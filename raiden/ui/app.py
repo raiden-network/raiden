@@ -137,7 +137,6 @@ def run_app(
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     pathfinding_service_address: str,
-    pathfinding_eth_address: str,
     pathfinding_max_paths: int,
     enable_monitoring: bool,
     resolver_endpoint: str,
@@ -222,7 +221,6 @@ def run_app(
         contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
-        pathfinding_eth_address=pathfinding_eth_address,
     )
 
     database_path = os.path.join(

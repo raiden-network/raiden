@@ -125,7 +125,6 @@ def setup_proxies_or_exit(
     contracts: Dict[str, Any],
     routing_mode: RoutingMode,
     pathfinding_service_address: str,
-    pathfinding_eth_address: str,
 ) -> Proxies:
     """
     Initialize and setup the contract proxies.

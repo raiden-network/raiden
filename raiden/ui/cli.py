@@ -48,7 +48,6 @@ log = structlog.get_logger(__name__)
 
 OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
     "pathfinding-service-address": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-eth-address": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
     "pathfinding-max-paths": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
     "pathfinding-max-fee": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
     "pathfinding-iou-timeout": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
@@ -249,17 +248,6 @@ def options(func):
                 default="auto",
                 type=str,
                 show_default=True,
-            ),
-            option(
-                "--pathfinding-eth-address",
-                help=(
-                    "Ethereum address to which to pay the fees of the path finding service.\n"
-                    "If the path finding service is chosen from the service registry contract, "
-                    "this option will be ignored. If the path finding service is configured "
-                    'manually, i. e. "--pathfinding-service-address" set to a value other than '
-                    '"auto", this argument must be set to a valid EIP55 address.'
-                ),
-                type=str,
             ),
             option(
                 "--pathfinding-max-paths",
