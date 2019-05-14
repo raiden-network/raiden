@@ -83,7 +83,7 @@ def get_filter_args_for_all_events_from_channel(
     return event_filter_params
 
 
-def decode_event(abi: Dict, log: Dict):
+def decode_event(abi: List[Dict], log: Dict):
     """ Helper function to unpack event data using a provided ABI
 
     Args:

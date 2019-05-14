@@ -1,6 +1,8 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Tuple, Type, Union
 
+from raiden_contracts.contract_manager import DeployedContract
+
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.transfer.state import (  # noqa: F401
@@ -20,8 +22,7 @@ if TYPE_CHECKING:
 
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"
 
-T_ABI = dict
-ABI = NewType("ABI", T_ABI)
+ABI = DeployedContract
 
 T_Address = bytes
 Address = NewType("Address", T_Address)
