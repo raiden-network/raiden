@@ -46,7 +46,7 @@ def verify_block_number(number: typing.BlockSpecification, argname: str):
 
 def get_contract_events(
     chain: BlockChainService,
-    abi: Dict,
+    abi: List[Dict],
     contract_address: Address,
     topics: Optional[List[str]],
     from_block: BlockSpecification,
