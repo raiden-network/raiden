@@ -26,7 +26,7 @@ def set_class_type(schema, data, instance):
 
 def remove_class_type(schema, data):
     if "_type" in data:
-        schema.context['_type'] = data['_type']
+        schema.context["_type"] = data["_type"]
         del data["_type"]
     return data
 
