@@ -33,7 +33,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class MessageHandler:
-    def on_message(self, raiden: RaidenService, message: Message):
+    def on_message(self, raiden: RaidenService, message: Message) -> None:
         # pylint: disable=unidiomatic-typecheck
 
         if type(message) == SecretRequest:
@@ -71,7 +71,7 @@ class MessageHandler:
             log.error("Unknown message cmdid {}".format(message.cmdid))
 
     @staticmethod
-    def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest):
+    def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
         secret_request = ReceiveSecretRequest(
             message.payment_identifier,
             message.amount,
@@ -82,12 +82,12 @@ class MessageHandler:
         raiden.handle_and_track_state_change(secret_request)
 
     @staticmethod
-    def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret):
+    def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
         state_change = ReceiveSecretReveal(message.secret, message.sender)
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
-    def handle_message_unlock(raiden: RaidenService, message: Unlock):
+    def handle_message_unlock(raiden: RaidenService, message: Unlock) -> None:
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveUnlock(
             message_identifier=message.message_identifier,
@@ -97,7 +97,7 @@ class MessageHandler:
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
-    def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
+    def handle_message_lockexpired(raiden: RaidenService, message: LockExpired) -> None:
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveLockExpired(
             balance_proof=balance_proof,
@@ -107,12 +107,11 @@ class MessageHandler:
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
-    def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer):
+    def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
         token_network_address = message.token_network_address
         from_transfer = lockedtransfersigned_from_message(message)
         chain_state = views.state_from_raiden(raiden)
 
-        # FIXME: add return types
         # FIXME: Shouldn't request routes here
         routes, _ = get_best_routes(
             chain_state=chain_state,
@@ -148,7 +147,7 @@ class MessageHandler:
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
-    def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer):
+    def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer) -> None:
         secrethash = message.lock.secrethash
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
@@ -175,11 +174,11 @@ class MessageHandler:
             raiden.mediate_mediated_transfer(message)
 
     @staticmethod
-    def handle_message_processed(raiden: RaidenService, message: Processed):
+    def handle_message_processed(raiden: RaidenService, message: Processed) -> None:
         processed = ReceiveProcessed(message.sender, message.message_identifier)
         raiden.handle_and_track_state_change(processed)
 
     @staticmethod
-    def handle_message_delivered(raiden: RaidenService, message: Delivered):
+    def handle_message_delivered(raiden: RaidenService, message: Delivered) -> None:
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
         raiden.handle_and_track_state_change(delivered)
