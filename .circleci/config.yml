@@ -316,6 +316,7 @@ jobs:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
       RAIDEN_TESTS_ETH_LOGSDIR: /tmp/eth/logs
+      COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
 
@@ -330,6 +331,12 @@ jobs:
           keys:
             - synapse-keys-v1
             - synapse-keys-
+      # Remove any existing .coverage files so we don't persist them again, causing a conflict.
+      - run:
+          name: Prepare coverage
+          command: |
+            mkdir -p ${COVERAGE_DIR}
+            rm ${COVERAGE_DIR}/.coverage* || true
       - run:
           name: Select tests
           command: |
@@ -367,9 +374,14 @@ jobs:
               << parameters.additional-args >>
 
       - run:
-          name: Report coverage
+          name: Store coverage
           command: |
-            bash <(curl -s https://codecov.io/bash) -c -F << parameters.test-type >>
+            mv .coverage* ${COVERAGE_DIR}
+
+      - persist_to_workspace:
+          root: "~"
+          paths:
+            - "./raiden/coverage"
 
       - save_cache:
           key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -409,7 +421,12 @@ jobs:
       - conditional-skip
       - config-path
       - run:
-          command: "true"
+          name: Report to Codecov
+          command: |
+            pip install codecov
+            cd ~/raiden
+            coverage combine coverage
+            codecov
 
   build-binary-linux:
     parameters:
