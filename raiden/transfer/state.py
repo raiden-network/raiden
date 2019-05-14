@@ -453,8 +453,7 @@ class TokenNetworkState(State):
             raise ValueError("token_address must be an address instance")
 
         self.partneraddresses_to_channelidentifiers = defaultdict(
-            list,
-            self.partneraddresses_to_channelidentifiers
+            list, self.partneraddresses_to_channelidentifiers
         )
 
 
