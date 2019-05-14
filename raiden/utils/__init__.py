@@ -5,6 +5,7 @@ import re
 import sys
 import time
 from itertools import zip_longest
+from typing import Any, Callable
 
 import gevent
 from eth_keys import keys
@@ -56,10 +57,6 @@ def random_secret() -> Secret:
 
 def ishash(data: bytes) -> bool:
     return isinstance(data, bytes) and len(data) == 32
-
-
-def is_minified_address(addr):
-    return re.compile("(0x)?[a-f0-9]{6,8}").match(addr)
 
 
 def address_checksum_and_decode(addr: str) -> Address:
@@ -132,7 +129,7 @@ def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
-def get_relative_path(file_name) -> str:
+def get_relative_path(file_name: str) -> str:
     prefix = os.path.commonprefix([os.path.realpath("."), os.path.realpath(file_name)])
     return file_name.replace(prefix + "/", "")
 
@@ -172,14 +169,14 @@ def get_system_spec() -> Dict[str, str]:
     return system_spec
 
 
-def wait_until(func, wait_for=None, sleep_for=0.5):
+def wait_until(func: Callable, wait_for: float = None, sleep_for: float = 0.5) -> Any:
     """Test for a function and wait for it to return a truth value or to timeout.
     Returns the value or None if a timeout is given and the function didn't return
     inside time timeout
     Args:
-        func (callable): a function to be evaluated, use lambda if parameters are required
-        wait_for (float, integer, None): the maximum time to wait, or None for an infinite loop
-        sleep_for (float, integer): how much to gevent.sleep between calls
+        func: a function to be evaluated, use lambda if parameters are required
+        wait_for: the maximum time to wait, or None for an infinite loop
+        sleep_for: how much to gevent.sleep between calls
     Returns:
         func(): result of func, if truth value, or None"""
     res = func()
@@ -201,7 +198,7 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
     return res
 
 
-def is_frozen():
+def is_frozen() -> bool:
     return getattr(sys, "frozen", False)
 
 
@@ -216,12 +213,12 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     return zip_longest(iterator, iterator)
 
 
-def create_default_identifier():
+def create_default_identifier() -> int:
     """ Generates a random identifier. """
     return random.randint(0, constants.UINT64_MAX)
 
 
-def merge_dict(to_update: dict, other_dict: dict):
+def merge_dict(to_update: dict, other_dict: dict) -> None:
     """ merges b into a """
     for key, value in other_dict.items():
         has_map = isinstance(value, collections.Mapping) and isinstance(

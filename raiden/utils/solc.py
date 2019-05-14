@@ -1,17 +1,18 @@
 import os
 import re
+from typing import Any, Dict, Set
 
 from eth_utils import decode_hex
 from solc import compile_files
 
 
-def solidity_resolve_address(hex_code, library_symbol, library_address):
+def solidity_resolve_address(hex_code: str, library_symbol: str, library_address: str) -> str:
     """ Change the bytecode to use the given library address.
 
     Args:
-        hex_code (bin): The bytecode encoded in hexadecimal.
-        library_name (str): The library that will be resolved.
-        library_address (str): The address of the library.
+        hex_code: The bytecode encoded in hexadecimal.
+        library_symbol: The library that will be resolved.
+        library_address: The address of the library.
 
     Returns:
         bin: The bytecode encoded in hexadecimal with the library references
@@ -31,7 +32,7 @@ def solidity_resolve_address(hex_code, library_symbol, library_address):
     return hex_code.replace(library_symbol, library_address)
 
 
-def solidity_resolve_symbols(hex_code, libraries):
+def solidity_resolve_symbols(hex_code: str, libraries: Dict[str, str]) -> str:
     symbol_address = {
         solidity_library_symbol(library_name): address
         for library_name, address in libraries.items()
@@ -44,7 +45,7 @@ def solidity_resolve_symbols(hex_code, libraries):
     return hex_code
 
 
-def solidity_library_symbol(library_name):
+def solidity_library_symbol(library_name: str) -> str:
     """ Return the symbol used in the bytecode to represent the `library_name`. """
     # the symbol is always 40 characters in length with the minimum of two
     # leading and trailing underscores
@@ -56,7 +57,7 @@ def solidity_library_symbol(library_name):
     return "__{library}{hold}__".format(library=library_piece, hold=hold_piece)
 
 
-def solidity_unresolved_symbols(hex_code):
+def solidity_unresolved_symbols(hex_code: str) -> Set[str]:
     """ Return the unresolved symbols contained in the `hex_code`.
 
     Note:
@@ -69,7 +70,7 @@ def solidity_unresolved_symbols(hex_code):
     return set(re.findall(r"_.{39}", hex_code))
 
 
-def compile_files_cwd(*args, **kwargs):
+def compile_files_cwd(*args: Any, **kwargs: Any) -> str:
     """change working directory to contract's dir in order to avoid symbol
     name conflicts"""
     # get root directory of the contracts

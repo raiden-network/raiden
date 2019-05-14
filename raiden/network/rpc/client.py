@@ -617,7 +617,7 @@ class JSONRPCClient:
         self,  # pylint: disable=too-many-locals
         contract_name: str,
         all_contracts: Dict[str, ABI],
-        libraries: Dict[str, Address] = None,
+        libraries: Dict[str, str] = None,
         constructor_parameters: Tuple[Any] = None,
         contract_path: str = None,
     ):
