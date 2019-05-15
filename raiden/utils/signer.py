@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from eth_keys import keys
-from eth_keys.exceptions import BadSignature
+from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import keccak, to_checksum_address
 
 from raiden.exceptions import InvalidSignature
@@ -34,7 +34,7 @@ def recover(
     try:
         sig = keys.Signature(signature_bytes=signature)
         public_key = keys.ecdsa_recover(message_hash=_hash, signature=sig)
-    except BadSignature as e:
+    except (BadSignature, ValidationError) as e:
         raise InvalidSignature from e
     return public_key.to_canonical_address()
 
