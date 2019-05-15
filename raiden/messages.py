@@ -646,7 +646,11 @@ class RevealSecret(SignedRetrieableMessage):
     @classmethod
     def from_event(cls, event):
         # pylint: disable=unexpected-keyword-arg
-        return cls(message_identifier=event.message_identifier, secret=event.secret)
+        return cls(
+            message_identifier=event.message_identifier,
+            secret=event.secret,
+            signature=EMPTY_SIGNATURE,
+        )
 
 
 @dataclass(repr=False, eq=False)
