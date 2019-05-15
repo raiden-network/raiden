@@ -110,7 +110,9 @@ def run_test_regression_revealsecret_after_secret(
     assert event
 
     message_identifier = random.randint(0, UINT64_MAX)
-    reveal_secret = RevealSecret(message_identifier=message_identifier, secret=event.secret)
+    reveal_secret = RevealSecret(
+        message_identifier=message_identifier, secret=event.secret, signature=EMPTY_SIGNATURE
+    )
     app2.raiden.sign(reveal_secret)
 
     if transport_protocol is TransportProtocol.UDP:
@@ -179,6 +181,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=transferred_amount,
         locked_amount=lock_amount,
+        fee=0,
         recipient=app1.raiden.address,
         locksroot=lock.secrethash,
         lock=lock,
@@ -197,7 +200,9 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
     else:
         raise TypeError("Unknown TransportProtocol")
 
-    reveal_secret = RevealSecret(message_identifier=random.randint(0, UINT64_MAX), secret=secret)
+    reveal_secret = RevealSecret(
+        message_identifier=random.randint(0, UINT64_MAX), secret=secret, signature=EMPTY_SIGNATURE
+    )
     app0.raiden.sign(reveal_secret)
 
     token_network_identifier = channelstate_0_1.token_network_identifier
@@ -212,6 +217,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
         locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=secret,
+        signature=EMPTY_SIGNATURE,
     )
     app0.raiden.sign(unlock)
 
