@@ -35,7 +35,7 @@ def recover(
         sig = keys.Signature(signature_bytes=signature)
         public_key = keys.ecdsa_recover(message_hash=_hash, signature=sig)
     except (BadSignature, ValidationError) as e:
-        raise InvalidSignature from e
+        raise InvalidSignature() from e
     return public_key.to_canonical_address()
 
 

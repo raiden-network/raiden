@@ -1,7 +1,9 @@
 import pytest
+from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, to_canonical_address
 
 from raiden.constants import EMPTY_HASH
+from raiden.exceptions import InvalidSignature
 from raiden.tests.utils.mocks import MockWeb3
 from raiden.utils import block_specification_to_number, privatekey_to_publickey, sha3
 from raiden.utils.signer import LocalSigner, Signer, recover
@@ -42,6 +44,19 @@ def test_recover():
     )
 
     assert recover(data=message, signature=signature) == account
+
+
+@pytest.mark.parametrize(
+    ("signature", "nested_exception"),
+    [
+        pytest.param(b"\x00" * 65, BadSignature, id="BadSignature"),
+        pytest.param(b"bla", ValidationError, id="ValidationError"),
+    ],
+)
+def test_recover_exception(signature, nested_exception):
+    with pytest.raises(InvalidSignature) as exc_info:
+        recover(b"bla", signature)
+    assert isinstance(exc_info.value.__context__, nested_exception)
 
 
 def test_block_speficiation_to_number():
