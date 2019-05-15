@@ -942,7 +942,7 @@ class RefundTransfer(LockedTransfer):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
-            signature=Signature(b""),
+            signature=EMPTY_SIGNATURE,
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
@@ -1004,8 +1004,8 @@ class LockExpired(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             secrethash=packed.secrethash,
+            signature=packed.signature,
         )
-        transfer.signature = packed.signature
 
         return transfer
 
