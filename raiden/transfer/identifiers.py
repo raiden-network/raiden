@@ -14,10 +14,13 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass(unsafe_hash=True)
+@dataclass
 class QueueIdentifier:
     recipient: Address
     channel_identifier: ChannelID
+
+    def __hash__(self) -> int:
+        return hash((self.recipient, self.channel_identifier))
 
 
 @dataclass
