@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import RevealSecret, SecretRequest, Unlock
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -64,6 +64,7 @@ def run_test_receive_secrethashtransfer_unknown(raiden_network, token_addresses)
         locked_amount=0,
         locksroot=UNIT_SECRETHASH,
         secret=UNIT_SECRET,
+        signature=EMPTY_SIGNATURE,
     )
     sign_and_inject(unlock, other_signer, app0)
 
@@ -73,10 +74,13 @@ def run_test_receive_secrethashtransfer_unknown(raiden_network, token_addresses)
         secrethash=UNIT_SECRETHASH,
         amount=1,
         expiration=refund_transfer_message.lock.expiration,
+        signature=EMPTY_SIGNATURE,
     )
     sign_and_inject(secret_request_message, other_signer, app0)
 
     reveal_secret_message = RevealSecret(
-        message_identifier=random.randint(0, UINT64_MAX), secret=UNIT_SECRET
+        message_identifier=random.randint(0, UINT64_MAX),
+        secret=UNIT_SECRET,
+        signature=EMPTY_SIGNATURE,
     )
     sign_and_inject(reveal_secret_message, other_signer, app0)
