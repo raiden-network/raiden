@@ -906,7 +906,7 @@ class LockedTransfer(LockedTransferBase):
             target=transfer.target,
             initiator=transfer.initiator,
             fee=fee,
-            signature=Signature(b""),
+            signature=EMPTY_SIGNATURE,
         )
 
 
@@ -975,6 +975,7 @@ class RefundTransfer(LockedTransfer):
             target=transfer.target,
             initiator=transfer.initiator,
             fee=fee,
+            signature=EMPTY_SIGNATURE,
         )
 
 
