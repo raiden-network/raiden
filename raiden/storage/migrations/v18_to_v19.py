@@ -22,7 +22,7 @@ class BlockHashCache:
 
     def __init__(self, web3: Web3):
         self.web3 = web3
-        self.mapping = {}
+        self.mapping: Dict[BlockNumber, str] = {}
 
     def get(self, block_number: BlockNumber) -> str:
         """Given a block number returns the hex representation of the blockhash"""
@@ -47,7 +47,7 @@ def _query_blocknumber_and_update_statechange_data(
 ) -> Tuple[str, int]:
     data = record.data
     data["block_hash"] = record.cache.get(record.block_number)
-    return (json.dumps(data), record.state_change_identifier)
+    return json.dumps(data), record.state_change_identifier
 
 
 def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCache) -> None:
@@ -69,7 +69,7 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
             data = json.loads(state_change.data)
             assert "block_hash" not in data, "v18 state changes cant contain blockhash"
             record = BlockQueryAndUpdateRecord(
-                block_number=int(data["block_number"]),
+                block_number=BlockNumber(int(data["block_number"])),
                 data=data,
                 state_change_identifier=state_change.state_change_identifier,
                 cache=cache,
@@ -112,7 +112,7 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
             if "block_hash" in statechange_data:
                 data["triggered_by_block_hash"] = statechange_data["block_hash"]
             elif "block_number" in statechange_data:
-                block_number = int(statechange_data["block_number"])
+                block_number = BlockNumber(int(statechange_data["block_number"]))
                 data["triggered_by_block_hash"] = cache.get(block_number)
 
             updated_events.append((json.dumps(data), event.event_identifier))
@@ -123,7 +123,7 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
 def _transform_snapshot(raw_snapshot: str, storage: SQLiteStorage, cache: BlockHashCache) -> str:
     """Upgrades a single snapshot by adding the blockhash to it and to any pending transactions"""
     snapshot = json.loads(raw_snapshot)
-    block_number = int(snapshot["block_number"])
+    block_number = BlockNumber(int(snapshot["block_number"]))
     snapshot["block_hash"] = cache.get(block_number)
 
     pending_transactions = snapshot["pending_transactions"]
@@ -158,7 +158,7 @@ class TransformSnapshotRecord(NamedTuple):
     cache: BlockHashCache
 
 
-def _do_transform_snapshot(record: TransformSnapshotRecord) -> Tuple[Dict[str, Any], int]:
+def _do_transform_snapshot(record: TransformSnapshotRecord) -> Tuple[str, int]:
     new_snapshot = _transform_snapshot(
         raw_snapshot=record.data, storage=record.storage, cache=record.cache
     )

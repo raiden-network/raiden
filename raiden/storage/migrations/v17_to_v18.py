@@ -20,7 +20,7 @@ def get_token_network_by_identifier(
     return None
 
 
-def _transform_snapshot(raw_snapshot: Dict[Any, Any]) -> str:
+def _transform_snapshot(raw_snapshot: str) -> str:
     """
     This migration upgrades the object:
     - `MediatorTransferState` such that a list of routes is added
@@ -48,7 +48,11 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]) -> str:
         token_network_identifier = transfer["balance_proof"]["token_network_identifier"]
         token_network = get_token_network_by_identifier(snapshot, token_network_identifier)
         channel_identifier = transfer["balance_proof"]["channel_identifier"]
-        channel = token_network.get("channelidentifiers_to_channels").get(channel_identifier)
+        channel = None
+        if token_network is not None:
+            channel = token_network.get("channelidentifiers_to_channels", {}).get(
+                channel_identifier
+            )
         if not channel:
             raise ChannelNotFound(
                 f"Upgrading to v18 failed. "
