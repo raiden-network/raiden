@@ -219,12 +219,12 @@ def make_signer() -> Signer:
 
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.partner_state.address, channel_state.identifier)
+    return RouteState(channel_state.partner_state.address, channel_state.identifier, complete_route=[])
 
 
 def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.our_state.address, channel_state.identifier)
+    return RouteState(channel_state.our_state.address, channel_state.identifier, complete_route=[])
 
 
 # CONSTANTS
@@ -239,9 +239,9 @@ UNIT_SECRET = b"secretsecretsecretsecretsecretse"
 UNIT_SECRETHASH = sha3(UNIT_SECRET)
 UNIT_REGISTRY_IDENTIFIER = b"registryregistryregi"
 UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
-UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
-UNIT_CHANNEL_ID = 1338
-UNIT_CHAIN_ID = 337
+UNIT_TOKEN_NETWORK_ADDRESS = TokenNetworkAddress(b"networknetworknetwor")
+UNIT_CHANNEL_ID = ChannelID(1338)
+UNIT_CHAIN_ID = ChainID(337)
 UNIT_CANONICAL_ID = CanonicalIdentifier(
     chain_identifier=UNIT_CHAIN_ID,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
@@ -268,7 +268,7 @@ def make_merkletree_leaves(width: int) -> List[Keccak256]:
     return [make_secret() for _ in range(width)]
 
 
-def make_merkletree(leaves: List[SecretHash]) -> MerkleTreeState:
+def make_merkletree(leaves: List[Keccak256]) -> MerkleTreeState:
     return MerkleTreeState(compute_layers(leaves))
 
 

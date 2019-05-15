@@ -106,9 +106,9 @@ def get_best_routes(
 
 
 class Neighbour(NamedTuple):
-    length: int
+    length: int  # first field in tuple defines order in the heap below
     nonrefundable: bool
-    partner_address: Address
+    route: List[Address]
     channelid: ChannelID
 
 
@@ -166,17 +166,17 @@ def get_best_routes_internal(
             continue
 
         nonrefundable = amount > channel.get_distributable(
-            channel_state.partner_state, channel_state.our_state
+            sender=channel_state.partner_state, receiver=channel_state.our_state
         )
 
         try:
-            length = networkx.shortest_path_length(
-                token_network.network_graph.network, partner_address, to_address
+            shortest_route = networkx.shortest_path(
+                G=token_network.network_graph.network, source=partner_address, target=to_address
             )
             neighbour = Neighbour(
-                length=length,
+                length=len(shortest_route),
                 nonrefundable=nonrefundable,
-                partner_address=partner_address,
+                route=shortest_route,
                 channelid=channel_state.identifier,
             )
             heappush(neighbors_heap, neighbour)
@@ -194,7 +194,9 @@ def get_best_routes_internal(
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
         route_state = RouteState(
-            node_address=neighbour.partner_address, channel_identifier=neighbour.channelid
+            node_address=neighbour.route[0],
+            channel_identifier=neighbour.channelid,
+            complete_route=neighbour.route,
         )
         available_routes.append(route_state)
     return available_routes
@@ -262,7 +264,11 @@ def get_best_routes_pfs(
             continue
 
         paths.append(
-            RouteState(node_address=partner_address, channel_identifier=channel_state.identifier)
+            RouteState(
+                node_address=partner_address,
+                channel_identifier=channel_state.identifier,
+                complete_route=path,
+            )
         )
 
     return True, paths, feedback_token

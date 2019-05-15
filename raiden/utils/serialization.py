@@ -55,6 +55,10 @@ def deserialize_bytes(data: str) -> bytes:
     return to_bytes(hexstr=data)
 
 
+def deserialize_address(data: str) -> Address:
+    return Address(deserialize_bytes(data))
+
+
 def deserialize_secret(data: str) -> Secret:
     return Secret(deserialize_bytes(data))
 

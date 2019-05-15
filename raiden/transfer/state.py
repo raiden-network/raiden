@@ -655,14 +655,20 @@ class RouteState(State):
         channel_identifier: The channel identifier.
     """
 
-    __slots__ = ("node_address", "channel_identifier")
+    __slots__ = ("node_address", "channel_identifier", "complete_route")
 
-    def __init__(self, node_address: Address, channel_identifier: ChannelID) -> None:
+    def __init__(
+        self,
+        node_address: Address,
+        channel_identifier: ChannelID,
+        complete_route: List[Address],
+    ) -> None:
         if not isinstance(node_address, T_Address):
             raise ValueError("node_address must be an address instance")
 
         self.node_address = node_address
         self.channel_identifier = channel_identifier
+        self.complete_route = complete_route
 
     def __repr__(self) -> str:
         return "<RouteState hop:{node} channel_identifier:{channel_identifier}>".format(
@@ -674,6 +680,7 @@ class RouteState(State):
             isinstance(other, RouteState)
             and self.node_address == other.node_address
             and self.channel_identifier == other.channel_identifier
+            and self.complete_route == other.complete_route
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -683,16 +690,16 @@ class RouteState(State):
         return {
             "node_address": to_checksum_address(self.node_address),
             "channel_identifier": str(self.channel_identifier),
+            "complete_route": map_list(serialization.serialize_bytes, self.complete_route),
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RouteState":
-        restored = cls(
+        return cls(
             node_address=to_canonical_address(data["node_address"]),
             channel_identifier=ChannelID(int(data["channel_identifier"])),
+            complete_route=map_list(serialization.deserialize_address, data.get("complete_route", []))
         )
-
-        return restored
 
 
 class BalanceProofUnsignedState(State):
