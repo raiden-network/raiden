@@ -63,7 +63,7 @@ else:
         initial_port = initial_port or 27854
 
         for port in count(initial_port):
-            # Because it is not know which interface the socket will bind to,
+            # Because it is not known which interface the socket will bind to,
             # if there is any socket in the target port it must be skiped.
             connect_using_port = (
                 conn
