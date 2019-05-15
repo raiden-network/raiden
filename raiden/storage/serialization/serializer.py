@@ -6,6 +6,7 @@ with sanitized input, to avoid the risk of exploits.
 """
 import importlib
 import json
+from copy import deepcopy
 from dataclasses import is_dataclass
 
 # pylint: disable=unused-import
@@ -52,7 +53,7 @@ class DictSerializer(SerializationBase):
         if "_type" in data:
             klass = _import_type(data["_type"])
             schema = SchemaCache.get_or_create_schema(klass)
-            return schema.load(data)
+            return schema.load(deepcopy(data))
         return data
 
 
