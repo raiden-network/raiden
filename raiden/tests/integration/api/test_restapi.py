@@ -869,7 +869,7 @@ def test_api_payments_secret_hash_errors(
         json={"amount": amount, "identifier": identifier, "secret": short_secret},
     )
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
 
     request = grequests.post(
         api_url_for(
@@ -881,7 +881,7 @@ def test_api_payments_secret_hash_errors(
         json={"amount": amount, "identifier": identifier, "secret": bad_secret},
     )
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
 
     request = grequests.post(
         api_url_for(
@@ -893,7 +893,7 @@ def test_api_payments_secret_hash_errors(
         json={"amount": amount, "identifier": identifier, "secret_hash": short_secret_hash},
     )
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
 
     request = grequests.post(
         api_url_for(
@@ -905,7 +905,7 @@ def test_api_payments_secret_hash_errors(
         json={"amount": amount, "identifier": identifier, "secret_hash": bad_secret_hash},
     )
     response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
 
     request = grequests.post(
         api_url_for(
@@ -1043,10 +1043,10 @@ def assert_payment_secret_and_hash(response, payment):
     assert "secret" in response
     assert "secret_hash" in response
 
-    secret = to_bytes(response["secret"])
+    secret = to_bytes(hexstr=response["secret"])
     assert len(secret) == SECRET_LENGTH
 
-    assert to_bytes(response["secret_hash"]) == sha3(secret)
+    assert to_bytes(hexstr=response["secret_hash"]) == sha3(secret)
 
 
 def assert_payment_conflict(responses):
