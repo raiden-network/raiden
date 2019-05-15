@@ -10,12 +10,14 @@ from raiden.storage.serialization.fields import (
     CallablePolyField,
     IntegerToStringField,
     PRNGField,
+    QueueIdentifierField,
 )
 from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     TransferTask,
 )
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -161,6 +163,7 @@ _native_to_marshmallow.update(
             serialization_schema_selector=transfer_task_schema_serialization,
             deserialization_schema_selector=transfer_task_schema_deserialization,
         ),
+        QueueIdentifier: QueueIdentifierField,
         # Other
         Random: PRNGField,
     }

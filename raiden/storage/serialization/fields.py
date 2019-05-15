@@ -4,6 +4,7 @@ import marshmallow
 from eth_utils import to_canonical_address, to_checksum_address
 from marshmallow_polyfield import PolyField
 
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.serialization import to_bytes, to_hex
 from raiden.utils.typing import Address, Any, Tuple
 
@@ -34,6 +35,20 @@ class AddressField(marshmallow.fields.Field):
 
     def _deserialize(self, value: str, attr: Any, data: Any) -> Address:
         return to_canonical_address(value)
+
+
+class QueueIdentifierField(marshmallow.fields.Field):
+    """ Converts QueueIdentifier objects to a tuple """
+
+    def _serialize(self, queue_identifier: QueueIdentifier, attr: Any, obj: Any) -> str:
+        return (
+            f"{to_checksum_address(queue_identifier.recipient)}"
+            f"-{str(queue_identifier.channel_identifier)}"
+        )
+
+    def _deserialize(self, queue_identifier_str: str, attr: Any, data: Any) -> QueueIdentifier:
+        str_recipient, str_channel_id = queue_identifier_str.split("-")
+        return QueueIdentifier(to_canonical_address(str_recipient), int(str_channel_id))
 
 
 class PRNGField(marshmallow.fields.Field):
