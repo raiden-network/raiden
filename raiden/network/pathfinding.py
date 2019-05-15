@@ -3,7 +3,6 @@ import random
 import sys
 from datetime import datetime
 from enum import IntEnum, unique
-from typing import Tuple
 from uuid import UUID
 
 import click
