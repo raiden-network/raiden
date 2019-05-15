@@ -5,7 +5,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
@@ -553,7 +553,9 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     # transfer is sent.
     app0.raiden.transport.stop()
 
-    reveal_secret = RevealSecret(message_identifier=random.randint(0, UINT64_MAX), secret=secret)
+    reveal_secret = RevealSecret(
+        message_identifier=random.randint(0, UINT64_MAX), secret=secret, signature=EMPTY_SIGNATURE
+    )
     app0.raiden.sign(reveal_secret)
     message_handler.on_message(app1.raiden, reveal_secret)
 
