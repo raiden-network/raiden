@@ -86,8 +86,8 @@ def run_test_locksroot_loading_during_channel_settle_handling(raiden_chain, toke
     )
 
     # The private chain used for tests has a very low pruning setting
-    pruned_after_blocks = 10
-    close_event_pruned_at = app1.raiden.chain.get_block_number() + pruned_after_blocks
+    pruned_after_blocks = 20
+    close_event_pruned_at = app1.raiden.chain.block_number() + pruned_after_blocks
     waiting.wait_for_block(raiden=app1.raiden, block_number=close_event_pruned_at, retry_timeout=1)
 
     # make sure the block was pruned
