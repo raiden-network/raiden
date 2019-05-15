@@ -633,9 +633,10 @@ class RevealSecret(SignedRetrieableMessage):
     @classmethod
     def unpack(cls, packed):
         reveal_secret = RevealSecret(
-            message_identifier=packed.message_identifier, secret=packed.secret
+            message_identifier=packed.message_identifier,
+            secret=packed.secret,
+            signature=packed.signature,
         )
-        reveal_secret.signature = packed.signature
         return reveal_secret
 
     def pack(self, packed) -> None:

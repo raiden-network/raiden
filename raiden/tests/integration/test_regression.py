@@ -3,7 +3,7 @@ import random
 import gevent
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
@@ -184,6 +184,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
         lock=lock,
         target=app1.raiden.address,
         initiator=app0.raiden.address,
+        signature=EMPTY_SIGNATURE,
     )
     app0.raiden.sign(mediated_transfer)
 
