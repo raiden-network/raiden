@@ -208,6 +208,7 @@ def run_test_receive_lockedtransfer_invalidsender(
         target=app0.raiden.address,
         initiator=other_address,
         fee=0,
+        signature=EMPTY_SIGNATURE,
     )
 
     sign_and_inject(mediated_transfer_message, LocalSigner(other_key), app0)
@@ -261,6 +262,7 @@ def run_test_receive_lockedtransfer_invalidrecipient(
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0,
+        signature=EMPTY_SIGNATURE,
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
@@ -320,6 +322,7 @@ def run_test_received_lockedtransfer_closedchannel(
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         fee=0,
+        signature=EMPTY_SIGNATURE,
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
