@@ -17,6 +17,7 @@ from raiden.transfer.architecture import (
     BalanceProofUnsignedState,
     TransferTask,
 )
+from raiden.transfer.events import SendMessageEvent
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
@@ -68,17 +69,21 @@ def transfer_task_schema_deserialization(
 ) -> Optional[Schema]:
     # pylint: disable=unused-argument
     # Avoid cyclic dependencies
-    from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-
     task_type = task_dict.get("_type")
     if task_type is None:
         return None
 
     if task_type.endswith("InitiatorTask"):
+        from raiden.transfer.mediated_transfer.tasks import InitiatorTask
+
         return SchemaCache.get_or_create_schema(InitiatorTask)
     if task_type.endswith("MediatorTask"):
+        from raiden.transfer.mediated_transfer.tasks import MediatorTask
+
         return SchemaCache.get_or_create_schema(MediatorTask)
     if task_type.endswith("TargetTask"):
+        from raiden.transfer.mediated_transfer.tasks import TargetTask
+
         return SchemaCache.get_or_create_schema(TargetTask)
 
     return None
@@ -103,6 +108,52 @@ def balance_proof_schema_deserialization(
         return SchemaCache.get_or_create_schema(BalanceProofUnsignedState)
     elif bp_type.endswith("SignedState"):
         return SchemaCache.get_or_create_schema(BalanceProofSignedState)
+
+    return None
+
+
+def message_event_schema_serialization(message_event: SendMessageEvent, parent: Any) -> Schema:
+    # pylint: disable=unused-argument
+    return SchemaCache.get_or_create_schema(message_event.__class__)
+
+
+def message_event_schema_deserialization(
+    message_event_dict: Dict[str, Any], parent: Dict[str, Any]
+) -> Optional[Schema]:
+    # pylint: disable=unused-argument
+    message_type = message_event_dict.get("_type")
+    if message_type is None:
+        return None
+
+    if message_type.endswith("SendLockExpired"):
+        from raiden.transfer.mediated_transfer.events import SendLockExpired
+
+        return SchemaCache.get_or_create_schema(SendLockExpired)
+    elif message_type.endswith("SendLockedTransfer"):
+        from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+
+        return SchemaCache.get_or_create_schema(SendLockedTransfer)
+    elif message_type.endswith("SendSecretReveal"):
+        from raiden.transfer.mediated_transfer.events import SendSecretReveal
+
+        return SchemaCache.get_or_create_schema(SendSecretReveal)
+    elif message_type.endswith("SendBalanceProof"):
+        from raiden.transfer.mediated_transfer.events import SendBalanceProof
+
+        return SchemaCache.get_or_create_schema(SendBalanceProof)
+    elif message_type.endswith("SendSecretRequest"):
+        from raiden.transfer.mediated_transfer.events import SendSecretRequest
+
+        return SchemaCache.get_or_create_schema(SendSecretRequest)
+    elif message_type.endswith("SendRefundTransfer"):
+        from raiden.transfer.mediated_transfer.events import SendRefundTransfer
+
+        return SchemaCache.get_or_create_schema(SendRefundTransfer)
+
+    elif message_type.endswith("SendProcessed"):
+        from raiden.transfer.events import SendProcessed
+
+        return SchemaCache.get_or_create_schema(SendProcessed)
 
     return None
 
@@ -149,6 +200,11 @@ _native_to_marshmallow.update(
         ChannelID: IntegerToStringField,
         # Union
         Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
+        # Polymorphic fields
+        TransferTask: CallablePolyField(
+            serialization_schema_selector=transfer_task_schema_serialization,
+            deserialization_schema_selector=transfer_task_schema_deserialization,
+        ),
         Union[BalanceProofUnsignedState, BalanceProofSignedState]: CallablePolyField(
             serialization_schema_selector=balance_proof_schema_serialization,
             deserialization_schema_selector=balance_proof_schema_deserialization,
@@ -158,11 +214,12 @@ _native_to_marshmallow.update(
             deserialization_schema_selector=balance_proof_schema_deserialization,
             allow_none=True,
         ),
-        # Polymorphic fields
-        TransferTask: CallablePolyField(
-            serialization_schema_selector=transfer_task_schema_serialization,
-            deserialization_schema_selector=transfer_task_schema_deserialization,
+        SendMessageEvent: CallablePolyField(
+            serialization_schema_selector=message_event_schema_serialization,
+            deserialization_schema_selector=message_event_schema_deserialization,
+            allow_none=True,
         ),
+        # QueueIdentifier (Special case)
         QueueIdentifier: QueueIdentifierField,
         # Other
         Random: PRNGField,
