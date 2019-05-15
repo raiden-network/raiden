@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
@@ -11,7 +12,6 @@ from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     BlockExpiration,
     List,
     MessageID,
@@ -21,10 +21,6 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa
 
 
 # Note: The init states must contain all the required data for trying doing
@@ -107,7 +103,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     amount: PaymentAmount
     expiration: BlockExpiration = field(repr=False)
     secrethash: SecretHash
-    revealsecret: Optional["SendSecretReveal"] = field(default=None)
+    revealsecret: Optional[SendSecretReveal] = field(default=None)
 
 
 @dataclass

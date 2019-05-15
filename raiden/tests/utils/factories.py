@@ -560,7 +560,10 @@ LockedTransferUnsignedStateProperties.DEFAULTS = LockedTransferUnsignedStateProp
 def _(properties, defaults=None) -> LockedTransferUnsignedState:
     transfer: LockedTransferUnsignedStateProperties = create_properties(properties, defaults)
     lock = HashTimeLockState(
-        amount=transfer.amount, expiration=transfer.expiration, secrethash=sha3(transfer.secret)
+        # pylint: disable=no-member
+        amount=transfer.amount,
+        expiration=transfer.expiration,
+        secrethash=sha3(transfer.secret),
     )
     if transfer.locksroot == EMPTY_MERKLE_ROOT:
         transfer = replace(transfer, locksroot=lock.lockhash)

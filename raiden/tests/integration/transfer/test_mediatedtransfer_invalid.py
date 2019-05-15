@@ -4,7 +4,7 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
@@ -145,6 +145,7 @@ def run_test_receive_lockedtransfer_invalidnonce(
         target=app2.raiden.address,
         initiator=app0.raiden.address,
         fee=0,
+        signature=EMPTY_SIGNATURE,
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
