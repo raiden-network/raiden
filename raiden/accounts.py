@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import add_0x_prefix, decode_hex, encode_hex, remove_0x_prefix
+from eth_utils import add_0x_prefix, decode_hex, encode_hex
 
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
@@ -48,37 +48,6 @@ def _find_keystoredir() -> Optional[str]:  # pragma: no cover
         # can't find a keystore under the found data directory
         return None
     return keystore_path
-
-
-def check_keystore_json(jsondata: Dict) -> bool:
-    """ Check if ``jsondata`` has the structure of a keystore file version 3.
-
-    Note that this test is not complete, e.g. it doesn't check key derivation or cipher parameters.
-    Copied from https://github.com/vbuterin/pybitcointools
-
-    Args:
-        jsondata: Dictionary containing the data from the json file
-
-    Returns:
-        `True` if the data appears to be valid, otherwise `False`
-    """
-    if "crypto" not in jsondata and "Crypto" not in jsondata:
-        return False
-    if "version" not in jsondata:
-        return False
-    if jsondata["version"] != 3:
-        return False
-
-    crypto = jsondata.get("crypto", jsondata.get("Crypto"))
-    if "cipher" not in crypto:
-        return False
-    if "ciphertext" not in crypto:
-        return False
-    if "kdf" not in crypto:
-        return False
-    if "mac" not in crypto:
-        return False
-    return True
 
 
 class AccountManager:
@@ -184,40 +153,6 @@ class Account:
 
         if password is not None:
             self.unlock(password)
-
-    @classmethod
-    def load(cls, path: str, password: str = None) -> "Account":
-        """Load an account from a keystore file.
-
-        Args:
-            path: full path to the keyfile
-            password: the password to decrypt the key file or `None` to leave it encrypted
-        """
-        with open(path) as f:
-            keystore = json.load(f)
-        if not check_keystore_json(keystore):
-            raise ValueError("Invalid keystore file")
-        return Account(keystore, password, path=path)
-
-    def dump(self, include_address=True, include_id=True) -> str:
-        """Dump the keystore for later disk storage.
-
-        The result inherits the entries `'crypto'` and `'version`' from `account.keystore`, and
-        adds `'address'` and `'id'` in accordance with the parameters `'include_address'` and
-        `'include_id`'.
-
-        If address or id are not known, they are not added, even if requested.
-
-        Args:
-            include_address: flag denoting if the address should be included or not
-            include_id: flag denoting if the id should be included or not
-        """
-        d = {"crypto": self.keystore["crypto"], "version": self.keystore["version"]}
-        if include_address and self.address is not None:
-            d["address"] = remove_0x_prefix(encode_hex(self.address))
-        if include_id and self.uuid is not None:
-            d["id"] = self.uuid
-        return json.dumps(d)
 
     def unlock(self, password: str):
         """Unlock the account with a password.
