@@ -24,9 +24,8 @@ def set_class_type(schema, data, instance):  # pylint: disable=unused-argument
     return data
 
 
-def remove_class_type(schema, data):
+def remove_class_type(schema, data):  # pylint: disable=unused-argument
     if "_type" in data:
-        schema.context["_type"] = data["_type"]
         del data["_type"]
     return data
 
