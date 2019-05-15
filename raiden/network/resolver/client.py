@@ -4,6 +4,7 @@ import requests
 from eth_utils import to_bytes, to_hex
 
 from raiden.raiden_service import RaidenService
+from raiden.storage.wal import WriteAheadLog
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 
@@ -15,6 +16,7 @@ def reveal_secret_with_resolver(
     if "resolver_endpoint" not in raiden.config:
         return False
 
+    assert isinstance(raiden.wal, WriteAheadLog), "RaidenService has not been started"
     current_state = raiden.wal.state_manager.current_state
     task = current_state.payment_mapping.secrethashes_to_task[secret_request_event.secrethash]
     token = task.target_state.transfer.token

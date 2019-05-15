@@ -1,5 +1,6 @@
 import json
 from functools import partial
+from typing import TYPE_CHECKING
 
 from eth_utils import to_canonical_address
 from gevent.pool import Pool
@@ -7,12 +8,23 @@ from gevent.pool import Pool
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
-from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
+from raiden.storage.sqlite import SnapshotRecord, SQLiteStorage, StateChangeRecord
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
-from raiden.utils.typing import Any, Dict, Locksroot, Tuple
+from raiden.utils.typing import (
+    Any,
+    ChainID,
+    ChannelID,
+    Dict,
+    Locksroot,
+    TokenNetworkAddress,
+    Tuple,
+)
 
-RaidenService = "RaidenService"
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService  # noqa: F401
+
 
 SOURCE_VERSION = 19
 TARGET_VERSION = 20
@@ -31,7 +43,7 @@ def _find_channel_new_state_change(
 
 
 def _get_onchain_locksroots(
-    raiden: RaidenService,
+    raiden: "RaidenService",
     storage: SQLiteStorage,
     token_network: Dict[str, Any],
     channel: Dict[str, Any],
@@ -49,9 +61,9 @@ def _get_onchain_locksroots(
         )
 
     canonical_identifier = CanonicalIdentifier(
-        chain_identifier=-1,
-        token_network_address=to_canonical_address(token_network["address"]),
-        channel_identifier=int(channel["identifier"]),
+        chain_identifier=ChainID(-1),
+        token_network_address=TokenNetworkAddress(to_canonical_address(token_network["address"])),
+        channel_identifier=ChannelID(int(channel["identifier"])),
     )
 
     our_locksroot, partner_locksroot = get_onchain_locksroots(
@@ -96,7 +108,7 @@ def _add_onchain_locksroot_to_channel_new_state_changes(storage: SQLiteStorage,)
 
 
 def _add_onchain_locksroot_to_channel_settled_state_changes(
-    raiden: RaidenService, storage: SQLiteStorage
+    raiden: "RaidenService", storage: SQLiteStorage
 ) -> None:
     """ Adds `our_onchain_locksroot` and `partner_onchain_locksroot` to
     ContractReceiveChannelSettled. """
@@ -134,9 +146,11 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
             new_channel_state = channel_state_data["channel_state"]
 
             canonical_identifier = CanonicalIdentifier(
-                chain_identifier=-1,
-                token_network_address=to_canonical_address(token_network_identifier),
-                channel_identifier=int(channel_identifier),
+                chain_identifier=ChainID(-1),
+                token_network_address=TokenNetworkAddress(
+                    to_canonical_address(token_network_identifier)
+                ),
+                channel_identifier=ChannelID(int(channel_identifier)),
             )
             our_locksroot, partner_locksroot = get_onchain_locksroots(
                 chain=raiden.chain,
@@ -156,8 +170,8 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
 
 
 def _add_onchain_locksroot_to_snapshot(
-    raiden: RaidenService, storage: SQLiteStorage, snapshot_record: StateChangeRecord
-) -> str:
+    raiden: "RaidenService", storage: SQLiteStorage, snapshot_record: SnapshotRecord
+) -> Tuple[str, int]:
     """
     Add `onchain_locksroot` to each NettingChannelEndState
     """
@@ -178,7 +192,7 @@ def _add_onchain_locksroot_to_snapshot(
     return json.dumps(snapshot, indent=4), snapshot_record.identifier
 
 
-def _add_onchain_locksroot_to_snapshots(raiden: RaidenService, storage: SQLiteStorage) -> None:
+def _add_onchain_locksroot_to_snapshots(raiden: "RaidenService", storage: SQLiteStorage) -> None:
     snapshots = storage.get_snapshots()
 
     transform_func = partial(_add_onchain_locksroot_to_snapshot, raiden, storage)
