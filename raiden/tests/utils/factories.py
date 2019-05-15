@@ -66,7 +66,6 @@ from raiden.utils.typing import (
     PaymentID,
     PaymentNetworkID,
     Secret,
-    SecretHash,
     Signature,
     TargetAddress,
     TokenAddress,
@@ -219,12 +218,18 @@ def make_signer() -> Signer:
 
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.partner_state.address, channel_state.identifier, complete_route=[])
+    return RouteState(
+        channel_state.identifier,
+        complete_route=[channel_state.our_state.address, channel_state.partner_state.address],
+    )
 
 
 def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.our_state.address, channel_state.identifier, complete_route=[])
+    return RouteState(
+        channel_state.identifier,
+        complete_route=[channel_state.partner_state.address, channel_state.our_state.address],
+    )
 
 
 # CONSTANTS

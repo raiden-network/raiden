@@ -218,11 +218,11 @@ def subdispatch_to_paymenttask(
             )
             if token_network_state:
                 sub_iteration = initiator_manager.state_transition(
-                    sub_task.manager_state,
-                    state_change,
-                    token_network_state.channelidentifiers_to_channels,
-                    pseudo_random_generator,
-                    block_number,
+                    payment_state=sub_task.manager_state,
+                    state_change=state_change,
+                    channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,  # noqa
+                    pseudo_random_generator=pseudo_random_generator,
+                    block_number=block_number,
                 )
                 events = sub_iteration.events
 
@@ -232,7 +232,7 @@ def subdispatch_to_paymenttask(
         elif isinstance(sub_task, MediatorTask):
             token_network_identifier = sub_task.token_network_identifier
             token_network_state = get_token_network_by_address(
-                chain_state, token_network_identifier
+                chain_state=chain_state, token_network_address=token_network_identifier
             )
 
             if token_network_state:

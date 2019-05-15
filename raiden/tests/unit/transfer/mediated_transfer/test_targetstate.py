@@ -236,7 +236,7 @@ def test_handle_offchain_secretreveal():
 
     assert iteration.new_state.state == "reveal_secret"
     assert reveal.secret == UNIT_SECRET
-    assert reveal.recipient == setup.new_state.route.node_address
+    assert reveal.recipient == setup.new_state.route.next_node
 
     # if we get an empty hash secret make sure it's rejected
     secret = EMPTY_HASH

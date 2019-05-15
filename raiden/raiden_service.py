@@ -169,13 +169,13 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
         config=raiden.config,
         privkey=raiden.privkey,
     )
-    from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
+    from_route = RouteState(from_transfer.balance_proof.channel_identifier, complete_route=[])
     return ActionInitMediator(routes, from_route, from_transfer)
 
 
 def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
-    from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
+    from_route = RouteState(from_transfer.balance_proof.channel_identifier, complete_route=[])
     return ActionInitTarget(from_route, from_transfer)
 
 

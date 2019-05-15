@@ -85,7 +85,10 @@ from raiden.utils import random_secret
 
 
 def make_route_from_channelstate(channel_state):
-    return RouteState(channel_state.partner_state.address, channel_state.channel_identifier)
+    return RouteState(
+        channel_state.channel_identifier,
+        complete_route=[channel_state.our_state.address, channel_state.partner_state.address],
+    )
 
 
 def test_is_lock_valid():
@@ -744,9 +747,9 @@ def test_secret_learned():
         transfer_pair.payee_transfer,
         from_transfer,
     )
-    assert transfer_pair.payee_address == channels.get_route(1).node_address
+    assert transfer_pair.payee_address == channels.get_route(1).next_node
 
-    assert transfer_pair.payer_transfer.balance_proof.sender == channels.get_route(0).node_address
+    assert transfer_pair.payer_transfer.balance_proof.sender == channels.get_route(0).next_node
     assert transfer_pair.payer_transfer == from_transfer
 
     assert iteration.new_state.secret == UNIT_SECRET

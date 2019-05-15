@@ -54,7 +54,7 @@ def get_best_routes(
         )
 
         for route_state in neighbours:
-            if to_address == route_state.node_address and (
+            if to_address == route_state.next_node and (
                 channel_state
                 # other conditions about e.g. channel state are checked in best routes internal
                 and channel.get_distributable(
@@ -194,9 +194,8 @@ def get_best_routes_internal(
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
         route_state = RouteState(
-            node_address=neighbour.route[0],
             channel_identifier=neighbour.channelid,
-            complete_route=neighbour.route,
+            complete_route=[Address(from_address)] + neighbour.route,
         )
         available_routes.append(route_state)
     return available_routes
@@ -265,9 +264,8 @@ def get_best_routes_pfs(
 
         paths.append(
             RouteState(
-                node_address=partner_address,
                 channel_identifier=channel_state.identifier,
-                complete_route=path,
+                complete_route=[to_canonical_address(a) for a in path],
             )
         )
 

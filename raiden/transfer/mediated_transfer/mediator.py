@@ -189,7 +189,7 @@ def filter_reachable_routes(
 
     for route in routes:
         node_network_state = nodeaddresses_to_networkstates.get(
-            route.node_address, NODE_NETWORK_UNREACHABLE
+            route.next_node, NODE_NETWORK_UNREACHABLE
         )
 
         if node_network_state == NODE_NETWORK_REACHABLE:
@@ -212,7 +212,7 @@ def filter_used_routes(
     This function will return routes as provided in their original order.
     """
     channelid_to_route = {r.channel_identifier: r for r in routes}
-    routes_order = {route.node_address: index for index, route in enumerate(routes)}
+    routes_order = {route.next_node: index for index, route in enumerate(routes)}
 
     for pair in transfers_pair:
         channelid = pair.payer_transfer.balance_proof.channel_identifier
@@ -223,7 +223,7 @@ def filter_used_routes(
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-    return sorted(channelid_to_route.values(), key=lambda route: routes_order[route.node_address])
+    return sorted(channelid_to_route.values(), key=lambda route: routes_order[route.next_node])
 
 
 def get_payee_channel(
@@ -1413,7 +1413,7 @@ def handle_node_change_network_state(
         route = next(
             route
             for route in mediator_state.routes
-            if route.node_address == state_change.node_address
+            if route.next_node == state_change.node_address
         )
     except StopIteration:
         return TransitionResult(mediator_state, list())

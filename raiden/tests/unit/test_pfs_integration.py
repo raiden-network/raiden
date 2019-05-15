@@ -218,7 +218,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
 
     assert_checksum_address_in_url(patched.call_args[0][0])
 
-    assert routes[0].node_address == address2
+    assert routes[0].next_node == address2
     assert routes[0].channel_identifier == channel_state2.identifier
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
@@ -266,7 +266,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 
     assert_checksum_address_in_url(patched.call_args[0][0])
 
-    assert routes[0].node_address == address2
+    assert routes[0].next_node == address2
     assert routes[0].channel_identifier == channel_state2.identifier
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
@@ -308,9 +308,9 @@ def test_routing_mocked_pfs_request_error(
         # PFS doesn't work, so internal routing is used, so two possible routes are returned,
         # whereas the path via address1 is shorter
         # (even if the route is not possible from a global perspective)
-        assert routes[0].node_address == address1
+        assert routes[0].next_node == address1
         assert routes[0].channel_identifier == channel_state1.identifier
-        assert routes[1].node_address == address2
+        assert routes[1].next_node == address2
         assert routes[1].channel_identifier == channel_state2.identifier
         assert feedback_token is None
 
@@ -363,9 +363,9 @@ def test_routing_mocked_pfs_bad_http_code(
         # whereas the path via address1 is shorter (
         # even if the route is not possible from a global perspective)
         # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].node_address == address1
+        assert routes[0].next_node == address1
         assert routes[0].channel_identifier == channel_state1.identifier
-        assert routes[1].node_address == address2
+        assert routes[1].next_node == address2
         assert routes[1].channel_identifier == channel_state2.identifier
         assert feedback_token is None
 
@@ -403,9 +403,9 @@ def test_routing_mocked_pfs_invalid_json(
         # whereas the path via address1 is shorter (
         # even if the route is not possible from a global perspective)
         # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].node_address == address1
+        assert routes[0].next_node == address1
         assert routes[0].channel_identifier == channel_state1.identifier
-        assert routes[1].node_address == address2
+        assert routes[1].next_node == address2
         assert routes[1].channel_identifier == channel_state2.identifier
         assert feedback_token is None
 
@@ -443,9 +443,9 @@ def test_routing_mocked_pfs_invalid_json_structure(
         # whereas the path via address1 is shorter (
         # even if the route is not possible from a global perspective)
         # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].node_address == address1
+        assert routes[0].next_node == address1
         assert routes[0].channel_identifier == channel_state1.identifier
-        assert routes[1].node_address == address2
+        assert routes[1].next_node == address2
         assert routes[1].channel_identifier == channel_state2.identifier
         assert feedback_token is None
 
@@ -495,7 +495,7 @@ def test_routing_mocked_pfs_unavailable_peer(
         )
         # Node with address2 is not reachable, so even if the only route sent by the PFS
         # is over address2, the internal routing does not provide
-        assert routes[0].node_address == address2
+        assert routes[0].next_node == address2
         assert routes[0].channel_identifier == channel_state2.identifier
         assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
@@ -539,7 +539,7 @@ def test_get_and_update_iou(one_to_n_address):
         ),
         our_address=factories.UNIT_TRANSFER_INITIATOR,
         privkey=PRIVKEY,
-        block_number=10,
+        block_number=BlockNumber(10),
         one_to_n_address=one_to_n_address,
         chain_id=4,
     )
@@ -724,7 +724,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             config=CONFIG,
             privkey=PRIVKEY,
         )
-        assert routes[0].node_address == address1
+        assert routes[0].next_node == address1
         assert routes[0].channel_identifier == channel_state1.identifier
         assert not pfs_request.called
 

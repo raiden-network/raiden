@@ -178,7 +178,7 @@ def handle_offchain_secretreveal(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
-        recipient = route.node_address
+        recipient = route.next_node
 
         reveal = SendSecretReveal(
             recipient=recipient,
