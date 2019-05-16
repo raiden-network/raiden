@@ -26,7 +26,7 @@ def state_transition_noop(state, state_change):  # pylint: disable=unused-argume
     return TransitionResult(Empty(), list())
 
 
-@dataclass
+@dataclass(frozen=True)
 class AccState(State):
     state_changes: List[Block] = field(default_factory=list)
 

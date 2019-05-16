@@ -10,7 +10,7 @@ from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
 
 
-@dataclass
+@dataclass(frozen=True)
 class ClassWithGraphObject:
     graph: Graph
 

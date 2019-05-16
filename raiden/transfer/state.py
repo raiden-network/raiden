@@ -128,7 +128,7 @@ def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
     return sorted(sorted(edge) for edge in network.edges())
 
 
-@dataclass
+@dataclass(frozen=True)
 class PaymentMappingState(State):
     """ Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
@@ -150,7 +150,7 @@ class PaymentMappingState(State):
 
 # This is necessary for the routing only, maybe it should be transient state
 # outside of the state tree.
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class TokenNetworkGraphState(State):
     """ Stores the existing channels in the channel manager contract, used for
     route finding.
@@ -167,7 +167,7 @@ class TokenNetworkGraphState(State):
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
 
 
-@dataclass
+@dataclass(frozen=True)
 class RouteState(State):
     """ A possible route provided by a routing service.
 
@@ -184,7 +184,7 @@ class RouteState(State):
             raise ValueError("node_address must be an address instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class HashTimeLockState(State):
     """ Represents a hash time lock. """
 
@@ -215,7 +215,7 @@ class HashTimeLockState(State):
         self.lockhash = LockHash(sha3(self.encoded))
 
 
-@dataclass
+@dataclass(frozen=True)
 class UnlockPartialProofState(State):
     """ Stores the lock along with its unlocking secret. """
 
@@ -241,7 +241,7 @@ class UnlockPartialProofState(State):
         self.lockhash = self.lock.lockhash
 
 
-@dataclass
+@dataclass(frozen=True)
 class UnlockProofState(State):
     """ An unlock proof for a given lock. """
 
@@ -254,7 +254,7 @@ class UnlockProofState(State):
             raise ValueError("secret must be a secret instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransactionExecutionStatus(State):
     """ Represents the status of a transaction. """
 
@@ -286,12 +286,12 @@ class TransactionExecutionStatus(State):
             raise ValueError(f"result must be one of '{self.SUCCESS}', '{self.FAILURE}' or 'None'")
 
 
-@dataclass
+@dataclass(frozen=True)
 class MerkleTreeState(State):
     layers: List[List[Keccak256]]
 
 
-@dataclass(order=True)
+@dataclass(frozen=True, order=True)
 class TransactionChannelNewBalance(State):
     participant_address: Address
     contract_balance: TokenAmount
@@ -308,13 +308,13 @@ class TransactionChannelNewBalance(State):
             raise ValueError("deposit_block_number must be of type block_number")
 
 
-@dataclass(order=True)
+@dataclass(frozen=True, order=True)
 class TransactionOrder(State):
     block_number: BlockNumber
     transaction: TransactionChannelNewBalance
 
 
-@dataclass
+@dataclass(frozen=True)
 class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
@@ -349,7 +349,7 @@ class NettingChannelEndState(State):
             raise ValueError("balance must be a token_amount isinstance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class NettingChannelState(State):
     """ The state of a netting channel. """
 
@@ -431,7 +431,7 @@ class NettingChannelState(State):
         return self.partner_state.contract_balance
 
 
-@dataclass
+@dataclass(frozen=True)
 class TokenNetworkState(State):
     """ Corresponds to a token network smart contract. """
 
@@ -457,7 +457,7 @@ class TokenNetworkState(State):
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
 
@@ -485,7 +485,7 @@ class PaymentNetworkState(State):
             }
 
 
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class ChainState(State):
     """ Umbrella object that stores the per blockchain state.
     For each registry smart contract there must be a payment network. Within the

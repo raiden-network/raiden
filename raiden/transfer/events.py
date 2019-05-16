@@ -29,7 +29,7 @@ from raiden.utils.typing import (
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendChannelClose(ContractSendEvent):
     """ Event emitted to close the netting channel.
     This event is used when a node needs to prepare the channel to unlock
@@ -48,7 +48,7 @@ class ContractSendChannelClose(ContractSendEvent):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendChannelSettle(ContractSendEvent):
     """ Event emitted if the netting channel must be settled. """
 
@@ -63,7 +63,7 @@ class ContractSendChannelSettle(ContractSendEvent):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
 
@@ -78,7 +78,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
         return self.balance_proof.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendChannelBatchUnlock(ContractSendEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
@@ -94,7 +94,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass(repr=False)
+@dataclass(frozen=True, repr=False)
 class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
@@ -107,7 +107,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventPaymentSentSuccess(Event):
     """ Event emitted by the initiator when a transfer is considered successful.
 
@@ -139,7 +139,7 @@ class EventPaymentSentSuccess(Event):
     secret: Optional[Secret] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventPaymentSentFailed(Event):
     """ Event emitted by the payer when a transfer has failed.
 
@@ -155,7 +155,7 @@ class EventPaymentSentFailed(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventPaymentReceivedSuccess(Event):
     """ Event emitted when a payee has received a payment.
 
@@ -180,7 +180,7 @@ class EventPaymentReceivedSuccess(Event):
             raise ValueError("transferred_amount is too large")
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventInvalidReceivedTransferRefund(Event):
     """ Event emitted when an invalid refund transfer is received. """
 
@@ -188,7 +188,7 @@ class EventInvalidReceivedTransferRefund(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventInvalidReceivedLockExpired(Event):
     """ Event emitted when an invalid lock expired message is received. """
 
@@ -196,7 +196,7 @@ class EventInvalidReceivedLockExpired(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventInvalidReceivedLockedTransfer(Event):
     """ Event emitted when an invalid locked transfer is received. """
 
@@ -204,7 +204,7 @@ class EventInvalidReceivedLockedTransfer(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventInvalidReceivedUnlock(Event):
     """ Event emitted when an invalid unlock message is received. """
 
@@ -212,6 +212,6 @@ class EventInvalidReceivedUnlock(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendProcessed(SendMessageEvent):
     pass

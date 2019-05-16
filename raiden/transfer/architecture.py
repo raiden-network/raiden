@@ -62,7 +62,7 @@ from raiden.utils.typing import (
 # outputs are separated under different class hierarquies (StateChange and Event).
 
 
-@dataclass
+@dataclass(frozen=True)
 class State:
     """ An isolated state, modified by StateChange messages.
 
@@ -79,7 +79,7 @@ class State:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class StateChange:
     """ Declare the transition to be applied in a state object.
 
@@ -100,7 +100,7 @@ class StateChange:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Event:
     """ Events produced by the execution of a state change.
 
@@ -119,14 +119,14 @@ class Event:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransferTask(State):
     # TODO: When we turn these into dataclasses it would be a good time to move common attributes
     # of all transfer tasks like the `token_network_identifier` into the common subclass
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendMessageEvent(Event):
     """ Marker used for events which represent off-chain protocol messages tied
     to a channel.
@@ -152,14 +152,14 @@ class SendMessageEvent(Event):
         self.message_identifier = self.message_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
 
     sender: Address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
 
@@ -170,7 +170,7 @@ class ContractSendEvent(Event):
             raise ValueError("triggered_by_block_hash must be of type block_hash")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
@@ -179,7 +179,7 @@ class ContractSendExpirableEvent(ContractSendEvent):
     expiration: BlockExpiration
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
 
@@ -286,7 +286,7 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
         return not self.__eq__(other)
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalanceProofUnsignedState(State):
     """ Balance proof from the local node without the signature. """
 
@@ -346,7 +346,7 @@ class BalanceProofUnsignedState(State):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalanceProofSignedState(State):
     """ Proof of a channel balance that can be used on-chain to resolve
     disputes.

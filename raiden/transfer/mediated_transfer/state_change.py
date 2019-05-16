@@ -25,7 +25,7 @@ from raiden.utils.typing import (
 
 # Note: The init states must contain all the required data for trying doing
 # useful work, ie. there must /not/ be an event for requesting new data.
-@dataclass
+@dataclass(frozen=True)
 class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer.
 
@@ -42,7 +42,7 @@ class ActionInitInitiator(StateChange):
             raise ValueError("transfer must be an TransferDescriptionWithSecretState instance.")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
@@ -65,7 +65,7 @@ class ActionInitMediator(BalanceProofStateChange):
             raise ValueError("from_transfer must be a LockedTransferSignedState instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitTarget(BalanceProofStateChange):
     """ Initial state for a new target.
 
@@ -87,7 +87,7 @@ class ActionInitTarget(BalanceProofStateChange):
             raise ValueError("transfer must be a LockedTransferSignedState instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 
@@ -95,7 +95,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
     message_identifier: MessageID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
 
@@ -106,7 +106,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     revealsecret: Optional[SendSecretReveal] = field(default=None)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
@@ -117,7 +117,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
         self.secrethash = sha3(self.secret)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
@@ -136,7 +136,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         self.secrethash = sha3(self.secret)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 

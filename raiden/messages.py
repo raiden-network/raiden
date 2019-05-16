@@ -198,7 +198,7 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
     return message
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Message:
     # Needs to be set by a subclass
     cmdid: ClassVar[Optional[int]]
@@ -248,7 +248,7 @@ class Message:
         raise NotImplementedError("Method needs to be implemented in a subclass.")
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class AuthenticatedMessage(Message):
     """ Message, that has a sender. """
 
@@ -256,7 +256,7 @@ class AuthenticatedMessage(Message):
         raise NotImplementedError("Property needs to be implemented in subclass.")
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SignedMessage(AuthenticatedMessage):
     # signing is a bit problematic, we need to pack the data to sign, but the
     # current API assumes that signing is called before, this can be improved
@@ -304,21 +304,21 @@ class SignedMessage(AuthenticatedMessage):
         return cls.unpack(packed)
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class RetrieableMessage:
     """ Message, that supports a retry-queue. """
 
     message_identifier: MessageID
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
     """ Mixin of SignedMessage and RetrieableMessage. """
 
     pass
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class EnvelopeMessage(SignedRetrieableMessage):
     chain_id: ChainID
     nonce: Nonce
@@ -368,7 +368,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
         return balance_proof_packed
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Processed(SignedRetrieableMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
@@ -394,7 +394,7 @@ class Processed(SignedRetrieableMessage):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class ToDevice(SignedMessage):
     """
     Message, which can be directly sent to all devices of a node known by matrix,
@@ -417,7 +417,7 @@ class ToDevice(SignedMessage):
         packed.signature = self.signature
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Delivered(SignedMessage):
     """ Message used to inform the partner node that a message was received *and*
     persisted.
@@ -441,7 +441,7 @@ class Delivered(SignedMessage):
         packed.signature = self.signature
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Pong(SignedMessage):
     """ Response to a Ping message. """
 
@@ -459,7 +459,7 @@ class Pong(SignedMessage):
         packed.signature = self.signature
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Ping(SignedMessage):
     """ Healthcheck message. """
 
@@ -484,7 +484,7 @@ class Ping(SignedMessage):
         packed.signature = self.signature
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
     """ Requests the secret which unlocks a secrethash. """
 
@@ -528,7 +528,7 @@ class SecretRequest(SignedRetrieableMessage):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Unlock(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
 
@@ -608,7 +608,7 @@ class Unlock(EnvelopeMessage):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
     """Message used to reveal a secret to party known to have interest in it.
 
@@ -651,7 +651,7 @@ class RevealSecret(SignedRetrieableMessage):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Lock:
     """ Describes a locked `amount`.
 
@@ -712,7 +712,7 @@ class Lock:
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `secrethash`.
@@ -784,7 +784,7 @@ class LockedTransferBase(EnvelopeMessage):
         packed.signature = self.signature
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LockedTransfer(LockedTransferBase):
     """
     A LockedTransfer has a `target` address to which a chain of transfers shall
@@ -905,7 +905,7 @@ class LockedTransfer(LockedTransferBase):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class RefundTransfer(LockedTransfer):
     """ A special LockedTransfer sent from a payee to a payer indicating that
     no route is available, this transfer will effectively refund the payer the
@@ -973,7 +973,7 @@ class RefundTransfer(LockedTransfer):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
     """Message used to notify opposite channel participant that a lock has
     expired.
@@ -1036,7 +1036,7 @@ class LockExpired(EnvelopeMessage):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SignedBlindedBalanceProof:
     """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
     """
@@ -1100,7 +1100,7 @@ class SignedBlindedBalanceProof:
         return signer.sign(data)
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class RequestMonitoring(SignedMessage):
     """Message to request channel watching from a monitoring service.
     Spec:
@@ -1254,7 +1254,7 @@ class RequestMonitoring(SignedMessage):
         )
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class UpdatePFS(SignedMessage):
     """ Message to inform a pathfinding service about a capacity change. """
 

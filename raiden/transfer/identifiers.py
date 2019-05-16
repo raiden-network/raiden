@@ -14,7 +14,7 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class QueueIdentifier:
     recipient: Address
     channel_identifier: ChannelID
@@ -23,7 +23,7 @@ class QueueIdentifier:
         return hash((self.recipient, self.channel_identifier))
 
 
-@dataclass
+@dataclass(frozen=True)
 class CanonicalIdentifier:
     chain_identifier: ChainID
     # introducing the type as Union, to avoid casting for now.

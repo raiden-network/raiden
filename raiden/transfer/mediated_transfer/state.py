@@ -36,12 +36,12 @@ if TYPE_CHECKING:
     from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa
 
 
-@dataclass
+@dataclass(frozen=True)
 class LockedTransferState(State):
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class LockedTransferUnsignedState(LockedTransferState):
     """ State for a transfer created by the local node which contains a hash
     time lock and may be sent.
@@ -67,7 +67,7 @@ class LockedTransferUnsignedState(LockedTransferState):
             raise ValueError("balance_proof must not be empty")
 
 
-@dataclass
+@dataclass(frozen=True)
 class LockedTransferSignedState(LockedTransferState):
     """ State for a received transfer which contains a hash time lock and a
     signed balance proof.
@@ -100,7 +100,7 @@ class LockedTransferSignedState(LockedTransferState):
         return self.balance_proof.sender
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransferDescriptionWithSecretState(State):
     """ Describes a transfer (target, amount, and token) and contains an
     additional secret that can be used with a hash-time-lock.
@@ -121,13 +121,13 @@ class TransferDescriptionWithSecretState(State):
             self.secrethash = sha3(self.secret)
 
 
-@dataclass
+@dataclass(frozen=True)
 class WaitingTransferState(State):
     transfer: LockedTransferSignedState
     state: str = field(default="waiting")
 
 
-@dataclass
+@dataclass(frozen=True)
 class InitiatorTransferState(State):
     """ State of a transfer for the initiator node. """
 
@@ -140,7 +140,7 @@ class InitiatorTransferState(State):
     valid_transfer_states = ("transfer_pending", "transfer_cancelled", "transfer_secret_revealed")
 
 
-@dataclass
+@dataclass(frozen=True)
 class InitiatorPaymentState(State):
     """ State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the
@@ -152,7 +152,7 @@ class InitiatorPaymentState(State):
     cancelled_channels: List[ChannelID] = field(repr=False, default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True)
 class MediationPairState(State):
     """ State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
@@ -213,7 +213,7 @@ class MediationPairState(State):
         return self.payer_transfer.payer_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class MediatorTransferState(State):
     """ State of a transfer for the mediator node.
     A mediator may manage multiple channels because of refunds, but all these
@@ -229,7 +229,7 @@ class MediatorTransferState(State):
     waiting_transfer: Optional[WaitingTransferState] = field(default=None)
 
 
-@dataclass
+@dataclass(frozen=True)
 class TargetTransferState(State):
     """ State of a transfer for the target node. """
 

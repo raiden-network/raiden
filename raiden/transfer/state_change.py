@@ -46,7 +46,7 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalanceProofStateChange(AuthenticatedSenderStateChange):
     """ Marker used for state changes which contain a balance proof. """
 
@@ -57,7 +57,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
             raise ValueError("balance_proof must be an instance of BalanceProofSignedState")
 
 
-@dataclass
+@dataclass(frozen=True)
 class Block(StateChange):
     """ Transition used when a new block is mined.
     Args:
@@ -73,7 +73,7 @@ class Block(StateChange):
             raise ValueError("block_number must be of type block_number")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionUpdateTransportAuthData(StateChange):
     """ Holds the last "timestamp" at which we synced
     with the transport. The timestamp could be a date/time value
@@ -84,7 +84,7 @@ class ActionUpdateTransportAuthData(StateChange):
     auth_data: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
@@ -94,7 +94,7 @@ class ActionCancelPayment(StateChange):
     payment_identifier: PaymentID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChannelClose(StateChange):
     """ User is closing an existing channel. """
 
@@ -113,7 +113,7 @@ class ActionChannelClose(StateChange):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChannelSetFee(StateChange):
     canonical_identifier: CanonicalIdentifier
     mediation_fee: FeeAmount
@@ -123,7 +123,7 @@ class ActionChannelSetFee(StateChange):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionCancelTransfer(StateChange):
     """ The user requests the transfer to be cancelled.
 
@@ -134,7 +134,7 @@ class ActionCancelTransfer(StateChange):
     transfer_identifier: TransferID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
 
@@ -149,7 +149,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
         return self.channel_state.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelClosed(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was closed. """
 
@@ -165,7 +165,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitChain(StateChange):
     pseudo_random_generator: Random = field(compare=False)
     block_number: BlockNumber
@@ -184,7 +184,7 @@ class ActionInitChain(StateChange):
             raise ValueError("chain_id must be int")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionNewTokenNetwork(StateChange):
     """ Registers a new token network.
     A token network corresponds to a channel manager smart contract.
@@ -198,7 +198,7 @@ class ActionNewTokenNetwork(StateChange):
             raise ValueError("token_network must be a TokenNetworkState instance.")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a deposit. """
 
@@ -214,7 +214,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelSettled(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was settled. """
 
@@ -231,14 +231,14 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionLeaveAllNetworks(StateChange):
     """ User is quitting all payment networks. """
 
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
@@ -250,7 +250,7 @@ class ActionChangeNodeNetworkState(StateChange):
             raise ValueError("node_address must be an address instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     """ Registers a new payment network.
     A payment network corresponds to a registry smart contract.
@@ -264,7 +264,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
             raise ValueError("payment_network must be a PaymentNetworkState instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     """ A new token was registered with the payment network. """
 
@@ -277,7 +277,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
             raise ValueError("token_network must be a TokenNetworkState instance")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveSecretReveal(ContractReceiveStateChange):
     """ A new secret was registered with the SecretRegistry contract. """
 
@@ -295,7 +295,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             raise ValueError("secret must be of type Secret")
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     """ All the locks were claimed via the blockchain.
 
@@ -327,7 +327,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveRouteNew(ContractReceiveStateChange):
     """ New channel was created and this node is NOT a participant. """
 
@@ -352,7 +352,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveRouteClosed(ContractReceiveStateChange):
     """ A channel was closed and this node is NOT a participant. """
 
@@ -367,7 +367,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
     nonce: Nonce
@@ -381,7 +381,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveUnlock(BalanceProofStateChange):
     message_identifier: MessageID
     secret: Secret
@@ -392,13 +392,13 @@ class ReceiveUnlock(BalanceProofStateChange):
         self.secrethash = SecretHash(sha3(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveDelivered(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveProcessed(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
