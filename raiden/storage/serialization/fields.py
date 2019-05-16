@@ -1,6 +1,8 @@
+import json
 from random import Random
 
 import marshmallow
+import networkx
 from eth_utils import to_canonical_address, to_checksum_address
 from marshmallow_polyfield import PolyField
 
@@ -21,9 +23,13 @@ class BytesField(marshmallow.fields.Field):
     """ Used for `bytes` in the dataclass, serialize to hex encoding"""
 
     def _serialize(self, value: bytes, attr: Any, obj: Any) -> str:
+        if value is None:
+            return value
         return to_hex(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any) -> bytes:
+        if value is None:
+            return value
         return to_bytes(hexstr=value)
 
 
@@ -89,3 +95,19 @@ class CallablePolyField(PolyField):
     def __call__(self, **metadata):
         self.metadata = metadata
         return self
+
+
+class NetworkXGraphField(marshmallow.fields.Field):
+    """ Converts networkx.Graph objects to a string """
+
+    def _serialize(self, graph: networkx.Graph, attr: Any, obj: Any) -> str:
+        return json.dumps(
+            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in graph.edges]
+        )
+
+    def _deserialize(self, graph_data: str, attr: Any, data: Any) -> networkx.Graph:
+        raw_data = json.loads(graph_data)
+        canonical_addresses = [
+            (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data
+        ]
+        return networkx.Graph(canonical_addresses)
