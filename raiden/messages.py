@@ -315,7 +315,7 @@ class RetrieableMessage:
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
     """ Mixin of SignedMessage and RetrieableMessage. """
 
-    message_identifier: MessageID
+    pass
 
 
 @dataclass(repr=False, eq=False)
@@ -375,7 +375,7 @@ class Processed(SignedRetrieableMessage):
     """
 
     # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
-    cmdid: ClassVar[Optional[int]] = messages.PROCESSED
+    cmdid: ClassVar[int] = messages.PROCESSED
 
     message_identifier: MessageID
 
