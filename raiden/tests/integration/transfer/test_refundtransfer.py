@@ -21,6 +21,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import channel, views
+from raiden.transfer.events import ContractSendChannelUpdateTransfer
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
@@ -508,14 +509,16 @@ def run_test_different_view_of_last_bp_during_unlock(
         )
 
     count = 0
-    original_update = app1.raiden.raiden_event_handler.handle_contract_send_channelupdate
+    on_raiden_event_original = app1.raiden.raiden_event_handler.on_raiden_event
 
-    def patched_update(raiden, event):
-        nonlocal count
-        count += 1
-        original_update(raiden, event)
+    def patched_on_raiden_event(raiden, chain_state, event):
+        if type(event) == ContractSendChannelUpdateTransfer:
+            nonlocal count
+            count += 1
 
-    app1.raiden.raiden_event_handler.handle_contract_send_channelupdate = patched_update
+        on_raiden_event_original(raiden, chain_state, event)
+
+    app1.raiden.raiden_event_handler.on_raiden_event = patched_on_raiden_event
     # and now app1 comes back online
     app1.raiden.start()
     # test for https://github.com/raiden-network/raiden/issues/3216
