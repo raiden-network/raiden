@@ -110,7 +110,7 @@ def test_update_pfs():
     channel_state.partner_state.balance_proof = balance_proof
     message = UpdatePFS.from_channel_state(channel_state=channel_state)
 
-    assert message.signature == b""
+    assert message.signature == EMPTY_SIGNATURE
     privkey2, address2 = factories.make_privkey_address()
     signer2 = LocalSigner(privkey2)
     message.sign(signer2)

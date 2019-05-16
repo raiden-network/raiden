@@ -474,9 +474,8 @@ class Ping(SignedMessage):
         ping = cls(
             nonce=packed.nonce,
             current_protocol_version=packed.current_protocol_version,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        ping.signature = packed.signature
         return ping
 
     def pack(self, packed) -> None:
@@ -504,9 +503,8 @@ class SecretRequest(SignedRetrieableMessage):
             secrethash=packed.secrethash,
             amount=packed.amount,
             expiration=packed.expiration,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        secret_request.signature = packed.signature
         return secret_request
 
     def pack(self, packed) -> None:
@@ -574,9 +572,8 @@ class Unlock(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             secret=packed.secret,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        secret.signature = packed.signature
         return secret
 
     def pack(self, packed) -> None:
@@ -762,9 +759,8 @@ class LockedTransferBase(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             lock=lock,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        locked_transfer.signature = packed.signature
         return locked_transfer
 
     def pack(self, packed) -> None:
@@ -850,9 +846,8 @@ class LockedTransfer(LockedTransferBase):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        mediated_transfer.signature = packed.signature
         return mediated_transfer
 
     def pack(self, packed) -> None:
@@ -942,9 +937,8 @@ class RefundTransfer(LockedTransfer):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
-            signature=EMPTY_SIGNATURE,
+            signature=packed.signature,
         )
-        locked_transfer.signature = packed.signature
         return locked_transfer
 
     @classmethod
@@ -1057,7 +1051,7 @@ class SignedBlindedBalanceProof:
     non_closing_signature: Optional[Signature] = field(default=EMPTY_SIGNATURE)
 
     def __post_init__(self):
-        if not self.signature:
+        if self.signature == EMPTY_SIGNATURE:
             raise ValueError("balance proof is not signed")
 
     @classmethod
@@ -1141,7 +1135,7 @@ class RequestMonitoring(SignedMessage):
         return cls(
             balance_proof=onchain_balance_proof,
             reward_amount=reward_amount,
-            signature=Signature(b""),
+            signature=EMPTY_SIGNATURE,
         )
         return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
 
@@ -1252,7 +1246,7 @@ class RequestMonitoring(SignedMessage):
             reward_amount=self.reward_amount,
             nonce=self.balance_proof.nonce,
         )
-        reward_proof_signature = self.reward_proof_signature or Signature(b"")
+        reward_proof_signature = self.reward_proof_signature or EMPTY_SIGNATURE
         return (
             recover(balance_proof_data, self.balance_proof.signature) == partner_address
             and recover(blinded_data, self.non_closing_signature) == requesting_address
@@ -1276,7 +1270,7 @@ class UpdatePFS(SignedMessage):
 
     def __post_init__(self):
         if self.signature is None:
-            self.signature = Signature(b"")
+            self.signature = EMPTY_SIGNATURE
 
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "UpdatePFS":
@@ -1295,7 +1289,7 @@ class UpdatePFS(SignedMessage):
             ),
             reveal_timeout=channel_state.reveal_timeout,
             mediation_fee=channel_state.mediation_fee,
-            signature=Signature(b""),
+            signature=EMPTY_SIGNATURE,
         )
 
     def packed(self) -> bytes:
