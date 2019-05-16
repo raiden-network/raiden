@@ -2019,7 +2019,12 @@ def test_receive_unlock():
             canonical_identifier=channels[0].canonical_identifier, nonce=2
         )
     )
-    state_change = ReceiveUnlock(1, factories.UNIT_SECRET, balance_proof)
+    state_change = ReceiveUnlock(
+        message_identifier=1,
+        secret=factories.UNIT_SECRET,
+        balance_proof=balance_proof,
+        sender=balance_proof.sender,
+    )
     prng = random.Random()
     block_hash = factories.make_block_hash()
 
