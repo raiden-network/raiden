@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
+from dataclasses import replace
 
 from eth_utils import encode_hex
 
@@ -1009,31 +1010,69 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None
         del end_state.secrethashes_to_onchain_unlockedlocks[secrethash]
 
 
-def set_closed(channel_state: NettingChannelState, block_number: BlockNumber) -> None:
+def set_closed(
+        channel_state: NettingChannelState,
+        block_number: BlockNumber
+) -> NettingChannelState:
     if not channel_state.close_transaction:
-        channel_state.close_transaction = TransactionExecutionStatus(
-            None, block_number, TransactionExecutionStatus.SUCCESS
+        channel_state = replace(
+            channel_state,
+            close_transaction=TransactionExecutionStatus(
+                None, block_number, TransactionExecutionStatus.SUCCESS
+            )
         )
 
     elif not channel_state.close_transaction.finished_block_number:
-        channel_state.close_transaction.finished_block_number = block_number
-        channel_state.close_transaction.result = TransactionExecutionStatus.SUCCESS
+        close_transaction = channel_state.close_transaction
+        close_transaction = replace(
+            close_transaction,
+            finished_block_number=block_number,
+            result=TransactionExecutionStatus.SUCCESS,
+        )
+        channel_state = replace(
+            channel_state,
+            close_transaction=close_transaction,
+        )
+
+    return channel_state
 
 
-def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -> None:
+def set_settled(
+        channel_state: NettingChannelState,
+        block_number: BlockNumber
+) -> NettingChannelState:
     if not channel_state.settle_transaction:
-        channel_state.settle_transaction = TransactionExecutionStatus(
-            None, block_number, TransactionExecutionStatus.SUCCESS
+        channel_state = replace(
+            channel_state,
+            settle_transaction=TransactionExecutionStatus(
+                None, block_number, TransactionExecutionStatus.SUCCESS
+            )
         )
 
     elif not channel_state.settle_transaction.finished_block_number:
-        channel_state.settle_transaction.finished_block_number = block_number
-        channel_state.settle_transaction.result = TransactionExecutionStatus.SUCCESS
+        settle_transaction = channel_state.settle_transaction
+        settle_transaction = replace(
+            settle_transaction,
+            finished_block_number=block_number,
+            result=TransactionExecutionStatus.SUCCESS
+        )
+        channel_state = replace(
+            channel_state,
+            settle_transaction=settle_transaction
+        )
+    return channel_state
 
 
-def update_contract_balance(end_state: NettingChannelEndState, contract_balance: Balance) -> None:
+def update_contract_balance(
+        end_state: NettingChannelEndState,
+        contract_balance: Balance
+) -> NettingChannelEndState:
     if contract_balance > end_state.contract_balance:
-        end_state.contract_balance = contract_balance
+        end_state = replace(
+            end_state,
+            contract_balance=contract_balance,
+        )
+    return end_state
 
 
 def compute_merkletree_with(
