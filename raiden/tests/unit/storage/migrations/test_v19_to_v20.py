@@ -3,11 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from eth_utils import to_hex
+
 from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.factories import make_32bytes, make_address
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.utils.serialization import serialize_bytes
 from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 
 
@@ -91,8 +92,8 @@ def test_upgrade_v19_to_v20(tmp_path):
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert data["our_onchain_locksroot"] == serialize_bytes(our_onchain_locksroot)
-            assert data["partner_onchain_locksroot"] == serialize_bytes(partner_onchain_locksroot)
+            assert data["our_onchain_locksroot"] == to_hex(our_onchain_locksroot)
+            assert data["partner_onchain_locksroot"] == to_hex(partner_onchain_locksroot)
 
     batch_query = storage.batch_query_event_records(
         batch_size=500, filters=[("_type", "events.ContractSendChannelBatchUnlock")]
@@ -112,5 +113,5 @@ def test_upgrade_v19_to_v20(tmp_path):
             for channel in token_network["channelidentifiers_to_channels"].values():
                 channel_our_locksroot = channel["our_state"]["onchain_locksroot"]
                 channel_partner_locksroot = channel["partner_state"]["onchain_locksroot"]
-                assert channel_our_locksroot == serialize_bytes(our_onchain_locksroot)
-                assert channel_partner_locksroot == serialize_bytes(partner_onchain_locksroot)
+                assert channel_our_locksroot == to_hex(our_onchain_locksroot)
+                assert channel_partner_locksroot == to_hex(partner_onchain_locksroot)
