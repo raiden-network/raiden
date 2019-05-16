@@ -141,6 +141,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 nonce=our_nonce,
                 transferred_amount=0,
                 locked_amount=len(our_model.merkletree_leaves),
+                # pylint: disable=no-member
                 locksroot=merkleroot(channel_state.our_state.merkletree),
                 canonical_identifier=channel_state.canonical_identifier,
             )
@@ -156,6 +157,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 nonce=partner_nonce,
                 transferred_amount=0,
                 locked_amount=len(partner_model.merkletree_leaves),
+                # pylint: disable=no-member
                 locksroot=merkleroot(channel_state.partner_state.merkletree),
                 canonical_identifier=channel_state.canonical_identifier,
             )
@@ -1497,7 +1499,7 @@ def test_update_transfer():
 
 
 def test_get_amount_locked():
-    state = NettingChannelEndState(address=factories.make_address(), contract_balance=0)
+    state = NettingChannelEndState(address=make_address(), contract_balance=0)
 
     assert channel.get_amount_locked(state) == 0
 

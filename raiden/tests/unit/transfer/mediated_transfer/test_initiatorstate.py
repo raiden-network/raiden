@@ -73,7 +73,7 @@ def make_initiator_manager_state(
 ):
     init = ActionInitInitiator(
         transfer=transfer_description or factories.UNIT_TRANSFER_DESCRIPTION,
-        routes=channels.get_routes()
+        routes=channels.get_routes(),
     )
     initial_state = None
     iteration = initiator_manager.state_transition(
@@ -1162,7 +1162,7 @@ def test_secret_reveal_cancel_other_transfers():
     secret_reveal = ReceiveSecretReveal(
         secret=UNIT_SECRET,
         # pylint: disable=E1101
-        sender=channels[0].partner_state.address
+        sender=channels[0].partner_state.address,
     )
 
     iteration = initiator_manager.state_transition(
@@ -1443,10 +1443,22 @@ def test_initiator_manager_drops_invalid_state_changes():
     channels = factories.make_channel_set_from_amounts([10])
     transfer = factories.create(factories.LockedTransferSignedStateProperties())
     secret = factories.UNIT_SECRET
-    cancel_route = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer, secret)
+    cancel_route = ReceiveTransferRefundCancelRoute(
+        routes=channels.get_routes(),
+        transfer=transfer,
+        secret=secret,
+        balance_proof=transfer.balance_proof,
+        # pylint: disable=no-member
+        sender=transfer.balance_proof.sender,
+    )
 
     balance_proof = factories.create(factories.BalanceProofSignedStateProperties())
-    lock_expired = ReceiveLockExpired(balance_proof, factories.UNIT_SECRETHASH, 1)
+    lock_expired = ReceiveLockExpired(
+        balance_proof=balance_proof,
+        sender=balance_proof.sender,
+        secrethash=factories.UNIT_SECRETHASH,
+        message_identifier=1,
+    )
 
     prng = random.Random()
 
@@ -1461,7 +1473,6 @@ def test_initiator_manager_drops_invalid_state_changes():
             factories.UNIT_TRANSFER_DESCRIPTION,
             channels[0].canonical_identifier.channel_identifier,
             transfer,
-            revealsecret=None,
         )
         state = InitiatorPaymentState(
             initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}
@@ -1470,7 +1481,14 @@ def test_initiator_manager_drops_invalid_state_changes():
         assert_dropped(iteration, state, "unknown channel identifier")
 
     transfer2 = factories.create(factories.LockedTransferSignedStateProperties(amount=2))
-    cancel_route2 = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer2, secret)
+    cancel_route2 = ReceiveTransferRefundCancelRoute(
+        routes=channels.get_routes(),
+        transfer=transfer2,
+        balance_proof=transfer2.balance_proof,
+        # pylint: disable=no-member
+        sender=transfer2.balance_proof.sender,
+        secret=secret,
+    )
     iteration = initiator_manager.state_transition(
         state, cancel_route2, channels.channel_map, prng, 1
     )
@@ -1517,7 +1535,12 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(), transfer=refund_transfer, secret=random_secret()
+        routes=channels.get_routes(),
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        # pylint: disable=no-member
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
