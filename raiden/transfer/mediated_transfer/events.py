@@ -192,3 +192,19 @@ class EventUnexpectedSecretReveal(Event):
 
     secrethash: SecretHash
     reason: str
+
+
+@dataclass
+class EventRouteFailed(Event):
+    """ Event emitted when a route failed.
+    As a payment can try different routes to reach the intended target
+    some of the routes can fail. This event is emitted when a route failed.
+    This means that multiple EventRouteFailed for a given payment and it's
+    therefore different to EventPaymentSentFailed.
+    A route can fail for two reasons:
+    - A refund transfer reaches the initiator (it's not important if this
+        refund transfer is unlocked or not)
+    - A lock expires
+    """
+
+    secrethash: SecretHash
