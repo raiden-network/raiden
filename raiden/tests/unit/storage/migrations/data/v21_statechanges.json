@@ -1803,6 +1803,23 @@
   [
     103,
     {
+      "transaction_hash": "0x559f38fb0a36581b96a212acb79432e82186a0e6fb4f4d9e52efc46f6d7368a6",
+      "token_network_identifier": "0x31F486f03875aA82781F3d1207294Cf7F4B0399F",
+      "participant": "0x999999D9b9c0c91AC009AeeBd74313D1a736A24C",
+      "partner": "0x111111e7821A0970EA79185A738BfBd3BC382AAb",
+      "locksroot": "0xd466502291daac54a7a4c34e87006bfb932dd684ac060f75dd8cbc05e7c802a0",
+      "unlocked_amount": "10",
+      "returned_tokens": "0",
+      "block_number": "121",
+      "block_hash": "0x4500be864b3f1b6e2be0d0e0eff3fdd87ec192a458420b5d13d9051be1bb2eea",
+      "_type": "raiden.transfer.state_change.Block",
+      "_type": "raiden.transfer.state_change.ContractReceiveChannelBatchUnlock",
+      "_version": 0
+    }
+  ],
+  [
+    104,
+    {
       "node_address": "0xe3B942e7821A0970EA79185A738BfBd3BC382AAb",
       "network_state": "unreachable",
       "_type": "raiden.transfer.state_change.ActionChangeNodeNetworkState",
