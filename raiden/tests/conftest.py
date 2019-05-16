@@ -20,6 +20,7 @@ from raiden.log_config import configure_logging
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.debugging import enable_gevent_monitoring_signal
 
 pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
 pytest.register_assert_rewrite("raiden.tests.utils.factories")
@@ -64,20 +65,8 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def enable_gevent_monitoring_signal():
-    """ Install a signal handler for SIGUSR1 that executes gevent.util.print_run_info().
-    This can help evaluating the gevent greenlet tree.
-    See http://www.gevent.org/monitoring.html for more information.
-
-    Usage:
-        pytest [...]
-        # while test is running (or stopped in a pdb session):
-        kill -SIGUSR1 $(pidof -x pytest)
-    """
-    import gevent.util
-    import signal
-
-    signal.signal(signal.SIGUSR1, gevent.util.print_run_info)
+def auto_enable_gevent_monitoring_signal():
+    enable_gevent_monitoring_signal()
 
 
 @pytest.fixture(scope="session", autouse=True)

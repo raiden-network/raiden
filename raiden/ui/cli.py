@@ -544,6 +544,9 @@ def smoketest(ctx, debug, eth_client):
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import setup_testchain_and_raiden, run_smoketest
     from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
+    from raiden.utils.debugging import enable_gevent_monitoring_signal
+
+    enable_gevent_monitoring_signal()
 
     report_file = mktemp(suffix=".log")
     configure_logging(
