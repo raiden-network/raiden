@@ -225,7 +225,7 @@ def _add_canonical_identifier_to_statechanges(
 
     for state_change_batch in storage.batch_query_state_changes(batch_size=500):
         updated_state_changes: List[Tuple[str, int]] = list()
-        delete_state_changes: List[int] = list()
+        delete_state_changes: List[Tuple[int]] = list()
 
         for state_change_record in state_change_batch:
             state_change_obj = json.loads(state_change_record.data)
@@ -236,7 +236,7 @@ def _add_canonical_identifier_to_statechanges(
             )
 
             if should_delete:
-                delete_state_changes.append(state_change_record.state_change_identifier)
+                delete_state_changes.append((state_change_record.state_change_identifier,))
             else:
                 channel_id: Optional[int] = None
                 if is_unlock:
