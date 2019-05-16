@@ -1,5 +1,6 @@
 from random import Random
 
+import networkx
 from marshmallow import Schema, fields
 from marshmallow_dataclass import _native_to_marshmallow
 
@@ -9,6 +10,7 @@ from raiden.storage.serialization.fields import (
     BytesField,
     CallablePolyField,
     IntegerToStringField,
+    NetworkXGraphField,
     PRNGField,
     QueueIdentifierField,
 )
@@ -222,6 +224,7 @@ _native_to_marshmallow.update(
         # QueueIdentifier (Special case)
         QueueIdentifier: QueueIdentifierField,
         # Other
+        networkx.Graph: NetworkXGraphField,
         Random: PRNGField,
     }
 )
