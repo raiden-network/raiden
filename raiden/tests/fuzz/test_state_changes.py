@@ -534,9 +534,11 @@ class MediatorMixin:
         target_channel = self.address_to_channel[transfer.target]
 
         return ActionInitMediator(
-            [factories.make_route_from_channel(target_channel)],
-            factories.make_route_to_channel(initiator_channel),
-            transfer,
+            routes=[factories.make_route_from_channel(target_channel)],
+            from_route=factories.make_route_to_channel(initiator_channel),
+            from_transfer=transfer,
+            balance_proof=transfer.balance_proof,
+            sender=transfer.balance_proof.sender,
         )
 
     @rule(
@@ -566,7 +568,7 @@ class MediatorMixin:
         sender = previous_action.from_transfer.target
         recipient = previous_action.from_transfer.initiator
 
-        action = ReceiveSecretReveal(secret, sender)
+        action = ReceiveSecretReveal(secret=secret, sender=sender)
         result = node.state_transition(self.chain_state, action)
 
         expiration = previous_action.from_transfer.lock.expiration
