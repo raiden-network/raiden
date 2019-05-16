@@ -183,7 +183,7 @@ class SQLiteStorage:
         """
         with self.write_lock:
             self.conn.executemany(
-                "DELETE FROM state_events WHERE identifier = ?", state_changes_to_delete
+                "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
             )
             self.maybe_commit()
 
