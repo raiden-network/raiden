@@ -2,7 +2,7 @@ import json
 from functools import partial
 from typing import TYPE_CHECKING
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_hex
 from gevent.pool import Pool
 
 from raiden.constants import EMPTY_MERKLE_ROOT
@@ -10,7 +10,6 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SnapshotRecord, SQLiteStorage, StateChangeRecord
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import (
     Any,
     ChainID,
@@ -96,10 +95,8 @@ def _add_onchain_locksroot_to_channel_new_state_changes(storage: SQLiteStorage,)
             msg = "v18 state changes cant contain onchain_locksroot"
             assert "onchain_locksroot" not in channel_state["partner_state"], msg
 
-            channel_state["our_state"]["onchain_locksroot"] = serialize_bytes(EMPTY_MERKLE_ROOT)
-            channel_state["partner_state"]["onchain_locksroot"] = serialize_bytes(
-                EMPTY_MERKLE_ROOT
-            )
+            channel_state["our_state"]["onchain_locksroot"] = to_hex(EMPTY_MERKLE_ROOT)
+            channel_state["partner_state"]["onchain_locksroot"] = to_hex(EMPTY_MERKLE_ROOT)
 
             updated_state_changes.append(
                 (json.dumps(state_change_data), state_change.state_change_identifier)
@@ -160,8 +157,8 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
                 block_identifier="latest",
             )
 
-            state_change_data["our_onchain_locksroot"] = serialize_bytes(our_locksroot)
-            state_change_data["partner_onchain_locksroot"] = serialize_bytes(partner_locksroot)
+            state_change_data["our_onchain_locksroot"] = to_hex(our_locksroot)
+            state_change_data["partner_onchain_locksroot"] = to_hex(partner_locksroot)
 
             updated_state_changes.append(
                 (json.dumps(state_change_data), state_change.state_change_identifier)
@@ -186,8 +183,8 @@ def _add_onchain_locksroot_to_snapshot(
                 our_locksroot, partner_locksroot = _get_onchain_locksroots(
                     raiden=raiden, storage=storage, token_network=token_network, channel=channel
                 )
-                channel["our_state"]["onchain_locksroot"] = serialize_bytes(our_locksroot)
-                channel["partner_state"]["onchain_locksroot"] = serialize_bytes(partner_locksroot)
+                channel["our_state"]["onchain_locksroot"] = to_hex(our_locksroot)
+                channel["partner_state"]["onchain_locksroot"] = to_hex(partner_locksroot)
 
     return json.dumps(snapshot, indent=4), snapshot_record.identifier
 

@@ -3,11 +3,10 @@ from random import Random
 
 import marshmallow
 import networkx
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import QueueIdentifier
-from raiden.utils.serialization import to_bytes, to_hex
 from raiden.utils.typing import Address, Any, ChannelID, Tuple
 
 

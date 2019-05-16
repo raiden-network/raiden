@@ -1,4 +1,4 @@
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.storage.sqlite import EventRecord, SQLiteStorage, StateChangeRecord
@@ -6,7 +6,6 @@ from raiden.storage.wal import restore_to_state_change
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import NettingChannelState
-from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import Address, Any, BalanceHash, Dict, Locksroot, Optional
 
 
@@ -60,7 +59,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
             "balance_proof.canonical_identifier.channel_identifier": str(
                 canonical_identifier.channel_identifier
             ),
-            "balance_proof.balance_hash": serialize_bytes(balance_hash),
+            "balance_proof.balance_hash": to_hex(balance_hash),
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
@@ -90,7 +89,7 @@ def get_state_change_with_balance_proof_by_locksroot(
             "balance_proof.canonical_identifier.channel_identifier": str(
                 canonical_identifier.channel_identifier
             ),
-            "balance_proof.locksroot": serialize_bytes(locksroot),
+            "balance_proof.locksroot": to_hex(locksroot),
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
@@ -111,7 +110,7 @@ def get_event_with_balance_proof_by_balance_hash(
             canonical_identifier.token_network_address
         ),
         "canonical_identifier.channel_identifier": str(canonical_identifier.channel_identifier),
-        "balance_hash": serialize_bytes(balance_hash),
+        "balance_hash": to_hex(balance_hash),
     }
 
     event = storage.get_latest_event_by_data_field(
@@ -149,7 +148,7 @@ def get_event_with_balance_proof_by_locksroot(
             "canonical_identifier.channel_identifier": str(
                 canonical_identifier.channel_identifier
             ),
-            "locksroot": serialize_bytes(locksroot),
+            "locksroot": to_hex(locksroot),
         },
     )
     balance_proof_filters.update(filters)
@@ -168,7 +167,7 @@ def get_event_with_balance_proof_by_locksroot(
             "canonical_identifier.channel_identifier": str(
                 canonical_identifier.channel_identifier
             ),
-            "locksroot": serialize_bytes(locksroot),
+            "locksroot": to_hex(locksroot),
         },
     )
     balance_proof_filters.update(filters)
