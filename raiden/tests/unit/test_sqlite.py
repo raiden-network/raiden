@@ -25,7 +25,9 @@ from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.transfer.state_change import ReceiveUnlock
 from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
+    get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.utils import sha3
 
@@ -216,6 +218,14 @@ def test_get_state_change_with_balance_proof():
         )
         assert state_change_record.data == state_change
 
+        state_change_record = get_state_change_with_balance_proof_by_locksroot(
+            storage=storage,
+            canonical_identifier=balance_proof.canonical_identifier,
+            sender=balance_proof.sender,
+            locksroot=balance_proof.locksroot,
+        )
+        assert state_change_record.data == state_change
+
 
 def test_get_event_with_balance_proof():
     """ All events which contain a balance proof must be found by when
@@ -275,6 +285,15 @@ def test_get_event_with_balance_proof():
             balance_hash=balance_proof.balance_hash,
         )
         assert event_record.data == event
+
+        event_record = get_event_with_balance_proof_by_locksroot(
+            storage=storage,
+            canonical_identifier=balance_proof.canonical_identifier,
+            recipient=event.recipient,
+            locksroot=balance_proof.locksroot,
+        )
+        assert event_record.data == event
+
         # Checking that balance proof attribute can be accessed for all events.
         # Issue https://github.com/raiden-network/raiden/issues/3179
         assert event_record.data.balance_proof == event.balance_proof
