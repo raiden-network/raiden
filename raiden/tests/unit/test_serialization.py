@@ -1,4 +1,5 @@
 import random
+from dataclasses import dataclass
 
 import pytest
 from eth_utils import to_canonical_address
@@ -7,9 +8,11 @@ from networkx import Graph
 from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
-from raiden.transfer.merkle_tree import compute_layers
-from raiden.transfer.state import make_empty_merkle_tree
-from raiden.utils import serialization
+
+
+@dataclass
+class ClassWithGraphObject:
+    graph: Graph
 
 
 def test_decode_with_unknown_type():
@@ -42,45 +45,12 @@ def test_serialization_networkx_graph():
 
     e = [(p1, p2), (p2, p3), (p3, p4)]
     graph = Graph(e)
+    instance = ClassWithGraphObject(graph)
 
-    data = serialization.serialize_networkx_graph(graph)
-    restored_graph = serialization.deserialize_networkx_graph(data)
+    data = JSONSerializer.serialize(instance)
+    restored_instance = JSONSerializer.deserialize(data)
 
-    assert graph.edges == restored_graph.edges
-
-
-def test_serialization_participants_tuple():
-    participants = (
-        to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4C"),
-        to_canonical_address("0xEF4f7c9962d8bAa8E268B72EC6DD4BDf09C84397"),
-    )
-
-    data = serialization.serialize_participants_tuple(participants)
-    restored = serialization.deserialize_participants_tuple(data)
-
-    assert participants == restored
-
-
-def test_serialization_merkletree_layers():
-    hash_0 = b"a" * 32
-    hash_1 = b"b" * 32
-
-    leaves = [hash_0, hash_1]
-    layers = compute_layers(leaves)
-
-    data = serialization.serialize_merkletree_layers(layers)
-    restored = serialization.deserialize_merkletree_layers(data)
-
-    assert layers == restored
-
-
-def test_serialization_merkletree_layers_empty():
-    tree = make_empty_merkle_tree()
-
-    data = serialization.serialize_merkletree_layers(tree.layers)
-    restored = serialization.deserialize_merkletree_layers(data)
-
-    assert tree.layers == restored
+    assert instance.graph.edges == restored_instance.graph.edges
 
 
 def test_actioninitchain_restore():
