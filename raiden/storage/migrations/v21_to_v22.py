@@ -248,10 +248,10 @@ def _add_canonical_identifier_to_statechanges(
                     lambda obj, channel_id_=channel_id: upgrade_object(obj, chain_id, channel_id_),
                 )
 
-            walk_dicts(state_change_obj, constraint_has_canonical_identifier_or_values_removed)
-            updated_state_changes.append(
-                (json.dumps(state_change_obj), state_change_record.state_change_identifier)
-            )
+                walk_dicts(state_change_obj, constraint_has_canonical_identifier_or_values_removed)
+                updated_state_changes.append(
+                    (json.dumps(state_change_obj), state_change_record.state_change_identifier)
+                )
 
         storage.update_state_changes(updated_state_changes)
         storage.delete_state_changes(delete_state_changes)
