@@ -138,23 +138,25 @@ class SQLiteStorage:
         return int(query[0][0])
 
     def write_state_change(self, state_change, log_time):
-        with self.write_lock, self.conn:
+        with self.write_lock:
             cursor = self.conn.execute(
                 "INSERT INTO state_changes(identifier, data, log_time) VALUES(null, ?, ?)",
                 (state_change, log_time),
             )
             last_id = cursor.lastrowid
 
+            self.maybe_commit()
         return last_id
 
     def write_state_snapshot(self, statechange_id, snapshot):
-        with self.write_lock, self.conn:
+        with self.write_lock:
             cursor = self.conn.execute(
                 "INSERT INTO state_snapshot(statechange_id, data) VALUES(?, ?)",
                 (statechange_id, snapshot),
             )
             last_id = cursor.lastrowid
 
+            self.maybe_commit()
         return last_id
 
     def write_events(self, events):
@@ -164,24 +166,26 @@ class SQLiteStorage:
             state_change_identifier: Id of the state change that generate these events.
             events: List of Event objects.
         """
-        with self.write_lock, self.conn:
+        with self.write_lock:
             self.conn.executemany(
                 "INSERT INTO state_events("
                 "   identifier, source_statechange_id, log_time, data"
                 ") VALUES(?, ?, ?, ?)",
                 events,
             )
+            self.maybe_commit()
 
-    def delete_state_changes(self, state_changes_to_delete: List[int]) -> None:
+    def delete_state_changes(self, state_changes_to_delete: List[Tuple[int]]) -> None:
         """ Delete state changes.
 
         Args:
             state_changes_to_delete: List of ids to delete.
         """
-        with self.write_lock, self.conn:
+        with self.write_lock:
             self.conn.executemany(
                 "DELETE FROM state_events WHERE identifier = ?", state_changes_to_delete
             )
+            self.maybe_commit()
 
     def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
         """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
