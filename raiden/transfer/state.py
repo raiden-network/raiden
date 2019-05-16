@@ -210,9 +210,8 @@ class HashTimeLockState(State):
         packed.expiration = self.expiration
         packed.secrethash = self.secrethash
 
-        self.encoded = EncodedData(packed.data)
-
-        self.lockhash = LockHash(sha3(self.encoded))
+        object.__setattr__(self, 'encoded', EncodedData(packed.data))
+        object.__setattr__(self, 'lockhash', LockHash(sha3(self.encoded)))
 
 
 @dataclass(frozen=True)
@@ -234,11 +233,11 @@ class UnlockPartialProofState(State):
         if not isinstance(self.secret, T_Secret):
             raise ValueError("secret must be a secret instance")
 
-        self.amount = self.lock.amount
-        self.expiration = self.lock.expiration
-        self.secrethash = self.lock.secrethash
-        self.encoded = self.lock.encoded
-        self.lockhash = self.lock.lockhash
+        object.__setattr__(self, 'amount', self.lock.amount)
+        object.__setattr__(self, 'expiration', self.lock.expiration)
+        object.__setattr__(self, 'secrethash', self.lock.secrethash)
+        object.__setattr__(self, 'encoded', self.lock.encoded)
+        object.__setattr__(self, 'lockhash', self.lock.lockhash)
 
 
 @dataclass(frozen=True)
@@ -452,8 +451,12 @@ class TokenNetworkState(State):
         if not isinstance(self.token_address, T_Address):
             raise ValueError("token_address must be an address instance")
 
-        self.partneraddresses_to_channelidentifiers = defaultdict(
-            list, self.partneraddresses_to_channelidentifiers
+        object.__setattr__(
+            self,
+            'partneraddresses_to_channelidentifiers',
+            defaultdict(
+                list, self.partneraddresses_to_channelidentifiers
+            )
         )
 
 
@@ -475,14 +478,23 @@ class PaymentNetworkState(State):
             raise ValueError("address must be an address instance")
 
         if not self.tokenidentifiers_to_tokennetworks:
-            self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
-                token_network.address: token_network for token_network in self.token_network_list
-            }
+            object.__setattr__(
+                self,
+                'tokenidentifiers_to_tokennetworks',
+                {
+                    token_network.address: token_network
+                    for token_network in self.token_network_list
+                }
+            )
         if not self.tokenaddresses_to_tokenidentifiers:
-            self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
-                token_network.token_address: token_network.address
-                for token_network in self.token_network_list
-            }
+            object.__setattr__(
+                self,
+                'tokenaddresses_to_tokenidentifiers',
+                {
+                    token_network.token_address: token_network.address
+                    for token_network in self.token_network_list
+                }
+            )
 
 
 @dataclass(frozen=True, repr=False)

@@ -118,7 +118,7 @@ class TransferDescriptionWithSecretState(State):
 
     def __post_init__(self) -> None:
         if self.secrethash == EMPTY_SECRETHASH and self.secret:
-            self.secrethash = sha3(self.secret)
+            object.__setattr__(self, 'secrethash', sha3(self.secret))
 
 
 @dataclass(frozen=True)

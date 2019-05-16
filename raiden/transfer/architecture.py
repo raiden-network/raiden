@@ -146,10 +146,13 @@ class SendMessageEvent(Event):
         if not isinstance(self.channel_identifier, T_ChannelID):
             raise ValueError("channel identifier must be of type T_ChannelIdentifier")
 
-        self.queue_identifier = QueueIdentifier(
-            recipient=self.recipient, channel_identifier=self.channel_identifier
+        object.__setattr__(
+            self,
+            'queue_identifier',
+            QueueIdentifier(
+                recipient=self.recipient, channel_identifier=self.channel_identifier
+            )
         )
-        self.message_identifier = self.message_identifier
 
 
 @dataclass(frozen=True)
@@ -327,10 +330,14 @@ class BalanceProofUnsignedState(State):
 
         self.canonical_identifier.validate()
 
-        self.balance_hash = hash_balance_data(
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
+        object.__setattr__(
+            self,
+            'balance_hash',
+            hash_balance_data(
+                transferred_amount=self.transferred_amount,
+                locked_amount=self.locked_amount,
+                locksroot=self.locksroot,
+            )
         )
 
     @property
@@ -407,10 +414,14 @@ class BalanceProofSignedState(State):
 
         self.canonical_identifier.validate()
 
-        self.balance_hash = hash_balance_data(
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
+        object.__setattr__(
+            self,
+            'balance_hash',
+            hash_balance_data(
+                transferred_amount=self.transferred_amount,
+                locked_amount=self.locked_amount,
+                locksroot=self.locksroot,
+            )
         )
 
     @property

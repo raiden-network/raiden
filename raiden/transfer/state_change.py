@@ -389,7 +389,7 @@ class ReceiveUnlock(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = SecretHash(sha3(self.secret))
+        object.__setattr__(self, 'secrethash', SecretHash(sha3(self.secret)))
 
 
 @dataclass(frozen=True)

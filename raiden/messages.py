@@ -276,7 +276,7 @@ class SignedMessage(AuthenticatedMessage):
     def sign(self, signer: Signer):
         """ Sign message using signer. """
         message_data = self._data_to_sign()
-        self.signature = signer.sign(data=message_data)
+        object.__setattr__(self, 'signature', signer.sign(data=message_data))
 
     @property  # type: ignore
     @cached(_senders_cache, key=attrgetter("signature"))
@@ -1161,9 +1161,13 @@ class RequestMonitoring(SignedMessage):
             - the `non_closing_signature` for the balance proof update
             - the `reward_proof_signature` for the monitoring request
         """
-        self.non_closing_signature = self.balance_proof._sign(signer)
+        object.__setattr__(
+            self,
+            'non_closing_signature',
+            self.balance_proof._sign(signer)
+        )
         message_data = self._data_to_sign()
-        self.signature = signer.sign(data=message_data)
+        object.__setattr__(self, 'signature', signer.sign(data=message_data))
 
     def packed(self) -> bytes:
         klass = messages.RequestMonitoring

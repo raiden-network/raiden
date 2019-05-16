@@ -114,7 +114,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        self.secrethash = sha3(self.secret)
+        object.__setattr__(self, 'secrethash', sha3(self.secret))
 
 
 @dataclass(frozen=True)
@@ -133,7 +133,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         if not isinstance(self.transfer, LockedTransferSignedState):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
-        self.secrethash = sha3(self.secret)
+        object.__setattr__(self, 'secrethash', sha3(self.secret))
 
 
 @dataclass(frozen=True)

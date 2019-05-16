@@ -92,7 +92,7 @@ class SendSecretReveal(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha3(self.secret)
+        object.__setattr__(self, 'secrethash', sha3(self.secret))
 
 
 @dataclass(frozen=True)
@@ -122,7 +122,7 @@ class SendBalanceProof(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha3(self.secret)
+        object.__setattr__(self, 'secrethash', sha3(self.secret))
 
 
 @dataclass(frozen=True)
