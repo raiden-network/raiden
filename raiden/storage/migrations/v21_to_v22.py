@@ -158,7 +158,7 @@ def constraint_removed_duplicated_values(obj: Dict[str, Any]) -> None:
             assert key not in obj
 
 
-def contraint_has_canonical_identifier(obj: Dict[str, Any]) -> None:
+def constraint_has_canonical_identifier(obj: Dict[str, Any]) -> None:
     _type = obj.get("_type")
     if _type in ALL_MIGRATING and _type not in ALL_REMOVE_MIGRATIONS:
         canonical_identifier = obj.get("canonical_identifier")
@@ -170,7 +170,7 @@ def contraint_has_canonical_identifier(obj: Dict[str, Any]) -> None:
 
 def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any]) -> None:
     constraint_removed_duplicated_values(obj)
-    contraint_has_canonical_identifier(obj)
+    constraint_has_canonical_identifier(obj)
 
 
 def walk_dicts(obj: Union[List, Dict], callback: Callable) -> None:
