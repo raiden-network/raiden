@@ -1,4 +1,3 @@
-# pylint: disable=too-many-arguments
 import random
 import string
 from dataclasses import dataclass, fields, replace
@@ -614,7 +613,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
     params["fee"] = 0
-    locked_transfer = LockedTransfer(lock=lock, **params, signature=Signature(b""))
+    locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
 
     assert locked_transfer.sender == sender
