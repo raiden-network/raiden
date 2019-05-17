@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, fields
+from hashlib import sha256
 from operator import attrgetter
 
 from cachetools import LRUCache, cached
@@ -448,7 +449,7 @@ class Unlock(EnvelopeMessage):
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
-        return sha3(self.secret)
+        return sha256(self.secret).digest()
 
     @classmethod
     def from_event(cls, event):
@@ -486,7 +487,7 @@ class RevealSecret(SignedRetrieableMessage):
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
-        return sha3(self.secret)
+        return sha256(self.secret).digest()
 
     @classmethod
     def from_event(cls, event):
@@ -505,7 +506,7 @@ class Lock:
     Args:
         amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
-        secrethash: Hashed secret `sha3(secret)` used to register the transfer,
+        secrethash: Hashed secret `sha256(secret).digest()` used to register the transfer,
         the real `secret` is necessary to release the locked amount.
     """
 

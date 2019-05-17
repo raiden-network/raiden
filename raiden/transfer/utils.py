@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
-from raiden.utils.typing import Any, BalanceHash, Locksroot, Secret, SecretHash, TokenAmount, Union
+from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -39,6 +39,5 @@ def pseudo_random_generator_from_json(data: Any) -> Random:
 def is_valid_secret_reveal(
     state_change: Union["ContractReceiveSecretReveal", "ReceiveSecretReveal"],
     transfer_secrethash: SecretHash,
-    secret: Secret,
 ) -> bool:
-    return secret != EMPTY_HASH and state_change.secrethash == transfer_secrethash
+    return state_change.secrethash == transfer_secrethash

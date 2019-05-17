@@ -54,7 +54,6 @@ from raiden.utils.typing import (
     T_BlockNumber,
     T_ChainID,
     T_ChannelID,
-    T_Keccak256,
     T_PaymentWithFeeAmount,
     T_Secret,
     T_TokenAmount,
@@ -209,8 +208,8 @@ class HashTimeLockState(State):
         if not isinstance(self.expiration, T_BlockNumber):
             raise ValueError("expiration must be a BlockNumber instance")
 
-        if not isinstance(self.secrethash, T_Keccak256):
-            raise ValueError("secrethash must be a Keccak256 instance")
+        if not isinstance(self.secrethash, T_Secret):
+            raise ValueError("secrethash must be a Secret instance")
 
         packed = messages.Lock(buffer_for(messages.Lock))
         # pylint: disable=assigning-non-slot

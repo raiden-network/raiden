@@ -1,4 +1,5 @@
 import random
+from hashlib import sha256
 
 import gevent
 import pytest
@@ -160,7 +161,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
 
     payment_identifier = 1
     secret = sha3(b"test_regression_multiple_revealsecret")
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
     expiration = app0.raiden.get_block_number() + 100
     lock_amount = 10
     lock = Lock(amount=lock_amount, expiration=expiration, secrethash=secrethash)

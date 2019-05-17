@@ -1,7 +1,8 @@
 import math
 from enum import Enum
+from hashlib import sha256
 
-from eth_utils import keccak, to_checksum_address
+from eth_utils import to_checksum_address
 
 from raiden.utils.typing import (
     AdditionalHash,
@@ -48,10 +49,11 @@ EMPTY_HASH = BlockHash(bytes(32))
 EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
 EMPTY_LOCK_HASH = LockHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
-EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
+EMPTY_SECRET = Secret(bytes(32))
+EMPTY_SECRET_SHA256 = SecretHash(sha256(EMPTY_SECRET).digest())
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")

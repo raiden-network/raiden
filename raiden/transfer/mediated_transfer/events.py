@@ -1,11 +1,11 @@
 # pylint: disable=too-many-arguments,too-few-public-methods
 from dataclasses import dataclass, field
+from hashlib import sha256
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.utils import sha3
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -95,7 +95,7 @@ class SendSecretReveal(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha3(self.secret)
+        self.secrethash = SecretHash(sha256(self.secret).digest())
 
 
 @dataclass
@@ -125,7 +125,7 @@ class SendBalanceProof(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha3(self.secret)
+        self.secrethash = SecretHash(sha256(self.secret).digest())
 
 
 @dataclass

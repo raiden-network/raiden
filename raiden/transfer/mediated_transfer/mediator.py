@@ -1193,9 +1193,7 @@ def handle_offchain_secretreveal(
 ) -> TransitionResult[MediatorTransferState]:
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
     is_valid_reveal = is_valid_secret_reveal(
-        state_change=mediator_state_change,
-        transfer_secrethash=mediator_state.secrethash,
-        secret=mediator_state_change.secret,
+        state_change=mediator_state_change, transfer_secrethash=mediator_state.secrethash
     )
     is_secret_unknown = mediator_state.secret is None
 
@@ -1245,12 +1243,11 @@ def handle_onchain_secretreveal(
     """
     secrethash = onchain_secret_reveal.secrethash
     is_valid_reveal = is_valid_secret_reveal(
-        state_change=onchain_secret_reveal,
-        transfer_secrethash=mediator_state.secrethash,
-        secret=onchain_secret_reveal.secret,
+        state_change=onchain_secret_reveal, transfer_secrethash=mediator_state.secrethash
     )
 
     if is_valid_reveal:
+
         secret = onchain_secret_reveal.secret
         # Compare against the block number at which the event was emitted.
         block_number = onchain_secret_reveal.block_number

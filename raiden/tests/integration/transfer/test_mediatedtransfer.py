@@ -1,3 +1,4 @@
+from hashlib import sha256
 from unittest.mock import patch
 
 import gevent
@@ -238,7 +239,7 @@ def run_test_mediated_transfer_messages_out_of_order(
     app2.raiden.message_handler = app2_wait_for_message
 
     secret = factories.make_secret(0)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     # Save the messages, these will be processed again
     app1_mediatedtransfer = app1_wait_for_message.wait_for_message(
@@ -555,7 +556,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     app1.raiden.handle_state_change(state_change=action_set_fee)
 
     secret = factories.make_secret(0)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     wait_message_handler = WaitForMessage()
     app0.raiden.message_handler = wait_message_handler

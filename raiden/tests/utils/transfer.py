@@ -1,6 +1,7 @@
 """ Utilities to make and assert transfers. """
 import random
 from enum import Enum
+from hashlib import sha256
 
 import gevent
 from gevent.timeout import Timeout
@@ -184,7 +185,7 @@ def _transfer_expired(
         timeout = 90
 
     secret = make_secret()
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     wait_for_remove_expired_lock = target_app.raiden.message_handler.wait_for_message(
         LockExpired, {"secrethash": secrethash}
@@ -228,7 +229,7 @@ def _transfer_secret_not_requested(
         timeout = 10
 
     secret = make_secret()
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     hold_secret_request = target_app.raiden.raiden_event_handler.hold(
         SendSecretRequest, {"secrethash": secrethash}

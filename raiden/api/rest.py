@@ -2,6 +2,7 @@ import errno
 import json
 import logging
 import socket
+from hashlib import sha256
 from http import HTTPStatus
 from typing import Dict
 
@@ -87,7 +88,6 @@ from raiden.utils import (
     create_default_identifier,
     optional_address_to_string,
     pex,
-    sha3,
     split_endpoint,
     typing,
 )
@@ -1001,7 +1001,7 @@ class RestAPI:
             "amount": amount,
             "identifier": identifier,
             "secret": secret,
-            "secret_hash": sha3(secret),
+            "secret_hash": sha256(secret).digest(),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result)
