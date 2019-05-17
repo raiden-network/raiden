@@ -1,7 +1,7 @@
 from random import Random
 
 import networkx
-from marshmallow import Schema, fields
+from marshmallow import Schema
 from marshmallow_dataclass import _native_to_marshmallow
 
 from raiden.storage.serialization.cache import SchemaCache
@@ -182,17 +182,17 @@ _native_to_marshmallow.update(
         Signature: BytesField,
         TransactionHash: BytesField,
         # Ints
-        BlockExpiration: fields.Int,
-        BlockNumber: fields.Int,
-        FeeAmount: fields.Int,
-        LockedAmount: fields.Int,
-        BlockGasLimit: fields.Int,
-        MessageID: fields.Int,
-        Nonce: fields.Int,
-        PaymentAmount: fields.Int,
-        PaymentID: fields.Int,
-        PaymentWithFeeAmount: fields.Int,
-        TransferID: fields.Int,
+        BlockExpiration: IntegerToStringField,
+        BlockNumber: IntegerToStringField,
+        FeeAmount: IntegerToStringField,
+        LockedAmount: IntegerToStringField,
+        BlockGasLimit: IntegerToStringField,
+        MessageID: IntegerToStringField,
+        Nonce: IntegerToStringField,
+        PaymentAmount: IntegerToStringField,
+        PaymentID: IntegerToStringField,
+        PaymentWithFeeAmount: IntegerToStringField,
+        TransferID: IntegerToStringField,
         # Integers which should be converted to strings
         # This is done for querying purposes as sqlite
         # integer type is smaller than python's.
