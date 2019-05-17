@@ -412,6 +412,13 @@ def query_paths(
             scrap_existing_iou=scrap_existing_iou,
         )
 
+        log.info(
+            "Requesting paths from PFS",
+            url=url,
+            token_network_address=token_network_address,
+            payload=payload,
+        )
+
         try:
             return post_pfs_paths(
                 url=url, token_network_address=token_network_address, payload=payload
