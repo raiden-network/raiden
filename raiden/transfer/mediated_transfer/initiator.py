@@ -350,7 +350,6 @@ def handle_offchain_secretreveal(
     valid_reveal = is_valid_secret_reveal(
         state_change=state_change,
         transfer_secrethash=initiator_state.transfer_description.secrethash,
-        secret=state_change.secret,
     )
     sent_by_partner = state_change.sender == channel_state.partner_state.address
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
@@ -388,7 +387,7 @@ def handle_onchain_secretreveal(
     secret = state_change.secret
     secrethash = initiator_state.transfer_description.secrethash
     is_valid_secret = is_valid_secret_reveal(
-        state_change=state_change, transfer_secrethash=secrethash, secret=secret
+        state_change=state_change, transfer_secrethash=secrethash
     )
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
     is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration

@@ -36,6 +36,7 @@ def environment_type_to_contracts_version(environment_type: Environment) -> str:
     if environment_type == Environment.DEVELOPMENT:
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
     else:
+        raise SystemExit("This version of Raiden client has no production mode.")
         contracts_version = RED_EYES_CONTRACT_VERSION
 
     return contracts_version

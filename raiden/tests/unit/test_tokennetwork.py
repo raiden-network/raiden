@@ -1,4 +1,5 @@
 import copy
+from hashlib import sha256
 
 import pytest
 
@@ -190,7 +191,7 @@ def test_channel_data_removed_after_unlock(
     lock_amount = 30
     lock_expiration = 20
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     mediated_transfer = make_receive_transfer_mediated(
@@ -304,7 +305,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
     lock_amount = 30
     lock_expiration = 20
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     mediated_transfer = make_receive_transfer_mediated(
@@ -421,7 +422,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
     lock_amount = 30
     lock_expiration = 20
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     mediated_transfer = make_receive_transfer_mediated(

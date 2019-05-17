@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 from http import HTTPStatus
 
 import gevent
@@ -30,7 +31,6 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
-from raiden.utils import sha3
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -967,7 +967,7 @@ def test_api_payments_with_hash_no_secret(
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     secret = to_hex(factories.make_secret())
-    secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
+    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -1003,7 +1003,7 @@ def test_api_payments_with_secret_and_hash(
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     secret = to_hex(factories.make_secret())
-    secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
+    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -1046,7 +1046,7 @@ def assert_payment_secret_and_hash(response, payment):
     secret = to_bytes(hexstr=response["secret"])
     assert len(secret) == SECRET_LENGTH
 
-    assert to_bytes(hexstr=response["secret_hash"]) == sha3(secret)
+    assert to_bytes(hexstr=response["secret_hash"]) == sha256(secret).digest()
 
 
 def assert_payment_conflict(responses):
@@ -1800,7 +1800,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     mediator.raiden.message_handler = mediator_wait = WaitForMessage()
 
     secret = factories.make_secret()
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     request = grequests.get(
         api_url_for(

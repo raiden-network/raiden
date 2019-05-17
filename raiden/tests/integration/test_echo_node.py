@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 import gevent
 import pytest
 from eth_utils import to_hex
@@ -9,7 +11,7 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.events import EventPaymentReceivedSuccess
-from raiden.utils import random_secret, sha3, wait_until
+from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
 
 
@@ -53,7 +55,7 @@ def run_test_event_transfer_received_success(token_addresses, raiden_chain):
             identifier=amount,
             target=target_address,
             secret=to_hex(secret),
-            secrethash=to_hex(sha3(secret)),
+            secrethash=to_hex(sha256(secret).digest()),
         )
 
     for wait, sender, amount in wait_for:

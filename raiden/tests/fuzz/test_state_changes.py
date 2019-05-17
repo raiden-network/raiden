@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from copy import deepcopy
+from hashlib import sha256
 from random import Random
 
 import pytest
@@ -49,7 +50,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import random_secret, sha3
+from raiden.utils import random_secret
 from raiden.utils.typing import BlockNumber
 
 
@@ -301,7 +302,7 @@ class InitiatorMixin:
         return ActionInitInitiator(transfer, [factories.make_route_from_channel(channel)])
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
-        secrethash = sha3(transfer.secret)
+        secrethash = sha256(transfer.secret).digest()
         return ReceiveSecretRequest(
             payment_identifier=transfer.payment_identifier,
             amount=transfer.amount,
@@ -435,7 +436,7 @@ class InitiatorMixin:
         previous_action=init_initiators, secret=secret()  # pylint: disable=no-value-for-parameter
     )
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
-        assume(sha3(secret) != sha3(previous_action.transfer.secret))
+        assume(sha256(secret).digest() != sha256(previous_action.transfer.secret).digest())
         self._assume_channel_opened(previous_action)
         transfer = deepcopy(previous_action.transfer)
         transfer.secret = secret
@@ -495,7 +496,7 @@ class MediatorMixin:
 
     def _update_balance_proof_data(self, partner, amount, expiration, secret):
         expected = self._get_balance_proof_data(partner)
-        lock = Lock(amount=amount, expiration=expiration, secrethash=sha3(secret))
+        lock = Lock(amount=amount, expiration=expiration, secrethash=sha256(secret).digest())
         expected.update(amount, lock.lockhash)
         return expected
 
@@ -510,7 +511,7 @@ class MediatorMixin:
         balance_proof_data = self._update_balance_proof_data(
             initiator_address, amount, self.block_number + 10, secret
         )
-        self.secrethash_to_secret[sha3(secret)] = secret
+        self.secrethash_to_secret[sha256(secret).digest()] = secret
 
         return factories.create(
             factories.LockedTransferSignedStateProperties(

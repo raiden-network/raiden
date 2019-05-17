@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from raiden.api.python import transfer_tasks_view
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.state import (
@@ -11,7 +13,6 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.views import list_channelstate_for_tokennetwork
-from raiden.utils import sha3
 
 
 def test_list_channelstate_for_tokennetwork(chain_state, payment_network_address, token_id):
@@ -42,7 +43,7 @@ def test_initiator_task_view():
         initiator=transfer.initiator,
         target=transfer.target,
         secret=secret,
-        secrethash=sha3(secret),
+        secrethash=sha256(secret).digest(),
     )
     transfer_state = InitiatorTransferState(
         route=factories.make_route_to_channel(),

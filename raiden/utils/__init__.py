@@ -52,8 +52,7 @@ def random_secret() -> Secret:
     """
     while True:
         secret = os.urandom(constants.SECRET_LENGTH)
-        if secret != constants.EMPTY_HASH:
-            return Secret(secret)
+        return Secret(secret)
 
 
 def ishash(data: bytes) -> bool:

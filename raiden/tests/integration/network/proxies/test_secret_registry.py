@@ -1,8 +1,8 @@
 from collections import defaultdict
+from hashlib import sha256
 
 import gevent
 import pytest
-from eth_utils import keccak
 
 from raiden.constants import STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
@@ -15,7 +15,7 @@ from raiden.tests.utils.factories import make_secret
 
 def secret_registry_batch_happy_path(secret_registry_proxy):
     secrets = [make_secret() for i in range(4)]
-    secrethashes = [keccak(secret) for secret in secrets]
+    secrethashes = [sha256(secret).digest() for secret in secrets]
 
     secret_registered_filter = secret_registry_proxy.secret_registered_filter()
     secret_registry_proxy.register_secret_batch(secrets=secrets)
@@ -46,9 +46,9 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     the SecretRegistered event.
     """
     secret = make_secret()
-    secrethash = keccak(secret)
+    secrethash = sha256(secret).digest()
     secret_unregistered = make_secret()
-    secrethash_unregistered = keccak(secret_unregistered)
+    secrethash_unregistered = sha256(secret_unregistered).digest()
 
     secret_registered_filter = secret_registry_proxy.secret_registered_filter()
 

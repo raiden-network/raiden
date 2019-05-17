@@ -1,3 +1,4 @@
+from hashlib import sha256
 from typing import List
 
 import gevent
@@ -19,7 +20,7 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
-from raiden.utils import pex, safe_gas_limit, sha3
+from raiden.utils import pex, safe_gas_limit
 from raiden.utils.typing import (
     BlockNumber,
     BlockSpecification,
@@ -94,7 +95,7 @@ class SecretRegistry:
             verification_block_hash = self.client.get_confirmed_blockhash()
 
             for secret in secrets:
-                secrethash = sha3(secret)
+                secrethash = SecretHash(sha256(secret).digest())
                 secrethash_hex = encode_hex(secrethash)
 
                 # Do the local test on `open_secret_transactions` first, then

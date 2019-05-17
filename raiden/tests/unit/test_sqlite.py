@@ -1,6 +1,7 @@
 import itertools
 import json
 from datetime import datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
 
@@ -36,7 +37,7 @@ def make_signed_balance_proof_from_counter(counter):
     lock = Lock(
         amount=next(counter),
         expiration=next(counter),
-        secrethash=sha3(factories.make_secret(next(counter))),
+        secrethash=sha256(factories.make_secret(next(counter))).digest(),
     )
     lock_expired_balance_proof = factories.create(
         factories.BalanceProofSignedStateProperties(
@@ -86,7 +87,7 @@ def make_signed_transfer_from_counter(counter):
     lock = Lock(
         amount=next(counter),
         expiration=next(counter),
-        secrethash=sha3(factories.make_secret(next(counter))),
+        secrethash=sha256(factories.make_secret(next(counter))).digest(),
     )
 
     signed_transfer = factories.create(
@@ -161,7 +162,7 @@ def test_get_state_change_with_balance_proof():
     lock_expired = ReceiveLockExpired(
         sender=balance_proof.sender,
         balance_proof=balance_proof,
-        secrethash=sha3(factories.make_secret(next(counter))),
+        secrethash=sha256(factories.make_secret(next(counter))).digest(),
         message_identifier=next(counter),
     )
 
@@ -262,7 +263,7 @@ def test_get_event_with_balance_proof():
         recipient=factories.make_address(),
         message_identifier=next(counter),
         balance_proof=balance_proof,
-        secrethash=sha3(factories.make_secret(next(counter))),
+        secrethash=sha256(factories.make_secret(next(counter))).digest(),
         channel_identifier=balance_proof.channel_identifier,
     )
     locked_transfer = SendLockedTransfer(

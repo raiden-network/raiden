@@ -2,6 +2,7 @@
 import random
 from collections import namedtuple
 from copy import deepcopy
+from hashlib import sha256
 from itertools import cycle
 
 import pytest
@@ -189,7 +190,7 @@ def test_new_end_state():
     end_state = NettingChannelEndState(node_address, balance1)
 
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
 
     assert channel.is_lock_pending(end_state, lock_secrethash) is False
     assert channel.is_lock_locked(end_state, lock_secrethash) is False
@@ -427,7 +428,7 @@ def test_channelstate_send_lockedtransfer():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -478,7 +479,7 @@ def test_channelstate_receive_lockedtransfer():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -590,7 +591,7 @@ def test_channelstate_lockedtransfer_overspent():
 
     lock_amount = distributable + 1
     lock_expiration = 10
-    lock_secrethash = sha3(b"test_channelstate_lockedtransfer_overspent")
+    lock_secrethash = sha256(b"test_channelstate_lockedtransfer_overspent").digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -618,7 +619,7 @@ def test_channelstate_lockedtransfer_invalid_chainid():
 
     lock_amount = distributable - 1
     lock_expiration = 10
-    lock_secrethash = sha3(b"test_channelstate_lockedtransfer_overspent")
+    lock_secrethash = sha256(b"test_channelstate_lockedtransfer_overspent").digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -646,7 +647,9 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
     # - this wont be unlocked
     lock1_amount = 1
     lock1_expiration = 1 + channel_state.settle_timeout
-    lock1_secrethash = sha3(b"test_receive_cannot_overspend_with_multiple_pending_transfers1")
+    lock1_secrethash = sha256(
+        b"test_receive_cannot_overspend_with_multiple_pending_transfers1"
+    ).digest()
     lock1 = HashTimeLockState(lock1_amount, lock1_expiration, lock1_secrethash)
 
     nonce1 = 1
@@ -677,7 +680,9 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
     lock2_amount = distributable + 1
     lock2_expiration = channel_state.settle_timeout
-    lock2_secrethash = sha3(b"test_receive_cannot_overspend_with_multiple_pending_transfers2")
+    lock2_secrethash = sha256(
+        b"test_receive_cannot_overspend_with_multiple_pending_transfers2"
+    ).digest()
     lock2 = HashTimeLockState(lock2_amount, lock2_expiration, lock2_secrethash)
     leaves = [lock1.lockhash, lock2.lockhash]
 
@@ -801,7 +806,7 @@ def test_interwoven_transfers():
         locked_amount += lock_amount
 
         lock_expiration = block_number + channel_state.settle_timeout - 1
-        lock_secrethash = sha3(lock_secret)
+        lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
         merkletree_leaves = list(partner_model_current.merkletree_leaves)
@@ -914,7 +919,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -966,7 +971,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     lock_amount = 10
     lock_expiration = block_number - 10
     lock_secret = sha3(b"test_regression_must_update_balanceproof_remove_expired_lock")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
     )
@@ -1034,7 +1039,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
     lock_secret = sha3(
         b"test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain"
     )
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
     )
@@ -1114,7 +1119,7 @@ def test_channel_must_accept_expired_locks():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secrethash = sha3(b"test_channel_must_accept_expired_locks")
+    lock_secrethash = sha256(b"test_channel_must_accept_expired_locks").digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -1156,7 +1161,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
 
     lock_amount = 10
     lock_secret = sha3(b"test_channel_rejects_onchain_secret_reveal_with_expired_locks")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
     )
@@ -1217,7 +1222,7 @@ def test_receive_lockedtransfer_before_deposit():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b"test_end_state")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -1266,7 +1271,7 @@ def test_channelstate_get_unlock_proof():
         locked_amount += lock_amount
 
         lock_expiration = block_number + settle_timeout
-        lock_secrethash = sha3(lock_secret)
+        lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
         merkletree_leaves.append(lock.lockhash)
@@ -1302,7 +1307,7 @@ def test_channelstate_unlock_unlocked_onchain():
     lock_amount = 10
     lock_expiration = 100
     lock_secret = sha3(b"test_channelstate_lockedtransfer_overspent")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -1407,7 +1412,7 @@ def test_update_must_be_called_if_close_lost_race():
     lock_amount = 30
     lock_expiration = 10
     lock_secret = sha3(b"test_update_must_be_called_if_close_lost_race")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
     nonce = 1
@@ -1502,14 +1507,14 @@ def test_get_amount_locked():
 
     assert channel.get_amount_locked(state) == 0
 
-    secrethash = sha3(make_secret(1))
+    secrethash = sha256(make_secret(1)).digest()
     state.secrethashes_to_lockedlocks[secrethash] = HashTimeLockState(
         amount=23, expiration=100, secrethash=secrethash
     )
     assert channel.get_amount_locked(state) == 23
 
     secret = make_secret(1)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
     lock = HashTimeLockState(amount=21, expiration=100, secrethash=secrethash)
     state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret
@@ -1517,7 +1522,7 @@ def test_get_amount_locked():
     assert channel.get_amount_locked(state) == 44
 
     secret = make_secret(2)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
     lock = HashTimeLockState(amount=19, expiration=100, secrethash=secrethash)
     state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret
@@ -1539,7 +1544,7 @@ def test_valid_lock_expired_for_unlocked_lock():
     lock_amount = 10
     lock_expiration = block_number - 10
     lock_secret = sha3(b"test_valid_lock_expired_for_unlocked_lock")
-    lock_secrethash = sha3(lock_secret)
+    lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
     )

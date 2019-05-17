@@ -963,7 +963,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
 
 
 def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
-    """ Initiator must not accept contract receive secret reveal with emptyhash
+    """ Initiator must accept contract receive secret reveal with emptyhash
     """
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=10)
 
@@ -986,9 +986,9 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
     )
-    assert len(iteration.events) == 0
-    # make sure the original lock wasn't moved
-    assert transfer.lock.secrethash in setup.channel.our_state.secrethashes_to_lockedlocks
+    assert len(iteration.events) == 3
+    # make sure the original lock was moved
+    assert transfer.lock.secrethash not in setup.channel.our_state.secrethashes_to_lockedlocks
 
 
 def test_initiator_handle_contract_receive_secret_reveal_expired():

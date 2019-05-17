@@ -1,4 +1,5 @@
 from copy import deepcopy
+from hashlib import sha256
 
 from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
@@ -25,7 +26,7 @@ def _channel_and_transfer(merkletree_width):
     reverse_channel_state = create_channel_from_models(partner_model, our_model, privkey)
 
     lock_secret = sha3(b"some secret seed")
-    lock = HashTimeLockState(30, 10, sha3(lock_secret))
+    lock = HashTimeLockState(30, 10, sha256(lock_secret).digest())
 
     mediated_transfer = make_receive_transfer_mediated(
         reverse_channel_state,

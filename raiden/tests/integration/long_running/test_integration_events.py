@@ -1,3 +1,4 @@
+from hashlib import sha256
 from typing import Dict, List
 
 import gevent
@@ -471,7 +472,7 @@ def run_test_secret_revealed_on_chain(
     identifier = 1
     target = app2.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     # Reveal the secret, but do not unlock it off-chain
     app1_hold_event_handler = app1.raiden.raiden_event_handler
@@ -564,7 +565,7 @@ def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
 
     target = app1.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     # make an unconfirmed transfer to ensure the nodes have communicated

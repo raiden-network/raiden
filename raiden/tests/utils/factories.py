@@ -2,6 +2,7 @@ import random
 import string
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
+from hashlib import sha256
 
 from eth_utils import to_checksum_address
 
@@ -256,7 +257,7 @@ UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 UNIT_TRANSFER_FEE = 5
 UNIT_SECRET = b"secretsecretsecretsecretsecretse"
-UNIT_SECRETHASH = sha3(UNIT_SECRET)
+UNIT_SECRETHASH = SecretHash(sha256(UNIT_SECRET).digest())
 UNIT_REGISTRY_IDENTIFIER = b"registryregistryregi"
 UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
 UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
@@ -650,7 +651,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         # pylint: disable=no-member
         amount=transfer.amount,
         expiration=transfer.expiration,
-        secrethash=sha3(transfer.secret),
+        secrethash=sha256(transfer.secret).digest(),
     )
     if transfer.locksroot == EMPTY_MERKLE_ROOT:
         transfer = replace(transfer, locksroot=lock.lockhash)
@@ -688,7 +689,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     lock = Lock(
         amount=params.pop("amount"),
         expiration=params.pop("expiration"),
-        secrethash=sha3(params.pop("secret")),
+        secrethash=sha256(params.pop("secret")).digest(),
     )
 
     pkey = params.pop("pkey")
@@ -720,7 +721,7 @@ def prepare_locked_transfer(properties, defaults):
     properties: LockedTransferProperties = create_properties(properties, defaults)
     params = unwrap_canonical_identifier(properties.__dict__)
 
-    secrethash = sha3(params.pop("secret"))
+    secrethash = sha256(params.pop("secret")).digest()
     params["lock"] = Lock(
         amount=params.pop("amount"), expiration=params.pop("expiration"), secrethash=secrethash
     )
@@ -796,7 +797,7 @@ def make_signed_transfer_for(
         lock = Lock(
             amount=properties.amount,
             expiration=properties.expiration,
-            secrethash=sha3(properties.secret),
+            secrethash=sha256(properties.secret).digest(),
         )
         locksroot = merkleroot(
             channel.compute_merkletree_with(

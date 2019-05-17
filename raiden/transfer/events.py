@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from hashlib import sha256
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
@@ -9,7 +10,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.utils import pex, sha3
+from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -101,7 +102,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     secret: Secret = field(repr=False)
 
     def __repr__(self):
-        secrethash: SecretHash = SecretHash(sha3(self.secret))
+        secrethash: SecretHash = SecretHash(sha256(self.secret).digest())
         return ("ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})").format(
             secrethash, pex(self.triggered_by_block_hash)
         )

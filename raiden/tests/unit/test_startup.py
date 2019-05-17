@@ -61,10 +61,8 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 def test_setup_contracts():
     # Mainnet production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 1)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 1)
 
     # Mainnet development -- NOT allowed
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -73,10 +71,8 @@ def test_setup_contracts():
 
     # Ropsten production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 3)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 3)
 
     # Ropsten development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -87,10 +83,8 @@ def test_setup_contracts():
 
     # Rinkeby production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 4)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 4)
 
     # Rinkeby development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -115,10 +109,8 @@ def test_setup_contracts():
 
     # Kovan production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 42)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 42)
 
     # Kovan development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -129,10 +121,8 @@ def test_setup_contracts():
 
     # random private network production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 5257)
-    assert "contracts_path" in config
-    assert not raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 5257)
 
     # random private network development
     config = {"environment_type": Environment.DEVELOPMENT}

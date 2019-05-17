@@ -2,6 +2,7 @@
 import os
 import random
 from collections import defaultdict
+from hashlib import sha256
 from typing import Dict, List, NamedTuple, Tuple, Union
 from uuid import UUID
 
@@ -72,7 +73,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3, to_rdn
+from raiden.utils import create_default_identifier, lpex, pex, random_secret, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -126,8 +127,6 @@ def initiator_init(
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
 ) -> ActionInitInitiator:
-    assert transfer_secret != constants.EMPTY_HASH, f"Empty secret node:{raiden!r}"
-
     transfer_state = TransferDescriptionWithSecretState(
         payment_network_address=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
@@ -1075,8 +1074,8 @@ class RaidenService(Runnable):
     ) -> PaymentStatus:
 
         if secrethash is None:
-            secrethash = sha3(secret)
-        elif secrethash != sha3(secret):
+            secrethash = SecretHash(sha256(secret).digest())
+        elif secrethash != sha256(secret).digest():
             raise InvalidSecretHash("provided secret and secret_hash do not match.")
 
         if len(secret) != SECRET_LENGTH:

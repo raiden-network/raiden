@@ -1,4 +1,5 @@
 import random
+from hashlib import sha256
 
 import gevent
 import pytest
@@ -169,9 +170,9 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     identifier = 1
     target = bob_app.raiden.address
     transfer_1_secret = factories.make_secret(0)
-    transfer_1_secrethash = sha3(transfer_1_secret)
+    transfer_1_secrethash = sha256(transfer_1_secret).digest()
     transfer_2_secret = factories.make_secret(1)
-    transfer_2_secrethash = sha3(transfer_2_secret)
+    transfer_2_secrethash = sha256(transfer_2_secret).digest()
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_1_secrethash)
     transfer1_received = wait_message_handler.wait_for_message(
@@ -305,7 +306,7 @@ def run_test_batch_unlock(
     identifier = 1
     target = bob_app.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -359,7 +360,7 @@ def run_test_batch_unlock(
     assert lock, "the lock must still be part of the node state"
     msg = "the secret must be registered before the lock expires"
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
-    assert lock.secrethash == sha3(secret)
+    assert lock.secrethash == sha256(secret).digest()
 
     waiting.wait_for_settle(
         alice_app.raiden,
@@ -441,7 +442,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     identifier = 1
     target = app1.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -531,7 +532,7 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
 
     target = app1.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
     locked_transfer_received = message_handler.wait_for_message(LockedTransfer, {})
@@ -560,7 +561,7 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
 
     chain_state = views.state_from_app(app1)
 
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
     target_task = chain_state.payment_mapping.secrethashes_to_task[secrethash]
     lock_expiration = target_task.target_state.transfer.lock.expiration
     app1.raiden.chain.wait_until_block(target_block_number=lock_expiration)
@@ -607,7 +608,7 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     identifier = 1
     target = app2.raiden.address
     secret = sha3(target)
-    secrethash = sha3(secret)
+    secrethash = sha256(secret).digest()
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -816,10 +817,10 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     identifier = 1
 
     alice_transfer_secret = sha3(alice_app.raiden.address)
-    alice_transfer_secrethash = sha3(alice_transfer_secret)
+    alice_transfer_secrethash = sha256(alice_transfer_secret).digest()
 
     bob_transfer_secret = sha3(bob_app.raiden.address)
-    bob_transfer_secrethash = sha3(bob_transfer_secret)
+    bob_transfer_secrethash = sha256(bob_transfer_secret).digest()
 
     alice_transfer_hold = bob_app.raiden.raiden_event_handler.hold_secretrequest_for(
         secrethash=alice_transfer_secrethash

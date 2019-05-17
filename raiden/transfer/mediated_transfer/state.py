@@ -1,5 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
+from hashlib import sha256
 
 from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRETHASH
 from raiden.transfer.architecture import State
@@ -10,7 +11,6 @@ from raiden.transfer.state import (
     HopState,
     RouteState,
 )
-from raiden.utils import sha3
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -117,7 +117,7 @@ class TransferDescriptionWithSecretState(State):
 
     def __post_init__(self) -> None:
         if self.secrethash == EMPTY_SECRETHASH and self.secret:
-            self.secrethash = sha3(self.secret)
+            self.secrethash = SecretHash(sha256(self.secret).digest())
 
 
 @dataclass

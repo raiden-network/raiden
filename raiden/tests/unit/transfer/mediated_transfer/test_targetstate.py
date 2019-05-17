@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, EMPTY_MERKLE_ROOT, UINT64_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRET, EMPTY_SECRET_SHA256, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -253,8 +253,8 @@ def test_handle_offchain_secretreveal():
     assert reveal.secret == UNIT_SECRET
     assert reveal.recipient == setup.new_state.from_hop.node_address
 
-    # if we get an empty hash secret make sure it's rejected
-    secret = EMPTY_HASH
+    # if we get an empty hash secret, it's not pending so rejected
+    secret = EMPTY_SECRET
     state_change = ReceiveSecretReveal(secret, setup.initiator)
     iteration = target.handle_offchain_secretreveal(
         target_state=setup.new_state,
@@ -336,13 +336,13 @@ def test_handle_onchain_secretreveal():
     assert UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_unlockedlocks
     assert UNIT_SECRETHASH not in setup.channel.partner_state.secrethashes_to_lockedlocks
 
-    # Make sure that an emptyhash on chain reveal is rejected.
+    # Make sure that an emptyhash on chain reveal is not accepted because it's not pending.
     block_number_prior_the_expiration = setup.expiration - 2
     onchain_reveal = ContractReceiveSecretReveal(
         transaction_hash=factories.make_address(),
         secret_registry_address=factories.make_address(),
-        secrethash=EMPTY_HASH_KECCAK,
-        secret=EMPTY_HASH,
+        secrethash=EMPTY_SECRET_SHA256,
+        secret=EMPTY_SECRET,
         block_number=block_number_prior_the_expiration,
         block_hash=factories.make_block_hash(),
     )
@@ -354,7 +354,7 @@ def test_handle_onchain_secretreveal():
         block_number=block_number_prior_the_expiration,
     )
     unlocked_onchain = setup.channel.partner_state.secrethashes_to_onchain_unlockedlocks
-    assert EMPTY_HASH_KECCAK not in unlocked_onchain
+    assert EMPTY_SECRET_SHA256 not in unlocked_onchain
 
     # now let's go for the actual secret
     onchain_reveal.secret = UNIT_SECRET
@@ -532,7 +532,7 @@ def test_state_transition():
     assert proof_iteration.new_state is None
 
 
-def test_target_reject_keccak_empty_hash():
+def test_target_accept_keccak_empty_hash():
     lock_amount = 7
     block_number = 1
     pseudo_random_generator = random.Random()
@@ -546,7 +546,7 @@ def test_target_reject_keccak_empty_hash():
             amount=lock_amount,
             target=channels.our_address(0),
             expiration=expiration,
-            secret=EMPTY_HASH,
+            secret=EMPTY_SECRET,
         ),
         allow_invalid=True,
     )
@@ -565,7 +565,7 @@ def test_target_reject_keccak_empty_hash():
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
-    assert init_transition.new_state is None
+    assert init_transition.new_state
 
 
 def test_target_receive_lock_expired():

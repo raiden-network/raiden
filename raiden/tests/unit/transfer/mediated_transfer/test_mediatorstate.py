@@ -4,7 +4,12 @@ from copy import deepcopy
 
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SECRET,
+    EMPTY_SECRET_SHA256,
+    MAXIMUM_PENDING_TRANSFERS,
+)
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -892,7 +897,7 @@ def test_init_mediator():
     ), "mediated_transfer should /not/ split the transfer"
 
 
-def test_mediator_reject_keccak_empty_hash():
+def test_mediator_accept_sha256_empty_hash():
     channels = mediator_make_channel_pair()
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
@@ -910,7 +915,7 @@ def test_mediator_reject_keccak_empty_hash():
         block_hash=factories.make_block_hash(),
     )
 
-    assert not iteration.new_state
+    assert iteration.new_state
 
 
 def test_mediator_secret_reveal_empty_hash():
@@ -935,7 +940,7 @@ def test_mediator_secret_reveal_empty_hash():
     assert iteration.new_state.transfers_pair[0].payer_transfer == from_transfer
     current_state = iteration.new_state
 
-    # an empty hash offchain secret reveal should be rejected
+    # an empty hash should be rejected because it's not the transfer's secret
     receive_secret = ReceiveSecretReveal(EMPTY_HASH, UNIT_TRANSFER_TARGET)
     iteration = mediator.state_transition(
         mediator_state=current_state,
@@ -948,13 +953,13 @@ def test_mediator_secret_reveal_empty_hash():
     )
     assert len(iteration.events) == 0
 
-    # an empty hash onchain secret reveal should be rejected
-    secrethash = EMPTY_HASH_KECCAK
+    # an empty hash onchain secret reveal should be rejected because it's not the transfer's secret
+    secrethash = EMPTY_SECRET_SHA256
     onchain_reveal = ContractReceiveSecretReveal(
         transaction_hash=factories.make_address(),
         secret_registry_address=factories.make_address(),
         secrethash=secrethash,
-        secret=EMPTY_HASH,
+        secret=EMPTY_SECRET,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
     )
