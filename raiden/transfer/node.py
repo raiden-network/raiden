@@ -16,7 +16,6 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     MediatorTransferState,
@@ -33,7 +32,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.state import (
+    ChainState,
+    PaymentNetworkState,
+    TokenNetworkState,
+)
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
@@ -538,18 +542,19 @@ def handle_contract_receive_channel_closed(
     chain_state: ChainState, state_change: ContractReceiveChannelClosed
 ) -> TransitionResult[ChainState]:
     # cleanup queue for channel
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=chain_state.chain_id,
+        token_network_address=state_change.token_network_address,
+        channel_identifier=state_change.channel_identifier,
+    )
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=chain_state.chain_id,
-            token_network_address=state_change.token_network_address,
-            channel_identifier=state_change.channel_identifier,
-        ),
+        canonical_identifier=canonical_identifier,
     )
     if channel_state:
         queue_id = QueueIdentifier(
             recipient=channel_state.partner_state.address,
-            channel_identifier=state_change.channel_identifier,
+            canonical_identifier=canonical_identifier,
         )
         if queue_id in chain_state.queueids_to_queues:
             chain_state.queueids_to_queues.pop(queue_id)
@@ -561,7 +566,7 @@ def handle_delivered(
     chain_state: ChainState, state_change: ReceiveDelivered
 ) -> TransitionResult[ChainState]:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    queueid = QueueIdentifier(state_change.sender, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
+    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_GLOBAL_QUEUE)
     inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
 
