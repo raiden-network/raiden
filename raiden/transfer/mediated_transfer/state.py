@@ -76,7 +76,7 @@ class LockedTransferSignedState(LockedTransferState):
     message_identifier: MessageID
     payment_identifier: PaymentID
     token: TokenAddress
-    balance_proof: BalanceProofSignedState = field(repr=False)
+    balance_proof: BalanceProofSignedState
     lock: HashTimeLockState
     initiator: InitiatorAddress
     target: TargetAddress
@@ -90,13 +90,11 @@ class LockedTransferSignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        # pylint: disable=E1101
         if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
             raise ValueError("balance_proof must not be empty")
 
     @property
     def payer_address(self) -> Address:
-        # pylint: disable=E1101
         return self.balance_proof.sender
 
 
