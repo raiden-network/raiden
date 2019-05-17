@@ -200,7 +200,7 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
 @dataclass(repr=False, eq=False)
 class Message:
     # Needs to be set by a subclass
-    cmdid: ClassVar[Optional[int]]
+    cmdid: ClassVar[int]
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.hash == other.hash
@@ -401,7 +401,7 @@ class ToDevice(SignedMessage):
     subclass.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.TODEVICE
+    cmdid: ClassVar[int] = messages.TODEVICE
 
     message_identifier: MessageID
 
@@ -422,7 +422,7 @@ class Delivered(SignedMessage):
     persisted.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.DELIVERED
+    cmdid: ClassVar[int] = messages.DELIVERED
 
     delivered_message_identifier: MessageID
 
@@ -444,7 +444,7 @@ class Delivered(SignedMessage):
 class Pong(SignedMessage):
     """ Response to a Ping message. """
 
-    cmdid: ClassVar[Optional[int]] = messages.PONG
+    cmdid: ClassVar[int] = messages.PONG
 
     nonce: Nonce
 
@@ -462,7 +462,7 @@ class Pong(SignedMessage):
 class Ping(SignedMessage):
     """ Healthcheck message. """
 
-    cmdid: ClassVar[Optional[int]] = messages.PING
+    cmdid: ClassVar[int] = messages.PING
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
@@ -487,7 +487,7 @@ class Ping(SignedMessage):
 class SecretRequest(SignedRetrieableMessage):
     """ Requests the secret which unlocks a secrethash. """
 
-    cmdid: ClassVar[Optional[int]] = messages.SECRETREQUEST
+    cmdid: ClassVar[int] = messages.SECRETREQUEST
 
     payment_identifier: PaymentID
     secrethash: SecretHash
@@ -536,7 +536,7 @@ class Unlock(EnvelopeMessage):
     the other party to claim the unlocked lock.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.UNLOCK
+    cmdid: ClassVar[int] = messages.UNLOCK
 
     payment_identifier: PaymentID
     secret: Secret = field(repr=False)
@@ -617,7 +617,7 @@ class RevealSecret(SignedRetrieableMessage):
     that must not update the internal channel state.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.REVEALSECRET
+    cmdid: ClassVar[int] = messages.REVEALSECRET
 
     secret: Secret = field(repr=False)
 
@@ -673,13 +673,13 @@ class Lock:
         if self.amount < 0:
             raise ValueError(f"amount {self.amount} needs to be positive")
 
-        if self.amount >= 2 ** 256:
+        if self.amount > UINT256_MAX:
             raise ValueError(f"amount {self.amount} is too large")
 
         if self.expiration < 0:
             raise ValueError(f"expiration {self.expiration} needs to be positive")
 
-        if self.expiration >= 2 ** 256:
+        if self.expiration > UINT256_MAX:
             raise ValueError(f"expiration {self.expiration} is too large")
 
         if not ishash(self.secrethash):
@@ -804,7 +804,7 @@ class LockedTransfer(LockedTransferBase):
     `initiator` is the party that knows the secret to the `secrethash`
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.LOCKEDTRANSFER
+    cmdid: ClassVar[int] = messages.LOCKEDTRANSFER
 
     target: TargetAddress
     initiator: InitiatorAddress
@@ -911,7 +911,7 @@ class RefundTransfer(LockedTransfer):
     transfer amount allowing him to try a new path to complete the transfer.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.REFUNDTRANSFER
+    cmdid: ClassVar[int] = messages.REFUNDTRANSFER
 
     @classmethod
     def unpack(cls, packed):
@@ -978,7 +978,7 @@ class LockExpired(EnvelopeMessage):
     expired.
     """
 
-    cmdid: ClassVar[Optional[int]] = messages.LOCKEXPIRED
+    cmdid: ClassVar[int] = messages.LOCKEXPIRED
 
     recipient: Address
     secrethash: SecretHash
