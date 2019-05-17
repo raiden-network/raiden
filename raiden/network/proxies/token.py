@@ -3,10 +3,11 @@ from eth_utils import is_binary_address, to_checksum_address, to_normalized_addr
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
+from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import safe_gas_limit
 from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
@@ -57,51 +58,46 @@ class Token:
         # are no preconditions to check before sending the transaction
 
         log_details = {
-            "node": pex(self.node_address),
-            "contract": pex(self.address),
-            "allowed_address": pex(allowed_address),
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "allowed_address": to_checksum_address(allowed_address),
             "allowance": allowance,
         }
 
-        checking_block = self.client.get_checking_block()
-        error_prefix = "Call to approve will fail"
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "approve", to_checksum_address(allowed_address), allowance
-        )
-
-        if gas_limit:
-            error_prefix = "Call to approve failed"
-            log.debug("approve called", **log_details)
-            transaction_hash = self.proxy.transact(
-                "approve",
-                safe_gas_limit(gas_limit),
-                to_checksum_address(allowed_address),
-                allowance,
+        with log_transaction(log, "approve", log_details):
+            checking_block = self.client.get_checking_block()
+            error_prefix = "Call to approve will fail"
+            gas_limit = self.proxy.estimate_gas(
+                checking_block, "approve", to_checksum_address(allowed_address), allowance
             )
 
-            self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if gas_limit:
+                error_prefix = "Call to approve failed"
+                gas_limit = safe_gas_limit(gas_limit)
+                log_details["gas_limit"] = gas_limit
+                transaction_hash = self.proxy.transact(
+                    "approve", gas_limit, to_checksum_address(allowed_address), allowance
+                )
 
-        transaction_executed = gas_limit is not None
-        if not transaction_executed or receipt_or_none:
-            if transaction_executed:
-                block = receipt_or_none["blockNumber"]
-            else:
-                block = checking_block
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name="approve",
-                transaction_executed=transaction_executed,
-                required_gas=GAS_REQUIRED_FOR_APPROVE,
-                block_identifier=block,
-            )
+            transaction_executed = gas_limit is not None
+            if not transaction_executed or receipt_or_none:
+                if transaction_executed:
+                    block = receipt_or_none["blockNumber"]
+                else:
+                    block = checking_block
 
-            msg = self._check_why_approved_failed(allowance, block)
-            error_msg = f"{error_prefix}. {msg}"
-            log.critical(error_msg, **log_details)
-            raise RaidenUnrecoverableError(error_msg)
+                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    transaction_name="approve",
+                    transaction_executed=transaction_executed,
+                    required_gas=GAS_REQUIRED_FOR_APPROVE,
+                    block_identifier=block,
+                )
 
-        log.info("approve successful", **log_details)
+                msg = self._check_why_approved_failed(allowance, block)
+                raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
 
     def _check_why_approved_failed(
         self, allowance: TokenAmount, block_identifier: BlockSpecification
@@ -160,23 +156,24 @@ class Token:
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
         log_details = {
-            "node": pex(self.node_address),
-            "contract": pex(self.address),
-            "to_address": pex(to_address),
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "to_address": to_checksum_address(to_address),
             "amount": amount,
         }
-        log.debug("transfer called", **log_details)
 
-        startgas = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-        transaction_hash = self.proxy.transact(
-            "transfer", safe_gas_limit(startgas), to_checksum_address(to_address), amount
-        )
+        with log_transaction(log, "transfer", log_details):
+            gas_limit = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
+            gas_limit = safe_gas_limit(gas_limit)
+            log_details["gas_limit"] = gas_limit
 
-        self.client.poll(transaction_hash)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            log.critical("transfer failed", **log_details)
-            raise TransactionThrew("Transfer", receipt_or_none)
+            transaction_hash = self.proxy.transact(
+                "transfer", gas_limit, to_checksum_address(to_address), amount
+            )
 
-        # TODO: check Transfer event (issue: #2598)
-        log.info("transfer successful", **log_details)
+            self.client.poll(transaction_hash)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if receipt_or_none:
+                raise TransactionThrew("Transfer", receipt_or_none)
+
+            # TODO: check Transfer event (issue: #2598)
