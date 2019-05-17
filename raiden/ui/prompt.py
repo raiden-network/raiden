@@ -47,7 +47,8 @@ def unlock_account_with_passwordprompt(
     tries = 3
     for current in range(tries):
         try:
-            password = getpass.getpass(f"Enter the password to unlock {address_hex}: ")
+            checksum_address = to_checksum_address(address_hex)
+            password = getpass.getpass(f"Enter the password to unlock {checksum_address}: ")
             return account_manager.get_privkey(address_hex, password)
         except ValueError:
             print(
