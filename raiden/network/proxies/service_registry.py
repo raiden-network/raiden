@@ -3,7 +3,7 @@ import web3
 from eth_utils import is_binary_address, to_normalized_address
 
 from raiden.exceptions import InvalidAddress
-from raiden.network.proxies.utils import compare_contract_versions
+from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional
@@ -75,7 +75,10 @@ class ServiceRegistry:
 
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
-        gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
-        transaction_hash = self.proxy.transact("setURL", gas_limit, url)
-        self.client.poll(transaction_hash)
-        assert not check_transaction_threw(self.client, transaction_hash)
+        log_details = {"url": url}
+
+        with log_transaction("set_url", log_details):
+            gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+            transaction_hash = self.proxy.transact("setURL", gas_limit, url)
+            self.client.poll(transaction_hash)
+            assert not check_transaction_threw(self.client, transaction_hash)

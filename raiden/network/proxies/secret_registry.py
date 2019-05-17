@@ -18,7 +18,7 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.proxies.utils import compare_contract_versions
+from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.utils import pex, safe_gas_limit
 from raiden.utils.typing import (
@@ -134,14 +134,17 @@ class SecretRegistry:
             "secrethashes_not_sent": secrethashes_not_sent,
         }
 
-        if not secrets_to_register:
-            log.debug("registerSecretBatch skipped, waiting for transactions", **log_details)
+        with log_transaction("register_secret_batch", log_details):
+            if secrets_to_register:
+                self._register_secret_batch(secrets_to_register, transaction_result)
 
             gevent.joinall(wait_for, raise_error=True)
 
-            log.info("registerSecretBatch successful", **log_details)
-            return
-
+    def _register_secret_batch(
+            self,
+            secrets_to_register: List[Secret],
+            transaction_result: AsyncResult,
+    ) -> None:
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block, "registerSecretBatch", secrets_to_register
@@ -154,8 +157,6 @@ class SecretRegistry:
             gas_limit = safe_gas_limit(
                 gas_limit, len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH
             )
-
-            log.debug("registerSecretBatch called", **log_details)
 
             try:
                 transaction_hash = self.proxy.transact(
@@ -217,7 +218,6 @@ class SecretRegistry:
                         "compiler bug was hit."
                     )
 
-                log.critical(error, **log_details)
                 exception = RaidenUnrecoverableError(error)
                 transaction_result.set_exception(exception)
                 raise exception
@@ -237,12 +237,12 @@ class SecretRegistry:
             if gas_limit:
                 assert msg, "Unexpected control flow, an exception should have been raised."
                 error = (
-                    f"Sending the the transaction for registerSecretBatch failed with: `{msg}`. "
-                    f"This happens if the same ethereum account is being used by more than one "
-                    f"program which is not supported."
+                    f"Sending the the transaction for registerSecretBatch "
+                    f"failed with: `{msg}`.  This happens if the same ethereum "
+                    f"account is being used by more than one program which is not "
+                    f"supported."
                 )
 
-                log.critical(error, **log_details)
                 exception = RaidenUnrecoverableError(error)
                 transaction_result.set_exception(exception)
                 raise exception
@@ -263,7 +263,6 @@ class SecretRegistry:
             )
             error = "Call to registerSecretBatch couldn't be done"
 
-            log.critical(error, **log_details)
             exception = RaidenRecoverableError(error)
             transaction_result.set_exception(exception)
             raise exception
@@ -271,12 +270,6 @@ class SecretRegistry:
         # The local **MUST** transaction_result be set before waiting for the
         # other results, otherwise we have a dead-lock
         transaction_result.set(transaction_hash)
-
-        if wait_for:
-            log.info("registerSecretBatch waiting for pending", **log_details)
-            gevent.joinall(wait_for, raise_error=True)
-
-        log.info("registerSecretBatch successful", **log_details)
 
     def get_secret_registration_block_by_secrethash(
         self, secrethash: SecretHash, block_identifier: BlockSpecification
