@@ -158,7 +158,6 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     # Feedback token not used here, will be removed with source routing
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
-        # pylint: disable=E1101
         token_network_address=from_transfer.balance_proof.token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
         from_address=raiden.address,
@@ -168,11 +167,7 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
         config=raiden.config,
         privkey=raiden.privkey,
     )
-    from_route = RouteState(
-        transfer.sender,
-        # pylint: disable=E1101
-        from_transfer.balance_proof.channel_identifier,
-    )
+    from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
     init_mediator_statechange = ActionInitMediator(
         routes=routes,
         from_route=from_route,
@@ -187,7 +182,6 @@ def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
         node_address=transfer.sender,
-        # pylint: disable=E1101
         channel_identifier=from_transfer.balance_proof.channel_identifier,
     )
     init_target_statechange = ActionInitTarget(
