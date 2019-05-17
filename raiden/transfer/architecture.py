@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier, wrap_id
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.typing import (
     AdditionalHash,
@@ -147,7 +147,7 @@ class SendMessageEvent(Event):
             raise ValueError("channel identifier must be of type T_ChannelIdentifier")
 
         self.queue_identifier = QueueIdentifier(
-            recipient=self.recipient, channel_identifier=self.channel_identifier
+            recipient=self.recipient, canonical_identifier=wrap_id(self.channel_identifier)
         )
         self.message_identifier = self.message_identifier
 

@@ -28,8 +28,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
-from raiden.transfer.identifiers import QueueIdentifier
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
@@ -107,12 +106,12 @@ def mock_matrix(
 def ping_pong_message_success(transport0, transport1):
     queueid0 = QueueIdentifier(
         recipient=transport0._raiden_service.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     )
 
     queueid1 = QueueIdentifier(
         recipient=transport1._raiden_service.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     )
 
     received_messages0 = transport0._raiden_service.message_handler.bag
@@ -277,8 +276,11 @@ def test_matrix_message_sync(matrix_transports):
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
+    canonical_identifier = CanonicalIdentifier(1, Address(1), 1)
+
     queue_identifier = QueueIdentifier(
-        recipient=transport1._raiden_service.address, channel_identifier=1
+        recipient=transport1._raiden_service.address,
+        canonical_identifier=canonical_identifier,
     )
 
     for i in range(5):
@@ -380,7 +382,8 @@ def test_matrix_message_retry(
     ] = AddressReachability.REACHABLE
 
     queueid = QueueIdentifier(
-        recipient=partner_address, channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=partner_address,
+        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     )
     chain_state = raiden_service.wal.state_manager.current_state
 

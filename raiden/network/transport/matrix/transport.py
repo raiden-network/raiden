@@ -42,8 +42,7 @@ from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import QueueIdentifier
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
@@ -158,7 +157,8 @@ class _RetryQueue(Runnable):
         """ Helper to enqueue a message in the global queue (e.g. Delivered) """
         self.enqueue(
             queue_identifier=QueueIdentifier(
-                recipient=self.receiver, channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+                recipient=self.receiver,
+                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
             ),
             message=message,
         )

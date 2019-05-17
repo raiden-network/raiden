@@ -9,7 +9,6 @@ from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
-    ChannelID,
     List,
     PaymentID,
     PaymentWithFeeAmount,
@@ -19,20 +18,12 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
 )
 
-# According to the smart contracts as of 07/08:
-# https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
-# channel_identifier can never be 0. We make this a requirement in the client and use this fact
-# to signify that a channel_identifier of `0` passed to the messages adds them to the
-# global queue
-CHANNEL_IDENTIFIER_GLOBAL_QUEUE = ChannelID(0)
-
 
 def refund_from_sendmediated(
     send_lockedtransfer_event: "SendLockedTransfer",
 ) -> "SendRefundTransfer":
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
-        channel_identifier=send_lockedtransfer_event.queue_identifier.channel_identifier,
         message_identifier=send_lockedtransfer_event.message_identifier,
         transfer=send_lockedtransfer_event.transfer,
     )
@@ -47,7 +38,6 @@ class SendLockExpired(SendMessageEvent):
 @dataclass
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
-
     transfer: LockedTransferUnsignedState
 
     def __post_init__(self) -> None:

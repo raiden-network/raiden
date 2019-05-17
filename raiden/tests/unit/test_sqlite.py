@@ -268,13 +268,11 @@ def test_get_event_with_balance_proof():
     )
     locked_transfer = SendLockedTransfer(
         recipient=factories.make_address(),
-        channel_identifier=factories.make_channel_identifier(),
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
     )
     balance_proof = SendBalanceProof(
         recipient=factories.make_address(),
-        channel_identifier=factories.make_channel_identifier(),
         message_identifier=next(counter),
         payment_identifier=next(counter),
         token_address=factories.make_address(),
@@ -283,7 +281,6 @@ def test_get_event_with_balance_proof():
     )
     refund_transfer = SendRefundTransfer(
         recipient=factories.make_address(),
-        channel_identifier=factories.make_channel_identifier(),
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
     )

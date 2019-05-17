@@ -22,7 +22,6 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
@@ -1182,7 +1181,6 @@ def create_sendlockedtransfer(
 
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         transfer=locked_transfer,
     )
@@ -1232,7 +1230,6 @@ def create_unlock(
 
     unlock_lock = SendBalanceProof(
         recipient=recipient,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         token_address=token_address,
@@ -1563,7 +1560,6 @@ def handle_refundtransfer(
 
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=refund.transfer.message_identifier,
         )
         events = [send_processed]
@@ -1599,7 +1595,6 @@ def handle_receive_lock_expired(
 
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=state_change.message_identifier,
         )
         events = [send_processed]
@@ -1638,7 +1633,6 @@ def handle_receive_lockedtransfer(
 
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=mediated_transfer.message_identifier,
         )
         events = [send_processed]
@@ -1672,7 +1666,6 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=unlock.message_identifier,
         )
         events: List[Event] = [send_processed]

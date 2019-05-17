@@ -3,7 +3,7 @@ import random
 from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.mediated_transfer import events
 
 
@@ -12,7 +12,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     block_number = 10
     our_address = factories.make_address()
     recipient = factories.make_address()
-    channel_identifier = 1
+    canonical_identifier = factories.make_canonical_identifier()
     message_identifier = random.randint(0, 2 ** 16)
     secret = factories.random_secret()
 
@@ -23,16 +23,25 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
         our_address=our_address,
         chain_id=chain_id,
     )
-    queue_identifier = QueueIdentifier(recipient, events.CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
+    queue_identifier = QueueIdentifier(
+        recipient=recipient,
+        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    )
 
     # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
     first_message = events.SendSecretReveal(
-        recipient, channel_identifier, message_identifier, secret
+        recipient=recipient,
+        message_identifier=message_identifier,
+        secret=secret,
+        canonical_identifier=canonical_identifier,
     )
     second_message = events.SendSecretReveal(
-        recipient, channel_identifier, random.randint(0, 2 ** 16), secret
+        recipient=recipient,
+        message_identifier=random.randint(0, 2 ** 16),
+        secret=secret,
+        canonical_identifier=canonical_identifier,
     )
 
     chain_state.queueids_to_queues[queue_identifier] = [first_message, second_message]
@@ -47,14 +56,20 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
 
 def test_delivered_processed_message_cleanup():
     recipient = factories.make_address()
-    channel_identifier = 1
+    canonical_identifier = factories.make_canonical_identifier()
     secret = factories.random_secret()
 
     first_message = events.SendSecretReveal(
-        recipient, channel_identifier, random.randint(0, 2 ** 16), secret
+        recipient=recipient,
+        message_identifier=random.randint(0, 2 ** 16),
+        secret=secret,
+        canonical_identifier=canonical_identifier,
     )
     second_message = events.SendSecretReveal(
-        recipient, channel_identifier, random.randint(0, 2 ** 16), secret
+        recipient=recipient,
+        message_identifier=random.randint(0, 2 ** 16),
+        secret=secret,
+        canonical_identifier=canonical_identifier,
     )
     message_queue = [first_message, second_message]
 
@@ -89,9 +104,12 @@ def test_channel_closed_must_clear_ordered_messages(
     message_identifier = random.randint(0, 2 ** 16)
     amount = 10
 
-    queue_identifier = QueueIdentifier(recipient, channel_identifier)
+    queue_identifier = QueueIdentifier(
+        recipient=recipient,
+        canonical_identifier=netting_channel_state.canonical_identifier,
+    )
 
-    # Regression test:
+    # Regression test:py
     # The code delivered_message handler worked only with a queue of one
     # element
     message = factories.create(

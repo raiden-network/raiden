@@ -29,7 +29,6 @@ from raiden.utils.typing import (
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 
-
 @dataclass
 class ContractSendChannelClose(ContractSendEvent):
     """ Event emitted to close the netting channel.
