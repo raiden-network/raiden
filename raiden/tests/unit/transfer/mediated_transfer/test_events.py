@@ -16,6 +16,4 @@ def test_send_refund_transfer_contains_balance_proof():
     )
 
     assert hasattr(event, "balance_proof")
-    # pylint: disable=E1101
-
     assert JSONSerializer.deserialize(JSONSerializer.serialize(event)) == event

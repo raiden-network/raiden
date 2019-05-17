@@ -992,7 +992,6 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     lock_expired = make_receive_expired_lock(
         channel_state,
         privkey2,
-        # pylint: disable=E1101
         receive_lockedtransfer.balance_proof.nonce + 1,
         transferred_amount,
         lock,
