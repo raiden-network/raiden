@@ -6,7 +6,14 @@ from functools import singledispatch
 from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
-from raiden.messages import Lock, LockedTransfer, RefundTransfer, lockedtransfersigned_from_message
+from raiden.messages import (
+    Lock,
+    LockedTransfer,
+    LockExpired,
+    RefundTransfer,
+    Unlock,
+    lockedtransfersigned_from_message,
+)
 from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer import mediator
@@ -448,6 +455,11 @@ class BalanceProofProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     TARGET_TYPE = BalanceProofUnsignedState
 
+    @property
+    def balance_proof(self) -> "BalanceProofProperties":
+        """ Convenience method to extract balance proof properties from the child classes. """
+        return self.extract(BalanceProofProperties)
+
 
 BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     nonce=1,
@@ -456,6 +468,64 @@ BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     locksroot=EMPTY_MERKLE_ROOT,
     canonical_identifier=UNIT_CANONICAL_ID,
 )
+
+
+@dataclass(frozen=True)
+class UnlockProperties(BalanceProofProperties):
+    message_identifier: MessageID = EMPTY
+    payment_identifier: PaymentID = EMPTY
+    secret: Secret = EMPTY
+    signature: Signature = EMPTY
+    TARGET_TYPE = Unlock
+
+
+UnlockProperties.DEFAULTS = UnlockProperties(
+    **BalanceProofProperties.DEFAULTS.__dict__,
+    message_identifier=1,
+    payment_identifier=1,
+    secret=UNIT_SECRET,
+    signature=EMPTY_SIGNATURE,
+)
+
+
+def unwrap_canonical_identifier(params: Dict[str, Any]) -> Dict[str, Any]:
+    # TODO use CanonicalIdentifier in all created classes, then remove this function
+    params_copy = dict(params)
+    canonical_identifier = params_copy.pop("canonical_identifier")
+    params_copy["chain_id"] = canonical_identifier.chain_identifier
+    params_copy["token_network_address"] = canonical_identifier.token_network_address
+    params_copy["channel_identifier"] = canonical_identifier.channel_identifier
+    return params_copy
+
+
+@create.register(UnlockProperties)  # noqa: F811
+def _(properties, defaults=None) -> Unlock:
+    properties: UnlockProperties = create_properties(properties, defaults)
+    return Unlock(**unwrap_canonical_identifier(properties.__dict__))
+
+
+@dataclass(frozen=True)
+class LockExpiredProperties(BalanceProofProperties):
+    recipient: Address = EMPTY
+    secrethash: SecretHash = EMPTY
+    message_identifier: MessageID = EMPTY
+    signature: Signature = EMPTY
+    TARGET_TYPE = LockExpired
+
+
+LockExpiredProperties.DEFAULTS = LockExpiredProperties(
+    **BalanceProofProperties.DEFAULTS.__dict__,
+    recipient=UNIT_TRANSFER_TARGET,
+    secrethash=UNIT_SECRETHASH,
+    message_identifier=1,
+    signature=EMPTY_SIGNATURE,
+)
+
+
+@create.register(LockExpiredProperties)  # noqa: F811
+def _(properties, defaults=None) -> LockExpired:
+    properties: LockExpiredProperties = create_properties(properties, defaults)
+    return LockExpired(**unwrap_canonical_identifier(properties.__dict__))
 
 
 @dataclass(frozen=True)
@@ -476,7 +546,7 @@ BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
 
 
 def make_signed_balance_proof_from_unsigned(
-    unsigned: BalanceProofUnsignedState, signer: Signer
+    unsigned: BalanceProofUnsignedState, signer: Signer, additional_hash: AdditionalHash = None
 ) -> BalanceProofSignedState:
     balance_hash = hash_balance_data(
         transferred_amount=unsigned.transferred_amount,
@@ -484,7 +554,9 @@ def make_signed_balance_proof_from_unsigned(
         locksroot=unsigned.locksroot,
     )
 
-    additional_hash = make_additional_hash()
+    if additional_hash is None:
+        additional_hash = make_additional_hash()
+
     data_to_sign = balance_proof.pack_balance_proof(
         balance_hash=balance_hash,
         additional_hash=additional_hash,
@@ -595,7 +667,7 @@ LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperti
 @create.register(LockedTransferSignedStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> LockedTransferSignedState:
     transfer: LockedTransferSignedStateProperties = create_properties(properties, defaults)
-    params = {key: value for key, value in transfer.__dict__.items()}
+    params = unwrap_canonical_identifier(transfer.__dict__)
 
     lock = Lock(
         amount=params.pop("amount"),
@@ -606,10 +678,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     pkey = params.pop("pkey")
     signer = LocalSigner(pkey)
     sender = params.pop("sender")
-    canonical_identifier = params.pop("canonical_identifier")
-    params["chain_id"] = int(canonical_identifier.chain_identifier)
-    params["channel_identifier"] = int(canonical_identifier.channel_identifier)
-    params["token_network_address"] = canonical_identifier.token_network_address
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
     params["fee"] = 0
@@ -634,12 +702,7 @@ LockedTransferProperties.DEFAULTS = LockedTransferProperties(
 
 def prepare_locked_transfer(properties, defaults):
     properties: LockedTransferProperties = create_properties(properties, defaults)
-    params = {key: value for key, value in properties.__dict__.items()}
-
-    canonical_identifier = params.pop("canonical_identifier")
-    params["chain_id"] = canonical_identifier.chain_identifier
-    params["token_network_address"] = canonical_identifier.token_network_address
-    params["channel_identifier"] = canonical_identifier.channel_identifier
+    params = unwrap_canonical_identifier(properties.__dict__)
 
     secrethash = sha3(params.pop("secret"))
     params["lock"] = Lock(
