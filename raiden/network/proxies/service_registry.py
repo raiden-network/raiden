@@ -73,7 +73,7 @@ class ServiceRegistry:
             return None
         return result
 
-    def set_url(self, url: str):
+    def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
         gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
         transaction_hash = self.proxy.transact("setURL", gas_limit, url)

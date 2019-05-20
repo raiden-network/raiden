@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     MerkleTreeLeaves,
     Nonce,
     Signature,
+    TokenAddress,
     TokenAmount,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
@@ -70,7 +71,7 @@ class PaymentChannel:
         self.client = token_network.client
         self.contract_manager = contract_manager
 
-    def token_address(self) -> Address:
+    def token_address(self) -> TokenAddress:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
