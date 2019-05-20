@@ -184,7 +184,7 @@ def make_raiden_service_mock(
 
 def patched_get_for_succesful_pfs_info():
     json_data = {
-        "price_info": 0,
+        "price_info": 5,
         "network_info": {
             "chain_id": 1,
             "registry_address": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",

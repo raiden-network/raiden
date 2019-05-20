@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
+    Tuple,
     Union,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
@@ -102,7 +103,7 @@ def get_random_service(
 class PFSConfiguration(NamedTuple):
     url: str
     eth_address: Optional[str]
-    fee: int
+    fee: TokenAmount
 
 
 def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> str:
@@ -385,7 +386,7 @@ def query_paths(
         "value": value,
         "max_paths": max_paths,
     }
-    offered_fee = service_config.get("pathfinding_fee", service_config["pathfinding_max_fee"])
+    offered_fee = service_config["pathfinding_fee"]
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
@@ -410,11 +411,8 @@ def query_paths(
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
             elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                if offered_fee < service_config["pathfinding_max_fee"]:
-                    offered_fee = service_config["pathfinding_max_fee"]
-                    # TODO: Query the PFS for the fee here instead of using the max fee
-                else:
-                    raise
+                # TODO get info endpoint again and load config
+                raise
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
