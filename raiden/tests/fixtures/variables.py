@@ -24,7 +24,6 @@ DUPLICATED_BRACKETS = str.maketrans({"{": "{{", "}": "}}"})
 
 
 class TransportProtocol(Enum):
-    UDP = "udp"
     MATRIX = "matrix"
 
 
@@ -284,14 +283,6 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
 
 
 @pytest.fixture
-def raiden_udp_ports(number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the raiden apps for the udp
-    transport.
-    """
-    return [next(port_generator) for _ in range(number_of_nodes)]
-
-
-@pytest.fixture
 def rest_api_port_number(port_generator):
     """ Unique port for the REST API server. """
     return next(port_generator)
@@ -318,22 +309,6 @@ def transport(request):
 @pytest.fixture
 def transport_protocol(transport):
     return TransportProtocol(transport)
-
-
-@pytest.fixture
-def skip_if_not_udp(request):
-    """Skip the test if not run with UDP transport"""
-    if request.config.option.transport in ("udp", "all"):
-        return
-    pytest.skip("This test works only with UDP transport")
-
-
-@pytest.fixture
-def skip_if_not_matrix(request):
-    """Skip the test if not run with Matrix transport"""
-    if request.config.option.transport in ("matrix", "all"):
-        return
-    pytest.skip("This test works only with Matrix transport")
 
 
 @pytest.fixture

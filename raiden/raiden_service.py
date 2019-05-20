@@ -416,15 +416,6 @@ class RaidenService(Runnable):
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
 
-        # start the registration early to speed up the start
-        if self.config["transport_type"] == "udp":
-            endpoint_registration_greenlet = gevent.spawn(
-                self.discovery.register,
-                self.address,
-                self.config["transport"]["udp"]["external_ip"],
-                self.config["transport"]["udp"]["external_port"],
-            )
-
         self.maybe_upgrade_db()
 
         storage = sqlite.SerializedSQLiteStorage(
@@ -521,9 +512,6 @@ class RaidenService(Runnable):
         self._initialize_whitelists(chain_state)
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
-
-        if self.config["transport_type"] == "udp":
-            endpoint_registration_greenlet.get()  # re-raise if exception occurred
 
         # Start the side-effects:
         # - React to blockchain events

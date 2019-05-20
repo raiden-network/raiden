@@ -123,9 +123,6 @@ def test_refund_transfer(
     deposit,
     network_wait,
     retry_timeout,
-    # UDP does not seem to retry messages until processed
-    # https://github.com/raiden-network/raiden/issues/3185
-    skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     raise_on_failure(
         raiden_chain,
@@ -335,9 +332,6 @@ def test_different_view_of_last_bp_during_unlock(
     deposit,
     network_wait,
     retry_timeout,
-    # UDP does not seem to retry messages until processed
-    # https://github.com/raiden-network/raiden/issues/3185
-    skip_if_not_matrix,  # pylint: disable=unused-argument
     blockchain_type,
 ):
     raise_on_failure(

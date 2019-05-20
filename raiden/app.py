@@ -11,9 +11,6 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
-    DEFAULT_NAT_INVITATION_TIMEOUT,
-    DEFAULT_NAT_KEEPALIVE_RETRIES,
-    DEFAULT_NAT_KEEPALIVE_TIMEOUT,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
@@ -23,10 +20,6 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-    DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-    DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
-    DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
-    INITIAL_PORT,
     RED_EYES_CONTRACT_VERSION,
 )
 from raiden.utils import pex, typing
@@ -42,22 +35,9 @@ class App:  # pylint: disable=too-few-public-methods
         "settle_timeout": DEFAULT_SETTLE_TIMEOUT,
         "contracts_path": contracts_precompiled_path(RED_EYES_CONTRACT_VERSION),
         "database_path": "",
-        "transport_type": "udp",
+        "transport_type": "matrix",
         "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
         "transport": {
-            "udp": {
-                "external_ip": "",
-                "external_port": INITIAL_PORT,
-                "host": "",
-                "nat_invitation_timeout": DEFAULT_NAT_INVITATION_TIMEOUT,
-                "nat_keepalive_retries": DEFAULT_NAT_KEEPALIVE_RETRIES,
-                "nat_keepalive_timeout": DEFAULT_NAT_KEEPALIVE_TIMEOUT,
-                "port": INITIAL_PORT,
-                "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-                "retry_interval": DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
-                "throttle_capacity": DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-                "throttle_fill_rate": DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
-            },
             "matrix": {
                 # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
                 "available_servers": None,

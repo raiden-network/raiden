@@ -7,24 +7,19 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
 from raiden.network.pathfinding import configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.network.throttle import TokenBucket
-from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.ui.checks import (
-    check_discovery_registration_gas,
     check_pfs_configuration,
     check_raiden_environment,
     check_smart_contract_addresses,
 )
 from raiden.utils.typing import Address
 from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -241,32 +236,3 @@ def setup_proxies_or_exit(
         service_registry=service_registry,
     )
     return proxies
-
-
-def setup_udp_or_exit(
-    config, blockchain_service, address, contracts, endpoint_registry_contract_address
-):
-    check_discovery_registration_gas(blockchain_service, address)
-    try:
-        dicovery_proxy = blockchain_service.discovery(
-            endpoint_registry_contract_address
-            or to_canonical_address(contracts[CONTRACT_ENDPOINT_REGISTRY]["address"])
-        )
-        discovery = ContractDiscovery(blockchain_service.node_address, dicovery_proxy)
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code("Endpoint Registry", endpoint_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address("Endpoint Registry", endpoint_registry_contract_address)
-
-    throttle_policy = TokenBucket(
-        config["transport"]["udp"]["throttle_capacity"],
-        config["transport"]["udp"]["throttle_fill_rate"],
-    )
-
-    transport = UDPTransport(
-        address, discovery, config["socket"], throttle_policy, config["transport"]["udp"]
-    )
-
-    return transport, discovery
