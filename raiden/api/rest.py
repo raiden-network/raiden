@@ -498,7 +498,7 @@ class RestAPI:
         return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
 
     def register_token(
-        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
+        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
     ):
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
@@ -538,7 +538,7 @@ class RestAPI:
 
     def open(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         partner_address: typing.Address,
         token_address: typing.TokenAddress,
         settle_timeout: typing.BlockTimeout = None,
@@ -617,7 +617,7 @@ class RestAPI:
 
     def connect(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress,
         funds: typing.TokenAmount,
         initial_channel_target: int = None,
@@ -647,7 +647,9 @@ class RestAPI:
 
         return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
 
-    def leave(self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress):
+    def leave(
+        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
+    ):
         log.debug(
             "Leaving token network",
             node=pex(self.raiden_api.address),
@@ -660,7 +662,7 @@ class RestAPI:
         ]
         return api_response(result=closed_channels)
 
-    def get_connection_managers_info(self, registry_address: typing.PaymentNetworkID):
+    def get_connection_managers_info(self, registry_address: typing.PaymentNetworkAddress):
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
@@ -673,7 +675,7 @@ class RestAPI:
         for token in self.raiden_api.get_tokens_list(registry_address):
             token_network_address = views.get_token_network_address_by_token_address(
                 views.state_from_raiden(self.raiden_api.raiden),
-                payment_network_id=registry_address,
+                payment_network_address=registry_address,
                 token_address=token,
             )
 
@@ -686,7 +688,7 @@ class RestAPI:
 
             open_channels = views.get_channelstate_open(
                 chain_state=views.state_from_raiden(self.raiden_api.raiden),
-                payment_network_id=registry_address,
+                payment_network_address=registry_address,
                 token_address=token,
             )
             if connection_manager is not None and open_channels:
@@ -702,7 +704,7 @@ class RestAPI:
 
     def get_channel_list(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress = None,
         partner_address: typing.Address = None,
     ):
@@ -722,7 +724,7 @@ class RestAPI:
         ]
         return api_response(result=result)
 
-    def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
+    def get_tokens_list(self, registry_address: typing.PaymentNetworkAddress):
         log.debug(
             "Getting token list",
             node=pex(self.raiden_api.address),
@@ -735,7 +737,7 @@ class RestAPI:
         return api_response(result=result)
 
     def get_token_network_for_token(
-        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
+        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
     ):
         log.debug(
             "Getting token network for token",
@@ -755,7 +757,7 @@ class RestAPI:
 
     def get_blockchain_events_network(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: typing.BlockSpecification = "latest",
     ):
@@ -879,7 +881,7 @@ class RestAPI:
 
     def get_channel(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
     ):
@@ -902,7 +904,7 @@ class RestAPI:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_partners_by_token(
-        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
+        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
     ):
         log.debug(
             "Getting partners by token",
@@ -937,7 +939,7 @@ class RestAPI:
 
     def initiate_payment(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress,
         target_address: typing.Address,
         amount: typing.TokenAmount,
@@ -1006,7 +1008,7 @@ class RestAPI:
 
     def _deposit(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         channel_state: NettingChannelState,
         total_deposit: typing.TokenAmount,
     ):
@@ -1046,7 +1048,7 @@ class RestAPI:
         return api_response(result=result)
 
     def _close(
-        self, registry_address: typing.PaymentNetworkID, channel_state: NettingChannelState
+        self, registry_address: typing.PaymentNetworkAddress, channel_state: NettingChannelState
     ):
         log.debug(
             "Closing channel",
@@ -1077,7 +1079,7 @@ class RestAPI:
 
     def patch_channel(
         self,
-        registry_address: typing.PaymentNetworkID,
+        registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
         total_deposit: typing.TokenAmount = None,

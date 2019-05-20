@@ -14,11 +14,13 @@ from raiden.transfer.views import list_channelstate_for_tokennetwork
 from raiden.utils import sha3
 
 
-def test_list_channelstate_for_tokennetwork(chain_state, payment_network_id, token_id):
+def test_list_channelstate_for_tokennetwork(chain_state, payment_network_address, token_id):
     """Regression test for https://github.com/raiden-network/raiden/issues/3257"""
     token_address = token_id
     result = list_channelstate_for_tokennetwork(
-        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
     )
     assert isinstance(result, list)
 
@@ -32,7 +34,7 @@ def test_initiator_task_view():
     transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
-        payment_network_identifier=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
+        payment_network_address=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
         allocated_fee=0,

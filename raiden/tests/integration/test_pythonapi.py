@@ -558,9 +558,11 @@ def run_test_create_monitoring_request(raiden_network, token_addresses):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
     )
 
     payment_identifier = create_default_identifier()

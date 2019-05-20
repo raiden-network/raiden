@@ -73,7 +73,7 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):
 
     new_token_network = ContractReceiveNewTokenNetwork(
         transaction_hash=transaction_hash,
-        payment_network_identifier=event.originating_contract,
+        payment_network_address=event.originating_contract,
         token_network=token_network_state,
         block_number=block_number,
         block_hash=block_hash,
@@ -105,7 +105,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
             token_address=typing.TokenAddress(token_address),
-            payment_network_identifier=raiden.default_registry.address,
+            payment_network_address=raiden.default_registry.address,
             token_network_address=token_network_address,
             reveal_timeout=raiden.config["reveal_timeout"],
             payment_channel_proxy=channel_proxy,

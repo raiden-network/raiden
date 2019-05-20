@@ -18,7 +18,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
@@ -147,7 +147,7 @@ class BlockChainService:
             if address not in self.address_to_token_network_registry:
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
                     jsonrpc_client=self.client,
-                    registry_address=PaymentNetworkID(address),
+                    registry_address=PaymentNetworkAddress(address),
                     contract_manager=self.contract_manager,
                 )
 

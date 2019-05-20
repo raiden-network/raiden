@@ -61,7 +61,7 @@ from raiden.utils.typing import (
     Nonce,
     Optional,
     PaymentID,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     Secret,
     SecretHash,
     Signature,
@@ -187,8 +187,8 @@ def make_privatekey_bin() -> bin:
     return make_32bytes()
 
 
-def make_payment_network_identifier() -> PaymentNetworkID:
-    return PaymentNetworkID(make_address())
+def make_payment_network_address() -> PaymentNetworkAddress:
+    return PaymentNetworkAddress(make_address())
 
 
 def make_keccak_hash() -> Keccak256:
@@ -370,7 +370,7 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: TokenAddress = EMPTY
-    payment_network_identifier: PaymentNetworkID = EMPTY
+    payment_network_address: PaymentNetworkAddress = EMPTY
 
     reveal_timeout: BlockTimeout = EMPTY
     settle_timeout: BlockTimeout = EMPTY
@@ -389,7 +389,7 @@ class NettingChannelStateProperties(Properties):
 NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=CanonicalIdentifierProperties.DEFAULTS,
     token_address=UNIT_TOKEN_ADDRESS,
-    payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    payment_network_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     mediation_fee=0,
@@ -403,7 +403,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
 
 @dataclass(frozen=True)
 class TransferDescriptionProperties(Properties):
-    payment_network_identifier: PaymentNetworkID = EMPTY
+    payment_network_address: PaymentNetworkAddress = EMPTY
     payment_identifier: PaymentID = EMPTY
     amount: TokenAmount = EMPTY
     token_network_address: TokenNetworkAddress = EMPTY
@@ -415,7 +415,7 @@ class TransferDescriptionProperties(Properties):
 
 
 TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
-    payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    payment_network_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,

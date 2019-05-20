@@ -25,7 +25,7 @@ from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
     make_canonical_identifier,
-    make_payment_network_identifier,
+    make_payment_network_address,
     make_privkey_address,
     make_secret,
     make_signed_balance_proof_from_unsigned,
@@ -699,7 +699,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 def test_invalid_timeouts():
     token_address = make_address()
     token_network_address = make_address()
-    payment_network_identifier = make_payment_network_identifier()
+    payment_network_address = make_payment_network_address()
     reveal_timeout = 5
     settle_timeout = 10
     identifier = make_address()
@@ -726,7 +726,7 @@ def test_invalid_timeouts():
                 token_network_address=token_network_address, channel_identifier=identifier
             ),
             token_address=token_address,
-            payment_network_identifier=payment_network_identifier,
+            payment_network_address=payment_network_address,
             reveal_timeout=large_reveal_timeout,
             settle_timeout=small_settle_timeout,
             mediation_fee=0,
@@ -745,7 +745,7 @@ def test_invalid_timeouts():
                     token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
-                payment_network_identifier=payment_network_identifier,
+                payment_network_address=payment_network_address,
                 reveal_timeout=invalid_value,
                 settle_timeout=settle_timeout,
                 mediation_fee=0,
@@ -762,7 +762,7 @@ def test_invalid_timeouts():
                     token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
-                payment_network_identifier=payment_network_identifier,
+                payment_network_address=payment_network_address,
                 reveal_timeout=reveal_timeout,
                 settle_timeout=invalid_value,
                 mediation_fee=0,

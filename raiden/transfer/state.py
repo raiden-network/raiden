@@ -45,7 +45,7 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Optional,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -354,7 +354,7 @@ class NettingChannelState(State):
 
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
-    payment_network_identifier: PaymentNetworkID = field(repr=False)
+    payment_network_address: PaymentNetworkAddress = field(repr=False)
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     mediation_fee: FeeAmount = field(repr=False)
@@ -460,7 +460,7 @@ class TokenNetworkState(State):
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
 
-    address: PaymentNetworkID
+    address: PaymentNetworkAddress
     token_network_list: List[TokenNetworkState]
     tokenidentifiers_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
         repr=False, default_factory=dict
@@ -498,7 +498,7 @@ class ChainState(State):
     block_hash: BlockHash
     our_address: Address
     chain_id: ChainID
-    identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
+    identifiers_to_paymentnetworks: Dict[PaymentNetworkAddress, PaymentNetworkState] = field(
         repr=False, default_factory=dict
     )
     nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
@@ -507,7 +507,7 @@ class ChainState(State):
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
     last_transport_authdata: Optional[str] = field(repr=False, default=None)
     tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
-        TokenNetworkAddress, PaymentNetworkID
+        TokenNetworkAddress, PaymentNetworkAddress
     ] = field(repr=False, default_factory=dict)
 
     def __post_init__(self) -> None:

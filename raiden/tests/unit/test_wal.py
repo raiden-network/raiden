@@ -137,7 +137,7 @@ def test_write_read_log():
 
 def test_timestamped_event():
     event = EventPaymentSentFailed(
-        factories.make_payment_network_identifier(),
+        factories.make_payment_network_address(),
         factories.make_address(),
         1,
         factories.make_address(),
@@ -155,7 +155,7 @@ def test_write_read_events():
     wal = new_wal(state_transition_noop)
 
     event = EventPaymentSentFailed(
-        factories.make_payment_network_identifier(),
+        factories.make_payment_network_address(),
         factories.make_address(),
         1,
         factories.make_address(),
