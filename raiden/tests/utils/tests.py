@@ -18,7 +18,7 @@ def shutdown_apps_and_cleanup_tasks(raiden_apps):
     for app in raiden_apps:
         app.stop()
 
-    # Two tests in sequence could run a UDP server on the same port, a hanging
+    # Two tests in sequence could run a server on the same port, a hanging
     # greenlet from the previous tests could send packet to the new server and
     # mess things up. Kill all greenlets to make sure that no left-over state
     # from a previous test interferes with a new one.

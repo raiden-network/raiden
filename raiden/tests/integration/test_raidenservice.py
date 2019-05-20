@@ -71,7 +71,6 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
     token_addresses,
     network_wait,
     user_deposit_address,
-    skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     """On restarts, Raiden will restore state and publish new balance proof
     updates to the global matrix room. This test will check for regressions

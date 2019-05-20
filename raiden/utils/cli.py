@@ -4,7 +4,6 @@ import re
 import string
 import sys
 from enum import EnumMeta
-from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
 from pathlib import Path
 from string import Template
@@ -230,25 +229,6 @@ class LogLevelConfigType(click.ParamType):
             logger_name, logger_level = logger_config.split(":")
             level_config[logger_name] = logger_level.upper()
         return level_config
-
-
-class NATChoiceType(click.Choice):
-    def convert(self, value, param, ctx):
-        if value.startswith("ext:"):
-            ip, _, port = value[4:].partition(":")
-            try:
-                IPv4Address(ip)
-            except AddressValueError:
-                self.fail("invalid IP address: {}".format(ip), param, ctx)
-            if port:
-                try:
-                    port = int(port, 0)
-                except ValueError:
-                    self.fail("invalid port number: {}".format(port), param, ctx)
-            else:
-                port = None
-            return ip, port
-        return super().convert(value, param, ctx)
 
 
 class NetworkChoiceType(click.Choice):

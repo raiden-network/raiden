@@ -39,10 +39,6 @@ USERID1 = "@Alice:Wonderland"
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 
 
-# All tests in this module require matrix
-pytestmark = pytest.mark.usefixtures("skip_if_not_matrix")
-
-
 class MessageHandler:
     def __init__(self, bag: set):
         self.bag = bag
@@ -365,7 +361,7 @@ def test_matrix_message_sync(matrix_transports):
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
-    skip_if_not_matrix, raiden_chain, token_addresses
+    raiden_chain, token_addresses
 ):
     """Proxies exceptions must be forwarded by the transport."""
     app0, app1 = raiden_chain

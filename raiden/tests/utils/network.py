@@ -3,14 +3,12 @@ from collections import namedtuple
 from copy import deepcopy
 
 import gevent
-from gevent import server
 
 from raiden import waiting
 from raiden.app import App
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.throttle import TokenBucket
-from raiden.network.transport import MatrixTransport, UDPTransport
+from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.app import database_from_privatekey
@@ -269,7 +267,6 @@ def create_apps(
     secret_registry_address,
     service_registry_address,
     user_deposit_address,
-    raiden_udp_ports,
     reveal_timeout,
     settle_timeout,
     database_basedir,
@@ -288,13 +285,10 @@ def create_apps(
 ):
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = zip(blockchain_services, endpoint_discovery_services, raiden_udp_ports)
+    services = zip(blockchain_services, endpoint_discovery_services)
 
     apps = []
     for idx, (blockchain, discovery, port) in enumerate(services):
-        address = blockchain.client.address
-
-        host = "127.0.0.1"
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
 
         config = {
@@ -306,21 +300,7 @@ def create_apps(
             "contracts_path": contracts_path,
             "database_path": database_path,
             "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
-            "transport": {
-                "udp": {
-                    "external_ip": host,
-                    "external_port": port,
-                    "host": host,
-                    "nat_invitation_timeout": nat_invitation_timeout,
-                    "nat_keepalive_retries": nat_keepalive_retries,
-                    "nat_keepalive_timeout": nat_keepalive_timeout,
-                    "port": port,
-                    "retries_before_backoff": retries_before_backoff,
-                    "retry_interval": retry_interval,
-                    "throttle_capacity": throttle_capacity,
-                    "throttle_fill_rate": throttle_fill_rate,
-                }
-            },
+            "transport": {},
             "rpc": True,
             "console": False,
         }
@@ -359,21 +339,7 @@ def create_apps(
         if user_deposit_address:
             user_deposit = blockchain.user_deposit(user_deposit_address)
 
-        if use_matrix:
-            transport = MatrixTransport(config["transport"]["matrix"])
-        else:
-            throttle_policy = TokenBucket(
-                config["transport"]["udp"]["throttle_capacity"],
-                config["transport"]["udp"]["throttle_fill_rate"],
-            )
-
-            transport = UDPTransport(
-                address,
-                discovery,
-                server._udp_socket((host, port)),  # pylint: disable=protected-access
-                throttle_policy,
-                config["transport"]["udp"],
-            )
+        transport = MatrixTransport(config["transport"]["matrix"])
 
         raiden_event_handler = RaidenEventHandler()
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)

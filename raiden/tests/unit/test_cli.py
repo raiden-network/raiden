@@ -20,9 +20,7 @@ _OPTION_DEPENDENCY_TEST_VALUES = {
     "listen-address": "0.0.0.0:5001",
     "max-unresponsive-time": 100,
     "send-ping-time": 100,
-    "nat": "stun",
-    ("transport", "matrix"): "udp",
-    ("transport", "udp"): "matrix",
+    ("transport", "matrix"): "matrix",
 }
 
 

@@ -49,9 +49,9 @@ def pytest_addoption(parser):
 
     parser.addoption(
         "--transport",
-        choices=("none", "udp", "matrix", "all"),
+        choices=("none", "matrix"),
         default="matrix",
-        help="Run integration tests with udp, with matrix, with both or not at all.",
+        help="Run integration tests with matrix, or not at all.",
     )
 
     parser.addoption(
@@ -195,7 +195,7 @@ def pytest_configure():
     pytest_timeout._validate_func_only = _validate_func_only
 
 
-# Convert `--transport all` to two separate invocations with `matrix` and `udp`
+# Convert `--transport all` to two separate invocations with `matrix`
 def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 
@@ -214,12 +214,8 @@ def pytest_generate_tests(metafunc):
                 # Check if more than one transport is used
                 if "number_of_transports" == mark.args[0]:
                     number_of_transports = mark.args[1]
-        # avoid collecting test if 'skip_if_not_*'
-        if transport in ("udp", "all") and "skip_if_not_matrix" not in fixtures:
-            transport_and_privacy.append(("udp", None))
 
-        if transport in ("matrix", "all") and "skip_if_not_udp" not in fixtures:
-
+        if transport == "matrix":
             if "public_and_private_rooms" in fixtures:
                 if number_of_transports:
                     transport_and_privacy.extend(

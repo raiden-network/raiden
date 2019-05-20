@@ -38,7 +38,7 @@ from raiden.network.transport.matrix.utils import (
     validate_and_parse_message,
     validate_userid_signature,
 )
-from raiden.network.transport.udp import udp_utils
+from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
 from raiden.transfer import views
@@ -138,7 +138,7 @@ class _RetryQueue(Runnable):
                     message=message,
                 )
                 return
-            timeout_generator = udp_utils.timeout_exponential_backoff(
+            timeout_generator = timeout_exponential_backoff(
                 self.transport._config["retries_before_backoff"],
                 self.transport._config["retry_interval"],
                 self.transport._config["retry_interval"] * 10,
@@ -292,7 +292,7 @@ class MatrixTransport(Runnable):
 
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
-            return udp_utils.timeout_exponential_backoff(
+            return timeout_exponential_backoff(
                 config["retries_before_backoff"],
                 config["retry_interval"] / 5,
                 config["retry_interval"],

@@ -227,7 +227,7 @@ def run_test_mediated_transfer_with_entire_deposit(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argument
-    raiden_network, deposit, token_addresses, network_wait, skip_if_not_matrix
+    raiden_network, deposit, token_addresses, network_wait
 ):
     raise_on_failure(
         raiden_network,

@@ -221,7 +221,7 @@ If Raiden has been running for many days then a lot of state changes will have g
 The Transport Layer
 *******************
 
-The Raiden Transport layer is responsible for the receiving and sending of the off-chain messages. The current architecture allows for a pluggable transport layer through the use of a common transport interface. We have two implementation of this interface. The deprecated `UDPTransport <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/udp/udp_transport.py#L155>`_ and the `MatrixTransport <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L262>`_.
+The Raiden Transport layer is responsible for the receiving and sending of the off-chain messages. The current architecture allows for a pluggable transport layer through the use of a common transport interface. We have one implementation of this interface. The `MatrixTransport <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L262>`_.
 
 Irrespective of the transport layer once a message is received it will eventually be forwarded to the `MessageHandler <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/message_handler.py#L41>`_ which will generate the proper state changes and dispatch them to the state machine described in the previous section.
 

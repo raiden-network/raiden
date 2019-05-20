@@ -24,7 +24,7 @@ from raiden.utils import BlockNumber
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_send_queued_messages(  # pylint: disable=unused-argument
-    raiden_network, deposit, token_addresses, network_wait, skip_if_not_matrix
+    raiden_network, deposit, token_addresses, network_wait
 ):
     """Test re-sending of undelivered messages on node restart"""
     raise_on_failure(
@@ -140,7 +140,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, network_wait, skip_if_not_matrix
+    raiden_network, token_addresses, network_wait
 ):
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport

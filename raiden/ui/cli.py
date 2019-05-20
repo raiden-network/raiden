@@ -15,13 +15,11 @@ from urllib3.exceptions import InsecureRequestWarning
 from raiden.constants import Environment, EthClient, RoutingMode
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
-from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
-    INITIAL_PORT,
 )
 from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec
@@ -31,7 +29,6 @@ from raiden.utils.cli import (
     EnumChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
-    NATChoiceType,
     NetworkChoiceType,
     PathRelativePath,
     apply_config_file,
@@ -41,7 +38,7 @@ from raiden.utils.cli import (
     validate_option_dependencies,
 )
 
-from .runners import EchoNodeRunner, MatrixRunner, UDPRunner
+from .runners import EchoNodeRunner, MatrixRunner
 
 log = structlog.get_logger(__name__)
 
@@ -53,10 +50,6 @@ OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
     "pathfinding-iou-timeout": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
     "enable-monitoring": [("transport", "matrix")],
     "matrix-server": [("transport", "matrix")],
-    "listen-address": [("transport", "udp")],
-    "max-unresponsive-time": [("transport", "udp")],
-    "send-ping-time": [("transport", "udp")],
-    "nat": [("transport", "udp")],
 }
 
 
@@ -152,8 +145,8 @@ def options(func):
         option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
             "--transport",
-            help="Transport system to use. UDP is not recommended",
-            type=click.Choice(["udp", "matrix"]),
+            help="Transport system to use.",
+            type=click.Choice(["matrix"]),
             default="matrix",
             show_default=True,
         ),
@@ -282,54 +275,6 @@ def options(func):
             ),
         ),
         option_group(
-            "UDP Transport Options",
-            option(
-                "--listen-address",
-                help='"host:port" for the raiden service to listen on.',
-                default="0.0.0.0:{}".format(INITIAL_PORT),
-                type=str,
-                show_default=True,
-            ),
-            option(
-                "--max-unresponsive-time",
-                help=(
-                    "Max time in seconds for which an address can send no packets and "
-                    "still be considered healthy."
-                ),
-                default=30,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--send-ping-time",
-                help=(
-                    "Time in seconds after which if we have received no message from a "
-                    "node we have a connection with, we are going to send a PING message"
-                ),
-                default=60,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--nat",
-                help=(
-                    "Manually specify method to use for determining public IP / NAT traversal.\n"
-                    "Available methods:\n"
-                    '"auto" - Try UPnP, then STUN, fallback to none\n'
-                    '"upnp" - Try UPnP, fallback to none\n'
-                    '"stun" - Try STUN, fallback to none\n'
-                    '"none" - Use the local interface address '
-                    "(this will likely cause connectivity issues)\n"
-                    '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port '
-                    "number)"
-                ),
-                type=NATChoiceType(["auto", "upnp", "stun", "none", "ext:<IP>[:<PORT>]"]),
-                default="auto",
-                show_default=True,
-                option_group="udp_transport",
-            ),
-        ),
-        option_group(
             "Matrix Transport Options",
             option(
                 "--matrix-server",
@@ -453,9 +398,7 @@ def run(ctx, **kwargs):
         ctx.obj = kwargs
         return
 
-    if kwargs["transport"] == "udp":
-        runner = UDPRunner(kwargs, ctx)
-    elif kwargs["transport"] == "matrix":
+    if kwargs["transport"] == "matrix":
         runner = MatrixRunner(kwargs, ctx)
     else:
         # Shouldn't happen
@@ -615,19 +558,7 @@ def smoketest(ctx, debug, eth_client):
 
         args["api_address"] = "localhost:" + str(port)
 
-        if args["transport"] == "udp":
-            with SocketFactory("127.0.0.1", port, strategy="none") as mapped_socket:
-                args["mapped_socket"] = mapped_socket
-                success = run_smoketest(
-                    print_step=print_step,
-                    append_report=append_report,
-                    args=args,
-                    contract_addresses=contract_addresses,
-                    token=token,
-                    debug=debug,
-                    ethereum_nodes=ethereum_nodes,
-                )
-        elif args["transport"] == "matrix":
+        if args["transport"] == "matrix":
             args["mapped_socket"] = None
             print_step("Starting Matrix transport")
             try:

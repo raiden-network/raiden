@@ -345,7 +345,6 @@ def test_stress(
     retry_timeout,
     token_addresses,
     port_generator,
-    skip_if_not_udp,  # pylint: disable=unused-argument
 ):
 
     config_converter = LogLevelConfigType()
