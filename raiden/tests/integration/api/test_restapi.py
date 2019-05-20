@@ -1788,7 +1788,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     identifier = 42
 
     token_address = token_addresses[0]
-    token_network_id = views.get_token_network_address_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
     )
 
@@ -1814,7 +1814,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
     initiator.raiden.start_mediated_transfer_with_secret(
-        token_network_address=token_network_id,
+        token_network_address=token_network_address,
         amount=amount,
         fee=0,
         target=target.raiden.address,
@@ -1834,7 +1834,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         assert content[0]["payment_identifier"] == str(identifier)
         assert content[0]["locked_amount"] == str(amount)
         assert content[0]["token_address"] == to_checksum_address(token_address)
-        assert content[0]["token_network_address"] == to_checksum_address(token_network_id)
+        assert content[0]["token_network_address"] == to_checksum_address(token_network_address)
 
     mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
     target_unlock = target_wait.wait_for_message(Unlock, {})

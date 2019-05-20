@@ -40,7 +40,7 @@ class ContractSendChannelClose(ContractSendEvent):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -55,7 +55,7 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -70,7 +70,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.balance_proof.canonical_identifier.token_network_address)
+        return self.balance_proof.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -86,7 +86,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:

@@ -96,13 +96,13 @@ def get_networks(
     payment_network_state = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
 
     if payment_network_state:
-        token_network_id = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
+        token_network_address = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
             token_address
         )
 
-        if token_network_id:
+        if token_network_address:
             token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-                token_network_id
+                token_network_address
             )
 
     return payment_network_state, token_network_state
@@ -112,7 +112,7 @@ def get_token_network_by_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[TokenNetworkState]:
     payment_network_address = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
-        TokenNetworkAddress(token_network_address)
+        token_network_address
     )
 
     payment_network_state = None
@@ -124,7 +124,7 @@ def get_token_network_by_address(
     token_network_state = None
     if payment_network_state:
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            TokenNetworkAddress(token_network_address)
+            token_network_address
         )
 
     return token_network_state
@@ -667,9 +667,7 @@ def handle_init_mediator(
     secrethash = transfer.lock.secrethash
     token_network_address = transfer.balance_proof.token_network_address
 
-    return subdispatch_mediatortask(
-        chain_state, state_change, TokenNetworkAddress(token_network_address), secrethash
-    )
+    return subdispatch_mediatortask(chain_state, state_change, token_network_address, secrethash)
 
 
 def handle_init_target(
@@ -681,11 +679,7 @@ def handle_init_target(
     token_network_address = transfer.balance_proof.token_network_address
 
     return subdispatch_targettask(
-        chain_state,
-        state_change,
-        TokenNetworkAddress(token_network_address),
-        channel_identifier,
-        secrethash,
+        chain_state, state_change, token_network_address, channel_identifier, secrethash
     )
 
 
@@ -970,9 +964,7 @@ def is_transaction_effect_satisfied(
         # channel exists for our_address and partner_address
         if partner_address:
             channel_state = views.get_channelstate_by_token_network_and_partner(
-                chain_state,
-                TokenNetworkAddress(state_change.token_network_address),
-                partner_address,
+                chain_state, state_change.token_network_address, partner_address
             )
             # If the channel was cleared, that means that both
             # sides of the channel were successfully unlocked.

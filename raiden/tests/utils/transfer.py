@@ -301,12 +301,12 @@ def transfer_and_assert_path(
     for from_app, to_app in pairs:
         from_channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=views.state_from_app(from_app),
-            token_network_id=token_network_address,
+            token_network_address=token_network_address,
             partner_address=to_app.raiden.address,
         )
         to_channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=views.state_from_app(to_app),
-            token_network_id=token_network_address,
+            token_network_address=token_network_address,
             partner_address=from_app.raiden.address,
         )
 

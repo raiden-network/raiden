@@ -154,7 +154,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
                 continue
             routes, _ = routing.get_best_routes(
                 chain_state=node_state,
-                token_network_id=network_state.address,
+                token_network_address=network_state.address,
                 one_to_n_address=one_to_n_address,
                 from_address=app.raiden.address,
                 to_address=target.raiden.address,

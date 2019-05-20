@@ -25,7 +25,7 @@ def token_id():
 
 
 @pytest.fixture
-def token_network_id():
+def token_network_address():
     return factories.make_address()
 
 
@@ -61,17 +61,19 @@ def payment_network_state(chain_state, payment_network_address):
 
 @pytest.fixture
 def token_network_state(
-    chain_state, payment_network_state, payment_network_address, token_network_id, token_id
+    chain_state, payment_network_state, payment_network_address, token_network_address, token_id
 ):
-    token_network_graph_state = TokenNetworkGraphState(token_network_id)
+    token_network_graph_state = TokenNetworkGraphState(token_network_address)
     token_network = TokenNetworkState(
-        address=token_network_id, token_address=token_id, network_graph=token_network_graph_state
+        address=token_network_address,
+        token_address=token_id,
+        network_graph=token_network_graph_state,
     )
-    payment_network_state.tokenidentifiers_to_tokennetworks[token_network_id] = token_network
-    payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_id
+    payment_network_state.tokenidentifiers_to_tokennetworks[token_network_address] = token_network
+    payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_address
 
     mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
-    mapping[token_network_id] = payment_network_address
+    mapping[token_network_address] = payment_network_address
 
     return token_network
 

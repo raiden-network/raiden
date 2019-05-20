@@ -51,7 +51,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
-from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkAddress
+from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -328,7 +328,7 @@ class RaidenEventHandler(EventHandler):
 
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=TokenNetworkAddress(token_network_address),
+            token_network_address=token_network_address,
             partner_address=participant,
         )
 
@@ -336,7 +336,8 @@ class RaidenEventHandler(EventHandler):
             # channel was cleaned up already due to an unlock
             raise RaidenUnrecoverableError(
                 f"Failed to find channel state with partner:"
-                f"{to_checksum_address(participant)}, token_network:pex(token_network_address)"
+                f"{to_checksum_address(participant)}, "
+                f"token_network:{to_checksum_address(token_network_address)}"
             )
 
         our_address = channel_state.our_state.address

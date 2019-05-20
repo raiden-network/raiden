@@ -72,7 +72,7 @@ class ConnectionManager:
 
     def __init__(self, raiden, token_network_address):
         chain_state = views.state_from_raiden(raiden)
-        token_network_state = views.get_token_network_by_identifier(
+        token_network_state = views.get_token_network_by_address(
             chain_state, token_network_address
         )
         token_network_registry = views.get_token_network_registry_by_token_network_address(

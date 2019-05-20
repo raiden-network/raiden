@@ -115,7 +115,7 @@ def get_best_routes_with_iou_request_mocked(
     with patch.object(requests, "get", side_effect=iou_side_effect) as patched:
         best_routes, feedback_token = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
             from_address=from_address,
             to_address=to_address,
@@ -698,7 +698,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
         pfs_request.return_value = True, [], "feedback_token"
         routes, _ = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
             from_address=our_address,
             to_address=address1,
@@ -717,7 +717,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
         pfs_request.return_value = True, [], "feedback_token"
         get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
             from_address=our_address,
             to_address=address1,

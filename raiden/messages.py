@@ -889,7 +889,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
-            token_network_address=TokenNetworkAddress(balance_proof.token_network_address),
+            token_network_address=balance_proof.token_network_address,
             token=transfer.token,
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
@@ -1065,7 +1065,7 @@ class SignedBlindedBalanceProof:
         # pylint: disable=unexpected-keyword-arg
         return cls(
             channel_identifier=balance_proof.channel_identifier,
-            token_network_address=TokenNetworkAddress(balance_proof.token_network_address),
+            token_network_address=balance_proof.token_network_address,
             nonce=balance_proof.nonce,
             additional_hash=balance_proof.message_hash,
             chain_id=balance_proof.chain_id,
