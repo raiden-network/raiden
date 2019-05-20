@@ -117,12 +117,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_refund_transfer(
-    raiden_chain,
-    number_of_nodes,
-    token_addresses,
-    deposit,
-    network_wait,
-    retry_timeout,
+    raiden_chain, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
 ):
     raise_on_failure(
         raiden_chain,

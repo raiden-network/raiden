@@ -115,7 +115,6 @@ def smoketest_perform_tests(
 ):
     """ Perform high level tests designed to quickly discover broken functionality. """
     try:
-        chain = raiden_service.chain
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
         events_token_addresses = [
             event["args"]["token_address"] for event in token_network_added_events

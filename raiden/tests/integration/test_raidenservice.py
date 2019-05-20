@@ -66,11 +66,7 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
 def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
-    raiden_network,
-    number_of_nodes,
-    token_addresses,
-    network_wait,
-    user_deposit_address,
+    raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
 ):
     """On restarts, Raiden will restore state and publish new balance proof
     updates to the global matrix room. This test will check for regressions

@@ -48,7 +48,7 @@ class App:  # pylint: disable=too-few-public-methods
                 "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 "retry_interval": DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
                 "server": "auto",
-            },
+            }
         },
         "rpc": True,
         "console": False,
