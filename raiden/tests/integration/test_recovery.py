@@ -28,11 +28,7 @@ from raiden.utils import create_default_identifier
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_happy_case(
-    raiden_network,
-    number_of_nodes,
-    deposit,
-    token_addresses,
-    network_wait,
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -158,12 +154,7 @@ def test_recovery_happy_case(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_unhappy_case(
-    raiden_network,
-    number_of_nodes,
-    deposit,
-    token_addresses,
-    network_wait,
-    retry_timeout,
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait, retry_timeout
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -258,11 +249,7 @@ def test_recovery_unhappy_case(
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_recovery_blockchain_events(
-    raiden_network,
-    token_addresses,
-    network_wait,
-):
+def test_recovery_blockchain_events(raiden_network, token_addresses, network_wait):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
     app sees the change

@@ -2,7 +2,7 @@ import sys
 
 import click
 import structlog
-from eth_utils import denoms, to_checksum_address
+from eth_utils import to_checksum_address
 from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
@@ -14,10 +14,9 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
-from raiden.utils import typing
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.typing import Address, Dict, Optional
-from raiden_contracts.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER, ID_TO_NETWORKNAME
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 
