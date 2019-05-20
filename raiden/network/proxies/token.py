@@ -3,11 +3,11 @@ from eth_utils import is_binary_address, to_checksum_address, to_normalized_addr
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
-from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit
-from raiden.utils.typing import Address, BlockSpecification, TokenAmount
+from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -18,7 +18,12 @@ GAS_REQUIRED_FOR_APPROVE = 58792
 
 
 class Token:
-    def __init__(self, jsonrpc_client, token_address, contract_manager: ContractManager):
+    def __init__(
+        self,
+        jsonrpc_client: JSONRPCClient,
+        token_address: TokenAddress,
+        contract_manager: ContractManager,
+    ) -> None:
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),
@@ -28,7 +33,7 @@ class Token:
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 
-        check_address_has_code(jsonrpc_client, token_address, "Token")
+        check_address_has_code(jsonrpc_client, Address(token_address), "Token")
 
         self.address = token_address
         self.client = jsonrpc_client
@@ -40,7 +45,7 @@ class Token:
             to_checksum_address(owner), to_checksum_address(spender)
         ).call(block_identifier=block_identifier)
 
-    def approve(self, allowed_address: Address, allowance: TokenAmount):
+    def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
@@ -139,17 +144,19 @@ class Token:
 
         return msg
 
-    def balance_of(self, address, block_identifier="latest"):
+    def balance_of(
+        self, address: Address, block_identifier: BlockSpecification = "latest"
+    ) -> Balance:
         """ Return the balance of `address`. """
         return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
             block_identifier=block_identifier
         )
 
-    def total_supply(self, block_identifier="latest"):
+    def total_supply(self, block_identifier: BlockSpecification = "latest"):
         """ Return the total supply of the token at the given block identifier. """
         return self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
 
-    def transfer(self, to_address: Address, amount: TokenAmount):
+    def transfer(self, to_address: Address, amount: TokenAmount) -> None:
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
         log_details = {

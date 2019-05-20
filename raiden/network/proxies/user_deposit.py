@@ -12,7 +12,15 @@ from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit
-from raiden.utils.typing import Address, Balance, BlockSpecification, Dict, TokenAmount, Tuple
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockSpecification,
+    Dict,
+    TokenAddress,
+    TokenAmount,
+    Tuple,
+)
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT, GAS_REQUIRED_FOR_UDC_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
 
@@ -46,7 +54,7 @@ class UserDeposit:
 
         self.deposit_lock = RLock()
 
-    def token_address(self, block_identifier: BlockSpecification) -> Address:
+    def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return to_canonical_address(
             self.proxy.contract.functions.token().call(block_identifier=block_identifier)
         )
@@ -135,8 +143,9 @@ class UserDeposit:
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
-        fn = getattr(self.proxy.contract.functions, "effectiveBalance")
-        balance = fn(address).call(block_identifier=block_identifier)
+        balance = self.proxy.contract.functions.effectiveBalance(address).call(
+            block_identifier=block_identifier
+        )
 
         if balance == b"":
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")

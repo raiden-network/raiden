@@ -53,6 +53,7 @@ from raiden.utils.typing import (
     Signature,
     T_ChannelID,
     T_ChannelState,
+    TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
 )
@@ -152,7 +153,7 @@ class TokenNetwork:
 
         return call_result
 
-    def token_address(self) -> Address:
+    def token_address(self) -> TokenAddress:
         """ Return the token of this manager. """
         return to_canonical_address(self.proxy.contract.functions.token().call())
 
@@ -616,7 +617,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,
         partner: Address,
-    ):
+    ) -> None:
         """ Set channel's total deposit.
 
         `total_deposit` has to be monotonically increasing, this is enforced by
@@ -838,7 +839,7 @@ class TokenNetwork:
         additional_hash: AdditionalHash,
         signature: Signature,
         given_block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ Close the channel using the provided balance proof.
 
         Note:

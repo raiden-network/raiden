@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockSpecification,
     Dict,
+    Endpoint,
     Host,
     HostPort,
     Iterable,
@@ -99,19 +100,18 @@ def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
-def host_port_to_endpoint(host: str, port: int) -> str:
-    return "{}:{}".format(host, port)
+def host_port_to_endpoint(host: Host, port: Port) -> Endpoint:
+    return Endpoint(f"{host}:{port}")
 
 
-def split_endpoint(endpoint: str) -> HostPort:
+def split_endpoint(endpoint: Endpoint) -> HostPort:
     match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
     if not match:
         raise ValueError("Invalid endpoint", endpoint)
     host, port = match.groups()
-    returned_port = None
-    if port:
-        returned_port = Port(int(port))
-    return Host(host), returned_port
+    if not port:
+        raise ValueError("Invalid endpoint, missing port", endpoint)
+    return Host(host), Port(int(port))
 
 
 def privatekey_to_publickey(private_key_bin: PrivateKey) -> PublicKey:

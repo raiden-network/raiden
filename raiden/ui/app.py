@@ -48,7 +48,7 @@ from raiden.ui.startup import (
 )
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, Optional, PrivateKey, Tuple
+from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
@@ -122,10 +122,10 @@ def run_app(
     service_registry_contract_address: Address,
     endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
-    listen_address: str,
+    listen_address: Endpoint,
     mapped_socket,
     max_unresponsive_time: int,
-    api_address: str,
+    api_address: Endpoint,
     rpc: bool,
     sync_check: bool,
     console: bool,

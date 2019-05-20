@@ -4,10 +4,11 @@ from eth_utils import is_binary_address, to_checksum_address, to_normalized_addr
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import TransactionThrew, UnknownAddress
 from raiden.network.proxies.utils import compare_contract_versions
-from raiden.network.rpc.client import check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit
+from raiden.utils.typing import Address, Endpoint
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     GAS_REQUIRED_FOR_ENDPOINT_REGISTER,
@@ -23,7 +24,12 @@ class Discovery:
     endpoints for other ethereum-/raiden-addressess.
     """
 
-    def __init__(self, jsonrpc_client, discovery_address, contract_manager: ContractManager):
+    def __init__(
+        self,
+        jsonrpc_client: JSONRPCClient,
+        discovery_address: Address,
+        contract_manager: ContractManager,
+    ) -> None:
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             to_normalized_address(discovery_address),
@@ -48,7 +54,7 @@ class Discovery:
         self.not_found_address = NULL_ADDRESS
         self.proxy = proxy
 
-    def register_endpoint(self, node_address, endpoint):
+    def register_endpoint(self, node_address: Address, endpoint: Endpoint) -> None:
         if node_address != self.client.address:
             raise ValueError("node_address doesnt match this node's address")
 
@@ -72,14 +78,14 @@ class Discovery:
 
         log.debug("registerEndpoint successful", **log_details)
 
-    def endpoint_by_address(self, node_address_bin):
+    def endpoint_by_address(self, node_address_bin: Address) -> Endpoint:
         node_address_hex = to_checksum_address(node_address_bin)
         endpoint = self.proxy.contract.functions.findEndpointByAddress(node_address_hex).call()
 
         if endpoint == "":
             raise UnknownAddress("Unknown address {}".format(pex(node_address_bin)))
 
-        return endpoint
+        return Endpoint(endpoint)
 
     def version(self):
         return self.proxy.contract.functions.contract_version().call()

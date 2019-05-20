@@ -21,6 +21,7 @@ from raiden.utils.typing import (
     Dict,
     PaymentNetworkID,
     T_ChannelID,
+    TokenAddress,
     TokenNetworkAddress,
     Tuple,
 )
@@ -35,7 +36,7 @@ class BlockChainService:
     def __init__(self, jsonrpc_client: JSONRPCClient, contract_manager: ContractManager):
         self.address_to_discovery: Dict[Address, Discovery] = dict()
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
-        self.address_to_token: Dict[Address, Token] = dict()
+        self.address_to_token: Dict[TokenAddress, Token] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
         self.address_to_token_network_registry: Dict[Address, TokenNetworkRegistry] = dict()
         self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
@@ -126,7 +127,7 @@ class BlockChainService:
 
         return current_block
 
-    def token(self, token_address: Address) -> Token:
+    def token(self, token_address: TokenAddress) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")

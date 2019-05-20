@@ -57,7 +57,7 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterator
+from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Endpoint, Iterator
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -71,7 +71,7 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 # the smoketest will assert that a different endpoint got successfully registered
-TEST_ENDPOINT = "9.9.9.9:9999"
+TEST_ENDPOINT = Endpoint("9.9.9.9:9999")
 TEST_PARTNER_ADDRESS = "2" * 40
 TEST_DEPOSIT_AMOUNT = 5
 
