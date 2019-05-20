@@ -84,6 +84,7 @@ CONFIG = {
         "pathfinding_max_paths": 3,
         "pathfinding_iou_timeout": 10,
         "pathfinding_max_fee": 50,
+        "pathfinding_fee": 5,
     }
 }
 
@@ -128,26 +129,11 @@ def get_best_routes_with_iou_request_mocked(
 
 
 def test_get_pfs_info_success():
-    json_data = {
-        "price_info": 0,
-        "network_info": {
-            "chain_id": 1,
-            "registry_address": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
-        },
-        "message": "This is your favorite pathfinding service",
-        "operator": "John Doe",
-        "version": "0.0.1",
-    }
-
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
-
     with patched_get_for_succesful_pfs_info():
         pathfinding_service_info = get_pfs_info("url")
 
         req_registry_address = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
-        assert pathfinding_service_info["price_info"] == 0
+        assert pathfinding_service_info["price_info"] == 5
         assert pathfinding_service_info["network_info"]["chain_id"] == 1
         assert pathfinding_service_info["network_info"]["registry_address"] == req_registry_address
         assert pathfinding_service_info["message"] == "This is your favorite pathfinding service"
@@ -156,9 +142,6 @@ def test_get_pfs_info_success():
 
 
 def test_get_pfs_info_request_error():
-    response = Mock()
-    response.configure_mock(status_code=400)
-
     with patch.object(requests, "get", side_effect=requests.RequestException()):
         pathfinding_service_info = get_pfs_info("url")
 
@@ -760,6 +743,7 @@ def query_paths_args(chain_id, token_network_state, one_to_n_address, our_addres
         pathfinding_max_fee=pfs_max_fee,
         pathfinding_max_paths=3,
         pathfinding_iou_timeout=500,
+        pathfinding_fee=int(pfs_max_fee / 2),
     )
     return dict(
         service_config=service_config,
@@ -831,37 +815,7 @@ def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
         )
 
 
-def test_query_paths_with_insufficient_payment(query_paths_args, valid_response_json, pfs_max_fee):
-    " After an insufficient payment response, we retry only if we are below our maximum fee. "
-    insufficient_payment = [dict(error_code=PFSError.INSUFFICIENT_SERVICE_PAYMENT.value)] * 2
-    assert_failed_pfs_request(
-        query_paths_args,
-        insufficient_payment,
-        expected_requests=1,
-        exception_type=ServiceRequestIOURejected,
-    )
-
-    query_paths_args["service_config"]["pathfinding_fee"] = pfs_max_fee
-    assert_failed_pfs_request(
-        query_paths_args,
-        insufficient_payment,
-        expected_requests=1,
-        exception_type=ServiceRequestIOURejected,
-    )
-
-    query_paths_args["service_config"]["pathfinding_fee"] = int(pfs_max_fee / 2)
-    assert_failed_pfs_request(
-        query_paths_args,
-        insufficient_payment,
-        expected_requests=2,
-        exception_type=ServiceRequestIOURejected,
-    )
-
-    # second attempt not rejected
-    insufficient_payment[1] = valid_response_json
-    assert_failed_pfs_request(
-        query_paths_args, insufficient_payment, [400, 200], expected_success=True
-    )
+# TODO create tests for sufficient / insufficient payments
 
 
 def test_query_paths_with_multiple_errors(query_paths_args):
