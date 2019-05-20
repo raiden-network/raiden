@@ -54,6 +54,7 @@ from raiden.utils.typing import (
     AddressHex,
     BlockHash,
     BlockSpecification,
+    DeployedContract,
     Nonce,
     TransactionHash,
 )
@@ -605,7 +606,7 @@ class JSONRPCClient:
             self, contract=self.new_contract(contract_interface, contract_address)
         )
 
-    def new_contract(self, contract_interface: Dict, contract_address: Address):
+    def new_contract(self, contract_interface: ABI, contract_address: Address):
         return self.web3.eth.contract(
             abi=contract_interface, address=to_checksum_address(contract_address)
         )
@@ -616,7 +617,7 @@ class JSONRPCClient:
     def deploy_solidity_contract(
         self,  # pylint: disable=too-many-locals
         contract_name: str,
-        all_contracts: Dict[str, ABI],
+        all_contracts: Dict[str, DeployedContract],
         libraries: Dict[str, str] = None,
         constructor_parameters: Tuple[Any] = None,
         contract_path: str = None,

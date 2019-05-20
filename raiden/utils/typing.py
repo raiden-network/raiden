@@ -1,7 +1,7 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
-from raiden_contracts.contract_manager import DeployedContract
+from raiden_contracts.contract_manager import DeployedContract  # NOQA pylint:disable=unused-import
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"
 
-ABI = DeployedContract
+ABI = List[Dict[str, Any]]
 
 T_Address = bytes
 Address = NewType("Address", T_Address)
@@ -167,7 +167,8 @@ NodeNetworkStateMap = Dict[Address, str]
 
 Host = NewType("Host", str)
 Port = NewType("Port", int)
-HostPort = Tuple[Host, Optional[Port]]
+HostPort = Tuple[Host, Port]
+Endpoint = NewType("Endpoint", str)
 
 LockType = Union["HashTimeLockState", "UnlockPartialProofState"]
 ErrorType = Union[Type["RaidenRecoverableError"], Type["RaidenUnrecoverableError"]]

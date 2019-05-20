@@ -6,7 +6,7 @@ from eth_utils import is_binary_address
 from raiden.exceptions import InvalidAddress, UnknownAddress
 from raiden.network.proxies.discovery import Discovery as DiscoveryProxy
 from raiden.utils import host_port_to_endpoint, pex, split_endpoint
-from raiden.utils.typing import HostPort
+from raiden.utils.typing import Address, Dict, Host, HostPort, Port
 
 log = structlog.get_logger(__name__)
 
@@ -15,9 +15,9 @@ class Discovery:
     """ Mock mapping address: host, port """
 
     def __init__(self):
-        self.nodeid_to_hostport = dict()
+        self.nodeid_to_hostport: Dict[Address, HostPort] = dict()
 
-    def register(self, node_address: bytes, host: str, port: int):
+    def register(self, node_address: Address, host: Host, port: Port) -> None:
         if not is_binary_address(node_address):
             raise ValueError("node_address must be a valid address")
 
@@ -31,7 +31,7 @@ class Discovery:
 
         self.nodeid_to_hostport[node_address] = (host, port)
 
-    def get(self, node_address: bytes):
+    def get(self, node_address: Address) -> HostPort:
         try:
             return self.nodeid_to_hostport[node_address]
         except KeyError:
@@ -44,14 +44,14 @@ class ContractDiscovery(Discovery):
     Allows registering and looking up by endpoint (host, port) for node_address.
     """
 
-    def __init__(self, node_address: bytes, discovery_proxy: DiscoveryProxy):
+    def __init__(self, node_address: Address, discovery_proxy: DiscoveryProxy) -> None:
 
         super().__init__()
 
         self.node_address = node_address
         self.discovery_proxy = discovery_proxy
 
-    def register(self, node_address: bytes, host: str, port: int):
+    def register(self, node_address: Address, host: Host, port: Port) -> None:
         if node_address != self.node_address:
             raise ValueError("You can only register your own endpoint.")
 
@@ -88,7 +88,7 @@ class ContractDiscovery(Discovery):
             port=port,
         )
 
-    def get(self, node_address: bytes) -> HostPort:
+    def get(self, node_address: Address) -> HostPort:
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
         host_port = split_endpoint(endpoint)
         return host_port
