@@ -28,7 +28,7 @@ from raiden.utils.typing import (
     List,
     Optional,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 
@@ -237,7 +237,7 @@ def handle_unlock(
         transfer = target_state.transfer
         payment_received_success = EventPaymentReceivedSuccess(
             payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
+            token_network_identifier=TokenNetworkAddress(channel_state.token_network_identifier),
             identifier=transfer.payment_identifier,
             amount=TokenAmount(transfer.lock.amount),
             initiator=transfer.initiator,

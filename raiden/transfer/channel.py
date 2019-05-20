@@ -105,7 +105,7 @@ from raiden.utils.typing import (
     SuccessOrError,
     TargetAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
     Tuple,
     Union,
     cast,
@@ -1306,7 +1306,7 @@ def create_sendexpiredlock(
     locked_lock: LockType,
     pseudo_random_generator: random.Random,
     chain_id: ChainID,
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     channel_identifier: ChannelID,
     recipient: Address,
 ) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:
@@ -1361,7 +1361,7 @@ def events_for_expired_lock(
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channel_state.chain_id,
-        token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
+        token_network_identifier=TokenNetworkAddress(channel_state.token_network_identifier),
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
     )

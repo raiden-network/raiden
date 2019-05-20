@@ -61,7 +61,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     Tuple,
 )
 
@@ -76,7 +75,7 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 def event_filter_for_payments(
     event: architecture.Event,
-    token_network_identifier: TokenNetworkID = None,
+    token_network_identifier: TokenNetworkAddress = None,
     partner_address: Address = None,
 ) -> bool:
     """Filters out non payment history related events
@@ -684,7 +683,7 @@ class RaidenAPI:
 
     def get_token_network_address_for_token_address(
         self, registry_address: PaymentNetworkID, token_address: TokenAddress
-    ) -> Optional[TokenNetworkID]:
+    ) -> Optional[TokenNetworkAddress]:
         return views.get_token_network_identifier_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,

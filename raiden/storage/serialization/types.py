@@ -54,7 +54,6 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAddress,
     TokenNetworkAddress,
-    TokenNetworkID,
     TransactionHash,
     TransferID,
     Union,
@@ -170,7 +169,6 @@ _native_to_marshmallow.update(
         TargetAddress: AddressField,
         TokenAddress: AddressField,
         TokenNetworkAddress: AddressField,
-        TokenNetworkID: AddressField,
         # Bytes
         EncodedData: BytesField,
         AdditionalHash: BytesField,
@@ -200,8 +198,6 @@ _native_to_marshmallow.update(
         # integer type is smaller than python's.
         ChainID: IntegerToStringField,
         ChannelID: IntegerToStringField,
-        # Union
-        Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
         # Polymorphic fields
         TransferTask: CallablePolyField(
             serialization_schema_selector=transfer_task_schema_serialization,

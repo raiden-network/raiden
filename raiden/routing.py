@@ -18,7 +18,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     TargetAddress,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -26,7 +26,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 def get_best_routes(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_id: TokenNetworkAddress,
     one_to_n_address: Optional[Address],
     from_address: InitiatorAddress,
     to_address: TargetAddress,
@@ -114,7 +114,7 @@ class Neighbour(NamedTuple):
 
 def get_best_routes_internal(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_id: TokenNetworkAddress,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: int,
@@ -202,7 +202,7 @@ def get_best_routes_internal(
 
 def get_best_routes_pfs(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_id: TokenNetworkAddress,
     one_to_n_address: Address,
     from_address: InitiatorAddress,
     to_address: TargetAddress,

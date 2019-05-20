@@ -23,7 +23,6 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -40,8 +39,8 @@ class ContractSendChannelClose(ContractSendEvent):
     balance_proof: Optional[BalanceProofSignedState]
 
     @property
-    def token_network_identifier(self) -> TokenNetworkID:
-        return TokenNetworkID(self.canonical_identifier.token_network_address)
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -132,7 +131,7 @@ class EventPaymentSentSuccess(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     identifier: PaymentID
     amount: PaymentAmount
     target: TargetAddress
@@ -149,7 +148,7 @@ class EventPaymentSentFailed(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     identifier: PaymentID
     target: TargetAddress
     reason: str
@@ -167,7 +166,7 @@ class EventPaymentReceivedSuccess(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     identifier: PaymentID
     amount: TokenAmount
     initiator: InitiatorAddress

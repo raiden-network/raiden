@@ -69,7 +69,6 @@ from raiden.utils.typing import (
     SecretHash,
     TokenAddress,
     TokenNetworkAddress,
-    TokenNetworkID,
     Tuple,
     Union,
 )
@@ -112,7 +111,7 @@ def get_networks(
 
 
 def get_token_network_by_address(
-    chain_state: ChainState, token_network_address: Union[TokenNetworkID, TokenNetworkAddress]
+    chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[TokenNetworkState]:
     payment_network_identifier = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
         TokenNetworkAddress(token_network_address)
@@ -127,7 +126,7 @@ def get_token_network_by_address(
     token_network_state = None
     if payment_network_state:
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            TokenNetworkID(token_network_address)
+            TokenNetworkAddress(token_network_address)
         )
 
     return token_network_state
@@ -277,7 +276,7 @@ def subdispatch_to_paymenttask(
 def subdispatch_initiatortask(
     chain_state: ChainState,
     state_change: StateChange,
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -323,7 +322,7 @@ def subdispatch_initiatortask(
 def subdispatch_mediatortask(
     chain_state: ChainState,
     state_change: StateChange,
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -371,7 +370,7 @@ def subdispatch_mediatortask(
 def subdispatch_targettask(
     chain_state: ChainState,
     state_change: StateChange,
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     channel_identifier: ChannelID,
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
@@ -451,8 +450,7 @@ def maybe_add_tokennetwork(
         addresses_to_ids[token_address] = token_network_identifier
 
         mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
-        # FIXME: Remove cast once TokenNetworkAddress or TokenNetworkID are removed
-        mapping[TokenNetworkAddress(token_network_identifier)] = payment_network_identifier
+        mapping[token_network_identifier] = payment_network_identifier
 
 
 def sanity_check(iteration: TransitionResult[ChainState]) -> None:
@@ -678,7 +676,7 @@ def handle_init_mediator(
     token_network_identifier = transfer.balance_proof.token_network_identifier
 
     return subdispatch_mediatortask(
-        chain_state, state_change, TokenNetworkID(token_network_identifier), secrethash
+        chain_state, state_change, TokenNetworkAddress(token_network_identifier), secrethash
     )
 
 
@@ -693,7 +691,7 @@ def handle_init_target(
     return subdispatch_targettask(
         chain_state,
         state_change,
-        TokenNetworkID(token_network_identifier),
+        TokenNetworkAddress(token_network_identifier),
         channel_identifier,
         secrethash,
     )
@@ -980,7 +978,7 @@ def is_transaction_effect_satisfied(
         # channel exists for our_address and partner_address
         if partner_address:
             channel_state = views.get_channelstate_by_token_network_and_partner(
-                chain_state, TokenNetworkID(state_change.token_network_identifier), partner_address
+                chain_state, TokenNetworkAddress(state_change.token_network_identifier), partner_address
             )
             # If the channel was cleared, that means that both
             # sides of the channel were successfully unlocked.

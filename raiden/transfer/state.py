@@ -61,7 +61,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     Union,
 )
 
@@ -156,7 +155,7 @@ class TokenNetworkGraphState(State):
     route finding.
     """
 
-    token_network_id: TokenNetworkID
+    token_network_id: TokenNetworkAddress
     network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
     channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
         repr=False, default_factory=dict
@@ -413,8 +412,8 @@ class NettingChannelState(State):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkID:
-        return TokenNetworkID(self.canonical_identifier.token_network_address)
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
     def chain_id(self) -> ChainID:
@@ -435,7 +434,7 @@ class NettingChannelState(State):
 class TokenNetworkState(State):
     """ Corresponds to a token network smart contract. """
 
-    address: TokenNetworkID
+    address: TokenNetworkAddress
     token_address: TokenAddress
     network_graph: TokenNetworkGraphState = field(repr=False)
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState] = field(
@@ -463,10 +462,10 @@ class PaymentNetworkState(State):
 
     address: PaymentNetworkID
     token_network_list: List[TokenNetworkState]
-    tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = field(
+    tokenidentifiers_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
         repr=False, default_factory=dict
     )
-    tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = field(
+    tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkAddress] = field(
         repr=False, default_factory=dict
     )
 
@@ -475,11 +474,11 @@ class PaymentNetworkState(State):
             raise ValueError("address must be an address instance")
 
         if not self.tokenidentifiers_to_tokennetworks:
-            self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
+            self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = {
                 token_network.address: token_network for token_network in self.token_network_list
             }
         if not self.tokenaddresses_to_tokenidentifiers:
-            self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
+            self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkAddress] = {
                 token_network.token_address: token_network.address
                 for token_network in self.token_network_list
             }

@@ -41,7 +41,6 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     TransferID,
 )
 
@@ -105,8 +104,8 @@ class ActionChannelClose(StateChange):
         return self.canonical_identifier.chain_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkID:
-        return TokenNetworkID(self.canonical_identifier.token_network_address)
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
     def channel_identifier(self) -> ChannelID:
