@@ -1,8 +1,8 @@
-from typing import Callable, Dict, Optional, Union
-from unittest.mock import Mock
+from typing import Callable, Dict, List, Optional, Union
 
 import pytest
 from eth_utils import to_canonical_address
+from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.network.transport.matrix import AddressReachability, UserPresence
@@ -26,14 +26,28 @@ class DummyUser:
 
 
 class DummyMatrixClient:
-    def __init__(self, user_id: str):
-        self._presence_callback = None
+    def __init__(self, user_id: str, user_directory_content: Optional[List[DummyUser]] = None):
         self.user_id = user_id
+        self._presence_callback = None
+        self._user_directory_content = user_directory_content if user_directory_content else []
+        # This is only used in `get_user_presence()`
+        self._user_presence = {}
 
     def add_presence_listener(self, callback: Callable):
         if self._presence_callback is not None:
             raise RuntimeError("Callback has already been registered")
         self._presence_callback = callback
+
+    def search_user_directory(self, term: str) -> List[DummyUser]:
+        for user in self._user_directory_content:
+            if term in user.user_id:
+                yield user
+
+    def get_user_presence(self, user_id: str) -> str:
+        presence = self._user_presence.get(user_id)
+        if presence is None:
+            raise MatrixRequestError(404, "Unknown user")
+        return presence
 
     # Test helper
     def trigger_presence_callback(self, user_states: Dict[str, UserPresence]):
@@ -65,8 +79,8 @@ def dummy_get_user(user_or_id: Union[str, User]) -> User:
     return DummyUser(user_id=user_or_id)
 
 
-ADDR1 = b"\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
-ADDR2 = b'""""""""""""""""""""'
+ADDR1 = Address(b"\x11" * 20)
+ADDR2 = Address(b'""""""""""""""""""""')
 INVALID_USER_ID = "bla:bla"
 USER0_ID = "@0x0000000000000000000000000000000000000000:server1"
 USER1_S1_ID = "@0x1111111111111111111111111111111111111111:server1"
@@ -80,8 +94,13 @@ USER2_S2 = DummyUser(USER2_S2_ID)
 
 
 @pytest.fixture
-def dummy_matrix_client():
-    return DummyMatrixClient(USER0_ID)
+def user_directory_content():
+    return []
+
+
+@pytest.fixture
+def dummy_matrix_client(user_directory_content):
+    return DummyMatrixClient(USER0_ID, user_directory_content)
 
 
 @pytest.fixture
@@ -150,7 +169,6 @@ def test_user_addr_mgr_basics(
     assert len(address_reachability) == 1
     assert address_reachability[ADDR1] is AddressReachability.REACHABLE
     assert len(user_presence) == 1
-    print(user_presence)
     assert user_presence[USER1_S1] is UserPresence.ONLINE
 
 
@@ -219,10 +237,10 @@ def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence)
 def test_user_addr_mgr_fetch_presence(
     user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
 ):
-    dummy_matrix_client.get_user_presence = Mock(return_value=UserPresence.ONLINE.value)
+    dummy_matrix_client._user_presence[USER1_S1_ID] = UserPresence.ONLINE.value
 
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
-    # We have not provided or forced any xplicit user presence,
+    # We have not provided or forced any explicit user presence,
     # therefore the client will be queried
     user_addr_mgr.refresh_address_presence(ADDR1)
 
@@ -231,7 +249,17 @@ def test_user_addr_mgr_fetch_presence(
     assert len(address_reachability) == 1
     assert address_reachability[ADDR1] is AddressReachability.REACHABLE
 
-    assert dummy_matrix_client.get_user_presence.called_with(USER1_S1_ID)
+
+def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability, user_presence):
+    user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
+    # We have not provided or forced any explicit user presence,
+    # therefore the client will be queried
+    user_addr_mgr.refresh_address_presence(ADDR1)
+
+    assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
+    assert len(user_presence) == 0
+    assert len(address_reachability) == 1
+    assert address_reachability[ADDR1] is AddressReachability.UNKNOWN
 
 
 def test_user_addr_mgr_fetch_misc(
@@ -250,3 +278,38 @@ def test_user_addr_mgr_fetch_misc(
     assert len(user_presence) == 0
     assert len(address_reachability) == 0
     assert user_addr_mgr.get_userid_presence(USER2_S2_ID) is UserPresence.UNKNOWN
+
+
+@pytest.mark.parametrize("user_directory_content", [[USER2_S1, USER2_S2]])
+def test_user_addr_mgr_populate(
+    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
+):
+    user_addr_mgr.add_address(ADDR2)
+
+    assert user_addr_mgr.get_userids_for_address(ADDR2) == set()
+
+    user_addr_mgr.populate_userids_for_address(ADDR2)
+
+    assert user_addr_mgr.get_userids_for_address(ADDR2) == {USER2_S1_ID, USER2_S2_ID}
+    assert user_addr_mgr.get_address_reachability(ADDR2) is AddressReachability.UNKNOWN
+
+    dummy_matrix_client._user_presence[USER2_S1_ID] = UserPresence.ONLINE.value
+
+    user_addr_mgr.refresh_address_presence(ADDR2)
+
+    assert len(address_reachability) == 1
+    assert address_reachability[ADDR2] is AddressReachability.REACHABLE
+    assert len(user_presence) == 0
+    assert user_addr_mgr.get_userid_presence(USER2_S1_ID) is UserPresence.ONLINE
+    assert user_addr_mgr.get_userid_presence(USER2_S2_ID) is UserPresence.UNKNOWN
+
+
+@pytest.mark.parametrize(
+    ("force", "result"), [(False, {USER2_S1_ID}), (True, {USER2_S1_ID, USER2_S2_ID})]
+)
+@pytest.mark.parametrize("user_directory_content", [[USER2_S1, USER2_S2]])
+def test_user_addr_mgr_populate_force(user_addr_mgr, force, result):
+    user_addr_mgr.add_userid_for_address(ADDR2, USER2_S1_ID)
+    user_addr_mgr.populate_userids_for_address(ADDR2, force=force)
+
+    assert user_addr_mgr.get_userids_for_address(ADDR2) == result
