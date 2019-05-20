@@ -163,6 +163,22 @@ class UserAddressManager:
         """
         self._userid_to_presence[user.user_id] = presence
 
+    def populate_userids_for_address(self, address: Address, force: bool = False):
+        """ Populate known user ids for the given ``address`` from the server directory.
+
+        If ``force`` is ``True`` perform the directory search even if there
+        already are known users.
+        """
+        if force or not self.get_userids_for_address(address):
+            self.add_userids_for_address(
+                address,
+                (
+                    user.user_id
+                    for user in self._client.search_user_directory(to_normalized_address(address))
+                    if self._validate_userid_signature(user)
+                ),
+            )
+
     def refresh_address_presence(self, address: Address):
         """
         Update synthesized address presence state from cached user presence states.
