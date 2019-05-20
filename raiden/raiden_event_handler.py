@@ -51,7 +51,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
-from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkID
+from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkAddress
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -328,7 +328,7 @@ class RaidenEventHandler(EventHandler):
 
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=TokenNetworkID(token_network_identifier),
+            token_network_id=TokenNetworkAddress(token_network_identifier),
             partner_address=participant,
         )
 

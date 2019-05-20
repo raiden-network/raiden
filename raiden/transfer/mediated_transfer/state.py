@@ -28,7 +28,7 @@ from raiden.utils.typing import (
     T_Address,
     TargetAddress,
     TokenAddress,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 if TYPE_CHECKING:
@@ -110,7 +110,7 @@ class TransferDescriptionWithSecretState(State):
     payment_identifier: PaymentID = field(repr=False)
     amount: PaymentAmount
     allocated_fee: FeeAmount
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress
     secret: Secret = field(repr=False)

@@ -7,18 +7,18 @@ from raiden.transfer.mediated_transfer.state import (
     MediatorTransferState,
     TargetTransferState,
 )
-from raiden.utils.typing import ChannelID, TokenNetworkID
+from raiden.utils.typing import ChannelID, TokenNetworkAddress
 
 
 @dataclass
 class InitiatorTask(TransferTask):
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     manager_state: InitiatorPaymentState = field(repr=False)
 
 
 @dataclass
 class MediatorTask(TransferTask):
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     mediator_state: MediatorTransferState = field(repr=False)
 
 
@@ -28,8 +28,8 @@ class TargetTask(TransferTask):
     target_state: TargetTransferState = field(repr=False)
 
     @property
-    def token_network_identifier(self) -> TokenNetworkID:
-        return TokenNetworkID(self.canonical_identifier.token_network_address)
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
     def channel_identifier(self) -> ChannelID:

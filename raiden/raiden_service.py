@@ -87,14 +87,13 @@ from raiden.utils.typing import (
     SecretHash,
     TargetAddress,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
-ConnectionManagerDict = Dict[TokenNetworkID, ConnectionManager]
+ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
 
 def _redact_secret(data: Union[Dict, List],) -> Union[Dict, List]:
@@ -123,7 +122,7 @@ def initiator_init(
     transfer_secret: Secret,
     transfer_secrethash: SecretHash,
     transfer_fee: FeeAmount,
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     target_address: TargetAddress,
 ) -> ActionInitInitiator:
     assert transfer_secret != constants.EMPTY_HASH, f"Empty secret node:{raiden!r}"
@@ -160,7 +159,7 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         # pylint: disable=E1101
-        token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
+        token_network_id=TokenNetworkAddress(from_transfer.balance_proof.token_network_identifier),
         one_to_n_address=raiden.default_one_to_n_address,
         from_address=raiden.address,
         to_address=from_transfer.target,
@@ -209,10 +208,10 @@ class PaymentStatus(NamedTuple):
 
     payment_identifier: PaymentID
     amount: PaymentAmount
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     payment_done: AsyncResult
 
-    def matches(self, token_network_identifier: TokenNetworkID, amount: PaymentAmount):
+    def matches(self, token_network_identifier: TokenNetworkAddress, amount: PaymentAmount):
         return token_network_identifier == self.token_network_identifier and amount == self.amount
 
 
@@ -864,7 +863,7 @@ class RaidenService(Runnable):
                 self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
                     payment_identifier=identifier,
                     amount=transfer_description.amount,
-                    token_network_identifier=TokenNetworkID(
+                    token_network_identifier=TokenNetworkAddress(
                         balance_proof.token_network_identifier
                     ),
                     payment_done=AsyncResult(),
@@ -1000,7 +999,7 @@ class RaidenService(Runnable):
                 )
 
     def connection_manager_for_token_network(
-        self, token_network_identifier: TokenNetworkID
+        self, token_network_identifier: TokenNetworkAddress
     ) -> ConnectionManager:
         if not is_binary_address(token_network_identifier):
             raise InvalidAddress("token address is not valid.")
@@ -1022,7 +1021,7 @@ class RaidenService(Runnable):
 
     def mediated_transfer_async(
         self,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         amount: PaymentAmount,
         target: TargetAddress,
         identifier: PaymentID,
@@ -1060,7 +1059,7 @@ class RaidenService(Runnable):
 
     def start_mediated_transfer_with_secret(
         self,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         amount: PaymentAmount,
         fee: FeeAmount,
         target: TargetAddress,

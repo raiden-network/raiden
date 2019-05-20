@@ -42,7 +42,7 @@ from raiden.utils.typing import (
     PaymentID,
     TokenAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 
@@ -63,7 +63,7 @@ def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
 
 
 def get_channelstate(
-    app0: App, app1: App, token_network_identifier: TokenNetworkID
+    app0: App, app1: App, token_network_identifier: TokenNetworkAddress
 ) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0), token_network_identifier, app1.raiden.address
@@ -361,7 +361,7 @@ def transfer_and_assert_path(
 
 
 def assert_synced_channel_state(
-    token_network_identifier: TokenNetworkID,
+    token_network_identifier: TokenNetworkAddress,
     app0: App,
     balance0: Balance,
     pending_locks0: List[HashTimeLockState],
