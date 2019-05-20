@@ -124,7 +124,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
                     balance=1000, address=partner_address
                 ),
                 canonical_identifier=factories.make_canonical_identifier(
-                    token_network_address=self.token_network_id
+                    token_network_address=self.token_network_address
                 ),
             )
         )
@@ -167,12 +167,12 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             chain_id=factories.UNIT_CHAIN_ID,
         )
 
-        self.token_network_id = factories.UNIT_TOKEN_NETWORK_ADDRESS
+        self.token_network_address = factories.UNIT_TOKEN_NETWORK_ADDRESS
         self.token_id = factories.UNIT_TOKEN_ADDRESS
         self.token_network_state = TokenNetworkState(
-            address=self.token_network_id,
+            address=self.token_network_address,
             token_address=self.token_id,
-            network_graph=TokenNetworkGraphState(self.token_network_id),
+            network_graph=TokenNetworkGraphState(self.token_network_address),
         )
 
         self.payment_network_address = factories.make_payment_network_address()
@@ -185,7 +185,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         ] = self.payment_network_state
 
         self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
-            self.token_network_id
+            self.token_network_address
         ] = self.payment_network_address
         channels = [
             self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
@@ -318,7 +318,7 @@ class InitiatorMixin:
             payment_identifier=payment_id,
             amount=amount,
             allocated_fee=0,
-            token_network_address=self.token_network_id,
+            token_network_address=self.token_network_address,
             initiator=self.address,
             target=target,
             secret=secret,

@@ -361,7 +361,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     locksroot = args["locksroot"]
 
     chain_state = views.state_from_raiden(raiden)
-    token_network_state = views.get_token_network_by_identifier(chain_state, token_network_address)
+    token_network_state = views.get_token_network_by_address(chain_state, token_network_address)
     assert token_network_state is not None
 
     if participant1 == raiden.address:

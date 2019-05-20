@@ -45,12 +45,12 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
     block_number = 10
     block_hash = factories.make_block_hash()
 
-    token_network_id = factories.make_address()
+    token_network_address = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(
-        address=token_network_id,
+        address=token_network_address,
         token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_id),
+        network_graph=TokenNetworkGraphState(token_network_address),
     )
 
     properties, _ = channel_properties
@@ -99,12 +99,12 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
 
-    token_network_id = factories.make_address()
+    token_network_address = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(
-        address=token_network_id,
+        address=token_network_address,
         token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_id),
+        network_graph=TokenNetworkGraphState(token_network_address),
     )
 
     properties, _ = channel_properties
@@ -377,8 +377,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
         chain_state=chain_state, state_change=channel_batch_unlock_state_change
     )
     chain_state = channel_unlock_iteration.new_state
-    token_network_state = views.get_token_network_by_identifier(
-        chain_state=chain_state, token_network_id=token_network_state.address
+    token_network_state = views.get_token_network_by_address(
+        chain_state=chain_state, token_network_address=token_network_state.address
     )
     ids_to_channels = token_network_state.channelidentifiers_to_channels
     assert len(ids_to_channels) == 0
@@ -793,7 +793,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     routes1, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
@@ -815,7 +815,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     routes1, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
@@ -837,7 +837,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     routes1, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
@@ -859,7 +859,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     routes1, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address3,
@@ -1019,7 +1019,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
 
     routes, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address3,
@@ -1041,7 +1041,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
 
     routes, _ = get_best_routes(
         chain_state=chain_state,
-        token_network_id=token_network_state.address,
+        token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,

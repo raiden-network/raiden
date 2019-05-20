@@ -1361,7 +1361,7 @@ def events_for_expired_lock(
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channel_state.chain_id,
-        token_network_address=TokenNetworkAddress(channel_state.token_network_address),
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
     )

@@ -26,7 +26,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 def get_best_routes(
     chain_state: ChainState,
-    token_network_id: TokenNetworkAddress,
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Optional[Address],
     from_address: InitiatorAddress,
     to_address: TargetAddress,
@@ -41,7 +41,7 @@ def get_best_routes(
     if to_address in views.all_neighbour_nodes(chain_state):
         neighbours = get_best_routes_internal(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -49,7 +49,7 @@ def get_best_routes(
         )
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             partner_address=Address(to_address),
         )
 
@@ -71,7 +71,7 @@ def get_best_routes(
     ):
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
             from_address=from_address,
             to_address=to_address,
@@ -95,7 +95,7 @@ def get_best_routes(
     return (
         get_best_routes_internal(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -114,7 +114,7 @@ class Neighbour(NamedTuple):
 
 def get_best_routes_internal(
     chain_state: ChainState,
-    token_network_id: TokenNetworkAddress,
+    token_network_address: TokenNetworkAddress,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: int,
@@ -131,7 +131,7 @@ def get_best_routes_internal(
 
     available_routes = list()
 
-    token_network = views.get_token_network_by_identifier(chain_state, token_network_id)
+    token_network = views.get_token_network_by_address(chain_state, token_network_address)
 
     if not token_network:
         return list()
@@ -150,7 +150,7 @@ def get_best_routes_internal(
             continue
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state, token_network_id, partner_address
+            chain_state, token_network_address, partner_address
         )
 
         if not channel_state:
@@ -202,7 +202,7 @@ def get_best_routes_internal(
 
 def get_best_routes_pfs(
     chain_state: ChainState,
-    token_network_id: TokenNetworkAddress,
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
@@ -217,7 +217,7 @@ def get_best_routes_pfs(
             our_address=chain_state.our_address,
             privkey=privkey,
             current_block_number=chain_state.block_number,
-            token_network_address=token_network_id,
+            token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
             chain_id=chain_state.chain_id,
             route_from=from_address,
@@ -244,7 +244,7 @@ def get_best_routes_pfs(
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             partner_address=partner_address,
         )
 

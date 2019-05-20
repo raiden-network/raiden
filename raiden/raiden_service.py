@@ -141,7 +141,7 @@ def initiator_init(
     previous_address = None
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
-        token_network_id=token_network_address,
+        token_network_address=token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
         from_address=InitiatorAddress(raiden.address),
         to_address=target_address,
@@ -159,7 +159,7 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         # pylint: disable=E1101
-        token_network_id=TokenNetworkAddress(from_transfer.balance_proof.token_network_address),
+        token_network_address=from_transfer.balance_proof.token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
         from_address=raiden.address,
         to_address=from_transfer.target,
@@ -324,7 +324,7 @@ class RaidenService(Runnable):
         user_deposit=None,
     ):
         super().__init__()
-        self.tokennetworkids_to_connectionmanagers: ConnectionManagerDict = dict()
+        self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
         self.chain: BlockChainService = chain
@@ -973,7 +973,7 @@ class RaidenService(Runnable):
     ):
         with self.event_poll_lock:
             node_state = views.state_from_raiden(self)
-            token_networks = views.get_token_network_addresss(
+            token_networks = views.get_token_network_addresses(
                 node_state, token_network_registry_proxy.address
             )
 
@@ -988,8 +988,8 @@ class RaidenService(Runnable):
                 from_block=from_block,
             )
 
-            for token_network in token_networks:
-                token_network_proxy = self.chain.token_network(TokenNetworkAddress(token_network))
+            for token_network_address in token_networks:
+                token_network_proxy = self.chain.token_network(token_network_address)
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy=token_network_proxy,
                     contract_manager=self.contract_manager,
@@ -1002,18 +1002,18 @@ class RaidenService(Runnable):
         if not is_binary_address(token_network_address):
             raise InvalidAddress("token address is not valid.")
 
-        known_token_networks = views.get_token_network_addresss(
+        known_token_networks = views.get_token_network_addresses(
             views.state_from_raiden(self), self.default_registry.address
         )
 
         if token_network_address not in known_token_networks:
             raise InvalidAddress("token is not registered.")
 
-        manager = self.tokennetworkids_to_connectionmanagers.get(token_network_address)
+        manager = self.tokennetworkaddrs_to_connectionmanagers.get(token_network_address)
 
         if manager is None:
             manager = ConnectionManager(self, token_network_address)
-            self.tokennetworkids_to_connectionmanagers[token_network_address] = manager
+            self.tokennetworkaddrs_to_connectionmanagers[token_network_address] = manager
 
         return manager
 

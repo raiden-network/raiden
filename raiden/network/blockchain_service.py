@@ -194,7 +194,7 @@ class BlockChainService:
 
     def payment_channel(self, canonical_identifier: CanonicalIdentifier) -> PaymentChannel:
 
-        token_network_address = TokenNetworkAddress(canonical_identifier.token_network_address)
+        token_network_address = canonical_identifier.token_network_address
         channel_id = canonical_identifier.channel_identifier
 
         if not is_binary_address(token_network_address):

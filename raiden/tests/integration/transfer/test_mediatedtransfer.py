@@ -325,14 +325,14 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_address = app0.raiden.default_registry.address
-    token_network_id = views.get_token_network_address_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
 
     with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
 
         app0.raiden.start_mediated_transfer_with_secret(
-            token_network_address=token_network_id,
+            token_network_address=token_network_address,
             amount=10,
             fee=0,
             target=factories.HOP1,
@@ -348,7 +348,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
 
         with patch.dict(app0.raiden.config["services"], config_patch):
             app0.raiden.start_mediated_transfer_with_secret(
-                token_network_address=token_network_id,
+                token_network_address=token_network_address,
                 amount=11,
                 fee=0,
                 target=factories.HOP2,
@@ -366,7 +366,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
                     pkey=factories.HOP1_KEY,
                     token=token_address,
                     canonical_identifier=factories.make_canonical_identifier(
-                        token_network_address=token_network_id
+                        token_network_address=token_network_address
                     ),
                 )
             )
@@ -449,7 +449,7 @@ def run_test_mediated_transfer_with_allocated_fee(
 
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
-        token_network_id=token_network_address,
+        token_network_address=token_network_address,
         partner_address=app2.raiden.address,
     )
 
@@ -543,7 +543,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
-        token_network_id=token_network_address,
+        token_network_address=token_network_address,
         partner_address=app2.raiden.address,
     )
 
@@ -574,7 +574,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app0.raiden),
-        token_network_id=token_network_address,
+        token_network_address=token_network_address,
         partner_address=app1.raiden.address,
     )
 

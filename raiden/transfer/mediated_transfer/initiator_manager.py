@@ -31,7 +31,6 @@ from raiden.utils.typing import (
     List,
     Optional,
     SecretHash,
-    TokenNetworkAddress,
     cast,
 )
 
@@ -242,7 +241,7 @@ def handle_cancelpayment(
 
             cancel = EventPaymentSentFailed(
                 payment_network_address=channel_state.payment_network_address,
-                token_network_address=TokenNetworkAddress(channel_state.token_network_address),
+                token_network_address=channel_state.token_network_address,
                 identifier=transfer_description.payment_identifier,
                 target=transfer_description.target,
                 reason="user canceled payment",

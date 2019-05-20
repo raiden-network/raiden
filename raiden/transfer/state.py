@@ -155,7 +155,7 @@ class TokenNetworkGraphState(State):
     route finding.
     """
 
-    token_network_id: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
     channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
         repr=False, default_factory=dict
@@ -413,7 +413,7 @@ class NettingChannelState(State):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def chain_id(self) -> ChainID:

@@ -682,7 +682,7 @@
                 "address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
                 "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
                 "network_graph": {
-                    "token_network_id": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+                    "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
                     "network": "[]",
                     "channel_identifier_to_participants": {},
                     "_type": "raiden.transfer.state.TokenNetworkGraphState",
