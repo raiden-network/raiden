@@ -770,7 +770,7 @@ def test_initiator_lock_expired():
     block_number = 10
     transfer_description = factories.create(
         factories.TransferDescriptionProperties(
-            secret=UNIT_SECRET, payment_network_identifier=channels[0].payment_network_identifier
+            secret=UNIT_SECRET, payment_network_address=channels[0].payment_network_address
         )
     )
     current_state = make_initiator_manager_state(
@@ -815,7 +815,7 @@ def test_initiator_lock_expired():
         iteration.events,
         EventPaymentSentFailed,
         {
-            "payment_network_identifier": channels[0].payment_network_identifier,
+            "payment_network_address": channels[0].payment_network_address,
             "token_network_address": channels[0].token_network_address,
             "identifier": UNIT_TRANSFER_IDENTIFIER,
             "target": transfer.target,

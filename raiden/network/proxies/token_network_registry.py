@@ -31,7 +31,7 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -44,7 +44,10 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 class TokenNetworkRegistry:
     def __init__(
-        self, jsonrpc_client, registry_address: PaymentNetworkID, contract_manager: ContractManager
+        self,
+        jsonrpc_client,
+        registry_address: PaymentNetworkAddress,
+        contract_manager: ContractManager,
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress("Expected binary address format for token network registry")

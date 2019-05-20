@@ -9,7 +9,7 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     Optional,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     TokenAddress,
     TokenNetworkAddress,
 )
@@ -17,7 +17,7 @@ from raiden.utils.typing import (
 
 def get_channel_state(
     token_address: TokenAddress,
-    payment_network_identifier: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_network_address: TokenNetworkAddress,
     reveal_timeout: BlockTimeout,
     payment_channel_proxy,
@@ -67,7 +67,7 @@ def get_channel_state(
             channel_identifier=identifier,
         ),
         token_address=token_address,
-        payment_network_identifier=payment_network_identifier,
+        payment_network_address=payment_network_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         mediation_fee=MEDIATION_FEE,

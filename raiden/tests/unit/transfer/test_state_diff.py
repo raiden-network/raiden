@@ -52,7 +52,7 @@ def test_detect_balance_proof_change():
     channel = NettingChannelState(
         canonical_identifier=factories.make_canonical_identifier(),
         token_address=b"a",
-        payment_network_identifier=1,
+        payment_network_address=1,
         reveal_timeout=1,
         settle_timeout=2,
         mediation_fee=0,

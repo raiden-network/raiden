@@ -53,9 +53,9 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     #   App0 <---> App1 <---> App2
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = token_addresses[0]
-    payment_network_identifier = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_identifier, token_address
+        views.state_from_app(app0), payment_network_address, token_address
     )
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
@@ -139,9 +139,9 @@ def run_test_refund_transfer(
     #
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
-    payment_network_identifier = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_identifier, token_address
+        views.state_from_app(app0), payment_network_address, token_address
     )
 
     # make a transfer to test the path app0 -> app1 -> app2
@@ -351,9 +351,9 @@ def run_test_different_view_of_last_bp_during_unlock(
     #
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
-    payment_network_identifier = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_identifier, token_address
+        views.state_from_app(app0), payment_network_address, token_address
     )
     token_proxy = app0.raiden.chain.token(token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
@@ -485,7 +485,7 @@ def run_test_different_view_of_last_bp_during_unlock(
 
         # now app0 closes the channel
         RaidenAPI(app0.raiden).channel_close(
-            registry_address=payment_network_identifier,
+            registry_address=payment_network_address,
             token_address=token_address,
             partner_address=app1.raiden.address,
         )
@@ -510,7 +510,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     # and we wait for settlement
     wait_for_settle(
         raiden=app0.raiden,
-        payment_network_id=payment_network_identifier,
+        payment_network_address=payment_network_address,
         token_address=token_address,
         channel_ids=[channel_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
@@ -568,9 +568,9 @@ def run_test_refund_transfer_after_2nd_hop(
     #
     app0, app1, app2, app3 = raiden_chain
     token_address = token_addresses[0]
-    payment_network_identifier = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_identifier, token_address
+        views.state_from_app(app0), payment_network_address, token_address
     )
 
     # make a transfer to test the path app0 -> app1 -> app2 -> app3

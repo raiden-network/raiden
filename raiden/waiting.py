@@ -17,7 +17,7 @@ from raiden.utils.typing import (
     ChannelID,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     Sequence,
     TokenAddress,
     TokenAmount,
@@ -44,7 +44,7 @@ def wait_for_block(
 
 def wait_for_newchannel(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     partner_address: Address,
     retry_timeout: float,
@@ -55,7 +55,7 @@ def wait_for_newchannel(
         This does not time out, use gevent.Timeout.
     """
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
 
     while channel_state is None:
@@ -64,13 +64,16 @@ def wait_for_newchannel(
 
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+            views.state_from_raiden(raiden),
+            payment_network_address,
+            token_address,
+            partner_address,
         )
 
 
 def wait_for_participant_newbalance(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -90,7 +93,7 @@ def wait_for_participant_newbalance(
         raise ValueError("target_address must be one of the channel participants")
 
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
 
     while balance(channel_state) < target_balance:
@@ -99,13 +102,16 @@ def wait_for_participant_newbalance(
 
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+            views.state_from_raiden(raiden),
+            payment_network_address,
+            token_address,
+            partner_address,
         )
 
 
 def wait_for_payment_balance(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -132,7 +138,7 @@ def wait_for_payment_balance(
         raise ValueError("target_address must be one of the channel participants")
 
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
 
     while balance(channel_state) < target_balance:
@@ -142,13 +148,16 @@ def wait_for_payment_balance(
         log.critical("wait", b=balance(channel_state), t=target_balance)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
+            views.state_from_raiden(raiden),
+            payment_network_address,
+            token_address,
+            partner_address,
         )
 
 
 def wait_for_channel_in_states(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -165,12 +174,15 @@ def wait_for_channel_in_states(
     """
     chain_state = views.state_from_raiden(raiden)
     token_network = views.get_token_network_by_token_address(
-        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
     )
 
     if token_network is None:
         raise ValueError(
-            f"The token {token_address} is not registered on the network {payment_network_id}."
+            f"The token {token_address} is not registered on "
+            f"the network {payment_network_address}."
         )
 
     token_network_address = token_network.address
@@ -207,7 +219,7 @@ def wait_for_channel_in_states(
 
 def wait_for_close(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -219,7 +231,7 @@ def wait_for_close(
     """
     return wait_for_channel_in_states(
         raiden=raiden,
-        payment_network_id=payment_network_id,
+        payment_network_address=payment_network_address,
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,
@@ -229,12 +241,12 @@ def wait_for_close(
 
 def wait_for_payment_network(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     retry_timeout: float,
 ) -> None:
     token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(raiden), payment_network_id, token_address
+        views.state_from_raiden(raiden), payment_network_address, token_address
     )
     while token_network is None:
         assert raiden, ALARM_TASK_ERROR_MSG
@@ -242,13 +254,13 @@ def wait_for_payment_network(
 
         gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
-            views.state_from_raiden(raiden), payment_network_id, token_address
+            views.state_from_raiden(raiden), payment_network_address, token_address
         )
 
 
 def wait_for_settle(
     raiden: "RaidenService",
-    payment_network_id: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -260,7 +272,7 @@ def wait_for_settle(
     """
     return wait_for_channel_in_states(
         raiden=raiden,
-        payment_network_id=payment_network_id,
+        payment_network_address=payment_network_address,
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,
@@ -277,7 +289,7 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
     chain_state = views.state_from_raiden(raiden)
 
     id_paymentnetworkstate = chain_state.identifiers_to_paymentnetworks.items()
-    for payment_network_id, payment_network_state in id_paymentnetworkstate:
+    for payment_network_address, payment_network_state in id_paymentnetworkstate:
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
         for token_network_id, token_network_state in id_tokennetworkstate:
@@ -287,7 +299,7 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
 
             wait_for_settle(
                 raiden=raiden,
-                payment_network_id=payment_network_id,
+                payment_network_address=payment_network_address,
                 token_address=TokenAddress(token_network_id),
                 channel_ids=channel_ids,
                 retry_timeout=retry_timeout,

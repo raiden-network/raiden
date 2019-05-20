@@ -128,7 +128,7 @@ def initiator_init(
     assert transfer_secret != constants.EMPTY_HASH, f"Empty secret node:{raiden!r}"
 
     transfer_state = TransferDescriptionWithSecretState(
-        payment_network_identifier=raiden.default_registry.address,
+        payment_network_address=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
         amount=transfer_amount,
         allocated_fee=transfer_fee,
@@ -469,7 +469,7 @@ class RaidenService(Runnable):
                 node=pex(self.address),
             )
 
-            known_networks = views.get_payment_network_identifiers(views.state_from_raiden(self))
+            known_networks = views.get_payment_network_addresss(views.state_from_raiden(self))
             if known_networks and self.default_registry.address not in known_networks:
                 configured_registry = pex(self.default_registry.address)
                 known_registries = lpex(known_networks)
