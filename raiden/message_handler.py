@@ -27,12 +27,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import pex, random_secret
-from raiden.utils.typing import (
-    MYPY_ANNOTATION,
-    InitiatorAddress,
-    PaymentAmount,
-    TokenNetworkAddress,
-)
+from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -122,7 +117,7 @@ class MessageHandler:
         # FIXME: Shouldn't request routes here
         routes, _ = get_best_routes(
             chain_state=chain_state,
-            token_network_id=TokenNetworkAddress(token_network_address),
+            token_network_address=token_network_address,
             one_to_n_address=raiden.default_one_to_n_address,
             from_address=InitiatorAddress(raiden.address),
             to_address=from_transfer.target,

@@ -44,7 +44,6 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    TokenNetworkAddress,
 )
 
 
@@ -71,7 +70,7 @@ def events_for_unlock_lock(
 
     payment_sent_success = EventPaymentSentSuccess(
         payment_network_address=channel_state.payment_network_address,
-        token_network_address=TokenNetworkAddress(channel_state.token_network_address),
+        token_network_address=channel_state.token_network_address,
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
         target=transfer_description.target,

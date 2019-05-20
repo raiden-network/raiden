@@ -339,7 +339,7 @@ class BalanceProofUnsignedState(State):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -419,7 +419,7 @@ class BalanceProofSignedState(State):
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:

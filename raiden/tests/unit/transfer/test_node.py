@@ -8,9 +8,11 @@ from raiden.transfer.state_change import (
 )
 
 
-def test_is_transaction_effect_satisfied(chain_state, token_network_id, netting_channel_state):
+def test_is_transaction_effect_satisfied(
+    chain_state, token_network_address, netting_channel_state
+):
     canonical_identifier = netting_channel_state.canonical_identifier
-    assert token_network_id == canonical_identifier.token_network_address
+    assert token_network_address == canonical_identifier.token_network_address
     transaction = ContractSendChannelBatchUnlock(
         canonical_identifier=canonical_identifier,
         participant=netting_channel_state.partner_state.address,

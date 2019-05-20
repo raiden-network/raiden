@@ -33,7 +33,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     channel_state = get_channelstate_by_token_network_and_partner(
         chain_state=state_from_raiden(raiden),
-        token_network_id=token_network_address,
+        token_network_address=token_network_address,
         partner_address=participant,
     )
 

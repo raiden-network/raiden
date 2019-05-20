@@ -553,7 +553,7 @@ def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state0, app0.raiden.default_registry.address, token_address
     )
-    token_network = views.get_token_network_by_identifier(chain_state0, token_network_address)
+    token_network = views.get_token_network_by_address(chain_state0, token_network_address)
 
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 

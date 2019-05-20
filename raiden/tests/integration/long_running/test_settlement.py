@@ -25,7 +25,7 @@ from raiden.utils import sha3
 from raiden.utils.timeout import BlockTimeout
 
 
-def wait_for_batch_unlock(app, token_network_id, participant, partner):
+def wait_for_batch_unlock(app, token_network_address, participant, partner):
     unlock_event = None
     while not unlock_event:
         gevent.sleep(1)
@@ -38,7 +38,7 @@ def wait_for_batch_unlock(app, token_network_id, participant, partner):
             state_changes,
             ContractReceiveChannelBatchUnlock,
             {
-                "token_network_address": token_network_id,
+                "token_network_address": token_network_address,
                 "participant": participant,
                 "partner": partner,
             },
@@ -63,7 +63,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(app0), token_network_address
     )
 
@@ -100,7 +100,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
         app0.raiden.alarm.sleep_time,
     )
 
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(app0), token_network_address
     )
 
@@ -153,7 +153,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     hold_event_handler = bob_app.raiden.raiden_event_handler
     wait_message_handler = bob_app.raiden.message_handler
 
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(alice_app), token_network_address
     )
 
@@ -284,7 +284,7 @@ def run_test_batch_unlock(
     # Take a snapshot early on
     alice_app.raiden.wal.snapshot()
 
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(alice_app), token_network_address
     )
 
@@ -369,7 +369,7 @@ def run_test_batch_unlock(
         alice_app.raiden.alarm.sleep_time,
     )
 
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
     )
 
@@ -383,12 +383,12 @@ def run_test_batch_unlock(
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
-            token_network_id=token_network_address,
+            token_network_address=token_network_address,
             participant=alice_bob_channel_state.partner_state.address,
             partner=alice_bob_channel_state.our_state.address,
         )
 
-    token_network = views.get_token_network_by_identifier(
+    token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
     )
 
@@ -799,8 +799,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     )
     timeout = 10
 
-    token_network = views.get_token_network_by_identifier(
-        chain_state=views.state_from_app(alice_app), token_network_id=token_network_address
+    token_network = views.get_token_network_by_address(
+        chain_state=views.state_from_app(alice_app), token_network_address=token_network_address
     )
 
     channel_identifier = get_channelstate(alice_app, bob_app, token_network_address).identifier
@@ -916,7 +916,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
-            token_network_id=token_network_address,
+            token_network_address=token_network_address,
             participant=alice_bob_channel_state.partner_state.address,
             partner=alice_bob_channel_state.our_state.address,
         )
@@ -926,7 +926,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=alice_app,
-            token_network_id=token_network_address,
+            token_network_address=token_network_address,
             participant=alice_bob_channel_state.partner_state.address,
             partner=alice_bob_channel_state.our_state.address,
         )

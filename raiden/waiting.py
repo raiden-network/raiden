@@ -292,7 +292,7 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
     for payment_network_address, payment_network_state in id_paymentnetworkstate:
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
-        for token_network_id, token_network_state in id_tokennetworkstate:
+        for token_network_address, token_network_state in id_tokennetworkstate:
             channel_ids = cast(
                 List[ChannelID], token_network_state.channelidentifiers_to_channels.keys()
             )
@@ -300,7 +300,7 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
             wait_for_settle(
                 raiden=raiden,
                 payment_network_address=payment_network_address,
-                token_address=TokenAddress(token_network_id),
+                token_address=TokenAddress(token_network_address),
                 channel_ids=channel_ids,
                 retry_timeout=retry_timeout,
             )
