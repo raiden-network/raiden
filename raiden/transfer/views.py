@@ -32,7 +32,7 @@ from raiden.utils.typing import (
     SecretHash,
     Set,
     TokenAddress,
-    TokenNetworkID,
+    TokenNetworkAddress,
     Union,
 )
 
@@ -142,7 +142,7 @@ def get_token_network_registry_by_token_network_identifier(
 
 def get_token_network_identifier_by_token_address(
     chain_state: ChainState, payment_network_id: PaymentNetworkID, token_address: TokenAddress
-) -> Optional[TokenNetworkID]:
+) -> Optional[TokenNetworkAddress]:
     token_network = get_token_network_by_token_address(
         chain_state, payment_network_id, token_address
     )
@@ -154,7 +154,7 @@ def get_token_network_identifier_by_token_address(
 
 def get_token_network_identifiers(
     chain_state: ChainState, payment_network_id: PaymentNetworkID
-) -> List[TokenNetworkID]:
+) -> List[TokenNetworkAddress]:
     """ Return the list of token networks registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 
@@ -213,7 +213,7 @@ def get_token_network_by_token_address(
 
 
 def get_token_network_by_identifier(
-    chain_state: ChainState, token_network_id: TokenNetworkID
+    chain_state: ChainState, token_network_id: TokenNetworkAddress
 ) -> Optional[TokenNetworkState]:
 
     token_network_state = None
@@ -253,7 +253,7 @@ def get_channelstate_for(
 
 
 def get_channelstate_by_token_network_and_partner(
-    chain_state: ChainState, token_network_id: TokenNetworkID, partner_address: Address
+    chain_state: ChainState, token_network_id: TokenNetworkAddress, partner_address: Address
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(chain_state, token_network_id)
@@ -276,7 +276,7 @@ def get_channelstate_by_canonical_identifier(
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
-        chain_state, TokenNetworkID(canonical_identifier.token_network_address)
+        chain_state, TokenNetworkAddress(canonical_identifier.token_network_address)
     )
 
     channel_state = None

@@ -9,8 +9,6 @@ from raiden.utils.typing import (
     T_ChainID,
     T_ChannelID,
     TokenNetworkAddress,
-    TokenNetworkID,
-    Union,
 )
 
 
@@ -26,9 +24,7 @@ class QueueIdentifier:
 @dataclass
 class CanonicalIdentifier:
     chain_identifier: ChainID
-    # introducing the type as Union, to avoid casting for now.
-    # Should be only `..Address` later
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID]
+    token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
 
     def validate(self) -> None:

@@ -63,7 +63,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     Type,
 )
 
@@ -1042,7 +1041,7 @@ class SignedBlindedBalanceProof:
     """
 
     channel_identifier: ChannelID
-    token_network_address: TokenNetworkID
+    token_network_address: TokenNetworkAddress
     nonce: Nonce
     additional_hash: AdditionalHash
     chain_id: ChainID
@@ -1066,7 +1065,7 @@ class SignedBlindedBalanceProof:
         # pylint: disable=unexpected-keyword-arg
         return cls(
             channel_identifier=balance_proof.channel_identifier,
-            token_network_address=TokenNetworkID(balance_proof.token_network_identifier),
+            token_network_address=TokenNetworkAddress(balance_proof.token_network_identifier),
             nonce=balance_proof.nonce,
             additional_hash=balance_proof.message_hash,
             chain_id=balance_proof.chain_id,

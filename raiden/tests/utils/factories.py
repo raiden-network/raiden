@@ -69,7 +69,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     TransactionHash,
     Tuple,
     Type,
@@ -407,7 +406,7 @@ class TransferDescriptionProperties(Properties):
     payment_network_identifier: PaymentNetworkID = EMPTY
     payment_identifier: PaymentID = EMPTY
     amount: TokenAmount = EMPTY
-    token_network_identifier: TokenNetworkID = EMPTY
+    token_network_identifier: TokenNetworkAddress = EMPTY
     initiator: InitiatorAddress = EMPTY
     target: TargetAddress = EMPTY
     secret: Secret = EMPTY

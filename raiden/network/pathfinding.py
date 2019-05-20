@@ -29,9 +29,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     Tuple,
-    Union,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
@@ -187,7 +185,7 @@ def configure_pfs_or_exit(
 
 def get_last_iou(
     url: str,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    token_network_address: TokenNetworkAddress,
     sender: Address,
     receiver: Address,
     privkey: bytes,
@@ -285,7 +283,7 @@ def update_iou(
 
 def create_current_iou(
     config: Dict[str, Any],
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     our_address: Address,
     privkey: bytes,
@@ -323,9 +321,7 @@ def create_current_iou(
 
 
 def post_pfs_paths(
-    url: str,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
-    payload: Dict[str, Any],
+    url: str, token_network_address: TokenNetworkAddress, payload: Dict[str, Any]
 ) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
         response = requests.post(
@@ -375,7 +371,7 @@ def query_paths(
     our_address: Address,
     privkey: bytes,
     current_block_number: BlockNumber,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     chain_id: int,
     route_from: InitiatorAddress,
