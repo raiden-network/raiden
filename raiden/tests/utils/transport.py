@@ -23,12 +23,6 @@ _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR", False)
 _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath("synapse_config.yaml.template")
 
 
-class MockDiscovery:
-    @staticmethod
-    def get(node_address: bytes):  # pylint: disable=unused-argument
-        return "127.0.0.1:5252"
-
-
 class ParsedURL(str):
     """ A string subclass that allows direct access to the split components of a URL """
 

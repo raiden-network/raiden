@@ -82,7 +82,6 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     app0.stop()
@@ -204,7 +203,6 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         transport=MatrixTransport(app0.raiden.config["transport"]["matrix"]),
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
     app0.stop()
     del app0  # from here on the app0_restart should be used

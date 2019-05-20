@@ -2,7 +2,6 @@ import gevent
 from eth_utils import is_binary_address
 from gevent.lock import Semaphore
 
-from raiden.network.proxies.discovery import Discovery
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -34,7 +33,6 @@ class BlockChainService:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, jsonrpc_client: JSONRPCClient, contract_manager: ContractManager):
-        self.address_to_discovery: Dict[Address, Discovery] = dict()
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
@@ -52,7 +50,6 @@ class BlockChainService:
         self.network_id = ChainID(int(self.client.web3.version.network))
 
         self._token_creation_lock = Semaphore()
-        self._discovery_creation_lock = Semaphore()
         self._token_network_creation_lock = Semaphore()
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
@@ -141,21 +138,6 @@ class BlockChainService:
                 )
 
         return self.address_to_token[token_address]
-
-    def discovery(self, discovery_address: Address) -> Discovery:
-        """ Return a proxy to interact with the discovery. """
-        if not is_binary_address(discovery_address):
-            raise ValueError("discovery_address must be a valid address")
-
-        with self._discovery_creation_lock:
-            if discovery_address not in self.address_to_discovery:
-                self.address_to_discovery[discovery_address] = Discovery(
-                    jsonrpc_client=self.client,
-                    discovery_address=discovery_address,
-                    contract_manager=self.contract_manager,
-                )
-
-        return self.address_to_discovery[discovery_address]
 
     def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
         if not is_binary_address(address):

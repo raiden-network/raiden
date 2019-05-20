@@ -74,9 +74,6 @@ class MockChain:
     ):
         return object()
 
-    def discovery(self, address: Address):  # pylint: disable=unused-argument, no-self-use
-        return object()
-
     def secret_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
 

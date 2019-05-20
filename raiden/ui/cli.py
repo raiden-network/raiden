@@ -559,7 +559,6 @@ def smoketest(ctx, debug, eth_client):
         args["api_address"] = "localhost:" + str(port)
 
         if args["transport"] == "matrix":
-            args["mapped_socket"] = None
             print_step("Starting Matrix transport")
             try:
                 with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:

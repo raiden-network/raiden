@@ -322,7 +322,6 @@ class RaidenService(Runnable):
         raiden_event_handler,
         message_handler,
         config,
-        discovery=None,
         user_deposit=None,
     ):
         super().__init__()
@@ -339,7 +338,6 @@ class RaidenService(Runnable):
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
         self.address = self.signer.address
-        self.discovery = discovery
         self.transport = transport
 
         self.user_deposit = user_deposit

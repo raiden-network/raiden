@@ -100,10 +100,6 @@ def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
-def host_port_to_endpoint(host: Host, port: Port) -> Endpoint:
-    return Endpoint(f"{host}:{port}")
-
-
 def split_endpoint(endpoint: Endpoint) -> HostPort:
     match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
     if not match:

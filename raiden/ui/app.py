@@ -113,9 +113,6 @@ def run_app(
     service_registry_contract_address: Address,
     endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
-    listen_address: Endpoint,
-    mapped_socket,
-    max_unresponsive_time: int,
     api_address: Endpoint,
     rpc: bool,
     sync_check: bool,
@@ -155,7 +152,6 @@ def run_app(
         account_manager, address, password_file
     )
 
-    (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
     config["console"] = console
@@ -218,7 +214,6 @@ def run_app(
         )
     )
 
-    discovery = None
     if transport == "matrix":
         transport = _setup_matrix(config)
     else:
@@ -244,7 +239,6 @@ def run_app(
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
-            discovery=discovery,
             user_deposit=proxies.user_deposit,
         )
     except RaidenError as e:

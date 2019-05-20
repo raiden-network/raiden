@@ -261,7 +261,6 @@ def create_apps(
     chain_id,
     contracts_path,
     blockchain_services,
-    endpoint_discovery_services,
     token_network_registry_address,
     one_to_n_address: Optional[Address],
     secret_registry_address,
@@ -272,11 +271,6 @@ def create_apps(
     database_basedir,
     retry_interval,
     retries_before_backoff,
-    throttle_capacity,
-    throttle_fill_rate,
-    nat_invitation_timeout,
-    nat_keepalive_retries,
-    nat_keepalive_timeout,
     environment_type,
     unrecoverable_error_should_crash,
     local_matrix_url=None,
@@ -285,10 +279,10 @@ def create_apps(
 ):
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = zip(blockchain_services, endpoint_discovery_services)
+    services = blockchain_services
 
     apps = []
-    for idx, (blockchain, discovery) in enumerate(services):
+    for idx, blockchain in enumerate(services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
 
         config = {
@@ -356,7 +350,6 @@ def create_apps(
             transport=transport,
             raiden_event_handler=hold_handler,
             message_handler=message_handler,
-            discovery=discovery,
             user_deposit=user_deposit,
         )
         apps.append(app)
