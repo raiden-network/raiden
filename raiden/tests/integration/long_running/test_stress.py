@@ -303,13 +303,13 @@ def stress_send_and_receive_parallel_transfers(
     gevent.wait(foward_transfers + backwards_transfers)
 
 
-def assert_channels(raiden_network, token_network_identifier, deposit):
+def assert_channels(raiden_network, token_network_address, deposit):
     pairs = list(zip(raiden_network, raiden_network[1:] + [raiden_network[0]]))
 
     for first, second in pairs:
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             first,
             deposit,
             [],
@@ -337,14 +337,14 @@ def test_stress(request, raiden_network, deposit, retry_timeout, token_addresses
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
 
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(raiden_network[0]),
         raiden_network[0].raiden.default_registry.address,
         token_address,
     )
 
     for _ in range(2):
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
@@ -352,7 +352,7 @@ def test_stress(request, raiden_network, deposit, retry_timeout, token_addresses
             raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
@@ -360,7 +360,7 @@ def test_stress(request, raiden_network, deposit, retry_timeout, token_addresses
             raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_and_receive_parallel_transfers(
             rest_apis, token_address, identifier_generator, deposit

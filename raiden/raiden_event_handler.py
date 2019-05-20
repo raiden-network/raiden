@@ -268,7 +268,7 @@ class RaidenEventHandler(EventHandler):
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
-                token_network_address=channel_close_event.token_network_identifier,
+                token_network_address=channel_close_event.token_network_address,
                 channel_identifier=channel_close_event.channel_identifier,
             )
         )
@@ -318,7 +318,7 @@ class RaidenEventHandler(EventHandler):
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = channel_unlock_event.canonical_identifier
-        token_network_identifier = canonical_identifier.token_network_address
+        token_network_address = canonical_identifier.token_network_address
         channel_identifier = canonical_identifier.channel_identifier
         participant = channel_unlock_event.participant
 
@@ -328,7 +328,7 @@ class RaidenEventHandler(EventHandler):
 
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=TokenNetworkAddress(token_network_identifier),
+            token_network_id=TokenNetworkAddress(token_network_address),
             partner_address=participant,
         )
 
@@ -336,7 +336,7 @@ class RaidenEventHandler(EventHandler):
             # channel was cleaned up already due to an unlock
             raise RaidenUnrecoverableError(
                 f"Failed to find channel state with partner:"
-                f"{to_checksum_address(participant)}, token_network:pex(token_network_identifier)"
+                f"{to_checksum_address(participant)}, token_network:pex(token_network_address)"
             )
 
         our_address = channel_state.our_state.address
@@ -375,7 +375,7 @@ class RaidenEventHandler(EventHandler):
                 raise RaidenUnrecoverableError(
                     f"Failed to find state that matches the current channel locksroots. "
                     f"chain_id:{raiden.chain.network_id} "
-                    f"token_network:{to_checksum_address(token_network_identifier)} "
+                    f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
                     f"our_locksroot:{to_hex(our_locksroot)} "
@@ -417,7 +417,7 @@ class RaidenEventHandler(EventHandler):
                 raise RaidenUnrecoverableError(
                     f"Failed to find event that match current channel locksroots. "
                     f"chain_id:{raiden.chain.network_id} "
-                    f"token_network:{to_checksum_address(token_network_identifier)} "
+                    f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
                     f"our_locksroot:{to_hex(our_locksroot)} "
@@ -454,7 +454,7 @@ class RaidenEventHandler(EventHandler):
 
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=raiden.chain.network_id,
-            token_network_address=channel_settle_event.token_network_identifier,
+            token_network_address=channel_settle_event.token_network_address,
             channel_identifier=channel_settle_event.channel_identifier,
         )
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
@@ -485,7 +485,7 @@ class RaidenEventHandler(EventHandler):
 
         log_details = {
             "chain_id": canonical_identifier.chain_identifier,
-            "token_network_identifier": canonical_identifier.token_network_address,
+            "token_network_address": canonical_identifier.token_network_address,
             "channel_identifier": canonical_identifier.channel_identifier,
             "node": pex(raiden.address),
             "partner": to_checksum_address(partner_details.address),

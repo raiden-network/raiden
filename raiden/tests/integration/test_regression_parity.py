@@ -61,13 +61,13 @@ def run_test_locksroot_loading_during_channel_settle_handling(
         transfer_state=TransferState.SECRET_NOT_REQUESTED,
     )
 
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_raiden(app0.raiden),
         payment_network_id=payment_network_id,
         token_address=token_address,
     )
     channel_state = get_channelstate(
-        app0=app0, app1=app1, token_network_identifier=token_network_identifier
+        app0=app0, app1=app1, token_network_address=token_network_address
     )
 
     channel = app0.raiden.chain.payment_channel(channel_state.canonical_identifier)

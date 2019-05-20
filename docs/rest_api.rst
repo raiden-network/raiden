@@ -22,7 +22,7 @@ Channel Object
 
     {
        "channel_identifier": 21,
-       "token_network_identifier": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+       "token_network_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
        "balance": 25000000,
@@ -45,7 +45,7 @@ A channel object consists of a
 - ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
   token we are trading in the channel.
 
-- ``token_network_identifier`` should be a ``string`` containing the EIP55-encoded address of the
+- ``token_network_address`` should be a ``string`` containing the EIP55-encoded address of the
   token network the channel is part of.
 
 - ``balance`` should be an integer of the amount of the ``token_address`` token we have available for payments.
@@ -165,7 +165,7 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -200,7 +200,7 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -235,7 +235,7 @@ Querying Information About Channels and Tokens
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -388,7 +388,7 @@ Querying Information About Channels and Tokens
             "role": "initiator",
             "target": "0x00AF5cBfc8dC76cd599aF623E60F763228906F3E",
             "token_address": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
-            "token_network_identifier": "0x111157460c0F41EfD9107239B7864c062aA8B978",
+            "token_network_address": "0x111157460c0F41EfD9107239B7864c062aA8B978",
             "transferred_amount": "331"
          }
 
@@ -446,7 +446,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -506,7 +506,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",

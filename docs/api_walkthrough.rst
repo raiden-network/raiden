@@ -114,7 +114,7 @@ Successfully opening a channel returns the following information:
 
    {
        "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
-       "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+       "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
@@ -293,7 +293,7 @@ When successful this gives a response with a channel object where the state is s
 
     {
         "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
-        "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+        "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
         "token_address": "0x0f114A1E9Db192502E7856309cc899952b3db1ED",
         "balance": 350,
         "state": "closed",

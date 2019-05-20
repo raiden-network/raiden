@@ -178,7 +178,7 @@ def test_regression_send_refund():
     first_payer_transfer = first_pair.payer_transfer
     payer_channel = mediator.get_payer_channel(setup.channel_map, first_pair)
     lock = channel.get_lock(end_state=payer_channel.partner_state, secrethash=UNIT_SECRETHASH)
-    token_network_identifier = first_payer_transfer.balance_proof.token_network_identifier
+    token_network_address = first_payer_transfer.balance_proof.token_network_address
     assert search_for_item(
         iteration.events,
         SendRefundTransfer,
@@ -195,7 +195,7 @@ def test_regression_send_refund():
                     "transferred_amount": 0,
                     "locked_amount": 10,
                     "locksroot": lock.lockhash,
-                    "token_network_identifier": token_network_identifier,
+                    "token_network_address": token_network_address,
                     "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
                     "chain_id": first_payer_transfer.balance_proof.chain_id,
                 },
@@ -340,7 +340,7 @@ def test_regression_mediator_task_no_routes():
         locked_lock=lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channels[0].chain_id,
-        token_network_identifier=channels[0].token_network_identifier,
+        token_network_address=channels[0].token_network_address,
         channel_identifier=channels[0].identifier,
         recipient=channels[0].our_state.address,
     )
@@ -549,7 +549,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         locked_lock=lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=payer_channel.chain_id,
-        token_network_identifier=payer_channel.token_network_identifier,
+        token_network_address=payer_channel.token_network_address,
         channel_identifier=payer_channel.identifier,
         recipient=payer_channel.our_state.address,
     )

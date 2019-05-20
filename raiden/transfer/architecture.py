@@ -122,7 +122,7 @@ class Event:
 @dataclass
 class TransferTask(State):
     # TODO: When we turn these into dataclasses it would be a good time to move common attributes
-    # of all transfer tasks like the `token_network_identifier` into the common subclass
+    # of all transfer tasks like the `token_network_address` into the common subclass
     pass
 
 
@@ -338,7 +338,7 @@ class BalanceProofUnsignedState(State):
         return self.canonical_identifier.chain_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -418,7 +418,7 @@ class BalanceProofSignedState(State):
         return self.canonical_identifier.chain_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property

@@ -157,7 +157,7 @@ class MockRaidenService:
 
 def make_raiden_service_mock(
     payment_network_identifier: PaymentNetworkID,
-    token_network_identifier: TokenNetworkAddress,
+    token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     partner: Address,
 ):
@@ -173,7 +173,7 @@ def make_raiden_service_mock(
 
     payment_network = MockPaymentNetwork()
     tokenidentifiers_to_tokennetworks = payment_network.tokenidentifiers_to_tokennetworks
-    tokenidentifiers_to_tokennetworks[token_network_identifier] = token_network
+    tokenidentifiers_to_tokennetworks[token_network_address] = token_network
 
     chain_state.identifiers_to_paymentnetworks = {payment_network_identifier: payment_network}
     return raiden_service

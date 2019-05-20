@@ -86,7 +86,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
     block_number = data["block_number"]
     block_hash = data["block_hash"]
     args = data["args"]
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     transaction_hash = event.event_data["transaction_hash"]
     channel_identifier = args["channel_identifier"]
     participant1 = args["participant1"]
@@ -98,7 +98,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=views.state_from_raiden(raiden).chain_id,
-                token_network_address=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             )
         )
@@ -106,7 +106,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         channel_state = get_channel_state(
             token_address=typing.TokenAddress(token_address),
             payment_network_identifier=raiden.default_registry.address,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             reveal_timeout=raiden.config["reveal_timeout"],
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
@@ -132,7 +132,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
             transaction_hash=transaction_hash,
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=raiden.chain.network_id,
-                token_network_address=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             ),
             participant1=participant1,
@@ -144,7 +144,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
 
     # A new channel is available, run the connection manager in case more
     # connections are needed
-    connection_manager = raiden.connection_manager_for_token_network(token_network_identifier)
+    connection_manager = raiden.connection_manager_for_token_network(token_network_address)
     retry_connect = gevent.spawn(connection_manager.retry_connect)
     raiden.add_pending_greenlet(retry_connect)
 
@@ -155,7 +155,7 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
     block_number = data["block_number"]
     block_hash = data["block_hash"]
     channel_identifier = args["channel_identifier"]
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     participant_address = args["participant"]
     total_deposit = args["total_deposit"]
     transaction_hash = data["transaction_hash"]
@@ -165,7 +165,7 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
     )
@@ -189,9 +189,7 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
         raiden.handle_and_track_state_change(newbalance_statechange)
 
         if balance_was_zero and participant_address != raiden.address:
-            connection_manager = raiden.connection_manager_for_token_network(
-                token_network_identifier
-            )
+            connection_manager = raiden.connection_manager_for_token_network(token_network_address)
 
             join_channel = gevent.spawn(
                 connection_manager.join_channel, participant_address, total_deposit
@@ -201,7 +199,7 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
 
 
 def handle_channel_closed(raiden: "RaidenService", event: Event):
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     data = event.event_data
     block_number = data["block_number"]
     args = data["args"]
@@ -214,7 +212,7 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
     )
@@ -237,7 +235,7 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
             transaction_hash=transaction_hash,
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
-                token_network_address=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             ),
             block_number=block_number,
@@ -247,7 +245,7 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
 
 
 def handle_channel_update_transfer(raiden: "RaidenService", event: Event):
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
     channel_identifier = args["channel_identifier"]
@@ -260,7 +258,7 @@ def handle_channel_update_transfer(raiden: "RaidenService", event: Event):
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
     )
@@ -278,7 +276,7 @@ def handle_channel_update_transfer(raiden: "RaidenService", event: Event):
 
 def handle_channel_settled(raiden: "RaidenService", event: Event):
     data = event.event_data
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     channel_identifier = data["args"]["channel_identifier"]
     block_number = data["block_number"]
     block_hash = data["block_hash"]
@@ -289,7 +287,7 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
     )
@@ -352,7 +350,7 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):
 def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
-    token_network_identifier = event.originating_contract
+    token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
     block_number = data["block_number"]
@@ -363,9 +361,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     locksroot = args["locksroot"]
 
     chain_state = views.state_from_raiden(raiden)
-    token_network_state = views.get_token_network_by_identifier(
-        chain_state, token_network_identifier
-    )
+    token_network_state = views.get_token_network_by_identifier(chain_state, token_network_address)
     assert token_network_state is not None
 
     if participant1 == raiden.address:
@@ -389,7 +385,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 storage=raiden.wal.storage,
                 canonical_identifier=CanonicalIdentifier(
                     chain_identifier=raiden.chain.network_id,
-                    token_network_address=token_network_identifier,
+                    token_network_address=token_network_address,
                     channel_identifier=channel_identifier,
                 ),
                 locksroot=locksroot,
@@ -403,7 +399,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 storage=raiden.wal.storage,
                 canonical_identifier=CanonicalIdentifier(
                     chain_identifier=raiden.chain.network_id,
-                    token_network_address=token_network_identifier,
+                    token_network_address=token_network_address,
                     channel_identifier=channel_identifier,
                 ),
                 locksroot=locksroot,
