@@ -507,7 +507,7 @@ def test_state_transition():
             transferred_amount=lock_amount,
             locked_amount=0,
             canonical_identifier=factories.make_canonical_identifier(
-                token_network_address=channels[0].token_network_identifier,
+                token_network_address=channels[0].token_network_address,
                 channel_identifier=channels.get_route(0).channel_identifier,
             ),
             locksroot=EMPTY_MERKLE_ROOT,

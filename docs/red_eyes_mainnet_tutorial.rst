@@ -73,7 +73,7 @@ Successfully opening a channel returns the following information:
 
    {
        "channel_identifier": 13,
-       "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+       "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": 2000,
@@ -155,7 +155,7 @@ This returns the following JSON response::
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",

@@ -188,7 +188,7 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
         sender_state=channel_state.partner_state,
     )
     assert result is False, result
-    assert msg.startswith("token_network_identifier does not match. "), msg
+    assert msg.startswith("token_network_address does not match. "), msg
 
     balance_proof_overflow = factories.create(
         factories.BalanceProofSignedStateProperties(

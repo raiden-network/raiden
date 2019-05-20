@@ -406,7 +406,7 @@ class TransferDescriptionProperties(Properties):
     payment_network_identifier: PaymentNetworkID = EMPTY
     payment_identifier: PaymentID = EMPTY
     amount: TokenAmount = EMPTY
-    token_network_identifier: TokenNetworkAddress = EMPTY
+    token_network_address: TokenNetworkAddress = EMPTY
     initiator: InitiatorAddress = EMPTY
     target: TargetAddress = EMPTY
     secret: Secret = EMPTY
@@ -418,7 +418,7 @@ TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
     payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
-    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     initiator=UNIT_TRANSFER_INITIATOR,
     target=UNIT_TRANSFER_TARGET,
     secret=GENERATE,

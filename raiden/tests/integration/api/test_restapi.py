@@ -266,7 +266,7 @@ def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_
     assert channel_info["partner_address"] == partner_address
     assert channel_info["token_address"] == to_checksum_address(token_address)
     assert channel_info["total_deposit"] == 0
-    assert "token_network_identifier" in channel_info
+    assert "token_network_address" in channel_info
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -320,7 +320,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     )
     assert check_dict_nested_attrs(response, expected_response)
 
-    token_network_identifier = response["token_network_identifier"]
+    token_network_address = response["token_network_address"]
 
     # now let's open a channel and make a deposit too
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
@@ -346,7 +346,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
             "balance": total_deposit,
             "state": CHANNEL_STATE_OPENED,
             "channel_identifier": second_channel_id,
-            "token_network_identifier": token_network_identifier,
+            "token_network_address": token_network_address,
             "total_deposit": total_deposit,
         }
     )
@@ -400,7 +400,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "state": CHANNEL_STATE_OPENED,
         "balance": total_deposit,
         "total_deposit": total_deposit,
-        "token_network_identifier": token_network_identifier,
+        "token_network_address": token_network_address,
     }
     assert check_dict_nested_attrs(response, expected_response)
 
@@ -426,7 +426,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "state": CHANNEL_STATE_OPENED,
         "balance": total_deposit,
         "total_deposit": total_deposit,
-        "token_network_identifier": token_network_identifier,
+        "token_network_address": token_network_address,
     }
     assert check_dict_nested_attrs(response, expected_response)
 
@@ -483,7 +483,7 @@ def test_api_open_close_and_settle_channel(
     )
     assert check_dict_nested_attrs(response, expected_response)
 
-    token_network_identifier = response["token_network_identifier"]
+    token_network_address = response["token_network_address"]
 
     # let's close the channel
     request = grequests.patch(
@@ -498,7 +498,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
     assert_proper_response(response)
     expected_response = {
-        "token_network_identifier": token_network_identifier,
+        "token_network_address": token_network_address,
         "channel_identifier": channel_identifier,
         "partner_address": partner_address,
         "token_address": to_checksum_address(token_address),
@@ -1788,7 +1788,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     identifier = 42
 
     token_address = token_addresses[0]
-    token_network_id = views.get_token_network_identifier_by_token_address(
+    token_network_id = views.get_token_network_address_by_token_address(
         views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
     )
 
@@ -1814,7 +1814,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
     initiator.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier=token_network_id,
+        token_network_address=token_network_id,
         amount=amount,
         fee=0,
         target=target.raiden.address,
@@ -1834,7 +1834,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         assert content[0]["payment_identifier"] == str(identifier)
         assert content[0]["locked_amount"] == str(amount)
         assert content[0]["token_address"] == to_checksum_address(token_address)
-        assert content[0]["token_network_identifier"] == to_checksum_address(token_network_id)
+        assert content[0]["token_network_address"] == to_checksum_address(token_network_id)
 
     mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
     target_unlock = target_wait.wait_for_message(Unlock, {})

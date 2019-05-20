@@ -46,10 +46,10 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     registry_address = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
     )
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     # make a transfer from app0 to app1 so that app1 is supposed to have a non
     # empty balance hash
@@ -65,7 +65,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     app1.stop()
     token_network_contract = TokenNetwork(
         jsonrpc_client=app1.raiden.chain.client,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         contract_manager=app1.raiden.contract_manager,
     )
 
@@ -93,10 +93,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
-        {
-            "token_network_identifier": token_network_identifier,
-            "channel_identifier": channel_identifier,
-        },
+        {"token_network_address": token_network_address, "channel_identifier": channel_identifier},
     )
 
 
@@ -135,10 +132,10 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     registry_address = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
     )
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     transfer(
         initiator_app=app0,
@@ -171,8 +168,5 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
-        {
-            "token_network_identifier": token_network_identifier,
-            "channel_identifier": channel_identifier,
-        },
+        {"token_network_address": token_network_address, "channel_identifier": channel_identifier},
     )

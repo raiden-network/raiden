@@ -782,13 +782,13 @@
         14,
         {
             "transaction_hash": "0x0a6ffa9820a3f3d74d92cde71b95e4d61ab6a5e69b5974c073357203fa29c7de",
-            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "channel_state": {
                 "identifier": "1",
                 "chain_id": 337,
                 "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
                 "payment_network_identifier": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
-                "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+                "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
                 "reveal_timeout": "13",
                 "settle_timeout": "39",
                 "our_state": {
@@ -887,7 +887,7 @@
         20,
         {
             "transaction_hash": "0x77a59fe504621284745afb2049caef57c1b8beb9d10734d905a897122d4c6b5e",
-            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "channel_identifier": "1",
             "deposit_transaction": {
                 "participant_address": "0x3503221a95028173969fc1f36b2E4F0705a3cc8b",
@@ -945,7 +945,7 @@
         25,
         {
             "transaction_hash": "0xb1d9aae3bf678007e63fb78f2f582558751c09ef7411da17902bb80c6106e853",
-            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "channel_identifier": "1",
             "deposit_transaction": {
                 "participant_address": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
@@ -1094,7 +1094,7 @@
         {
             "transaction_hash": "0xda8d79065dedaf731ca532248092a1e47c23c115f0a5e95402f7ca063c375015",
             "transaction_from": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
-            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "channel_identifier": "1",
             "block_number": "45",
             "_type": "raiden.transfer.state_change.ContractReceiveChannelClosed",
@@ -1565,7 +1565,7 @@
         86,
         {
             "transaction_hash": "0xa0d708763999365a7ab10c09c153ad816dda9d51ac0b1857b63fc2cd8eb5b353",
-            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "channel_identifier": "1",
             "block_number": "92",
             "_type": "raiden.transfer.state_change.ContractReceiveChannelSettled",

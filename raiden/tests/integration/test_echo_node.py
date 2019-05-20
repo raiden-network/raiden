@@ -66,7 +66,7 @@ def run_test_event_transfer_received_success(token_addresses, raiden_chain):
                 "identifier": amount,
                 "initiator": sender,
                 "payment_network_identifier": registry_address,
-                # 'token_network_identifier': ,
+                # 'token_network_address': ,
             },
         )
 

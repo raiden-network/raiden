@@ -12,13 +12,13 @@ from raiden.utils.typing import ChannelID, TokenNetworkAddress
 
 @dataclass
 class InitiatorTask(TransferTask):
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     manager_state: InitiatorPaymentState = field(repr=False)
 
 
 @dataclass
 class MediatorTask(TransferTask):
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     mediator_state: MediatorTransferState = field(repr=False)
 
 
@@ -28,8 +28,8 @@ class TargetTask(TransferTask):
     target_state: TargetTransferState = field(repr=False)
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:

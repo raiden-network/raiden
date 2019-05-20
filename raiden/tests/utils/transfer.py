@@ -63,10 +63,10 @@ def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
 
 
 def get_channelstate(
-    app0: App, app1: App, token_network_identifier: TokenNetworkAddress
+    app0: App, app1: App, token_network_address: TokenNetworkAddress
 ) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app0), token_network_identifier, app1.raiden.address
+        views.state_from_app(app0), token_network_address, app1.raiden.address
     )
     return channel_state
 
@@ -140,13 +140,13 @@ def _transfer_unlocked(
     )
 
     payment_network_identifier = initiator_app.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_app(initiator_app),
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
     payment_status = initiator_app.raiden.mediated_transfer_async(
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         target=target_app.raiden.address,
         identifier=identifier,
@@ -191,13 +191,13 @@ def _transfer_expired(
     )
 
     payment_network_identifier = initiator_app.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_app(initiator_app),
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
     payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         fee=fee,
         target=target_app.raiden.address,
@@ -235,13 +235,13 @@ def _transfer_secret_not_requested(
     )
 
     payment_network_identifier = initiator_app.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_app(initiator_app),
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
     initiator_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         fee=fee,
         target=target_app.raiden.address,
@@ -275,7 +275,7 @@ def transfer_and_assert_path(
 
     first_app = path[0]
     payment_network_identifier = first_app.raiden.default_registry.address
-    token_network_address = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_app(first_app),
         payment_network_id=payment_network_identifier,
         token_address=token_address,
@@ -287,7 +287,7 @@ def transfer_and_assert_path(
         msg = "The apps must be on the same payment network"
         assert app.raiden.default_registry.address == payment_network_identifier, msg
 
-        app_token_network_address = views.get_token_network_identifier_by_token_address(
+        app_token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_app(app),
             payment_network_id=payment_network_identifier,
             token_address=token_address,
@@ -343,7 +343,7 @@ def transfer_and_assert_path(
 
     last_app = path[-1]
     payment_status = first_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier=token_network_address,
+        token_network_address=token_network_address,
         amount=amount,
         fee=fee,
         target=last_app.raiden.address,
@@ -361,7 +361,7 @@ def transfer_and_assert_path(
 
 
 def assert_synced_channel_state(
-    token_network_identifier: TokenNetworkAddress,
+    token_network_address: TokenNetworkAddress,
     app0: App,
     balance0: Balance,
     pending_locks0: List[HashTimeLockState],
@@ -376,8 +376,8 @@ def assert_synced_channel_state(
         hasn't been delivered yet or has been completely lost."""
     # pylint: disable=too-many-arguments
 
-    channel0 = get_channelstate(app0, app1, token_network_identifier)
-    channel1 = get_channelstate(app1, app0, token_network_identifier)
+    channel0 = get_channelstate(app0, app1, token_network_address)
+    channel1 = get_channelstate(app1, app0, token_network_address)
 
     assert channel0.our_state.contract_balance == channel1.partner_state.contract_balance
     assert channel0.partner_state.contract_balance == channel1.our_state.contract_balance
@@ -543,7 +543,7 @@ def make_receive_transfer_mediated(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=nonce,
-        token_network_address=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,
@@ -609,7 +609,7 @@ def make_receive_expired_lock(
         locked_amount=locked_amount,
         locksroot=locksroot,
         channel_identifier=channel_state.identifier,
-        token_network_address=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         recipient=channel_state.partner_state.address,
         secrethash=lock.secrethash,
         signature=EMPTY_SIGNATURE,

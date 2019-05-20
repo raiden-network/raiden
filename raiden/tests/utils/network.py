@@ -34,11 +34,11 @@ BlockchainServices = namedtuple(
 
 
 def check_channel(
-    app1, app2, token_network_identifier, channel_identifier, settle_timeout, deposit_amount
+    app1, app2, token_network_address, channel_identifier, settle_timeout, deposit_amount
 ):
     canonical_identifier = CanonicalIdentifier(
         chain_identifier=state_from_raiden(app1.raiden).chain_id,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_identifier,
     )
     netcontract1 = app1.raiden.chain.payment_channel(canonical_identifier=canonical_identifier)

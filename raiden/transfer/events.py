@@ -39,7 +39,7 @@ class ContractSendChannelClose(ContractSendEvent):
     balance_proof: Optional[BalanceProofSignedState]
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -54,7 +54,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     canonical_identifier: CanonicalIdentifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -69,7 +69,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     balance_proof: BalanceProofSignedState
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.balance_proof.canonical_identifier.token_network_address)
 
     @property
@@ -85,7 +85,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     participant: Address
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -131,7 +131,7 @@ class EventPaymentSentSuccess(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     identifier: PaymentID
     amount: PaymentAmount
     target: TargetAddress
@@ -148,7 +148,7 @@ class EventPaymentSentFailed(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     identifier: PaymentID
     target: TargetAddress
     reason: str
@@ -166,7 +166,7 @@ class EventPaymentReceivedSuccess(Event):
     """
 
     payment_network_identifier: PaymentNetworkID
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     identifier: PaymentID
     amount: TokenAmount
     initiator: InitiatorAddress

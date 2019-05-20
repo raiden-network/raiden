@@ -29,7 +29,7 @@ class CanonicalIdentifier:
 
     def validate(self) -> None:
         if not isinstance(self.token_network_address, T_Address):
-            raise ValueError("token_network_identifier must be an address instance")
+            raise ValueError("token_network_address must be an address instance")
 
         if not isinstance(self.channel_identifier, T_ChannelID):
             raise ValueError("channel_identifier must be an ChannelID instance")

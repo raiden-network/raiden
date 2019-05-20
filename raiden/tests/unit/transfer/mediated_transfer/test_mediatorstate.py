@@ -496,7 +496,7 @@ def test_events_for_balanceproof():
                 "transferred_amount": UNIT_TRANSFER_AMOUNT,
                 "locked_amount": 0,
                 # 'locksroot':  ignored here
-                "token_network_identifier": UNIT_TOKEN_NETWORK_ADDRESS,
+                "token_network_address": UNIT_TOKEN_NETWORK_ADDRESS,
                 "channel_identifier": payee_channel.identifier,
                 "chain_id": UNIT_CHAIN_ID,
             },
@@ -1124,7 +1124,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
             initiator=HOP1,
             target=target_attacker2,
             canonical_identifier=factories.make_canonical_identifier(
-                token_network_address=bc_channel.token_network_identifier
+                token_network_address=bc_channel.token_network_address
             ),
         ),
     )
