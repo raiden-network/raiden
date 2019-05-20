@@ -34,7 +34,6 @@ def print_usage():
         "\t{}use `{}raiden{}` to interact with the raiden service.".format(OKBLUE, HEADER, OKBLUE)
     )
     print("\tuse `{}chain{}` to interact with the blockchain.".format(HEADER, OKBLUE))
-    print("\tuse `{}discovery{}` to find raiden nodes.".format(HEADER, OKBLUE))
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
             HEADER, OKBLUE
@@ -130,15 +129,12 @@ class Console(gevent.Greenlet):
             for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
-        tools = ConsoleTools(
-            self.app.raiden, self.app.discovery, self.app.config["settle_timeout"]
-        )
+        tools = ConsoleTools(self.app.raiden, self.app.config["settle_timeout"])
 
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
             "chain": self.app.raiden.chain,
-            "discovery": self.app.discovery,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,
@@ -155,11 +151,10 @@ class Console(gevent.Greenlet):
 
 
 class ConsoleTools:
-    def __init__(self, raiden_service, discovery, settle_timeout):
+    def __init__(self, raiden_service, settle_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
         self._api = RaidenAPI(raiden_service)
-        self._discovery = discovery
         self.settle_timeout = settle_timeout
 
     def create_token(

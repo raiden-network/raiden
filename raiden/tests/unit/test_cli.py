@@ -4,7 +4,7 @@ from functools import partial
 import pytest
 from click.testing import CliRunner
 
-from raiden.constants import EthClient
+from raiden.constants import EthClient, RoutingMode
 from raiden.ui.cli import OPTION_DEPENDENCIES, run
 from raiden.utils.ethereum_clients import is_supported_client
 
@@ -20,7 +20,8 @@ _OPTION_DEPENDENCY_TEST_VALUES = {
     "listen-address": "0.0.0.0:5001",
     "max-unresponsive-time": 100,
     "send-ping-time": 100,
-    ("transport", "matrix"): "matrix",
+    "transport": "matrix",
+    "routing-mode": RoutingMode.PFS,
 }
 
 
@@ -35,20 +36,24 @@ def pytest_generate_tests(metafunc):
     if metafunc.definition.name == "test_cli_option_dependencies":
         test_params = []
         test_ids = []
+        error_message = ""
         for option_name, dependencies in OPTION_DEPENDENCIES.items():
             args = [f"--{option_name}"]
             option_test_value = _OPTION_DEPENDENCY_TEST_VALUES.get(option_name)
             if option_test_value is not None:
                 args.append(option_test_value)
 
-            for dep_name, dep_value in dependencies:
+            for dep_name, expected_dep_value in dependencies:
                 args.append(f"--{dep_name}")
-                dep_test_value = _OPTION_DEPENDENCY_TEST_VALUES.get((dep_name, dep_value))
+                dep_test_value = _OPTION_DEPENDENCY_TEST_VALUES.get(dep_name)
                 args.append(dep_test_value)
+
+                if dep_test_value == expected_dep_value:
+                    continue
 
                 error_message = (
                     f'This option is only available when option "--{dep_name}" '
-                    f'is set to "{dep_value}". Current value: "{dep_test_value}"'
+                    f'is set to "{expected_dep_value}". Current value: "{dep_test_value}"'
                 )
                 # Only test first depended-on option for now
                 # TODO: Implement multiple option dependencies test when such an option is added

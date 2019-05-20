@@ -281,7 +281,6 @@ We communicate with each smart contract through the notion of a smart contract `
 
 We have proxies for all the contracts:
 
-- `EndpointRegistry <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/proxies/discovery.py#L20>`_
 - `TokenNetworkRegistry <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/proxies/token_network_registry.py#L30>`_
 - `TokenNetwork <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/proxies/token_network.py#L78>`_
 - `SecretRegistry <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/proxies/secret_registry.py#L19>`_

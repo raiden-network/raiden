@@ -110,9 +110,7 @@ def run_restapi_smoketests(port_number):
     assert response_json[0]["balance"] > 0
 
 
-def smoketest_perform_tests(
-    raiden_service: RaidenService, transport: str, token_addresses, discovery_address
-):
+def smoketest_perform_tests(raiden_service: RaidenService, token_addresses):
     """ Perform high level tests designed to quickly discover broken functionality. """
     try:
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
@@ -429,12 +427,7 @@ def run_smoketest(
             token_addresses = [to_checksum_address(token.contract.address)]
 
             print_step("Running smoketest")
-            error = smoketest_perform_tests(
-                app.raiden,
-                args["transport"],
-                token_addresses,
-                contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-            )
+            error = smoketest_perform_tests(app.raiden, token_addresses)
             if error is not None:
                 append_report("Smoketest assertion error", error)
             else:
