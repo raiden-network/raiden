@@ -23,10 +23,11 @@ from raiden.transfer.balance_proof import (
     pack_reward_proof,
 )
 from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
 )
-from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed
+from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
@@ -296,6 +297,11 @@ def assert_method_call(mock, method, *args, **kwargs):
 
 
 def test_message_handler():
+    """
+    Test for MessageHandler.on_message and the different methods it dispatches into.
+    Each of them results in a call to a RaidenService method, which is checked with a Mock.
+    """
+
     our_address = factories.make_address()
     sender_privkey, sender = factories.make_privkey_address()
     signer = LocalSigner(sender_privkey)
@@ -337,6 +343,40 @@ def test_message_handler():
     reveal_secret.sign(signer)
     receive = ReceiveSecretReveal(sender=sender, secret=secret)
     message_handler.on_message(mock_raiden, reveal_secret)
+    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+
+    properties: factories.UnlockProperties = factories.create_properties(
+        factories.UnlockProperties()
+    )
+    unlock = factories.create(properties)
+    unlock.sign(signer)
+    balance_proof = factories.make_signed_balance_proof_from_unsigned(
+        factories.create(properties.balance_proof), signer, unlock.message_hash
+    )
+    receive = ReceiveUnlock(
+        message_identifier=properties.message_identifier,
+        secret=properties.secret,
+        balance_proof=balance_proof,
+        sender=sender,
+    )
+    message_handler.on_message(mock_raiden, unlock)
+    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+
+    properties: factories.LockExpiredProperties = factories.create_properties(
+        factories.LockExpiredProperties()
+    )
+    lock_expired = factories.create(properties)
+    lock_expired.sign(signer)
+    balance_proof = factories.make_signed_balance_proof_from_unsigned(
+        factories.create(properties.balance_proof), signer, lock_expired.message_hash
+    )
+    receive = ReceiveLockExpired(
+        balance_proof=balance_proof,
+        message_identifier=properties.message_identifier,
+        secrethash=properties.secrethash,  # pylint: disable=no-member
+        sender=sender,
+    )
+    message_handler.on_message(mock_raiden, lock_expired)
     assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
 
     delivered = Delivered(delivered_message_identifier=1, signature=factories.EMPTY_SIGNATURE)
