@@ -288,7 +288,7 @@ def create_apps(
     services = zip(blockchain_services, endpoint_discovery_services)
 
     apps = []
-    for idx, (blockchain, discovery, port) in enumerate(services):
+    for idx, (blockchain, discovery) in enumerate(services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
 
         config = {
