@@ -41,7 +41,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
     raiden_chain, deploy_client, token_addresses
 ):
     app0, app1 = raiden_chain
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     transfer(
@@ -63,7 +63,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
 
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_raiden(app0.raiden),
-        payment_network_id=payment_network_id,
+        payment_network_address=payment_network_address,
         token_address=token_address,
     )
     channel_state = get_channelstate(
@@ -88,7 +88,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
 
     waiting.wait_for_settle(
         raiden=app1.raiden,
-        payment_network_id=payment_network_id,
+        payment_network_address=payment_network_address,
         token_address=token_address,
         channel_ids=[channel_state.canonical_identifier.channel_identifier],
         retry_timeout=1,

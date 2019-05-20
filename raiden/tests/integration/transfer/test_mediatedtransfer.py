@@ -43,9 +43,9 @@ def run_test_mediated_transfer(
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
 
     amount = 10
@@ -103,9 +103,9 @@ def run_test_locked_transfer_secret_registered_onchain(
     app0 = raiden_network[0]
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
 
     amount = 1
@@ -178,9 +178,9 @@ def run_test_mediated_transfer_with_entire_deposit(
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
     transfer(
         initiator_app=app0,
@@ -254,9 +254,9 @@ def run_test_mediated_transfer_messages_out_of_order(
 
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
 
     amount = 10
@@ -324,9 +324,9 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
     app0, = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_id = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
 
     with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
@@ -407,9 +407,9 @@ def run_test_mediated_transfer_with_allocated_fee(
     app0, app1, app2, app3 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
     fee = 5
     amount = 10
@@ -534,9 +534,9 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
+    payment_network_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_id, token_address
+        chain_state, payment_network_address, token_address
     )
     fee = 5
     amount = 10

@@ -45,7 +45,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -164,7 +164,7 @@ _native_to_marshmallow.update(
         # Addresses
         Address: AddressField,
         InitiatorAddress: AddressField,
-        PaymentNetworkID: AddressField,
+        PaymentNetworkAddress: AddressField,
         SecretRegistryAddress: AddressField,
         TargetAddress: AddressField,
         TokenAddress: AddressField,

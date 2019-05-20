@@ -65,7 +65,7 @@ from raiden.utils.typing import (
     ChannelID,
     List,
     Optional,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     SecretHash,
     TokenAddress,
     TokenNetworkAddress,
@@ -89,13 +89,11 @@ TokenNetworkStateChange = Union[
 
 def get_networks(
     chain_state: ChainState,
-    payment_network_identifier: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
 ) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
     token_network_state = None
-    payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
-        payment_network_identifier
-    )
+    payment_network_state = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
 
     if payment_network_state:
         token_network_id = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
@@ -113,14 +111,14 @@ def get_networks(
 def get_token_network_by_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[TokenNetworkState]:
-    payment_network_identifier = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
+    payment_network_address = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
         TokenNetworkAddress(token_network_address)
     )
 
     payment_network_state = None
-    if payment_network_identifier:
+    if payment_network_address:
         payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
-            payment_network_identifier
+            payment_network_address
         )
 
     token_network_state = None
@@ -420,23 +418,21 @@ def subdispatch_targettask(
 
 def maybe_add_tokennetwork(
     chain_state: ChainState,
-    payment_network_identifier: PaymentNetworkID,
+    payment_network_address: PaymentNetworkAddress,
     token_network_state: TokenNetworkState,
 ) -> None:
     token_network_address = token_network_state.address
     token_address = token_network_state.token_address
 
     payment_network_state, token_network_state_previous = get_networks(
-        chain_state, payment_network_identifier, token_address
+        chain_state, payment_network_address, token_address
     )
 
     if payment_network_state is None:
-        payment_network_state = PaymentNetworkState(
-            payment_network_identifier, [token_network_state]
-        )
+        payment_network_state = PaymentNetworkState(payment_network_address, [token_network_state])
 
         ids_to_payments = chain_state.identifiers_to_paymentnetworks
-        ids_to_payments[payment_network_identifier] = payment_network_state
+        ids_to_payments[payment_network_address] = payment_network_state
 
     if token_network_state_previous is None:
         ids_to_tokens = payment_network_state.tokenidentifiers_to_tokennetworks
@@ -446,7 +442,7 @@ def maybe_add_tokennetwork(
         addresses_to_ids[token_address] = token_network_address
 
         mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
-        mapping[token_network_address] = payment_network_identifier
+        mapping[token_network_address] = payment_network_address
 
 
 def sanity_check(iteration: TransitionResult[ChainState]) -> None:
@@ -574,9 +570,9 @@ def handle_new_token_network(
     chain_state: ChainState, state_change: ActionNewTokenNetwork
 ) -> TransitionResult[ChainState]:
     token_network_state = state_change.token_network
-    payment_network_identifier = state_change.payment_network_identifier
+    payment_network_address = state_change.payment_network_address
 
-    maybe_add_tokennetwork(chain_state, payment_network_identifier, token_network_state)
+    maybe_add_tokennetwork(chain_state, payment_network_address, token_network_state)
 
     events: List[Event] = list()
     return TransitionResult(chain_state, events)
@@ -623,9 +619,9 @@ def handle_new_payment_network(
     events: List[Event] = list()
 
     payment_network = state_change.payment_network
-    payment_network_identifier = PaymentNetworkID(payment_network.address)
-    if payment_network_identifier not in chain_state.identifiers_to_paymentnetworks:
-        chain_state.identifiers_to_paymentnetworks[payment_network_identifier] = payment_network
+    payment_network_address = PaymentNetworkAddress(payment_network.address)
+    if payment_network_address not in chain_state.identifiers_to_paymentnetworks:
+        chain_state.identifiers_to_paymentnetworks[payment_network_address] = payment_network
 
     return TransitionResult(chain_state, events)
 
@@ -635,7 +631,7 @@ def handle_tokenadded(
 ) -> TransitionResult[ChainState]:
     events: List[Event] = list()
     maybe_add_tokennetwork(
-        chain_state, state_change.payment_network_identifier, state_change.token_network
+        chain_state, state_change.payment_network_address, state_change.token_network
     )
 
     return TransitionResult(chain_state, events)

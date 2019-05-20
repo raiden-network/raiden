@@ -22,7 +22,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkID,
+    PaymentNetworkAddress,
     Secret,
     SecretHash,
     T_Address,
@@ -106,7 +106,7 @@ class TransferDescriptionWithSecretState(State):
     additional secret that can be used with a hash-time-lock.
     """
 
-    payment_network_identifier: PaymentNetworkID = field(repr=False)
+    payment_network_address: PaymentNetworkAddress = field(repr=False)
     payment_identifier: PaymentID = field(repr=False)
     amount: PaymentAmount
     allocated_fee: FeeAmount
