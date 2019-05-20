@@ -4,7 +4,6 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies.discovery import Discovery
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -74,7 +73,6 @@ class App:  # pylint: disable=too-few-public-methods
         transport,
         raiden_event_handler,
         message_handler,
-        discovery: Discovery = None,
         user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
@@ -88,7 +86,6 @@ class App:  # pylint: disable=too-few-public-methods
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             config=config,
-            discovery=discovery,
             user_deposit=user_deposit,
         )
 
@@ -112,7 +109,6 @@ class App:  # pylint: disable=too-few-public-methods
             )
 
         self.config = config
-        self.discovery = discovery
         self.user_deposit = user_deposit
         self.raiden = raiden
         self.start_console = self.config["console"]

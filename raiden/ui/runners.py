@@ -235,7 +235,6 @@ class NodeRunner:
 class MatrixRunner(NodeRunner):
     def run(self):
         super().run()
-        self._options["mapped_socket"] = None
         return self._start_services()
 
 

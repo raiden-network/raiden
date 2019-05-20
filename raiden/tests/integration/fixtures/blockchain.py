@@ -5,7 +5,6 @@ from web3 import HTTPProvider, Web3
 
 from raiden.constants import Environment, EthClient
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.eth_node import (
@@ -21,14 +20,6 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
 _ETH_LOGDIR = os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
-
-
-@pytest.fixture
-def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
-    return [
-        ContractDiscovery(chain.node_address, chain.discovery(endpoint_registry_address))
-        for chain in blockchain_services.blockchain_services
-    ]
 
 
 @pytest.fixture
