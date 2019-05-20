@@ -42,7 +42,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_id, token_address
     )
 
@@ -56,7 +56,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         identifier = 1
         for _ in range(spent_amount):
             app0.raiden.mediated_transfer_async(
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 amount=amount,
                 target=app1.raiden.address,
                 identifier=identifier,
@@ -125,7 +125,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0_restart,
         deposit - spent_amount,
         [],
@@ -167,7 +167,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_id, token_address
     )
 
@@ -182,7 +182,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
     for identifier in range(spent_amount):
         identifier = identifier + 1
         payment_status = app0.raiden.mediated_transfer_async(
-            token_network_identifier=token_network_identifier,
+            token_network_address=token_network_address,
             amount=amount,
             target=app1.raiden.address,
             identifier=identifier,
@@ -217,7 +217,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         status = mapping[app1.raiden.address][identifier]
         assert status.amount == 1
         assert status.payment_identifier == identifier
-        assert status.token_network_identifier == token_network_identifier
+        assert status.token_network_address == token_network_address
 
     app1.start()  # now that our checks are done start app1 again
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)

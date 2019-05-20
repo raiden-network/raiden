@@ -104,7 +104,7 @@ class ActionChannelClose(StateChange):
         return self.canonical_identifier.chain_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -140,7 +140,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     channel_state: NettingChannelState
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.channel_state.canonical_identifier.token_network_address)
 
     @property
@@ -160,7 +160,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -209,7 +209,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -226,7 +226,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -322,7 +322,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             raise ValueError("partner must be of type address")
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -347,7 +347,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -362,7 +362,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
@@ -376,7 +376,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 

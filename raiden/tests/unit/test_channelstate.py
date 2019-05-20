@@ -511,13 +511,13 @@ def test_channelstate_receive_lockedtransfer():
     # - Update the balances
     transferred_amount = 0
     message_identifier = random.randint(0, UINT64_MAX)
-    token_network_identifier = channel_state.token_network_identifier
+    token_network_address = channel_state.token_network_address
     unlock_message = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
@@ -532,7 +532,7 @@ def test_channelstate_receive_lockedtransfer():
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
@@ -698,7 +698,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 
 def test_invalid_timeouts():
     token_address = make_address()
-    token_network_identifier = make_address()
+    token_network_address = make_address()
     payment_network_identifier = make_payment_network_identifier()
     reveal_timeout = 5
     settle_timeout = 10
@@ -723,7 +723,7 @@ def test_invalid_timeouts():
 
         NettingChannelState(
             canonical_identifier=make_canonical_identifier(
-                token_network_address=token_network_identifier, channel_identifier=identifier
+                token_network_address=token_network_address, channel_identifier=identifier
             ),
             token_address=token_address,
             payment_network_identifier=payment_network_identifier,
@@ -742,7 +742,7 @@ def test_invalid_timeouts():
         with pytest.raises(ValueError):
             NettingChannelState(
                 canonical_identifier=make_canonical_identifier(
-                    token_network_address=token_network_identifier, channel_identifier=identifier
+                    token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
@@ -759,7 +759,7 @@ def test_invalid_timeouts():
         with pytest.raises(ValueError):
             NettingChannelState(
                 canonical_identifier=make_canonical_identifier(
-                    token_network_address=token_network_identifier, channel_identifier=identifier
+                    token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
@@ -793,7 +793,7 @@ def test_interwoven_transfers():
     locked_amount = 0
     our_model_current = our_model
     partner_model_current = partner_model
-    token_network_address = channel_state.token_network_identifier
+    token_network_address = channel_state.token_network_address
 
     for i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
         nonce += 1
@@ -1337,7 +1337,7 @@ def test_channelstate_unlock_unlocked_onchain():
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
         canonical_identifier=make_canonical_identifier(
-            token_network_address=channel_state.token_network_identifier,
+            token_network_address=channel_state.token_network_address,
             channel_identifier=channel_state.identifier,
         ),
         transaction_hash=make_transaction_hash(),

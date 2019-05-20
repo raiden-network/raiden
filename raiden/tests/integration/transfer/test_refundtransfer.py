@@ -54,7 +54,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), payment_network_identifier, token_address
     )
 
@@ -71,7 +71,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     refund_amount = deposit // 2
     identifier = 1
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier, refund_amount, app2.raiden.address, identifier
+        token_network_address, refund_amount, app2.raiden.address, identifier
     )
     msg = "Must fail, there are no routes available"
     assert payment_status.payment_done.wait() is False, msg
@@ -90,7 +90,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit,
             [send_lockedtransfer.transfer.lock],
@@ -102,14 +102,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     # This channel was exhausted to force the refund transfer
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app1,
-            0,
-            [],
-            app2,
-            deposit * 2,
-            [],
+            assert_synced_channel_state, token_network_address, app1, 0, [], app2, deposit * 2, []
         )
 
 
@@ -147,7 +140,7 @@ def run_test_refund_transfer(
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), payment_network_identifier, token_address
     )
 
@@ -181,7 +174,7 @@ def run_test_refund_transfer(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [],
@@ -192,7 +185,7 @@ def run_test_refund_transfer(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path - amount_drain,
             [],
@@ -206,7 +199,7 @@ def run_test_refund_transfer(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier, amount_refund, app2.raiden.address, identifier_refund
+        token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert payment_status.payment_done.wait() is False, msg
@@ -235,7 +228,7 @@ def run_test_refund_transfer(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [lock],
@@ -246,7 +239,7 @@ def run_test_refund_transfer(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path - amount_drain,
             [],
@@ -359,7 +352,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), payment_network_identifier, token_address
     )
     token_proxy = app0.raiden.chain.token(token_address)
@@ -393,7 +386,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [],
@@ -404,7 +397,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path - amount_drain,
             [],
@@ -418,7 +411,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier, amount_refund, app2.raiden.address, identifier_refund
+        token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert payment_status.payment_done.wait() is False, msg
@@ -447,7 +440,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [lock],
@@ -458,7 +451,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path - amount_drain,
             [],
@@ -512,7 +505,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     app1.raiden.start()
     # test for https://github.com/raiden-network/raiden/issues/3216
     assert count == 1, "Update transfer should have only been called once during restart"
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     # and we wait for settlement
     wait_for_settle(
@@ -576,7 +569,7 @@ def run_test_refund_transfer_after_2nd_hop(
     app0, app1, app2, app3 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), payment_network_identifier, token_address
     )
 
@@ -607,7 +600,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [],
@@ -618,7 +611,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path,
             [],
@@ -629,7 +622,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app2,
             deposit - amount_path - amount_drain,
             [],
@@ -644,7 +637,7 @@ def run_test_refund_transfer_after_2nd_hop(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier, amount_refund, app3.raiden.address, identifier_refund
+        token_network_address, amount_refund, app3.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert payment_status.payment_done.wait() is False, msg
@@ -684,7 +677,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0,
             deposit - amount_path,
             [lock1],
@@ -695,7 +688,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1,
             deposit - amount_path,
             [lock2],
@@ -706,7 +699,7 @@ def run_test_refund_transfer_after_2nd_hop(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app2,
             deposit - amount_path - amount_drain,
             [],

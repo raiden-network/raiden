@@ -232,15 +232,15 @@ def run_test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
 
     api0 = RaidenAPI(app0.raiden)
 
-    old_state = get_channelstate(app0, app1, token_network_identifier)
+    old_state = get_channelstate(app0, app1, token_network_address)
     api0.set_total_channel_deposit(registry_address, token_address, app1.raiden.address, 210)
-    new_state = get_channelstate(app0, app1, token_network_identifier)
+    new_state = get_channelstate(app0, app1, token_network_address)
 
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
 
@@ -559,7 +559,7 @@ def run_test_create_monitoring_request(raiden_network, token_addresses):
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
     )
 
@@ -573,7 +573,7 @@ def run_test_create_monitoring_request(raiden_network, token_addresses):
     )
     chain_state = views.state_from_raiden(app0.raiden)
     channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state, token_network_identifier, app1.raiden.address
+        chain_state, token_network_address, app1.raiden.address
     )
     balance_proof = channel_state.partner_state.balance_proof
     api = RaidenAPI(app0.raiden)

@@ -194,7 +194,7 @@ def test_init_with_usable_routes():
     transfer = send_mediated_transfer.transfer
     expiration = initiator.get_initial_lock_expiration(block_number, channels[0].reveal_timeout)
 
-    assert transfer.balance_proof.token_network_identifier == channels[0].token_network_identifier
+    assert transfer.balance_proof.token_network_address == channels[0].token_network_address
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
@@ -816,7 +816,7 @@ def test_initiator_lock_expired():
         EventPaymentSentFailed,
         {
             "payment_network_identifier": channels[0].payment_network_identifier,
-            "token_network_identifier": channels[0].token_network_identifier,
+            "token_network_address": channels[0].token_network_address,
             "identifier": UNIT_TRANSFER_IDENTIFIER,
             "target": transfer.target,
             "reason": "lock expired",
@@ -888,7 +888,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         transaction_from=factories.make_address(),
         canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=setup.channel.chain_id,
-            token_network_address=setup.channel.token_network_identifier,
+            token_network_address=setup.channel.token_network_address,
             channel_identifier=setup.channel.identifier,
         ),
         block_number=block_number,
@@ -1032,7 +1032,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         transaction_from=factories.make_address(),
         canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=setup.channel.chain_id,
-            token_network_address=setup.channel.token_network_identifier,
+            token_network_address=setup.channel.token_network_address,
             channel_identifier=setup.channel.identifier,
         ),
         block_number=block_number,

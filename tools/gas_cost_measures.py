@@ -147,7 +147,7 @@ def find_max_pending_transfers(gas_limit):
 
     nonce = 10
     additional_hash = urandom(32)
-    token_network_identifier = tester.contract_address("TokenNetwork")
+    token_network_address = tester.contract_address("TokenNetwork")
 
     while enough + 1 < too_much:
         tree_size = (enough + too_much) // 2
@@ -165,7 +165,7 @@ def find_max_pending_transfers(gas_limit):
             additional_hash=additional_hash,
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=1,
-                token_network_address=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             ),
         )

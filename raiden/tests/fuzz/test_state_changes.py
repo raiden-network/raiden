@@ -318,7 +318,7 @@ class InitiatorMixin:
             payment_identifier=payment_id,
             amount=amount,
             allocated_fee=0,
-            token_network_identifier=self.token_network_id,
+            token_network_address=self.token_network_id,
             initiator=self.address,
             target=target,
             secret=secret,
@@ -652,7 +652,7 @@ class OnChainMixin:
             transaction_hash=factories.make_transaction_hash(),
             canonical_identifier=factories.make_canonical_identifier(
                 chain_identifier=channel.chain_id,
-                token_network_address=channel.token_network_identifier,
+                token_network_address=channel.token_network_address,
                 channel_identifier=channel.identifier,
             ),
             block_number=self.block_number + 1,

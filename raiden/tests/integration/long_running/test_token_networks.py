@@ -119,7 +119,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
     ]
     gevent.wait(connect_greenlets)
 
-    token_network_registry_address = views.get_token_network_identifier_by_token_address(
+    token_network_registry_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
         payment_network_id=registry_address,
         token_address=token_address,

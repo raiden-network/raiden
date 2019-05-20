@@ -34,7 +34,7 @@ def test_recovery_happy_case(
 
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_id, token_address
     )
 
@@ -61,7 +61,7 @@ def test_recovery_happy_case(
     app0.start()
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0,
         deposit - spent_amount,
         [],
@@ -70,13 +70,7 @@ def test_recovery_happy_case(
         [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
-        app1,
-        deposit - spent_amount,
-        [],
-        app2,
-        deposit + spent_amount,
-        [],
+        token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
     # wait for the nodes' healthcheck to update the network statuses
@@ -100,7 +94,7 @@ def test_recovery_happy_case(
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0,
         deposit - spent_amount,
         [],
@@ -110,13 +104,7 @@ def test_recovery_happy_case(
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
-        app1,
-        deposit - spent_amount,
-        [],
-        app2,
-        deposit + spent_amount,
-        [],
+        token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
 
@@ -130,7 +118,7 @@ def test_recovery_unhappy_case(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_id, token_address
     )
 
@@ -198,7 +186,7 @@ def test_recovery_unhappy_case(
         state_changes,
         ContractReceiveChannelSettled,
         {
-            "token_network_identifier": token_network_identifier,
+            "token_network_address": token_network_address,
             "channel_identifier": channel01.identifier,
         },
     )

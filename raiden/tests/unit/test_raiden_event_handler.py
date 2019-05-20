@@ -22,18 +22,18 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     """
     channel_identifier = 1
     payment_network_identifier = make_address()
-    token_network_identifier = make_address()
+    token_network_address = make_address()
     participant = make_address()
     raiden = make_raiden_service_mock(
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         partner=participant,
     )
 
     channel_state = get_channelstate_by_token_network_and_partner(
         chain_state=state_from_raiden(raiden),
-        token_network_id=token_network_identifier,
+        token_network_id=token_network_address,
         partner_address=participant,
     )
 
@@ -79,7 +79,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     event = ContractSendChannelBatchUnlock(
         canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_identifier, channel_identifier=channel_identifier
+            token_network_address=token_network_address, channel_identifier=channel_identifier
         ),
         participant=participant,
         triggered_by_block_hash=make_block_hash(),

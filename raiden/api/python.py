@@ -75,7 +75,7 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 def event_filter_for_payments(
     event: architecture.Event,
-    token_network_identifier: TokenNetworkAddress = None,
+    token_network_address: TokenNetworkAddress = None,
     partner_address: Address = None,
 ) -> bool:
     """Filters out non payment history related events
@@ -87,8 +87,7 @@ def event_filter_for_payments(
       then it's returned.
     """
     is_matching_event = isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and (
-        token_network_identifier is None
-        or token_network_identifier == event.token_network_identifier
+        token_network_address is None or token_network_address == event.token_network_address
     )
     if not is_matching_event:
         return False
@@ -106,9 +105,7 @@ def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
     return {
         "payment_identifier": str(transfer.payment_identifier),
         "token_address": to_checksum_address(transfer.token),
-        "token_network_identifier": to_checksum_address(
-            transfer.balance_proof.token_network_identifier
-        ),
+        "token_network_address": to_checksum_address(transfer.balance_proof.token_network_address),
         "channel_identifier": str(transfer.balance_proof.channel_identifier),
         "initiator": to_checksum_address(transfer.initiator),
         "target": to_checksum_address(transfer.target),
@@ -278,14 +275,14 @@ class RaidenAPI:
         if not is_binary_address(token_address):
             raise InvalidAddress("token_address must be a valid address in binary")
 
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
+        token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
             token_address=token_address,
         )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
-            token_network_identifier
+            token_network_address
         )
 
         has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
@@ -319,14 +316,14 @@ class RaidenAPI:
         if token_address not in self.get_tokens_list(registry_address):
             raise UnknownTokenAddress("token_address unknown")
 
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
+        token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
             token_address=token_address,
         )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
-            token_network_identifier
+            token_network_address
         )
 
         return connection_manager.leave(registry_address)
@@ -684,7 +681,7 @@ class RaidenAPI:
     def get_token_network_address_for_token_address(
         self, registry_address: PaymentNetworkID, token_address: TokenAddress
     ) -> Optional[TokenNetworkAddress]:
-        return views.get_token_network_identifier_by_token_address(
+        return views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
             token_address=token_address,
@@ -768,13 +765,13 @@ class RaidenAPI:
             identifier=identifier,
         )
 
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
+        token_network_address = views.get_token_network_address_by_token_address(
             chain_state=current_state,
             payment_network_id=payment_network_identifier,
             token_address=token_address,
         )
         payment_status = self.raiden.mediated_transfer_async(
-            token_network_identifier=token_network_identifier,
+            token_network_address=token_network_address,
             amount=amount,
             target=target,
             identifier=identifier,
@@ -801,9 +798,9 @@ class RaidenAPI:
                 "target_address in get_raiden_events_payment_history"
             )
 
-        token_network_identifier = None
+        token_network_address = None
         if token_address:
-            token_network_identifier = views.get_token_network_identifier_by_token_address(
+            token_network_address = views.get_token_network_address_by_token_address(
                 chain_state=views.state_from_raiden(self.raiden),
                 payment_network_id=self.raiden.default_registry.address,
                 token_address=token_address,
@@ -816,7 +813,7 @@ class RaidenAPI:
             )
             if event_filter_for_payments(
                 event=event.wrapped_event,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 partner_address=target_address,
             )
         ]

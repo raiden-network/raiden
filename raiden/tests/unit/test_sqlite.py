@@ -133,7 +133,7 @@ def make_from_route_from_counter(counter):
         factories.LockedTransferSignedStateProperties(
             transferred_amount=0,
             canonical_identifier=factories.make_canonical_identifier(
-                token_network_address=from_channel.token_network_identifier
+                token_network_address=from_channel.token_network_address
             ),
             amount=1,
             expiration=expiration,

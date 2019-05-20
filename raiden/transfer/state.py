@@ -412,7 +412,7 @@ class NettingChannelState(State):
         return self.canonical_identifier.channel_identifier
 
     @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
+    def token_network_address(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     @property
@@ -474,9 +474,9 @@ class PaymentNetworkState(State):
             raise ValueError("address must be an address instance")
 
         if not self.tokenidentifiers_to_tokennetworks:
-            self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = {
-                token_network.address: token_network for token_network in self.token_network_list
-            }
+            self.tokenidentifiers_to_tokennetworks: Dict[
+                TokenNetworkAddress, TokenNetworkState
+            ] = {token_network.address: token_network for token_network in self.token_network_list}
         if not self.tokenaddresses_to_tokenidentifiers:
             self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkAddress] = {
                 token_network.token_address: token_network.address

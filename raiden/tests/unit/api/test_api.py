@@ -36,7 +36,7 @@ def test_initiator_task_view():
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
         allocated_fee=0,
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         initiator=transfer.initiator,
         target=transfer.target,
         secret=secret,
@@ -47,7 +47,7 @@ def test_initiator_task_view():
     )
     payment_state = InitiatorPaymentState({secrethash: transfer_state})
     task = InitiatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
     )
     payment_mapping = {secrethash: task}
 
@@ -94,8 +94,7 @@ def test_mediator_task_view():
         )
     )
     task1 = MediatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        mediator_state=transfer_state1,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state1
     )
 
     secret2 = factories.make_secret(2)
@@ -109,8 +108,7 @@ def test_mediator_task_view():
     transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=routes)
     transfer_state2.waiting_transfer = WaitingTransferState(transfer=transfer2)
     task2 = MediatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        mediator_state=transfer_state2,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state2
     )
 
     payment_mapping = {secrethash1: task1, secrethash2: task2}

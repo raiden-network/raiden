@@ -68,13 +68,13 @@ class ConnectionManager:
     BOOTSTRAP_ADDR_HEX = "2" * 40
     BOOTSTRAP_ADDR = decode_hex(BOOTSTRAP_ADDR_HEX)
 
-    def __init__(self, raiden, token_network_identifier):
+    def __init__(self, raiden, token_network_address):
         chain_state = views.state_from_raiden(raiden)
         token_network_state = views.get_token_network_by_identifier(
-            chain_state, token_network_identifier
+            chain_state, token_network_address
         )
-        token_network_registry = views.get_token_network_registry_by_token_network_identifier(
-            chain_state, token_network_identifier
+        token_network_registry = views.get_token_network_registry_by_token_network_address(
+            chain_state, token_network_address
         )
 
         # TODO:
@@ -87,7 +87,7 @@ class ConnectionManager:
 
         self.raiden = raiden
         self.registry_address = token_network_registry.address
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.token_address = token_network_state.token_address
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
@@ -204,14 +204,14 @@ class ConnectionManager:
         # To fix this race, first the node must wait for the pending operations
         # to finish, because in them could be a deposit, and then deposit must
         # be called only if the channel is still not funded.
-        token_network_proxy = self.raiden.chain.token_network(self.token_network_identifier)
+        token_network_proxy = self.raiden.chain.token_network(self.token_network_address)
 
         # Wait for any pending operation in the channel to complete, before
         # deciding on the deposit
         with self.lock, token_network_proxy.channel_operations_lock[partner_address]:
             channel_state = views.get_channelstate_for(
                 views.state_from_raiden(self.raiden),
-                self.token_network_identifier,
+                self.token_network_address,
                 self.token_address,
                 partner_address,
             )

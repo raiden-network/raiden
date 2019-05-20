@@ -130,17 +130,17 @@ def get_payment_network_identifiers(chain_state: ChainState) -> List[PaymentNetw
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
-def get_token_network_registry_by_token_network_identifier(
-    chain_state: ChainState, token_network_identifier: Address
+def get_token_network_registry_by_token_network_address(
+    chain_state: ChainState, token_network_address: Address
 ) -> Optional[PaymentNetworkState]:
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
+        if token_network_address in payment_network.tokenidentifiers_to_tokennetworks:
             return payment_network
 
     return None
 
 
-def get_token_network_identifier_by_token_address(
+def get_token_network_address_by_token_address(
     chain_state: ChainState, payment_network_id: PaymentNetworkID, token_address: TokenAddress
 ) -> Optional[TokenNetworkAddress]:
     token_network = get_token_network_by_token_address(
@@ -152,7 +152,7 @@ def get_token_network_identifier_by_token_address(
     return token_network_id
 
 
-def get_token_network_identifiers(
+def get_token_network_addresss(
     chain_state: ChainState, payment_network_id: PaymentNetworkID
 ) -> List[TokenNetworkAddress]:
     """ Return the list of token networks registered with the given payment network. """
@@ -513,16 +513,16 @@ def detect_balance_proof_change(
         if old_payment_network == current_payment_network:
             continue
 
-        for token_network_identifier in current_payment_network.tokenidentifiers_to_tokennetworks:
+        for token_network_address in current_payment_network.tokenidentifiers_to_tokennetworks:
             if old_payment_network:
                 old_token_network = old_payment_network.tokenidentifiers_to_tokennetworks.get(
-                    token_network_identifier
+                    token_network_address
                 )
             else:
                 old_token_network = None
 
             current_token_network = current_payment_network.tokenidentifiers_to_tokennetworks[
-                token_network_identifier
+                token_network_address
             ]
             if old_token_network == current_token_network:
                 continue
