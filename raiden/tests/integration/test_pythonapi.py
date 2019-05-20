@@ -430,7 +430,7 @@ def run_test_funds_check_for_openchannel(raiden_network, token_addresses):
 @pytest.mark.parametrize("reveal_timeout", [8])
 @pytest.mark.parametrize("settle_timeout", [30])
 def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, reveal_timeout, skip_if_not_matrix, retry_timeout
+    raiden_network, token_addresses, reveal_timeout, retry_timeout
 ):
     """ Test to make sure that when our target does not respond payment times out
 
@@ -446,13 +446,12 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
         raiden_network=raiden_network,
         token_addresses=token_addresses,
         reveal_timeout=reveal_timeout,
-        skip_if_not_matrix=skip_if_not_matrix,
         retry_timeout=retry_timeout,
     )
 
 
 def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, reveal_timeout, skip_if_not_matrix, retry_timeout
+    raiden_network, token_addresses, reveal_timeout, retry_timeout
 ):
     app0, app1 = raiden_network
     token_address = token_addresses[0]

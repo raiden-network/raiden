@@ -23,11 +23,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.settings import (
-    DEFAULT_MATRIX_KNOWN_SERVERS,
-    DEFAULT_NAT_KEEPALIVE_RETRIES,
-    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-)
+from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
     check_ethereum_has_accounts,
@@ -40,12 +36,7 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordfile,
     unlock_account_with_passwordprompt,
 )
-from raiden.ui.startup import (
-    setup_contracts_or_exit,
-    setup_environment,
-    setup_proxies_or_exit,
-    setup_udp_or_exit,
-)
+from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
@@ -149,9 +140,6 @@ def run_app(
 
     from raiden.app import App
 
-    if transport == "udp" and not mapped_socket:
-        raise RuntimeError("Missing socket")
-
     if datadir is None:
         datadir = os.path.join(os.path.expanduser("~"), ".raiden")
 
@@ -170,23 +158,14 @@ def run_app(
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
-    config["transport"]["udp"]["host"] = listen_host
-    config["transport"]["udp"]["port"] = listen_port
     config["console"] = console
     config["rpc"] = rpc
     config["web_ui"] = rpc and web_ui
     config["api_host"] = api_host
     config["api_port"] = api_port
     config["resolver_endpoint"] = resolver_endpoint
-    if mapped_socket:
-        config["socket"] = mapped_socket.socket
-        config["transport"]["udp"]["external_ip"] = mapped_socket.external_ip
-        config["transport"]["udp"]["external_port"] = mapped_socket.external_port
     config["transport_type"] = transport
     config["transport"]["matrix"]["server"] = matrix_server
-    config["transport"]["udp"]["nat_keepalive_retries"] = DEFAULT_NAT_KEEPALIVE_RETRIES
-    timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
-    config["transport"]["udp"]["nat_keepalive_timeout"] = timeout
     config["unrecoverable_error_should_crash"] = unrecoverable_error_should_crash
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
@@ -240,11 +219,7 @@ def run_app(
     )
 
     discovery = None
-    if transport == "udp":
-        transport, discovery = setup_udp_or_exit(
-            config, blockchain_service, address, contracts, endpoint_registry_contract_address
-        )
-    elif transport == "matrix":
+    if transport == "matrix":
         transport = _setup_matrix(config)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')

@@ -123,13 +123,6 @@ def smoketest_perform_tests(
 
         assert events_token_addresses == token_addresses
 
-        if transport == "udp":
-            discovery_addresses = list(chain.address_to_discovery.keys())
-            assert len(discovery_addresses) == 1, repr(chain.address_to_discovery)
-            assert discovery_addresses[0] == discovery_address
-            discovery = chain.address_to_discovery[discovery_addresses[0]]
-            assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
-
         token_networks = views.get_token_identifiers(
             views.state_from_raiden(raiden_service), raiden_service.default_registry.address
         )

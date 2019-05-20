@@ -5,7 +5,7 @@ from raiden.tests.utils.factories import make_address
 
 
 def test_geth_discover_next_available_nonce(
-    deploy_client, skip_if_parity  # pylint: disable=unused-argument
+    deploy_client,
 ):
     """ Test that geth_discover_next_available nonce works correctly
 

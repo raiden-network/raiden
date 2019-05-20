@@ -11,8 +11,8 @@
 
 #console = false
 
-## Transport system to use 'udp' or 'matrix'
-#transport = "udp"
+## Transport system to use. 'matrix' is the only supported one at the moment
+#transport = "matrix"
 
 ## Available networks:
 ## mainnet: 1

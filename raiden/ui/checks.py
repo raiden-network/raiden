@@ -180,23 +180,3 @@ def check_synced(blockchain_service: BlockChainService) -> None:
     wait_for_sync(
         blockchain_service, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3
     )
-
-
-def check_discovery_registration_gas(
-    blockchain_service: BlockChainService, account_address: typing.Address
-) -> None:
-    discovery_tx_cost = blockchain_service.client.gas_price() * GAS_REQUIRED_FOR_ENDPOINT_REGISTER
-    account_balance = blockchain_service.client.balance(account_address)
-
-    # pylint: disable=no-member
-    if discovery_tx_cost > account_balance:
-        click.secho(
-            "Account has insufficient funds for discovery registration.\n"
-            "Needed: {} ETH\n"
-            "Available: {} ETH.\n"
-            "Please deposit additional funds into this account.".format(
-                discovery_tx_cost / denoms.ether, account_balance / denoms.ether
-            ),
-            fg="red",
-        )
-        sys.exit(1)
