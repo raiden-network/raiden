@@ -214,15 +214,15 @@ class PaymentChannel:
 
     def unlock(
         self,
-        participant: Address,
-        partner: Address,
+        sender: Address,
+        receiver: Address,
         merkle_tree_locks: MerkleTreeLeaves,
         given_block_identifier: BlockSpecification,
     ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
-            participant=participant,
-            partner=partner,
+            sender=sender,
+            receiver=receiver,
             merkle_tree_locks=merkle_tree_locks,
             given_block_identifier=given_block_identifier,
         )

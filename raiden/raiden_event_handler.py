@@ -75,16 +75,16 @@ UNEVENTFUL_EVENTS = (
 def unlock(
     payment_channel: PaymentChannel,
     end_state: NettingChannelEndState,
-    participant: Address,
-    partner: Address,
+    sender: Address,
+    receiver: Address,
     given_block_identifier: BlockSpecification,
 ) -> None:
     merkle_tree_locks = get_batch_unlock(end_state)
     assert merkle_tree_locks, "merkle tree is missing"
 
     payment_channel.unlock(
-        participant=participant,
-        partner=partner,
+        sender=sender,
+        receiver=receiver,
         merkle_tree_locks=merkle_tree_locks,
         given_block_identifier=given_block_identifier,
     )
@@ -403,8 +403,8 @@ class RaidenEventHandler(EventHandler):
                 unlock(
                     payment_channel=payment_channel,
                     end_state=restored_channel_state.partner_state,
-                    participant=our_address,
-                    partner=partner_address,
+                    sender=partner_address,
+                    receiver=our_address,
                     given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                 )
 
@@ -445,8 +445,8 @@ class RaidenEventHandler(EventHandler):
                 unlock(
                     payment_channel=payment_channel,
                     end_state=restored_channel_state.our_state,
-                    participant=partner_address,
-                    partner=our_address,
+                    sender=our_address,
+                    receiver=partner_address,
                     given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                 )
 

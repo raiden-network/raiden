@@ -480,6 +480,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
         [channelstate_0_1.identifier],
         app1.raiden.alarm.sleep_time,
     )
+    current_block = app0.raiden.chain.block_number()
 
     netting_channel = app1.raiden.chain.payment_channel(
         canonical_identifier=channelstate_0_1.canonical_identifier
@@ -489,9 +490,10 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     # unlock must fail.
     with pytest.raises(RaidenUnrecoverableError):
         netting_channel.unlock(
+            sender=channelstate_0_1.our_state.address,
+            receiver=channelstate_0_1.partner_state.address,
             merkle_tree_locks=batch_unlock,
-            participant=channelstate_0_1.our_state.address,
-            partner=channelstate_0_1.partner_state.address,
+            given_block_identifier=current_block,
         )
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2

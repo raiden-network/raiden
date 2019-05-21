@@ -1393,16 +1393,16 @@ class TokenNetwork:
     def unlock(
         self,
         channel_identifier: ChannelID,
-        participant: Address,
-        partner: Address,
+        sender: Address,
+        receiver: Address,
         merkle_tree_locks: MerkleTreeLeaves,
         given_block_identifier: BlockSpecification,
     ):
         log_details = {
             "token_network": pex(self.address),
             "node": pex(self.node_address),
-            "partner": pex(partner),
-            "participant": pex(participant),
+            "sender": pex(sender),
+            "receiver": pex(receiver),
             "merkle_tree_locks": merkle_tree_locks,
         }
 
@@ -1416,15 +1416,15 @@ class TokenNetwork:
         # emitted.
         try:
             channel_onchain_detail = self._detail_channel(
-                participant1=participant,
-                participant2=partner,
+                participant1=sender,
+                participant2=receiver,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-            unlock_end_details = self._detail_participant(
+            sender_details = self._detail_participant(
                 channel_identifier=channel_identifier,
-                detail_for=participant,
-                partner=partner,
+                detail_for=sender,
+                partner=receiver,
                 block_identifier=given_block_identifier,
             )
         except ValueError:
@@ -1443,12 +1443,12 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError(msg)
 
             local_merkleroot = merkleroot(merkle_tree)
-            if unlock_end_details.locksroot != local_merkleroot:
+            if sender_details.locksroot != local_merkleroot:
                 msg = (
                     f"The provided merkle tree ({to_hex(local_merkleroot)}) "
                     f"does correspond to the on-chain locksroot "
-                    f"{to_hex(unlock_end_details.locksroot)} for partner "
-                    f"{to_checksum_address(partner)}."
+                    f"{to_hex(sender_details.locksroot)} for sender "
+                    f"{to_checksum_address(sender)}."
                 )
                 raise RaidenUnrecoverableError(msg)
 
@@ -1458,8 +1458,8 @@ class TokenNetwork:
             checking_block,
             "unlock",
             channel_identifier=channel_identifier,
-            participant=participant,
-            partner=partner,
+            participant=receiver,
+            partner=sender,
             merkle_tree_leaves=leaves_packed,
         )
 
@@ -1469,8 +1469,8 @@ class TokenNetwork:
                 function_name="unlock",
                 startgas=safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT),
                 channel_identifier=channel_identifier,
-                participant=participant,
-                partner=partner,
+                participant=receiver,
+                partner=sender,
                 merkle_tree_leaves=leaves_packed,
             )
 
@@ -1494,14 +1494,14 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 # Query the current state to check for transaction races
-                unlock_end_details = self._detail_participant(
+                sender_details = self._detail_participant(
                     channel_identifier=channel_identifier,
-                    detail_for=partner,
-                    partner=self.node_address,
+                    detail_for=sender,
+                    partner=receiver,
                     block_identifier=given_block_identifier,
                 )
 
-                is_unlock_done = unlock_end_details.locksroot == EMPTY_MERKLE_ROOT
+                is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
                 if is_unlock_done:
                     raise RaidenRecoverableError("The merkle tree is already unlocked ")
 
@@ -1522,15 +1522,15 @@ class TokenNetwork:
                 block_identifier=failed_at_blocknumber,
             )
             detail = self._detail_channel(
-                participant1=self.node_address,
-                participant2=partner,
+                participant1=sender,
+                participant2=receiver,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-            unlock_end_details = self._detail_participant(
+            sender_details = self._detail_participant(
                 channel_identifier=channel_identifier,
-                detail_for=partner,
-                partner=self.node_address,
+                detail_for=sender,
+                partner=receiver,
                 block_identifier=failed_at_blockhash,
             )
 
@@ -1541,7 +1541,7 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            is_unlock_done = unlock_end_details.locksroot == EMPTY_MERKLE_ROOT
+            is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
             if is_unlock_done:
                 raise RaidenRecoverableError("The merkle tree is already unlocked ")
 
