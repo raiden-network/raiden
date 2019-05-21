@@ -619,3 +619,13 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             messages.append(message)
 
     return messages
+
+
+def my_place_or_yours(our_address: Address, partner_address: Address):
+    """Convention to compare two addresses. Compares lexicographical
+    order and returns the preceding address """
+
+    if our_address == partner_address:
+        raise ValueError("Addresses to compare must differ")
+    sorted_addresses = sorted([our_address, partner_address])
+    return our_address if sorted_addresses[0] == our_address else partner_address
