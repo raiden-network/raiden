@@ -9,6 +9,10 @@ contract RpcTest {
         return 1;
     }
 
+    function ret_str() pure public returns (string memory) {
+        return "";
+    }
+
     function loop(uint reps) pure public returns (uint) {
         uint result = 0;
         for (uint i=0; i<reps; i++) {

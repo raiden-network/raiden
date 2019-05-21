@@ -60,6 +60,27 @@ def test_call_with_a_block_number_before_smart_contract_deployed(deploy_client):
         contract_proxy.contract.functions.ret().call(block_identifier=deploy_block - 1)
 
 
+def test_call_which_returns_a_string_before_smart_contract_deployed(deploy_client):
+    """ A JSON RPC call using a block number where the smart contract was not
+    yet deployed should raise, even if the ABI of the function returns an empty
+    string.
+    """
+    contract_path, contracts = get_test_contract("RpcTest.sol")
+    contract_proxy, receipt = deploy_client.deploy_solidity_contract(
+        "RpcTest",
+        contracts,
+        libraries=dict(),
+        constructor_parameters=None,
+        contract_path=contract_path,
+    )
+
+    deploy_block = receipt["blockNumber"]
+    assert contract_proxy.contract.functions.ret_str().call(block_identifier=deploy_block) == ""
+
+    with pytest.raises(BadFunctionCallOutput):
+        contract_proxy.contract.functions.ret_str().call(block_identifier=deploy_block - 1)
+
+
 def test_call_works_with_blockhash(deploy_client):
     """ A JSON RPC call works with a block number or blockhash. """
     contract_path, contracts = get_test_contract("RpcTest.sol")
