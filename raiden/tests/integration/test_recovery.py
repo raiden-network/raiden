@@ -61,13 +61,7 @@ def test_recovery_happy_case(
     app0.start()
 
     assert_synced_channel_state(
-        token_network_address,
-        app0,
-        deposit - spent_amount,
-        [],
-        app1,
-        deposit + spent_amount,
-        [],
+        token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
     assert_synced_channel_state(
         token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
@@ -94,13 +88,7 @@ def test_recovery_happy_case(
     )
 
     assert_synced_channel_state(
-        token_network_address,
-        app0,
-        deposit - spent_amount,
-        [],
-        app1,
-        deposit + spent_amount,
-        [],
+        token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
 
     assert_synced_channel_state(

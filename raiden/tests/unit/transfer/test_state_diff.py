@@ -46,7 +46,7 @@ def test_detect_balance_proof_change():
         address=b"a", token_address=b"a", network_graph=TokenNetworkGraphState(b"a")
     )
     token_network_copy = deepcopy(token_network)
-    payment_network.tokenidentifiers_to_tokennetworks["a"] = token_network
+    payment_network.tokennetworkaddresses_to_tokennetworks["a"] = token_network
     assert len(diff()) == 0
 
     channel = NettingChannelState(
@@ -81,7 +81,7 @@ def test_detect_balance_proof_change():
     old.identifiers_to_paymentnetworks["a"] = payment_network_copy
     assert len(diff()) == 1
 
-    payment_network_copy.tokenidentifiers_to_tokennetworks["a"] = token_network_copy
+    payment_network_copy.tokennetworkaddresses_to_tokennetworks["a"] = token_network_copy
     assert len(diff()) == 1
 
     token_network_copy.channelidentifiers_to_channels["a"] = channel_copy

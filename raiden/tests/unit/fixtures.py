@@ -69,8 +69,10 @@ def token_network_state(
         token_address=token_id,
         network_graph=token_network_graph_state,
     )
-    payment_network_state.tokenidentifiers_to_tokennetworks[token_network_address] = token_network
-    payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_address
+    payment_network_state.tokennetworkaddresses_to_tokennetworks[
+        token_network_address
+    ] = token_network
+    payment_network_state.tokenaddresses_to_tokennetworkaddresses[token_id] = token_network_address
 
     mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
     mapping[token_network_address] = payment_network_address
