@@ -9,13 +9,13 @@ from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     transfer,
     transfer_and_assert_path,
 )
 from raiden.transfer import views
+from raiden.transfer.state import NODE_NETWORK_UNREACHABLE
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
@@ -52,33 +52,17 @@ def test_recovery_happy_case(
         )
 
     app0.raiden.stop()
+    app0.stop()
 
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
-
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = WaitForMessage()
-
-    app0_restart = App(
-        config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
-        default_registry=app0.raiden.default_registry,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
+    waiting.wait_for_network_state(
+        app1.raiden, app0.raiden.address, NODE_NETWORK_UNREACHABLE, network_wait
     )
 
-    app0.stop()
-    del app0  # from here on the app0_restart should be used
-
-    app0_restart.start()
+    app0.start()
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart,
+        app0,
         deposit - spent_amount,
         [],
         app1,
@@ -96,29 +80,28 @@ def test_recovery_happy_case(
     )
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
-    waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
+    waiting.wait_for_healthy(app0.raiden, app1.raiden.address, network_wait)
+    waiting.wait_for_healthy(app1.raiden, app0.raiden.address, network_wait)
 
-    transfer(
-        initiator_app=app2,
-        target_app=app0_restart,
+    transfer_and_assert_path(
+        path=raiden_network[::-1],
         token_address=token_address,
         amount=amount,
         identifier=create_default_identifier(),
-        timeout=network_wait * number_of_nodes * 2,
+        timeout=network_wait * number_of_nodes,
     )
-    transfer(
-        initiator_app=app0_restart,
-        target_app=app2,
+
+    transfer_and_assert_path(
+        path=raiden_network,
         token_address=token_address,
         amount=amount,
         identifier=create_default_identifier(),
-        timeout=network_wait * number_of_nodes * 2,
+        timeout=network_wait * number_of_nodes,
     )
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart,
+        app0,
         deposit - spent_amount,
         [],
         app1,
