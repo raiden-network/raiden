@@ -1,5 +1,6 @@
 from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import SendRefundTransfer
 
 
@@ -11,6 +12,7 @@ def test_send_refund_transfer_contains_balance_proof():
         recipient=recipient,
         message_identifier=message_identifier,
         transfer=transfer,
+        canonical_identifier=factories.make_canonical_identifier(),
     )
 
     assert hasattr(event, "balance_proof")

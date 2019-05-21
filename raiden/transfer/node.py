@@ -14,7 +14,11 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
@@ -32,12 +36,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
-from raiden.transfer.state import (
-    ChainState,
-    PaymentNetworkState,
-    TokenNetworkState,
-)
+from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
@@ -548,8 +547,7 @@ def handle_contract_receive_channel_closed(
         channel_identifier=state_change.channel_identifier,
     )
     channel_state = views.get_channelstate_by_canonical_identifier(
-        chain_state=chain_state,
-        canonical_identifier=canonical_identifier,
+        chain_state=chain_state, canonical_identifier=canonical_identifier
     )
     if channel_state:
         queue_id = QueueIdentifier(

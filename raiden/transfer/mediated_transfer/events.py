@@ -26,6 +26,7 @@ def refund_from_sendmediated(
         recipient=send_lockedtransfer_event.recipient,
         message_identifier=send_lockedtransfer_event.message_identifier,
         transfer=send_lockedtransfer_event.transfer,
+        canonical_identifier=send_lockedtransfer_event.queue_identifier.canonical_identifier,
     )
 
 
@@ -38,6 +39,7 @@ class SendLockExpired(SendMessageEvent):
 @dataclass
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
+
     transfer: LockedTransferUnsignedState
 
     def __post_init__(self) -> None:

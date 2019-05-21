@@ -4,6 +4,7 @@ import random
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import SendProcessed
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnexpectedSecretReveal,
     EventUnlockClaimFailed,
@@ -677,6 +678,7 @@ def events_for_secretreveal(
                 recipient=payer_transfer.balance_proof.sender,
                 message_identifier=message_identifier,
                 secret=secret,
+                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
             )
 
             events.append(revealsecret)
@@ -1300,6 +1302,7 @@ def handle_unlock(
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
                         message_identifier=state_change.message_identifier,
+                        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
                     )
                     events.append(send_processed)
 
