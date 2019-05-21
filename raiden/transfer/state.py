@@ -462,10 +462,10 @@ class PaymentNetworkState(State):
 
     address: PaymentNetworkAddress
     token_network_list: List[TokenNetworkState]
-    tokenidentifiers_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
+    tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
         repr=False, default_factory=dict
     )
-    tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkAddress] = field(
+    tokenaddresses_to_tokennetworkaddresses: Dict[TokenAddress, TokenNetworkAddress] = field(
         repr=False, default_factory=dict
     )
 
@@ -473,12 +473,14 @@ class PaymentNetworkState(State):
         if not isinstance(self.address, T_Address):
             raise ValueError("address must be an address instance")
 
-        if not self.tokenidentifiers_to_tokennetworks:
-            self.tokenidentifiers_to_tokennetworks: Dict[
+        if not self.tokennetworkaddresses_to_tokennetworks:
+            self.tokennetworkaddresses_to_tokennetworks: Dict[
                 TokenNetworkAddress, TokenNetworkState
             ] = {token_network.address: token_network for token_network in self.token_network_list}
-        if not self.tokenaddresses_to_tokenidentifiers:
-            self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkAddress] = {
+        if not self.tokenaddresses_to_tokennetworkaddresses:
+            self.tokenaddresses_to_tokennetworkaddresses: Dict[
+                TokenAddress, TokenNetworkAddress
+            ] = {
                 token_network.token_address: token_network.address
                 for token_network in self.token_network_list
             }
