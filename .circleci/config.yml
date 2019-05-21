@@ -19,10 +19,10 @@ templates:
       type: enum
       enum: ["small", "medium", "medium+", "large", "xlarge"]
     transport-layer:
-      description: "transmission protocol used, udp or matrix"
-      default: "udp"
+      description: "transmission protocol used, matrix"
+      default: "matrix"
       type: enum
-      enum: ["udp", "matrix"]
+      enum: ["matrix"]
     environment-type:
       description: "Environment configuration to be used."
       default: "production"
@@ -672,24 +672,6 @@ workflows:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "production"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
-          name: smoketest-udp-development-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "development"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
           name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -734,23 +716,6 @@ workflows:
             - lint-3.7
 
       - test:
-          name: test-integration-udp-geth-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
-
-      - test:
           name: test-integration-matrix-geth-3.7
           py-version: "3.7"
           resource: "medium+"
@@ -759,25 +724,6 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
-
-      - test:
-          name: test-integration-udp-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
@@ -793,8 +739,6 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
@@ -803,9 +747,7 @@ workflows:
 
       - finalize:
           requires:
-            - test-integration-udp-geth-3.7
             - test-integration-matrix-geth-3.7
-            - test-integration-udp-parity-3.7
             - test-integration-matrix-parity-3.7
 
   deploy-release:
@@ -930,24 +872,6 @@ workflows:
           - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "production"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
-          name: smoketest-udp-development-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "development"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
           name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -992,23 +916,6 @@ workflows:
             - lint-3.7
 
       - test:
-          name: test-integration-udp-geth-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
-
-      - test:
           name: test-integration-matrix-geth-3.7
           py-version: "3.7"
           resource: "medium+"
@@ -1017,25 +924,6 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
-
-      - test:
-          name: test-integration-udp-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
@@ -1051,8 +939,6 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
@@ -1061,9 +947,7 @@ workflows:
 
       - finalize:
           requires:
-          - test-integration-udp-geth-3.7
           - test-integration-matrix-geth-3.7
-          - test-integration-udp-parity-3.7
           - test-integration-matrix-parity-3.7
 
       - build-binary-linux:
