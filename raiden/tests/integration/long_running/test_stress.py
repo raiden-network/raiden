@@ -8,14 +8,13 @@ import pytest
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
 from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
+from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
@@ -97,18 +96,7 @@ def start_apiserver_for_network(raiden_network, port_generator):
 
 
 def restart_app(app):
-    host_port = (
-        app.raiden.config["transport"]["udp"]["host"],
-        app.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)  # pylint: disable=protected-access
-    new_transport = UDPTransport(
-        app.raiden.address,
-        app.discovery,
-        socket,
-        app.raiden.transport.throttle_policy,
-        app.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
     app = App(
         config=app.config,
         chain=app.raiden.chain,
@@ -120,7 +108,6 @@ def restart_app(app):
         transport=new_transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
-        discovery=app.raiden.discovery,
     )
 
     app.start()

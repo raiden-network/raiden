@@ -1,12 +1,11 @@
 import gevent
 import pytest
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
+from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -53,19 +52,8 @@ def test_recovery_happy_case(
         )
 
     app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
 
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
 
     raiden_event_handler = RaidenEventHandler()
     message_handler = WaitForMessage()
@@ -81,7 +69,6 @@ def test_recovery_happy_case(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     app0.stop()
@@ -178,19 +165,8 @@ def test_recovery_unhappy_case(
         )
 
     app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
 
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
 
     app0.stop()
 
@@ -227,7 +203,6 @@ def test_recovery_unhappy_case(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
@@ -258,19 +233,8 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     token_address = token_addresses[0]
 
     app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
 
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(
@@ -297,7 +261,6 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     del app0  # from here on the app0_restart should be used
