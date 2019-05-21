@@ -157,8 +157,7 @@ class _RetryQueue(Runnable):
         """ Helper to enqueue a message in the global queue (e.g. Delivered) """
         self.enqueue(
             queue_identifier=QueueIdentifier(
-                recipient=self.receiver,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
             ),
             message=message,
         )

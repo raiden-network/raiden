@@ -15,6 +15,7 @@ from raiden.storage.restore import (
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -264,12 +265,13 @@ def test_get_event_with_balance_proof():
         message_identifier=next(counter),
         balance_proof=balance_proof,
         secrethash=sha256(factories.make_secret(next(counter))).digest(),
-        channel_identifier=balance_proof.channel_identifier,
+        canonical_identifier=balance_proof.canonical_identifier,
     )
     locked_transfer = SendLockedTransfer(
         recipient=factories.make_address(),
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
+        canonical_identifier=factories.make_canonical_identifier(),
     )
     balance_proof = SendBalanceProof(
         recipient=factories.make_address(),
@@ -278,11 +280,13 @@ def test_get_event_with_balance_proof():
         token_address=factories.make_address(),
         secret=factories.make_secret(next(counter)),
         balance_proof=make_balance_proof_from_counter(counter),
+        canonical_identifier=factories.make_canonical_identifier(),
     )
     refund_transfer = SendRefundTransfer(
         recipient=factories.make_address(),
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
+        canonical_identifier=factories.make_canonical_identifier(),
     )
 
     events_balanceproofs = [

@@ -47,9 +47,9 @@ class QueueIdentifier:
 
     def __eq__(self, other: Any) -> bool:  # TODO
         return (
-            isinstance(other, QueueIdentifier) and
-            self.recipient == other.recipient and
-            self.channel_identifier == other.channel_identifier
+            isinstance(other, QueueIdentifier)
+            and self.recipient == other.recipient
+            and self.channel_identifier == other.channel_identifier
         )
 
 
@@ -59,9 +59,7 @@ class QueueIdentifier:
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
 CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
-    ChainID(0),
-    TokenNetworkAddress(b''),
-    ChannelID(0),
+    ChainID(0), TokenNetworkAddress(b"\1" * 20), ChannelID(0)
 )
 
 
@@ -71,6 +69,6 @@ def wrap_id(channel_identifier: ChannelID) -> CanonicalIdentifier:
         return CANONICAL_IDENTIFIER_GLOBAL_QUEUE
     return CanonicalIdentifier(
         chain_identifier=ChainID(0),
-        token_network_address=TokenNetworkAddress(b''),
+        token_network_address=TokenNetworkAddress(b""),
         channel_identifier=channel_identifier,
     )

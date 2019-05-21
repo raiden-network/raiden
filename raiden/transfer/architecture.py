@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier, wrap_id
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.typing import (
     AdditionalHash,
@@ -26,7 +26,6 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_ChannelID,
     T_Keccak256,
     T_Signature,
     T_TokenAmount,
@@ -136,20 +135,14 @@ class SendMessageEvent(Event):
     """
 
     recipient: Address
-    channel_identifier: ChannelID
+    canonical_identifier: CanonicalIdentifier
     message_identifier: MessageID
     queue_identifier: QueueIdentifier = field(init=False)
 
     def __post_init__(self) -> None:
-        # Note that here and only here channel identifier can also be 0 which stands
-        # for the identifier of no channel (i.e. the global queue)
-        if not isinstance(self.channel_identifier, T_ChannelID):
-            raise ValueError("channel identifier must be of type T_ChannelIdentifier")
-
         self.queue_identifier = QueueIdentifier(
-            recipient=self.recipient, canonical_identifier=wrap_id(self.channel_identifier)
+            recipient=self.recipient, canonical_identifier=self.canonical_identifier
         )
-        self.message_identifier = self.message_identifier
 
 
 @dataclass

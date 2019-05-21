@@ -24,8 +24,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
         chain_id=chain_id,
     )
     queue_identifier = QueueIdentifier(
-        recipient=recipient,
-        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+        recipient=recipient, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
     )
 
     # Regression test:
@@ -100,25 +99,21 @@ def test_channel_closed_must_clear_ordered_messages(
     chain_state, token_network_state, netting_channel_state
 ):
     recipient = netting_channel_state.partner_state.address
-    channel_identifier = netting_channel_state.identifier
     message_identifier = random.randint(0, 2 ** 16)
     amount = 10
 
     queue_identifier = QueueIdentifier(
-        recipient=recipient,
-        canonical_identifier=netting_channel_state.canonical_identifier,
+        recipient=recipient, canonical_identifier=netting_channel_state.canonical_identifier
     )
 
-    # Regression test:py
+    # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
     message = factories.create(
         factories.LockedTransferProperties(
             message_identifier=message_identifier,
             token=token_network_state.token_address,
-            canonical_identifier=factories.make_canonical_identifier(
-                channel_identifier=channel_identifier
-            ),
+            canonical_identifier=netting_channel_state.canonical_identifier,
             transferred_amount=amount,
             recipient=recipient,
         )
