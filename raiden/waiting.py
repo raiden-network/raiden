@@ -294,7 +294,9 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
             )
 
 
-def wait_for_healthy(raiden: "RaidenService", node_address: Address, retry_timeout: float) -> None:
+def wait_for_network_state(
+    raiden: "RaidenService", node_address: Address, network_state: str, retry_timeout: float
+) -> None:
     """Wait until `node_address` becomes healthy.
 
     Note:
@@ -302,12 +304,22 @@ def wait_for_healthy(raiden: "RaidenService", node_address: Address, retry_timeo
     """
     network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
 
-    while network_statuses.get(node_address) != NODE_NETWORK_REACHABLE:
+    while network_statuses.get(node_address) != network_state:
         assert raiden, TRANSPORT_ERROR_MSG
         assert raiden.transport, TRANSPORT_ERROR_MSG
 
         gevent.sleep(retry_timeout)
         network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
+
+
+def wait_for_healthy(raiden: "RaidenService", node_address: Address, retry_timeout: float) -> None:
+    """Wait until `node_address` becomes healthy.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+
+    wait_for_network_state(raiden, node_address, NODE_NETWORK_REACHABLE, retry_timeout)
 
 
 def wait_for_transfer_success(
