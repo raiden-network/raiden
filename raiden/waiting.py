@@ -291,7 +291,7 @@ def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) 
     id_paymentnetworkstate = chain_state.identifiers_to_paymentnetworks.items()
     for payment_network_address, payment_network_state in id_paymentnetworkstate:
 
-        id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
+        id_tokennetworkstate = payment_network_state.tokennetworkaddresses_to_tokennetworks.items()
         for token_network_address, token_network_state in id_tokennetworkstate:
             channel_ids = cast(
                 List[ChannelID], token_network_state.channelidentifiers_to_channels.keys()
