@@ -263,11 +263,6 @@ class ConsoleTools:
         registry_address = decode_hex(registry_address_hex)
         peer_address = decode_hex(peer_address_hex)
         token_address = decode_hex(token_address_hex)
-        try:
-            self._discovery.get(peer_address)
-        except KeyError:
-            print("Error: peer {} not found in discovery".format(peer_address_hex))
-            return None
 
         self._api.channel_open(
             registry_address, token_address, peer_address, settle_timeout=settle_timeout
