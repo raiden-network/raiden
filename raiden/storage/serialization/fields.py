@@ -7,7 +7,7 @@ from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_he
 from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import QueueIdentifier
-from raiden.utils.typing import Address, Any, ChannelID, Tuple
+from raiden.utils.typing import Address, Any, ChannelID, Optional, Tuple
 
 
 class IntegerToStringField(marshmallow.fields.Field):
@@ -15,6 +15,18 @@ class IntegerToStringField(marshmallow.fields.Field):
         return str(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any) -> int:
+        return int(value)
+
+
+class OptionalIntegerToStringField(marshmallow.fields.Field):
+    def _serialize(self, value: Optional[int], attr: Any, obj: Any) -> str:
+        if value is None:
+            return ""
+        return str(value)
+
+    def _deserialize(self, value: str, attr: Any, data: Any) -> Optional[int]:
+        if value == "":
+            return None
         return int(value)
 
 

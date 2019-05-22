@@ -11,6 +11,7 @@ from raiden.storage.serialization.fields import (
     CallablePolyField,
     IntegerToStringField,
     NetworkXGraphField,
+    OptionalIntegerToStringField,
     PRNGField,
     QueueIdentifierField,
 )
@@ -193,6 +194,7 @@ _native_to_marshmallow.update(
         PaymentID: IntegerToStringField,
         PaymentWithFeeAmount: IntegerToStringField,
         TransferID: IntegerToStringField,
+        Optional[BlockNumber]: OptionalIntegerToStringField,
         # Integers which should be converted to strings
         # This is done for querying purposes as sqlite
         # integer type is smaller than python's.
