@@ -302,6 +302,7 @@ def run_smoketest(
     print_step("Starting Raiden")
 
     app = None
+    api_server = None
     try:
         app = run_app(**args)
         raiden_api = RaidenAPI(app.raiden)
@@ -370,6 +371,10 @@ def run_smoketest(
         assert response_json[0]["state"] == "opened"
         assert response_json[0]["balance"] > 0
     finally:
+        if api_server is not None:
+            api_server.stop()
+            api_server.get()
+
         if app is not None:
             app.stop()
             app.raiden.get()
