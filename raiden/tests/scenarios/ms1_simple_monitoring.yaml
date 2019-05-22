@@ -29,20 +29,20 @@ scenario:
       - open_channel: {from: 0, to: 1, total_deposit: 1000}
       - transfer: {from: 0, to: 1, amount: 500, expected_http_status: 200}
       ## Wait for Monitor Request to be sent
-      - wait: 10
+      - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
       - close_channel: {from: 0, to: 1}
       ## Wait for channel to be closed
-      - wait: 50
+      - wait_blocks: 1
       - assert: {from: 0 ,to: 1, total_deposit: 1000, balance: 500, state: "closed"}
       - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
 
-      ## Current blocktime Kovan 15s, so monitoring service reacts after 0.3 * 500 * 15 seconds
-      - wait: 3000
+      ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
+      - wait_blocks: 401
       - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 1}
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 500 blocks -> 500 * 15s in Kovan = 7500s
-      - wait: 8000
+      ## Settlement timeout is 500, but we've already waited 400 blocks.
+      - wait_blocks: 100
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}
