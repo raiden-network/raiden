@@ -497,10 +497,10 @@ def version(short):
 def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import (
-        setup_testchain,
         setup_raiden,
         run_smoketest,
         setup_matrix_for_smoketest,
+        setup_testchain_for_smoketest,
     )
     from raiden.tests.utils.transport import make_requests_insecure
     from raiden.utils.debugging import enable_gevent_monitoring_signal
@@ -566,7 +566,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         free_port_generator = get_free_port()
         ethereum_nodes = None
 
-        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
+        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
             eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
         )
         matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(

@@ -13,9 +13,7 @@ from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 @pytest.fixture(scope="session")
 def testchain_provider(blockchain_type, port_generator):
     eth_client = EthClient(blockchain_type)
-    chain_manager = setup_testchain(
-        eth_client=eth_client, print_step=lambda x: None, free_port_generator=port_generator
-    )
+    chain_manager = setup_testchain(eth_client=eth_client, free_port_generator=port_generator)
 
     with chain_manager as testchain:
         yield testchain
