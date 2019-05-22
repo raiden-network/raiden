@@ -8,7 +8,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import PathState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
@@ -27,15 +27,10 @@ from raiden.utils.typing import (
 # useful work, ie. there must /not/ be an event for requesting new data.
 @dataclass
 class ActionInitInitiator(StateChange):
-    """ Initial state of a new mediated transfer.
-
-    Args:
-        transfer_description: A state object containing the transfer details.
-        routes: A list of possible routes provided by a routing service.
-    """
+    """ Initial state of a new mediated transfer. """
 
     transfer: TransferDescriptionWithSecretState
-    routes: List[RouteState]
+    routes: List[PathState]
 
     def __post_init__(self) -> None:
         if not isinstance(self.transfer, TransferDescriptionWithSecretState):
@@ -52,7 +47,7 @@ class ActionInitMediator(BalanceProofStateChange):
         from_transfer: The payee transfer.
     """
 
-    routes: List[RouteState] = field(repr=False)
+    routes: List[PathState] = field(repr=False)
     from_route: RouteState
     from_transfer: LockedTransferSignedState
 
@@ -123,7 +118,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     route.
     """
 
-    routes: List[RouteState] = field(repr=False)
+    routes: List[PathState] = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
@@ -141,7 +136,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
     transfer: LockedTransferSignedState
-    routes: List[RouteState] = field(repr=False)
+    routes: List[PathState] = field(repr=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()
