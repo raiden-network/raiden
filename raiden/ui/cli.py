@@ -579,12 +579,20 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         ethereum_nodes = None
         with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
             result = setup_raiden(
-                transport, matrix_server, print_step, contracts_version, testchain
+                transport=transport,
+                matrix_server=matrix_server,
+                print_step=print_step,
+                contracts_version=contracts_version,
+                eth_client=testchain["eth_client"],
+                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+                web3=testchain["web3"],
+                base_datadir=testchain["base_datadir"],
+                keystore=testchain["keystore"],
             )
 
             args = result["args"]
             contract_addresses = result["contract_addresses"]
-            ethereum_nodes = result["ethereum_nodes"]
+            ethereum_nodes = testchain["node_executors"]
             token = result["token"]
 
             port = next(free_port_generator)

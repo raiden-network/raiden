@@ -206,19 +206,25 @@ def setup_testchain(
         )
 
 
-def setup_raiden(transport, matrix_server, print_step, contracts_version, testchain_setup):
+def setup_raiden(
+    transport,
+    matrix_server,
+    print_step,
+    contracts_version,
+    eth_client,
+    eth_rpc_endpoint,
+    web3,
+    base_datadir,
+    keystore,
+):
     print_step("Deploying Raiden contracts")
 
-    if testchain_setup["eth_client"] is EthClient.PARITY:
+    if eth_client is EthClient.PARITY:
         client = JSONRPCClient(
-            testchain_setup["web3"],
-            get_private_key(testchain_setup["keystore"]),
-            gas_estimate_correction=lambda gas: gas * 2,
+            web3, get_private_key(keystore), gas_estimate_correction=lambda gas: gas * 2
         )
     else:
-        client = JSONRPCClient(
-            testchain_setup["web3"], get_private_key(testchain_setup["keystore"])
-        )
+        client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
     token = deploy_token(
@@ -265,14 +271,14 @@ def setup_raiden(transport, matrix_server, print_step, contracts_version, testch
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
-        "datadir": testchain_setup["keystore"],
+        "datadir": keystore,
         "endpoint_registry_contract_address": endpoint_registry_contract_address,
-        "eth_rpc_endpoint": testchain_setup["eth_rpc_endpoint"],
+        "eth_rpc_endpoint": eth_rpc_endpoint,
         "gas_price": "fast",
-        "keystore_path": testchain_setup["keystore"],
+        "keystore_path": keystore,
         "matrix_server": matrix_server,
         "network_id": str(NETWORKNAME_TO_ID["smoketest"]),
-        "password_file": click.File()(os.path.join(testchain_setup["base_datadir"], "pw")),
+        "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "tokennetwork_registry_contract_address": tokennetwork_registry_contract_address,
         "secret_registry_contract_address": secret_registry_contract_address,
         "sync_check": False,
@@ -285,12 +291,7 @@ def setup_raiden(transport, matrix_server, print_step, contracts_version, testch
         )
         args["service_registry_contract_address"] = service_registry_contract_address
 
-    return {
-        "args": args,
-        "contract_addresses": contract_addresses,
-        "ethereum_nodes": testchain_setup["node_executors"],
-        "token": token,
-    }
+    return {"args": args, "contract_addresses": contract_addresses, "token": token}
 
 
 def run_smoketest(
