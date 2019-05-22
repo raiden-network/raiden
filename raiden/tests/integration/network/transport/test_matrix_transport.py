@@ -599,7 +599,7 @@ def test_matrix_send_global(
     # messages could have been bundled
     call_args_str = " ".join(str(arg) for arg in ms_room.send_text.call_args_list)
     for i in range(5):
-        assert f'"message_identifier": {i}' in call_args_str
+        assert f'"message_identifier": "{i}"' in call_args_str
 
     transport.stop()
     transport.get()
