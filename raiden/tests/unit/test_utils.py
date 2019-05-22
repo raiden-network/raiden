@@ -12,6 +12,7 @@ from raiden.network.utils import get_http_rtt
 from raiden.tests.utils.mocks import MockWeb3
 from raiden.utils import block_specification_to_number, privatekey_to_publickey, sha3
 from raiden.utils.signer import LocalSigner, Signer, recover
+from raiden.utils.signing import pack_data
 from raiden.utils.typing import BlockNumber
 
 
@@ -92,3 +93,8 @@ def test_get_http_rtt():
 
     with patch.object(requests, "request", side_effect=request_mock):
         assert get_http_rtt(url="url", method="get") == 0.3
+
+
+def test_pack_data():
+    with pytest.raises(ValueError):
+        pack_data(["uint256", "address"], [13])
