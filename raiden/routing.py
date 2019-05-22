@@ -9,7 +9,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
+from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, PathState
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -34,12 +34,12 @@ def get_best_routes(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> Tuple[List[RouteState], Optional[UUID]]:
+) -> Tuple[List[PathState], Optional[UUID]]:
     services_config = config.get("services", None)
 
     # the pfs should not be requested when the target is linked via a direct channel
     if to_address in views.all_neighbour_nodes(chain_state):
-        neighbours = get_best_routes_internal(
+        internal_routes = get_best_routes_internal(
             chain_state=chain_state,
             token_network_address=token_network_address,
             from_address=from_address,
@@ -53,8 +53,8 @@ def get_best_routes(
             partner_address=Address(to_address),
         )
 
-        for route_state in neighbours:
-            if to_address == route_state.node_address and (
+        for route_state in internal_routes:
+            if to_address == route_state.route[1] and (
                 channel_state
                 # other conditions about e.g. channel state are checked in best routes internal
                 and channel.get_distributable(
@@ -106,10 +106,11 @@ def get_best_routes(
 
 
 class Neighbour(NamedTuple):
-    length: int
+    length: int  # first item used for ordering
     nonrefundable: bool
     partner_address: Address
     channelid: ChannelID
+    route: List[Address]
 
 
 def get_best_routes_internal(
@@ -119,7 +120,7 @@ def get_best_routes_internal(
     to_address: TargetAddress,
     amount: int,
     previous_address: Optional[Address],
-) -> List[RouteState]:
+) -> List[PathState]:
     """ Returns a list of channels that can be used to make a transfer.
 
     This will filter out channels that are not open and don't have enough
@@ -170,14 +171,15 @@ def get_best_routes_internal(
         )
 
         try:
-            length = networkx.shortest_path_length(
+            route = networkx.shortest_path(
                 token_network.network_graph.network, partner_address, to_address
             )
             neighbour = Neighbour(
-                length=length,
+                length=len(route),
                 nonrefundable=nonrefundable,
                 partner_address=partner_address,
                 channelid=channel_state.identifier,
+                route=route,
             )
             heappush(neighbors_heap, neighbour)
         except (networkx.NetworkXNoPath, networkx.NodeNotFound):
@@ -193,10 +195,11 @@ def get_best_routes_internal(
 
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
-        route_state = RouteState(
-            node_address=neighbour.partner_address, channel_identifier=neighbour.channelid
-        )
-        available_routes.append(route_state)
+        # The complete route includes the initiator, add it to the beginning
+        complete_route = [from_address] + neighbour.route
+
+        available_routes.append(PathState(complete_route, neighbour.channelid))
+
     return available_routes
 
 
@@ -210,7 +213,7 @@ def get_best_routes_pfs(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> Tuple[bool, List[RouteState], Optional[UUID]]:
+) -> Tuple[bool, List[PathState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
             service_config=config,
@@ -233,10 +236,11 @@ def get_best_routes_pfs(
     paths = []
     for path_object in pfs_routes:
         path = path_object["path"]
+        canonical_path = [to_canonical_address(node) for node in path]
 
         # get the second entry, as the first one is the node itself
         # also needs to be converted to canonical representation
-        partner_address = to_canonical_address(path[1])
+        partner_address = canonical_path[1]
 
         # don't route back
         if partner_address == previous_address:
@@ -261,8 +265,6 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(
-            RouteState(node_address=partner_address, channel_identifier=channel_state.identifier)
-        )
+        paths.append(PathState(canonical_path, channel_state.identifier))
 
     return True, paths, feedback_token

@@ -33,7 +33,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
-    RouteState,
+    PathState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -160,14 +160,14 @@ def has_secret_registration_started(
 
 
 def filter_reachable_routes(
-    routes: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
-) -> List[RouteState]:
+    routes: List[PathState], nodeaddresses_to_networkstates: NodeNetworkStateMap
+) -> List[PathState]:
     """This function makes sure we use reachable routes only."""
     reachable_routes = []
 
     for route in routes:
         node_network_state = nodeaddresses_to_networkstates.get(
-            route.node_address, NODE_NETWORK_UNREACHABLE
+            route.route[1], NODE_NETWORK_UNREACHABLE
         )
 
         if node_network_state == NODE_NETWORK_REACHABLE:
@@ -177,8 +177,8 @@ def filter_reachable_routes(
 
 
 def filter_used_routes(
-    transfers_pair: List[MediationPairState], routes: List[RouteState]
-) -> List[RouteState]:
+    transfers_pair: List[MediationPairState], routes: List[PathState]
+) -> List[PathState]:
     """This function makes sure we filter routes that have already been used.
 
     So in a setup like this, we want to make sure that node 2, having tried to
@@ -189,8 +189,8 @@ def filter_used_routes(
          5 -> 6 -> 7
     This function will return routes as provided in their original order.
     """
-    channelid_to_route = {r.channel_identifier: r for r in routes}
-    routes_order = {route.node_address: index for index, route in enumerate(routes)}
+    channelid_to_route = {r.forward_channel_id: r for r in routes}
+    routes_order = {route.route[1]: index for index, route in enumerate(routes)}
 
     for pair in transfers_pair:
         channelid = pair.payer_transfer.balance_proof.channel_identifier
@@ -201,7 +201,7 @@ def filter_used_routes(
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-    return sorted(channelid_to_route.values(), key=lambda route: routes_order[route.node_address])
+    return sorted(channelid_to_route.values(), key=lambda route: routes_order[route.route[1]])
 
 
 def get_payee_channel(
@@ -352,7 +352,7 @@ def clear_if_finalized(
 
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
-    available_routes: List["RouteState"],
+    available_routes: List[PathState],
     channelidentifiers_to_channels: Dict,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -372,14 +372,19 @@ def forward_transfer_pair(
     mediated_events: List[Event] = list()
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
+<<<<<<< HEAD
     payee_channel = channel.next_channel_from_routes(
+=======
+    route_infos = next_channel_from_routes(
+>>>>>>> Add state to store complete routes in initiator and mediator
         available_routes=available_routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         transfer_amount=payer_transfer.lock.amount,
         lock_timeout=lock_timeout,
     )
 
-    if payee_channel:
+    if route_infos:
+        payee_channel, path_state = route_infos
         assert payee_channel.settle_timeout >= lock_timeout
         assert payee_channel.token_address == payer_transfer.token
 
@@ -398,7 +403,10 @@ def forward_transfer_pair(
         assert lockedtransfer_event
 
         transfer_pair = MediationPairState(
-            payer_transfer, payee_channel.partner_state.address, lockedtransfer_event.transfer
+            path=path_state,
+            payer_transfer=payer_transfer,
+            payee_address=payee_channel.partner_state.address,
+            payee_transfer=lockedtransfer_event.transfer,
         )
 
         mediated_events = [lockedtransfer_event]
@@ -450,8 +458,12 @@ def backward_transfer_pair(
             secrethash=lock.secrethash,
         )
 
+        backward_path = PathState([], ChannelID(-1))
         transfer_pair = MediationPairState(
-            payer_transfer, backward_channel.partner_state.address, refund_transfer.transfer
+            path=backward_path,
+            payer_transfer=payer_transfer,
+            payee_address=backward_channel.partner_state.address,
+            payee_transfer=refund_transfer.transfer,
         )
 
         events.append(refund_transfer)
@@ -970,7 +982,7 @@ def secret_learned(
 
 def mediate_transfer(
     state: MediatorTransferState,
-    possible_routes: List["RouteState"],
+    possible_routes: List[PathState],
     payer_channel: NettingChannelState,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
@@ -1130,8 +1142,8 @@ def handle_refundtransfer(
         payer:A payee:C from the first SendLockedTransfer
         payer:C payee:D from the following SendRefundTransfer
     Args:
-        mediator_state (MediatorTransferState): Current mediator_state.
-        mediator_state_change (ReceiveTransferRefund): The mediator_state change.
+        mediator_state: Current mediator_state.
+        mediator_state_change: The mediator_state change.
     Returns:
         TransitionResult: The resulting iteration.
     """
@@ -1361,9 +1373,7 @@ def handle_node_change_network_state(
 
     try:
         route = next(
-            route
-            for route in mediator_state.routes
-            if route.node_address == state_change.node_address
+            route for route in mediator_state.routes if route.route[1] == state_change.node_address
         )
     except StopIteration:
         return TransitionResult(mediator_state, list())
@@ -1374,7 +1384,7 @@ def handle_node_change_network_state(
     transfer = mediator_state.waiting_transfer.transfer
     payer_channel_identifier = transfer.balance_proof.channel_identifier
     payer_channel = channelidentifiers_to_channels.get(payer_channel_identifier)
-    payee_channel = channelidentifiers_to_channels.get(route.channel_identifier)
+    payee_channel = channelidentifiers_to_channels.get(route.forward_channel_id)
 
     if not payee_channel or not payer_channel:
         return TransitionResult(mediator_state, list())

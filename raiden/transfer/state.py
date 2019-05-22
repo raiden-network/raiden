@@ -168,12 +168,7 @@ class TokenNetworkGraphState(State):
 
 @dataclass
 class RouteState(State):
-    """ A possible route provided by a routing service.
-
-    Args:
-        node_address: The address of the next_hop.
-        channel_identifier: The channel identifier.
-    """
+    """ A possible route provided by a routing service. """
 
     node_address: Address
     channel_identifier: ChannelID
@@ -181,6 +176,15 @@ class RouteState(State):
     def __post_init__(self) -> None:
         if not isinstance(self.node_address, T_Address):
             raise ValueError("node_address must be an address instance")
+
+
+@dataclass
+class PathState(State):
+    """ A possible route for a payment to a given target. """
+
+    # TODO: Add timestamp
+    route: List[Address]
+    forward_channel_id: ChannelID
 
 
 @dataclass
