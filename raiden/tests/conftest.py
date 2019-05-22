@@ -48,13 +48,6 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        "--transport",
-        choices=("none", "matrix"),
-        default="matrix",
-        help="Run integration tests with matrix, or not at all.",
-    )
-
-    parser.addoption(
         "--base-port",
         action="store",
         default=8500,
@@ -195,12 +188,10 @@ def pytest_configure():
     pytest_timeout._validate_func_only = _validate_func_only
 
 
-# Convert `--transport all` to two separate invocations with `matrix`
 def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 
     if "transport" in fixtures:
-        transport = metafunc.config.getoption("transport")
         parmeterize_private_rooms = True
         transport_and_privacy = list()
         number_of_transports = list()
@@ -215,24 +206,23 @@ def pytest_generate_tests(metafunc):
                 if "number_of_transports" == mark.args[0]:
                     number_of_transports = mark.args[1]
 
-        if transport == "matrix":
-            if "public_and_private_rooms" in fixtures:
-                if number_of_transports:
-                    transport_and_privacy.extend(
-                        [
-                            ("matrix", [False for _ in range(number_of_transports[0])]),
-                            ("matrix", [True for _ in range(number_of_transports[0])]),
-                        ]
-                    )
-                else:
-                    transport_and_privacy.extend([("matrix", False), ("matrix", True)])
+        if "public_and_private_rooms" in fixtures:
+            if number_of_transports:
+                transport_and_privacy.extend(
+                    [
+                        ("matrix", [False for _ in range(number_of_transports[0])]),
+                        ("matrix", [True for _ in range(number_of_transports[0])]),
+                    ]
+                )
             else:
-                if number_of_transports:
-                    transport_and_privacy.extend(
-                        [("matrix", [False for _ in range(number_of_transports[0])])]
-                    )
-                else:
-                    transport_and_privacy.append(("matrix", False))
+                transport_and_privacy.extend([("matrix", False), ("matrix", True)])
+        else:
+            if number_of_transports:
+                transport_and_privacy.extend(
+                    [("matrix", [False for _ in range(number_of_transports[0])])]
+                )
+            else:
+                transport_and_privacy.append(("matrix", False))
 
         if not parmeterize_private_rooms or "private_rooms" not in fixtures:
             # If the test does not expect the private_rooms parameter or parametrizes

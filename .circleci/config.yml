@@ -345,7 +345,6 @@ jobs:
               --collect-only \
               --quiet \
               --blockchain-type=<< parameters.blockchain-type >> \
-              --transport=<< parameters.transport-layer >> \
               << parameters.additional-args >> \
               | \
             grep '::' | \
@@ -368,7 +367,6 @@ jobs:
               --random \
               --junit-xml=test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>/results.xml \
               --blockchain-type=<< parameters.blockchain-type >> \
-              --transport=<< parameters.transport-layer >> \
               --select-fail-on-missing \
               --select-from-file selected-tests.txt \
               << parameters.additional-args >>
