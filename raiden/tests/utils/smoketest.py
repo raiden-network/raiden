@@ -4,7 +4,6 @@ import shutil
 import sys
 import tempfile
 from contextlib import contextmanager
-from copy import deepcopy
 from http import HTTPStatus
 from typing import Any, Callable, ContextManager, List
 
@@ -23,14 +22,12 @@ from web3.middleware import geth_poa_middleware
 from raiden.accounts import AccountManager
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UINT256_MAX,
     EthClient,
-    RoutingMode,
 )
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
@@ -303,15 +300,6 @@ def run_smoketest(
     token: ContractProxy,
 ):
     print_step("Starting Raiden")
-
-    config = deepcopy(App.DEFAULT_CONFIG)
-    args["config"] = config
-    # Should use basic routing in the smoke test for now
-    # TODO: If we ever utilize a PFS in the smoke test we
-    #     need to use the deployed service registry, register the
-    #     PFS service there and then change this argument.
-    args["routing_mode"] = RoutingMode.BASIC
-    args["one_to_n_contract_address"] = None
 
     app = None
     try:

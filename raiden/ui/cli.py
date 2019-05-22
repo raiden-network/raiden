@@ -5,6 +5,7 @@ import signal
 import sys
 import textwrap
 import traceback
+from copy import deepcopy
 from io import StringIO
 from subprocess import TimeoutExpired
 from tempfile import mktemp
@@ -15,6 +16,7 @@ import structlog
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 
+from raiden.app import App
 from raiden.constants import Environment, EthClient, RoutingMode
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
@@ -498,9 +500,16 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
     from raiden.utils.debugging import enable_gevent_monitoring_signal
 
-    enable_gevent_monitoring_signal()
+    step_count = 8
+    step = 0
+    stdout = sys.stdout
+    raiden_stdout = StringIO()
 
+    environment_type = ctx.parent.params["environment_type"]
     transport = ctx.parent.params["transport"]
+    disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
+    matrix_server = ctx.parent.params["matrix_server"]
+
     if transport != "matrix":
         raise RuntimeError(f"Invalid transport type '{transport}'")
 
@@ -509,13 +518,17 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     else:
         report_file = report_path
 
+    enable_gevent_monitoring_signal()
+    make_requests_insecure()
+    urllib3.disable_warnings(InsecureRequestWarning)
+
+    click.secho(f"Report file: {report_file}", fg="yellow")
+
     configure_logging(
         logger_level_config={"": "DEBUG"},
         log_file=report_file,
-        disable_debug_logfile=ctx.parent.params["disable_debug_logfile"],
+        disable_debug_logfile=disable_debug_logfile,
     )
-    free_port_generator = get_free_port()
-    click.secho(f"Report file: {report_file}", fg="yellow")
 
     def append_report(subject: str, data: Optional[AnyStr] = None):
         with open(report_file, "a", encoding="UTF-8") as handler:
@@ -531,11 +544,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     append_report("Raiden version", json.dumps(get_system_spec()))
     append_report("Raiden log")
 
-    step_count = 8
-    step = 0
-
-    stdout = sys.stdout
-
     def print_step(description: str, error: bool = False) -> None:
         nonlocal step
         step += 1
@@ -548,12 +556,11 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         )
 
     print_step("Getting smoketest configuration")
-    contracts_version = environment_type_to_contracts_version(
-        ctx.parent.params["environment_type"]
-    )
+    contracts_version = environment_type_to_contracts_version(environment_type)
 
     matrix_server = ctx.parent.params["matrix_server"]
 
+    free_port_generator = get_free_port()
     testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
         eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
     )
@@ -561,7 +568,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         free_port_generator=free_port_generator
     )
 
-    raiden_stdout = StringIO()
     if debug:
         stdout_manager = contextlib.nullcontext()
     else:
@@ -570,6 +576,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     print_step("Starting Matrix transport")
 
     try:
+        ethereum_nodes = None
         with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
             result = setup_raiden(
                 transport, matrix_server, print_step, contracts_version, testchain
@@ -577,22 +584,25 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 
             args = result["args"]
             contract_addresses = result["contract_addresses"]
+            ethereum_nodes = result["ethereum_nodes"]
             token = result["token"]
-            # Also respect environment type
-            args["environment_type"] = ctx.parent.params["environment_type"]
+
+            port = next(free_port_generator)
+
+            # TODO: To use a routing_mode other than BASIC the service registry
+            # has to be deployed
+            args["api_address"] = f"localhost:{port}"
+            args["config"] = deepcopy(App.DEFAULT_CONFIG)
+            args["environment_type"] = environment_type
+            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
+            args["one_to_n_contract_address"] = None
+            args["routing_mode"] = RoutingMode.BASIC
+
             for option_ in run.params:
                 if option_.name in args.keys():
                     args[option_.name] = option_.process_value(ctx, args[option_.name])
                 else:
                     args[option_.name] = option_.default
-
-            port = next(free_port_generator)
-
-            args["api_address"] = "localhost:" + str(port)
-
-            make_requests_insecure()
-            urllib3.disable_warnings(InsecureRequestWarning)
-            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
 
             try:
                 run_smoketest(
@@ -602,21 +612,22 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
                     token=token,
                 )
             finally:
-                for node_executor in result["ethereum_nodes"]:
-                    node = node_executor.process
-                    node.send_signal(signal.SIGINT)
+                if ethereum_nodes:
+                    for node_executor in ethereum_nodes:
+                        node = node_executor.process
+                        node.send_signal(signal.SIGINT)
 
-                    try:
-                        node.wait(10)
-                    except TimeoutExpired:
-                        print_step("Ethereum node shutdown unclean, check log!", error=True)
-                        node.kill()
+                        try:
+                            node.wait(10)
+                        except TimeoutExpired:
+                            print_step("Ethereum node shutdown unclean, check log!", error=True)
+                            node.kill()
 
-                    if isinstance(node_executor.stdio, tuple):
-                        logfile = node_executor.stdio[1]
-                        logfile.flush()
-                        logfile.seek(0)
-                        append_report("Ethereum Node log output", logfile.read())
+                        if isinstance(node_executor.stdio, tuple):
+                            logfile = node_executor.stdio[1]
+                            logfile.flush()
+                            logfile.seek(0)
+                            append_report("Ethereum Node log output", logfile.read())
     except:  # noqa pylint: disable=bare-except
         if debug:
             import pdb
