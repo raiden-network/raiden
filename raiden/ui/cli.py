@@ -1,8 +1,11 @@
+import contextlib
 import json
 import os
 import signal
 import sys
 import textwrap
+import traceback
+from io import StringIO
 from subprocess import TimeoutExpired
 from tempfile import mktemp
 from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
@@ -10,7 +13,6 @@ from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 import click
 import structlog
 import urllib3
-from mirakuru import ProcessExitedWithError
 from urllib3.exceptions import InsecureRequestWarning
 
 from raiden.constants import Environment, EthClient, RoutingMode
@@ -559,10 +561,16 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         free_port_generator=free_port_generator
     )
 
+    raiden_stdout = StringIO()
+    if debug:
+        stdout_manager = contextlib.nullcontext()
+    else:
+        stdout_manager = contextlib.redirect_stdout(raiden_stdout)
+
     print_step("Starting Matrix transport")
 
     try:
-        with testchain_manager as testchain, matrix_manager as server_urls:
+        with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
             result = setup_raiden(
                 transport, matrix_server, print_step, contracts_version, testchain
             )
@@ -593,7 +601,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
                     args=args,
                     contract_addresses=contract_addresses,
                     token=token,
-                    debug=debug,
                 )
             finally:
                 for node_executor in result["ethereum_nodes"]:
@@ -611,11 +618,18 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
                         logfile.flush()
                         logfile.seek(0)
                         append_report("Ethereum Node log output", logfile.read())
-    except (PermissionError, ProcessExitedWithError, FileNotFoundError):
-        print_step(
-            f"Error during smoketest setup, report was written to {report_file}", error=True
-        )
+    except:  # noqa pylint: disable=bare-except
+        if debug:
+            import pdb
+
+            pdb.post_mortem()  # pylint: disable=no-member
+
+        error = traceback.format_exc()
+        append_report("Smoketest execution error", error)
+        print_step("Smoketest execution error", error=True)
         success = False
+
+    append_report("Raiden Node stdout", raiden_stdout.getvalue())
 
     if success:
         print_step(f"Smoketest successful")
