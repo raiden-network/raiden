@@ -33,7 +33,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
-    PathState,
+    RouteState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -160,8 +160,8 @@ def has_secret_registration_started(
 
 
 def filter_reachable_routes(
-    routes: List[PathState], nodeaddresses_to_networkstates: NodeNetworkStateMap
-) -> List[PathState]:
+    routes: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
+) -> List[RouteState]:
     """This function makes sure we use reachable routes only."""
     reachable_routes = []
 
@@ -177,8 +177,8 @@ def filter_reachable_routes(
 
 
 def filter_used_routes(
-    transfers_pair: List[MediationPairState], routes: List[PathState]
-) -> List[PathState]:
+    transfers_pair: List[MediationPairState], routes: List[RouteState]
+) -> List[RouteState]:
     """This function makes sure we filter routes that have already been used.
 
     So in a setup like this, we want to make sure that node 2, having tried to
@@ -352,7 +352,7 @@ def clear_if_finalized(
 
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
-    available_routes: List[PathState],
+    available_routes: List[RouteState],
     channelidentifiers_to_channels: Dict,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -372,11 +372,7 @@ def forward_transfer_pair(
     mediated_events: List[Event] = list()
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
-<<<<<<< HEAD
-    payee_channel = channel.next_channel_from_routes(
-=======
-    route_infos = next_channel_from_routes(
->>>>>>> Add state to store complete routes in initiator and mediator
+    route_infos = channel.next_channel_from_routes(
         available_routes=available_routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         transfer_amount=payer_transfer.lock.amount,
@@ -384,7 +380,7 @@ def forward_transfer_pair(
     )
 
     if route_infos:
-        payee_channel, path_state = route_infos
+        payee_channel, route_state = route_infos
         assert payee_channel.settle_timeout >= lock_timeout
         assert payee_channel.token_address == payer_transfer.token
 
@@ -403,7 +399,7 @@ def forward_transfer_pair(
         assert lockedtransfer_event
 
         transfer_pair = MediationPairState(
-            path=path_state,
+            route=route_state,
             payer_transfer=payer_transfer,
             payee_address=payee_channel.partner_state.address,
             payee_transfer=lockedtransfer_event.transfer,
@@ -458,9 +454,9 @@ def backward_transfer_pair(
             secrethash=lock.secrethash,
         )
 
-        backward_path = PathState([], ChannelID(-1))
+        backward_path = RouteState([], ChannelID(-1))
         transfer_pair = MediationPairState(
-            path=backward_path,
+            route=backward_path,
             payer_transfer=payer_transfer,
             payee_address=backward_channel.partner_state.address,
             payee_transfer=refund_transfer.transfer,
@@ -982,7 +978,7 @@ def secret_learned(
 
 def mediate_transfer(
     state: MediatorTransferState,
-    possible_routes: List[PathState],
+    possible_routes: List[RouteState],
     payer_channel: NettingChannelState,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
@@ -1050,9 +1046,9 @@ def handle_init(
 ) -> TransitionResult[MediatorTransferState]:
     routes = state_change.routes
 
-    from_route = state_change.from_route
+    from_hop = state_change.from_hop
     from_transfer = state_change.from_transfer
-    payer_channel = channelidentifiers_to_channels.get(from_route.channel_identifier)
+    payer_channel = channelidentifiers_to_channels.get(from_hop.channel_identifier)
 
     # There is no corresponding channel for the message, ignore it
     if not payer_channel:

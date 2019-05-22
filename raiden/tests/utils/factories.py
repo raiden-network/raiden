@@ -22,10 +22,10 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    HopState,
     MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
-    PathState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -213,27 +213,27 @@ def make_signer() -> Signer:
     return LocalSigner(privatekey)
 
 
+def make_hop_from_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
+    return HopState(channel_state.partner_state.address, channel_state.identifier)
+
+
+def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
+    return HopState(channel_state.our_state.address, channel_state.identifier)
+
+
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.partner_state.address, channel_state.identifier)
-
-
-def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
-    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return RouteState(channel_state.our_state.address, channel_state.identifier)
-
-
-def make_path_from_channel(channel_state: NettingChannelState = EMPTY) -> PathState:
-    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return PathState(
+    return RouteState(
         [channel_state.our_state.address, channel_state.partner_state.address],
         channel_state.identifier,
     )
 
 
-def make_path_to_channel(channel_state: NettingChannelState = EMPTY) -> PathState:
+def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
-    return PathState([channel_state.our_state.address], channel_state.identifier)
+    return RouteState([channel_state.our_state.address], channel_state.identifier)
 
 
 # CONSTANTS
@@ -819,17 +819,17 @@ class ChannelSet:
     def partner_address(self, index: int) -> Address:
         return self.channels[index].partner_state.address
 
+    def get_hop(self, channel_index: int) -> HopState:
+        return make_hop_from_channel(self.channels[channel_index])
+
+    def get_hops(self, *args) -> List[HopState]:
+        return [self.get_hop(index) for index in (args or range(len(self.channels)))]
+
     def get_route(self, channel_index: int) -> RouteState:
         return make_route_from_channel(self.channels[channel_index])
 
     def get_routes(self, *args) -> List[RouteState]:
         return [self.get_route(index) for index in (args or range(len(self.channels)))]
-
-    def get_path(self, channel_index: int) -> PathState:
-        return make_path_from_channel(self.channels[channel_index])
-
-    def get_paths(self, *args) -> List[PathState]:
-        return [self.get_path(index) for index in (args or range(len(self.channels)))]
 
     def __getitem__(self, item: int) -> NettingChannelState:
         return self.channels[item]
@@ -891,8 +891,8 @@ def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
     return ActionInitMediator(
-        routes=channels.get_paths(1),
-        from_route=channels.get_route(0),
+        routes=channels.get_routes(1),
+        from_hop=channels.get_hop(0),
         from_transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,
@@ -983,7 +983,7 @@ def make_transfers_pair(
         sent_transfer = lockedtransfer_event.transfer
 
         pair = MediationPairState(
-            path=PathState([], 0),
+            route=RouteState([], 0),
             payer_transfer=received_transfer,
             payee_address=lockedtransfer_event.recipient,
             payee_transfer=sent_transfer,

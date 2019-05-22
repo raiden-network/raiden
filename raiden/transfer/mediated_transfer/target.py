@@ -93,7 +93,7 @@ def handle_inittarget(
 ) -> TransitionResult[TargetTransferState]:
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
-    route = state_change.route
+    route = state_change.from_hop
 
     assert channel_state.identifier == transfer.balance_proof.channel_identifier
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
@@ -173,7 +173,7 @@ def handle_offchain_secretreveal(
             secrethash=state_change.secrethash,
         )
 
-        route = target_state.route
+        route = target_state.from_hop
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret

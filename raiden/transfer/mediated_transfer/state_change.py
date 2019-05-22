@@ -8,7 +8,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.state import PathState, RouteState
+from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
@@ -30,7 +30,7 @@ class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer. """
 
     transfer: TransferDescriptionWithSecretState
-    routes: List[PathState]
+    routes: List[RouteState]
 
     def __post_init__(self) -> None:
         if not isinstance(self.transfer, TransferDescriptionWithSecretState):
@@ -43,17 +43,17 @@ class ActionInitMediator(BalanceProofStateChange):
 
     Args:
         routes: A list of possible routes provided by a routing service.
-        from_route: The payee route.
+        from_hop: The payee route.
         from_transfer: The payee transfer.
     """
 
-    routes: List[PathState] = field(repr=False)
-    from_route: RouteState
+    routes: List[RouteState] = field(repr=False)
+    from_hop: HopState
     from_transfer: LockedTransferSignedState
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.from_route, RouteState):
+        if not isinstance(self.from_hop, HopState):
             raise ValueError("from_route must be a RouteState instance")
 
         if not isinstance(self.from_transfer, LockedTransferSignedState):
@@ -65,17 +65,17 @@ class ActionInitTarget(BalanceProofStateChange):
     """ Initial state for a new target.
 
     Args:
-        route: The payee route.
+        from_hop: The payee route.
         transfer: The payee transfer.
     """
 
-    route: RouteState
+    from_hop: HopState
     transfer: LockedTransferSignedState
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
-        if not isinstance(self.route, RouteState):
+        if not isinstance(self.from_hop, HopState):
             raise ValueError("route must be a RouteState instance")
 
         if not isinstance(self.transfer, LockedTransferSignedState):
@@ -118,7 +118,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     route.
     """
 
-    routes: List[PathState] = field(repr=False)
+    routes: List[RouteState] = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
@@ -136,7 +136,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
     transfer: LockedTransferSignedState
-    routes: List[PathState] = field(repr=False)
+    routes: List[RouteState] = field(repr=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()

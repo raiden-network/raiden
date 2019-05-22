@@ -10,7 +10,6 @@ from raiden.transfer.mediated_transfer.state import (
     WaitingTransferState,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import PathState
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 from raiden.utils import sha3
 
@@ -91,7 +90,7 @@ def test_mediator_task_view():
     # pylint: disable=E1101
     transfer_state1.transfers_pair.append(
         MediationPairState(
-            path=PathState([], -1),
+            route=routes[0],
             payer_transfer=payer_transfer,
             payee_transfer=payee_transfer,
             payee_address=payee_transfer.target,
@@ -142,7 +141,7 @@ def test_target_task_view():
             partner_state=factories.NettingChannelEndStateProperties(address=mediator, balance=100)
         )
     )
-    transfer_state = TargetTransferState(route=None, transfer=transfer, secret=secret)
+    transfer_state = TargetTransferState(from_hop=None, transfer=transfer, secret=secret)
     task = TargetTask(
         canonical_identifier=mediator_channel.canonical_identifier, target_state=transfer_state
     )

@@ -24,7 +24,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     NettingChannelState,
-    PathState,
+    RouteState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, StateChange
@@ -175,20 +175,20 @@ def get_initial_lock_expiration(
 
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-    available_routes: List[PathState],
+    available_routes: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorTransferState]:
 
-    channel_state, _ = channel.next_channel_from_routes(
+    route_infos = channel.next_channel_from_routes(
         available_routes=available_routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         transfer_amount=PaymentWithFeeAmount(transfer_description.amount),
     )
 
     events: List[Event] = list()
-    if channel_state is None:
+    if route_infos is None:
         if not available_routes:
             reason = "there is no route available"
         else:
@@ -206,6 +206,7 @@ def try_new_route(
         initiator_state = None
 
     else:
+        channel_state, _ = route_infos
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             transfer_description=transfer_description,

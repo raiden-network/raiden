@@ -124,7 +124,7 @@ def make_from_route_from_counter(counter):
             ),
         )
     )
-    from_route = factories.make_route_from_channel(from_channel)
+    from_hop = factories.make_hop_from_channel(from_channel)
 
     expiration = factories.UNIT_REVEAL_TIMEOUT + 1
 
@@ -145,7 +145,7 @@ def make_from_route_from_counter(counter):
             pkey=factories.HOP1_KEY,
         ),
     )
-    return from_route, from_transfer
+    return from_hop, from_transfer
 
 
 def test_get_state_change_with_balance_proof():
@@ -190,14 +190,14 @@ def test_get_state_change_with_balance_proof():
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
     action_init_mediator = ActionInitMediator(
         routes=list(),
-        from_route=mediator_from_route,
+        from_hop=mediator_from_route,
         from_transfer=mediator_signed_transfer,
         balance_proof=mediator_signed_transfer.balance_proof,
         sender=mediator_signed_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     target_from_route, target_signed_transfer = make_from_route_from_counter(counter)
     action_init_target = ActionInitTarget(
-        route=target_from_route,
+        from_hop=target_from_route,
         transfer=target_signed_transfer,
         balance_proof=target_signed_transfer.balance_proof,
         sender=target_signed_transfer.balance_proof.sender,  # pylint: disable=no-member
