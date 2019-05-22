@@ -2,7 +2,6 @@ import contextlib
 import os
 import random
 import shutil
-import signal
 import sys
 import tempfile
 import traceback
@@ -10,7 +9,6 @@ from contextlib import contextmanager
 from copy import deepcopy
 from http import HTTPStatus
 from io import StringIO
-from subprocess import TimeoutExpired
 from typing import Any, Callable, ContextManager, List
 
 import click
@@ -372,7 +370,6 @@ def run_smoketest(
     contract_addresses: List[Address],
     token: ContractProxy,
     debug: bool,
-    ethereum_nodes: List[HTTPExecutor],
 ):
     print_step("Starting Raiden")
 
@@ -438,19 +435,5 @@ def run_smoketest(
             if app is not None:
                 app.stop()
                 app.raiden.get()
-            node_executor = ethereum_nodes[0]
-            node = node_executor.process
-            node.send_signal(signal.SIGINT)
-            try:
-                node.wait(10)
-            except TimeoutExpired:
-                print_step("Ethereum node shutdown unclean, check log!", error=True)
-                node.kill()
-
-            if isinstance(node_executor.stdio, tuple):
-                logfile = node_executor.stdio[1]
-                logfile.flush()
-                logfile.seek(0)
-                append_report("Ethereum Node log output", logfile.read())
     append_report("Raiden Node stdout", raiden_stdout.getvalue())
     return success
