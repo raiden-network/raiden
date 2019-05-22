@@ -5,7 +5,7 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from http import HTTPStatus
-from typing import Any, Callable, ContextManager, List
+from typing import TYPE_CHECKING, Any, Callable, ContextManager, List
 
 import click
 import requests
@@ -59,6 +59,10 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MIN,
 )
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.network.transport.matrix import ParsedURL  # noqa: F401
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = Endpoint("9.9.9.9:9999")
@@ -204,6 +208,18 @@ def setup_testchain(
             node_executors=node_executors,
             web3=web3,
         )
+
+
+@contextmanager
+def setup_matrix_for_smoketest(
+    print_step: Callable, free_port_generator: Iterable[Port]
+) -> ContextManager[List["ParsedURL"]]:
+    from raiden.tests.utils.transport import matrix_server_starter
+
+    print_step("Starting Matrix transport")
+
+    with matrix_server_starter(free_port_generator=free_port_generator) as ctx:
+        yield ctx
 
 
 def setup_raiden(
