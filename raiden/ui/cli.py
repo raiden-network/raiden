@@ -474,6 +474,11 @@ def version(short):
 
 
 @run.command()
+@option(
+    "--report-path",
+    help="Store report at this location instead of a temp file.",
+    type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+)
 @option("--debug", is_flag=True, help="Drop into pdb on errors.")
 @option(
     "--eth-client",
@@ -483,7 +488,7 @@ def version(short):
     help="Which Ethereum client to run for the smoketests",
 )
 @click.pass_context
-def smoketest(ctx, debug, eth_client):
+def smoketest(ctx, debug, eth_client, report_path):
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import setup_testchain_and_raiden, run_smoketest
     from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
@@ -491,7 +496,10 @@ def smoketest(ctx, debug, eth_client):
 
     enable_gevent_monitoring_signal()
 
-    report_file = mktemp(suffix=".log")
+    if report_path is None:
+        report_file = mktemp(suffix=".log")
+    else:
+        report_file = report_path
     configure_logging(
         logger_level_config={"": "DEBUG"},
         log_file=report_file,
