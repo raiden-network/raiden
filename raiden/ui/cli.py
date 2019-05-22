@@ -497,10 +497,15 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 
     enable_gevent_monitoring_signal()
 
+    transport = ctx.parent.params["transport"]
+    if transport != "matrix":
+        raise RuntimeError(f"Invalid transport type '{transport}'")
+
     if report_path is None:
         report_file = mktemp(suffix=".log")
     else:
         report_file = report_path
+
     configure_logging(
         logger_level_config={"": "DEBUG"},
         log_file=report_file,
@@ -523,9 +528,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     append_report("Raiden version", json.dumps(get_system_spec()))
     append_report("Raiden log")
 
-    step_count = 7
-    if ctx.parent.params["transport"] == "matrix":
-        step_count = 8
+    step_count = 8
     step = 0
 
     stdout = sys.stdout
@@ -546,9 +549,9 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         ctx.parent.params["environment_type"]
     )
 
-    transport = ctx.parent.params["transport"]
     matrix_server = ctx.parent.params["matrix_server"]
 
+    testchain: Dict[str, Any]
     with setup_testchain(
         eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
     ) as testchain:
@@ -570,36 +573,31 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 
         args["api_address"] = "localhost:" + str(port)
 
-        if args["transport"] == "matrix":
-            print_step("Starting Matrix transport")
-            try:
-                server_urls: List[ParsedURL]
-                with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
-                    # Disable TLS verification so we can connect to the self signed certificate
-                    make_requests_insecure()
-                    urllib3.disable_warnings(InsecureRequestWarning)
-                    args["extra_config"] = {
-                        "transport": {"matrix": {"available_servers": server_urls}}
-                    }
-                    success = run_smoketest(
-                        print_step=print_step,
-                        append_report=append_report,
-                        args=args,
-                        contract_addresses=contract_addresses,
-                        token=token,
-                        debug=debug,
-                        ethereum_nodes=ethereum_nodes,
-                    )
-            except (PermissionError, ProcessExitedWithError, FileNotFoundError):
-                append_report("Matrix server start exception", traceback.format_exc())
-                print_step(
-                    f"Error during smoketest setup, report was written to {report_file}",
-                    error=True,
+        print_step("Starting Matrix transport")
+        try:
+            server_urls: List[ParsedURL]
+            with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
+                # Disable TLS verification so we can connect to the self signed certificate
+                make_requests_insecure()
+                urllib3.disable_warnings(InsecureRequestWarning)
+                args["extra_config"] = {
+                    "transport": {"matrix": {"available_servers": server_urls}}
+                }
+                success = run_smoketest(
+                    print_step=print_step,
+                    append_report=append_report,
+                    args=args,
+                    contract_addresses=contract_addresses,
+                    token=token,
+                    debug=debug,
+                    ethereum_nodes=ethereum_nodes,
                 )
-                success = False
-        else:
-            # Shouldn't happen
-            raise RuntimeError(f"Invalid transport type '{args['transport']}'")
+        except (PermissionError, ProcessExitedWithError, FileNotFoundError):
+            append_report("Matrix server start exception", traceback.format_exc())
+            print_step(
+                f"Error during smoketest setup, report was written to {report_file}", error=True
+            )
+            success = False
 
     if not success:
         sys.exit(1)
