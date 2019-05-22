@@ -492,7 +492,7 @@ def version(short):
 @click.pass_context
 def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import setup_testchain_and_raiden, run_smoketest
+    from raiden.tests.utils.smoketest import setup_testchain, setup_raiden, run_smoketest
     from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
     from raiden.utils.debugging import enable_gevent_monitoring_signal
 
@@ -547,14 +547,14 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         ctx.parent.params["environment_type"]
     )
 
-    with setup_testchain_and_raiden(
-        transport=ctx.parent.params["transport"],
-        eth_client=eth_client,
-        matrix_server=ctx.parent.params["matrix_server"],
-        contracts_version=contracts_version,
-        print_step=print_step,
-        free_port_generator=free_port_generator,
-    ) as result:
+    transport = ctx.parent.params["transport"]
+    matrix_server = ctx.parent.params["matrix_server"]
+
+    with setup_testchain(
+        eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
+    ) as testchain:
+        result = setup_raiden(transport, matrix_server, print_step, contracts_version, testchain)
+
         args = result["args"]
         contract_addresses = result["contract_addresses"]
         token = result["token"]

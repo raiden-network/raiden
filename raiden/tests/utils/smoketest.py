@@ -219,24 +219,8 @@ def get_private_key(keystore):
 
 
 @contextmanager
-def setup_testchain_and_raiden(
-    transport: str,
-    eth_client: EthClient,
-    matrix_server: str,
-    contracts_version: str,
-    print_step: Callable,
-    free_port_generator: Iterable[Port],
-):
-    testchain_manager = setup_testchain(
-        eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
-    )
-    with testchain_manager as testchain:
-        yield setup_raiden(transport, matrix_server, print_step, contracts_version, testchain)
-
-
-@contextmanager
 def setup_testchain(
-    eth_client: EthClient, print_step: Callable, free_port_generator: Iterator[int]
+    eth_client: EthClient, print_step: Callable, free_port_generator: Iterable[Port]
 ) -> ContextManager[Dict[str, Any]]:
     print_step("Starting Ethereum node")
 
