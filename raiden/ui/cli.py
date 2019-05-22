@@ -150,6 +150,7 @@ def options(func):
             type=click.Choice(["matrix"]),
             default="matrix",
             show_default=True,
+            hidden=True,
         ),
         option(
             "--network-id",
