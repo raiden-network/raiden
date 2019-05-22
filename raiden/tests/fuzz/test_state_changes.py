@@ -298,7 +298,7 @@ class InitiatorMixin:
         channel = self.address_to_channel[transfer.target]
         if transfer.secrethash not in self.expected_expiry:
             self.expected_expiry[transfer.secrethash] = self.block_number + 10
-        return ActionInitInitiator(transfer, [factories.make_path_from_channel(channel)])
+        return ActionInitInitiator(transfer, [factories.make_route_from_channel(channel)])
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
         secrethash = sha3(transfer.secret)
@@ -534,8 +534,8 @@ class MediatorMixin:
         target_channel = self.address_to_channel[transfer.target]
 
         return ActionInitMediator(
-            routes=[factories.make_path_from_channel(target_channel)],
-            from_route=factories.make_route_to_channel(initiator_channel),
+            routes=[factories.make_route_from_channel(target_channel)],
+            from_hop=factories.make_hop_to_channel(initiator_channel),
             from_transfer=transfer,
             balance_proof=transfer.balance_proof,
             sender=transfer.balance_proof.sender,

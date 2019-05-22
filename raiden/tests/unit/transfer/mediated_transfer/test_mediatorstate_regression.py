@@ -136,7 +136,7 @@ def test_regression_send_refund():
     setup = factories.make_transfers_pair(3)
 
     mediator_state = MediatorTransferState(
-        secrethash=UNIT_SECRETHASH, routes=setup.channels.get_routes()
+        secrethash=UNIT_SECRETHASH, routes=setup.channels.get_hops()
     )
     mediator_state.transfers_pair = setup.transfers_pair
 
@@ -309,8 +309,8 @@ def test_regression_mediator_task_no_routes():
     )
 
     init_state_change = ActionInitMediator(
-        routes=channels.get_paths(),
-        from_route=channels.get_route(0),
+        routes=channels.get_routes(),
+        from_hop=channels.get_hop(0),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -395,13 +395,13 @@ def test_regression_mediator_not_update_payer_state_twice():
 
     pair = factories.mediator_make_channel_pair()
     payer_channel, payee_channel = pair.channels
-    payer_route = factories.make_route_from_channel(payer_channel)
+    payer_route = factories.make_hop_from_channel(payer_channel)
     payer_transfer = factories.make_signed_transfer_for(payer_channel, LONG_EXPIRATION)
 
-    available_routes = [factories.make_path_from_channel(payee_channel)]
+    available_routes = [factories.make_route_from_channel(payee_channel)]
     init_state_change = ActionInitMediator(
         routes=available_routes,
-        from_route=payer_route,
+        from_hop=payer_route,
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member

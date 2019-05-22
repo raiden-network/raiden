@@ -7,7 +7,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
-    PathState,
+    HopState,
     RouteState,
 )
 from raiden.utils import sha3
@@ -159,7 +159,7 @@ class MediationPairState(State):
     the payer and payee, and the current state of the payment.
     """
 
-    path: PathState
+    route: RouteState
     payer_transfer: LockedTransferSignedState
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState
@@ -223,7 +223,7 @@ class MediatorTransferState(State):
     """
 
     secrethash: SecretHash
-    routes: List[PathState]
+    routes: List[RouteState]
     secret: Optional[Secret] = field(default=None)
     transfers_pair: List[MediationPairState] = field(default_factory=list)
     waiting_transfer: Optional[WaitingTransferState] = field(default=None)
@@ -247,7 +247,7 @@ class TargetTransferState(State):
         SECRET_REQUEST,
     )
 
-    route: RouteState = field(repr=False)
+    from_hop: HopState = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Optional[Secret] = field(repr=False, default=None)
     state: str = field(default="secret_request")

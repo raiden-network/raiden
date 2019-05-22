@@ -167,8 +167,8 @@ class TokenNetworkGraphState(State):
 
 
 @dataclass
-class RouteState(State):
-    """ A possible route provided by a routing service. """
+class HopState(State):
+    """ Information about the next hop. """
 
     node_address: Address
     channel_identifier: ChannelID
@@ -179,7 +179,7 @@ class RouteState(State):
 
 
 @dataclass
-class PathState(State):
+class RouteState(State):
     """ A possible route for a payment to a given target. """
 
     # TODO: Add timestamp

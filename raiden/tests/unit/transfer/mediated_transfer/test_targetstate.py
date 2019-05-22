@@ -88,7 +88,7 @@ def make_target_state(
     from_transfer = make_target_transfer(channels[0], amount, expiration, initiator)
 
     state_change = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -140,7 +140,7 @@ def test_events_for_onchain_secretreveal():
     safe_to_wait = expiration - channels[0].reveal_timeout - 1
     unsafe_to_wait = expiration - channels[0].reveal_timeout
 
-    state = TargetTransferState(channels.get_route(0), from_transfer)
+    state = TargetTransferState(channels.get_hop(0), from_transfer)
     events = target.events_for_onchain_secretreveal(
         target_state=state,
         channel_state=channels[0],
@@ -185,7 +185,7 @@ def test_handle_inittarget():
     from_transfer = create(transfer_properties)
 
     state_change = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -220,7 +220,7 @@ def test_handle_inittarget_bad_expiration():
     channel.handle_receive_lockedtransfer(channels[0], from_transfer)
 
     state_change = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -251,7 +251,7 @@ def test_handle_offchain_secretreveal():
 
     assert iteration.new_state.state == "reveal_secret"
     assert reveal.secret == UNIT_SECRET
-    assert reveal.recipient == setup.new_state.route.node_address
+    assert reveal.recipient == setup.new_state.from_hop.node_address
 
     # if we get an empty hash secret make sure it's rejected
     secret = EMPTY_HASH
@@ -451,7 +451,7 @@ def test_state_transition():
     from_transfer = make_target_transfer(channels[0], amount=lock_amount, initiator=initiator)
 
     init = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -465,7 +465,7 @@ def test_state_transition():
         block_number=block_number,
     )
     assert init_transition.new_state is not None
-    assert init_transition.new_state.route == channels.get_route(0)
+    assert init_transition.new_state.from_hop == channels.get_hop(0)
     assert init_transition.new_state.transfer == from_transfer
 
     first_new_block = Block(
@@ -508,7 +508,7 @@ def test_state_transition():
             locked_amount=0,
             canonical_identifier=factories.make_canonical_identifier(
                 token_network_address=channels[0].token_network_address,
-                channel_identifier=channels.get_route(0).channel_identifier,
+                channel_identifier=channels.get_hop(0).channel_identifier,
             ),
             locksroot=EMPTY_MERKLE_ROOT,
             message_hash=b"\x00" * 32,  # invalid
@@ -552,7 +552,7 @@ def test_target_reject_keccak_empty_hash():
     )
 
     init = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -581,7 +581,7 @@ def test_target_receive_lock_expired():
     )
 
     init = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -595,7 +595,7 @@ def test_target_receive_lock_expired():
         block_number=block_number,
     )
     assert init_transition.new_state is not None
-    assert init_transition.new_state.route == channels.get_route(0)
+    assert init_transition.new_state.from_hop == channels.get_hop(0)
     assert init_transition.new_state.transfer == from_transfer
 
     balance_proof = create(
@@ -646,7 +646,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     from_transfer = make_target_transfer(channels[0], amount=lock_amount, block_number=1)
 
     init = ActionInitTarget(
-        route=channels.get_route(0),
+        from_hop=channels.get_hop(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member

@@ -21,7 +21,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import NettingChannelState, PathState
+from raiden.transfer.state import NettingChannelState, RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -94,7 +94,7 @@ def maybe_try_new_route(
     payment_state: InitiatorPaymentState,
     initiator_state: InitiatorTransferState,
     transfer_description: TransferDescriptionWithSecretState,
-    available_routes: List[PathState],
+    available_routes: List[RouteState],
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,

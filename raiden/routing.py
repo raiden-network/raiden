@@ -9,7 +9,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, PathState
+from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -34,7 +34,7 @@ def get_best_routes(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> Tuple[List[PathState], Optional[UUID]]:
+) -> Tuple[List[RouteState], Optional[UUID]]:
     services_config = config.get("services", None)
 
     # the pfs should not be requested when the target is linked via a direct channel
@@ -120,7 +120,7 @@ def get_best_routes_internal(
     to_address: TargetAddress,
     amount: int,
     previous_address: Optional[Address],
-) -> List[PathState]:
+) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 
     This will filter out channels that are not open and don't have enough
@@ -198,7 +198,7 @@ def get_best_routes_internal(
         # The complete route includes the initiator, add it to the beginning
         complete_route = [Address(from_address)] + neighbour.route
 
-        available_routes.append(PathState(complete_route, neighbour.channelid))
+        available_routes.append(RouteState(complete_route, neighbour.channelid))
 
     return available_routes
 
@@ -213,7 +213,7 @@ def get_best_routes_pfs(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> Tuple[bool, List[PathState], Optional[UUID]]:
+) -> Tuple[bool, List[RouteState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
             service_config=config,
@@ -265,6 +265,6 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(PathState(canonical_path, channel_state.identifier))
+        paths.append(RouteState(canonical_path, channel_state.identifier))
 
     return True, paths, feedback_token

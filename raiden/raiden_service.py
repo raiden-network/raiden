@@ -62,8 +62,8 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
+    HopState,
     PaymentNetworkState,
-    RouteState,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -167,10 +167,18 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
         config=raiden.config,
         privkey=raiden.privkey,
     )
+<<<<<<< HEAD
     from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
+=======
+    from_hop = HopState(
+        transfer.sender,
+        # pylint: disable=E1101
+        from_transfer.balance_proof.channel_identifier,
+    )
+>>>>>>> Give states more intuitive names
     init_mediator_statechange = ActionInitMediator(
         routes=routes,
-        from_route=from_route,
+        from_hop=from_hop,
         from_transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -180,12 +188,12 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
 
 def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
-    from_route = RouteState(
+    from_hop = HopState(
         node_address=transfer.sender,
         channel_identifier=from_transfer.balance_proof.channel_identifier,
     )
     init_target_statechange = ActionInitTarget(
-        route=from_route,
+        from_hop=from_hop,
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
