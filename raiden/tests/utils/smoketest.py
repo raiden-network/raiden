@@ -3,7 +3,6 @@ import random
 import shutil
 import sys
 import tempfile
-import traceback
 from contextlib import contextmanager
 from copy import deepcopy
 from http import HTTPStatus
@@ -36,7 +35,6 @@ from raiden.constants import (
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
@@ -88,21 +86,6 @@ def ensure_executable(cmd):
             "Make sure it is installed and added to the PATH variable." % cmd
         )
         sys.exit(1)
-
-
-def run_restapi_smoketests(port_number):
-    """Test if REST api works. """
-    url = "http://localhost:{port}/api/v1/channels".format(port=port_number)
-
-    response = requests.get(url)
-    assert response.status_code == HTTPStatus.OK
-
-    response_json = response.json()
-    assert response_json[0]["partner_address"] == to_checksum_address(
-        ConnectionManager.BOOTSTRAP_ADDR
-    )
-    assert response_json[0]["state"] == "opened"
-    assert response_json[0]["balance"] > 0
 
 
 def deploy_smoketest_contracts(
@@ -315,7 +298,6 @@ def setup_raiden(transport, matrix_server, print_step, contracts_version, testch
 
 def run_smoketest(
     print_step: Callable,
-    append_report: Callable,
     args: Dict[str, Any],
     contract_addresses: List[Address],
     token: ContractProxy,
@@ -331,7 +313,6 @@ def run_smoketest(
     args["routing_mode"] = RoutingMode.BASIC
     args["one_to_n_contract_address"] = None
 
-    success = False
     app = None
     try:
         app = run_app(**args)
@@ -362,48 +343,45 @@ def run_smoketest(
 
         print_step("Running smoketest")
 
-        try:
-            raiden_service = app.raiden
-            token_network_added_events = (
-                raiden_service.default_registry.filter_token_added_events()
-            )
-            events_token_addresses = [
-                event["args"]["token_address"] for event in token_network_added_events
-            ]
+        raiden_service = app.raiden
+        token_network_added_events = raiden_service.default_registry.filter_token_added_events()
+        events_token_addresses = [
+            event["args"]["token_address"] for event in token_network_added_events
+        ]
 
-            assert events_token_addresses == token_addresses
+        assert events_token_addresses == token_addresses
 
-            token_networks = views.get_token_identifiers(
-                views.state_from_raiden(raiden_service), raiden_service.default_registry.address
-            )
-            assert len(token_networks) == 1
+        token_networks = views.get_token_identifiers(
+            views.state_from_raiden(raiden_service), raiden_service.default_registry.address
+        )
+        assert len(token_networks) == 1
 
-            channel_state = views.get_channelstate_for(
-                views.state_from_raiden(raiden_service),
-                raiden_service.default_registry.address,
-                token_networks[0],
-                decode_hex(TEST_PARTNER_ADDRESS),
-            )
+        channel_state = views.get_channelstate_for(
+            views.state_from_raiden(raiden_service),
+            raiden_service.default_registry.address,
+            token_networks[0],
+            decode_hex(TEST_PARTNER_ADDRESS),
+        )
 
-            distributable = channel.get_distributable(
-                channel_state.our_state, channel_state.partner_state
-            )
-            assert distributable == TEST_DEPOSIT_AMOUNT
-            assert distributable == channel_state.our_state.contract_balance
-            assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        distributable = channel.get_distributable(
+            channel_state.our_state, channel_state.partner_state
+        )
+        assert distributable == TEST_DEPOSIT_AMOUNT
+        assert distributable == channel_state.our_state.contract_balance
+        assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
-            # Run API test
-            run_restapi_smoketests(raiden_service.config["api_port"])
-            error = None
-        except:  # NOQA pylint: disable=bare-except
-            error = traceback.format_exc()
+        port_number = raiden_service.config["api_port"]
+        response = requests.get(f"http://localhost:{port_number}/api/v1/channels")
 
-        if error is not None:
-            append_report("Smoketest assertion error", error)
-        else:
-            success = True
+        assert response.status_code == HTTPStatus.OK
+
+        response_json = response.json()
+        assert response_json[0]["partner_address"] == to_checksum_address(
+            ConnectionManager.BOOTSTRAP_ADDR
+        )
+        assert response_json[0]["state"] == "opened"
+        assert response_json[0]["balance"] > 0
     finally:
         if app is not None:
             app.stop()
             app.raiden.get()
-    return success
