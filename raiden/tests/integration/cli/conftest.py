@@ -10,45 +10,38 @@ from raiden.settings import RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
 
-@pytest.fixture(scope="session")
-def testchain_provider(blockchain_type, port_generator):
-    eth_client = EthClient(blockchain_type)
-    chain_manager = setup_testchain(eth_client=eth_client, free_port_generator=port_generator)
-
-    with chain_manager as testchain:
-        yield testchain
-
-
 @pytest.fixture(scope="module")
 def cli_tests_contracts_version():
     return RED_EYES_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")
-def raiden_testchain(testchain_provider, cli_tests_contracts_version):
+def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_version):
     import time
 
     start_time = time.monotonic()
+    eth_client = EthClient(blockchain_type)
 
-    result = setup_raiden(
-        transport="matrix",
-        matrix_server="auto",
-        print_step=lambda x: None,
-        contracts_version=cli_tests_contracts_version,
-        eth_client=testchain_provider["eth_client"],
-        eth_rpc_endpoint=testchain_provider["eth_rpc_endpoint"],
-        web3=testchain_provider["web3"],
-        base_datadir=testchain_provider["base_datadir"],
-        keystore=testchain_provider["keystore"],
-    )
-    result["ethereum_nodes"] = testchain_provider["node_executors"]
+    with setup_testchain(eth_client=eth_client, free_port_generator=port_generator) as testchain:
+        result = setup_raiden(
+            transport="matrix",
+            matrix_server="auto",
+            print_step=lambda x: None,
+            contracts_version=cli_tests_contracts_version,
+            eth_client=testchain["eth_client"],
+            eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+            web3=testchain["web3"],
+            base_datadir=testchain["base_datadir"],
+            keystore=testchain["keystore"],
+        )
+        result["ethereum_nodes"] = testchain["node_executors"]
 
-    args = result["args"]
-    # The setup of the testchain returns a TextIOWrapper but
-    # for the tests we need a filename
-    args["password_file"] = args["password_file"].name
-    print("setup_raiden took", time.monotonic() - start_time)
-    return args
+        args = result["args"]
+        # The setup of the testchain returns a TextIOWrapper but
+        # for the tests we need a filename
+        args["password_file"] = args["password_file"].name
+        print("setup_raiden took", time.monotonic() - start_time)
+        yield args
 
 
 @pytest.fixture()
