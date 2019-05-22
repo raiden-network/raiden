@@ -496,8 +496,13 @@ def version(short):
 @click.pass_context
 def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import setup_testchain, setup_raiden, run_smoketest
-    from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
+    from raiden.tests.utils.smoketest import (
+        setup_testchain,
+        setup_raiden,
+        run_smoketest,
+        setup_matrix_for_smoketest,
+    )
+    from raiden.tests.utils.transport import make_requests_insecure
     from raiden.utils.debugging import enable_gevent_monitoring_signal
 
     step_count = 8
@@ -555,28 +560,26 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             file=stdout,
         )
 
-    print_step("Getting smoketest configuration")
     contracts_version = environment_type_to_contracts_version(environment_type)
 
-    matrix_server = ctx.parent.params["matrix_server"]
-
-    free_port_generator = get_free_port()
-    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
-        eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
-    )
-    matrix_manager: ContextManager[List[ParsedURL]] = matrix_server_starter(
-        free_port_generator=free_port_generator
-    )
-
-    if debug:
-        stdout_manager = contextlib.nullcontext()
-    else:
-        stdout_manager = contextlib.redirect_stdout(raiden_stdout)
-
-    print_step("Starting Matrix transport")
-
     try:
+        free_port_generator = get_free_port()
         ethereum_nodes = None
+
+        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
+            eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
+        )
+        matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
+            print_step=print_step, free_port_generator=free_port_generator
+        )
+
+        # Do not redirect the stdout on a debug session, otherwise the REPL
+        # will also be redirected
+        if debug:
+            stdout_manager = contextlib.nullcontext()
+        else:
+            stdout_manager = contextlib.redirect_stdout(raiden_stdout)
+
         with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
             result = setup_raiden(
                 transport=transport,
@@ -636,6 +639,9 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
                             logfile.flush()
                             logfile.seek(0)
                             append_report("Ethereum Node log output", logfile.read())
+
+        append_report("Raiden Node stdout", raiden_stdout.getvalue())
+
     except:  # noqa pylint: disable=bare-except
         if debug:
             import pdb
@@ -647,14 +653,10 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         print_step("Smoketest execution error", error=True)
         success = False
     else:
+        print_step(f"Smoketest successful")
         success = True
 
-    append_report("Raiden Node stdout", raiden_stdout.getvalue())
-
-    if success:
-        print_step(f"Smoketest successful")
-    else:
-        print_step(f"Smoketest had errors", error=True)
+    if not success:
         sys.exit(1)
 
 
