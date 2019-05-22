@@ -25,6 +25,7 @@ from raiden.transfer.state import (
     MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
+    PathState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -222,6 +223,19 @@ def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteSt
     return RouteState(channel_state.our_state.address, channel_state.identifier)
 
 
+def make_path_from_channel(channel_state: NettingChannelState = EMPTY) -> PathState:
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
+    return PathState(
+        [channel_state.our_state.address, channel_state.partner_state.address],
+        channel_state.identifier,
+    )
+
+
+def make_path_to_channel(channel_state: NettingChannelState = EMPTY) -> PathState:
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
+    return PathState([channel_state.our_state.address], channel_state.identifier)
+
+
 # CONSTANTS
 # In this module constants are in the bottom because we need some of the
 # factories.
@@ -236,7 +250,7 @@ UNIT_REGISTRY_IDENTIFIER = b"registryregistryregi"
 UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
 UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
 UNIT_CHANNEL_ID = 1338
-UNIT_CHAIN_ID = 337
+UNIT_CHAIN_ID = ChainID(337)
 UNIT_CANONICAL_ID = CanonicalIdentifier(
     chain_identifier=UNIT_CHAIN_ID,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
@@ -811,6 +825,12 @@ class ChannelSet:
     def get_routes(self, *args) -> List[RouteState]:
         return [self.get_route(index) for index in (args or range(len(self.channels)))]
 
+    def get_path(self, channel_index: int) -> PathState:
+        return make_path_from_channel(self.channels[channel_index])
+
+    def get_paths(self, *args) -> List[PathState]:
+        return [self.get_path(index) for index in (args or range(len(self.channels)))]
+
     def __getitem__(self, item: int) -> NettingChannelState:
         return self.channels[item]
 
@@ -871,7 +891,7 @@ def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
     return ActionInitMediator(
-        routes=channels.get_routes(1),
+        routes=channels.get_paths(1),
         from_route=channels.get_route(0),
         from_transfer=transfer,
         balance_proof=transfer.balance_proof,
@@ -962,7 +982,12 @@ def make_transfers_pair(
         )
         sent_transfer = lockedtransfer_event.transfer
 
-        pair = MediationPairState(received_transfer, lockedtransfer_event.recipient, sent_transfer)
+        pair = MediationPairState(
+            path=PathState([], 0),
+            payer_transfer=received_transfer,
+            payee_address=lockedtransfer_event.recipient,
+            payee_transfer=sent_transfer,
+        )
         transfers_pairs.append(pair)
 
     return MediatorTransfersPair(

@@ -71,6 +71,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
+    PathState,
     RouteState,
     message_identifier_from_prng,
 )
@@ -156,25 +157,25 @@ def test_next_route_amount():
     )
 
     # the first available route should be used
-    chosen_channel = channel.next_channel_from_routes(
-        channels.get_routes(0), channels.channel_map, amount, timeout_blocks
+    chosen_channel, _ = channel.next_channel_from_routes(
+        channels.get_paths(0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
 
     # additional routes do not change the order
-    chosen_channel = channel.next_channel_from_routes(
-        channels.get_routes(0, 1), channels.channel_map, amount, timeout_blocks
+    chosen_channel, _ = channel.next_channel_from_routes(
+        channels.get_paths(0, 1), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
 
-    chosen_channel = channel.next_channel_from_routes(
-        channels.get_routes(2, 0), channels.channel_map, amount, timeout_blocks
+    chosen_channel, _ = mediator.next_channel_from_routes(
+        channels.get_paths(2, 0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[2].identifier
 
     # a channel without capacity must be skipped
-    chosen_channel = channel.next_channel_from_routes(
-        channels.get_routes(1, 0), channels.channel_map, amount, timeout_blocks
+    chosen_channel, _ = channel.next_channel_from_routes(
+        channels.get_paths(1, 0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
 
@@ -201,8 +202,8 @@ def test_next_route_reveal_timeout():
         ]
     )
 
-    chosen_channel = channel.next_channel_from_routes(
-        channels.get_routes(0, 1, 2, 3), channels.channel_map, UNIT_TRANSFER_AMOUNT, timeout_blocks
+    chosen_channel, _ = channel.next_channel_from_routes(
+        channels.get_paths(0, 1, 2, 3), channels.channel_map, UNIT_TRANSFER_AMOUNT, timeout_blocks
     )
     assert chosen_channel.identifier == channels[2].identifier
 
@@ -228,7 +229,7 @@ def test_next_transfer_pair():
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer,
-        channels.get_routes(0),
+        channels.get_paths(0),
         channels.channel_map,
         pseudo_random_generator,
         block_number,
@@ -826,12 +827,10 @@ def test_mediate_transfer():
         channels[0], LockedTransferSignedStateProperties(expiration=30)
     )
 
-    mediator_state = MediatorTransferState(
-        secrethash=UNIT_SECRETHASH, routes=channels.get_routes()
-    )
+    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=channels.get_paths())
     iteration = mediator.mediate_transfer(
         mediator_state,
-        channels.get_routes(1),
+        channels.get_paths(1),
         channels[0],
         channels.channel_map,
         channels.nodeaddresses_to_networkstates,
@@ -1129,7 +1128,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         ),
     )
 
-    available_routes = [factories.make_route_from_channel(attacked_channel)]
+    available_routes = [factories.make_path_from_channel(attacked_channel)]
     channel_map = {
         bc_channel.identifier: bc_channel,
         attacked_channel.identifier: attacked_channel,
@@ -1263,10 +1262,10 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
         channels[0], LockedTransferSignedStateProperties(expiration=30)
     )
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_paths())
     iteration = mediator.mediate_transfer(
         mediator_state,
-        channels.get_routes(1),
+        channels.get_paths(1),
         channels[0],
         channels.channel_map,
         channels.nodeaddresses_to_networkstates,
@@ -1405,10 +1404,10 @@ def test_mediator_lock_expired_with_new_block():
         channels[0], LockedTransferSignedStateProperties(initiator=HOP1, expiration=30)
     )
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_paths())
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        possible_routes=channels.get_routes(1),
+        possible_routes=channels.get_paths(1),
         payer_channel=channels[0],
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
@@ -1461,10 +1460,10 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         payer_channel_state, LockedTransferSignedStateProperties(initiator=HOP1, expiration=30)
     )
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_paths())
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        possible_routes=channels.get_routes(1),
+        possible_routes=channels.get_paths(1),
         payer_channel=channels[0],
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
@@ -1765,8 +1764,8 @@ def test_filter_reachable_routes():
     channel2 = factories.create(factories.NettingChannelStateProperties(partner_state=partner2))
 
     possible_routes = [
-        factories.make_route_from_channel(channel1),
-        factories.make_route_from_channel(channel2),
+        factories.make_path_from_channel(channel1),
+        factories.make_path_from_channel(channel2),
     ]
 
     # Both nodes are online
@@ -1817,7 +1816,7 @@ def test_node_change_network_state_reachable_node():
     setup.channels.channels.append(payer_channel)
 
     possible_routes = [
-        factories.make_route_from_channel(channel) for channel in setup.channel_map.values()
+        factories.make_path_from_channel(channel) for channel in setup.channel_map.values()
     ]
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
@@ -1897,7 +1896,7 @@ def test_next_transfer_pair_with_fees_deducted():
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
-        available_routes=channels.get_routes(0),
+        available_routes=channels.get_paths(0),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=random.Random(),
         block_number=2,
@@ -2037,7 +2036,12 @@ def test_receive_unlock():
         factories.LockedTransferSignedStateProperties(sender=HOP1, pkey=factories.HOP1_KEY)
     )
     payee_transfer = factories.create(factories.LockedTransferUnsignedStateProperties())
-    wrong_pair = MediationPairState(payer_transfer, HOP2, payee_transfer)
+    wrong_pair = MediationPairState(
+        path=PathState([], -1),
+        payer_transfer=payer_transfer,
+        payee_address=HOP2,
+        payee_transfer=payee_transfer,
+    )
     state.transfers_pair = [wrong_pair]
     iteration = mediator.state_transition(
         state, state_change, channels.channel_map, dict(), prng, 1, block_hash
@@ -2045,7 +2049,12 @@ def test_receive_unlock():
     assert_dropped(iteration, state_change, "no matching transfer pair in mediator state")
 
     payer_transfer = factories.create(factories.LockedTransferSignedStateProperties())
-    pair = MediationPairState(payer_transfer, UNIT_TRANSFER_TARGET, payee_transfer)
+    pair = MediationPairState(
+        path=PathState([], -1),
+        payer_transfer=payer_transfer,
+        payee_address=UNIT_TRANSFER_TARGET,
+        payee_transfer=payee_transfer,
+    )
     state.transfers_pair = [pair]
     iteration = mediator.state_transition(state, state_change, dict(), dict(), prng, 1, block_hash)
     assert_dropped(iteration, state_change, "channel identifier unknown")
