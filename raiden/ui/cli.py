@@ -595,9 +595,8 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
 
             try:
-                success = run_smoketest(
+                run_smoketest(
                     print_step=print_step,
-                    append_report=append_report,
                     args=args,
                     contract_addresses=contract_addresses,
                     token=token,
@@ -628,6 +627,8 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         append_report("Smoketest execution error", error)
         print_step("Smoketest execution error", error=True)
         success = False
+    else:
+        success = True
 
     append_report("Raiden Node stdout", raiden_stdout.getvalue())
 
