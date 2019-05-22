@@ -1,4 +1,3 @@
-import contextlib
 import os
 import random
 import shutil
@@ -8,7 +7,6 @@ import traceback
 from contextlib import contextmanager
 from copy import deepcopy
 from http import HTTPStatus
-from io import StringIO
 from typing import Any, Callable, ContextManager, List
 
 import click
@@ -54,17 +52,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
-from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import (
-    Address,
-    AddressHex,
-    ChainID,
-    Dict,
-    Endpoint,
-    Iterable,
-    Iterator,
-    Port,
-)
+from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Endpoint, Iterable, Port
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -369,7 +357,6 @@ def run_smoketest(
     args: Dict[str, Any],
     contract_addresses: List[Address],
     token: ContractProxy,
-    debug: bool,
 ):
     print_step("Starting Raiden")
 
@@ -382,58 +369,43 @@ def run_smoketest(
     args["routing_mode"] = RoutingMode.BASIC
     args["one_to_n_contract_address"] = None
 
-    raiden_stdout = StringIO()
-    maybe_redirect_stdout = contextlib.redirect_stdout(raiden_stdout)
-    if debug:
-        maybe_redirect_stdout = contextlib.nullcontext()
-    with maybe_redirect_stdout:
-        success = False
-        app = None
-        try:
-            app = run_app(**args)
-            raiden_api = RaidenAPI(app.raiden)
-            rest_api = RestAPI(raiden_api)
-            (api_host, api_port) = split_endpoint(args["api_address"])
-            api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
-            api_server.start()
+    success = False
+    app = None
+    try:
+        app = run_app(**args)
+        raiden_api = RaidenAPI(app.raiden)
+        rest_api = RestAPI(raiden_api)
+        (api_host, api_port) = split_endpoint(args["api_address"])
+        api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
+        api_server.start()
 
-            block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-            # Proxies now use the confirmed block hash to query the chain for
-            # prerequisite checks. Wait a bit here to make sure that the confirmed
-            # block hash contains the deployed token network or else things break
-            wait_for_block(raiden=app.raiden, block_number=block, retry_timeout=1.0)
+        block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        # Proxies now use the confirmed block hash to query the chain for
+        # prerequisite checks. Wait a bit here to make sure that the confirmed
+        # block hash contains the deployed token network or else things break
+        wait_for_block(raiden=app.raiden, block_number=block, retry_timeout=1.0)
 
-            raiden_api.channel_open(
-                registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-                token_address=to_canonical_address(token.contract.address),
-                partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
-            )
-            raiden_api.set_total_channel_deposit(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-                to_canonical_address(token.contract.address),
-                to_canonical_address(TEST_PARTNER_ADDRESS),
-                TEST_DEPOSIT_AMOUNT,
-            )
-            token_addresses = [to_checksum_address(token.contract.address)]
+        raiden_api.channel_open(
+            registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+            token_address=to_canonical_address(token.contract.address),
+            partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
+        )
+        raiden_api.set_total_channel_deposit(
+            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+            to_canonical_address(token.contract.address),
+            to_canonical_address(TEST_PARTNER_ADDRESS),
+            TEST_DEPOSIT_AMOUNT,
+        )
+        token_addresses = [to_checksum_address(token.contract.address)]
 
-            print_step("Running smoketest")
-            error = smoketest_perform_tests(app.raiden, token_addresses)
-            if error is not None:
-                append_report("Smoketest assertion error", error)
-            else:
-                success = True
-        except:  # noqa pylint: disable=bare-except
-            if debug:
-                import pdb
-
-                # The pylint comment is required when pdbpp is installed
-                pdb.post_mortem()  # pylint: disable=no-member
-            else:
-                error = traceback.format_exc()
-                append_report("Smoketest execution error", error)
-        finally:
-            if app is not None:
-                app.stop()
-                app.raiden.get()
-    append_report("Raiden Node stdout", raiden_stdout.getvalue())
+        print_step("Running smoketest")
+        error = smoketest_perform_tests(app.raiden, token_addresses)
+        if error is not None:
+            append_report("Smoketest assertion error", error)
+        else:
+            success = True
+    finally:
+        if app is not None:
+            app.stop()
+            app.raiden.get()
     return success
