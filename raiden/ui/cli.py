@@ -1,8 +1,9 @@
 import json
 import os
+import signal
 import sys
 import textwrap
-import traceback
+from subprocess import TimeoutExpired
 from tempfile import mktemp
 from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 
@@ -569,7 +570,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             args = result["args"]
             contract_addresses = result["contract_addresses"]
             token = result["token"]
-            ethereum_nodes = result["ethereum_nodes"]
             # Also respect environment type
             args["environment_type"] = ctx.parent.params["environment_type"]
             for option_ in run.params:
@@ -585,15 +585,32 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             make_requests_insecure()
             urllib3.disable_warnings(InsecureRequestWarning)
             args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
-            success = run_smoketest(
-                print_step=print_step,
-                append_report=append_report,
-                args=args,
-                contract_addresses=contract_addresses,
-                token=token,
-                debug=debug,
-                ethereum_nodes=ethereum_nodes,
-            )
+
+            try:
+                success = run_smoketest(
+                    print_step=print_step,
+                    append_report=append_report,
+                    args=args,
+                    contract_addresses=contract_addresses,
+                    token=token,
+                    debug=debug,
+                )
+            finally:
+                for node_executor in result["ethereum_nodes"]:
+                    node = node_executor.process
+                    node.send_signal(signal.SIGINT)
+
+                    try:
+                        node.wait(10)
+                    except TimeoutExpired:
+                        print_step("Ethereum node shutdown unclean, check log!", error=True)
+                        node.kill()
+
+                    if isinstance(node_executor.stdio, tuple):
+                        logfile = node_executor.stdio[1]
+                        logfile.flush()
+                        logfile.seek(0)
+                        append_report("Ethereum Node log output", logfile.read())
     except (PermissionError, ProcessExitedWithError, FileNotFoundError):
         print_step(
             f"Error during smoketest setup, report was written to {report_file}", error=True
