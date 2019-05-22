@@ -453,8 +453,4 @@ def run_smoketest(
                 logfile.seek(0)
                 append_report("Ethereum Node log output", logfile.read())
     append_report("Raiden Node stdout", raiden_stdout.getvalue())
-    if success:
-        print_step(f"Smoketest successful")
-    else:
-        print_step(f"Smoketest had errors", error=True)
     return success

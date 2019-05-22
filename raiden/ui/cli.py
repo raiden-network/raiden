@@ -601,7 +601,10 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         )
         success = False
 
-    if not success:
+    if success:
+        print_step(f"Smoketest successful")
+    else:
+        print_step(f"Smoketest had errors", error=True)
         sys.exit(1)
 
 
