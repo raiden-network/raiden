@@ -152,9 +152,8 @@ def get_private_key(keystore):
 
 @contextmanager
 def setup_testchain(
-    eth_client: EthClient, print_step: Callable, free_port_generator: Iterable[Port]
+    eth_client: EthClient, free_port_generator: Iterable[Port]
 ) -> ContextManager[Dict[str, Any]]:
-    print_step("Starting Ethereum node")
 
     ensure_executable(eth_client.value)
 
@@ -219,6 +218,16 @@ def setup_matrix_for_smoketest(
     print_step("Starting Matrix transport")
 
     with matrix_server_starter(free_port_generator=free_port_generator) as ctx:
+        yield ctx
+
+
+@contextmanager
+def setup_testchain_for_smoketest(
+    eth_client: EthClient, print_step: Callable, free_port_generator: Iterable[Port]
+) -> ContextManager[Dict[str, Any]]:
+    print_step("Starting Ethereum node")
+
+    with setup_testchain(eth_client=eth_client, free_port_generator=free_port_generator) as ctx:
         yield ctx
 
 
