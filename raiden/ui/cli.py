@@ -4,7 +4,7 @@ import sys
 import textwrap
 import traceback
 from tempfile import mktemp
-from typing import Any, AnyStr, Dict, List, Optional, Tuple
+from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
@@ -551,53 +551,54 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 
     matrix_server = ctx.parent.params["matrix_server"]
 
-    testchain: Dict[str, Any]
-    with setup_testchain(
+    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
         eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
-    ) as testchain:
-        result = setup_raiden(transport, matrix_server, print_step, contracts_version, testchain)
+    )
+    matrix_manager: ContextManager[List[ParsedURL]] = matrix_server_starter(
+        free_port_generator=free_port_generator
+    )
 
-        args = result["args"]
-        contract_addresses = result["contract_addresses"]
-        token = result["token"]
-        ethereum_nodes = result["ethereum_nodes"]
-        # Also respect environment type
-        args["environment_type"] = ctx.parent.params["environment_type"]
-        for option_ in run.params:
-            if option_.name in args.keys():
-                args[option_.name] = option_.process_value(ctx, args[option_.name])
-            else:
-                args[option_.name] = option_.default
+    print_step("Starting Matrix transport")
 
-        port = next(free_port_generator)
-
-        args["api_address"] = "localhost:" + str(port)
-
-        print_step("Starting Matrix transport")
-        try:
-            server_urls: List[ParsedURL]
-            with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
-                # Disable TLS verification so we can connect to the self signed certificate
-                make_requests_insecure()
-                urllib3.disable_warnings(InsecureRequestWarning)
-                args["extra_config"] = {
-                    "transport": {"matrix": {"available_servers": server_urls}}
-                }
-                success = run_smoketest(
-                    print_step=print_step,
-                    append_report=append_report,
-                    args=args,
-                    contract_addresses=contract_addresses,
-                    token=token,
-                    debug=debug,
-                    ethereum_nodes=ethereum_nodes,
-                )
-        except (PermissionError, ProcessExitedWithError, FileNotFoundError):
-            append_report("Matrix server start exception", traceback.format_exc())
-            print_step(
-                f"Error during smoketest setup, report was written to {report_file}", error=True
+    try:
+        with testchain_manager as testchain, matrix_manager as server_urls:
+            result = setup_raiden(
+                transport, matrix_server, print_step, contracts_version, testchain
             )
-            success = False
+
+            args = result["args"]
+            contract_addresses = result["contract_addresses"]
+            token = result["token"]
+            ethereum_nodes = result["ethereum_nodes"]
+            # Also respect environment type
+            args["environment_type"] = ctx.parent.params["environment_type"]
+            for option_ in run.params:
+                if option_.name in args.keys():
+                    args[option_.name] = option_.process_value(ctx, args[option_.name])
+                else:
+                    args[option_.name] = option_.default
+
+            port = next(free_port_generator)
+
+            args["api_address"] = "localhost:" + str(port)
+
+            make_requests_insecure()
+            urllib3.disable_warnings(InsecureRequestWarning)
+            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
+            success = run_smoketest(
+                print_step=print_step,
+                append_report=append_report,
+                args=args,
+                contract_addresses=contract_addresses,
+                token=token,
+                debug=debug,
+                ethereum_nodes=ethereum_nodes,
+            )
+    except (PermissionError, ProcessExitedWithError, FileNotFoundError):
+        print_step(
+            f"Error during smoketest setup, report was written to {report_file}", error=True
+        )
+        success = False
 
     if not success:
         sys.exit(1)
