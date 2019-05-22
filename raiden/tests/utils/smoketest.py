@@ -57,7 +57,16 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Endpoint, Iterator
+from raiden.utils.typing import (
+    Address,
+    AddressHex,
+    ChainID,
+    Dict,
+    Endpoint,
+    Iterable,
+    Iterator,
+    Port,
+)
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -216,7 +225,7 @@ def setup_testchain_and_raiden(
     matrix_server: str,
     contracts_version: str,
     print_step: Callable,
-    free_port_generator: Iterator[int],
+    free_port_generator: Iterable[Port],
 ):
     testchain_manager = setup_testchain(
         eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator

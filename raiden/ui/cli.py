@@ -21,6 +21,7 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
 )
+from raiden.tests.utils.transport import ParsedURL
 from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec
 from raiden.utils.cli import (
@@ -488,7 +489,7 @@ def version(short):
     help="Which Ethereum client to run for the smoketests",
 )
 @click.pass_context
-def smoketest(ctx, debug, eth_client, report_path):
+def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import setup_testchain_and_raiden, run_smoketest
     from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
@@ -572,6 +573,7 @@ def smoketest(ctx, debug, eth_client, report_path):
         if args["transport"] == "matrix":
             print_step("Starting Matrix transport")
             try:
+                server_urls: List[ParsedURL]
                 with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
                     # Disable TLS verification so we can connect to the self signed certificate
                     make_requests_insecure()
