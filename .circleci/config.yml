@@ -340,7 +340,7 @@ jobs:
           name: Prepare coverage
           command: |
             mkdir -p ${COVERAGE_DIR}
-            rm ${COVERAGE_DIR}/.coverage* || true
+            rm ${COVERAGE_DIR}/.coverage.* || true
       - run:
           name: Select tests
           command: |
@@ -380,7 +380,7 @@ jobs:
       - run:
           name: Store coverage
           command: |
-            mv .coverage* ${COVERAGE_DIR}
+            mv .coverage.* ${COVERAGE_DIR}
 
       - persist_to_workspace:
           root: "~"
