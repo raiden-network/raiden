@@ -196,7 +196,7 @@ def get_best_routes_internal(
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
         # The complete route includes the initiator, add it to the beginning
-        complete_route = [from_address] + neighbour.route
+        complete_route = [Address(from_address)] + neighbour.route
 
         available_routes.append(PathState(complete_route, neighbour.channelid))
 

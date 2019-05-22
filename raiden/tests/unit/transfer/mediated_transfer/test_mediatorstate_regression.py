@@ -309,7 +309,7 @@ def test_regression_mediator_task_no_routes():
     )
 
     init_state_change = ActionInitMediator(
-        routes=channels.get_routes(),
+        routes=channels.get_paths(),
         from_route=channels.get_route(0),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
@@ -398,7 +398,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     payer_route = factories.make_route_from_channel(payer_channel)
     payer_transfer = factories.make_signed_transfer_for(payer_channel, LONG_EXPIRATION)
 
-    available_routes = [factories.make_route_from_channel(payee_channel)]
+    available_routes = [factories.make_path_from_channel(payee_channel)]
     init_state_change = ActionInitMediator(
         routes=available_routes,
         from_route=payer_route,
@@ -426,9 +426,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
 
     block = Block(
-        block_number=block_expiration_number,
-        gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_number=block_expiration_number, gas_limit=1, block_hash=factories.make_block_hash()
     )
     iteration = mediator.state_transition(
         mediator_state=current_state,

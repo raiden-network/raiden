@@ -10,6 +10,7 @@ from raiden.transfer.mediated_transfer.state import (
     WaitingTransferState,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.state import PathState
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 from raiden.utils import sha3
 
@@ -90,6 +91,7 @@ def test_mediator_task_view():
     # pylint: disable=E1101
     transfer_state1.transfers_pair.append(
         MediationPairState(
+            path=PathState([], -1),
             payer_transfer=payer_transfer,
             payee_transfer=payee_transfer,
             payee_address=payee_transfer.target,
