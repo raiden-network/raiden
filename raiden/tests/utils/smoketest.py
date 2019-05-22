@@ -105,44 +105,6 @@ def run_restapi_smoketests(port_number):
     assert response_json[0]["balance"] > 0
 
 
-def smoketest_perform_tests(raiden_service: RaidenService, token_addresses):
-    """ Perform high level tests designed to quickly discover broken functionality. """
-    try:
-        token_network_added_events = raiden_service.default_registry.filter_token_added_events()
-        events_token_addresses = [
-            event["args"]["token_address"] for event in token_network_added_events
-        ]
-
-        assert events_token_addresses == token_addresses
-
-        token_networks = views.get_token_identifiers(
-            views.state_from_raiden(raiden_service), raiden_service.default_registry.address
-        )
-        assert len(token_networks) == 1
-
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden_service),
-            raiden_service.default_registry.address,
-            token_networks[0],
-            decode_hex(TEST_PARTNER_ADDRESS),
-        )
-
-        distributable = channel.get_distributable(
-            channel_state.our_state, channel_state.partner_state
-        )
-        assert distributable == TEST_DEPOSIT_AMOUNT
-        assert distributable == channel_state.our_state.contract_balance
-        assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
-
-        # Run API test
-        run_restapi_smoketests(raiden_service.config["api_port"])
-    except:  # NOQA pylint: disable=bare-except
-        error = traceback.format_exc()
-        return error
-
-    return None
-
-
 def deploy_smoketest_contracts(
     client: JSONRPCClient,
     chain_id: ChainID,
@@ -399,7 +361,43 @@ def run_smoketest(
         token_addresses = [to_checksum_address(token.contract.address)]
 
         print_step("Running smoketest")
-        error = smoketest_perform_tests(app.raiden, token_addresses)
+
+        try:
+            raiden_service = app.raiden
+            token_network_added_events = (
+                raiden_service.default_registry.filter_token_added_events()
+            )
+            events_token_addresses = [
+                event["args"]["token_address"] for event in token_network_added_events
+            ]
+
+            assert events_token_addresses == token_addresses
+
+            token_networks = views.get_token_identifiers(
+                views.state_from_raiden(raiden_service), raiden_service.default_registry.address
+            )
+            assert len(token_networks) == 1
+
+            channel_state = views.get_channelstate_for(
+                views.state_from_raiden(raiden_service),
+                raiden_service.default_registry.address,
+                token_networks[0],
+                decode_hex(TEST_PARTNER_ADDRESS),
+            )
+
+            distributable = channel.get_distributable(
+                channel_state.our_state, channel_state.partner_state
+            )
+            assert distributable == TEST_DEPOSIT_AMOUNT
+            assert distributable == channel_state.our_state.contract_balance
+            assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+
+            # Run API test
+            run_restapi_smoketests(raiden_service.config["api_port"])
+            error = None
+        except:  # NOQA pylint: disable=bare-except
+            error = traceback.format_exc()
+
         if error is not None:
             append_report("Smoketest assertion error", error)
         else:
