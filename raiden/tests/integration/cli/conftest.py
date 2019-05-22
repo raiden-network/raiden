@@ -37,8 +37,14 @@ def raiden_testchain(testchain_provider, cli_tests_contracts_version):
         matrix_server="auto",
         print_step=lambda x: None,
         contracts_version=cli_tests_contracts_version,
-        testchain_setup=testchain_provider,
+        eth_client=testchain_provider["eth_client"],
+        eth_rpc_endpoint=testchain_provider["eth_rpc_endpoint"],
+        web3=testchain_provider["web3"],
+        base_datadir=testchain_provider["base_datadir"],
+        keystore=testchain_provider["keystore"],
     )
+    result["ethereum_nodes"] = testchain_provider["node_executors"]
+
     args = result["args"]
     # The setup of the testchain returns a TextIOWrapper but
     # for the tests we need a filename
