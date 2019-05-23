@@ -2,7 +2,19 @@
 Changelog
 =========
 
-* :release:`0.100.3-rc5 <2019-05-08>`
+* :release:`0.100.3 <2019-05-22>`
+* :feature:`4043` Update raiden-contracts to 0.19.0 with Görli Testnet support
+* :bug:`4024` Fix clearing a channel state iff all unlocks are done by channel participants
+* :bug:`3874` Fix invalidation of a batch-unlock transaction in case a similar transaction was already sent/mined by channel partner
+* :bug:`3856` Handle pruned blocks during settle/unlock when requesting on-chain state, use latest if block is pruned
+* :bug:`3832` Fix Raiden startup when a previous run aborted during migrations
+* :feature:`3697` Make sure a token implements the ERC20 interface when registering a new token network. In this case, totalSupply function existence is implemented
+* :bug:`3687` Fix startup initialization issue which caused Raiden to crash on private chains
+* :bug:`3567` Resolve an issue in route filtering where the partner's network state is taken into account when choosing a route
+* :bug:`3566` Handle cases where Raiden tries to query blocks which are old and pruned by the blockchain client (Geth & Parity)
+* :feature:`3464` Raiden will warn users about insufficient user deposit funds (If monitoring service or path-finding service are enabled and used).
+* :feature:`3462` Static Monitoring service reward through user deposits contract. Only usable if Raiden is run in development environment
+* :feature:`3461` Static PFS payment for provided routes through the user deposits contract. Only usable if Raiden is run in development environment
 * :release:`0.100.3-rc4 <2019-04-17>`
 * :release:`0.100.3-rc3 <2019-04-15>`
 * :feature:`-` Add support for Görli testnet in Raiden.
@@ -15,6 +27,12 @@ Changelog
 * :bug:`3475` Properly check async_result in rest api payments
 * :feature:`3318` allow secret and/or hash with payment request
 * :feature:`3425` Update raiden-contracts package to version 0.9.0
+
+* :release:`0.100.3-rc7 <2019-05-16>`
+
+* :release:`0.100.3-rc6 <2019-05-15>`
+
+* :release:`0.100.3-rc5 <2019-05-08>`
 
 * :release:`0.100.2 <2019-02-21>`
 * :bug:`3528` Do not crash raiden if a LockExpired message with invalid channel identifier is received.
