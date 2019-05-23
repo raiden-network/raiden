@@ -1,7 +1,6 @@
 import itertools
 import random
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import SendProcessed
@@ -115,27 +114,6 @@ def is_safe_to_wait(
         f" expiration: {lock_expiration} block_number: {block_number}"
     )
     return False, msg
-
-
-def is_channel_usable(
-    candidate_channel_state: NettingChannelState,
-    transfer_amount: PaymentWithFeeAmount,
-    lock_timeout: BlockTimeout,
-) -> bool:
-    pending_transfers = channel.get_number_of_pending_transfers(candidate_channel_state.our_state)
-    distributable = channel.get_distributable(
-        candidate_channel_state.our_state, candidate_channel_state.partner_state
-    )
-
-    return (
-        lock_timeout > 0
-        and channel.get_status(candidate_channel_state) == CHANNEL_STATE_OPENED
-        and candidate_channel_state.settle_timeout >= lock_timeout
-        and candidate_channel_state.reveal_timeout < lock_timeout
-        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
-        and transfer_amount <= distributable
-        and channel.is_valid_amount(candidate_channel_state.our_state, transfer_amount)
-    )
 
 
 def is_send_transfer_almost_equal(
@@ -372,40 +350,6 @@ def clear_if_finalized(
     return TransitionResult(None, iteration.events)
 
 
-def next_channel_from_routes(
-    available_routes: List["RouteState"],
-    channelidentifiers_to_channels: Dict,
-    transfer_amount: PaymentWithFeeAmount,
-    lock_timeout: BlockTimeout,
-) -> Optional[NettingChannelState]:
-    """ Returns the first route that may be used to mediated the transfer.
-    The routing service can race with local changes, so the recommended routes
-    must be validated.
-    Args:
-        available_routes: Current available routes that may be used, it's
-            assumed that the available_routes list is ordered from best to
-            worst.
-        channelidentifiers_to_channels: Mapping from channel identifier
-            to NettingChannelState.
-        transfer_amount: The amount of tokens that will be transferred
-            through the given route.
-        lock_timeout: Number of blocks until the lock expires, used to filter
-            out channels that have a smaller settlement window.
-    Returns:
-        The next route.
-    """
-    for route in available_routes:
-        channel_state = channelidentifiers_to_channels.get(route.channel_identifier)
-
-        if not channel_state:
-            continue
-
-        if is_channel_usable(channel_state, transfer_amount, lock_timeout):
-            return channel_state
-
-    return None
-
-
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
     available_routes: List["RouteState"],
@@ -428,7 +372,7 @@ def forward_transfer_pair(
     mediated_events: List[Event] = list()
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
-    payee_channel = next_channel_from_routes(
+    payee_channel = channel.next_channel_from_routes(
         available_routes=available_routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         transfer_amount=payer_transfer.lock.amount,
@@ -459,7 +403,7 @@ def forward_transfer_pair(
 
         mediated_events = [lockedtransfer_event]
 
-    return (transfer_pair, mediated_events)
+    return transfer_pair, mediated_events
 
 
 def backward_transfer_pair(
@@ -493,7 +437,7 @@ def backward_transfer_pair(
 
     # Ensure the refund transfer's lock has a safe expiration, otherwise don't
     # do anything and wait for the received lock to expire.
-    if is_channel_usable(backward_channel, lock.amount, lock_timeout):
+    if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         refund_transfer = channel.send_refundtransfer(
             channel_state=backward_channel,
@@ -512,7 +456,7 @@ def backward_transfer_pair(
 
         events.append(refund_transfer)
 
-    return (transfer_pair, events)
+    return transfer_pair, events
 
 
 def set_offchain_secret(

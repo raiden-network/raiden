@@ -156,24 +156,24 @@ def test_next_route_amount():
     )
 
     # the first available route should be used
-    chosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = channel.next_channel_from_routes(
         channels.get_routes(0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
 
     # additional routes do not change the order
-    chosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = channel.next_channel_from_routes(
         channels.get_routes(0, 1), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
 
-    chosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = channel.next_channel_from_routes(
         channels.get_routes(2, 0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[2].identifier
 
     # a channel without capacity must be skipped
-    chosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = channel.next_channel_from_routes(
         channels.get_routes(1, 0), channels.channel_map, amount, timeout_blocks
     )
     assert chosen_channel.identifier == channels[0].identifier
@@ -201,7 +201,7 @@ def test_next_route_reveal_timeout():
         ]
     )
 
-    chosen_channel = mediator.next_channel_from_routes(
+    chosen_channel = channel.next_channel_from_routes(
         channels.get_routes(0, 1, 2, 3), channels.channel_map, UNIT_TRANSFER_AMOUNT, timeout_blocks
     )
     assert chosen_channel.identifier == channels[2].identifier

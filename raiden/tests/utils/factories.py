@@ -9,7 +9,6 @@ from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX, UIN
 from raiden.messages import Lock, LockedTransfer, RefundTransfer, lockedtransfersigned_from_message
 from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferSignedState,
@@ -956,7 +955,7 @@ def make_transfers_pair(
         assert lockedtransfer_event
 
         lock_timeout = lock_expiration - block_number
-        assert mediator.is_channel_usable(
+        assert channel.is_channel_usable(
             candidate_channel_state=channels[payee_index],
             transfer_amount=amount,
             lock_timeout=lock_timeout,
