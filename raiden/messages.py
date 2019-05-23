@@ -778,6 +778,8 @@ class LockedTransfer(LockedTransferBase):
     fee: int
     metadata: Metadata
 
+    route_metadata: Optional[RouteMetadata] = None
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -953,15 +955,6 @@ class LockExpired(EnvelopeMessage):
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
         )
-
-
-@dataclass(frozen=True)
-class RouteMetadata:
-    routes: List[Address]
-
-    @property
-    def hash(self):
-        return sha3(rlp.encode(self.routes))
 
 
 @dataclass(repr=False, eq=False)
