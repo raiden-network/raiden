@@ -32,4 +32,20 @@ def test_locked_transfer_with_route_metadata():
     assert isinstance(locked_transfer, LockedTransfer)
     assert isinstance(locked_transfer.route_metadata, RouteMetadata)
 
+    # pylint: disable=E1101
     assert locked_transfer.route_metadata.routes == [factories.HOP1, factories.HOP2]
+
+
+def test_locked_transfer_additional_hash_contains_route_metadata_hash():
+    one_locked_transfer = factories.create(factories.LockedTransferProperties())
+    another_locked_transfer = factories.create(
+        factories.LockedTransferProperties(
+            route_metadata=factories.create(
+                factories.RouteMetadataProperties(routes=[factories.HOP2, factories.HOP1])
+            )
+        )
+    )
+
+    assert (
+        one_locked_transfer.message_hash != another_locked_transfer.message_hash
+    ), "LockedTransfers with different routes should have different message hashes"

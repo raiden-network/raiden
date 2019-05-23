@@ -647,7 +647,7 @@ class LockedTransfer(LockedTransferBase):
     initiator: InitiatorAddress
     fee: int
 
-    route_metadata: Optional[RouteMetadata] = None
+    route_metadata: Optional[RouteMetadata] = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -660,6 +660,21 @@ class LockedTransfer(LockedTransferBase):
 
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
+
+    @property
+    def message_hash(self):
+        route_metadata_hash = (self.route_metadata and self.route_metadata.hash) or sha3(b"")
+        packed = self.packed()
+        klass = type(packed)
+
+        field = klass.fields_spec[-1]
+        assert field.name == "signature", "signature is not the last field"
+
+        data = packed.data
+        message_data = data[: -field.size_bytes]
+        message_hash = sha3(message_data + route_metadata_hash)
+
+        return message_hash
 
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
