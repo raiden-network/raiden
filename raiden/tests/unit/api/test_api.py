@@ -47,7 +47,9 @@ def test_initiator_task_view():
     transfer_state = InitiatorTransferState(
         transfer_description=transfer_description, channel_identifier=channel_id, transfer=transfer
     )
-    payment_state = InitiatorPaymentState({secrethash: transfer_state})
+    payment_state = InitiatorPaymentState(
+        routes=[], initiator_transfers={secrethash: transfer_state}
+    )
     task = InitiatorTask(
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
     )

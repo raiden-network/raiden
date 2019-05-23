@@ -184,6 +184,8 @@ def test_init_with_usable_routes():
     assert transition.events, "we have a valid route, the mediated transfer event must be emitted"
 
     payment_state = transition.new_state
+    assert len(payment_state.routes) == 1
+
     initiator_state = get_transfer_at_index(payment_state, 0)
     assert initiator_state.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
 
@@ -1463,7 +1465,7 @@ def test_initiator_manager_drops_invalid_state_changes():
     prng = random.Random()
 
     for state_change in (cancel_route, lock_expired):
-        state = InitiatorPaymentState(initiator_transfers=dict())
+        state = InitiatorPaymentState(routes=[], initiator_transfers=dict())
         iteration = initiator_manager.state_transition(
             state, state_change, channels.channel_map, prng, 1
         )
@@ -1475,7 +1477,7 @@ def test_initiator_manager_drops_invalid_state_changes():
             transfer,
         )
         state = InitiatorPaymentState(
-            initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}
+            routes=[], initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}
         )
         iteration = initiator_manager.state_transition(state, state_change, dict(), prng, 1)
         assert_dropped(iteration, state, "unknown channel identifier")
