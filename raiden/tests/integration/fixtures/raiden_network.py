@@ -4,6 +4,7 @@ import gevent
 import pytest
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.network import (
     CHAIN,
     create_all_channels_for_network,
@@ -16,8 +17,6 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
-
-_ETH_LOGDIR = os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
 
 
 def timeout(blockchain_type: str):
@@ -59,10 +58,9 @@ def raiden_chain(
         "with 0, 1 or 2 channels"
     )
 
-    if _ETH_LOGDIR:
-        base_datadir = os.path.join(_ETH_LOGDIR, request.node.name, "raiden_nodes")
-    else:
-        base_datadir = os.path.join(tmpdir.strpath, "raiden_nodes")
+    base_datadir = os.path.join(
+        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes"
+    )
 
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -155,10 +153,9 @@ def raiden_network(
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
 
-    if _ETH_LOGDIR:
-        base_datadir = os.path.join(_ETH_LOGDIR, request.node.name, "raiden_nodes")
-    else:
-        base_datadir = os.path.join(tmpdir.strpath, "raiden_nodes")
+    base_datadir = os.path.join(
+        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes"
+    )
 
     raiden_apps = create_apps(
         chain_id=chain_id,

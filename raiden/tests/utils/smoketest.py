@@ -2,7 +2,6 @@ import os
 import random
 import shutil
 import sys
-import tempfile
 from contextlib import contextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Callable, ContextManager, List
@@ -74,9 +73,6 @@ TEST_PRIVKEY = (
     b"\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD"
 )
 TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
-
-RST_DATADIR = tempfile.mkdtemp()
-os.environ["RST_DATADIR"] = RST_DATADIR
 
 
 def ensure_executable(cmd):
@@ -152,14 +148,13 @@ def get_private_key(keystore):
 
 @contextmanager
 def setup_testchain(
-    eth_client: EthClient, free_port_generator: Iterable[Port]
+    eth_client: EthClient, free_port_generator: Iterable[Port], base_datadir, base_logdir: str
 ) -> ContextManager[Dict[str, Any]]:
 
     ensure_executable(eth_client.value)
 
     rpc_port = next(free_port_generator)
     p2p_port = next(free_port_generator)
-    base_datadir = os.environ["RST_DATADIR"]
 
     eth_rpc_endpoint = f"http://127.0.0.1:{rpc_port}"
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
@@ -194,7 +189,7 @@ def setup_testchain(
         web3=web3,
         eth_nodes=eth_nodes,
         base_datadir=base_datadir,
-        log_dir=os.path.join(base_datadir, "logs"),
+        log_dir=base_logdir,
         verbosity="info",
         genesis_description=genesis_description,
     )
@@ -223,11 +218,20 @@ def setup_matrix_for_smoketest(
 
 @contextmanager
 def setup_testchain_for_smoketest(
-    eth_client: EthClient, print_step: Callable, free_port_generator: Iterable[Port]
+    eth_client: EthClient,
+    print_step: Callable,
+    free_port_generator: Iterable[Port],
+    base_datadir: str,
+    base_logdir: str,
 ) -> ContextManager[Dict[str, Any]]:
     print_step("Starting Ethereum node")
 
-    with setup_testchain(eth_client=eth_client, free_port_generator=free_port_generator) as ctx:
+    with setup_testchain(
+        eth_client=eth_client,
+        free_port_generator=free_port_generator,
+        base_datadir=base_datadir,
+        base_logdir=base_logdir,
+    ) as ctx:
         yield ctx
 
 

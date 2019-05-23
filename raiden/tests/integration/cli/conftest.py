@@ -1,12 +1,14 @@
 import os
 import sys
 from copy import copy
+from tempfile import mkdtemp
 
 import pexpect
 import pytest
 
 from raiden.constants import Environment, EthClient
 from raiden.settings import RED_EYES_CONTRACT_VERSION
+from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
 
@@ -22,7 +24,20 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
     start_time = time.monotonic()
     eth_client = EthClient(blockchain_type)
 
-    with setup_testchain(eth_client=eth_client, free_port_generator=port_generator) as testchain:
+    # The private chain data is always discarded on the CI
+    tmpdir = mkdtemp()
+    base_datadir = str(tmpdir)
+
+    # Save the Ethereum node's logs, if needed for debugging
+    base_logdir = os.path.join(get_artifacts_storage(str(tmpdir)), blockchain_type)
+    os.makedirs(base_logdir, exist_ok=True)
+
+    with setup_testchain(
+        eth_client=eth_client,
+        free_port_generator=port_generator,
+        base_datadir=base_datadir,
+        base_logdir=base_logdir,
+    ) as testchain:
         result = setup_raiden(
             transport="matrix",
             matrix_server="auto",
@@ -55,7 +70,7 @@ def changed_args():
 
 
 @pytest.fixture()
-def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, environment_type):
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -67,6 +82,12 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
         for k, v in changed_args.items():
             initial_args[k] = v
 
+    # This assumes that there is only one Raiden instance per CLI test
+    base_logfile = os.path.join(
+        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes", "cli_test.log"
+    )
+    os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
+
     args = [
         "--gas-price",
         "1000000000",
@@ -77,7 +98,7 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
         initial_args["secret_registry_contract_address"],
         "--endpoint-registry-contract-address",
         initial_args["endpoint_registry_contract_address"],
-        "--disable-debug-logfile",
+        f"--debug-logfile-name={base_logfile}",
     ]
 
     if environment_type == Environment.DEVELOPMENT.value:
