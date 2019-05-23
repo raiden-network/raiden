@@ -1,4 +1,5 @@
 from raiden.messages import LockedTransfer, RouteMetadata
+from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner, recover
 
@@ -69,3 +70,12 @@ def test_changing_route_metadata_will_invalidate_lock_transfer_signature():
     assert ADDRESS != recover(
         one_locked_transfer._data_to_sign(), one_locked_transfer.signature
     ), "signature should not be valid after data being altered"
+
+
+def test_can_round_trip_serialize_locked_transfer():
+    locked_transfer = factories.create(
+        factories.LockedTransferProperties(sender=ADDRESS, pkey=PRIVKEY)
+    )
+
+    as_dict = DictSerializer.serialize(locked_transfer)
+    assert DictSerializer.deserialize(as_dict) == locked_transfer
