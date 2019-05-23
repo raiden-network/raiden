@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
+from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex
 
@@ -84,8 +85,10 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockHash,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     ChannelID,
+    Dict,
     InitiatorAddress,
     Keccak256,
     List,
@@ -110,6 +113,10 @@ from raiden.utils.typing import (
     Union,
     cast,
 )
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.state import RouteState  # noqa: F401
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = Tuple[bool, Optional[str], Optional[MerkleTreeState]]
@@ -140,6 +147,68 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
     This is necessary to handle reorgs which could hide a secret registration.
     """
     return BlockNumber(lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+
+
+def next_channel_from_routes(
+    available_routes: List["RouteState"],
+    channelidentifiers_to_channels: Dict,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: BlockTimeout = None,
+) -> Optional[NettingChannelState]:
+    """ Returns the first route that may be used to mediated the transfer.
+    The routing service can race with local changes, so the recommended routes
+    must be validated.
+    Args:
+        available_routes: Current available routes that may be used, it's
+            assumed that the available_routes list is ordered from best to
+            worst.
+        channelidentifiers_to_channels: Mapping from channel identifier
+            to NettingChannelState.
+        transfer_amount: The amount of tokens that will be transferred
+            through the given route.
+        lock_timeout: Number of blocks until the lock expires, used to filter
+            out channels that have a smaller settlement window.
+    Returns:
+        The next route.
+    """
+    for route in available_routes:
+        channel_state = channelidentifiers_to_channels.get(route.channel_identifier)
+
+        if not channel_state:
+            continue
+
+        if is_channel_usable(channel_state, transfer_amount, lock_timeout):
+            return channel_state
+
+    return None
+
+
+def is_channel_usable(
+    candidate_channel_state: NettingChannelState,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: BlockTimeout = None,
+) -> bool:
+    pending_transfers = get_number_of_pending_transfers(candidate_channel_state.our_state)
+    distributable = get_distributable(
+        candidate_channel_state.our_state, candidate_channel_state.partner_state
+    )
+
+    channel_usable = (
+        get_status(candidate_channel_state) == CHANNEL_STATE_OPENED
+        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
+        and transfer_amount <= distributable
+        and is_valid_amount(candidate_channel_state.our_state, transfer_amount)
+    )
+
+    lock_timeout_valid = True
+    if lock_timeout is not None:
+        lock_timeout_valid = (
+            lock_timeout > 0
+            and candidate_channel_state.settle_timeout >= lock_timeout
+            and candidate_channel_state.reveal_timeout < lock_timeout
+        )
+
+    return channel_usable and lock_timeout_valid
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:

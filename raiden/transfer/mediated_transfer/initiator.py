@@ -1,6 +1,6 @@
 import random
 
-from raiden.constants import EMPTY_SECRET, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_SECRET
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
@@ -39,8 +39,6 @@ from raiden.utils.typing import (
     Dict,
     List,
     MessageID,
-    Optional,
-    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -175,41 +173,6 @@ def get_initial_lock_expiration(
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
-def next_channel_from_routes(
-    available_routes: List[RouteState],
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-    transfer_amount: PaymentAmount,
-) -> Optional[NettingChannelState]:
-    """ Returns the first channel that can be used to start the transfer.
-    The routing service can race with local changes, so the recommended routes
-    must be validated.
-    """
-    for route in available_routes:
-        channel_identifier = route.channel_identifier
-        channel_state = channelidentifiers_to_channels.get(channel_identifier)
-
-        if not channel_state:
-            continue
-
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
-            continue
-
-        pending_transfers = channel.get_number_of_pending_transfers(channel_state.our_state)
-        if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
-            continue
-
-        distributable = channel.get_distributable(
-            channel_state.our_state, channel_state.partner_state
-        )
-        if transfer_amount > distributable:
-            continue
-
-        if channel.is_valid_amount(channel_state.our_state, transfer_amount):
-            return channel_state
-
-    return None
-
-
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     available_routes: List[RouteState],
@@ -218,10 +181,10 @@ def try_new_route(
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorTransferState]:
 
-    channel_state = next_channel_from_routes(
+    channel_state = channel.next_channel_from_routes(
         available_routes=available_routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
-        transfer_amount=transfer_description.amount,
+        transfer_amount=PaymentWithFeeAmount(transfer_description.amount),
     )
 
     events: List[Event] = list()
