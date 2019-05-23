@@ -54,7 +54,7 @@ def get_best_routes(
         )
 
         for route_state in internal_routes:
-            if to_address == route_state.route[1] and (
+            if to_address == route_state.next_hop_address and (
                 channel_state
                 # other conditions about e.g. channel state are checked in best routes internal
                 and channel.get_distributable(

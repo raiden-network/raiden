@@ -803,8 +803,8 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         config={},
         privkey=b"",  # not used if pfs is not configured
     )
-    assert routes1[0].route[1] == address1
-    assert routes1[1].route[1] == address2
+    assert routes1[0].next_hop_address == address1
+    assert routes1[1].next_hop_address == address2
 
     # test routing with node 2 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -825,7 +825,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         config={},
         privkey=b"",
     )
-    assert routes1[0].route[1] == address1
+    assert routes1[0].next_hop_address == address1
 
     # test routing with node 3 offline
     # the routing doesn't care as node 3 is not directly connected
@@ -847,8 +847,8 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         config={},
         privkey=b"",
     )
-    assert routes1[0].route[1] == address1
-    assert routes1[1].route[1] == address2
+    assert routes1[0].next_hop_address == address1
+    assert routes1[1].next_hop_address == address2
 
     # test routing with node 1 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -870,7 +870,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         privkey=b"",
     )
     # right now the channel to 1 gets filtered out as it is offline
-    assert routes1[0].route[1] == address2
+    assert routes1[0].next_hop_address == address2
 
 
 def test_routing_priority(chain_state, token_network_state, one_to_n_address, our_address):
@@ -1029,8 +1029,8 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         config={},
         privkey=b"",
     )
-    assert routes[0].route[1] == address1
-    assert routes[1].route[1] == address2
+    assert routes[0].next_hop_address == address1
+    assert routes[1].next_hop_address == address2
 
     # number of hops overwrites refunding capacity (route over node 2 involves less hops)
     chain_state.nodeaddresses_to_networkstates = {
@@ -1051,5 +1051,5 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         config={},
         privkey=b"",
     )
-    assert routes[0].route[1] == address2
-    assert routes[1].route[1] == address1
+    assert routes[0].next_hop_address == address2
+    assert routes[1].next_hop_address == address1

@@ -54,7 +54,7 @@ class ActionInitMediator(BalanceProofStateChange):
     def __post_init__(self) -> None:
         super().__post_init__()
         if not isinstance(self.from_hop, HopState):
-            raise ValueError("from_route must be a RouteState instance")
+            raise ValueError("from_route must be a HopState instance")
 
         if not isinstance(self.from_transfer, LockedTransferSignedState):
             raise ValueError("from_transfer must be a LockedTransferSignedState instance")
