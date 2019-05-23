@@ -1,4 +1,4 @@
-from collections import namedtuple
+from dataclasses import dataclass
 from typing import Dict, List
 
 from eth_utils import to_canonical_address
@@ -15,6 +15,7 @@ from raiden.utils.filters import (
 )
 from raiden.utils.typing import (
     Address,
+    Any,
     BlockSpecification,
     ChannelID,
     Optional,
@@ -30,7 +31,13 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import ContractManager
 
-EventListener = namedtuple("EventListener", ("event_name", "filter", "abi"))
+
+@dataclass(frozen=True)
+class EventListener:
+    event_name: str
+    filter: StatelessFilter
+    abi: List[Dict[str, Any]]
+
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
@@ -201,7 +208,7 @@ class BlockchainEvents:
     """ Events polling. """
 
     def __init__(self):
-        self.event_listeners = list()
+        self.event_listeners: List[EventListener] = list()
 
     def poll_blockchain_events(self, block_number: typing.BlockNumber):
         """ Poll for new blockchain events up to `block_number`. """
