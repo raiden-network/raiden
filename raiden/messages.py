@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields
 from hashlib import sha256
 from operator import attrgetter
 
+import rlp
 from cachetools import LRUCache, cached
 from eth_utils import big_endian_to_int
 
@@ -49,6 +50,7 @@ from raiden.utils.typing import (
     Dict,
     FeeAmount,
     InitiatorAddress,
+    List,
     Locksroot,
     MessageID,
     Nonce,
@@ -81,6 +83,7 @@ __all__ = (
     "RefundTransfer",
     "RequestMonitoring",
     "RevealSecret",
+    "RouteMetadata",
     "SecretRequest",
     "SignedBlindedBalanceProof",
     "SignedMessage",
@@ -772,6 +775,15 @@ class LockExpired(EnvelopeMessage):
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
         )
+
+
+@dataclass(frozen=True)
+class RouteMetadata:
+    routes: List[Address]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode(self.routes))
 
 
 @dataclass(repr=False, eq=False)
