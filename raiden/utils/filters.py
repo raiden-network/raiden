@@ -38,9 +38,6 @@ def get_filter_args_for_specific_event_from_channel(
     to_block: BlockSpecification = "latest",
 ):
     """ Return the filter params for a specific event of a given channel. """
-    if not event_name:
-        raise ValueError("Event name must be given")
-
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
     # Here the topics for a specific event are created
