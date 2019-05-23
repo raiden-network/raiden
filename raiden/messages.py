@@ -955,6 +955,15 @@ class LockExpired(EnvelopeMessage):
         )
 
 
+@dataclass(frozen=True)
+class RouteMetadata:
+    routes: List[Address]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode(self.routes))
+
+
 @dataclass(repr=False, eq=False)
 class SignedBlindedBalanceProof:
     """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
