@@ -1,6 +1,6 @@
 from raiden.messages import LockedTransfer, RouteMetadata
 from raiden.tests.utils import factories
-from raiden.utils.signer import LocalSigner
+from raiden.utils.signer import LocalSigner, recover
 
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
@@ -49,3 +49,23 @@ def test_locked_transfer_additional_hash_contains_route_metadata_hash():
     assert (
         one_locked_transfer.message_hash != another_locked_transfer.message_hash
     ), "LockedTransfers with different routes should have different message hashes"
+
+
+def test_changing_route_metadata_will_invalidate_lock_transfer_signature():
+    one_locked_transfer = factories.create(
+        factories.LockedTransferProperties(sender=ADDRESS, pkey=PRIVKEY)
+    )
+
+    new_route_metadata = factories.create(
+        factories.RouteMetadataProperties(routes=[factories.HOP2, factories.HOP1])
+    )
+
+    assert ADDRESS == recover(
+        one_locked_transfer._data_to_sign(), one_locked_transfer.signature
+    ), "signature does not match signer address"
+
+    one_locked_transfer.route_metadata = new_route_metadata
+
+    assert ADDRESS != recover(
+        one_locked_transfer._data_to_sign(), one_locked_transfer.signature
+    ), "signature should not be valid after data being altered"
