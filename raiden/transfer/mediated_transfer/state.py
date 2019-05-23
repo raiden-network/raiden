@@ -147,6 +147,7 @@ class InitiatorPaymentState(State):
     different secrethash.
     """
 
+    routes: List[RouteState]
     initiator_transfers: Dict[SecretHash, InitiatorTransferState]
     cancelled_channels: List[ChannelID] = field(repr=False, default_factory=list)
 

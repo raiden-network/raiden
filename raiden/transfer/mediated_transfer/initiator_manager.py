@@ -213,7 +213,8 @@ def handle_init(
             payment_state = InitiatorPaymentState(
                 initiator_transfers={
                     sub_iteration.new_state.transfer.lock.secrethash: sub_iteration.new_state
-                }
+                },
+                routes=state_change.routes,
             )
 
     return TransitionResult(payment_state, events)
