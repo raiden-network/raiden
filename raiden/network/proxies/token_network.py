@@ -1452,6 +1452,13 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
+            if sender_details.locked_amount == 0:
+                msg = (
+                    f"The provided locked amount on-chain is 0. This should "
+                    f"never happen because a lock with an amount 0 is forbidden"
+                )
+                raise RaidenUnrecoverableError(msg)
+
         checking_block = self.client.get_checking_block()
         leaves_packed = b"".join(lock.encoded for lock in merkle_tree_locks)
         gas_limit = self.proxy.estimate_gas(
