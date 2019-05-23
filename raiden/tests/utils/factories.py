@@ -12,6 +12,7 @@ from raiden.messages import (
     LockedTransfer,
     LockExpired,
     RefundTransfer,
+    RouteMetadata,
     Unlock,
     lockedtransfersigned_from_message,
 )
@@ -1087,6 +1088,15 @@ def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
         )
     )
     return channel  # type: ignore
+
+
+@dataclass(frozen=True)
+class RouteMetadataProperties(Properties):
+    routes: List[Address] = EMPTY
+    TARGET_TYPE = RouteMetadata
+
+
+RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(routes=[HOP1, HOP2])
 
 
 def create_network(
