@@ -48,6 +48,7 @@ from raiden.utils.typing import (
     ClassVar,
     Dict,
     InitiatorAddress,
+    List,
     Locksroot,
     MessageID,
     Nonce,
@@ -83,6 +84,7 @@ __all__ = (
     "RefundTransfer",
     "RequestMonitoring",
     "RevealSecret",
+    "RouteMetadata",
     "SecretRequest",
     "SignedBlindedBalanceProof",
     "SignedMessage",
@@ -909,6 +911,15 @@ class LockExpired(EnvelopeMessage):
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
         )
+
+
+@dataclass(frozen=True)
+class RouteMetadata:
+    routes: List[Address]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode(self.routes))
 
 
 @dataclass(repr=False, eq=False)
