@@ -65,6 +65,7 @@ class NodeRunner:
             log_json=self._options["log_json"],
             log_file=self._options["log_file"],
             disable_debug_logfile=self._options["disable_debug_logfile"],
+            debug_log_file_name=self._options["debug_logfile_name"],
         )
 
         log.info("Starting Raiden", **get_system_spec())

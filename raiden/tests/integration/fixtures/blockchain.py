@@ -7,6 +7,7 @@ from raiden.constants import Environment, EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
+from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     GenesisDescription,
@@ -18,8 +19,6 @@ from raiden.utils import privatekey_to_address
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
-
-_ETH_LOGDIR = os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
 
 
 @pytest.fixture
@@ -69,12 +68,13 @@ def web3(
 
     accounts_to_fund = [privatekey_to_address(key) for key in keys_to_fund]
 
+    # The private chain data is always discarded on the CI
     base_datadir = str(tmpdir)
 
-    if _ETH_LOGDIR:
-        base_logdir = os.path.join(_ETH_LOGDIR, request.node.name, blockchain_type)
-    else:
-        base_logdir = os.path.join(base_datadir, "logs")
+    # Save the Ethereum node's log, if needed for debugging
+    base_logdir = os.path.join(
+        get_artifacts_storage(base_datadir), request.node.name, blockchain_type
+    )
 
     genesis_description = GenesisDescription(
         prefunded_accounts=accounts_to_fund, chain_id=chain_id, random_marker=random_marker

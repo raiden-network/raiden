@@ -8,7 +8,7 @@ import traceback
 from copy import deepcopy
 from io import StringIO
 from subprocess import TimeoutExpired
-from tempfile import mktemp
+from tempfile import mkdtemp, mktemp
 from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 
 import click
@@ -311,10 +311,15 @@ def options(func):
                 "--log-file",
                 help="file path for logging to file",
                 default=None,
-                type=str,
+                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
                 show_default=True,
             ),
             option("--log-json", help="Output log lines in JSON format", is_flag=True),
+            option(
+                "--debug-logfile-name",
+                help=("The debug logfile name."),
+                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+            ),
             option(
                 "--disable-debug-logfile",
                 help=(
@@ -577,8 +582,13 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         free_port_generator = get_free_port()
         ethereum_nodes = None
 
+        datadir = mkdtemp()
         testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
-            eth_client=eth_client, print_step=print_step, free_port_generator=free_port_generator
+            eth_client=eth_client,
+            print_step=print_step,
+            free_port_generator=free_port_generator,
+            base_datadir=datadir,
+            base_logdir=datadir,
         )
         matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
             print_step=print_step, free_port_generator=free_port_generator
