@@ -563,6 +563,15 @@ class Lock:
         )
 
 
+@dataclass(frozen=True)
+class RouteMetadata:
+    routes: List[Address]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode(self.routes))
+
+
 @dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
@@ -637,6 +646,8 @@ class LockedTransfer(LockedTransferBase):
     target: TargetAddress
     initiator: InitiatorAddress
     fee: int
+
+    route_metadata: Optional[RouteMetadata] = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -775,15 +786,6 @@ class LockExpired(EnvelopeMessage):
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
         )
-
-
-@dataclass(frozen=True)
-class RouteMetadata:
-    routes: List[Address]
-
-    @property
-    def hash(self):
-        return sha3(rlp.encode(self.routes))
 
 
 @dataclass(repr=False, eq=False)

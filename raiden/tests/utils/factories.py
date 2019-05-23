@@ -393,6 +393,15 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 
 
 @dataclass(frozen=True)
+class RouteMetadataProperties(Properties):
+    routes: List[Address] = EMPTY
+    TARGET_TYPE = RouteMetadata
+
+
+RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(routes=[HOP1, HOP2])
+
+
+@dataclass(frozen=True)
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: TokenAddress = EMPTY
@@ -699,6 +708,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
     params["fee"] = 0
+
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
 
@@ -710,11 +720,14 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
 @dataclass(frozen=True)
 class LockedTransferProperties(LockedTransferSignedStateProperties):
     fee: FeeAmount = EMPTY
+    route_metadata: RouteMetadata = EMPTY
     TARGET_TYPE = LockedTransfer
 
 
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
-    **replace(LockedTransferSignedStateProperties.DEFAULTS, locksroot=GENERATE).__dict__, fee=0
+    **replace(LockedTransferSignedStateProperties.DEFAULTS, locksroot=GENERATE).__dict__,
+    fee=0,
+    route_metadata=GENERATE,
 )
 
 
@@ -730,6 +743,10 @@ def prepare_locked_transfer(properties, defaults):
         params["locksroot"] = sha3(params["lock"].as_bytes)
 
     params["signature"] = EMPTY_SIGNATURE
+
+    if params["route_metadata"] == GENERATE:
+        params["route_metadata"] = create(RouteMetadataProperties())
+
     return params, LocalSigner(params.pop("pkey")), params.pop("sender")
 
 
@@ -1093,15 +1110,6 @@ def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
         )
     )
     return channel  # type: ignore
-
-
-@dataclass(frozen=True)
-class RouteMetadataProperties(Properties):
-    routes: List[Address] = EMPTY
-    TARGET_TYPE = RouteMetadata
-
-
-RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(routes=[HOP1, HOP2])
 
 
 def create_network(
