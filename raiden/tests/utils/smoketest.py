@@ -148,7 +148,7 @@ def get_private_key(keystore):
 
 @contextmanager
 def setup_testchain(
-    eth_client: EthClient, free_port_generator: Iterable[Port], base_datadir, base_logdir: str
+    eth_client: EthClient, free_port_generator: Iterable[Port], base_datadir: str, base_logdir: str
 ) -> ContextManager[Dict[str, Any]]:
 
     ensure_executable(eth_client.value)
