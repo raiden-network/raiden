@@ -409,7 +409,7 @@ def role_from_transfer_task(transfer_task: TransferTask) -> str:
 
 
 def secret_from_transfer_task(
-    transfer_task: Optional[TransferTask], secrethash: SecretHash
+    transfer_task: TransferTask, secrethash: SecretHash
 ) -> Optional[Secret]:
     """Return the secret for the transfer, None on EMPTY_SECRET."""
     assert isinstance(transfer_task, InitiatorTask)
@@ -435,9 +435,10 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
 
 
 def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Optional[Secret]:
-    return secret_from_transfer_task(
-        chain_state.payment_mapping.secrethashes_to_task.get(secrethash), secrethash
-    )
+    transfer_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
+    if transfer_task is None:
+        return None
+    return secret_from_transfer_task(transfer_task=transfer_task, secrethash=secrethash)
 
 
 def get_transfer_task(chain_state: ChainState, secrethash: SecretHash) -> Optional[TransferTask]:
