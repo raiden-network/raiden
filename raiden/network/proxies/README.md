@@ -1,7 +1,5 @@
 Coding standard for this module:
 
-- Be sure to reflect changes to this module in the test
-  implementations. [tests/utils/*_client.py]
 - Expose a synchronous interface by default
   - poll for the transaction hash
   - check if the proper events were emited

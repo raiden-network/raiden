@@ -37,8 +37,7 @@ class PaymentChannel:
         from_block = GENESIS_BLOCK_NUMBER
 
         # For this check it is perfectly fine to use a `latest` block number.
-        # If the channel happened to be closed, even if the chanel is already
-        # closed/settled.
+        # Because the filter is looking just for the OPENED event.
         to_block = "latest"
 
         filter_args = get_filter_args_for_specific_event_from_channel(
@@ -51,10 +50,12 @@ class PaymentChannel:
         )
 
         events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
-        if not len(events) > 0:
+
+        # There must be only one channel open event per channel identifier
+        if len(events) != 1:
             raise ValueError("Channel is non-existing.")
 
-        event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0])
         participant1 = Address(decode_hex(event["args"]["participant1"]))
         participant2 = Address(decode_hex(event["args"]["participant2"]))
 
