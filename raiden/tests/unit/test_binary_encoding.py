@@ -68,10 +68,7 @@ def test_processed():
     )
     processed_message.sign(signer)
     assert processed_message.sender == ADDRESS
-
     assert processed_message.message_identifier == message_identifier
-
-    processed_message.encode()
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -89,7 +86,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
             fee=fee,
         )
     )
-    mediated_transfer.encode()
+    mediated_transfer.packed()
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -105,4 +102,4 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    refund_transfer.encode()
+    refund_transfer.packed()

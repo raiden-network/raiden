@@ -212,10 +212,6 @@ class Message:
         packed = self.packed()
         return sha3(packed.data)
 
-    def encode(self) -> bytes:
-        packed = self.packed()
-        return bytes(packed.data)
-
     def packed(self):
         klass = messages.CMDID_MESSAGE[self.cmdid]
         data = buffer_for(klass)
