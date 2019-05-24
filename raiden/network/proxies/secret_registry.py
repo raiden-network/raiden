@@ -22,6 +22,7 @@ from raiden.network.proxies.utils import compare_contract_versions, log_transact
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.utils import pex, safe_gas_limit
 from raiden.utils.typing import (
+    Any,
     BlockNumber,
     BlockSpecification,
     Dict,
@@ -134,16 +135,17 @@ class SecretRegistry:
             "secrethashes_not_sent": secrethashes_not_sent,
         }
 
-        with log_transaction("register_secret_batch", log_details):
+        with log_transaction(log, "register_secret_batch", log_details):
             if secrets_to_register:
-                self._register_secret_batch(secrets_to_register, transaction_result)
+                self._register_secret_batch(secrets_to_register, transaction_result, log_details)
 
             gevent.joinall(wait_for, raise_error=True)
 
     def _register_secret_batch(
-            self,
-            secrets_to_register: List[Secret],
-            transaction_result: AsyncResult,
+        self,
+        secrets_to_register: List[Secret],
+        transaction_result: AsyncResult,
+        log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
@@ -157,6 +159,7 @@ class SecretRegistry:
             gas_limit = safe_gas_limit(
                 gas_limit, len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH
             )
+            log_details["gas_limit"] = gas_limit
 
             try:
                 transaction_hash = self.proxy.transact(
