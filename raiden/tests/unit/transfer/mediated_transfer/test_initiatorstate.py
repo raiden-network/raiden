@@ -45,8 +45,8 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import (
     HashTimeLockState,
-    HopState,
     NettingChannelState,
+    RouteState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -87,7 +87,7 @@ class InitiatorSetup(NamedTuple):
     block_number: typing.BlockNumber
     channel: NettingChannelState
     channel_map: typing.Dict[typing.ChannelID, NettingChannelState]
-    available_routes: typing.List[HopState]
+    available_routes: typing.List[RouteState]
     prng: random.Random
     lock: HashTimeLockState
 

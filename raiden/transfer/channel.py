@@ -116,7 +116,7 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.transfer.state import PathState  # noqa: F401
+    from raiden.transfer.state import RouteState  # noqa: F401
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = Tuple[bool, Optional[str], Optional[MerkleTreeState]]
@@ -150,11 +150,11 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
 
 
 def next_channel_from_routes(
-    available_routes: List["PathState"],
+    available_routes: List["RouteState"],
     channelidentifiers_to_channels: Dict,
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: BlockTimeout = None,
-) -> Optional[Tuple[NettingChannelState, "PathState"]]:
+) -> Optional[Tuple[NettingChannelState, "RouteState"]]:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
@@ -172,7 +172,7 @@ def next_channel_from_routes(
         The next route.
     """
     for route in available_routes:
-        channel_state = channelidentifiers_to_channels.get(route.channel_identifier)
+        channel_state = channelidentifiers_to_channels.get(route.forward_channel_id)
 
         if not channel_state:
             continue

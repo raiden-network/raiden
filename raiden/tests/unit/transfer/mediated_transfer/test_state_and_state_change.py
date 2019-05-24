@@ -12,7 +12,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import HopState, RouteState
 
 
 def test_invalid_instantiation_locked_transfer_state():
@@ -42,6 +42,7 @@ def test_invalid_instantiation_locked_transfer_state():
 
 def test_invalid_instantiation_mediation_pair_state():
     valid = MediationPairState(
+        route=RouteState([], -1),
         payer_transfer=factories.create(factories.LockedTransferSignedStateProperties()),
         payee_address=factories.make_address(),
         payee_transfer=factories.create(factories.LockedTransferUnsignedStateProperties()),
@@ -74,7 +75,7 @@ def additional_args():
 
 
 def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
-    route_state = RouteState(
+    hop_state = HopState(
         node_address=factories.make_address(),
         channel_identifier=factories.make_channel_identifier(),
     )
@@ -85,25 +86,22 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
 
     with pytest.raises(ValueError):
         ActionInitMediator(
-            from_transfer=wrong_type_transfer,
-            from_route=route_state,
-            routes=routes,
-            **additional_args,
+            from_transfer=wrong_type_transfer, from_hop=hop_state, routes=routes, **additional_args
         )
 
     with pytest.raises(ValueError):
         ActionInitMediator(
             from_transfer=valid_transfer,
-            from_route=not_a_route_state,
+            from_hop=not_a_route_state,
             routes=routes,
             **additional_args,
         )
 
     with pytest.raises(ValueError):
-        ActionInitTarget(transfer=wrong_type_transfer, route=route_state, **additional_args)
+        ActionInitTarget(transfer=wrong_type_transfer, from_hop=hop_state, **additional_args)
 
     with pytest.raises(ValueError):
-        ActionInitTarget(transfer=valid_transfer, route=not_a_route_state, **additional_args)
+        ActionInitTarget(transfer=valid_transfer, from_hop=not_a_route_state, **additional_args)
 
 
 def test_invalid_instantiation_receive_transfer_refund(additional_args):
