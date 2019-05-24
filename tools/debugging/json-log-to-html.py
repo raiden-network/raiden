@@ -1,22 +1,21 @@
 """
 Utility to format Raiden json logs into HTML.
-Colorizes log key-values according to their hash to make debugging easier.
+Colorizes log key-values according to their md5 hash to make debugging easier.
 Allows to filter records by `event`.
-When processing multiple files make sure to set `PYTHONHASHSEED` to a fixed value,
-otherwise the colors of values will not match up.
 """
 
 import hashlib
 import json
-import math
 from collections import Counter, namedtuple
 from copy import copy
 from datetime import datetime
 from html import escape
 from json import JSONDecodeError
-from typing import Any, Dict, Iterable, Set, Tuple
+from math import log10
+from typing import Any, Dict, Iterable, Set, TextIO, Tuple
 
 import click
+from cachetools import LRUCache, cached
 from click import UsageError
 from click._compat import _default_text_stderr
 from colour import Color
@@ -29,7 +28,267 @@ Record = namedtuple("Line", ("event", "timestamp", "logger", "level", "fields"))
 TIME_PAST = datetime(1970, 1, 1)
 TIME_FUTURE = datetime(9999, 1, 1)
 
-TEMPLATE = """\
+COLORMAP = [
+    "#440154",
+    "#440256",
+    "#450457",
+    "#450559",
+    "#46075a",
+    "#46085c",
+    "#460a5d",
+    "#460b5e",
+    "#470d60",
+    "#470e61",
+    "#471063",
+    "#471164",
+    "#471365",
+    "#481467",
+    "#481668",
+    "#481769",
+    "#48186a",
+    "#481a6c",
+    "#481b6d",
+    "#481c6e",
+    "#481d6f",
+    "#481f70",
+    "#482071",
+    "#482173",
+    "#482374",
+    "#482475",
+    "#482576",
+    "#482677",
+    "#482878",
+    "#482979",
+    "#472a7a",
+    "#472c7a",
+    "#472d7b",
+    "#472e7c",
+    "#472f7d",
+    "#46307e",
+    "#46327e",
+    "#46337f",
+    "#463480",
+    "#453581",
+    "#453781",
+    "#453882",
+    "#443983",
+    "#443a83",
+    "#443b84",
+    "#433d84",
+    "#433e85",
+    "#423f85",
+    "#424086",
+    "#424186",
+    "#414287",
+    "#414487",
+    "#404588",
+    "#404688",
+    "#3f4788",
+    "#3f4889",
+    "#3e4989",
+    "#3e4a89",
+    "#3e4c8a",
+    "#3d4d8a",
+    "#3d4e8a",
+    "#3c4f8a",
+    "#3c508b",
+    "#3b518b",
+    "#3b528b",
+    "#3a538b",
+    "#3a548c",
+    "#39558c",
+    "#39568c",
+    "#38588c",
+    "#38598c",
+    "#375a8c",
+    "#375b8d",
+    "#365c8d",
+    "#365d8d",
+    "#355e8d",
+    "#355f8d",
+    "#34608d",
+    "#34618d",
+    "#33628d",
+    "#33638d",
+    "#32648e",
+    "#32658e",
+    "#31668e",
+    "#31678e",
+    "#31688e",
+    "#30698e",
+    "#306a8e",
+    "#2f6b8e",
+    "#2f6c8e",
+    "#2e6d8e",
+    "#2e6e8e",
+    "#2e6f8e",
+    "#2d708e",
+    "#2d718e",
+    "#2c718e",
+    "#2c728e",
+    "#2c738e",
+    "#2b748e",
+    "#2b758e",
+    "#2a768e",
+    "#2a778e",
+    "#2a788e",
+    "#29798e",
+    "#297a8e",
+    "#297b8e",
+    "#287c8e",
+    "#287d8e",
+    "#277e8e",
+    "#277f8e",
+    "#27808e",
+    "#26818e",
+    "#26828e",
+    "#26828e",
+    "#25838e",
+    "#25848e",
+    "#25858e",
+    "#24868e",
+    "#24878e",
+    "#23888e",
+    "#23898e",
+    "#238a8d",
+    "#228b8d",
+    "#228c8d",
+    "#228d8d",
+    "#218e8d",
+    "#218f8d",
+    "#21908d",
+    "#21918c",
+    "#20928c",
+    "#20928c",
+    "#20938c",
+    "#1f948c",
+    "#1f958b",
+    "#1f968b",
+    "#1f978b",
+    "#1f988b",
+    "#1f998a",
+    "#1f9a8a",
+    "#1e9b8a",
+    "#1e9c89",
+    "#1e9d89",
+    "#1f9e89",
+    "#1f9f88",
+    "#1fa088",
+    "#1fa188",
+    "#1fa187",
+    "#1fa287",
+    "#20a386",
+    "#20a486",
+    "#21a585",
+    "#21a685",
+    "#22a785",
+    "#22a884",
+    "#23a983",
+    "#24aa83",
+    "#25ab82",
+    "#25ac82",
+    "#26ad81",
+    "#27ad81",
+    "#28ae80",
+    "#29af7f",
+    "#2ab07f",
+    "#2cb17e",
+    "#2db27d",
+    "#2eb37c",
+    "#2fb47c",
+    "#31b57b",
+    "#32b67a",
+    "#34b679",
+    "#35b779",
+    "#37b878",
+    "#38b977",
+    "#3aba76",
+    "#3bbb75",
+    "#3dbc74",
+    "#3fbc73",
+    "#40bd72",
+    "#42be71",
+    "#44bf70",
+    "#46c06f",
+    "#48c16e",
+    "#4ac16d",
+    "#4cc26c",
+    "#4ec36b",
+    "#50c46a",
+    "#52c569",
+    "#54c568",
+    "#56c667",
+    "#58c765",
+    "#5ac864",
+    "#5cc863",
+    "#5ec962",
+    "#60ca60",
+    "#63cb5f",
+    "#65cb5e",
+    "#67cc5c",
+    "#69cd5b",
+    "#6ccd5a",
+    "#6ece58",
+    "#70cf57",
+    "#73d056",
+    "#75d054",
+    "#77d153",
+    "#7ad151",
+    "#7cd250",
+    "#7fd34e",
+    "#81d34d",
+    "#84d44b",
+    "#86d549",
+    "#89d548",
+    "#8bd646",
+    "#8ed645",
+    "#90d743",
+    "#93d741",
+    "#95d840",
+    "#98d83e",
+    "#9bd93c",
+    "#9dd93b",
+    "#a0da39",
+    "#a2da37",
+    "#a5db36",
+    "#a8db34",
+    "#aadc32",
+    "#addc30",
+    "#b0dd2f",
+    "#b2dd2d",
+    "#b5de2b",
+    "#b8de29",
+    "#bade28",
+    "#bddf26",
+    "#c0df25",
+    "#c2df23",
+    "#c5e021",
+    "#c8e020",
+    "#cae11f",
+    "#cde11d",
+    "#d0e11c",
+    "#d2e21b",
+    "#d5e21a",
+    "#d8e219",
+    "#dae319",
+    "#dde318",
+    "#dfe318",
+    "#e2e418",
+    "#e5e419",
+    "#e7e419",
+    "#eae51a",
+    "#ece51b",
+    "#efe51c",
+    "#f1e51d",
+    "#f4e61e",
+    "#f6e620",
+    "#f8e621",
+    "#fbe723",
+    "#fde725",
+]
+
+
+PAGE_BEGIN = """\
 <!doctype html>
 <html>
 <head>
@@ -69,6 +328,13 @@ table td {{
 table tr:hover {{
     background-color: #902020;
 }}
+td.no, td.time * {{
+    white-space: pre;
+    font-family: courier;
+}}
+td.no {{
+    text-align: right;
+}}
 .lvl-debug {{
     color: #20d0d0;
 }}
@@ -89,14 +355,41 @@ table tr:hover {{
 <h1>{name}</h1>
 <h2>Generated on: {date:%Y-%m-%d %H:%M}</h2>
 <table>
-{table_header}
-{table_rows}
+<tr class="head">
+   <td>No</td>
+   <td>Event</td>
+   <td>Timestamp</td>
+   <td>Logger</td>
+   <td>Level</td>
+   <td>Fields</td>
+</tr>
+"""
+
+PAGE_END = """\
 </table>
 </body>
 </html>
 """
 
+ROW_TEMPLATE = """
+<tr class="lvl-{record.level}">
+    <td class="no">{index}</td>
+    <td><b style="color: {event_color}">{record.event}</b></td>
+    <td class="time"><span title="{time_absolute}" style="{time_color}">{time_display}</span></td>
+    <td>{record.logger}</td>
+    <td>{record.level}</td>
+    <td>{fields}</td>
+</tr>
+"""
 
+
+def _colorize_cache_key(value, min_luminance):
+    if isinstance(value, (list, dict)):
+        return repr(value), min_luminance
+    return value, min_luminance
+
+
+@cached(LRUCache(maxsize=2 ** 24))
 def rgb_color_picker(obj, min_luminance=None, max_luminance=None):
     """Modified version of colour.RGB_color_picker"""
     color_value = (
@@ -108,6 +401,67 @@ def rgb_color_picker(obj, min_luminance=None, max_luminance=None):
     elif max_luminance and color.get_luminance() > max_luminance:
         color.set_luminance(max_luminance)
     return color
+
+
+def nice_time_diff(time_base: datetime, time_now: datetime) -> Tuple[str, float]:
+    delta = time_now - time_base
+    total_seconds = delta.total_seconds()
+    if total_seconds < 0.001:
+        return f"+ {delta.microseconds: 10.0f} µs", total_seconds
+    if total_seconds < 1:
+        return f"+ {delta.microseconds / 1000: 10.3f} ms", total_seconds
+    if total_seconds < 10:
+        formatted_seconds = f"{total_seconds: 9.6f}"
+        formatted_seconds = f"{formatted_seconds[:6]} {formatted_seconds[6:]}"
+        return f"+ {formatted_seconds} s", total_seconds
+    return time_now.isoformat(), total_seconds
+
+
+def get_time_display(prev_record, record):
+    time_absolute = record.timestamp.isoformat()
+    time_color = ""
+    if prev_record:
+        time_display, delta_seconds = nice_time_diff(prev_record.timestamp, record.timestamp)
+        if delta_seconds <= 10:
+            if delta_seconds < 0.0001:  # 100 µs
+                time_color_value = COLORMAP[0]
+            elif delta_seconds < 1:
+                # get color based on duration
+                # Normalize range to 100 µs - 1 s (1s = 1.000.000 µs)
+                duration_value = delta_seconds * 1_000_000 / 100
+                # log10(10_000) == 4
+                time_color_value = COLORMAP[int(log10(duration_value) / 4 * 255)]
+            else:
+                time_color_value = COLORMAP[-1]
+            time_color = f"color: {time_color_value}"
+    else:
+        time_display = time_absolute
+    return time_absolute, time_color, time_display
+
+
+@cached(LRUCache(maxsize=2 ** 24), key=_colorize_cache_key)
+def colorize_value(value, min_luminance):
+    if isinstance(value, (list, tuple)):
+        return type(value)(colorize_value(inner, min_luminance) for inner in value)
+    elif isinstance(value, dict):
+        return {
+            colorize_value(k, min_luminance): colorize_value(v, min_luminance)
+            for k, v in value.items()
+        }
+    str_value = str(value)
+    color = rgb_color_picker(str_value, min_luminance=min_luminance)
+    return f'<span style="color: {color.web}">{escape(str_value)}</span>'
+
+
+def render_fields(record, sorted_known_fields):
+    rendered_fields = []
+    for field_name in sorted_known_fields:
+        if field_name not in record.fields:
+            continue
+        field_value = record.fields[field_name]
+        colorized_value = str(colorize_value(field_value, min_luminance=0.6))
+        rendered_fields.append(f'<span class="fn">{field_name}</span>' f"=" f"{colorized_value}")
+    return rendered_fields
 
 
 def parse_log(log_file):
@@ -149,7 +503,9 @@ def filter_records(
             or record.timestamp < time_from
             or record.timestamp > time_to
         )
-        if not drop:
+        if drop:
+            yield None
+        else:
             yield record
 
 
@@ -186,53 +542,30 @@ def transform_records(log_records: Iterable[Record], replacements: Dict[str, Any
         yield replace(record)
 
 
-def render(name: str, log_records: Iterable[Record], record_count: int, known_fields: Counter):
+def render(name: str, log_records: Iterable[Record], known_fields: Counter, output: TextIO):
     sorted_known_fields = [name for name, count in known_fields.most_common()]
-    header = (
-        '<tr class="head">'
-        "<td>Event</td>"
-        "<td>Timestamp</td>"
-        "<td>Logger</td>"
-        "<td>Level</td>"
-        "<td>Fields</td>"
-        "</tr>"
-    )
-    rows = []
-    digits = int(math.log10(record_count)) + 1
+    prev_record = None
+    output.write(PAGE_BEGIN.format(name=name, date=datetime.now()))
     for i, record in enumerate(log_records):
+        if record is None:
+            # We still want to count dropped records
+            continue
+        time_absolute, time_color, time_display = get_time_display(prev_record, record)
         event_color = rgb_color_picker(record.event, min_luminance=0.6)
-        row = [
-            f'<tr class="lvl-{record.level}">'
-            f'<td>{i:0{digits}d} <b style="color: {event_color}">{record.event}</b></td>'
-            f"<td>{record.timestamp.isoformat()}</td>"
-            f"<td>{record.logger}</td>"
-            f"<td>{record.level}</td>"
-            "<td>"
-        ]
-        for field_name in sorted_known_fields:
-            if field_name not in record.fields:
-                continue
-            field_value = record.fields[field_name]
-            colorized_value = str(colorize_value(field_value, min_luminance=0.6))
-            row.append(f'<span class="fn">{field_name}</span>' f"=" f"{colorized_value} ")
-        row.append("</td></tr>")
-        rows.append("".join(row))
-    return TEMPLATE.format(
-        name=name, date=datetime.now(), table_header=header, table_rows="\n".join(rows)
-    )
-
-
-def colorize_value(value, min_luminance):
-    if isinstance(value, (list, tuple)):
-        return type(value)(colorize_value(inner, min_luminance) for inner in value)
-    elif isinstance(value, dict):
-        return {
-            colorize_value(k, min_luminance): colorize_value(v, min_luminance)
-            for k, v in value.items()
-        }
-    str_value = str(value)
-    color = rgb_color_picker(str_value, min_luminance=min_luminance)
-    return f'<span style="color: {color.web}">{escape(str_value)}</span>'
+        rendered_fields = render_fields(record, sorted_known_fields)
+        output.write(
+            ROW_TEMPLATE.format(
+                index=i,
+                record=record,
+                time_absolute=time_absolute,
+                time_display=time_display,
+                time_color=time_color,
+                event_color=event_color,
+                fields=" ".join(rendered_fields),
+            )
+        )
+        prev_record = record
+    output.write(PAGE_END)
 
 
 @click.command(help=__doc__)
@@ -241,6 +574,7 @@ def colorize_value(value, min_luminance):
 @click.option(
     "-e",
     "--drop-event",
+    "drop_events",
     multiple=True,
     help=(
         "Filter out log records with the given event. "
@@ -250,6 +584,7 @@ def colorize_value(value, min_luminance):
 @click.option(
     "-l",
     "--drop-logger",
+    "drop_loggers",
     multiple=True,
     help=(
         "Filter out log records with the given logger name. "
@@ -271,7 +606,7 @@ def colorize_value(value, min_luminance):
     "-f",
     "--replacements-from-file",
     type=click.File("rt"),
-    help=("Behaves as -r / --replacements but reads the JSON object from the given file."),
+    help="Behaves as -r / --replacements but reads the JSON object from the given file.",
 )
 @click.option(
     "-t",
@@ -283,7 +618,7 @@ def colorize_value(value, min_luminance):
     ),
 )
 def main(
-    log_file, drop_event, drop_logger, replacements, replacements_from_file, time_range, output
+    log_file, drop_events, drop_loggers, replacements, replacements_from_file, time_range, output
 ):
     if replacements_from_file:
         replacements = replacements_from_file.read()
@@ -300,28 +635,28 @@ def main(
         datetime.fromisoformat(time_to) if time_to else TIME_FUTURE,
     )
 
-    click.echo("Parsing log...")
+    click.secho(f"Processing {click.style(log_file.name, fg='yellow')}", fg="green")
     log_records, known_fields = parse_log(log_file)
 
-    prog_bar = click.progressbar(log_records, label="Rendering", file=_default_text_stderr())
+    prog_bar = click.progressbar(
+        log_records, label=click.style("Rendering", fg="green"), file=_default_text_stderr()
+    )
     with prog_bar as log_records_progr:
-        print(
-            render(
-                log_file.name,
-                transform_records(
-                    filter_records(
-                        log_records_progr,
-                        drop_events=set(d.lower() for d in drop_event),
-                        drop_loggers=set(l.lower() for l in drop_logger),
-                        time_range=time_range,
-                    ),
-                    replacements,
+        render(
+            log_file.name,
+            transform_records(
+                filter_records(
+                    log_records_progr,
+                    drop_events=set(d.lower() for d in drop_events),
+                    drop_loggers=set(l.lower() for l in drop_loggers),
+                    time_range=time_range,
                 ),
-                len(log_records),
-                known_fields,
+                replacements,
             ),
-            file=output,
+            known_fields,
+            output,
         )
+    click.secho(f"Output written to {click.style(output.name, fg='yellow')}", fg="green")
 
 
 if __name__ == "__main__":
