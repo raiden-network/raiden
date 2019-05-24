@@ -16,7 +16,6 @@ from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
-    EMPTY_SECRET,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -119,13 +118,13 @@ def initiator_init(
     raiden: "RaidenService",
     transfer_identifier: PaymentID,
     transfer_amount: PaymentAmount,
-    transfer_secret: Secret,
+    transfer_secret: Optional[Secret],
     transfer_secrethash: SecretHash,
     transfer_fee: FeeAmount,
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
 ) -> ActionInitInitiator:
-    assert transfer_secret != constants.EMPTY_HASH, f"Empty secret node:{raiden!r}"
+    assert transfer_secret, f"Empty secret node:{raiden!r}"
 
     transfer_state = TransferDescriptionWithSecretState(
         payment_network_address=raiden.default_registry.address,
@@ -1022,7 +1021,7 @@ class RaidenService(Runnable):
         target: TargetAddress,
         identifier: PaymentID,
         fee: FeeAmount = MEDIATION_FEE,
-        secret: Secret = None,
+        secret: Optional[Secret] = None,
         secrethash: SecretHash = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
@@ -1038,8 +1037,7 @@ class RaidenService(Runnable):
         if secret is None:
             if secrethash is None:
                 secret = random_secret()
-            else:
-                secret = EMPTY_SECRET
+            # When we're making a secrethash-only transfer, leave the secret as None.
 
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
@@ -1060,16 +1058,19 @@ class RaidenService(Runnable):
         fee: FeeAmount,
         target: TargetAddress,
         identifier: PaymentID,
-        secret: Secret,
-        secrethash: SecretHash = None,
+        secret: Optional[Secret],
+        secrethash: Optional[SecretHash] = None,
     ) -> PaymentStatus:
 
         if secrethash is None:
-            secrethash = sha3(secret)
+            if secret:
+                secrethash = sha3(secret)
+            else:
+                raise InvalidSecret("neither secret nor secrethash is provided.")
         elif secrethash != sha3(secret):
             raise InvalidSecretHash("provided secret and secret_hash do not match.")
 
-        if len(secret) != SECRET_LENGTH:
+        if secret and len(secret) != SECRET_LENGTH:
             raise InvalidSecret("secret of invalid length.")
 
         # We must check if the secret was registered against the latest block,

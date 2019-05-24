@@ -1,6 +1,5 @@
 import structlog
 
-from raiden.constants import EMPTY_SECRET
 from raiden.messages import (
     Delivered,
     LockedTransfer,
@@ -137,7 +136,7 @@ class MessageHandler:
             # We currently don't allow multi routes if the initiator does not
             # hold the secret. In such case we remove all other possible routes
             # which allow the API call to return with with an error message.
-            if old_secret == EMPTY_SECRET:
+            if old_secret is None:
                 routes = list()
 
             secret = random_secret()
