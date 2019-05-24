@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from operator import attrgetter
 
 from cachetools import LRUCache, cached
@@ -222,7 +222,8 @@ class Message:
         return packed
 
     def pack(self, packed) -> None:
-        raise NotImplementedError("Method needs to be implemented in a subclass.")
+        for f in fields(self):
+            setattr(packed, f.name, getattr(self, f.name))
 
 
 @dataclass(repr=False, eq=False)
@@ -347,10 +348,6 @@ class Processed(SignedRetrieableMessage):
 
     message_identifier: MessageID
 
-    def pack(self, packed) -> None:
-        packed.message_identifier = self.message_identifier
-        packed.signature = self.signature
-
     @classmethod
     def from_event(cls, event):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
@@ -368,10 +365,6 @@ class ToDevice(SignedMessage):
 
     message_identifier: MessageID
 
-    def pack(self, packed) -> None:
-        packed.message_identifier = self.message_identifier
-        packed.signature = self.signature
-
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
@@ -383,10 +376,6 @@ class Delivered(SignedMessage):
 
     delivered_message_identifier: MessageID
 
-    def pack(self, packed) -> None:
-        packed.delivered_message_identifier = self.delivered_message_identifier
-        packed.signature = self.signature
-
 
 @dataclass(repr=False, eq=False)
 class Pong(SignedMessage):
@@ -395,10 +384,6 @@ class Pong(SignedMessage):
     cmdid: ClassVar[int] = messages.PONG
 
     nonce: Nonce
-
-    def pack(self, packed) -> None:
-        packed.nonce = self.nonce
-        packed.signature = self.signature
 
 
 @dataclass(repr=False, eq=False)
@@ -409,11 +394,6 @@ class Ping(SignedMessage):
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
-
-    def pack(self, packed) -> None:
-        packed.nonce = self.nonce
-        packed.current_protocol_version = self.current_protocol_version
-        packed.signature = self.signature
 
 
 @dataclass(repr=False, eq=False)
@@ -426,14 +406,6 @@ class SecretRequest(SignedRetrieableMessage):
     secrethash: SecretHash
     amount: PaymentAmount
     expiration: BlockExpiration
-
-    def pack(self, packed) -> None:
-        packed.message_identifier = self.message_identifier
-        packed.payment_identifier = self.payment_identifier
-        packed.secrethash = self.secrethash
-        packed.amount = self.amount
-        packed.expiration = self.expiration
-        packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
@@ -478,19 +450,6 @@ class Unlock(EnvelopeMessage):
     def secrethash(self):
         return sha3(self.secret)
 
-    def pack(self, packed) -> None:
-        packed.chain_id = self.chain_id
-        packed.message_identifier = self.message_identifier
-        packed.payment_identifier = self.payment_identifier
-        packed.nonce = self.nonce
-        packed.token_network_address = self.token_network_address
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.locksroot = self.locksroot
-        packed.secret = self.secret
-        packed.signature = self.signature
-
     @classmethod
     def from_event(cls, event):
         balance_proof = event.balance_proof
@@ -528,11 +487,6 @@ class RevealSecret(SignedRetrieableMessage):
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
         return sha3(self.secret)
-
-    def pack(self, packed) -> None:
-        packed.message_identifier = self.message_identifier
-        packed.secret = self.secret
-        packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
@@ -798,19 +752,6 @@ class LockExpired(EnvelopeMessage):
 
     recipient: Address
     secrethash: SecretHash
-
-    def pack(self, packed) -> None:
-        packed.chain_id = self.chain_id
-        packed.nonce = self.nonce
-        packed.message_identifier = self.message_identifier
-        packed.token_network_address = self.token_network_address
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.recipient = self.recipient
-        packed.locksroot = self.locksroot
-        packed.secrethash = self.secrethash
-        packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
