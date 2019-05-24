@@ -986,8 +986,9 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
     )
+
     assert len(iteration.events) == 3
-    # make sure the original lock was moved
+    assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert transfer.lock.secrethash not in setup.channel.our_state.secrethashes_to_lockedlocks
 
 
