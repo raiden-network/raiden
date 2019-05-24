@@ -186,7 +186,7 @@ def skip_userid_validation(monkeypatch):
     )
 
 
-def make_message(convert_to_hex: bool = False, overwrite_data=None):
+def make_message(overwrite_data=None):
     room = Room(None, "!roomID:server")
     if not overwrite_data:
         message = SecretRequest(
@@ -198,11 +198,7 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
             signature=EMPTY_SIGNATURE,
         )
         message.sign(LocalSigner(factories.HOP1_KEY))
-        data = message.encode()
-        if convert_to_hex:
-            data = "0x" + data.hex()
-        else:
-            data = JSONSerializer.serialize(message)
+        data = JSONSerializer.serialize(message)
     else:
         data = overwrite_data
 
@@ -216,7 +212,7 @@ def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     m = mock_matrix
-    room, event = make_message(convert_to_hex=False)
+    room, event = make_message()
     assert m._handle_message(room, event)
 
 
@@ -225,7 +221,7 @@ def test_processing_invalid_json(  # pylint: disable=unused-argument
 ):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
-    room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
+    room, event = make_message(overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
@@ -242,7 +238,7 @@ def test_processing_invalid_message_json(  # pylint: disable=unused-argument
 ):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
-    room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
+    room, event = make_message(overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
@@ -251,7 +247,7 @@ def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argume
 ):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
-    room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
+    room, event = make_message(overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
