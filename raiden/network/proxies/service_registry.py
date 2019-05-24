@@ -1,6 +1,6 @@
 import structlog
 import web3
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
 from raiden.exceptions import InvalidAddress
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
@@ -75,10 +75,15 @@ class ServiceRegistry:
 
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
-        log_details = {"url": url}
+        log_details = {
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "url": url,
+        }
 
-        with log_transaction("set_url", log_details):
+        with log_transaction(log, "set_url", log_details):
             gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+            log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact("setURL", gas_limit, url)
             self.client.poll(transaction_hash)
             assert not check_transaction_threw(self.client, transaction_hash)
