@@ -212,14 +212,6 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
-):
-    m = mock_matrix
-    room, event = make_message(convert_to_hex=True)
-    assert m._handle_message(room, event)
-
-
 def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
@@ -260,36 +252,6 @@ def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argume
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
-    assert not m._handle_message(room, event)
-
-
-def test_processing_invalid_hex(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
-):
-    m = mock_matrix
-    room, event = make_message(convert_to_hex=True)
-    old_data = event["content"]["body"]
-    event["content"]["body"] = old_data[:-1]
-    assert not m._handle_message(room, event)
-
-
-def test_processing_invalid_message_hex(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
-):
-    m = mock_matrix
-    room, event = make_message(convert_to_hex=True)
-    old_data = event["content"]["body"]
-    event["content"]["body"] = old_data[:-4]
-    assert not m._handle_message(room, event)
-
-
-def test_processing_invalid_message_cmdid_hex(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
-):
-    m = mock_matrix
-    room, event = make_message(convert_to_hex=True)
-    old_data = event["content"]["body"]
-    event["content"]["body"] = "0xff" + old_data[4:]
     assert not m._handle_message(room, event)
 
 

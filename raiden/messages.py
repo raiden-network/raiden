@@ -86,7 +86,6 @@ __all__ = (
     "ToDevice",
     "Unlock",
     "UpdatePFS",
-    "decode",
     "from_dict",
     "message_from_sendevent",
 )
@@ -144,14 +143,6 @@ def assert_transfer_values(payment_identifier, token, recipient):
 
     if len(recipient) != 20:
         raise ValueError("recipient is an invalid address")
-
-
-def decode(data: bytes) -> "Message":
-    try:
-        klass = CMDID_TO_CLASS[data[0]]
-    except KeyError:
-        raise InvalidProtocolMessage("Invalid message type (CMDID = {})".format(hex(data[0])))
-    return klass.decode(data)
 
 
 def from_dict(data: dict) -> "Message":
@@ -221,11 +212,6 @@ class Message:
         packed = self.packed()
         return sha3(packed.data)
 
-    @classmethod
-    def decode(cls, data):
-        packed = messages.wrap(data)
-        return cls.unpack(packed)
-
     def encode(self) -> bytes:
         packed = self.packed()
         return bytes(packed.data)
@@ -238,10 +224,6 @@ class Message:
         self.pack(packed)
 
         return packed
-
-    @classmethod
-    def unpack(cls, packed):
-        raise NotImplementedError("Method needs to be implemented in a subclass.")
 
     def pack(self, packed) -> None:
         raise NotImplementedError("Method needs to be implemented in a subclass.")
@@ -292,15 +274,6 @@ class SignedMessage(AuthenticatedMessage):
         except InvalidSignature:
             address = None
         return address
-
-    @classmethod
-    def decode(cls, data):
-        packed = messages.wrap(data)
-
-        if packed is None:
-            return None
-
-        return cls.unpack(packed)
 
 
 @dataclass(repr=False, eq=False)
@@ -378,12 +351,6 @@ class Processed(SignedRetrieableMessage):
 
     message_identifier: MessageID
 
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        processed = cls(message_identifier=packed.message_identifier, signature=packed.signature)
-        return processed
-
     def pack(self, packed) -> None:
         packed.message_identifier = self.message_identifier
         packed.signature = self.signature
@@ -405,12 +372,6 @@ class ToDevice(SignedMessage):
 
     message_identifier: MessageID
 
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        to_device = cls(message_identifier=packed.message_identifier, signature=packed.signature)
-        return to_device
-
     def pack(self, packed) -> None:
         packed.message_identifier = self.message_identifier
         packed.signature = self.signature
@@ -426,15 +387,6 @@ class Delivered(SignedMessage):
 
     delivered_message_identifier: MessageID
 
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        delivered = cls(
-            delivered_message_identifier=packed.delivered_message_identifier,
-            signature=packed.signature,
-        )
-        return delivered
-
     def pack(self, packed) -> None:
         packed.delivered_message_identifier = self.delivered_message_identifier
         packed.signature = self.signature
@@ -447,11 +399,6 @@ class Pong(SignedMessage):
     cmdid: ClassVar[int] = messages.PONG
 
     nonce: Nonce
-
-    @staticmethod
-    def unpack(packed):
-        pong = Pong(nonce=packed.nonce, signature=packed.signature)
-        return pong
 
     def pack(self, packed) -> None:
         packed.nonce = self.nonce
@@ -466,16 +413,6 @@ class Ping(SignedMessage):
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
-
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        ping = cls(
-            nonce=packed.nonce,
-            current_protocol_version=packed.current_protocol_version,
-            signature=packed.signature,
-        )
-        return ping
 
     def pack(self, packed) -> None:
         packed.nonce = self.nonce
@@ -493,18 +430,6 @@ class SecretRequest(SignedRetrieableMessage):
     secrethash: SecretHash
     amount: PaymentAmount
     expiration: BlockExpiration
-
-    @classmethod
-    def unpack(cls, packed):
-        secret_request = cls(
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            secrethash=packed.secrethash,
-            amount=packed.amount,
-            expiration=packed.expiration,
-            signature=packed.signature,
-        )
-        return secret_request
 
     def pack(self, packed) -> None:
         packed.message_identifier = self.message_identifier
@@ -557,24 +482,6 @@ class Unlock(EnvelopeMessage):
     def secrethash(self):
         return sha3(self.secret)
 
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        secret = cls(
-            chain_id=packed.chain_id,
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            locked_amount=packed.locked_amount,
-            locksroot=packed.locksroot,
-            secret=packed.secret,
-            signature=packed.signature,
-        )
-        return secret
-
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
         packed.message_identifier = self.message_identifier
@@ -625,15 +532,6 @@ class RevealSecret(SignedRetrieableMessage):
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
         return sha3(self.secret)
-
-    @classmethod
-    def unpack(cls, packed):
-        reveal_secret = RevealSecret(
-            message_identifier=packed.message_identifier,
-            secret=packed.secret,
-            signature=packed.signature,
-        )
-        return reveal_secret
 
     def pack(self, packed) -> None:
         packed.message_identifier = self.message_identifier
@@ -738,30 +636,6 @@ class LockedTransferBase(EnvelopeMessage):
         super().__post_init__()
         assert_transfer_values(self.payment_identifier, self.token, self.recipient)
 
-    @classmethod
-    def unpack(cls, packed):
-        lock = Lock(
-            amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
-        )
-
-        # pylint: disable=unexpected-keyword-arg
-        locked_transfer = cls(
-            chain_id=packed.chain_id,
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
-            token=packed.token,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            recipient=packed.recipient,
-            locked_amount=packed.locked_amount,
-            locksroot=packed.locksroot,
-            lock=lock,
-            signature=packed.signature,
-        )
-        return locked_transfer
-
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
         packed.message_identifier = self.message_identifier
@@ -821,33 +695,6 @@ class LockedTransfer(LockedTransferBase):
 
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
-
-    @classmethod
-    def unpack(cls, packed):
-        lock = Lock(
-            amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
-        )
-
-        # pylint: disable=unexpected-keyword-arg
-        mediated_transfer = cls(
-            chain_id=packed.chain_id,
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
-            token=packed.token,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            locked_amount=packed.locked_amount,
-            recipient=packed.recipient,
-            locksroot=packed.locksroot,
-            lock=lock,
-            target=packed.target,
-            initiator=packed.initiator,
-            fee=packed.fee,
-            signature=packed.signature,
-        )
-        return mediated_transfer
 
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
@@ -914,33 +761,6 @@ class RefundTransfer(LockedTransfer):
     cmdid: ClassVar[int] = messages.REFUNDTRANSFER
 
     @classmethod
-    def unpack(cls, packed):
-        lock = Lock(
-            amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
-        )
-
-        # pylint: disable=unexpected-keyword-arg
-        locked_transfer = cls(
-            chain_id=packed.chain_id,
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
-            token=packed.token,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            locked_amount=packed.locked_amount,
-            recipient=packed.recipient,
-            locksroot=packed.locksroot,
-            lock=lock,
-            target=packed.target,
-            initiator=packed.initiator,
-            fee=packed.fee,
-            signature=packed.signature,
-        )
-        return locked_transfer
-
-    @classmethod
     def from_event(cls, event):
         transfer = event.transfer
         balance_proof = transfer.balance_proof
@@ -982,25 +802,6 @@ class LockExpired(EnvelopeMessage):
 
     recipient: Address
     secrethash: SecretHash
-
-    @classmethod
-    def unpack(cls, packed):
-        # pylint: disable=unexpected-keyword-arg
-        transfer = cls(
-            chain_id=packed.chain_id,
-            nonce=packed.nonce,
-            message_identifier=packed.message_identifier,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            recipient=packed.recipient,
-            locked_amount=packed.locked_amount,
-            locksroot=packed.locksroot,
-            secrethash=packed.secrethash,
-            signature=packed.signature,
-        )
-
-        return transfer
 
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
@@ -1187,26 +988,6 @@ class RequestMonitoring(SignedMessage):
         packed.reward_amount = self.reward_amount
         packed.reward_proof_signature = self.reward_proof_signature
 
-    @classmethod
-    def unpack(cls, packed) -> "RequestMonitoring":
-        onchain_balance_proof = SignedBlindedBalanceProof(
-            nonce=packed.nonce,
-            chain_id=packed.chain_id,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-            balance_hash=packed.balance_hash,
-            additional_hash=packed.additional_hash,
-            signature=packed.signature,
-        )
-        # pylint: disable=unexpected-keyword-arg
-        monitoring_request = cls(
-            balance_proof=onchain_balance_proof,
-            non_closing_signature=packed.non_closing_signature,
-            reward_amount=packed.reward_amount,
-            signature=packed.reward_proof_signature,
-        )
-        return monitoring_request
-
     def verify_request_monitoring(
         self, partner_address: Address, requesting_address: Address
     ) -> bool:
@@ -1311,26 +1092,6 @@ class UpdatePFS(SignedMessage):
         packed.reveal_timeout = self.reveal_timeout
         packed.fee = self.mediation_fee
         packed.signature = self.signature
-
-    @classmethod
-    def unpack(cls, packed) -> "UpdatePFS":
-        # pylint: disable=unexpected-keyword-arg
-        return cls(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=packed.chain_id,
-                token_network_address=packed.token_network_address,
-                channel_identifier=packed.channel_identifier,
-            ),
-            updating_participant=packed.updating_participant,
-            other_participant=packed.other_participant,
-            updating_nonce=packed.updating_nonce,
-            other_nonce=packed.other_nonce,
-            updating_capacity=packed.other_capacity,
-            other_capacity=packed.other_capacity,
-            reveal_timeout=packed.reveal_timeout,
-            mediation_fee=packed.fee,
-            signature=packed.signature,
-        )
 
 
 def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":
