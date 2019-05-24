@@ -33,7 +33,9 @@ def assert_sqlite_version() -> bool:
     return True
 
 
-def _sanitize_limit_and_offset(limit: int = None, offset: int = None) -> Tuple[int, int]:
+def _sanitize_limit_and_offset(
+    limit: Optional[int] = None, offset: Optional[int] = None
+) -> Tuple[int, int]:
     if limit is not None and (not isinstance(limit, int) or limit < 0):
         raise InvalidNumberInput("limit must be a positive integer")
 
@@ -275,9 +277,9 @@ class SQLiteStorage:
     def _form_and_execute_json_query(
         self,
         query: str,
-        limit: int = None,
-        offset: int = None,
-        filters: List[Tuple[str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        filters: Optional[List[Tuple[str, Any]]] = None,
         logical_and: bool = True,
     ) -> sqlite3.Cursor:
         limit, offset = _sanitize_limit_and_offset(limit, offset)
@@ -337,9 +339,9 @@ class SQLiteStorage:
 
     def _get_state_changes(
         self,
-        limit: int = None,
-        offset: int = None,
-        filters: List[Tuple[str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        filters: Optional[List[Tuple[str, Any]]] = None,
         logical_and: bool = True,
     ) -> List[StateChangeRecord]:
         """ Return a batch of state change records (identifier and data)
@@ -417,7 +419,7 @@ class SQLiteStorage:
         result = [entry[0] for entry in cursor]
         return result
 
-    def _query_events(self, limit: int = None, offset: int = None):
+    def _query_events(self, limit: Optional[int] = None, offset: Optional[int] = None):
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
 
@@ -433,9 +435,9 @@ class SQLiteStorage:
 
     def _get_event_records(
         self,
-        limit: int = None,
-        offset: int = None,
-        filters: List[Tuple[str, Any]] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        filters: Optional[List[Tuple[str, Any]]] = None,
         logical_and: bool = True,
     ) -> List[EventRecord]:
         """ Return a batch of event records
@@ -460,7 +462,10 @@ class SQLiteStorage:
         return result
 
     def batch_query_event_records(
-        self, batch_size: int, filters: List[Tuple[str, Any]] = None, logical_and: bool = True
+        self,
+        batch_size: int,
+        filters: Optional[List[Tuple[str, Any]]] = None,
+        logical_and: bool = True,
     ) -> Iterator[List[EventRecord]]:
         """Batch query event records with a given batch size and an optional filter
 
@@ -484,11 +489,13 @@ class SQLiteStorage:
         cursor.executemany("UPDATE state_events SET data=? WHERE identifier=?", events_data)
         self.maybe_commit()
 
-    def get_events_with_timestamps(self, limit: int = None, offset: int = None):
+    def get_events_with_timestamps(
+        self, limit: Optional[int] = None, offset: Optional[int] = None
+    ):
         entries = self._query_events(limit, offset)
         return [TimestampedEvent(entry[0], entry[1]) for entry in entries]
 
-    def get_events(self, limit: int = None, offset: int = None):
+    def get_events(self, limit: Optional[int] = None, offset: Optional[int] = None):
         entries = self._query_events(limit, offset)
         return [entry[0] for entry in entries]
 

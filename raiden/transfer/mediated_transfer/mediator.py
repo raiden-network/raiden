@@ -61,7 +61,6 @@ from raiden.utils.typing import (
     SecretHash,
     SuccessOrError,
     Tuple,
-    Union,
     cast,
 )
 
@@ -895,7 +894,7 @@ def events_to_remove_expired_locks(
             continue
 
         secrethash = mediator_state.secrethash
-        lock: Union[None, LockType] = None
+        lock: Optional[LockType] = None
         if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
             assert secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
             lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)

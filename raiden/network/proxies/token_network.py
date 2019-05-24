@@ -388,7 +388,7 @@ class TokenNetwork:
         participant1: Address,
         participant2: Address,
         block_identifier: BlockSpecification,
-        channel_identifier: ChannelID = None,
+        channel_identifier: Optional[ChannelID] = None,
     ) -> ParticipantsDetails:
         """ Returns a ParticipantsDetails instance with the participants'
             channel information.

@@ -853,7 +853,7 @@ class JSONRPCClient:
     def get_filter_events(
         self,
         contract_address: Address,
-        topics: List[str] = None,
+        topics: Optional[List[str]] = None,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = "latest",
     ) -> List[Dict]:

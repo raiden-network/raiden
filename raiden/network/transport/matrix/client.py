@@ -192,8 +192,8 @@ class GMatrixClient(MatrixClient):
     def __init__(
         self,
         base_url: str,
-        token: str = None,
-        user_id: str = None,
+        token: Optional[str] = None,
+        user_id: Optional[str] = None,
         valid_cert_check: bool = True,
         sync_filter_limit: int = 20,
         cache_level: CACHE = CACHE.ALL,
@@ -307,7 +307,9 @@ class GMatrixClient(MatrixClient):
         except KeyError:
             return []
 
-    def search_room_directory(self, filter_term: str = None, limit: int = 10) -> List[Room]:
+    def search_room_directory(
+        self, filter_term: Optional[str] = None, limit: int = 10
+    ) -> List[Room]:
         filter_options: dict = {}
         if filter_term:
             filter_options = {"filter": {"generic_search_term": filter_term}}

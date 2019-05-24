@@ -1,4 +1,5 @@
 from copy import copy
+from typing import Optional
 from unittest.mock import Mock, patch
 from uuid import UUID
 
@@ -663,7 +664,7 @@ def assert_failed_pfs_request(
     responses: typing.List[typing.Dict],
     status_codes: typing.List[int] = (400, 400),
     expected_requests: int = MAX_PATHS_QUERY_ATTEMPTS,
-    expected_get_iou_requests: int = None,
+    expected_get_iou_requests: Optional[int] = None,
     expected_success: bool = False,
     exception_type: typing.Type = None,
 ):

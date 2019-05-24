@@ -3,7 +3,7 @@ import json
 import logging
 import socket
 from http import HTTPStatus
-from typing import Dict
+from typing import Dict, Optional
 
 import gevent
 import gevent.pool
@@ -705,8 +705,8 @@ class RestAPI:
     def get_channel_list(
         self,
         registry_address: typing.PaymentNetworkAddress,
-        token_address: typing.TokenAddress = None,
-        partner_address: typing.Address = None,
+        token_address: Optional[typing.TokenAddress] = None,
+        partner_address: Optional[typing.Address] = None,
     ):
         log.debug(
             "Getting channel list",
@@ -802,10 +802,10 @@ class RestAPI:
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
-        token_address: typing.TokenAddress = None,
-        target_address: typing.Address = None,
-        limit: int = None,
-        offset: int = None,
+        token_address: Optional[typing.TokenAddress] = None,
+        target_address: Optional[typing.Address] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ):
         log.debug(
             "Getting payment history",
@@ -1082,8 +1082,8 @@ class RestAPI:
         registry_address: typing.PaymentNetworkAddress,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
-        total_deposit: typing.TokenAmount = None,
-        state: str = None,
+        total_deposit: Optional[typing.TokenAmount] = None,
+        state: Optional[str] = None,
     ):
         log.debug(
             "Patching channel",

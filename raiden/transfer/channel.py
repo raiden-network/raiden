@@ -153,7 +153,7 @@ def next_channel_from_routes(
     available_routes: List["RouteState"],
     channelidentifiers_to_channels: Dict,
     transfer_amount: PaymentWithFeeAmount,
-    lock_timeout: BlockTimeout = None,
+    lock_timeout: Optional[BlockTimeout] = None,
 ) -> Optional[Tuple[NettingChannelState, "RouteState"]]:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes

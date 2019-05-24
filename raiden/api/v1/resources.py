@@ -1,3 +1,5 @@
+from typing import Optional
+
 from flask import Blueprint
 from flask_restful import Resource
 from webargs.flaskparser import use_kwargs
@@ -200,10 +202,10 @@ class PaymentResource(BaseResource):
     @use_kwargs(get_schema, locations=("query",))
     def get(
         self,
-        token_address: typing.TokenAddress = None,
-        target_address: typing.Address = None,
-        limit: int = None,
-        offset: int = None,
+        token_address: Optional[typing.TokenAddress] = None,
+        target_address: Optional[typing.Address] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ):
         return self.rest_api.get_raiden_events_payment_history_with_timestamps(
             token_address=token_address, target_address=target_address, limit=limit, offset=offset

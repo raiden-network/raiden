@@ -138,8 +138,8 @@ def get_transfer_from_task(
 
 def transfer_tasks_view(
     transfer_tasks: Dict[SecretHash, TransferTask],
-    token_address: TokenAddress = None,
-    channel_id: ChannelID = None,
+    token_address: Optional[TokenAddress] = None,
+    channel_id: Optional[ChannelID] = None,
 ) -> List[Dict[str, Any]]:
     view = list()
 
@@ -333,7 +333,7 @@ class RaidenAPI:
         registry_address: PaymentNetworkAddress,
         token_address: TokenAddress,
         partner_address: Address,
-        settle_timeout: BlockTimeout = None,
+        settle_timeout: Optional[BlockTimeout] = None,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> ChannelID:
         """ Open a channel with the peer at `partner_address`
@@ -606,8 +606,8 @@ class RaidenAPI:
     def get_channel_list(
         self,
         registry_address: PaymentNetworkAddress,
-        token_address: TokenAddress = None,
-        partner_address: Address = None,
+        token_address: Optional[TokenAddress] = None,
+        partner_address: Optional[Address] = None,
     ) -> List[NettingChannelState]:
         """Returns a list of channels associated with the optionally given
            `token_address` and/or `partner_address`.
@@ -695,10 +695,10 @@ class RaidenAPI:
         token_address: TokenAddress,
         amount: TokenAmount,
         target: Address,
-        identifier: PaymentID = None,
-        transfer_timeout: int = None,
-        secret: Secret = None,
-        secrethash: SecretHash = None,
+        identifier: Optional[PaymentID] = None,
+        transfer_timeout: Optional[int] = None,
+        secret: Optional[Secret] = None,
+        secrethash: Optional[SecretHash] = None,
     ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
@@ -721,9 +721,9 @@ class RaidenAPI:
         token_address: TokenAddress,
         amount: TokenAmount,
         target: Address,
-        identifier: PaymentID = None,
-        secret: Secret = None,
-        secrethash: SecretHash = None,
+        identifier: Optional[PaymentID] = None,
+        secret: Optional[Secret] = None,
+        secrethash: Optional[SecretHash] = None,
     ):
         current_state = views.state_from_raiden(self.raiden)
         payment_network_address = self.raiden.default_registry.address
@@ -784,10 +784,10 @@ class RaidenAPI:
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
-        token_address: TokenAddress = None,
-        target_address: Address = None,
-        limit: int = None,
-        offset: int = None,
+        token_address: Optional[TokenAddress] = None,
+        target_address: Optional[Address] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ):
         if token_address and not is_binary_address(token_address):
             raise InvalidAddress(
@@ -824,10 +824,10 @@ class RaidenAPI:
 
     def get_raiden_events_payment_history(
         self,
-        token_address: TokenAddress = None,
-        target_address: Address = None,
-        limit: int = None,
-        offset: int = None,
+        token_address: Optional[TokenAddress] = None,
+        target_address: Optional[Address] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ):
         timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
             token_address=token_address, target_address=target_address, limit=limit, offset=offset
@@ -835,7 +835,9 @@ class RaidenAPI:
 
         return [event.wrapped_event for event in timestamped_events]
 
-    def get_raiden_internal_events_with_timestamps(self, limit: int = None, offset: int = None):
+    def get_raiden_internal_events_with_timestamps(
+        self, limit: Optional[int] = None, offset: Optional[int] = None
+    ):
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
@@ -894,7 +896,7 @@ class RaidenAPI:
     def get_blockchain_events_channel(
         self,
         token_address: TokenAddress,
-        partner_address: Address = None,
+        partner_address: Optional[Address] = None,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
     ):
