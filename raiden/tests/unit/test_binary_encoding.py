@@ -86,7 +86,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
             fee=fee,
         )
     )
-    mediated_transfer.packed()
+    mediated_transfer.packed()  # Just test that packing works without exceptions.
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -102,4 +102,4 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    refund_transfer.packed()
+    refund_transfer.packed()  # Just test that packing works without exceptions.

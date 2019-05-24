@@ -554,8 +554,6 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
         )
         return []
 
-    assert not data.startswith("0x")
-
     for line in data.splitlines():
         line = line.strip()
         if not line:
@@ -572,7 +570,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             continue
         except InvalidProtocolMessage as ex:
             log.warning(
-                "Message data JSON are not a valid Message",
+                "Message data JSON is not a valid Message",
                 message_data=line,
                 peer_address=to_checksum_address(peer_address),
                 _exc=ex,
