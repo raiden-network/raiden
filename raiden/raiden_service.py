@@ -167,15 +167,11 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
         config=raiden.config,
         privkey=raiden.privkey,
     )
-<<<<<<< HEAD
-    from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
-=======
     from_hop = HopState(
         transfer.sender,
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
->>>>>>> Give states more intuitive names
     init_mediator_statechange = ActionInitMediator(
         routes=routes,
         from_hop=from_hop,
