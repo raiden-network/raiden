@@ -1,7 +1,7 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 from gevent import monkey  # isort:skip # noqa
 
-monkey.patch_all()  # isort:skip # noqa
+monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 
 import datetime
 import os
