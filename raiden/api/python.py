@@ -420,7 +420,7 @@ class RaidenAPI:  # pragma: no unittest
 
         return channel_state.identifier
 
-    def withdraw_from_channel(
+    def set_total_channel_withdraw(
             self,
             registry_address: typing.PaymentNetworkAddress,
             token_address: typing.TokenAddress,
@@ -428,8 +428,8 @@ class RaidenAPI:  # pragma: no unittest
             total_withdraw: typing.TokenAmount,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
-        """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
-        given `token_address` in order to be able to do transfers.
+        """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
+        given `token_address.
 
         Raises:
             InvalidAddress: If either token_address or partner_address is not
@@ -443,7 +443,7 @@ class RaidenAPI:  # pragma: no unittest
                 the deposit call.
             AddressWithoutCode: The channel was settled during the deposit
                 execution.
-            DepositOverLimit: The total deposit amount is higher than the limit.
+            DepositOverLimit: The total withdraw amount is higher than the limit.
         """
         chain_state = views.state_from_raiden(self.raiden)
 
@@ -486,8 +486,7 @@ class RaidenAPI:  # pragma: no unittest
             raise WithdrawMismatch('Attempted to withdraw 0 amount')
 
         withdraw_status = self.raiden.withdraw(
-            token_network_identifier=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
+            canonical_identifier=channel_state.canonical_identifier,
             total_withdraw=total_withdraw,
         )
 
