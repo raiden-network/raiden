@@ -130,7 +130,7 @@ def get_relative_path(file_name: str) -> str:
     return file_name.replace(prefix + "/", "")
 
 
-def get_system_spec() -> Dict[str, str]:
+def get_system_spec() -> Dict[str, Any]:
     """Collect information about the system and installation.
     """
     import pkg_resources
@@ -156,6 +156,7 @@ def get_system_spec() -> Dict[str, str]:
 
     system_spec = {
         "raiden": version,
+        "raiden_db_version": constants.RAIDEN_DB_VERSION,
         "python_implementation": platform.python_implementation(),
         "python_version": platform.python_version(),
         "system": system_info,
