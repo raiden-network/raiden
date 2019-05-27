@@ -34,7 +34,7 @@ def wait_for_batch_unlock(app, token_network_address, receiver, sender):
         gevent.sleep(1)
 
         state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
-            from_identifier=0, to_identifier="latest"
+            from_identifier="earliest", to_identifier="latest"
         )
 
         unlock_event = search_for_item(
@@ -113,7 +113,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     )
 
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
 
     assert search_for_item(

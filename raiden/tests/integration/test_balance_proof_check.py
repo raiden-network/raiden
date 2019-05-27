@@ -90,7 +90,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
     assert search_for_item(
         state_changes,
@@ -167,7 +167,7 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
     assert search_for_item(
         state_changes,

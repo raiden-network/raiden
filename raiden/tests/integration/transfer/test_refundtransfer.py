@@ -270,7 +270,9 @@ def run_test_refund_transfer(
         )
         assert send_lock_expired
         # make sure that app0 never got it
-        state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, "latest")
+        state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
+            "earliest", "latest"
+        )
         assert not search_for_item(state_changes, ReceiveLockExpired, {"secrethash": secrethash})
 
     # Out of the handicapped app0 transport.
