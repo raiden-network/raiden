@@ -778,7 +778,7 @@ class LockedTransfer(LockedTransferBase):
     fee: int
     metadata: Metadata
 
-    route_metadata: Optional[RouteMetadata] = field(default=None)
+    route_metadata: RouteMetadata
 
     def __post_init__(self):
         super().__post_init__()
