@@ -6,7 +6,7 @@ from web3 import HTTPProvider, Web3
 from raiden.constants import Environment, EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, PRODUCTION_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
@@ -102,7 +102,7 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
 
 @pytest.fixture
 def contracts_path(environment_type):
-    version = RED_EYES_CONTRACT_VERSION
+    version = PRODUCTION_CONTRACT_VERSION
     if environment_type == Environment.DEVELOPMENT:
         version = DEVELOPMENT_CONTRACT_VERSION
 

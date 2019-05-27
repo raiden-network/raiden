@@ -12,7 +12,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, PRODUCTION_CONTRACT_VERSION
 from raiden.ui.checks import (
     check_pfs_configuration,
     check_raiden_environment,
@@ -36,8 +36,7 @@ def environment_type_to_contracts_version(environment_type: Environment) -> str:
     if environment_type == Environment.DEVELOPMENT:
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
     else:
-        raise SystemExit("This version of Raiden client has no production mode.")
-        contracts_version = RED_EYES_CONTRACT_VERSION
+        contracts_version = PRODUCTION_CONTRACT_VERSION
 
     return contracts_version
 
