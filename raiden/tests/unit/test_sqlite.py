@@ -28,7 +28,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import BalanceProofUnsignedState
+from raiden.transfer.state import BalanceProofUnsignedState, RouteState
 from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils import sha3
 
@@ -189,8 +189,12 @@ def test_get_state_change_with_balance_proof():
         secret=sha3(factories.make_secret(next(counter))),
     )
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
+
     action_init_mediator = ActionInitMediator(
-        routes=list(),
+        route_state=RouteState(
+            route=[factories.make_address(), factories.make_address()],
+            forward_channel_id=factories.make_channel_identifier(),
+        ),
         from_hop=mediator_from_route,
         from_transfer=mediator_signed_transfer,
         balance_proof=mediator_signed_transfer.balance_proof,

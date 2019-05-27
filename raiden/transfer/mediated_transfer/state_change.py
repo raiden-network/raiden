@@ -42,13 +42,13 @@ class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
     Args:
-        routes: A list of possible routes provided by a routing service.
         from_hop: The payee route.
+        route_state: The forward route state.
         from_transfer: The payee transfer.
     """
 
-    routes: List[RouteState] = field(repr=False)
     from_hop: HopState
+    route_state: RouteState = field(repr=False)
     from_transfer: LockedTransferSignedState
 
     def __post_init__(self) -> None:

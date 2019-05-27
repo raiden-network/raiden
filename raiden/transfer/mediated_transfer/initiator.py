@@ -211,18 +211,19 @@ def try_new_route(
         initiator_state = None
 
     else:
-        channel_state, route = route_infos
+        channel_state, route_state = route_infos
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             transfer_description=transfer_description,
             channel_state=channel_state,
             message_identifier=message_identifier,
             block_number=block_number,
+            route_state=route_state,
         )
         assert lockedtransfer_event
 
         initiator_state = InitiatorTransferState(
-            route=route,
+            route=route_state,
             transfer_description=transfer_description,
             channel_identifier=channel_state.identifier,
             transfer=lockedtransfer_event.transfer,
@@ -237,6 +238,7 @@ def send_lockedtransfer(
     channel_state: NettingChannelState,
     message_identifier: MessageID,
     block_number: BlockNumber,
+    route_state: RouteState,
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
     assert channel_state.token_network_address == transfer_description.token_network_address
@@ -259,6 +261,7 @@ def send_lockedtransfer(
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
+        route_state=route_state,
     )
     return lockedtransfer_event
 

@@ -79,21 +79,28 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         node_address=factories.make_address(),
         channel_identifier=factories.make_channel_identifier(),
     )
+
+    route_state = RouteState(
+        route=[factories.make_address()], forward_channel_id=factories.make_channel_identifier()
+    )
+
     not_a_route_state = object()
     valid_transfer = factories.create(factories.LockedTransferSignedStateProperties())
     wrong_type_transfer = factories.create(factories.TransferDescriptionProperties())
-    routes = list()
 
     with pytest.raises(ValueError):
         ActionInitMediator(
-            from_transfer=wrong_type_transfer, from_hop=hop_state, routes=routes, **additional_args
+            from_transfer=wrong_type_transfer,
+            from_hop=hop_state,
+            route_state=route_state,
+            **additional_args,
         )
 
     with pytest.raises(ValueError):
         ActionInitMediator(
             from_transfer=valid_transfer,
             from_hop=not_a_route_state,
-            routes=routes,
+            route_state=route_state,
             **additional_args,
         )
 
