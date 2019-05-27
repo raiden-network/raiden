@@ -91,14 +91,14 @@ def test_write_read_log():
     )
 
     state_changes1 = wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
     count1 = len(state_changes1)
 
     wal.log_and_dispatch(block)
 
     state_changes2 = wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
     count2 = len(state_changes2)
     assert count1 + 1 == count2
@@ -106,25 +106,25 @@ def test_write_read_log():
     wal.log_and_dispatch(contract_receive_unlock)
 
     state_changes3 = wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
     count3 = len(state_changes3)
     assert count2 + 1 == count3
 
     result1, result2 = state_changes3[-2:]
-    assert isinstance(result1, Block)
-    assert result1.block_number == block_number
+    assert isinstance(result1.data, Block)
+    assert result1.data.block_number == block_number
 
-    assert isinstance(result2, ContractReceiveChannelBatchUnlock)
-    assert result2.receiver == participant
-    assert result2.sender == partner
-    assert result2.locksroot == locksroot
-    assert result2.unlocked_amount == unlocked_amount
-    assert result2.returned_tokens == returned_amount
+    assert isinstance(result2.data, ContractReceiveChannelBatchUnlock)
+    assert result2.data.receiver == participant
+    assert result2.data.sender == partner
+    assert result2.data.locksroot == locksroot
+    assert result2.data.unlocked_amount == unlocked_amount
+    assert result2.data.returned_tokens == returned_amount
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
-        wal.storage.write_state_snapshot(34, "AAAA")
+        wal.storage.write_state_snapshot(34, "AAAA", datetime.now())
 
     # Make sure we can only have a single state snapshot
     assert wal.storage.get_latest_state_snapshot() is None

@@ -97,7 +97,9 @@ def raiden_state_changes_search_for_item(
     `attributes` are compared using the utility `check_nested_attrs`.
     """
     return search_for_item(
-        raiden.wal.storage.get_statechanges_by_identifier(0, "latest"), item_type, attributes
+        raiden.wal.storage.get_statechanges_by_identifier("earliest", "latest"),
+        item_type,
+        attributes,
     )
 
 
