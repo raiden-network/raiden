@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     TokenAddress,
+    TokenNetworkAddress,
 )
 
 # According to the smart contracts as of 07/08:
@@ -211,3 +212,4 @@ class EventRouteFailed(Event):
 
     secrethash: SecretHash
     route: List[Address]
+    token_network_address: TokenNetworkAddress

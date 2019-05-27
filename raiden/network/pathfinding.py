@@ -409,7 +409,7 @@ def query_paths(
         )
 
         log.info(
-            "Requesting paths from PFS",
+            "Requesting paths from Pathfinding Service",
             url=url,
             token_network_address=token_network_address,
             payload=payload,
@@ -432,3 +432,38 @@ def query_paths(
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
     return list(), None
+
+
+def post_pfs_feedback(
+    token_network_address: TokenNetworkAddress,
+    route: List[Address],
+    token: UUID,
+    succesful: bool,
+    service_config: Dict[str, Any] = None,
+) -> None:
+
+    # PFS not enabled
+    if service_config is None:
+        return
+
+    url = service_config["pathfinding_service_address"]
+    hex_route = [to_checksum_address(address) for address in route]
+    payload = dict(token=token.hex, path=hex_route, status="success" if succesful else "failure")
+
+    log.info(
+        "Sending routing feedback to Pathfinding Service",
+        url=url,
+        token_network_address=token_network_address,
+        payload=payload,
+    )
+
+    try:
+        requests.post(
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/feedback",
+            json=payload,
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        log.warning(
+            f"Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
+        )

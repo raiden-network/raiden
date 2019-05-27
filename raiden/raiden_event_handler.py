@@ -7,6 +7,7 @@ from eth_utils import to_checksum_address, to_hex
 from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
+from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
@@ -565,7 +566,7 @@ class RaidenEventHandler(EventHandler):
 class PFSFeedbackEventHandler(RaidenEventHandler):
     """ A event handler that sends feedback to the PFS. """
 
-    def __init__(self, wrapped_handler: RaidenEventHandler) -> None:
+    def __init__(self, wrapped_handler: EventHandler) -> None:
         self.wrapped = wrapped_handler
 
     def on_raiden_event(
@@ -574,36 +575,48 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         if type(event) == EventRouteFailed:
             assert isinstance(event, EventRouteFailed), MYPY_ANNOTATION
             self.handle_routefailed(raiden, event)
-        elif type(event) == EventPaymentSentFailed:
-            assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
-            self.handle_paymentsentfailed(raiden, event)
+        elif type(event) == EventPaymentSentSuccess:
+            assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
+            self.handle_paymentsentsuccess(raiden, event)
 
         # Call the decorated event handler
         self.wrapped.on_raiden_event(raiden, chain_state, event)
 
     @staticmethod
-    def handle_routefailed(raiden: "RaidenService", route_failed_event: EventRouteFailed):
+    def handle_routefailed(raiden: "RaidenService", route_failed_event: EventRouteFailed) -> None:
         feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
 
         if feedback_token:
-            log.warning(
-                "Received route failed for route",
+            log.debug(
+                "Received event for failed route",
                 route=route_failed_event.route,
                 secrethash=route_failed_event.secrethash,
                 feedback_token=feedback_token,
             )
-            log.error("SENDING FEEDBACK")
+            post_pfs_feedback(
+                token_network_address=route_failed_event.token_network_address,
+                route=route_failed_event.route,
+                token=feedback_token,
+                succesful=False,
+                service_config=raiden.config.get("services"),
+            )
 
     @staticmethod
     def handle_paymentsentsuccess(
         raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
-    ):
+    ) -> None:
         feedback_token = raiden.route_to_feeback_token.get(tuple(payment_sent_success_event.route))
 
         if feedback_token:
-            log.warning(
-                "Received route worked for route",
+            log.debug(
+                "Received payment success event",
                 route=payment_sent_success_event.route,
                 feedback_token=feedback_token,
             )
-            log.error("SENDING FEEDBACK")
+            post_pfs_feedback(
+                token_network_address=payment_sent_success_event.token_network_address,
+                route=payment_sent_success_event.route,
+                token=feedback_token,
+                succesful=True,
+                service_config=raiden.config.get("services"),
+            )

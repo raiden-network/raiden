@@ -22,7 +22,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
-from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
@@ -219,7 +219,10 @@ def run_app(
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
-    raiden_event_handler = RaidenEventHandler()
+    event_handler: EventHandler = RaidenEventHandler()
+
+    if routing_mode == RoutingMode.PFS:
+        event_handler = PFSFeedbackEventHandler(event_handler)
 
     message_handler = MessageHandler()
 
@@ -237,7 +240,7 @@ def run_app(
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
             transport=transport,
-            raiden_event_handler=raiden_event_handler,
+            raiden_event_handler=event_handler,
             message_handler=message_handler,
             user_deposit=proxies.user_deposit,
         )
