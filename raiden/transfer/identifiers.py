@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from eth_utils import to_checksum_address, to_bytes
+
 from raiden import constants
 from raiden.utils.typing import (
     Address,
@@ -32,6 +34,24 @@ class CanonicalIdentifier:
         if self.channel_identifier < 0 or self.channel_identifier > constants.UINT256_MAX:
             raise ValueError("channel id is invalid")
 
+    def __str__(self) -> str:
+        return (
+            f"{self.chain_identifier}|{to_checksum_address(self.token_network_address)}|"
+            f"{self.channel_identifier}"
+        )
+
+    @staticmethod
+    def from_string(string: str) -> "CanonicalIdentifier":
+        try:
+            chain_id_str, token_network_address_hex, channel_id_str = string.split("|")
+            return CanonicalIdentifier(
+                chain_identifier=int(chain_id_str),
+                token_network_address=to_bytes(hexstr=token_network_address_hex),
+                channel_identifier=int(channel_id_str),
+            )
+        except:
+            raise ValueError(f"Could not reconstruct canonical identifier from string: {string}")
+
 
 @dataclass
 class QueueIdentifier:
@@ -61,14 +81,3 @@ class QueueIdentifier:
 CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
     ChainID(0), TokenNetworkAddress(b"\1" * 20), ChannelID(0)
 )
-
-
-def wrap_id(channel_identifier: ChannelID) -> CanonicalIdentifier:
-    # temporarily needed function while we reorganize queue identifiers
-    if channel_identifier == 0:
-        return CANONICAL_IDENTIFIER_GLOBAL_QUEUE
-    return CanonicalIdentifier(
-        chain_identifier=ChainID(0),
-        token_network_address=TokenNetworkAddress(b""),
-        channel_identifier=channel_identifier,
-    )

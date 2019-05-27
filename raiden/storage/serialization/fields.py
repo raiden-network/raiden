@@ -6,8 +6,8 @@ import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 from marshmallow_polyfield import PolyField
 
-from raiden.transfer.identifiers import QueueIdentifier, wrap_id
-from raiden.utils.typing import Address, Any, ChannelID, Optional, Tuple
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.utils.typing import Address, Any, Optional, Tuple
 
 
 class IntegerToStringField(marshmallow.fields.Field):
@@ -60,13 +60,13 @@ class QueueIdentifierField(marshmallow.fields.Field):
     def _serialize(self, queue_identifier: QueueIdentifier, attr: Any, obj: Any) -> str:
         return (
             f"{to_checksum_address(queue_identifier.recipient)}"
-            f"-{str(queue_identifier.channel_identifier)}"
+            f"-{str(queue_identifier.canonical_identifier)}"
         )
 
     def _deserialize(self, queue_identifier_str: str, attr: Any, data: Any) -> QueueIdentifier:
-        str_recipient, str_channel_id = queue_identifier_str.split("-")
+        str_recipient, str_canonical_id = queue_identifier_str.split("-")
         return QueueIdentifier(
-            to_canonical_address(str_recipient), wrap_id(ChannelID(int(str_channel_id)))
+            to_canonical_address(str_recipient), CanonicalIdentifier.from_string(str_canonical_id)
         )
 
 
