@@ -1068,7 +1068,7 @@ class RestAPI:  # pragma: no unittest
             )
 
         try:
-            self.raiden_api.withdraw_from_channel(
+            self.raiden_api.set_total_channel_withdraw(
                 registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
