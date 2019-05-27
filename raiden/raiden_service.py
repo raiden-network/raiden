@@ -2,7 +2,8 @@
 import os
 import random
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Union
+from typing import Dict, List, NamedTuple, Tuple, Union
+from uuid import UUID
 
 import filelock
 import gevent
@@ -138,29 +139,34 @@ def initiator_init(
         secret=transfer_secret,
         secrethash=transfer_secrethash,
     )
-    previous_address = None
-    routes, _ = routing.get_best_routes(
+
+    routes, feedback_token = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_address=token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
         from_address=InitiatorAddress(raiden.address),
         to_address=target_address,
         amount=transfer_amount,
-        previous_address=previous_address,
+        previous_address=None,
         config=raiden.config,
         privkey=raiden.privkey,
     )
+
+    if feedback_token is not None:
+        for route_state in routes:
+            raiden.route_to_feeback_token[tuple(route_state.route)] = feedback_token
+
     return ActionInitInitiator(transfer_state, routes)
 
 
-def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
+def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
     # Feedback token not used here, will be removed with source routing
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_address=from_transfer.balance_proof.token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
-        from_address=raiden.address,
+        from_address=InitiatorAddress(raiden.address),
         to_address=from_transfer.target,
         amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated through #3863
         previous_address=transfer.sender,
@@ -381,6 +387,9 @@ class RaidenService(Runnable):
         self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
+
+        # A list is not hashable, so use tuple as key here
+        self.route_to_feeback_token: Dict[Tuple[Address, ...], UUID] = dict()
 
         # Flag used to skip the processing of all Raiden events during the
         # startup.
