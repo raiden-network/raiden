@@ -329,7 +329,7 @@ def test_log_run():
         get_speck_mock.return_value = dict(raiden="1.2.3")
         store = SerializedSQLiteStorage(":memory:", None)
         store.log_run()
-    cursor = store.conn.cursor()
+    cursor = store.database.conn.cursor()
     cursor.execute("SELECT started_at, raiden_version FROM runs")
     run = cursor.fetchone()
     now = datetime.utcnow()
@@ -399,7 +399,7 @@ def test_batch_query_event_records():
         state_change_identifier = event[1]
         event_data = json.dumps(event[2])
         log_time = datetime.utcnow().isoformat(timespec="milliseconds")
-        event_tuple = (None, state_change_identifier, log_time, event_data)
+        event_tuple = (state_change_identifier, log_time, event_data)
         storage.write_events([event_tuple])
 
     # Test that querying the events in batches of 1 works

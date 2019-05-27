@@ -114,6 +114,18 @@ PaymentNetworkAddress = NewType("PaymentNetworkAddress", T_PaymentNetworkAddress
 T_RaidenProtocolVersion = int
 RaidenProtocolVersion = NewType("RaidenProtocolVersion", T_RaidenProtocolVersion)
 
+T_RaidenDBVersion = int
+RaidenDBVersion = NewType("RaidenDBVersion", T_RaidenDBVersion)
+
+T_StateChangeID = int
+StateChangeID = NewType("StateChangeID", T_StateChangeID)
+
+T_SnapshotID = int
+SnapshotID = NewType("SnapshotID", T_SnapshotID)
+
+T_EventID = int
+EventID = NewType("EventID", T_EventID)
+
 T_ChainID = int
 ChainID = NewType("ChainID", T_ChainID)
 
