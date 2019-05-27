@@ -144,7 +144,11 @@ def handle_block(
             target=transfer_description.target,
             reason=reason,
         )
-        route_failed = EventRouteFailed(secrethash=secrethash, route=initiator_state.route.route)
+        route_failed = EventRouteFailed(
+            secrethash=secrethash,
+            route=initiator_state.route.route,
+            token_network_address=transfer_description.token_network_address,
+        )
         unlock_failed = EventUnlockFailed(
             identifier=payment_identifier,
             secrethash=initiator_state.transfer_description.secrethash,

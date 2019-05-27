@@ -296,9 +296,11 @@ def handle_transferrefundcancelroute(
         return TransitionResult(payment_state, list())
 
     transfer_secrethash = original_transfer.lock.secrethash
+    transfer_state = payment_state.initiator_transfers[transfer_secrethash]
     route_failed_event = EventRouteFailed(
         secrethash=transfer_secrethash,
-        route=payment_state.initiator_transfers[transfer_secrethash].route.route,
+        route=transfer_state.route.route,
+        token_network_address=transfer_state.transfer_description.token_network_address,
     )
     events.append(route_failed_event)
 
