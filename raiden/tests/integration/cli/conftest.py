@@ -7,14 +7,14 @@ import pexpect
 import pytest
 
 from raiden.constants import Environment, EthClient
-from raiden.settings import RED_EYES_CONTRACT_VERSION
+from raiden.settings import PRODUCTION_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
 
 @pytest.fixture(scope="module")
 def cli_tests_contracts_version():
-    return RED_EYES_CONTRACT_VERSION
+    return PRODUCTION_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")

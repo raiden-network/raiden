@@ -59,10 +59,12 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 
 
 def test_setup_contracts():
-    # Mainnet production
+    # Mainnet production: contracts are not deployed
     config = {"environment_type": Environment.PRODUCTION}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 1)
+    contracts = setup_contracts_or_exit(config, 1)
+    assert "contracts_path" in config
+    assert not raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
 
     # Mainnet development -- NOT allowed
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -71,8 +73,10 @@ def test_setup_contracts():
 
     # Ropsten production
     config = {"environment_type": Environment.PRODUCTION}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 3)
+    contracts = setup_contracts_or_exit(config, 3)
+    assert "contracts_path" in config
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Ropsten development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -83,8 +87,10 @@ def test_setup_contracts():
 
     # Rinkeby production
     config = {"environment_type": Environment.PRODUCTION}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 4)
+    contracts = setup_contracts_or_exit(config, 4)
+    assert "contracts_path" in config
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Rinkeby development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -93,12 +99,12 @@ def test_setup_contracts():
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
-    # Goerli production TODO: Uncomment when production contracts are deployed in Goerli
-    # config = {'environment_type': Environment.PRODUCTION}
-    # contracts = setup_contracts_or_exit(config, 5)
-    # assert 'contracts_path' in config
-    # assert raiden_contracts_in_data(contracts)
-    # assert not service_contracts_in_data(contracts)
+    # Goerli production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts = setup_contracts_or_exit(config, 5)
+    assert 'contracts_path' in config
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Goerli development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -109,8 +115,10 @@ def test_setup_contracts():
 
     # Kovan production
     config = {"environment_type": Environment.PRODUCTION}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 42)
+    contracts = setup_contracts_or_exit(config, 42)
+    assert "contracts_path" in config
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Kovan development
     config = {"environment_type": Environment.DEVELOPMENT}
@@ -121,8 +129,10 @@ def test_setup_contracts():
 
     # random private network production
     config = {"environment_type": Environment.PRODUCTION}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 5257)
+    contracts = setup_contracts_or_exit(config, 5257)
+    assert "contracts_path" in config
+    assert not raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
 
     # random private network development
     config = {"environment_type": Environment.DEVELOPMENT}
