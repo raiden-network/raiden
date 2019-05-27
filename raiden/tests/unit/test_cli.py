@@ -21,6 +21,7 @@ def test_cli_version(cli_runner):
     result_json = json.loads(result.output)
     result_expected_keys = {
         "raiden",
+        "raiden_db_version",
         "python_implementation",
         "python_version",
         "system",
