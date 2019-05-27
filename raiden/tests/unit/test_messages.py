@@ -55,9 +55,6 @@ def test_request_monitoring():
     request_monitoring.sign(signer)
     as_dict = DictSerializer.serialize(request_monitoring)
     assert DictSerializer.deserialize(as_dict) == request_monitoring
-    request_monitoring_packed = request_monitoring.packed()
-    request_monitoring.pack(request_monitoring_packed)
-    assert RequestMonitoring.unpack(request_monitoring_packed) == request_monitoring
     # RequestMonitoring can be created directly from BalanceProofSignedState
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
         balance_proof, reward_amount=55

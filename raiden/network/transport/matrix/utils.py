@@ -35,7 +35,7 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
-from raiden.messages import Message, SignedMessage, decode as message_from_bytes
+from raiden.messages import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
@@ -544,7 +544,7 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
 
 
 def validate_and_parse_message(data, peer_address) -> List[Message]:
-    messages = list()
+    messages: List[Message] = list()
 
     if not isinstance(data, str):
         log.warning(
@@ -554,69 +554,44 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
         )
         return []
 
-    if data.startswith("0x"):
+    for line in data.splitlines():
+        line = line.strip()
+        if not line:
+            continue
         try:
-            message = message_from_bytes(decode_hex(data))
-            if not message:
-                raise InvalidProtocolMessage
-        except (DecodeError, AssertionError) as ex:
+            message = JSONSerializer.deserialize(line)
+        except (UnicodeDecodeError, json.JSONDecodeError) as ex:
             log.warning(
-                "Can't parse Message binary data",
-                message_data=data,
+                "Can't parse Message data JSON",
+                message_data=line,
                 peer_address=to_checksum_address(peer_address),
                 _exc=ex,
             )
-            return []
+            continue
         except InvalidProtocolMessage as ex:
             log.warning(
-                "Received Message binary data is not a valid message",
-                message_data=data,
+                "Message data JSON is not a valid Message",
+                message_data=line,
                 peer_address=to_checksum_address(peer_address),
                 _exc=ex,
             )
-            return []
-        else:
-            messages.append(message)
-
-    else:
-        for line in data.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                message = JSONSerializer.deserialize(line)
-            except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                log.warning(
-                    "Can't parse Message data JSON",
-                    message_data=line,
-                    peer_address=to_checksum_address(peer_address),
-                    _exc=ex,
-                )
-                continue
-            except InvalidProtocolMessage as ex:
-                log.warning(
-                    "Message data JSON are not a valid Message",
-                    message_data=line,
-                    peer_address=to_checksum_address(peer_address),
-                    _exc=ex,
-                )
-                continue
-            if not isinstance(message, SignedMessage):
-                log.warning(
-                    "Message not a SignedMessage!",
-                    message=message,
-                    peer_address=to_checksum_address(peer_address),
-                )
-                continue
-            if message.sender != peer_address:
-                log.warning(
-                    "Message not signed by sender!",
-                    message=message,
-                    signer=message.sender,
-                    peer_address=to_checksum_address(peer_address),
-                )
-                continue
-            messages.append(message)
+            continue
+        if not isinstance(message, SignedMessage):
+            log.warning(
+                "Message not a SignedMessage!",
+                message=message,
+                peer_address=to_checksum_address(peer_address),
+            )
+            continue
+        if message.sender != peer_address:
+            log.warning(
+                "Message not signed by sender!",
+                message=message,
+                signer=message.sender,
+                peer_address=to_checksum_address(peer_address),
+            )
+            continue
+        messages.append(message)
 
     return messages
 

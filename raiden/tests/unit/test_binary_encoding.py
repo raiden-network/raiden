@@ -4,9 +4,8 @@ import pytest
 
 from raiden import constants
 from raiden.exceptions import InvalidSignature
-from raiden.messages import Ping, Processed, decode
+from raiden.messages import Ping, Processed
 from raiden.tests.utils import factories
-from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = factories.make_privkey_address()
@@ -50,13 +49,7 @@ def test_encoding():
         signature=constants.EMPTY_SIGNATURE,
     )
     ping.sign(signer)
-    decoded_ping = decode(ping.encode())
-    assert isinstance(decoded_ping, Ping)
-    assert decoded_ping.sender == ADDRESS == ping.sender
-    assert ping.nonce == decoded_ping.nonce
-    assert ping.signature == decoded_ping.signature
-    assert ping.cmdid == decoded_ping.cmdid
-    assert ping.hash == decoded_ping.hash
+    assert ping.sender == ADDRESS
 
 
 def test_hash():
@@ -66,10 +59,6 @@ def test_hash():
         signature=constants.EMPTY_SIGNATURE,
     )
     ping.sign(signer)
-    data = ping.encode()
-    msghash = sha3(data)
-    decoded_ping = decode(data)
-    assert sha3(decoded_ping.encode()) == msghash
 
 
 def test_processed():
@@ -79,16 +68,7 @@ def test_processed():
     )
     processed_message.sign(signer)
     assert processed_message.sender == ADDRESS
-
     assert processed_message.message_identifier == message_identifier
-
-    data = processed_message.encode()
-    decoded_processed_message = decode(data)
-
-    assert decoded_processed_message.message_identifier == message_identifier
-    assert processed_message.message_identifier == message_identifier
-    assert decoded_processed_message.sender == processed_message.sender
-    assert sha3(decoded_processed_message.encode()) == sha3(data)
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -106,7 +86,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
             fee=fee,
         )
     )
-    assert decode(mediated_transfer.encode()) == mediated_transfer
+    mediated_transfer.packed()  # Just test that packing works without exceptions.
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -122,4 +102,4 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    assert decode(refund_transfer.encode()) == refund_transfer
+    refund_transfer.packed()  # Just test that packing works without exceptions.
