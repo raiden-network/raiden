@@ -6,11 +6,22 @@ from raiden.storage.wal import restore_to_state_change
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import NettingChannelState
-from raiden.utils.typing import Address, Any, BalanceHash, Dict, Locksroot, Optional
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BalanceHash,
+    Dict,
+    Locksroot,
+    Optional,
+    StateChangeID,
+    Union,
+)
 
 
 def channel_state_until_state_change(
-    raiden, canonical_identifier: CanonicalIdentifier, state_change_identifier: int
+    raiden,
+    canonical_identifier: CanonicalIdentifier,
+    state_change_identifier: Union[StateChangeID, str],
 ) -> Optional[NettingChannelState]:
     """ Go through WAL state changes until a certain balance hash is found. """
     wal = restore_to_state_change(
@@ -41,7 +52,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
     canonical_identifier: CanonicalIdentifier,
     balance_hash: BalanceHash,
     sender: Address,
-) -> StateChangeRecord:
+) -> Optional[StateChangeRecord]:
     """ Returns the state change which contains the corresponding balance
     proof.
 
@@ -70,7 +81,7 @@ def get_state_change_with_balance_proof_by_locksroot(
     canonical_identifier: CanonicalIdentifier,
     locksroot: Locksroot,
     sender: Address,
-) -> StateChangeRecord:
+) -> Optional[StateChangeRecord]:
     """ Returns the state change which contains the corresponding balance
     proof.
 
@@ -97,7 +108,7 @@ def get_state_change_with_balance_proof_by_locksroot(
 
 def get_event_with_balance_proof_by_balance_hash(
     storage: SQLiteStorage, canonical_identifier: CanonicalIdentifier, balance_hash: BalanceHash
-) -> EventRecord:
+) -> Optional[EventRecord]:
     """ Returns the event which contains the corresponding balance
     proof.
 
@@ -116,7 +127,7 @@ def get_event_with_balance_proof_by_balance_hash(
     event = storage.get_latest_event_by_data_field(
         balance_proof_query_from_keys(prefix="", filters=filters)
     )
-    if event.data:
+    if event is not None:
         return event
 
     event = storage.get_latest_event_by_data_field(
@@ -130,7 +141,7 @@ def get_event_with_balance_proof_by_locksroot(
     canonical_identifier: CanonicalIdentifier,
     locksroot: Locksroot,
     recipient: Address,
-) -> EventRecord:
+) -> Optional[EventRecord]:
     """ Returns the event which contains the corresponding balance proof.
 
     Use this function to find a balance proof for a call to unlock, which only
@@ -154,7 +165,7 @@ def get_event_with_balance_proof_by_locksroot(
     balance_proof_filters.update(filters)
 
     event = storage.get_latest_event_by_data_field(balance_proof_filters)
-    if event.data:
+    if event is not None:
         return event
 
     balance_proof_filters = balance_proof_query_from_keys(

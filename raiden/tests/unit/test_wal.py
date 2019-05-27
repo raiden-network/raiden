@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import pytest
 
@@ -15,7 +16,7 @@ from raiden.transfer.architecture import State, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils import sha3
-from raiden.utils.typing import List
+from raiden.utils.typing import Callable, List
 
 
 class Empty(State):
@@ -37,7 +38,7 @@ def state_transtion_acc(state, state_change):
     return TransitionResult(state, list())
 
 
-def new_wal(state_transition, state=None):
+def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     serializer = JSONSerializer
 
     state_manager = StateManager(state_transition, state)
@@ -129,10 +130,14 @@ def test_write_read_log():
     assert wal.storage.get_latest_state_snapshot() is None
 
     wal.storage.write_state_snapshot(1, "AAAA")
-    assert wal.storage.get_latest_state_snapshot() == (1, "AAAA")
+    snapshot = wal.storage.get_latest_state_snapshot()
+    assert snapshot.state_change_identifier == 1
+    assert snapshot.data == "AAAA"
 
     wal.storage.write_state_snapshot(2, "BBBB")
-    assert wal.storage.get_latest_state_snapshot() == (2, "BBBB")
+    snapshot = wal.storage.get_latest_state_snapshot()
+    assert snapshot.state_change_identifier == 2
+    assert snapshot.data == "BBBB"
 
 
 def test_timestamped_event():
@@ -169,7 +174,7 @@ def test_write_read_events():
 
     previous_events = wal.storage.get_events_with_timestamps()
 
-    log_time = "2018-09-07T20:02:35.0000"
+    log_time = datetime(year=2018, month=9, day=7, hour=20, minute=2, second=35, microsecond=0)
     state_change_id = wal.storage.write_state_change("statechangedata", log_time)
     wal.storage.write_events(state_change_id, event_list, log_time)
 
@@ -219,5 +224,5 @@ def test_get_snapshot_closest_to_state_change():
     wal.log_and_dispatch(block3)
     wal.snapshot()
 
-    _, snapshot = wal.storage.get_snapshot_closest_to_state_change("latest")
-    assert snapshot.state_changes == [block1, block2, block3]
+    snapshot = wal.storage.get_snapshot_closest_to_state_change("latest")
+    assert snapshot.data == AccState([block1, block2, block3])

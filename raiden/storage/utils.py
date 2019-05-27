@@ -17,7 +17,7 @@ DB_CREATE_STATE_CHANGES = """
 CREATE TABLE IF NOT EXISTS state_changes (
     identifier INTEGER PRIMARY KEY AUTOINCREMENT,
     data JSON,
-    log_time TEXT
+    log_time TIMESTAMP
 );
 """
 
@@ -34,7 +34,7 @@ DB_CREATE_STATE_EVENTS = """
 CREATE TABLE IF NOT EXISTS state_events (
     identifier INTEGER PRIMARY KEY,
     source_statechange_id INTEGER NOT NULL,
-    log_time TEXT,
+    log_time TIMESTAMP,
     data JSON,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
 );
