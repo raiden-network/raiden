@@ -152,6 +152,7 @@ def initiator_init(
         privkey=raiden.privkey,
     )
 
+    # Only prepare feedback when token is available
     if feedback_token is not None:
         for route_state in routes:
             raiden.route_to_feeback_token[tuple(route_state.route)] = feedback_token

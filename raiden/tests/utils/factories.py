@@ -170,6 +170,10 @@ def make_checksum_address() -> AddressHex:
     return to_checksum_address(make_address())
 
 
+def make_token_network_address() -> TokenNetworkAddress:
+    return TokenNetworkAddress(make_address())
+
+
 def make_additional_hash() -> AdditionalHash:
     return AdditionalHash(make_32bytes())
 
