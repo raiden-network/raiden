@@ -155,7 +155,7 @@ class SendWithdrawRequest(SendMessageEvent):
     """ Event used by node to request a withdraw from channel partner."""
 
     chain_id: ChainID
-    token_network_identifier: TokenNetworkID
+    token_network_address: TokenNetworkAddress
     total_withdraw: TokenAmount
     participant: Address
 
@@ -165,7 +165,7 @@ class SendWithdraw(SendMessageEvent):
     """ Event used by node to confirm a withdraw for a channel's partner."""
 
     chain_id: ChainID
-    token_network_identifier: TokenNetworkID
+    token_network_address: TokenNetworkAddress
     total_withdraw: TokenAmount
     participant: Address
 

@@ -1,3 +1,5 @@
+import random
+
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.state import TokenNetworkState
@@ -33,6 +35,7 @@ def subdispatch_to_channel_by_id(
     state_change: StateChangeWithChannelID,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events = list()
 
@@ -262,6 +265,7 @@ def state_transition(
     state_change: StateChange,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -281,11 +285,11 @@ def state_transition(
     if type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
         iteration = handle_channel_withdraw(
-            token_network_state,
-            state_change,
-            pseudo_random_generator,
-            block_number,
-            block_hash,
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION

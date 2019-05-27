@@ -14,7 +14,6 @@ from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils.typing import (
     BlockExpiration,
     ChannelID,
-    Dict,
     List,
     MessageID,
     Optional,
@@ -23,7 +22,6 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     Signature,
-    TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
     typecheck,
@@ -146,7 +144,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A WithdrawRequest message received. """
 
     total_withdraw: PaymentAmount
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
     signature: Signature
 

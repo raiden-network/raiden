@@ -296,7 +296,7 @@ class RaidenEventHandler(EventHandler):
             channel_withdraw_event: ContractSendChannelWithdraw,
     ):
         channel_proxy = raiden.chain.payment_channel(
-            token_network_address=channel_withdraw_event.token_network_identifier,
+            token_network_address=channel_withdraw_event.token_network_address,
             channel_id=channel_withdraw_event.channel_identifier,
         )
 

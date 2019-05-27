@@ -1050,7 +1050,7 @@ class RestAPI:  # pragma: no unittest
 
     def _withdraw(
             self,
-            registry_address: typing.PaymentNetworkID,
+            registry_address: typing.PaymentNetworkAddress,
             channel_state: NettingChannelState,
             total_withdraw: typing.TokenAmount,
     ):

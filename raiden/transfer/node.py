@@ -690,10 +690,9 @@ def handle_receive_withdraw_request(
         chain_state: ChainState,
         state_change: ReceiveWithdrawRequest,
 ) -> TransitionResult[ChainState]:
-    channel_state = views.get_channelstate_by_token_network_identifier(
+    channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        token_network_identifier=state_change.token_network_identifier,
-        channel_identifier=state_change.channel_identifier,
+        canonical_identifier=state_change.canonical_identifier,
     )
     return channel.state_transition(
         channel_state=channel_state,
@@ -705,10 +704,9 @@ def handle_receive_withdraw(
         chain_state: ChainState,
         state_change: ReceiveWithdraw,
 ) -> TransitionResult[ChainState]:
-    channel_state = views.get_channelstate_by_token_network_identifier(
+    channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        token_network_identifier=state_change.token_network_identifier,
-        channel_identifier=state_change.channel_identifier,
+        canonical_identifier=state_change.canonical_identifier,
     )
     return channel.state_transition(
         channel_state=channel_state,
@@ -797,9 +795,10 @@ def handle_state_change(
         )
     elif type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
-        iteration = handle_token_network_action(
-            chain_state,
-            state_change,
+        iteration = subdispatch_by_canonical_id(
+            chain_state=chain_state,
+            canonical_identifier=state_change.canonical_identifier,
+            state_change=state_change,
         )
     elif type(state_change) == ActionChangeNodeNetworkState:
         assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION

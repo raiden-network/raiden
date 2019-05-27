@@ -422,7 +422,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def withdraw_from_channel(
             self,
-            registry_address: typing.PaymentNetworkID,
+            registry_address: typing.PaymentNetworkAddress,
             token_address: typing.TokenAddress,
             partner_address: typing.Address,
             total_withdraw: typing.TokenAmount,
