@@ -397,6 +397,7 @@ def forward_transfer_pair(
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
             secrethash=lock.secrethash,
+            route_state=route_state,
         )
         assert lockedtransfer_event
 
@@ -445,6 +446,12 @@ def backward_transfer_pair(
     # do anything and wait for the received lock to expire.
     if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+
+        backward_route_state = RouteState(
+            route=[backward_channel.partner_state.address],
+            forward_channel_id=backward_channel.canonical_identifier.channel_identifier,
+        )
+
         refund_transfer = channel.send_refundtransfer(
             channel_state=backward_channel,
             initiator=payer_transfer.initiator,
@@ -454,11 +461,11 @@ def backward_transfer_pair(
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
             secrethash=lock.secrethash,
+            route_state=backward_route_state,
         )
 
-        backward_path = RouteState([], ChannelID(-1))
         transfer_pair = MediationPairState(
-            route=backward_path,
+            route=backward_route_state,
             payer_transfer=payer_transfer,
             payee_address=backward_channel.partner_state.address,
             payee_transfer=refund_transfer.transfer,
@@ -1046,11 +1053,12 @@ def handle_init(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
-    routes = state_change.routes
 
     from_hop = state_change.from_hop
     from_transfer = state_change.from_transfer
     payer_channel = channelidentifiers_to_channels.get(from_hop.channel_identifier)
+
+    routes = [state_change.route_state]
 
     # There is no corresponding channel for the message, ignore it
     if not payer_channel:
@@ -1166,14 +1174,14 @@ def handle_refundtransfer(
             return TransitionResult(mediator_state, channel_events)
 
         iteration = mediate_transfer(
-            mediator_state,
-            mediator_state_change.routes,
-            payer_channel,
-            channelidentifiers_to_channels,
-            nodeaddresses_to_networkstates,
-            pseudo_random_generator,
-            payer_transfer,
-            block_number,
+            state=mediator_state,
+            possible_routes=mediator_state_change.routes,
+            payer_channel=payer_channel,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            pseudo_random_generator=pseudo_random_generator,
+            payer_transfer=payer_transfer,
+            block_number=block_number,
         )
 
         events.extend(channel_events)

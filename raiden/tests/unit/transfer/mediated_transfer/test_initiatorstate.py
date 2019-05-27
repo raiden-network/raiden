@@ -703,7 +703,14 @@ def test_init_with_maximum_pending_transfers_exceeded():
         )
     )
     channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.make_route_from_channel(channel1)]
+    available_routes = [
+        RouteState(
+            # pylint: disable=E1101
+            route=[channel1.our_state.address, channel1.partner_state.address],
+            forward_channel_id=channel1.canonical_identifier.channel_identifier,
+        )
+    ]
+
     pseudo_random_generator = random.Random()
 
     transitions = list()

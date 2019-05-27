@@ -7,6 +7,7 @@ import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
+from raiden.messages import RouteMetadata
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
@@ -268,3 +269,24 @@ def get_best_routes_pfs(
         paths.append(RouteState(canonical_path, channel_state.identifier))
 
     return True, paths, feedback_token
+
+
+def resolve_route(
+    route_metadata: RouteMetadata,
+    token_network_address: TokenNetworkAddress,
+    chain_state: ChainState,
+) -> RouteState:
+    """ resolve the forward_channel_id for a given route """
+
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=chain_state,
+        token_network_address=token_network_address,
+        partner_address=route_metadata.routes[1],
+    )
+
+    assert channel_state is not None, "Channel state needs to exist"
+
+    return RouteState(
+        route=route_metadata.routes,
+        forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+    )

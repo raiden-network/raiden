@@ -647,7 +647,7 @@ class LockedTransfer(LockedTransferBase):
     initiator: InitiatorAddress
     fee: int
 
-    route_metadata: Optional[RouteMetadata] = field(default=None)
+    route_metadata: RouteMetadata
 
     def __post_init__(self):
         super().__post_init__()
@@ -728,6 +728,7 @@ class LockedTransfer(LockedTransferBase):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
+            route_metadata=RouteMetadata(transfer.route_state.route[1:]),
         )
 
 
@@ -769,6 +770,7 @@ class RefundTransfer(LockedTransfer):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
+            route_metadata=transfer.route_state.route,
         )
 
 
@@ -1068,25 +1070,6 @@ class UpdatePFS(SignedMessage):
         packed.signature = self.signature
 
 
-def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":
-    """ Create LockedTransferSignedState from a LockedTransfer message. """
-    balance_proof = balanceproof_from_envelope(message)
-
-    lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-
-    transfer_state = LockedTransferSignedState(
-        message.message_identifier,
-        message.payment_identifier,
-        message.token,
-        balance_proof,
-        lock,
-        message.initiator,
-        message.target,
-    )
-
-    return transfer_state
-
-
 CMDID_TO_CLASS: Dict[int, Type[Message]] = {
     messages.DELIVERED: Delivered,
     messages.LOCKEDTRANSFER: LockedTransfer,
@@ -1103,3 +1086,22 @@ CMDID_TO_CLASS: Dict[int, Type[Message]] = {
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
 CLASSNAME_TO_CLASS["Secret"] = Unlock
+
+
+def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransferSignedState:
+    """ Create LockedTransferSignedState from a LockedTransfer message. """
+    balance_proof = balanceproof_from_envelope(message)
+
+    lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
+    transfer_state = LockedTransferSignedState(
+        message_identifier=message.message_identifier,
+        payment_identifier=message.payment_identifier,
+        token=message.token,
+        balance_proof=balance_proof,
+        lock=lock,
+        initiator=message.initiator,
+        target=message.target,
+        route=message.route_metadata.routes,
+    )
+
+    return transfer_state
