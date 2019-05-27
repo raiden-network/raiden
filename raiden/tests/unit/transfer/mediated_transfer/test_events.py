@@ -1,6 +1,5 @@
 from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import SendRefundTransfer
 
 

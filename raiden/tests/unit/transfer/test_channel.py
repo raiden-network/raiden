@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import replace
 from hashlib import sha256
 
 from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
@@ -175,8 +176,9 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
     assert result is False, result
     assert msg.startswith("channel_identifier does not match. "), msg
 
-    wrong_token_network_canonical_identifier = deepcopy(channel_state.canonical_identifier)
-    wrong_token_network_canonical_identifier.token_network_address = factories.make_address()
+    wrong_token_network_canonical_identifier = replace(
+        channel_state.canonical_identifier, token_network_address=factories.make_address()
+    )
 
     balance_proof_wrong_token_network = factories.create(
         factories.BalanceProofSignedStateProperties(
