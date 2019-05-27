@@ -130,6 +130,7 @@ class WaitingTransferState(State):
 class InitiatorTransferState(State):
     """ State of a transfer for the initiator node. """
 
+    route: RouteState
     transfer_description: TransferDescriptionWithSecretState = field(repr=False)
     channel_identifier: ChannelID
     transfer: LockedTransferUnsignedState

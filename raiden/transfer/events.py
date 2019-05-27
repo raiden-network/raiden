@@ -14,6 +14,7 @@ from raiden.utils.typing import (
     Address,
     ChannelID,
     InitiatorAddress,
+    List,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -135,7 +136,8 @@ class EventPaymentSentSuccess(Event):
     identifier: PaymentID
     amount: PaymentAmount
     target: TargetAddress
-    secret: Optional[Secret] = None
+    secret: Secret
+    route: List[Address]
 
 
 @dataclass

@@ -131,7 +131,6 @@ class MessageHandler:
             chain_state=chain_state, secrethash=from_transfer.lock.secrethash
         )
 
-        state_change: StateChange
         if role == "initiator":
             old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
             # We currently don't allow multi routes if the initiator does not
@@ -141,7 +140,7 @@ class MessageHandler:
                 routes = list()
 
             secret = random_secret()
-            state_change = ReceiveTransferRefundCancelRoute(
+            state_change: StateChange = ReceiveTransferRefundCancelRoute(
                 routes=routes,
                 transfer=from_transfer,
                 balance_proof=from_transfer.balance_proof,

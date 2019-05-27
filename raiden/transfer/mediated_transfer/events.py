@@ -7,8 +7,10 @@ from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils import sha3
 from raiden.utils.typing import (
+    Address,
     BlockExpiration,
     ChannelID,
+    List,
     PaymentID,
     PaymentWithFeeAmount,
     Secret,
@@ -208,3 +210,4 @@ class EventRouteFailed(Event):
     """
 
     secrethash: SecretHash
+    route: List[Address]

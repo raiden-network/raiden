@@ -37,6 +37,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
+    EventRouteFailed,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockFailed,
@@ -559,3 +560,50 @@ class RaidenEventHandler(EventHandler):
             partner_locksroot=partner_locksroot,
             block_identifier=triggered_by_block_hash,
         )
+
+
+class PFSFeedbackEventHandler(RaidenEventHandler):
+    """ A event handler that sends feedback to the PFS. """
+
+    def __init__(self, wrapped_handler: RaidenEventHandler) -> None:
+        self.wrapped = wrapped_handler
+
+    def on_raiden_event(
+        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    ) -> None:
+        if type(event) == EventRouteFailed:
+            assert isinstance(event, EventRouteFailed), MYPY_ANNOTATION
+            self.handle_routefailed(raiden, event)
+        elif type(event) == EventPaymentSentFailed:
+            assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
+            self.handle_paymentsentfailed(raiden, event)
+
+        # Call the decorated event handler
+        self.wrapped.on_raiden_event(raiden, chain_state, event)
+
+    @staticmethod
+    def handle_routefailed(raiden: "RaidenService", route_failed_event: EventRouteFailed):
+        feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
+
+        if feedback_token:
+            log.warning(
+                "Received route failed for route",
+                route=route_failed_event.route,
+                secrethash=route_failed_event.secrethash,
+                feedback_token=feedback_token,
+            )
+            log.error("SENDING FEEDBACK")
+
+    @staticmethod
+    def handle_paymentsentsuccess(
+        raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
+    ):
+        feedback_token = raiden.route_to_feeback_token.get(tuple(payment_sent_success_event.route))
+
+        if feedback_token:
+            log.warning(
+                "Received route worked for route",
+                route=payment_sent_success_event.route,
+                feedback_token=feedback_token,
+            )
+            log.error("SENDING FEEDBACK")

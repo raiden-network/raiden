@@ -73,6 +73,7 @@ def events_for_unlock_lock(
         amount=transfer_description.amount,
         target=transfer_description.target,
         secret=secret,
+        route=initiator_state.route.route,
     )
 
     unlock_success = EventUnlockSuccess(
@@ -143,7 +144,7 @@ def handle_block(
             target=transfer_description.target,
             reason=reason,
         )
-        route_failed = EventRouteFailed(secrethash=secrethash)
+        route_failed = EventRouteFailed(secrethash=secrethash, route=initiator_state.route.route)
         unlock_failed = EventUnlockFailed(
             identifier=payment_identifier,
             secrethash=initiator_state.transfer_description.secrethash,
@@ -206,7 +207,7 @@ def try_new_route(
         initiator_state = None
 
     else:
-        channel_state, _ = route_infos
+        channel_state, route = route_infos
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             transfer_description=transfer_description,
@@ -217,6 +218,7 @@ def try_new_route(
         assert lockedtransfer_event
 
         initiator_state = InitiatorTransferState(
+            route=route,
             transfer_description=transfer_description,
             channel_identifier=channel_state.identifier,
             transfer=lockedtransfer_event.transfer,
