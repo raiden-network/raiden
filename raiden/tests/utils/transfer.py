@@ -10,7 +10,7 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
+from raiden.messages import LockedTransfer, LockExpired, Message, RouteMetadata, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
@@ -538,6 +538,11 @@ def make_receive_transfer_mediated(
     transfer_target = make_address()
     transfer_initiator = make_address()
     chain_id = chain_id or channel_state.chain_id
+
+    transfer_route_metadata = RouteMetadata(
+        routes=[channel_state.our_state.address, transfer_target]
+    )
+
     mediated_transfer_msg = LockedTransfer(
         chain_id=chain_id,
         message_identifier=random.randint(0, UINT64_MAX),
@@ -555,19 +560,21 @@ def make_receive_transfer_mediated(
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
         fee=0,
+        route_metadata=transfer_route_metadata,
     )
     mediated_transfer_msg.sign(signer)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_lockedtransfer = LockedTransferSignedState(
-        random.randint(0, UINT64_MAX),
-        payment_identifier,
-        channel_state.token_address,
-        balance_proof,
-        lock,
-        transfer_initiator,
-        transfer_target,
+        payment_identifier=payment_identifier,
+        token=channel_state.token_address,
+        lock=lock,
+        initiator=transfer_initiator,
+        target=transfer_target,
+        message_identifier=random.randint(0, UINT64_MAX),
+        balance_proof=balance_proof,
+        route=transfer_route_metadata.routes,
     )
 
     return receive_lockedtransfer

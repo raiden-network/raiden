@@ -40,7 +40,16 @@ if TYPE_CHECKING:
 
 @dataclass
 class LockedTransferState(State):
-    pass
+
+    payment_identifier: PaymentID
+    token: TokenAddress
+    lock: HashTimeLockState
+    initiator: InitiatorAddress
+    target: TargetAddress
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.lock, HashTimeLockState):
+            raise ValueError("lock must be a HashTimeLockState instance")
 
 
 @dataclass
@@ -49,14 +58,11 @@ class LockedTransferUnsignedState(LockedTransferState):
     time lock and may be sent.
     """
 
-    payment_identifier: PaymentID
-    token: TokenAddress
     balance_proof: BalanceProofUnsignedState
-    lock: HashTimeLockState
-    initiator: InitiatorAddress
-    target: TargetAddress
+    route_state: RouteState
 
     def __post_init__(self) -> None:
+        super().__post_init__()
 
         typecheck(self.lock, HashTimeLockState)
         typecheck(self.balance_proof, BalanceProofUnsignedState)
@@ -74,12 +80,8 @@ class LockedTransferSignedState(LockedTransferState):
     """
 
     message_identifier: MessageID
-    payment_identifier: PaymentID
-    token: TokenAddress
-    balance_proof: BalanceProofSignedState
-    lock: HashTimeLockState
-    initiator: InitiatorAddress
-    target: TargetAddress
+    balance_proof: BalanceProofSignedState = field(repr=False)
+    route: List[Address]
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)
@@ -92,6 +94,7 @@ class LockedTransferSignedState(LockedTransferState):
 
     @property
     def payer_address(self) -> Address:
+        # pylint: disable=E1101
         return self.balance_proof.sender
 
 

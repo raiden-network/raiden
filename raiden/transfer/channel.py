@@ -490,12 +490,12 @@ def is_valid_lockedtransfer(
     receiver_state: NettingChannelEndState,
 ) -> PendingLocksStateOrError:
     return valid_lockedtransfer_check(
-        channel_state,
-        sender_state,
-        receiver_state,
-        "LockedTransfer",
-        transfer_state.balance_proof,
-        transfer_state.lock,
+        channel_state=channel_state,
+        sender_state=sender_state,
+        receiver_state=receiver_state,
+        message_name="LockedTransfer",
+        received_balance_proof=transfer_state.balance_proof,
+        lock=transfer_state.lock,
     )
 
 
@@ -1218,6 +1218,7 @@ def create_sendlockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
+    route_state: "RouteState",
 ) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -1261,7 +1262,13 @@ def create_sendlockedtransfer(
     )
 
     locked_transfer = LockedTransferUnsignedState(
-        payment_identifier, token, balance_proof, lock, initiator, target
+        payment_identifier=payment_identifier,
+        token=token,
+        balance_proof=balance_proof,
+        lock=lock,
+        initiator=initiator,
+        target=target,
+        route_state=route_state,
     )
 
     lockedtransfer = SendLockedTransfer(
@@ -1340,6 +1347,7 @@ def send_lockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
+    route_state: "RouteState",
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state,
@@ -1350,6 +1358,7 @@ def send_lockedtransfer(
         payment_identifier,
         expiration,
         secrethash,
+        route_state=route_state,
     )
 
     transfer = send_locked_transfer_event.transfer
@@ -1371,6 +1380,7 @@ def send_refundtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
+    route_state: "RouteState",
 ) -> SendRefundTransfer:
     msg = "Refunds are only valid for *known and pending* transfers"
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
@@ -1379,14 +1389,15 @@ def send_refundtransfer(
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
     send_mediated_transfer, pending_locks = create_sendlockedtransfer(
-        channel_state,
-        initiator,
-        target,
-        amount,
-        message_identifier,
-        payment_identifier,
-        expiration,
-        secrethash,
+        channel_state=channel_state,
+        initiator=initiator,
+        target=target,
+        amount=amount,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        expiration=expiration,
+        secrethash=secrethash,
+        route_state=route_state,
     )
 
     mediated_transfer = send_mediated_transfer.transfer

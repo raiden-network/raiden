@@ -56,6 +56,7 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     PendingLocksState,
+    RouteState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
@@ -463,6 +464,11 @@ def test_channelstate_send_lockedtransfer():
         payment_identifier,
         lock_expiration,
         lock_secrethash,
+        route_state=RouteState(
+            # pylint: disable=E1101
+            route=[channel_state.partner_state.address],
+            forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+        ),
     )
 
     our_model2 = our_model1._replace(
@@ -958,6 +964,11 @@ def test_channel_never_expires_lock_with_secret_onchain():
         payment_identifier=payment_identifier,
         expiration=lock_expiration,
         secrethash=lock_secrethash,
+        route_state=RouteState(
+            # pylint: disable=E1101
+            route=[channel_state.partner_state.address],
+            forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+        ),
     )
 
     # pylint: disable=E1101
@@ -1382,12 +1393,16 @@ def test_channelstate_unlock_unlocked_onchain():
 
 
 def test_refund_transfer_matches_received():
-    same = LockedTransferSignedStateProperties(amount=30, expiration=50)
+    amount = 30
+    expiration = 50
+
+    same = LockedTransferSignedStateProperties(amount=amount, expiration=expiration)
     lower = replace(same, expiration=49)
 
     refund_lower_expiration = create(lower)
     refund_same_expiration = create(same)
-    transfer = create(same.extract(LockedTransferUnsignedStateProperties))
+
+    transfer = create(LockedTransferUnsignedStateProperties(amount=amount, expiration=expiration))
 
     assert channel.refund_transfer_matches_transfer(refund_lower_expiration, transfer) is False
     assert channel.refund_transfer_matches_transfer(refund_same_expiration, transfer) is True
