@@ -149,6 +149,7 @@ def subdispatch_to_all_channels(
                     state_change=state_change,
                     block_number=block_number,
                     block_hash=block_hash,
+                    pseudo_random_generator=chain_state.pseudo_random_generator,
                 )
                 events.extend(result.events)
 
@@ -169,6 +170,7 @@ def subdispatch_by_canonical_id(
             state_change=state_change,
             block_number=chain_state.block_number,
             block_hash=chain_state.block_hash,
+            pseudo_random_generator=chain_state.pseudo_random_generator,
         )
         assert iteration.new_state, "No token network state transition can lead to None"
 
@@ -529,6 +531,7 @@ def handle_token_network_action(
             state_change=state_change,
             block_number=chain_state.block_number,
             block_hash=chain_state.block_hash,
+            pseudo_random_generator=chain_state.pseudo_random_generator,
         )
         assert iteration.new_state, "No token network state transition leads to None"
 
@@ -690,12 +693,9 @@ def handle_receive_withdraw_request(
         chain_state: ChainState,
         state_change: ReceiveWithdrawRequest,
 ) -> TransitionResult[ChainState]:
-    channel_state = views.get_channelstate_by_canonical_identifier(
+    return subdispatch_by_canonical_id(
         chain_state=chain_state,
         canonical_identifier=state_change.canonical_identifier,
-    )
-    return channel.state_transition(
-        channel_state=channel_state,
         state_change=state_change,
     )
 
@@ -704,12 +704,9 @@ def handle_receive_withdraw(
         chain_state: ChainState,
         state_change: ReceiveWithdraw,
 ) -> TransitionResult[ChainState]:
-    channel_state = views.get_channelstate_by_canonical_identifier(
+    return subdispatch_by_canonical_id(
         chain_state=chain_state,
         canonical_identifier=state_change.canonical_identifier,
-    )
-    return channel.state_transition(
-        channel_state=channel_state,
         state_change=state_change,
     )
 

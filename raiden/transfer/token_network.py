@@ -23,6 +23,7 @@ from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, U
 StateChangeWithChannelID = Union[
     ActionChannelClose,
     ActionChannelSetFee,
+    ActionChannelWithdraw,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
@@ -73,28 +74,30 @@ def handle_channel_close(
     state_change: ActionChannelClose,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
 def handle_channel_withdraw(
         token_network_state: TokenNetworkState,
         state_change: ActionChannelWithdraw,
-        pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
+        pseudo_random_generator: random.Random,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
@@ -130,12 +133,14 @@ def handle_balance(
     state_change: ContractReceiveChannelNewBalance,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
@@ -144,6 +149,7 @@ def handle_closed(
     state_change: ContractReceiveChannelClosed,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     network_graph_state = token_network_state.network_graph
 
@@ -163,6 +169,7 @@ def handle_closed(
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
@@ -171,12 +178,14 @@ def handle_settled(
     state_change: ContractReceiveChannelSettled,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
@@ -185,12 +194,14 @@ def handle_updated_transfer(
     state_change: ContractReceiveUpdateTransfer,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
 
@@ -199,6 +210,7 @@ def handle_batch_unlock(
     state_change: ContractReceiveChannelBatchUnlock,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events = list()
     channel_state = token_network_state.channelidentifiers_to_channels.get(
@@ -210,6 +222,7 @@ def handle_batch_unlock(
             state_change=state_change,
             block_number=block_number,
             block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
         events.extend(sub_iteration.events)
 
@@ -272,7 +285,11 @@ def state_transition(
     if type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_channel_close(
-            token_network_state, state_change, block_number, block_hash
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ActionChannelSetFee:
         assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
@@ -281,6 +298,7 @@ def state_transition(
             state_change=state_change,
             block_number=block_number,
             block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
     if type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
@@ -293,31 +311,66 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
-        iteration = handle_channelnew(token_network_state, state_change)
+        iteration = handle_channelnew(
+            token_network_state=token_network_state,
+            state_change=state_change,
+        )
     elif type(state_change) == ContractReceiveChannelNewBalance:
         assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
-        iteration = handle_balance(token_network_state, state_change, block_number, block_hash)
+        iteration = handle_balance(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
-        iteration = handle_closed(token_network_state, state_change, block_number, block_hash)
+        iteration = handle_closed(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
-        iteration = handle_settled(token_network_state, state_change, block_number, block_hash)
+        iteration = handle_settled(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
     elif type(state_change) == ContractReceiveUpdateTransfer:
         assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
         iteration = handle_updated_transfer(
-            token_network_state, state_change, block_number, block_hash
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_batch_unlock(
-            token_network_state, state_change, block_number, block_hash
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveRouteNew:
         assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
-        iteration = handle_newroute(token_network_state, state_change)
+        iteration = handle_newroute(
+            token_network_state=token_network_state,
+            state_change=state_change,
+        )
     elif type(state_change) == ContractReceiveRouteClosed:
         assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
-        iteration = handle_closeroute(token_network_state, state_change)
+        iteration = handle_closeroute(
+            token_network_state=token_network_state,
+            state_change=state_change,
+        )
 
     return iteration
