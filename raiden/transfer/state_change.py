@@ -113,8 +113,7 @@ class ActionChannelClose(StateChange):
 @dataclass
 class ActionChannelWithdraw(StateChange):
     """ Withdraw funds from channel. """
-    token_network_identifier: TokenNetworkID
-    channel_identifier: ChannelID
+    canonical_identifier: CanonicalIdentifier
     total_withdraw: TokenAmount
 
 

@@ -515,16 +515,16 @@ class WithdrawRequest(SignedMessage):
     cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
 
     chain_id: ChainID
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
     participant: Address
-    total_withdraw: typing.PaymentAmount
+    total_withdraw: PaymentAmount
 
     @classmethod
     def unpack(cls, packed):
         withdraw_request = cls(
             chain_id=packed.chain_id,
-            token_network_identifier=packed.token_network_identifier,
+            token_network_address=packed.token_network_address,
             channel_identifier=packed.channel_identifier,
             total_withdraw=packed.total_withdraw,
             participant=packed.participant,
@@ -534,7 +534,7 @@ class WithdrawRequest(SignedMessage):
 
     def pack(self, packed):
         packed.chain_id = self.chain_id
-        packed.token_network_identifier = self.token_network_identifier
+        packed.token_network_address = self.token_network_address
         packed.channel_identifier = self.channel_identifier
         packed.total_withdraw = self.total_withdraw
         packed.participant = self.participant
@@ -545,7 +545,7 @@ class WithdrawRequest(SignedMessage):
     def from_event(cls, event):
         return cls(
             chain_id=event.chain_id,
-            token_network_identifier=event.token_network_identifier,
+            token_network_address=event.token_network_address,
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
@@ -558,16 +558,16 @@ class Withdraw(SignedMessage):
     cmdid: ClassVar[int] = messages.WITHDRAW
 
     chain_id: ChainID
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
     participant: Address
-    total_withdraw: typing.PaymentAmount
+    total_withdraw: PaymentAmount
 
     @classmethod
     def unpack(cls, packed):
         withdraw_request = cls(
             chain_id=packed.chain_id,
-            token_network_identifier=packed.token_network_identifier,
+            token_network_address=packed.token_network_address,
             channel_identifier=packed.channel_identifier,
             total_withdraw=packed.total_withdraw,
             participant=packed.participant,
@@ -577,7 +577,7 @@ class Withdraw(SignedMessage):
 
     def pack(self, packed):
         packed.chain_id = self.chain_id
-        packed.token_network_identifier = self.token_network_identifier
+        packed.token_network_address = self.token_network_address
         packed.channel_identifier = self.channel_identifier
         packed.total_withdraw = self.total_withdraw
         packed.participant = self.participant
@@ -588,7 +588,7 @@ class Withdraw(SignedMessage):
     def from_event(cls, event):
         return cls(
             chain_id=event.chain_id,
-            token_network_identifier=event.token_network_identifier,
+            token_network_address=event.token_network_address,
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,

@@ -55,6 +55,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -85,7 +86,6 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    ChannelID,
     FeeAmount,
     InitiatorAddress,
     Optional,
@@ -1167,13 +1167,11 @@ class RaidenService(Runnable):
 
     def withdraw(
         self,
-        token_network_identifier: TokenNetworkID,
-        channel_identifier: ChannelID,
+        canonical_identifier: CanonicalIdentifier,
         total_withdraw: TokenAmount,
     ):
         init_withdraw = ActionChannelWithdraw(
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=canonical_identifier,
             total_withdraw=total_withdraw,
         )
 

@@ -35,12 +35,10 @@ from raiden.utils.typing import (
 class ContractSendChannelWithdraw(ContractSendEvent):
     """ Event emitted if node wants to withdraw from current channel balance. """
 
-    channel_identifier: ChannelID
-    token_network_identifier: TokenNetworkID
+    canonical_identifier: CanonicalIdentifier
     total_withdraw: TokenAmount
     participant_signature: Signature
     partner_signature: Signature
-    triggered_by_block_hash: BlockHash
 
 
 @dataclass

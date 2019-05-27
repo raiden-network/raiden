@@ -850,7 +850,7 @@ def is_valid_withdraw_request(
 
     withdraw_request_message = WithdrawRequest(
         chain_id=channel_state.chain_id,
-        token_network_identifier=withdraw_request.token_network_identifier,
+        token_network_address=withdraw_request.token_network_address,
         channel_identifier=withdraw_request.channel_identifier,
         total_withdraw=withdraw_request.total_withdraw,
         participant=channel_state.partner_state.address,
@@ -892,7 +892,7 @@ def is_valid_withdraw_confirmation(
 
     withdraw_message = Withdraw(
         chain_id=channel_state.chain_id,
-        token_network_identifier=withdraw.token_network_identifier,
+        token_network_address=withdraw.token_network_address,
         channel_identifier=withdraw.channel_identifier,
         total_withdraw=withdraw.total_withdraw,
         participant=channel_state.our_state.address,
@@ -988,7 +988,10 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
     return Balance(
-        sender.contract_balance sender.total_withdraw - sender_transferred_amount + receiver_transferred_amount
+        sender.contract_balance -
+        sender.total_withdraw -
+        sender_transferred_amount +
+        receiver_transferred_amount
     )
 
 
@@ -1473,17 +1476,16 @@ def events_for_withdraw(
         total_withdraw: TokenAmount,
         block_number: BlockNumber,
         block_hash: BlockHash,
-        pseudo_random_generator: random.Random,
 ) -> List[Event]:
     events = list()
 
     if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
-        return []
+        return events
 
     withdraw_event = SendWithdrawRequest(
         recipient=channel_state.partner_state.address,
         chain_id=channel_state.chain_id,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         total_withdraw=total_withdraw,
@@ -1713,7 +1715,7 @@ def handle_receive_withdraw_request(
             SendWithdraw(
                 recipient=channel_state.partner_state.address,
                 chain_id=channel_state.chain_id,
-                token_network_identifier=channel_state.token_network_identifier,
+                token_network_address=channel_state.token_network_address,
                 channel_identifier=channel_state.identifier,
                 total_withdraw=withdraw_request.total_withdraw,
                 participant=channel_state.partner_state.address,
@@ -1732,7 +1734,7 @@ def handle_receive_withdraw(
 
         withdraw_request_message = WithdrawRequest(
             chain_id=channel_state.chain_id,
-            token_network_identifier=withdraw.token_network_identifier,
+            token_network_address=withdraw.token_network_address,
             channel_identifier=withdraw.channel_identifier,
             total_withdraw=withdraw.total_withdraw,
             participant=channel_state.partner_state.address,
@@ -1741,7 +1743,7 @@ def handle_receive_withdraw(
 
         events.append(
             ContractSendChannelWithdraw(
-                token_network_identifier=channel_state.token_network_identifier,
+                token_network_address=channel_state.token_network_address,
                 channel_identifier=channel_state.identifier,
                 total_withdraw=withdraw.total_withdraw,
                 participant_signature=participant_signature,

@@ -70,7 +70,7 @@ class MessageHandler:
 
         elif type(message) == Withdraw:
             assert isinstance(message, Withdraw), MYPY_ANNOTATION
-            self.handle_message_withdrawrequest(raiden, message)
+            self.handle_message_withdraw(raiden, message)
 
         elif type(message) == Delivered:
             assert isinstance(message, Delivered), MYPY_ANNOTATION
@@ -84,7 +84,7 @@ class MessageHandler:
 
     def handle_message_withdrawrequest(raiden: RaidenService, message: WithdrawRequest):
         withdraw_request = ReceiveWithdrawRequest(
-            token_network_identifier=message.token_network_identifier,
+            token_network_address=message.token_network_address,
             channel_identifier=message.channel_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
@@ -93,14 +93,14 @@ class MessageHandler:
         raiden.handle_and_track_state_change(withdraw_request)
 
     def handle_message_withdraw(raiden: RaidenService, message: Withdraw):
-        secret_request = ReceiveWithdraw(
-            token_network_identifier=message.token_network_identifier,
+        withdraw = ReceiveWithdraw(
+            token_network_address=message.token_network_address,
             channel_identifier=message.channel_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_change(secret_request)
+        raiden.handle_and_track_state_change(withdraw)
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
@@ -111,7 +111,7 @@ class MessageHandler:
             secrethash=message.secrethash,
             sender=message.sender,
         )
-        raiden.handle_and_track_state_change(withdraw)
+        raiden.handle_and_track_state_change(secret_request)
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
