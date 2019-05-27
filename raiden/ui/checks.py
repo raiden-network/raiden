@@ -97,8 +97,9 @@ def check_ethereum_network_id(given_network_id: int, web3: Web3) -> None:
 
 
 def check_raiden_environment(network_id: int, environment_type: Environment) -> None:
-    # for now we don't have a mainnet or a production configuration
-    not_allowed = network_id == 1 or environment_type == Environment.PRODUCTION
+    not_allowed = (  # for now we only disallow mainnet with test configuration
+        network_id == 1 and environment_type == Environment.DEVELOPMENT
+    )
     if not_allowed:
         click.secho(
             f"The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, "
