@@ -190,9 +190,8 @@ def deploy_token_network_registry_and_return_address(
         chain_id,
         settle_timeout_min,
         settle_timeout_max,
+        UINT256_MAX
     ]
-    if environment_type == Environment.DEVELOPMENT:
-        constructor_arguments.append(UINT256_MAX)
 
     address = deploy_contract_web3(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
