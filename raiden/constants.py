@@ -51,9 +51,10 @@ EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
-EMPTY_SECRET = Secret(b"")
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 ZERO_TOKENS = TokenAmount(0)
+
+ABSENT_SECRET = Secret(b"")
 
 SECRET_LENGTH = 32
 SECRETHASH_LENGTH = 32

@@ -16,7 +16,7 @@ from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
-    EMPTY_SECRET,
+    ABSENT_SECRET,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -1039,7 +1039,7 @@ class RaidenService(Runnable):
             if secrethash is None:
                 secret = random_secret()
             else:
-                secret = EMPTY_SECRET
+                secret = ABSENT_SECRET
 
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
