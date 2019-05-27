@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, List
 import gevent
 import structlog
 
+from raiden.exceptions import ChannelNotFound
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -10,17 +11,20 @@ from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
+    NettingChannelState,
 )
 from raiden.utils.typing import (
     Address,
     BlockNumber,
     ChannelID,
+    Optional,
     PaymentAmount,
     PaymentID,
     PaymentNetworkAddress,
     Sequence,
     TokenAddress,
     TokenAmount,
+    WithdrawAmount,
 )
 
 if TYPE_CHECKING:
@@ -107,6 +111,51 @@ def wait_for_participant_newbalance(
             token_address,
             partner_address,
         )
+
+
+def wait_for_participant_withdraw(
+    raiden: "RaidenService",
+    payment_network_address: PaymentNetworkAddress,
+    token_address: TokenAddress,
+    partner_address: Address,
+    target_address: Address,
+    target_withdraw: WithdrawAmount,
+    retry_timeout: float,
+) -> None:
+    """Wait until a given channels total_withdraw reaches/exceeds the target withdraw amount.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    def _get_total_withdraw(channel_state: Optional[NettingChannelState]) -> WithdrawAmount:
+        if channel_state is None:
+            raise ChannelNotFound()
+
+        if target_address == raiden.address:
+            return channel_state.our_state.total_withdraw
+        elif target_address == partner_address:
+            return channel_state.partner_state.total_withdraw
+        else:
+            raise ValueError("target_address must be one of the channel participants")
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
+    )
+
+    total_withdraw = _get_total_withdraw(channel_state)
+
+    while total_withdraw < target_withdraw:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
+        gevent.sleep(retry_timeout)
+        channel_state = views.get_channelstate_for(
+            views.state_from_raiden(raiden),
+            payment_network_address,
+            token_address,
+            partner_address,
+        )
+        total_withdraw = _get_total_withdraw(channel_state)
 
 
 def wait_for_payment_balance(
