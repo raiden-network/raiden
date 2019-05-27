@@ -5,8 +5,8 @@ settings:
   chain: any
   services:
     pfs:
-      # url: https://pfs-kovan.services-dev.raiden.network
       url: https://pfs-goerli.services-dev.raiden.network
+      #url: http://localhost:6000
     udc:
       enable: true
       token:
@@ -48,6 +48,7 @@ scenario:
             # Node 3 cannot send tokens to Node 0 due to imbalanced channels
             # We expect the pfs not to send any route but to charge for the information
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 409}
+            - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: 10}
             - assert_pfs_iou: {source: 2, amount: 0}
@@ -65,6 +66,7 @@ scenario:
             # Now that there is a path with capacity the transfer should go through 
             # and another IOU should exist
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 200}
+            - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 3, amount: 20}
             - assert_pfs_iou: {source: 2, amount: 10}
@@ -74,6 +76,7 @@ scenario:
             - assert_pfs_iou: {source: 0, iou_exists: false}
             - assert_pfs_history: {source: 0, request_count: 0}
             - transfer: {from: 0, to: 3, amount: 100, expected_http_status: 200}
+            - wait: 10
             - assert_pfs_history: {source: 0, target: 3, request_count: 1}
             - assert_pfs_iou: {source: 0, amount: 10}
             - assert_pfs_iou: {source: 1, amount: 10}
@@ -83,5 +86,6 @@ scenario:
             - assert_pfs_iou: {source: 2, iou_exists: true, amount: 10}
             - assert_pfs_history: {source: 2, request_count: 1}
             - transfer: {from: 2, to: 0, amount: 100, expected_http_status: 200}
-            - assert_pfs_history: {source: 2, target: 1, request_count: 2}
+            - wait: 10
+            - assert_pfs_history: {source: 2, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 2, amount: 20}
