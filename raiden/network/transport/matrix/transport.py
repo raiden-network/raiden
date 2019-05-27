@@ -197,7 +197,7 @@ class _RetryQueue(Runnable):
         # sort output by channel_identifier (so global/unordered queue goes first)
         # inside queue, preserve order in which messages were enqueued
         ordered_queue = sorted(
-            self._message_queue, key=lambda d: d.queue_identifier.channel_identifier
+            self._message_queue, key=lambda d: d.queue_identifier.canonical_identifier
         )
         message_texts = [
             data.text

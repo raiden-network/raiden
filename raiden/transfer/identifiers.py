@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 
-from eth_utils import to_checksum_address, to_bytes
+from eth_utils import to_bytes, to_checksum_address
 
 from raiden import constants
 from raiden.utils.typing import (
     Address,
-    Any,
     ChainID,
     ChannelID,
     T_Address,
@@ -15,7 +14,7 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass
+@dataclass(frozen=True, order=True)
 class CanonicalIdentifier:
     chain_identifier: ChainID
     token_network_address: TokenNetworkAddress
@@ -45,32 +44,18 @@ class CanonicalIdentifier:
         try:
             chain_id_str, token_network_address_hex, channel_id_str = string.split("|")
             return CanonicalIdentifier(
-                chain_identifier=int(chain_id_str),
+                chain_identifier=ChainID(int(chain_id_str)),
                 token_network_address=to_bytes(hexstr=token_network_address_hex),
-                channel_identifier=int(channel_id_str),
+                channel_identifier=ChannelID(int(channel_id_str)),
             )
-        except:
+        except ValueError:
             raise ValueError(f"Could not reconstruct canonical identifier from string: {string}")
 
 
-@dataclass
+@dataclass(frozen=True)
 class QueueIdentifier:
     recipient: Address
     canonical_identifier: CanonicalIdentifier
-
-    @property
-    def channel_identifier(self):
-        return self.canonical_identifier.channel_identifier
-
-    def __hash__(self) -> int:  # TODO
-        return hash((self.recipient, self.channel_identifier))
-
-    def __eq__(self, other: Any) -> bool:  # TODO
-        return (
-            isinstance(other, QueueIdentifier)
-            and self.recipient == other.recipient
-            and self.channel_identifier == other.channel_identifier
-        )
 
 
 # According to the smart contracts as of 07/08:
