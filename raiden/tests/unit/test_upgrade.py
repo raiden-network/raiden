@@ -90,8 +90,7 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
         )
         action_init_chain_data = JSONSerializer.serialize(state_change)
         storage.write_state_change(
-            state_change=action_init_chain_data,
-            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
+            state_change=action_init_chain_data, timestamp=datetime.utcnow()
         )
         storage.update_version()
 

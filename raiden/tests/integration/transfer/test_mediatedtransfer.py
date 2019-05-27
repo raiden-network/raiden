@@ -150,7 +150,7 @@ def run_test_locked_transfer_secret_registered_onchain(
     message_handler = MessageHandler()
     message_handler.handle_message_lockedtransfer(app0.raiden, locked_transfer)
 
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, "latest")
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier("earliest", "latest")
     transfer_statechange_dispatched = search_for_item(
         state_changes, ActionInitMediator, {}
     ) or search_for_item(state_changes, ActionInitTarget, {})

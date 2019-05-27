@@ -168,7 +168,7 @@ def test_recovery_unhappy_case(
     app0_restart.start()
 
     state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
 
     assert search_for_item(
@@ -232,6 +232,6 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
     waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
     restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        0, "latest"
+        "earliest", "latest"
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})

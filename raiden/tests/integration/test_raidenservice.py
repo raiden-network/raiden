@@ -47,7 +47,7 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     target_block_num = latest_block["number"]
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+        from_identifier="earliest", to_identifier="latest"
     )
 
     assert search_for_item(

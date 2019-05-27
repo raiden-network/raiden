@@ -6,6 +6,7 @@ from raiden.storage.sqlite import (
     FilteredDBQuery,
     Operator,
     SerializedSQLiteStorage,
+    StateChangeID,
     StateChangeRecord,
 )
 from raiden.storage.wal import restore_to_state_change
@@ -21,7 +22,6 @@ from raiden.utils.typing import (
     List,
     Locksroot,
     Optional,
-    StateChangeID,
     Union,
 )
 

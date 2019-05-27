@@ -215,7 +215,7 @@ def test_get_state_change_with_balance_proof():
         (action_init_target, action_init_target.transfer.balance_proof),
     ]
 
-    timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
+    timestamp = datetime.utcnow()
 
     assert storage.count_state_changes() == 0
 
@@ -225,18 +225,21 @@ def test_get_state_change_with_balance_proof():
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_identifier(1, "latest")
-    assert isinstance(stored_statechanges[0], ReceiveLockExpired)
-    assert isinstance(stored_statechanges[1], ReceiveUnlock)
-    assert isinstance(stored_statechanges[2], ReceiveTransferRefund)
-    assert isinstance(stored_statechanges[3], ReceiveTransferRefundCancelRoute)
-    assert isinstance(stored_statechanges[4], ActionInitMediator)
-    assert isinstance(stored_statechanges[5], ActionInitTarget)
+    stored_statechanges = storage.get_statechanges_by_identifier("earliest", "latest")
+    assert isinstance(stored_statechanges[0].data, ReceiveLockExpired)
+    assert isinstance(stored_statechanges[1].data, ReceiveUnlock)
+    assert isinstance(stored_statechanges[2].data, ReceiveTransferRefund)
+    assert isinstance(stored_statechanges[3].data, ReceiveTransferRefundCancelRoute)
+    assert isinstance(stored_statechanges[4].data, ActionInitMediator)
+    assert isinstance(stored_statechanges[5].data, ActionInitTarget)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_identifier(1, 2)
-    assert isinstance(stored_statechanges[0], ReceiveLockExpired)
-    assert isinstance(stored_statechanges[1], ReceiveUnlock)
+    stored_statechanges = storage.get_statechanges_by_identifier(
+        stored_statechanges[1].state_change_identifier,
+        stored_statechanges[2].state_change_identifier,
+    )
+    assert isinstance(stored_statechanges[0].data, ReceiveUnlock)
+    assert isinstance(stored_statechanges[1].data, ReceiveTransferRefund)
 
     for state_change, balance_proof in statechanges_balanceproofs:
         state_change_record = get_state_change_with_balance_proof_by_balance_hash(
@@ -254,6 +257,8 @@ def test_get_state_change_with_balance_proof():
             locksroot=balance_proof.locksroot,
         )
         assert state_change_record.data == state_change
+
+    storage.close()
 
 
 def test_get_event_with_balance_proof():
@@ -303,12 +308,12 @@ def test_get_event_with_balance_proof():
         (refund_transfer, refund_transfer.transfer.balance_proof),
     ]
 
-    timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
+    timestamp = datetime.utcnow()
     state_change = ""
     for event, _ in events_balanceproofs:
         state_change_identifier = storage.write_state_change(state_change, timestamp)
         storage.write_events(
-            state_change_identifier=state_change_identifier, events=[event], log_time=timestamp
+            state_change_identifier=state_change_identifier, events=[event], timestamp=timestamp
         )
 
     for event, balance_proof in events_balanceproofs:
@@ -332,6 +337,8 @@ def test_get_event_with_balance_proof():
         # Issue https://github.com/raiden-network/raiden/issues/3179
         assert event_record.data.balance_proof == event.balance_proof
 
+    storage.close()
+
 
 def test_log_run():
     with patch("raiden.storage.sqlite.get_system_spec") as get_speck_mock:
@@ -345,21 +352,37 @@ def test_log_run():
     assert now - timedelta(seconds=2) <= run[0] <= now, f"{run[0]} not right before {now}"
     assert run[1] == "1.2.3"
 
+    store.close()
+
 
 @pytest.fixture
 def storage():
-    state_changes_file = Path(__file__).parent / "test_data/db_statechanges.json"
+    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
+
     with SQLiteStorage(":memory:") as storage:
+        state_change_identifiers = list()
         for state_change_record in state_changes_data:
-            storage.write_state_change(
-                state_change=json.dumps(state_change_record[1]),
-                log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
+            state_change_id = storage.write_state_change(
+                state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
             )
+            state_change_identifiers.append(state_change_id)
+
         yield storage
 
 
-def test_batch_query_state_changes(storage):
+def test_batch_query_state_changes():
+    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
+    state_changes_data = json.loads(state_changes_file.read_text())
+
+    storage = SQLiteStorage(":memory:")
+    state_change_identifiers = list()
+    for state_change_record in state_changes_data:
+        state_change_id = storage.write_state_change(
+            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+        )
+        state_change_identifiers.append(state_change_id)
+
     # Test that querying the state changes in batches of 10 works
     state_changes_num = 87
     state_changes = []
@@ -367,8 +390,8 @@ def test_batch_query_state_changes(storage):
         state_changes.extend(state_changes_batch)
 
     assert len(state_changes) == state_changes_num
-    for i in range(1, 87):
-        assert state_changes[i - 1].state_change_identifier == i
+    for pos, id_ in enumerate(state_change_identifiers):
+        assert state_changes[pos].state_change_identifier == id_
 
     # Test that we can also add a filter
     state_changes = []
@@ -395,15 +418,28 @@ def test_batch_query_state_changes(storage):
         state_changes.extend(state_changes_batch)
     assert len(state_changes) == 6
 
+    storage.close()
 
-def test_batch_query_event_records(storage):
-    events_file = Path(__file__).parent / "test_data/db_events.json"
+
+def test_batch_query_event_records():
+    storage = SQLiteStorage(":memory:")
+
+    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
+    state_changes_data = json.loads(state_changes_file.read_text())
+    state_change_identifiers = list()
+    for state_change_record in state_changes_data:
+        state_change_id = storage.write_state_change(
+            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+        )
+        state_change_identifiers.append(state_change_id)
+
+    events_file = Path(__file__).parent / "test_data" / "db_events.json"
     events_data = json.loads(events_file.read_text())
     for event in events_data:
-        state_change_identifier = event[1]
+        state_change_id = state_change_identifiers[event[1]]
         event_data = json.dumps(event[2])
         log_time = datetime.utcnow().isoformat(timespec="milliseconds")
-        event_tuple = (state_change_identifier, log_time, event_data)
+        event_tuple = (state_change_id, log_time, event_data)
         storage.write_events([event_tuple])
 
     # Test that querying the events in batches of 1 works
@@ -437,15 +473,17 @@ def test_batch_query_event_records(storage):
         events.extend(events_batch)
     assert len(events) == 2
 
+    storage.close()
+
 
 def test_update_event_get_event():
     storage = SQLiteStorage(":memory:")
-    state_changes_file = Path(__file__).parent / "test_data/db_statechanges.json"
+    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
             state_change=json.dumps(state_change_record[1]),
-            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
+            timestamp=datetime.utcnow().isoformat(timespec="milliseconds"),
         )
 
 
