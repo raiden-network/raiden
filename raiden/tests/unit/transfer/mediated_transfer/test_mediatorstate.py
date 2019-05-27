@@ -1498,6 +1498,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         state_change=channel_closed,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     payee_channel_state = channel_close_transition.new_state
 

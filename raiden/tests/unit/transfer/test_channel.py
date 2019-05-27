@@ -1,3 +1,4 @@
+import random
 from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
@@ -63,6 +64,7 @@ def test_channel_cleared_after_two_unlocks():
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()
+    pseudo_random_generator = random.Random()
 
     def make_unlock(unlock_end, partner_end):
         batch_unlock = ContractReceiveChannelBatchUnlock(
@@ -86,7 +88,13 @@ def test_channel_cleared_after_two_unlocks():
         block_number=1,
         block_hash=make_block_hash(),
     )
-    iteration = channel.state_transition(channel_state, settle_channel, block_number, block_hash)
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=settle_channel,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator
+    )
 
     msg = "both participants have pending locks, merkleroot must not be empty"
     assert iteration.new_state.our_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
@@ -94,7 +102,11 @@ def test_channel_cleared_after_two_unlocks():
 
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
-        iteration.new_state, batch_unlock, block_number, block_hash
+        channel_state=iteration.new_state,
+        state_change=batch_unlock,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     msg = "all of our locks has been unlocked, onchain state must be updated"
     assert iteration.new_state.our_state.onchain_locksroot is EMPTY_MERKLE_ROOT, msg
@@ -105,7 +117,11 @@ def test_channel_cleared_after_two_unlocks():
 
     # processing the same unlock twice must not count
     iteration = channel.state_transition(
-        iteration.new_state, batch_unlock, block_number, block_hash
+        channel_state=iteration.new_state,
+        state_change=batch_unlock,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     msg = "partner has pending locks, the merkleroot must not be cleared"
     assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
@@ -113,16 +129,18 @@ def test_channel_cleared_after_two_unlocks():
     assert iteration.new_state is not None, msg
 
     iteration = channel.state_transition(
-        iteration.new_state,
-        make_unlock(channel_state.partner_state, channel_state.our_state),
-        block_number,
-        block_hash,
+        channel_state=iteration.new_state,
+        state_change=make_unlock(channel_state.partner_state, channel_state.our_state),
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     msg = "all unlocks have been done, channel must be cleared"
     assert iteration.new_state is None, msg
 
 
 def test_channel_cleared_after_our_unlock():
+    pseudo_random_generator = random.Random()
     our_model, _ = create_model(balance=700, merkletree_width=1)
     partner_model, partner_key1 = create_model(balance=700, merkletree_width=0)
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
@@ -155,11 +173,21 @@ def test_channel_cleared_after_our_unlock():
     assert settle_channel.our_onchain_locksroot is not EMPTY_MERKLE_ROOT
     assert settle_channel.partner_onchain_locksroot is EMPTY_MERKLE_ROOT
 
-    iteration = channel.state_transition(channel_state, settle_channel, block_number, block_hash)
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=settle_channel,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
 
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
-        iteration.new_state, batch_unlock, block_number, block_hash
+        channel_state=iteration.new_state,
+        state_change=batch_unlock,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     msg = "partner did not have any locks in the merkletree, channel should have been cleaned"
     assert iteration.new_state is None, msg

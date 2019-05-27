@@ -1,4 +1,5 @@
 import copy
+import random
 from hashlib import sha256
 
 import pytest
@@ -881,7 +882,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
     address2 = factories.make_address()
     address3 = factories.make_address()
     address4 = factories.make_address()
-
+    pseudo_random_generator = random.Random()
     # Create a network with the following topology
     #
     # our  ----- 1/1 ----> (1)
@@ -930,6 +931,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change1,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     channel_new_iteration2 = token_network.state_transition(
@@ -937,6 +939,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change2,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     # create new channels without being participant
@@ -956,6 +959,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change3,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     channel_new_state_change4 = ContractReceiveRouteNew(
@@ -974,6 +978,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change4,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     channel_new_state_change5 = ContractReceiveRouteNew(
@@ -992,6 +997,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change5,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     channel_new_state_change6 = ContractReceiveRouteNew(
@@ -1010,6 +1016,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         state_change=channel_new_state_change6,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     # test routing priority with all nodes available

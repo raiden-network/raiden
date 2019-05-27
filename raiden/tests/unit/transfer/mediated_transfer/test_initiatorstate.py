@@ -889,6 +889,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     """
     block_number = 10
     block_hash = factories.make_block_hash()
+    pseudo_random_generator = random.Random()
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
 
     channel_closed = ContractReceiveChannelClosed(
@@ -907,6 +908,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         state_change=channel_closed,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     channel_state = channel_close_transition.new_state
 
@@ -1030,6 +1032,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     """
     block_number = 10
     block_hash = factories.make_block_hash()
+    pseudo_random_generator = random.Random()
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
 
     initiator_task = get_transfer_at_index(setup.current_state, 0)
@@ -1053,6 +1056,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=channel_closed,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     channel_state = channel_close_transition.new_state
 
