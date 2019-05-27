@@ -15,7 +15,6 @@ from raiden.storage.restore import (
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,

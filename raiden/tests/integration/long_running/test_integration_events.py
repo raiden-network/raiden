@@ -597,7 +597,7 @@ def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
         (queue_id, queue)
         for queue_id, queue in queues0.items()
         if queue_id.recipient == app1.raiden.address
-        and queue_id.channel_identifier == channel_identifier
+        and queue_id.canonical_identifier.channel_identifier == channel_identifier
         and queue
     ]
 

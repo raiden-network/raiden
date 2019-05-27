@@ -494,7 +494,11 @@ def test_events_for_balanceproof():
             "payment_identifier": UNIT_TRANSFER_IDENTIFIER,
             "queue_identifier": {
                 "recipient": last_pair.payee_address,
-                "channel_identifier": payee_channel.identifier,
+                "canonical_identifier": {
+                    "chain_identifier": UNIT_CHAIN_ID,
+                    "token_network_address": UNIT_TOKEN_NETWORK_ADDRESS,
+                    "channel_identifier": payee_channel.identifier,
+                },
             },
             "secret": UNIT_SECRET,
             "balance_proof": {

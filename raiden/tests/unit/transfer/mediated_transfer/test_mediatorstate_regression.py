@@ -186,7 +186,11 @@ def test_regression_send_refund():
             "recipient": setup.channels.partner_address(0),
             "queue_identifier": {
                 "recipient": setup.channels.partner_address(0),
-                "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
+                "canonical_identifier": {
+                    "chain_identifier": first_payer_transfer.balance_proof.chain_id,
+                    "token_network_address": token_network_address,
+                    "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
+                },
             },
             "transfer": {
                 "payment_identifier": UNIT_TRANSFER_IDENTIFIER,
