@@ -1,6 +1,6 @@
 from copy import copy
 from unittest.mock import Mock, patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import requests
@@ -13,6 +13,7 @@ from raiden.network.pathfinding import (
     get_last_iou,
     get_pfs_info,
     make_iou,
+    post_pfs_feedback,
     query_paths,
     update_iou,
 )
@@ -26,7 +27,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
 )
 from raiden.utils import privatekey_to_address, typing
-from raiden.utils.typing import Address, BlockNumber, PaymentAmount, TokenNetworkAddress
+from raiden.utils.typing import Address, Any, BlockNumber, Dict, PaymentAmount, TokenNetworkAddress
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
@@ -651,7 +652,7 @@ def test_update_iou():
         update_iou(iou=tampered_iou, privkey=privkey, added_amount=added_amount)
 
 
-def request_mock(response=None, status_code=200):
+def request_mock(response=None, status_code=200) -> Mock:
     mock = Mock()
     mock.configure_mock(status_code=status_code)
     mock.json = Mock(return_value=response or {})
@@ -736,7 +737,9 @@ def pfs_max_fee():
 
 
 @pytest.fixture
-def query_paths_args(chain_id, token_network_state, one_to_n_address, our_address, pfs_max_fee):
+def query_paths_args(
+    chain_id, token_network_state, one_to_n_address, our_address, pfs_max_fee
+) -> Dict[str, Any]:
     service_config = dict(
         pathfinding_service_address="mock.pathservice",
         pathfinding_eth_address="0x2222222222222222222222222222222222222222",
@@ -827,3 +830,56 @@ def test_query_paths_with_multiple_errors(query_paths_args):
     assert_failed_pfs_request(
         query_paths_args, different_recoverable_errors, exception_type=ServiceRequestIOURejected
     )
+
+
+def test_post_pfs_feedback(query_paths_args):
+    """ Test POST feedback to PFS """
+
+    feedback_token = uuid4()
+    token_network_address = factories.make_token_network_address()
+    route = [factories.make_address(), factories.make_address()]
+
+    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+        post_pfs_feedback(
+            token_network_address=token_network_address,
+            route=route,
+            token=feedback_token,
+            succesful=True,
+            service_config=query_paths_args["service_config"],
+        )
+
+        assert feedback.called
+        assert feedback.call_args[0][0].find(to_checksum_address(token_network_address)) > 0
+
+        payload = feedback.call_args[1]["json"]
+        assert payload["token"] == feedback_token.hex
+        assert payload["status"] == "success"
+        assert payload["path"] == [to_checksum_address(addr) for addr in route]
+
+    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+        post_pfs_feedback(
+            token_network_address=token_network_address,
+            route=route,
+            token=feedback_token,
+            succesful=False,
+            service_config=query_paths_args["service_config"],
+        )
+
+        assert feedback.called
+        assert feedback.call_args[0][0].find(to_checksum_address(token_network_address)) > 0
+
+        payload = feedback.call_args[1]["json"]
+        assert payload["token"] == feedback_token.hex
+        assert payload["status"] == "failure"
+        assert payload["path"] == [to_checksum_address(addr) for addr in route]
+
+    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+        post_pfs_feedback(
+            token_network_address=token_network_address,
+            route=route,
+            token=feedback_token,
+            succesful=False,
+            service_config=None,
+        )
+
+        assert not feedback.called
