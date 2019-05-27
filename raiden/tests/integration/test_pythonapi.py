@@ -27,7 +27,11 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import views
-from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.events import (
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+)
 from raiden.transfer.state_change import ContractReceiveNewTokenNetwork
 from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import (
