@@ -1,4 +1,5 @@
 from raiden.messages import LockedTransfer, RouteMetadata
+from raiden.routing import resolve_route
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner, recover
@@ -79,3 +80,28 @@ def test_can_round_trip_serialize_locked_transfer():
 
     as_dict = DictSerializer.serialize(locked_transfer)
     assert DictSerializer.deserialize(as_dict) == locked_transfer
+
+
+def test_resolve_route(netting_channel_state, chain_state, token_network_state):
+    route_metadata = factories.create(
+        factories.RouteMetadataProperties(
+            routes=[
+                netting_channel_state.our_state.address,
+                netting_channel_state.partner_state.address,
+            ]
+        )
+    )
+
+    route_state = resolve_route(
+        route_metadata=route_metadata,
+        token_network_address=token_network_state.address,
+        chain_state=chain_state,
+    )
+
+    msg = "route resolved with wrong channel id"
+    channel_id = netting_channel_state.canonical_identifier.channel_identifier
+    assert route_state.forward_channel_id == channel_id, msg
+
+
+def test_mediator_forwards_pruned_route():
+    pass
