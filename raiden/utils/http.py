@@ -3,7 +3,6 @@ import os
 import platform
 import socket
 import ssl
-import subprocess
 import time
 from http.client import HTTPSConnection
 from json import JSONDecodeError
@@ -12,6 +11,7 @@ from typing import IO, Any, Callable, List, Optional, Tuple, Union
 from urllib.parse import urlunparse
 
 import structlog
+from gevent import subprocess
 from mirakuru.base import ENV_UUID
 from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
