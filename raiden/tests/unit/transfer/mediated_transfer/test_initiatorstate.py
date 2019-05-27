@@ -1472,9 +1472,10 @@ def test_initiator_manager_drops_invalid_state_changes():
         assert_dropped(iteration, state, "no matching initiator_state")
 
         initiator_state = InitiatorTransferState(
-            factories.UNIT_TRANSFER_DESCRIPTION,
-            channels[0].canonical_identifier.channel_identifier,
-            transfer,
+            route=factories.make_route_from_channel(channels[0]),
+            transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+            channel_identifier=channels[0].canonical_identifier.channel_identifier,
+            transfer=transfer,
         )
         state = InitiatorPaymentState(
             routes=[], initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}

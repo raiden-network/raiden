@@ -49,6 +49,7 @@ def test_v1_event_payment_sent_failed_schema():
 
 def test_event_filter_for_payments():
     token_network_address = factories.make_address()
+    secret = factories.make_secret()
     payment_network_address = factories.make_payment_network_address()
     identifier = 1
     target = factories.make_address()
@@ -58,6 +59,8 @@ def test_event_filter_for_payments():
         identifier=identifier,
         amount=5,
         target=target,
+        secret=secret,
+        route=[],
     )
     assert event_filter_for_payments(event, token_network_address, None)
     assert event_filter_for_payments(event, token_network_address, target)

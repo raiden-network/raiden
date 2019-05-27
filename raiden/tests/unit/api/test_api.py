@@ -45,7 +45,10 @@ def test_initiator_task_view():
         secrethash=sha3(secret),
     )
     transfer_state = InitiatorTransferState(
-        transfer_description=transfer_description, channel_identifier=channel_id, transfer=transfer
+        route=factories.make_route_to_channel(),
+        transfer_description=transfer_description,
+        channel_identifier=channel_id,
+        transfer=transfer,
     )
     payment_state = InitiatorPaymentState(
         routes=[], initiator_transfers={secrethash: transfer_state}
