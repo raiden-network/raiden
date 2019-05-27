@@ -6,8 +6,8 @@ settings:
   chain: any
   services:
     pfs:
-      # url: https://pfs-kovan.services-dev.raiden.network
       url: https://pfs-goerli.services-dev.raiden.network
+      #url: http://localhost:6000
     udc:
       enable: true
       token:
