@@ -183,14 +183,13 @@ def deploy_token_network_registry_and_return_address(
     settle_timeout_min,
     settle_timeout_max,
     contract_manager,
-    environment_type,
 ) -> typing.Address:
     constructor_arguments = [
         to_checksum_address(secret_registry_address),
         chain_id,
         settle_timeout_min,
         settle_timeout_max,
-        UINT256_MAX
+        UINT256_MAX,
     ]
 
     address = deploy_contract_web3(

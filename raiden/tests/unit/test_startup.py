@@ -100,9 +100,9 @@ def test_setup_contracts():
     assert service_contracts_in_data(contracts)
 
     # Goerli production
-    config = {'environment_type': Environment.PRODUCTION}
+    config = {"environment_type": Environment.PRODUCTION}
     contracts = setup_contracts_or_exit(config, 5)
-    assert 'contracts_path' in config
+    assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
