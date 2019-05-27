@@ -16,6 +16,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
     PendingLocksState,
+    RouteState,
     TokenNetworkGraphState,
     TokenNetworkState,
 )
@@ -336,10 +337,13 @@ def test_mediator_clear_pairs_after_batch_unlock(
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.make_route_from_channel(channel_state)
+    route_state = RouteState(
+        route=[channel_state.our_state.address, channel_state.partner_state.address],
+        forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+    )
     from_hop = factories.make_hop_from_channel(channel_state)
     init_mediator = ActionInitMediator(
-        routes=[from_route],
+        route_state=route_state,
         from_hop=from_hop,
         from_transfer=mediated_transfer,
         balance_proof=mediated_transfer.balance_proof,

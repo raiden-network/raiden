@@ -12,6 +12,7 @@ from raiden.transfer.mediated_transfer.state import (
     WaitingTransferState,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.state import RouteState
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 
 
@@ -91,12 +92,16 @@ def test_mediator_task_view():
             )
         )
     )
-    routes = [factories.make_route_from_channel(initiator_channel)]
-    transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=routes)
+    route_state = RouteState(
+        route=[payee_transfer.target],
+        forward_channel_id=initiator_channel.canonical_identifier.channel_identifier,
+    )
+
+    transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=[route_state])
     # pylint: disable=E1101
     transfer_state1.transfers_pair.append(
         MediationPairState(
-            route=routes[0],
+            route=route_state,
             payer_transfer=payer_transfer,
             payee_transfer=payee_transfer,
             payee_address=payee_transfer.target,
@@ -114,7 +119,7 @@ def test_mediator_task_view():
         )
     )
     secrethash2 = transfer2.lock.secrethash
-    transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=routes)
+    transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=[route_state])
     transfer_state2.waiting_transfer = WaitingTransferState(transfer=transfer2)
     task2 = MediatorTask(
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state2

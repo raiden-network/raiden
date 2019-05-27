@@ -161,8 +161,8 @@ class MessageHandler:
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
         token_network_address = message.token_network_address
-        from_transfer = lockedtransfersigned_from_message(message)
         chain_state = views.state_from_raiden(raiden)
+        from_transfer = lockedtransfersigned_from_message(message=message)
 
         # FIXME: Shouldn't request routes here
         routes, _ = get_best_routes(

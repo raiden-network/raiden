@@ -163,25 +163,20 @@ def initiator_init(
 def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
     # Feedback token not used here, will be removed with source routing
-    routes, _ = routing.get_best_routes(
-        chain_state=views.state_from_raiden(raiden),
-        token_network_address=from_transfer.balance_proof.token_network_address,
-        one_to_n_address=raiden.default_one_to_n_address,
-        from_address=InitiatorAddress(raiden.address),
-        to_address=from_transfer.target,
-        amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated through #3863
-        previous_address=transfer.sender,
-        config=raiden.config,
-        privkey=raiden.privkey,
-    )
     from_hop = HopState(
         transfer.sender,
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
+    route_state = routing.resolve_route(
+        route_metadata=transfer.route_metadata,
+        # pylint: disable=E1101
+        token_network_address=from_transfer.balance_proof.token_network_address,
+        chain_state=views.state_from_raiden(raiden),
+    )
     init_mediator_statechange = ActionInitMediator(
-        routes=routes,
         from_hop=from_hop,
+        route_state=route_state,
         from_transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -193,6 +188,7 @@ def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_hop = HopState(
         node_address=transfer.sender,
+        # pylint: disable=E1101
         channel_identifier=from_transfer.balance_proof.channel_identifier,
     )
     init_target_statechange = ActionInitTarget(
