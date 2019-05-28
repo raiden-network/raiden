@@ -853,7 +853,7 @@ def test_post_pfs_feedback(query_paths_args):
 
         payload = feedback.call_args[1]["json"]
         assert payload["token"] == feedback_token.hex
-        assert payload["status"] == "success"
+        assert payload["success"] is True
         assert payload["path"] == [to_checksum_address(addr) for addr in route]
 
     with patch.object(requests, "post", return_value=request_mock()) as feedback:
@@ -870,7 +870,7 @@ def test_post_pfs_feedback(query_paths_args):
 
         payload = feedback.call_args[1]["json"]
         assert payload["token"] == feedback_token.hex
-        assert payload["status"] == "failure"
+        assert payload["success"] is False
         assert payload["path"] == [to_checksum_address(addr) for addr in route]
 
     with patch.object(requests, "post", return_value=request_mock()) as feedback:
