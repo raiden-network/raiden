@@ -1,7 +1,7 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
-from raiden_contracts.contract_manager import DeployedContract  # NOQA pylint:disable=unused-import
+from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
