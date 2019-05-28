@@ -109,19 +109,25 @@ class MockChainState:
 
 
 class MockRaidenService:
-    def __init__(self, message_handler=None, state_transition=None, private_key=None):
+    def __init__(self, message_handler=None, state_transition=None, private_key=None, config=None):
         if private_key is None:
-            self.private_key, self.address = factories.make_privkey_address()
+            self.privkey, self.address = factories.make_privkey_address()
         else:
-            self.private_key = private_key
+            self.privkey = private_key
             self.address = privatekey_to_address(private_key)
 
         self.chain = MockChain(network_id=17, node_address=self.address)
-        self.signer = LocalSigner(self.private_key)
+        self.signer = LocalSigner(self.privkey)
 
         self.message_handler = message_handler
+        self.config = config
 
         self.user_deposit = Mock()
+        self.default_registry = Mock()
+        self.default_registry.address = factories.make_address()
+        self.default_one_to_n_address = factories.make_address()
+
+        self.route_to_feeback_token = {}
 
         if state_transition is None:
             state_transition = node.state_transition
