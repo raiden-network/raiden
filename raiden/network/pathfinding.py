@@ -465,7 +465,7 @@ def post_pfs_feedback(
 
     url = service_config["pathfinding_service_address"]
     hex_route = [to_checksum_address(address) for address in route]
-    payload = dict(token=token.hex, path=hex_route, status="success" if succesful else "failure")
+    payload = dict(token=token.hex, path=hex_route, success=succesful)
 
     log.info(
         "Sending routing feedback to Pathfinding Service",
