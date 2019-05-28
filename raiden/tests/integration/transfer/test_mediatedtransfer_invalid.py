@@ -22,6 +22,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.utils.signer import LocalSigner
 
 
@@ -54,7 +55,7 @@ def run_test_failsfast_lockedtransfer_exceeding_distributable(
         token_network_address, deposit * 2, app1.raiden.address, identifier=1
     )
 
-    assert payment_status.payment_done.get(timeout=5) is False
+    assert isinstance(payment_status.payment_done.get(timeout=5), EventPaymentSentFailed)
     assert payment_status.payment_done.successful()
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
@@ -84,7 +85,7 @@ def run_test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount, app1.raiden.address, identifier=1
     )
-    assert payment_status.payment_done.wait() is False
+    assert isinstance(payment_status.payment_done.get(), EventPaymentSentFailed)
 
 
 @pytest.mark.parametrize("number_of_nodes", [3])
