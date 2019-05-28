@@ -1465,8 +1465,8 @@ class TokenNetwork:
             checking_block,
             "unlock",
             channel_identifier=channel_identifier,
-            participant=receiver,
-            partner=sender,
+            receiver=receiver,
+            sender=sender,
             merkle_tree_leaves=leaves_packed,
         )
 
@@ -1476,8 +1476,8 @@ class TokenNetwork:
                 function_name="unlock",
                 startgas=safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT),
                 channel_identifier=channel_identifier,
-                participant=receiver,
-                partner=sender,
+                receiver=receiver,
+                sender=sender,
                 merkle_tree_leaves=leaves_packed,
             )
 
