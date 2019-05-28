@@ -180,8 +180,8 @@ def decode_event_to_internal(abi, log_event):
         args["closing_participant"] = to_canonical_address(args["closing_participant"])
 
     elif event == ChannelEvent.UNLOCKED:
-        args["participant"] = to_canonical_address(args["participant"])
-        args["partner"] = to_canonical_address(args["partner"])
+        args["receiver"] = to_canonical_address(args["receiver"])
+        args["sender"] = to_canonical_address(args["sender"])
 
     return Event(originating_contract=to_canonical_address(log_event["address"]), event_data=data)
 

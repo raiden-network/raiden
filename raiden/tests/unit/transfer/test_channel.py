@@ -67,8 +67,8 @@ def test_channel_cleared_after_two_unlocks():
         batch_unlock = ContractReceiveChannelBatchUnlock(
             transaction_hash=make_transaction_hash(),
             canonical_identifier=channel_state.canonical_identifier,
-            participant=partner_end.address,
-            partner=unlock_end.address,
+            receiver=partner_end.address,
+            sender=unlock_end.address,
             locksroot=unlock_end.balance_proof.locksroot,
             unlocked_amount=10,
             returned_tokens=0,
@@ -132,8 +132,8 @@ def test_channel_cleared_after_our_unlock():
         batch_unlock = ContractReceiveChannelBatchUnlock(
             transaction_hash=make_transaction_hash(),
             canonical_identifier=channel_state.canonical_identifier,
-            participant=partner_end.address,
-            partner=unlock_end.address,
+            receiver=partner_end.address,
+            sender=unlock_end.address,
             locksroot=unlock_end.balance_proof.locksroot,
             unlocked_amount=10,
             returned_tokens=0,

@@ -302,24 +302,24 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     by the token network contract.
     Note:
         For this state change the contract caller is not important but only the
-        receiving address. `participant` is the address to which the `unlocked_amount`
+        receiving address. `receiver` is the address to which the `unlocked_amount`
         was transferred. `returned_tokens` was transferred to the channel partner.
     """
 
     canonical_identifier: CanonicalIdentifier
-    participant: Address
-    partner: Address
+    receiver: Address
+    sender: Address
     locksroot: Locksroot
     unlocked_amount: TokenAmount
     returned_tokens: TokenAmount
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.participant, T_Address):
-            raise ValueError("participant must be of type address")
+        if not isinstance(self.receiver, T_Address):
+            raise ValueError("receiver must be of type address")
 
-        if not isinstance(self.partner, T_Address):
-            raise ValueError("partner must be of type address")
+        if not isinstance(self.sender, T_Address):
+            raise ValueError("sender must be of type address")
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:

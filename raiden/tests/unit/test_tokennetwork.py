@@ -254,8 +254,8 @@ def test_channel_data_removed_after_unlock(
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=factories.make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        participant=our_address,
-        partner=address,
+        receiver=our_address,
+        sender=address,
         locksroot=lock_secrethash,
         unlocked_amount=lock_amount,
         returned_tokens=0,
@@ -367,8 +367,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=factories.make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        participant=address,
-        partner=our_address,
+        receiver=address,
+        sender=our_address,
         locksroot=lock_secrethash,
         unlocked_amount=lock_amount,
         returned_tokens=0,
