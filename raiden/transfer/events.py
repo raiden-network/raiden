@@ -26,6 +26,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
+    WithdrawAmount,
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -36,7 +37,7 @@ class ContractSendChannelWithdraw(ContractSendEvent):
     """ Event emitted if node wants to withdraw from current channel balance. """
 
     canonical_identifier: CanonicalIdentifier
-    total_withdraw: TokenAmount
+    total_withdraw: WithdrawAmount
     participant_signature: Signature
     partner_signature: Signature
 
