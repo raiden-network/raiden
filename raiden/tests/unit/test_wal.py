@@ -126,19 +126,6 @@ def test_write_read_log():
     with pytest.raises(sqlite3.IntegrityError):
         wal.storage.write_state_snapshot(34, "AAAA", datetime.now())
 
-    # Make sure we can only have a single state snapshot
-    assert wal.storage.get_latest_state_snapshot() is None
-
-    wal.storage.write_state_snapshot(1, "AAAA")
-    snapshot = wal.storage.get_latest_state_snapshot()
-    assert snapshot.state_change_identifier == 1
-    assert snapshot.data == "AAAA"
-
-    wal.storage.write_state_snapshot(2, "BBBB")
-    snapshot = wal.storage.get_latest_state_snapshot()
-    assert snapshot.state_change_identifier == 2
-    assert snapshot.data == "BBBB"
-
 
 def test_timestamped_event():
     event = EventPaymentSentFailed(
