@@ -163,7 +163,7 @@ def find_max_pending_transfers(gas_limit):
         tester.tester.revert_to_snapshot(before_closing)
 
         pending_transfers_tree = get_pending_transfers_tree(
-            tester.web3, unlockable_amounts=[1] * tree_size
+            tester.web3, unlockable_amounts=[1] * tree_size, expired_amounts=[]
         )
 
         balance_hash = hash_balance_data(
