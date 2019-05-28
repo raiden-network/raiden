@@ -1,6 +1,14 @@
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import AdditionalHash, Address, BalanceHash, Nonce, Signature, TokenAmount
+from raiden.utils.typing import (
+    AdditionalHash,
+    Address,
+    BalanceHash,
+    Nonce,
+    Signature,
+    TokenAmount,
+    WithdrawAmount,
+)
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -73,5 +81,32 @@ def pack_reward_proof(
             reward_amount,
             token_network_address,
             nonce,
+        ],
+    )
+
+
+def pack_withdraw(
+    canonical_identifier: CanonicalIdentifier, participant: Address, total_withdraw: WithdrawAmount
+) -> bytes:
+    """Packs balance proof data to be signed
+
+    Packs the given arguments in a byte array in the same configuration the
+    contracts expect the signed data to have.
+address(this),
+            chain_id,
+            uint256(MessageTypeId.Withdraw),
+            channel_identifier,
+            participant,
+            total_withdraw
+    """
+    return pack_data(
+        ["address", "uint256", "uint256", "uint256", "address", "uint256"],
+        [
+            canonical_identifier.token_network_address,
+            canonical_identifier.chain_identifier,
+            MessageTypeId.WITHDRAW,
+            canonical_identifier.channel_identifier,
+            participant,
+            total_withdraw,
         ],
     )

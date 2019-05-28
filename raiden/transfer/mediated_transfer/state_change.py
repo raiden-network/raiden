@@ -4,6 +4,7 @@ from hashlib import sha256
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -24,6 +25,7 @@ from raiden.utils.typing import (
     Signature,
     TokenNetworkAddress,
     TokenNetworkID,
+    WithdrawAmount,
     typecheck,
 )
 

@@ -168,6 +168,9 @@ TransactionHash = NewType("TransactionHash", T_TransactionHash)
 T_EncodedData = bytes
 EncodedData = NewType("EncodedData", T_EncodedData)
 
+T_WithdrawAmount = int
+WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
+
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
 

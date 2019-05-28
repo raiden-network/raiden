@@ -75,12 +75,11 @@ from raiden.utils.typing import (
     cast,
     typecheck,
 )
-from raiden_contracts.constants import (
+from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
     CONTRACT_TOKEN_NETWORK,
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
     GAS_REQUIRED_FOR_OPEN_CHANNEL,
     GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
-    GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
     GAS_REQUIRED_FOR_SETTLE_CHANNEL,
     GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
     ChannelInfoIndex,
@@ -1012,6 +1011,7 @@ class TokenNetwork:
                 partner_signature,
             )
 
+            GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW = 0
             if gas_limit:
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW)
                 error_prefix = "setTotalWithdraw call failed"
