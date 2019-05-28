@@ -330,25 +330,6 @@ class SQLiteStorage:
         )
         self.maybe_commit()
 
-    def get_latest_state_snapshot(self) -> Optional[SnapshotRecord]:
-        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
-        cursor = self.conn.execute(
-            "SELECT identifier, statechange_id, data "
-            "FROM state_snapshot "
-            "ORDER BY identifier "
-            "DESC LIMIT 1"
-        )
-        rows = cursor.fetchall()
-
-        if rows:
-            assert len(rows) == 1
-            snapshot_state_id = rows[0][0]
-            last_applied_state_change_id = rows[0][1]
-            snapshot_state = rows[0][2]
-            return SnapshotRecord(snapshot_state_id, last_applied_state_change_id, snapshot_state)
-
-        return None
-
     def get_snapshot_closest_to_state_change(
         self, state_change_identifier: Union[StateChangeID, str]
     ) -> Optional[SnapshotRecord]:
@@ -767,16 +748,6 @@ class SerializedSQLiteStorage:
             for event in events
         ]
         return self.database.write_events(events_data)
-
-    def get_latest_state_snapshot(self) -> Optional[SnapshotRecord]:
-        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
-        row = self.database.get_latest_state_snapshot()
-
-        if row:
-            snapshot_state = self.serializer.deserialize(row.data)
-            return SnapshotRecord(row.identifier, row.state_change_identifier, snapshot_state)
-
-        return None
 
     def get_snapshot_closest_to_state_change(
         self, state_change_identifier: Union[StateChangeID, str]
