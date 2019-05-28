@@ -7,6 +7,7 @@ from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     Any,
     BalanceHash,
@@ -17,13 +18,18 @@ from raiden.utils.typing import (
     Union,
 )
 
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
+
 
 def channel_state_until_state_change(
-    raiden,
+    raiden: "RaidenService",
     canonical_identifier: CanonicalIdentifier,
     state_change_identifier: Union[StateChangeID, str],
 ) -> Optional[NettingChannelState]:
     """ Go through WAL state changes until a certain balance hash is found. """
+    assert raiden.wal, "Raiden has not been started yet"
+
     wal = restore_to_state_change(
         transition_function=node.state_transition,
         storage=raiden.wal.storage,
