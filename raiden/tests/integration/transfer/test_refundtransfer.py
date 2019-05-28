@@ -21,7 +21,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import channel, views
-from raiden.transfer.events import ContractSendChannelUpdateTransfer
+from raiden.transfer.events import ContractSendChannelUpdateTransfer, EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
@@ -74,7 +74,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
         token_network_address, refund_amount, app2.raiden.address, identifier
     )
     msg = "Must fail, there are no routes available"
-    assert payment_status.payment_done.wait() is False, msg
+    assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
 
     # The transfer from app0 to app2 failed, so the balances did change.
     # Since the refund is not unlocked both channels have the corresponding
@@ -202,7 +202,7 @@ def run_test_refund_transfer(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
-    assert payment_status.payment_done.wait() is False, msg
+    assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
 
     gevent.sleep(0.2)
 
@@ -414,7 +414,7 @@ def run_test_different_view_of_last_bp_during_unlock(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
-    assert payment_status.payment_done.wait() is False, msg
+    assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
 
     gevent.sleep(0.2)
 
@@ -640,7 +640,7 @@ def run_test_refund_transfer_after_2nd_hop(
         token_network_address, amount_refund, app3.raiden.address, identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
-    assert payment_status.payment_done.wait() is False, msg
+    assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
 
     gevent.sleep(0.2)
 

@@ -27,7 +27,11 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import views
-from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
+from raiden.transfer.events import (
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+)
 from raiden.transfer.state_change import ContractReceiveNewTokenNetwork
 from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import (
@@ -385,7 +389,7 @@ def run_test_insufficient_funds(raiden_network, token_addresses, deposit):
         deposit + 1,
         target=app1.raiden.address,
     )
-    assert not result.payment_done.get()
+    assert isinstance(result.payment_done.get(), EventPaymentSentFailed)
 
 
 @pytest.mark.parametrize("number_of_nodes", [3])
