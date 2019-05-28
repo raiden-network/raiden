@@ -348,7 +348,10 @@ class MatrixTransport(Runnable):
         return f"<{self.__class__.__name__}{node} id:{id(self)}>"
 
     def start(  # type: ignore
-        self, raiden_service: RaidenService, message_handler: MessageHandler, prev_auth_data: str
+        self,
+        raiden_service: RaidenService,
+        message_handler: MessageHandler,
+        prev_auth_data: Optional[str],
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")

@@ -203,7 +203,7 @@ class SQLiteStorage:
         return None
 
     def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: int
+        self, state_change_identifier: Union[int, str]
     ) -> Tuple[int, Any]:
         """ Get snapshots earlier than state_change with provided ID. """
 
@@ -580,7 +580,7 @@ class SerializedSQLiteStorage(SQLiteStorage):
         return None
 
     def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: int
+        self, state_change_identifier: Union[int, str]
     ) -> Tuple[int, Any]:
         """ Get snapshots earlier than state_change with provided ID. """
 
