@@ -565,8 +565,12 @@ class SQLiteStorage:
         finally:
             self.in_transaction = False
 
-    def __del__(self):
+    def close(self):
         self.conn.close()
+        del self.conn
+
+    def __del__(self):
+        self.close()
 
 
 class SerializedSQLiteStorage:
@@ -576,6 +580,9 @@ class SerializedSQLiteStorage:
 
     def update_version(self) -> None:
         self.database.update_version()
+
+    def count_state_changes(self) -> int:
+        return self.database.count_state_changes()
 
     def get_version(self) -> RaidenDBVersion:
         return self.database.get_version()
@@ -681,6 +688,9 @@ class SerializedSQLiteStorage:
     def get_events(self, limit: int = None, offset: int = None) -> List[Event]:
         events = self.database.get_events(limit, offset)
         return [self.serializer.deserialize(event) for event in events]
+
+    def close(self):
+        self.database.close()
 
     def __del__(self):
         del self.database
