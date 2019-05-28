@@ -54,7 +54,6 @@ py-solc==3.2.0
 pycparser==2.18
 pycryptodome==3.6.6
 pysha3==1.0.2
-pystun-patched-for-raiden==0.1.0
 pytoml==0.1.19
 pytz==2018.5
 raiden-contracts==0.19.1

@@ -22,7 +22,6 @@ psutil==5.4.7
 py-geth==2.1.0
 pysha3==1.0.2
 py-solc==3.2.0
-pystun-patched-for-raiden==0.1.0
 pytoml==0.1.19
 raiden-contracts==0.19.1
 raiden-webui==0.8.0
