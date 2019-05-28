@@ -1049,13 +1049,13 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=result)
 
     def _withdraw(
-            self,
-            registry_address: typing.PaymentNetworkAddress,
-            channel_state: NettingChannelState,
-            total_withdraw: typing.TokenAmount,
+        self,
+        registry_address: typing.PaymentNetworkAddress,
+        channel_state: NettingChannelState,
+        total_withdraw: typing.TokenAmount,
     ):
         log.debug(
-            'Withdrawing from channel',
+            "Withdrawing from channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
@@ -1064,8 +1064,7 @@ class RestAPI:  # pragma: no unittest
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
-                errors="Can't withdraw from a closed channel",
-                status_code=HTTPStatus.CONFLICT,
+                errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
             )
 
         try:
@@ -1076,25 +1075,14 @@ class RestAPI:  # pragma: no unittest
                 total_withdraw,
             )
         except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except DepositOverLimit as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except DepositMismatch as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(
-            registry_address,
-            channel_state.token_address,
-            channel_state.partner_state.address,
+            registry_address, channel_state.token_address, channel_state.partner_state.address
         )
 
         result = self.channel_schema.dump(updated_channel_state)

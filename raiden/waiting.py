@@ -127,6 +127,7 @@ def wait_for_participant_withdraw(
     Note:
         This does not time out, use gevent.Timeout.
     """
+
     def _get_total_withdraw(channel_state: Optional[NettingChannelState]) -> WithdrawAmount:
         if channel_state is None:
             raise ChannelNotFound()

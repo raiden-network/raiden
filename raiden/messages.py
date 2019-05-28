@@ -70,28 +70,29 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     Type,
+    WithdrawAmount,
     typecheck,
 )
 from raiden_contracts.constants import MessageTypeId
 
 __all__ = (
-    'Delivered',
-    'EnvelopeMessage',
-    'Lock',
-    'LockedTransfer',
-    'LockedTransferBase',
-    'LockExpired',
-    'Message',
-    'Ping',
-    'Pong',
-    'Processed',
-    'RefundTransfer',
-    'RequestMonitoring',
-    'RevealSecret',
-    'SecretRequest',
-    'SignedBlindedBalanceProof',
-    'SignedMessage',
-    'Unlock',
+    "Delivered",
+    "EnvelopeMessage",
+    "Lock",
+    "LockedTransfer",
+    "LockedTransferBase",
+    "LockExpired",
+    "Message",
+    "Ping",
+    "Pong",
+    "Processed",
+    "RefundTransfer",
+    "RequestMonitoring",
+    "RevealSecret",
+    "SecretRequest",
+    "SignedBlindedBalanceProof",
+    "SignedMessage",
+    "Unlock",
     "ToDevice",
     "UpdatePFS",
     'Withdraw',
@@ -564,13 +565,14 @@ class RevealSecret(SignedRetrieableMessage):
 @dataclass(repr=False, eq=False)
 class WithdrawRequest(SignedMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
+
     cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
 
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
     participant: Address
-    total_withdraw: PaymentAmount
+    total_withdraw: WithdrawAmount
 
     @classmethod
     def unpack(cls, packed):
@@ -607,13 +609,14 @@ class WithdrawRequest(SignedMessage):
 @dataclass(repr=False, eq=False)
 class Withdraw(SignedMessage):
     """ Confirms withdraw to partner with a signature """
+
     cmdid: ClassVar[int] = messages.WITHDRAW
 
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
     participant: Address
-    total_withdraw: PaymentAmount
+    total_withdraw: WithdrawAmount
 
     @classmethod
     def unpack(cls, packed):

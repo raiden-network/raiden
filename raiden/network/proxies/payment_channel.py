@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     Signature,
     TokenAddress,
     TokenAmount,
+    WithdrawAmount,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
@@ -175,16 +176,16 @@ class PaymentChannel:
         )
 
     def set_total_withdraw(
-            self,
-            total_deposit: TokenAmount,
-            participant_signature: Signature,
-            partner_signature: Signature,
-            block_identifier: BlockSpecification,
+        self,
+        total_withdraw: WithdrawAmount,
+        participant_signature: Signature,
+        partner_signature: Signature,
+        block_identifier: BlockSpecification,
     ):
-        self.token_network.set_total_deposit(
+        self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
-            total_withdraw=total_deposit,
+            total_withdraw=total_withdraw,
             participant_signature=participant_signature,
             partner_signature=partner_signature,
             partner=self.participant2,

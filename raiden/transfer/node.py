@@ -690,8 +690,7 @@ def handle_init_target(
 
 
 def handle_receive_withdraw_request(
-        chain_state: ChainState,
-        state_change: ReceiveWithdrawRequest,
+    chain_state: ChainState, state_change: ReceiveWithdrawRequest
 ) -> TransitionResult[ChainState]:
     return subdispatch_by_canonical_id(
         chain_state=chain_state,
@@ -701,8 +700,7 @@ def handle_receive_withdraw_request(
 
 
 def handle_receive_withdraw(
-        chain_state: ChainState,
-        state_change: ReceiveWithdraw,
+    chain_state: ChainState, state_change: ReceiveWithdraw
 ) -> TransitionResult[ChainState]:
     return subdispatch_by_canonical_id(
         chain_state=chain_state,

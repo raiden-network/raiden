@@ -59,7 +59,7 @@ locked_amount = make_field("locked_amount", 32, "32s", integer(0, UINT256_MAX))
 amount = make_field("amount", 32, "32s", integer(0, UINT256_MAX))
 reward_amount = make_field("reward_amount", 32, "32s", integer(0, UINT256_MAX))
 fee = make_field("fee", 32, "32s", integer(0, UINT256_MAX))
-total_withdraw = make_field('total_withdraw', 32, '32s', integer(0, UINT256_MAX))
+total_withdraw = make_field("total_withdraw", 32, "32s", integer(0, UINT256_MAX))
 reveal_timeout = make_field("reveal_timeout", 32, "32s", integer(0, UINT256_MAX))
 updating_capacity = make_field("updating_capacity", 32, "32s", integer(0, UINT256_MAX))
 other_capacity = make_field("other_capacity", 32, "32s", integer(0, UINT256_MAX))
@@ -229,7 +229,7 @@ UpdatePFS = namedbuffer(
 ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier, signature])
 
 WithdrawRequest = namedbuffer(
-    'withdraw_request',
+    "withdraw_request",
     [
         token_network_address,
         chain_id,
@@ -243,7 +243,7 @@ WithdrawRequest = namedbuffer(
 
 
 Withdraw = namedbuffer(
-    'withdraw',
+    "withdraw",
     [
         token_network_address,
         chain_id,
