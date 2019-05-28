@@ -5,16 +5,18 @@ import structlog
 
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, Generic, List, Tuple, TypeVar
+from raiden.utils.typing import Callable, Generic, List, Tuple, TypeVar, Union
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_to_state_change(
-    transition_function: Callable, storage: SerializedSQLiteStorage, state_change_identifier: int
+    transition_function: Callable,
+    storage: SerializedSQLiteStorage,
+    state_change_identifier: Union[int, str],
 ) -> "WriteAheadLog":
     msg = "state change identifier 'latest' or an integer greater than zero"
-    assert state_change_identifier == "latest" or state_change_identifier > 0, msg
+    assert state_change_identifier == "latest" or state_change_identifier > 0, msg  # type: ignore
 
     from_state_change_id, chain_state = storage.get_snapshot_closest_to_state_change(
         state_change_identifier=state_change_identifier

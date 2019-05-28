@@ -1,16 +1,21 @@
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 
 import requests
 from eth_utils import to_bytes, to_hex
 
-from raiden.raiden_service import RaidenService
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.utils import Secret
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService
 
 
 def reveal_secret_with_resolver(
-    raiden: RaidenService, secret_request_event: SendSecretRequest
+    raiden: "RaidenService", secret_request_event: SendSecretRequest
 ) -> bool:
 
     if "resolver_endpoint" not in raiden.config:
@@ -18,6 +23,10 @@ def reveal_secret_with_resolver(
 
     assert isinstance(raiden.wal, WriteAheadLog), "RaidenService has not been started"
     current_state = raiden.wal.state_manager.current_state
+
+    if current_state is None:
+        return False
+
     task = current_state.payment_mapping.secrethashes_to_task[secret_request_event.secrethash]
     token = task.target_state.transfer.token
 
@@ -42,7 +51,8 @@ def reveal_secret_with_resolver(
         return False
 
     state_change = ReceiveSecretReveal(
-        to_bytes(hexstr=response.json()["secret"]), secret_request_event.recipient
+        sender=secret_request_event.recipient,
+        secret=Secret(to_bytes(hexstr=response.json()["secret"])),
     )
     raiden.handle_and_track_state_change(state_change)
     return True

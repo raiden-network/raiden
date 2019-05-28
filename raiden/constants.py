@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
+    TransactionHash,
 )
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
@@ -46,6 +47,7 @@ NULL_ADDRESS_BYTES = bytes(20)
 NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 
 EMPTY_HASH = BlockHash(bytes(32))
+EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
 EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
 EMPTY_LOCK_HASH = LockHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
