@@ -14,7 +14,6 @@ marshmallow-polyfield==5.5
 marshmallow-dataclass==6.0.0rc2
 marshmallow==3.0.0rc6
 matrix-client==0.3.2
-miniupnpc==2.0.2
 mirakuru==1.0.0
 netifaces==0.10.7
 networkx==2.1
