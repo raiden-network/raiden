@@ -356,8 +356,8 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     block_number = data["block_number"]
     block_hash = data["block_hash"]
     transaction_hash = data["transaction_hash"]
-    participant1 = args["participant"]
-    participant2 = args["partner"]
+    participant1 = args["receiver"]
+    participant2 = args["sender"]
     locksroot = args["locksroot"]
 
     chain_state = views.state_from_raiden(raiden)
@@ -418,8 +418,8 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
         canonical_identifier=canonical_identifier,
-        participant=args["participant"],
-        partner=args["partner"],
+        receiver=args["receiver"],
+        sender=args["sender"],
         locksroot=args["locksroot"],
         unlocked_amount=args["unlocked_amount"],
         returned_tokens=args["returned_tokens"],

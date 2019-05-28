@@ -80,8 +80,8 @@ def test_write_read_log():
         canonical_identifier=factories.make_canonical_identifier(
             token_network_address=factories.make_address()
         ),
-        participant=participant,
-        partner=partner,
+        receiver=participant,
+        sender=partner,
         locksroot=locksroot,
         unlocked_amount=unlocked_amount,
         returned_tokens=returned_amount,
@@ -115,8 +115,8 @@ def test_write_read_log():
     assert result1.block_number == block_number
 
     assert isinstance(result2, ContractReceiveChannelBatchUnlock)
-    assert result2.participant == participant
-    assert result2.partner == partner
+    assert result2.receiver == participant
+    assert result2.sender == partner
     assert result2.locksroot == locksroot
     assert result2.unlocked_amount == unlocked_amount
     assert result2.returned_tokens == returned_amount

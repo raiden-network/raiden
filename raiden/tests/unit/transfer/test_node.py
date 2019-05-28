@@ -21,8 +21,8 @@ def test_is_transaction_effect_satisfied(
     state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=UNIT_SECRETHASH,
         canonical_identifier=canonical_identifier,
-        participant=HOP1,
-        partner=HOP2,
+        receiver=HOP1,
+        sender=HOP2,
         locksroot=EMPTY_MERKLE_ROOT,
         unlocked_amount=0,
         returned_tokens=0,
@@ -33,12 +33,12 @@ def test_is_transaction_effect_satisfied(
     assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
 
     # now call normally with us being the partner and not the participant
-    state_change.partner = netting_channel_state.partner_state.address
-    state_change.participant = netting_channel_state.our_state.address
+    state_change.sender = netting_channel_state.partner_state.address
+    state_change.receiver = netting_channel_state.our_state.address
     assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
     # finally call with us being the participant and not the partner which should check out
-    state_change.participant = netting_channel_state.partner_state.address
-    state_change.partner = netting_channel_state.our_state.address
+    state_change.receiver = netting_channel_state.partner_state.address
+    state_change.sender = netting_channel_state.our_state.address
 
     # ContractSendChannelBatchUnlock would only be satisfied if both sides are unlocked
     # and if the channel was cleared

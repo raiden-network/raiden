@@ -26,7 +26,7 @@ from raiden.utils import sha3
 from raiden.utils.timeout import BlockTimeout
 
 
-def wait_for_batch_unlock(app, token_network_address, participant, partner):
+def wait_for_batch_unlock(app, token_network_address, receiver, sender):
     unlock_event = None
     while not unlock_event:
         gevent.sleep(1)
@@ -40,8 +40,8 @@ def wait_for_batch_unlock(app, token_network_address, participant, partner):
             ContractReceiveChannelBatchUnlock,
             {
                 "token_network_address": token_network_address,
-                "participant": participant,
-                "partner": partner,
+                "receiver": receiver,
+                "sender": sender,
             },
         )
 
@@ -385,8 +385,8 @@ def run_test_batch_unlock(
         wait_for_batch_unlock(
             app=bob_app,
             token_network_address=token_network_address,
-            participant=alice_bob_channel_state.partner_state.address,
-            partner=alice_bob_channel_state.our_state.address,
+            receiver=alice_bob_channel_state.partner_state.address,
+            sender=alice_bob_channel_state.our_state.address,
         )
 
     token_network = views.get_token_network_by_address(
@@ -920,8 +920,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         wait_for_batch_unlock(
             app=bob_app,
             token_network_address=token_network_address,
-            participant=alice_bob_channel_state.partner_state.address,
-            partner=alice_bob_channel_state.our_state.address,
+            receiver=alice_bob_channel_state.partner_state.address,
+            sender=alice_bob_channel_state.our_state.address,
         )
 
     alice_app.start()
@@ -930,6 +930,6 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         wait_for_batch_unlock(
             app=alice_app,
             token_network_address=token_network_address,
-            participant=alice_bob_channel_state.partner_state.address,
-            partner=alice_bob_channel_state.our_state.address,
+            receiver=alice_bob_channel_state.partner_state.address,
+            sender=alice_bob_channel_state.our_state.address,
         )

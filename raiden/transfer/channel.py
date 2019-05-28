@@ -1847,9 +1847,9 @@ def handle_channel_batch_unlock(
         partner_state = channel_state.partner_state
 
         # partner is the address of the sender
-        if state_change.partner == our_state.address:
+        if state_change.sender == our_state.address:
             our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
-        elif state_change.partner == partner_state.address:
+        elif state_change.sender == partner_state.address:
             partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
 
         # only clear the channel state once all unlocks have been done
