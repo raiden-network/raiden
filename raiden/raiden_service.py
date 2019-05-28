@@ -1165,14 +1165,9 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_change(init_target_statechange)
 
-    def withdraw(
-        self,
-        canonical_identifier: CanonicalIdentifier,
-        total_withdraw: TokenAmount,
-    ):
+    def withdraw(self, canonical_identifier: CanonicalIdentifier, total_withdraw: TokenAmount):
         init_withdraw = ActionChannelWithdraw(
-            canonical_identifier=canonical_identifier,
-            total_withdraw=total_withdraw,
+            canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
         )
 
         self.handle_and_track_state_change(init_withdraw)

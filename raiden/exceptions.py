@@ -88,6 +88,7 @@ class InvalidChannelID(RaidenError):
 
 class WithdrawMismatch(RaidenRecoverableError):
     """ Raised when the requested withdraw is larger than actual channel balance. """
+
     pass
 
 

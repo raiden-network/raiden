@@ -421,12 +421,12 @@ class RaidenAPI:  # pragma: no unittest
         return channel_state.identifier
 
     def set_total_channel_withdraw(
-            self,
-            registry_address: typing.PaymentNetworkAddress,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address,
-            total_withdraw: typing.TokenAmount,
-            retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+        self,
+        registry_address: typing.PaymentNetworkAddress,
+        token_address: typing.TokenAddress,
+        partner_address: typing.Address,
+        total_withdraw: typing.WithdrawAmount,
+        retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
         given `token_address.
@@ -447,57 +447,51 @@ class RaidenAPI:  # pragma: no unittest
         """
         chain_state = views.state_from_raiden(self.raiden)
 
-        token_networks = views.get_token_network_addresses_for(
-            chain_state,
-            registry_address,
-        )
+        token_addresses = views.get_token_identifiers(chain_state, registry_address)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
-            payment_network_id=registry_address,
+            payment_network_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
         )
 
         if not is_binary_address(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel deposit')
+            raise InvalidAddress("Expected binary address format for token in channel deposit")
 
         if not is_binary_address(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel deposit')
+            raise InvalidAddress("Expected binary address format for partner in channel deposit")
 
-        if token_address not in token_networks:
-            raise UnknownTokenAddress('Unknown token address')
+        if token_address not in token_addresses:
+            raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
-            raise InvalidAddress('No channel with partner_address for the given token')
+            raise InvalidAddress("No channel with partner_address for the given token")
 
         current_balance = channel.get_balance(
-            sender=channel_state.our_state,
-            receiver=channel_state.partner_state,
+            sender=channel_state.our_state, receiver=channel_state.partner_state
         )
         if total_withdraw > current_balance:
             raise DepositOverLimit(
-                'The withdraw of {} is bigger than the current balance of {}'.format(
-                    total_withdraw,
-                    current_balance,
-                ),
+                "The withdraw of {} is bigger than the current balance of {}".format(
+                    total_withdraw, current_balance
+                )
             )
 
         if total_withdraw == 0:
-            raise WithdrawMismatch('Attempted to withdraw 0 amount')
+            raise WithdrawMismatch("Attempted to withdraw 0 amount")
 
-        withdraw_status = self.raiden.withdraw(
-            canonical_identifier=channel_state.canonical_identifier,
-            total_withdraw=total_withdraw,
+        self.raiden.withdraw(
+            canonical_identifier=channel_state.canonical_identifier, total_withdraw=total_withdraw
         )
 
         target_address = self.raiden.address
-        waiting.wait_for_participant_newbalance(
+        waiting.wait_for_participant_withdraw(
             raiden=self.raiden,
-            payment_network_id=registry_address,
+            payment_network_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
             target_address=target_address,
-            target_balance=total_deposit,
+            target_withdraw=total_withdraw,
             retry_timeout=retry_timeout,
         )
 
@@ -994,12 +988,12 @@ class RaidenAPI:  # pragma: no unittest
             partner_address=partner_address,
         )
         returned_events = []
-        for channel in channel_list:
+        for channel_state in channel_list:
             returned_events.extend(
                 blockchain_events.get_all_netting_channel_events(
                     chain=self.raiden.chain,
                     token_network_address=token_network_address,
-                    netting_channel_identifier=channel.identifier,
+                    netting_channel_identifier=channel_state.identifier,
                     contract_manager=self.raiden.contract_manager,
                     from_block=from_block,
                     to_block=to_block,

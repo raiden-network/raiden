@@ -123,8 +123,10 @@ class RaidenEventHandler(EventHandler):
             assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
             self.handle_send_refundtransfer(raiden, event)
         elif type(event) == SendWithdrawRequest:
+            assert isinstance(event, SendWithdrawRequest), MYPY_ANNOTATION
             self.handle_send_withdrawrequest(raiden, event)
         elif type(event) == SendWithdraw:
+            assert isinstance(event, SendWithdraw), MYPY_ANNOTATION
             self.handle_send_withdraw(raiden, event)
         elif type(event) == SendProcessed:
             assert isinstance(event, SendProcessed), MYPY_ANNOTATION
@@ -154,6 +156,7 @@ class RaidenEventHandler(EventHandler):
             assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
             self.handle_contract_send_channelsettle(raiden, event)
         elif type(event) == ContractSendChannelWithdraw:
+            assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
             self.handle_contract_send_channelwithdraw(raiden, event)
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
@@ -215,26 +218,21 @@ class RaidenEventHandler(EventHandler):
             refund_transfer_event.queue_identifier, refund_transfer_message
         )
 
+    @staticmethod
     def handle_send_withdrawrequest(
         raiden: "RaidenService", withdraw_request_event: SendWithdrawRequest
     ):
-        withdraw_request_message = message_from_sendevent(withdraw_request_event, raiden.address)
+        withdraw_request_message = message_from_sendevent(withdraw_request_event)
         raiden.sign(withdraw_request_message)
         raiden.transport.send_async(
-            withdraw_request_event.queue_identifier,
-            withdraw_request_message,
+            withdraw_request_event.queue_identifier, withdraw_request_message
         )
 
     @staticmethod
-    def handle_send_withdraw(
-        raiden: "RaidenService", withdraw_event: SendRefundTransfer
-    ):
-        withdraw_message = message_from_sendevent(withdraw_event, raiden.address)
+    def handle_send_withdraw(raiden: "RaidenService", withdraw_event: SendWithdraw):
+        withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
-        raiden.transport.send_async(
-            withdraw_event.queue_identifier,
-            withdraw_message,
-        )
+        raiden.transport.send_async(withdraw_event.queue_identifier, withdraw_message)
 
     @staticmethod
     def handle_send_processed(
@@ -292,16 +290,14 @@ class RaidenEventHandler(EventHandler):
 
     @staticmethod
     def handle_contract_send_channelwithdraw(
-            raiden: RaidenService,
-            channel_withdraw_event: ContractSendChannelWithdraw,
+        raiden: "RaidenService", channel_withdraw_event: ContractSendChannelWithdraw
     ):
         channel_proxy = raiden.chain.payment_channel(
-            token_network_address=channel_withdraw_event.token_network_address,
-            channel_id=channel_withdraw_event.channel_identifier,
+            canonical_identifier=channel_withdraw_event.canonical_identifier
         )
 
-        channel_proxy.withdraw(
-            total_deposit=channel_withdraw_event.total_withdraw,
+        channel_proxy.set_total_withdraw(
+            total_withdraw=channel_withdraw_event.total_withdraw,
             participant_signature=channel_withdraw_event.participant_signature,
             partner_signature=channel_withdraw_event.partner_signature,
             block_identifier=channel_withdraw_event.triggered_by_block_hash,

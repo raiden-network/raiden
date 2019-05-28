@@ -71,6 +71,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     Tuple,
+    WithdrawAmount,
     cast,
     typecheck,
 )
@@ -903,14 +904,14 @@ class TokenNetwork:
         return error_type, msg
 
     def _withdraw_preconditions(
-            self,
-            channel_identifier: ChannelID,
-            total_withdraw: TokenAmount,
-            partner: Address,
-            block_identifier: BlockSpecification,
-    ) -> Tuple[TokenAmount, Dict]:
+        self,
+        channel_identifier: ChannelID,
+        total_withdraw: WithdrawAmount,
+        partner: Address,
+        block_identifier: BlockSpecification,
+    ) -> Tuple[WithdrawAmount, Dict]:
         if not isinstance(total_withdraw, int):
-            raise ValueError('total_withdraw needs to be an integral number.')
+            raise ValueError("total_withdraw needs to be an integral number.")
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -931,53 +932,53 @@ class TokenNetwork:
         # This check is serialized with the channel_operations_lock to avoid
         # sending invalid transactions on-chain (decreasing total withdraw).
         #
-        participant_details = self.detail_participant(
+        participant_details = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=self.node_address,
             partner=partner,
             block_identifier=block_identifier,
         )
-        previous_total_withdraw = participant_details.withdrawn_amount
-        amount_to_withdraw = total_withdraw - previous_total_withdraw
+        previous_total_withdraw = participant_details.withdrawn
+        amount_to_withdraw = WithdrawAmount(total_withdraw - previous_total_withdraw)
 
         log_details = {
-            'token_network': pex(self.address),
-            'channel_identifier': channel_identifier,
-            'node': pex(self.node_address),
-            'partner': pex(partner),
-            'new_total_withdraw': total_withdraw,
-            'previous_total_withdraw': previous_total_withdraw,
+            "token_network": pex(self.address),
+            "channel_identifier": channel_identifier,
+            "node": pex(self.node_address),
+            "partner": pex(partner),
+            "new_total_withdraw": total_withdraw,
+            "previous_total_withdraw": previous_total_withdraw,
         }
 
         # These two scenarios can happen if two calls to withdraw happen
         # and then we get here on the second call
         if total_withdraw < previous_total_withdraw:
             msg = (
-                f'Current total withdraw ({previous_total_withdraw}) is already larger '
-                f'than the requested total withdraw amount ({total_withdraw})'
+                f"Current total withdraw ({previous_total_withdraw}) is already larger "
+                f"than the requested total withdraw amount ({total_withdraw})"
             )
-            log.info('setTotalWithdraw failed', reason=msg, **log_details)
+            log.info("setTotalWithdraw failed", reason=msg, **log_details)
             raise WithdrawMismatch(msg)
 
         if amount_to_withdraw <= 0:
             msg = (
-                f'new_total_withdraw - previous_total_withdraw must be greater than 0. '
-                f'new_total_withdraw={total_withdraw} '
-                f'previous_total_withdraw={previous_total_withdraw}'
+                f"new_total_withdraw - previous_total_withdraw must be greater than 0. "
+                f"new_total_withdraw={total_withdraw} "
+                f"previous_total_withdraw={previous_total_withdraw}"
             )
-            log.info('setTotalWithdraw failed', reason=msg, **log_details)
+            log.info("setTotalWithdraw failed", reason=msg, **log_details)
             raise WithdrawMismatch(msg)
 
         return amount_to_withdraw, log_details
 
     def set_total_withdraw(
-            self,
-            given_block_identifier: BlockSpecification,
-            channel_identifier: ChannelID,
-            total_withdraw: TokenAmount,
-            participant_signature: Signature,
-            partner_signature: Signature,
-            partner: Address,
+        self,
+        given_block_identifier: BlockSpecification,
+        channel_identifier: ChannelID,
+        total_withdraw: WithdrawAmount,
+        participant_signature: Signature,
+        partner_signature: Signature,
+        partner: Address,
     ):
         """ Set total token withdraw in the channel to total_withdraw.
 
@@ -985,8 +986,14 @@ class TokenNetwork:
             ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the token address is empty.
         """
+        token_address = self.token_address()
+        token = Token(
+            jsonrpc_client=self.client,
+            token_address=token_address,
+            contract_manager=self.contract_manager,
+        )
         checking_block = self.client.get_checking_block()
-        error_prefix = 'setTotalWithdraw call will fail'
+        error_prefix = "setTotalWithdraw call will fail"
         with self.channel_operations_lock[partner], self.withdraw_lock:
             amount_to_withdraw, log_details = self._withdraw_preconditions(
                 channel_identifier=channel_identifier,
@@ -997,7 +1004,7 @@ class TokenNetwork:
 
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
-                'setTotalWithdraw',
+                "setTotalWithdraw",
                 channel_identifier,
                 self.node_address,
                 total_withdraw,
@@ -1007,11 +1014,11 @@ class TokenNetwork:
 
             if gas_limit:
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW)
-                error_prefix = 'setTotalWithdraw call failed'
+                error_prefix = "setTotalWithdraw call failed"
 
-                log.debug('setTotalWithdraw called', **log_details)
+                log.debug("setTotalWithdraw called", **log_details)
                 transaction_hash = self.proxy.transact(
-                    'setTotalWithdraw',
+                    "setTotalWithdraw",
                     gas_limit,
                     channel_identifier,
                     self.node_address,
@@ -1024,18 +1031,19 @@ class TokenNetwork:
             transaction_executed = gas_limit is not None
             if not transaction_executed or receipt_or_none:
                 if transaction_executed:
-                    block = receipt_or_none['blockNumber']
+                    block = receipt_or_none["blockNumber"]
                 else:
                     block = checking_block
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                    transaction_name='setTotalWithdraw',
+                    transaction_name="setTotalWithdraw",
                     transaction_executed=transaction_executed,
                     required_gas=GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
                     block_identifier=block,
                 )
                 error_type, msg = self._check_why_withdraw_failed(
                     channel_identifier=channel_identifier,
+                    token=token,
                     partner=partner,
                     amount_to_withdraw=amount_to_withdraw,
                     total_withdraw=total_withdraw,
@@ -1043,14 +1051,78 @@ class TokenNetwork:
                     block_identifier=block,
                 )
 
-                error_msg = f'{error_prefix}. {msg}'
+                error_msg = f"{error_prefix}. {msg}"
                 if error_type == RaidenRecoverableError:
                     log.warning(error_msg, **log_details)
                 else:
                     log.critical(error_msg, **log_details)
                 raise error_type(error_msg)
 
-            log.info('setTotalWithdraw successful', **log_details)
+            log.info("setTotalWithdraw successful", **log_details)
+
+    def _check_why_withdraw_failed(
+        self,
+        channel_identifier: ChannelID,
+        partner: Address,
+        token: Token,
+        amount_to_withdraw: WithdrawAmount,
+        total_withdraw: WithdrawAmount,
+        transaction_executed: bool,
+        block_identifier: BlockSpecification,
+    ) -> Tuple[ErrorType, str]:
+        error_type: ErrorType = RaidenUnrecoverableError
+        msg = ""
+        latest_deposit = self._detail_participant(
+            channel_identifier=channel_identifier,
+            participant=self.node_address,
+            partner=partner,
+            block_identifier=block_identifier,
+        ).deposit
+
+        allowance = token.allowance(
+            owner=self.node_address,
+            spender=Address(self.address),
+            block_identifier=block_identifier,
+        )
+        if allowance < amount_to_withdraw:
+            msg = (
+                "The allowance is insufficient. Check concurrent deposits "
+                "for the same token network but different proxies."
+            )
+        elif token.balance_of(self.node_address, block_identifier) < amount_to_withdraw:
+            msg = "The address doesnt have enough tokens"
+        elif transaction_executed and latest_deposit < total_withdraw:
+            msg = "The tokens were not transferred"
+        else:
+            participant_details = self.detail_participants(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=block_identifier,
+                channel_identifier=channel_identifier,
+            )
+            channel_state = self._get_channel_state(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=block_identifier,
+                channel_identifier=channel_identifier,
+            )
+            # Check if deposit is being made on a nonexistent channel
+            if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+                msg = (
+                    f"Channel between participant {to_checksum_address(self.node_address)} "
+                    f"and {to_checksum_address(partner)} does not exist"
+                )
+            # Deposit was prohibited because the channel is settled
+            elif channel_state == ChannelState.SETTLED:
+                msg = "Deposit is not possible due to channel being settled"
+            # Deposit was prohibited because the channel is closed
+            elif channel_state == ChannelState.CLOSED:
+                error_type = RaidenRecoverableError
+                msg = "Channel is already closed"
+            elif participant_details.our_details.deposit < total_withdraw:
+                msg = "Deposit amount did not increase after deposit transaction"
+
+        return error_type, msg
 
     def close(
         self,
