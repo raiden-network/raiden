@@ -1,11 +1,14 @@
 # pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
 import random
+import uuid
 from copy import deepcopy
 from typing import NamedTuple
+from unittest.mock import patch
 
 import pytest
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
+from raiden.raiden_service import initiator_init
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -16,6 +19,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
 )
+from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import assert_dropped
 from raiden.transfer import channel
 from raiden.transfer.architecture import State
@@ -55,7 +59,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveSecretReveal,
 )
-from raiden.utils import random_secret, typing
+from raiden.utils import random_secret, sha3, typing
+from raiden.utils.typing import FeeAmount, PaymentAmount
 
 
 def get_transfer_at_index(
@@ -354,6 +359,7 @@ def test_state_wait_unlock_valid():
     assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert balance_proof
     assert complete
+    assert complete.route == setup.available_routes[0].route
 
     assert balance_proof.recipient == setup.channel.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER
@@ -1586,3 +1592,37 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
     msg = "failed event must not be emitted twice"
     assert search_for_item(iteration.events, EventPaymentSentFailed, {}) is None, msg
     assert search_for_item(iteration.events, EventUnlockFailed, {}) is None, msg
+
+
+def test_initiator_init():
+    secret = factories.make_secret()
+    service = MockRaidenService()
+
+    route_states = [
+        RouteState(
+            route=[factories.make_address(), factories.make_address()], forward_channel_id=1
+        )
+    ]
+    feedback_token = uuid.uuid4()
+
+    with patch(
+        "raiden.routing.get_best_routes", return_value=(route_states, feedback_token)
+    ) as best_routes:
+        assert len(service.route_to_feeback_token) == 0
+
+        state = initiator_init(
+            raiden=service,
+            transfer_identifier=1,
+            transfer_amount=PaymentAmount(100),
+            transfer_secret=secret,
+            transfer_secrethash=sha3(secret),
+            transfer_fee=FeeAmount(0),
+            token_network_address=factories.make_token_network_address(),
+            target_address=factories.make_address(),
+        )
+
+        assert best_routes.called
+        assert len(service.route_to_feeback_token) == 1
+        assert service.route_to_feeback_token[tuple(route_states[0].route)] == feedback_token
+
+        assert state.routes == route_states
