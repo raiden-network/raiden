@@ -8,7 +8,13 @@ from uuid import UUID
 import click
 import requests
 import structlog
-from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import (
+    is_checksum_address,
+    is_same_address,
+    to_canonical_address,
+    to_checksum_address,
+    to_hex,
+)
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
@@ -121,6 +127,7 @@ def configure_pfs_or_exit(
     pfs_address: Optional[str],
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
+    token_network_registry_address: Address,
 ) -> PFSConfiguration:
     """
     Take in the given pfs_address argument, the service registry and find out a
@@ -179,6 +186,16 @@ def configure_pfs_or_exit(
         )
         click.secho(msg)
         log.info("Using PFS", pfs_info=pathfinding_service_info)
+        pfs_token_network_address = pathfinding_service_info["network_info"]["registry_address"]
+        if not is_same_address(pfs_token_network_address, token_network_registry_address):
+            click.secho(
+                f"Invalid reply from pathfinding service {pfs_address}:"
+                f"PFS is not operating on the same Token Network Registry"
+                f"'{pfs_token_network_address}' as your node is"
+                f"'{token_network_registry_address}'. Raiden will shut "
+                f"down. Please choose a different PFS."
+            )
+            sys.exit(1)
 
     return PFSConfiguration(url=pfs_address, eth_address=pfs_eth_address, fee=fee)
 

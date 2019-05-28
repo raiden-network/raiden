@@ -10,6 +10,8 @@ from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
 
+token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+
 
 def test_service_registry_random_pfs(
     service_registry_address, private_keys, web3, contract_manager
@@ -51,7 +53,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "price_info": 0,
         "network_info": {
             "chain_id": 1,
-            "registry_address": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
+            "registry_address": token_network_registry_address_test_default,
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
@@ -66,13 +68,19 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # With basic routing configure pfs should raise assertion
     with pytest.raises(AssertionError):
         config = configure_pfs_or_exit(
-            pfs_address=None, routing_mode=RoutingMode.BASIC, service_registry=service_proxy
+            pfs_address=None,
+            routing_mode=RoutingMode.BASIC,
+            service_registry=service_proxy,
+            token_network_registry_address=token_network_registry_address_test_default,
         )
 
     # Asking for auto address
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address="auto", routing_mode=RoutingMode.PFS, service_registry=service_proxy
+            pfs_address="auto",
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_proxy,
+            token_network_registry_address=token_network_registry_address_test_default,
         )
     assert config.url in urls
     assert is_checksum_address(config.eth_address)
@@ -81,7 +89,10 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     given_address = "http://ourgivenaddress"
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address=given_address, routing_mode=RoutingMode.PFS, service_registry=service_proxy
+            pfs_address=given_address,
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_proxy,
+            token_network_registry_address=token_network_registry_address_test_default,
         )
     assert config.url == given_address
     assert config.eth_address == json_data["payment_address"]
@@ -98,4 +109,18 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 pfs_address=bad_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_proxy,
+                token_network_registry_address=token_network_registry_address_test_default,
+            )
+
+    # Addresses of token network registries of pfs and client conflic, should exit the client
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value=json_data)
+
+    with pytest.raises(SystemExit):
+        with patch.object(requests, "get", return_value=response):
+            configure_pfs_or_exit(
+                pfs_address="adad",
+                routing_mode=RoutingMode.PFS,
+                service_registry=Mock(),
+                token_network_registry_address="0x2222222222222222222222222222222222222221",
             )

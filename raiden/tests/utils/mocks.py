@@ -180,11 +180,12 @@ def make_raiden_service_mock(
 
 
 def patched_get_for_succesful_pfs_info():
+    token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
     json_data = {
         "price_info": 5,
         "network_info": {
             "chain_id": 1,
-            "registry_address": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
+            "registry_address": token_network_registry_address_test_default,
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",

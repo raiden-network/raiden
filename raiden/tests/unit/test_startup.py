@@ -17,6 +17,8 @@ from raiden_contracts.constants import (
     CONTRACT_USER_DEPOSIT,
 )
 
+token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+
 
 def test_check_network_id_raises_with_mismatching_ids():
     check_ethereum_network_id(68, MockWeb3(68))
@@ -142,7 +144,7 @@ def test_setup_contracts():
 
 def test_setup_proxies_raiden_addresses_are_given():
     """
-    Test that startup for proxies works fine if only raiden addresses only are given
+    Test that startup for proxies works fine if only raiden addresses are given
     """
 
     network_id = 42
@@ -152,7 +154,7 @@ def test_setup_proxies_raiden_addresses_are_given():
 
     proxies = setup_proxies_or_exit(
         config=config,
-        tokennetwork_registry_contract_address=make_address(),
+        tokennetwork_registry_contract_address=token_network_registry_address_test_default,
         secret_registry_contract_address=make_address(),
         endpoint_registry_contract_address=make_address(),
         user_deposit_contract_address=None,
@@ -169,8 +171,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     assert not proxies.service_registry
 
 
-@pytest.mark.parametrize("routing_mode", [RoutingMode.PFS, RoutingMode.BASIC])
-def test_setup_proxies_all_addresses_are_given(routing_mode):
+def test_setup_proxies_all_addresses_are_given():
     """
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
@@ -183,14 +184,14 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
     with patched_get_for_succesful_pfs_info():
         proxies = setup_proxies_or_exit(
             config=config,
-            tokennetwork_registry_contract_address=make_address(),
+            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
             secret_registry_contract_address=make_address(),
             endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=make_address(),
             blockchain_service=blockchain_service,
             contracts=contracts,
-            routing_mode=routing_mode,
+            routing_mode=RoutingMode.BASIC,
             pathfinding_service_address="my-pfs",
         )
     assert proxies
@@ -200,8 +201,7 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
     assert proxies.service_registry
 
 
-@pytest.mark.parametrize("routing_mode", [RoutingMode.PFS, RoutingMode.BASIC])
-def test_setup_proxies_all_addresses_are_known(routing_mode):
+def test_setup_proxies_all_addresses_are_known():
     """
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
@@ -221,7 +221,7 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
             service_registry_contract_address=None,
             blockchain_service=blockchain_service,
             contracts=contracts,
-            routing_mode=routing_mode,
+            routing_mode=RoutingMode.BASIC,
             pathfinding_service_address="my-pfs",
         )
     assert proxies
@@ -247,7 +247,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
     with patched_get_for_succesful_pfs_info():
         proxies = setup_proxies_or_exit(
             config=config,
-            tokennetwork_registry_contract_address=make_address(),
+            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
             secret_registry_contract_address=make_address(),
             endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
