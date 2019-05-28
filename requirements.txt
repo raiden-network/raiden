@@ -24,7 +24,7 @@ pysha3==1.0.2
 py-solc==3.2.0
 pystun-patched-for-raiden==0.1.0
 pytoml==0.1.19
-raiden-contracts==0.20.0
+raiden-contracts==0.21.0
 raiden-webui==0.8.0
 requests==2.20.0
 structlog==18.2.0
