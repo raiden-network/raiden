@@ -86,11 +86,11 @@ def handle_channel_close(
 
 
 def handle_channel_withdraw(
-        token_network_state: TokenNetworkState,
-        state_change: ActionChannelWithdraw,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
-        pseudo_random_generator: random.Random,
+    token_network_state: TokenNetworkState,
+    state_change: ActionChannelWithdraw,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -312,8 +312,7 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
         iteration = handle_channelnew(
-            token_network_state=token_network_state,
-            state_change=state_change,
+            token_network_state=token_network_state, state_change=state_change
         )
     elif type(state_change) == ContractReceiveChannelNewBalance:
         assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
@@ -363,14 +362,12 @@ def state_transition(
     elif type(state_change) == ContractReceiveRouteNew:
         assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
         iteration = handle_newroute(
-            token_network_state=token_network_state,
-            state_change=state_change,
+            token_network_state=token_network_state, state_change=state_change
         )
     elif type(state_change) == ContractReceiveRouteClosed:
         assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
         iteration = handle_closeroute(
-            token_network_state=token_network_state,
-            state_change=state_change,
+            token_network_state=token_network_state, state_change=state_change
         )
 
     return iteration

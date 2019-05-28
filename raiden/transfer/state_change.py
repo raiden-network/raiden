@@ -113,8 +113,13 @@ class ActionChannelClose(StateChange):
 @dataclass
 class ActionChannelWithdraw(StateChange):
     """ Withdraw funds from channel. """
+
     canonical_identifier: CanonicalIdentifier
     total_withdraw: TokenAmount
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
 
 @dataclass

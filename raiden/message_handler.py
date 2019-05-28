@@ -19,6 +19,7 @@ from raiden.raiden_service import RaidenService
 from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveSecretRequest,
@@ -82,20 +83,28 @@ class MessageHandler:
         else:
             log.error("Unknown message cmdid {}".format(message.cmdid))
 
+    @staticmethod
     def handle_message_withdrawrequest(raiden: RaidenService, message: WithdrawRequest):
         withdraw_request = ReceiveWithdrawRequest(
-            token_network_address=message.token_network_address,
-            channel_identifier=message.channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=message.chain_id,
+                token_network_address=message.token_network_address,
+                channel_identifier=message.channel_identifier,
+            ),
             total_withdraw=message.total_withdraw,
             sender=message.sender,
             signature=message.signature,
         )
         raiden.handle_and_track_state_change(withdraw_request)
 
+    @staticmethod
     def handle_message_withdraw(raiden: RaidenService, message: Withdraw):
         withdraw = ReceiveWithdraw(
-            token_network_address=message.token_network_address,
-            channel_identifier=message.channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=message.chain_id,
+                token_network_address=message.token_network_address,
+                channel_identifier=message.channel_identifier,
+            ),
             total_withdraw=message.total_withdraw,
             sender=message.sender,
             signature=message.signature,

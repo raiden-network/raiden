@@ -143,17 +143,31 @@ class ReceiveTransferRefund(BalanceProofStateChange):
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A WithdrawRequest message received. """
 
-    total_withdraw: PaymentAmount
-    token_network_address: TokenNetworkAddress
-    channel_identifier: ChannelID
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
     signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
 
 
 @dataclass
 class ReceiveWithdraw(AuthenticatedSenderStateChange):
     """ A Withdraw message received. """
 
-    token_network_address: TokenNetworkAddress
-    channel_identifier: ChannelID
-    total_withdraw: PaymentAmount
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
     signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
