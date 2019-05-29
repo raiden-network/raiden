@@ -224,7 +224,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
     gevent.joinall(wait)
 
 
-def run_test_regression_register_secret_once(secret_registry_address, deploy_service):
+def test_regression_register_secret_once(secret_registry_address, deploy_service):
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
@@ -248,7 +248,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
 ):
     raise_on_failure(
         raiden_network,
-        run_test_regression_unfiltered_routes,
+        run_regression_payment_complete_after_refund_to_the_initiator,
         raiden_network=raiden_network,
         token_addresses=token_addresses,
         settle_timeout=settle_timeout,
