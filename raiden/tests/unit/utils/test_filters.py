@@ -25,6 +25,7 @@ def test_get_filter_args(contract_manager):
     assert event_filter_params["toBlock"] == "latest"
 
     with pytest.raises(ValueError):
+        # filter argument generation checks if event type is known
         get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
