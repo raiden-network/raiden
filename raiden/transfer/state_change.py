@@ -123,17 +123,6 @@ class ActionChannelSetFee(StateChange):
 
 
 @dataclass
-class ActionCancelTransfer(StateChange):
-    """ The user requests the transfer to be cancelled.
-
-    This state change can fail, it depends on the node's role and the current
-    state of the transfer.
-    """
-
-    transfer_identifier: TransferID
-
-
-@dataclass
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
 
