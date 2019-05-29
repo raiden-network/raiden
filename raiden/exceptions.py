@@ -137,6 +137,12 @@ class UnknownAddress(RaidenError):
     pass
 
 
+class UnresolvableRoute(RaidenError):
+    """ Raised when the next hop of a route can not be resolved to a channel"""
+
+    pass
+
+
 class UnknownTokenAddress(RaidenError):
     """ Raised when the token address in unknown. """
 
