@@ -187,10 +187,6 @@ def make_transaction_hash() -> TransactionHash:
     return TransactionHash(make_32bytes())
 
 
-def make_locksroot() -> Locksroot:
-    return Locksroot(make_32bytes())
-
-
 def make_block_hash() -> BlockHash:
     return BlockHash(make_32bytes())
 
