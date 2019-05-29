@@ -2,7 +2,6 @@ import random
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
-from raiden.transfer.mediated_transfer.state_change import ReceiveWithdraw, ReceiveWithdrawRequest
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -17,6 +16,8 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
+    ReceiveWithdraw,
+    ReceiveWithdrawRequest,
 )
 from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, Union
 

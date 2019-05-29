@@ -31,8 +31,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
-    ReceiveWithdraw,
-    ReceiveWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
@@ -61,6 +59,8 @@ from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
+    ReceiveWithdraw,
+    ReceiveWithdrawRequest,
 )
 from raiden.utils.typing import (
     MYPY_ANNOTATION,

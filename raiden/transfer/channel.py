@@ -44,8 +44,6 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
-    ReceiveWithdraw,
-    ReceiveWithdrawRequest,
 )
 from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
 from raiden.transfer.state import (
@@ -81,6 +79,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
+    ReceiveWithdraw,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex
