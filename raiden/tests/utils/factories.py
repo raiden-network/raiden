@@ -1276,6 +1276,13 @@ def make_node_availability_map(nodes):
     return {node: NODE_NETWORK_REACHABLE for node in nodes}
 
 
+def make_route_from_channel(channel: NettingChannelState) -> RouteState:
+    return RouteState(
+        route=[channel.our_state.address, channel.partner_state.address],
+        forward_channel_id=channel.canonical_identifier.channel_identifier,
+    )
+
+
 @dataclass(frozen=True)
 class RouteProperties(Properties):
     address1: Address

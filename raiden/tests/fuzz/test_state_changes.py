@@ -353,7 +353,7 @@ class InitiatorMixin:
     @rule(
         target=init_initiators,
         partner=partners,
-        payment_id=payment_id(),
+        payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1, max_value=100),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
@@ -374,7 +374,7 @@ class InitiatorMixin:
 
     @rule(
         partner=partners,
-        payment_id=payment_id(),
+        payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         excess_amount=integers(min_value=1),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
@@ -389,7 +389,7 @@ class InitiatorMixin:
     @rule(
         previous_action=init_initiators,
         partner=partners,
-        payment_id=payment_id(),
+        payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1),
     )
     def used_secret_init_initiator(self, previous_action, partner, payment_id, amount):
@@ -537,7 +537,7 @@ class MediatorMixin:
         target_channel = self.address_to_channel[transfer.target]
 
         return ActionInitMediator(
-            routes=[factories.make_route_from_channel(target_channel)],
+            route_state=factories.make_route_from_channel(target_channel),
             from_hop=factories.make_hop_to_channel(initiator_channel),
             from_transfer=transfer,
             balance_proof=transfer.balance_proof,
@@ -548,9 +548,9 @@ class MediatorMixin:
         target=init_mediators,
         initiator_address=partners,
         target_address=partners,
-        payment_id=payment_id(),
+        payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1, max_value=100),
-        secret=secret(),
+        secret=secret(),  # pylint: disable=no-value-for-parameter
     )
     def valid_init_mediator(self, initiator_address, target_address, payment_id, amount, secret):
         assume(initiator_address != target_address)
@@ -597,22 +597,28 @@ class MediatorMixin:
         result = node.state_transition(self.chain_state, previous_action)
         assert not result.events
 
+    # pylint: disable=no-value-for-parameter
     @rule(previous_action=secret_requests, invalid_sender=address())
+    # pylint: enable=no-value-for-parameter
     def replay_receive_secret_reveal_scrambled_sender(self, previous_action, invalid_sender):
         action = ReceiveSecretReveal(previous_action.secret, invalid_sender)
         result = node.state_transition(self.chain_state, action)
         assert not result.events
 
+    # pylint: disable=no-value-for-parameter
     @rule(previous_action=init_mediators, secret=secret())
+    # pylint: enable=no-value-for-parameter
     def wrong_secret_receive_secret_reveal(self, previous_action, secret):
         sender = previous_action.from_transfer.target
         action = ReceiveSecretReveal(secret, sender)
         result = node.state_transition(self.chain_state, action)
         assert not result.events
 
+    # pylint: disable=no-value-for-parameter
     @rule(
         target=secret_requests, previous_action=consumes(init_mediators), invalid_sender=address()
     )
+    # pylint: enable=no-value-for-parameter
     def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         invalid_action = ReceiveSecretReveal(secret, invalid_sender)
