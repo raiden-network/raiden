@@ -181,10 +181,6 @@ def wait_until(func: Callable, wait_for: float = None, sleep_for: float = 0.5) -
     return res
 
 
-def is_frozen() -> bool:
-    return getattr(sys, "frozen", False)
-
-
 def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     """ Split given iterable in pairs [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]"""
     # We are using zip_longest with one clever hack:
