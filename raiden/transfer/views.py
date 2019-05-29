@@ -441,10 +441,6 @@ def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Opti
     return secret_from_transfer_task(transfer_task=transfer_task, secrethash=secrethash)
 
 
-def get_transfer_task(chain_state: ChainState, secrethash: SecretHash) -> Optional[TransferTask]:
-    return chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-
-
 def get_all_transfer_tasks(chain_state: ChainState) -> Dict[SecretHash, TransferTask]:
     return chain_state.payment_mapping.secrethashes_to_task
 
