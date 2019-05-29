@@ -712,6 +712,9 @@ class Metadata:
     def hash(self):
         return sha3(rlp.encode([r.hash for r in self.routes]))
 
+    def __repr__(self):
+        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.routes])}"
+
 
 @dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
