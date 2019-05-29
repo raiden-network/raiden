@@ -137,8 +137,6 @@ class InitiatorTransferState(State):
     received_secret_request: bool = field(default=False, repr=False)
     transfer_state: str = field(default="transfer_pending")
 
-    valid_transfer_states = ("transfer_pending", "transfer_cancelled", "transfer_secret_revealed")
-
 
 @dataclass
 class InitiatorPaymentState(State):
