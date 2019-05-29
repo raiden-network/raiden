@@ -1,7 +1,7 @@
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.storage.sqlite import EventRecord, SQLiteStorage, StateChangeRecord
+from raiden.storage.sqlite import EventRecord, SerializedSQLiteStorage, StateChangeRecord
 from raiden.storage.wal import restore_to_state_change
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -54,7 +54,7 @@ def channel_state_until_state_change(
 
 
 def get_state_change_with_balance_proof_by_balance_hash(
-    storage: SQLiteStorage,
+    storage: SerializedSQLiteStorage,
     canonical_identifier: CanonicalIdentifier,
     balance_hash: BalanceHash,
     sender: Address,
@@ -83,7 +83,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
 
 
 def get_state_change_with_balance_proof_by_locksroot(
-    storage: SQLiteStorage,
+    storage: SerializedSQLiteStorage,
     canonical_identifier: CanonicalIdentifier,
     locksroot: Locksroot,
     sender: Address,
@@ -113,7 +113,9 @@ def get_state_change_with_balance_proof_by_locksroot(
 
 
 def get_event_with_balance_proof_by_balance_hash(
-    storage: SQLiteStorage, canonical_identifier: CanonicalIdentifier, balance_hash: BalanceHash
+    storage: SerializedSQLiteStorage,
+    canonical_identifier: CanonicalIdentifier,
+    balance_hash: BalanceHash,
 ) -> Optional[EventRecord]:
     """ Returns the event which contains the corresponding balance
     proof.
@@ -143,7 +145,7 @@ def get_event_with_balance_proof_by_balance_hash(
 
 
 def get_event_with_balance_proof_by_locksroot(
-    storage: SQLiteStorage,
+    storage: SerializedSQLiteStorage,
     canonical_identifier: CanonicalIdentifier,
     locksroot: Locksroot,
     recipient: Address,
