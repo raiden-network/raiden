@@ -32,7 +32,6 @@ RAIDEN_DB_VERSION = RaidenDBVersion(23)
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = RaidenProtocolVersion(1)
 
-INT64_MAX = 2 ** 63 - 1
 UINT256_MAX = 2 ** 256 - 1
 UINT64_MAX = 2 ** 64 - 1
 
@@ -74,10 +73,6 @@ class EthClient(Enum):
     GETH = "geth"
     PARITY = "parity"
 
-
-ETH_RPC_DEFAULT_PORT = 8545
-HTTP_PORT = 80
-HTTPS_PORT = 443
 
 START_QUERY_BLOCK_KEY = "DefaultStartBlock"
 SNAPSHOT_STATE_CHANGES_COUNT = 500
