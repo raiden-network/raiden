@@ -254,7 +254,6 @@ UNIT_TRANSFER_AMOUNT = 10
 UNIT_TRANSFER_FEE = 5
 UNIT_SECRET = b"secretsecretsecretsecretsecretse"
 UNIT_SECRETHASH = SecretHash(sha256(UNIT_SECRET).digest())
-UNIT_REGISTRY_IDENTIFIER = b"registryregistryregi"
 UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
 UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
 UNIT_CHANNEL_ID = 1338
