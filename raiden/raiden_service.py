@@ -161,7 +161,9 @@ def initiator_init(
     return ActionInitInitiator(transfer_state, routes)
 
 
-def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
+def mediator_init(
+    raiden: "RaidenService", transfer: LockedTransfer
+) -> Optional[ActionInitMediator]:
     from_transfer = lockedtransfersigned_from_message(transfer)
     # Feedback token not used here, will be removed with source routing
     from_hop = HopState(
