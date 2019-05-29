@@ -46,7 +46,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
-from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Endpoint, Iterable, Port
+from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterable, Port
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,

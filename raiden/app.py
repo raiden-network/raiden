@@ -22,7 +22,7 @@ from raiden.settings import (
     PRODUCTION_CONTRACT_VERSION,
 )
 from raiden.utils import pex, typing
-from raiden.utils.typing import Address, Any, Dict
+from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
