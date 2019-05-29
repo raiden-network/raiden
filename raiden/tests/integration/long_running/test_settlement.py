@@ -3,12 +3,13 @@ from hashlib import sha256
 
 import gevent
 import pytest
+from gevent.timeout import Timeout
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.messages import LockedTransfer, LockExpired, RevealSecret
+from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -22,7 +23,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import sha3
+from raiden.utils import pex, sha3
 from raiden.utils.timeout import BlockTimeout
 
 
@@ -403,6 +404,82 @@ def run_test_batch_unlock(
 
     assert token_proxy.balance_of(alice_app.raiden.address) == alice_new_balance
     assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_channel_withdraw(
+        raiden_network, number_of_nodes, token_addresses, secret_registry_address, deposit, blockchain_type, network_wait
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_channel_withdraw,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        secret_registry_address=secret_registry_address,
+        deposit=deposit,
+        blockchain_type=blockchain_type,
+        network_wait=network_wait,
+        number_of_nodes=number_of_nodes,
+    )
+
+
+def run_test_channel_withdraw(
+        raiden_network, token_addresses, secret_registry_address, deposit, blockchain_type, network_wait, number_of_nodes
+):
+    """Batch unlock can be called after the channel is settled."""
+    alice_app, bob_app = raiden_network
+    registry_address = alice_app.raiden.default_registry.address
+    token_address = token_addresses[0]
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
+    )
+
+    message_handler = WaitForMessage()
+    bob_app.raiden.message_handler = message_handler
+
+    alice_to_bob_amount = 10
+    identifier = 1
+    target = bob_app.raiden.address
+    secret = sha3(target)
+
+    payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
+        token_network_address=token_network_address,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
+    )
+
+    wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
+        Unlock, {"payment_identifier": identifier}
+    )
+    timeout = network_wait * number_of_nodes
+    with Timeout(seconds=timeout):
+        wait_for_unlock.get()
+        msg = (
+            f"transfer from {pex(alice_app.raiden.address)} "
+            f"to {pex(bob_app.raiden.address)} failed."
+        )
+        assert payment_status.payment_done.get(), msg
+
+    total_withdraw = deposit + alice_to_bob_amount
+
+    bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+    bob_app.raiden.withdraw(
+        canonical_identifier=bob_alice_channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+    )
+
+    waiting.wait_for_participant_withdraw(
+        raiden=bob_app.raiden,
+        payment_network_address=registry_address,
+        token_address=token_address,
+        partner_address=alice_app.raiden.address,
+        target_address=bob_app.raiden.address,
+        target_withdraw=total_withdraw,
+        retry_timeout=bob_app.raiden.alarm.sleep_time,
+    )
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
