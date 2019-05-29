@@ -1,20 +1,11 @@
-import copy
 import json
-import os
 import warnings
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import gevent
 import structlog
-from eth_utils import (
-    decode_hex,
-    encode_hex,
-    is_checksum_address,
-    remove_0x_prefix,
-    to_canonical_address,
-    to_checksum_address,
-)
+from eth_utils import encode_hex, is_checksum_address, to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ConnectTimeout
@@ -43,11 +34,6 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import pex, privatekey_to_address
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.filters import StatelessFilter
-from raiden.utils.solc import (
-    solidity_library_symbol,
-    solidity_resolve_symbols,
-    solidity_unresolved_symbols,
-)
 from raiden.utils.typing import (
     ABI,
     Address,
@@ -194,60 +180,6 @@ def check_address_has_code(client: "JSONRPCClient", address: Address, contract_n
                 formated_contract_name, to_checksum_address(address)
             )
         )
-
-
-def deploy_dependencies_symbols(all_contract):
-    dependencies = {}
-
-    symbols_to_contract = dict()
-    for contract_name in all_contract:
-        symbol = solidity_library_symbol(contract_name)
-
-        if symbol in symbols_to_contract:
-            raise ValueError("Conflicting library names.")
-
-        symbols_to_contract[symbol] = contract_name
-
-    for contract_name, contract in all_contract.items():
-        unresolved_symbols = solidity_unresolved_symbols(contract["bin"])
-        dependencies[contract_name] = [
-            symbols_to_contract[unresolved] for unresolved in unresolved_symbols
-        ]
-
-    return dependencies
-
-
-def dependencies_order_of_build(target_contract, dependencies_map):
-    """ Return an ordered list of contracts that is sufficient to successfully
-    deploy the target contract.
-
-    Note:
-        This function assumes that the `dependencies_map` is an acyclic graph.
-    """
-    if not dependencies_map:
-        return [target_contract]
-
-    if target_contract not in dependencies_map:
-        raise ValueError("no dependencies defined for {}".format(target_contract))
-
-    order = [target_contract]
-    todo = list(dependencies_map[target_contract])
-
-    while todo:
-        target_contract = todo.pop(0)
-        target_pos = len(order)
-
-        for dependency in dependencies_map[target_contract]:
-            # we need to add the current contract before all its depedencies
-            if dependency in order:
-                target_pos = order.index(dependency)
-            else:
-                todo.append(dependency)
-
-        order.insert(target_pos, target_contract)
-
-    order.reverse()
-    return order
 
 
 class ParityCallType(Enum):
@@ -614,131 +546,10 @@ class JSONRPCClient:
     def get_transaction_receipt(self, tx_hash: bytes):
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
 
-    def deploy_solidity_contract(
-        self,  # pylint: disable=too-many-locals
-        contract_name: str,
-        all_contracts: Dict[str, CompiledContract],
-        libraries: Dict[str, str] = None,
-        constructor_parameters: Tuple[Any] = None,
-        contract_path: str = None,
-    ) -> Tuple[ContractProxy, Dict]:
-        """
-        Deploy a solidity contract.
-
-        Args:
-            contract_name: The name of the contract to compile.
-            all_contracts: The json dictionary containing the result of compiling a file.
-            constructor_parameters: A tuple of arguments to pass to the constructor.
-            contract_path: If we are dealing with solc >= v0.4.9 then the path
-                           to the contract is a required argument to extract
-                           the contract data from the `all_contracts` dict.
-        """
-        if libraries:
-            libraries = dict(libraries)
-        else:
-            libraries = dict()
-
-        ctor_parameters = constructor_parameters or ()
-        all_contracts = copy.deepcopy(all_contracts)
-
-        if contract_name in all_contracts:
-            contract_key = contract_name
-
-        elif contract_path is not None:
-            contract_key = os.path.basename(contract_path) + ":" + contract_name
-
-            if contract_key not in all_contracts:
-                raise ValueError("Unknown contract {}".format(contract_name))
-        else:
-            raise ValueError(
-                "Unknown contract {} and no contract_path given".format(contract_name)
-            )
-
-        contract = all_contracts[contract_key]
-        contract_interface = contract["abi"]
-        symbols = solidity_unresolved_symbols(contract["bin"])
-
-        if symbols:
-            available_symbols = list(map(solidity_library_symbol, all_contracts.keys()))
-
-            unknown_symbols = set(symbols) - set(available_symbols)
-            if unknown_symbols:
-                msg = "Cannot deploy contract, known symbols {}, unresolved symbols {}.".format(
-                    available_symbols, unknown_symbols
-                )
-                raise Exception(msg)
-
-            dependencies = deploy_dependencies_symbols(all_contracts)
-            deployment_order = dependencies_order_of_build(contract_key, dependencies)
-
-            deployment_order.pop()  # remove `contract_name` from the list
-
-            log.debug(
-                "Deploying dependencies: {}".format(str(deployment_order)), node=pex(self.address)
-            )
-
-            for deploy_contract in deployment_order:
-                dependency_contract = all_contracts[deploy_contract]
-
-                hex_bytecode = solidity_resolve_symbols(dependency_contract["bin"], libraries)
-                bytecode = decode_hex(hex_bytecode)
-
-                dependency_contract["bin"] = bytecode
-
-                gas_limit = self.web3.eth.getBlock("latest")["gasLimit"] * 8 // 10
-                transaction_hash = self.send_transaction(
-                    to=Address(b""), startgas=gas_limit, data=bytecode
-                )
-
-                self.poll(transaction_hash)
-                receipt = self.get_transaction_receipt(transaction_hash)
-
-                contract_address = receipt["contractAddress"]
-                # remove the hexadecimal prefix 0x from the address
-                contract_address = remove_0x_prefix(contract_address)
-
-                libraries[deploy_contract] = contract_address
-
-                deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
-
-                if not deployed_code:
-                    raise RuntimeError("Contract address has no code, check gas usage.")
-
-            hex_bytecode = solidity_resolve_symbols(contract["bin"], libraries)
-            bytecode = decode_hex(hex_bytecode)
-
-            contract["bin"] = bytecode
-
-        if isinstance(contract["bin"], str):
-            contract["bin"] = decode_hex(contract["bin"])
-
-        contract_object = self.web3.eth.contract(abi=contract["abi"], bytecode=contract["bin"])
-        contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
-        transaction_hash = self.send_transaction(
-            to=Address(b""),
-            data=contract_transaction["data"],
-            startgas=self._gas_estimate_correction(contract_transaction["gas"]),
-        )
-
-        self.poll(transaction_hash)
-        receipt = self.get_transaction_receipt(transaction_hash)
-        contract_address = receipt["contractAddress"]
-
-        deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
-
-        if not deployed_code:
-            raise RuntimeError(
-                "Deployment of {} failed. Contract address has no code, check gas usage.".format(
-                    contract_name
-                )
-            )
-
-        return self.new_contract_proxy(contract_interface, contract_address), receipt
-
     def deploy_single_contract(
         self,
         contract_name: str,
-        contract: DeployedContract,
+        contract: CompiledContract,
         constructor_parameters: Tuple[Any, ...] = None,
     ) -> Tuple[ContractProxy, Dict]:
         """
