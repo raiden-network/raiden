@@ -280,32 +280,6 @@ def wait_for_settle(
     )
 
 
-def wait_for_settle_all_channels(raiden: "RaidenService", retry_timeout: float) -> None:
-    """Wait until all channels are settled.
-
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-    chain_state = views.state_from_raiden(raiden)
-
-    id_paymentnetworkstate = chain_state.identifiers_to_paymentnetworks.items()
-    for payment_network_address, payment_network_state in id_paymentnetworkstate:
-
-        id_tokennetworkstate = payment_network_state.tokennetworkaddresses_to_tokennetworks.items()
-        for token_network_address, token_network_state in id_tokennetworkstate:
-            channel_ids = cast(
-                List[ChannelID], token_network_state.channelidentifiers_to_channels.keys()
-            )
-
-            wait_for_settle(
-                raiden=raiden,
-                payment_network_address=payment_network_address,
-                token_address=TokenAddress(token_network_address),
-                channel_ids=channel_ids,
-                retry_timeout=retry_timeout,
-            )
-
-
 def wait_for_network_state(
     raiden: "RaidenService", node_address: Address, network_state: str, retry_timeout: float
 ) -> None:
