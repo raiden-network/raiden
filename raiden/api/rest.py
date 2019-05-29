@@ -1086,7 +1086,7 @@ class RestAPI:  # pragma: no unittest
         )
 
         result = self.channel_schema.dump(updated_channel_state)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def _close(
         self, registry_address: typing.PaymentNetworkAddress, channel_state: NettingChannelState
@@ -1143,14 +1143,18 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        if total_deposit is None and state is None:
+        if total_deposit is None and state is None and total_withdraw is None:
             return api_error(
-                errors="Nothing to do. Should either provide 'total_deposit' or 'state' argument",
+                errors="Nothing to do. Should either provide 'total_deposit', 'total_withdraw' or 'state' argument",
                 status_code=HTTPStatus.BAD_REQUEST,
             )
         if total_deposit and total_deposit < 0:
             return api_error(
                 errors="Amount to deposit must not be negative.", status_code=HTTPStatus.CONFLICT
+            )
+        if total_withdraw and total_withdraw < 0:
+            return api_error(
+                errors="Amount to withdraw must not be negative.", status_code=HTTPStatus.CONFLICT
             )
 
         try:
