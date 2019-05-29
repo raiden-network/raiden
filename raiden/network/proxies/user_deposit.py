@@ -109,13 +109,10 @@ class UserDeposit:
                 if gas_limit:
                     error_prefix = "Call to deposit failed"
                     gas_limit = safe_gas_limit(gas_limit)
-                    log_details['gas_limit'] = gas_limit
+                    log_details["gas_limit"] = gas_limit
 
                     transaction_hash = self.proxy.transact(
-                        "deposit",
-                        gas_limit,
-                        to_checksum_address(beneficiary),
-                        total_deposit,
+                        "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
                     )
 
                     self.client.poll(transaction_hash)
