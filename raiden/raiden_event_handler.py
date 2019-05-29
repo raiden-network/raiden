@@ -295,8 +295,7 @@ class RaidenEventHandler(EventHandler):
         non_closing_data = pack_withdraw(
             canonical_identifier=channel_withdraw_event.canonical_identifier,
             participant=raiden.address,
-            total_withdraw=channel_withdraw_event.total_withdraw
-
+            total_withdraw=channel_withdraw_event.total_withdraw,
         )
         our_signature = raiden.signer.sign(data=non_closing_data)
 

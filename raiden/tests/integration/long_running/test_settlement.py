@@ -408,7 +408,13 @@ def run_test_batch_unlock(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw(
-        raiden_network, number_of_nodes, token_addresses, secret_registry_address, deposit, blockchain_type, network_wait
+    raiden_network,
+    number_of_nodes,
+    token_addresses,
+    secret_registry_address,
+    deposit,
+    blockchain_type,
+    network_wait,
 ):
     raise_on_failure(
         raiden_network,
@@ -424,7 +430,13 @@ def test_channel_withdraw(
 
 
 def run_test_channel_withdraw(
-        raiden_network, token_addresses, secret_registry_address, deposit, blockchain_type, network_wait, number_of_nodes
+    raiden_network,
+    token_addresses,
+    secret_registry_address,
+    deposit,
+    blockchain_type,
+    network_wait,
+    number_of_nodes,
 ):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
