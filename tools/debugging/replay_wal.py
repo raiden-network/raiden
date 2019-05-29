@@ -14,7 +14,7 @@ import click
 from eth_utils import encode_hex, to_canonical_address
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import NULL_ULID, SerializedSQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
