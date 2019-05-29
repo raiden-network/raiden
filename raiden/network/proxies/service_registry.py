@@ -1,6 +1,6 @@
 import structlog
 import web3
-from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
+from eth_utils import is_binary_address, to_canonical_address, to_checksum_address
 
 from raiden.exceptions import InvalidAddress
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
@@ -28,7 +28,7 @@ class ServiceRegistry:
 
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY),
-            to_normalized_address(service_registry_address),
+            to_canonical_address(service_registry_address),
         )
 
         compare_contract_versions(

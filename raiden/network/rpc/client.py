@@ -595,7 +595,7 @@ class JSONRPCClient:
 
         return price
 
-    def new_contract_proxy(self, contract_interface, contract_address: Address):
+    def new_contract_proxy(self, contract_interface, contract_address: Address) -> ContractProxy:
         """ Return a proxy for interacting with a smart contract.
 
         Args:
@@ -621,14 +621,13 @@ class JSONRPCClient:
         libraries: Dict[str, str] = None,
         constructor_parameters: Tuple[Any] = None,
         contract_path: str = None,
-    ):
+    ) -> Tuple[ContractProxy, Dict]:
         """
         Deploy a solidity contract.
 
         Args:
             contract_name: The name of the contract to compile.
             all_contracts: The json dictionary containing the result of compiling a file.
-            libraries: A list of libraries to use in deployment.
             constructor_parameters: A tuple of arguments to pass to the constructor.
             contract_path: If we are dealing with solc >= v0.4.9 then the path
                            to the contract is a required argument to extract
@@ -735,6 +734,46 @@ class JSONRPCClient:
             )
 
         return self.new_contract_proxy(contract_interface, contract_address), receipt
+
+    def deploy_single_contract(
+        self,
+        contract_name: str,
+        contract: DeployedContract,
+        constructor_parameters: Tuple[Any, ...] = None,
+    ) -> Tuple[ContractProxy, Dict]:
+        """
+        Deploy a single solidity contract without dependencies.
+
+        Args:
+            contract_name: The name of the contract to compile.
+            contract: The dictionary containing the contract information (like ABI and BIN)
+            constructor_parameters: A tuple of arguments to pass to the constructor.
+        """
+
+        ctor_parameters = constructor_parameters or ()
+
+        contract_object = self.web3.eth.contract(abi=contract["abi"], bytecode=contract["bin"])
+        contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
+        transaction_hash = self.send_transaction(
+            to=Address(b""),
+            data=contract_transaction["data"],
+            startgas=self._gas_estimate_correction(contract_transaction["gas"]),
+        )
+
+        self.poll(transaction_hash)
+        receipt = self.get_transaction_receipt(transaction_hash)
+        contract_address = receipt["contractAddress"]
+
+        deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
+
+        if not deployed_code:
+            raise RuntimeError(
+                "Deployment of {} failed. Contract address has no code, check gas usage.".format(
+                    contract_name
+                )
+            )
+
+        return self.new_contract_proxy(contract["abi"], contract_address), receipt
 
     def send_transaction(
         self, to: Address, startgas: int, value: int = 0, data: bytes = b""
