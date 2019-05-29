@@ -116,11 +116,6 @@ def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
-def get_relative_path(file_name: str) -> str:
-    prefix = os.path.commonprefix([os.path.realpath("."), os.path.realpath(file_name)])
-    return file_name.replace(prefix + "/", "")
-
-
 def get_system_spec() -> Dict[str, Any]:
     """Collect information about the system and installation.
     """
