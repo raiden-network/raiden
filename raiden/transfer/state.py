@@ -248,19 +248,6 @@ class UnlockPartialProofState(State):
 
 
 @dataclass
-class UnlockProofState(State):
-    """ An unlock proof for a given lock. """
-
-    merkle_proof: List[Keccak256]
-    lock_encoded: bytes
-    secret: Secret = field(repr=False)
-
-    def __post_init__(self):
-        if not isinstance(self.secret, T_Secret):
-            raise ValueError("secret must be a secret instance")
-
-
-@dataclass
 class TransactionExecutionStatus(State):
     """ Represents the status of a transaction. """
 
