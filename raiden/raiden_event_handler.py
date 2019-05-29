@@ -19,7 +19,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.architecture import Event
-from raiden.transfer.balance_proof import pack_balance_proof_update
+from raiden.transfer.balance_proof import pack_balance_proof_update, pack_withdraw
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -292,13 +292,21 @@ class RaidenEventHandler(EventHandler):
     def handle_contract_send_channelwithdraw(
         raiden: "RaidenService", channel_withdraw_event: ContractSendChannelWithdraw
     ):
+        non_closing_data = pack_withdraw(
+            canonical_identifier=channel_withdraw_event.canonical_identifier,
+            participant=raiden.address,
+            total_withdraw=channel_withdraw_event.total_withdraw
+
+        )
+        our_signature = raiden.signer.sign(data=non_closing_data)
+
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=channel_withdraw_event.canonical_identifier
         )
 
         channel_proxy.set_total_withdraw(
             total_withdraw=channel_withdraw_event.total_withdraw,
-            participant_signature=channel_withdraw_event.participant_signature,
+            participant_signature=our_signature,
             partner_signature=channel_withdraw_event.partner_signature,
             block_identifier=channel_withdraw_event.triggered_by_block_hash,
         )
