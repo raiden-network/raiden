@@ -156,7 +156,7 @@ class TokenNetworkRegistry:
             if gas_limit:
                 error_prefix = "Call to createERC20TokenNetwork failed"
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK)
-                log_details['gas_limit'] = gas_limit
+                log_details["gas_limit"] = gas_limit
                 transaction_hash = self.proxy.transact(
                     "createERC20TokenNetwork", gas_limit, **kwarguments
                 )
