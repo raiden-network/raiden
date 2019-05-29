@@ -124,7 +124,6 @@ class UpgradeManager:
         assert match, f'Database name "{base_name}" does not match our format'
 
         self._current_db_filename = Path(db_filename)
-        self._current_version = get_file_version(self._current_db_filename)
         self._kwargs = kwargs
 
     def run(self):
