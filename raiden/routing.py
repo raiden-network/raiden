@@ -6,11 +6,12 @@ import networkx
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.exceptions import ServiceRequestFailed
+from raiden.exceptions import ServiceRequestFailed, UnresolvableRoute
 from raiden.messages import RouteMetadata
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
+from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -297,7 +298,8 @@ def resolve_route(
         partner_address=route_metadata.routes[1],
     )
 
-    assert channel_state is not None, "Channel state needs to exist"
+    if channel_state is None:
+        raise UnresolvableRoute(f"no channel for {route_metadata} on {pex(token_network_address)}")
 
     return RouteState(
         route=route_metadata.routes,
