@@ -83,11 +83,6 @@ def data_decoder(data: str) -> bytes:
     return decode_hex(data)
 
 
-def quantity_encoder(i: int) -> str:
-    """Encode integer quantity `data`."""
-    return hex(i).rstrip("L")
-
-
 def pex(data: bytes) -> str:
     return remove_0x_prefix(encode_hex(data))[:8]
 
