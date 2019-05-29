@@ -41,7 +41,6 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TransferID,
 )
 
 
