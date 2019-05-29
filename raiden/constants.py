@@ -35,7 +35,6 @@ PROTOCOL_VERSION = RaidenProtocolVersion(1)
 UINT256_MAX = 2 ** 256 - 1
 UINT64_MAX = 2 ** 64 - 1
 
-RED_EYES_MAX_TOKEN_NETWORKS = 1
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
 RED_EYES_PER_TOKEN_NETWORK_LIMIT = int(250 * 10 ** 18)
 
@@ -74,7 +73,6 @@ class EthClient(Enum):
     PARITY = "parity"
 
 
-START_QUERY_BLOCK_KEY = "DefaultStartBlock"
 SNAPSHOT_STATE_CHANGES_COUNT = 500
 
 # An arbitrary limit for transaction size in Raiden, added in PR #1990
