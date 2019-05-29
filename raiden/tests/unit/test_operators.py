@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages import Processed
 from raiden.tests.utils import factories
@@ -12,11 +10,7 @@ from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.utils import sha3
 
 ADDRESS = sha3(b"foo")[:20]
-ADDRESS2 = sha3(b"boo")[:20]
-ADDRESS3 = sha3(b"coo")[:20]
-ADDRESS4 = sha3(b"goo")[:20]
 SECRET = b"secret"
-HASH = sha256(SECRET).digest()
 
 
 def test_transfer_statechange_operators():
