@@ -358,6 +358,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             )
             assert patched.call_count == 1
 
+            # Mediator should not re-query PFS
             locked_transfer = factories.create(
                 factories.LockedTransferProperties(
                     amount=TokenAmount(5),
@@ -372,7 +373,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
                 )
             )
             app0.raiden.mediate_mediated_transfer(locked_transfer)
-            assert patched.call_count == 2
+            assert patched.call_count == 1
 
 
 @pytest.mark.parametrize("channels_per_node", [CHAIN])

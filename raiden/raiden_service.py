@@ -32,6 +32,7 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
+    UnresolvableRoute,
 )
 from raiden.messages import (
     LockedTransfer,
@@ -171,12 +172,27 @@ def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionIn
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
-    route_state = routing.resolve_route(
-        route_metadata=transfer.route_metadata,
-        # pylint: disable=E1101
-        token_network_address=from_transfer.balance_proof.token_network_address,
-        chain_state=views.state_from_raiden(raiden),
-    )
+    try:
+
+        route_state = routing.resolve_route(
+            route_metadata=transfer.route_metadata,
+            # pylint: disable=E1101
+            token_network_address=from_transfer.balance_proof.token_network_address,
+            chain_state=views.state_from_raiden(raiden),
+        )
+    except UnresolvableRoute as exc:
+        log.warn(
+            str(exc),
+            sender=pex(transfer.sender),
+            message_identifier=transfer.message_identifier,
+            # pylint: disable=E1101
+            channel_identifier=from_transfer.balance_proof.canonical_identifier.channel_identifier,
+            # pylint: disable=E1101
+            token_network_address=pex(from_transfer.balance_proof.token_network_address),
+            node=pex(raiden.address),
+        )
+        return None
+
     init_mediator_statechange = ActionInitMediator(
         from_hop=from_hop,
         route_state=route_state,
@@ -1150,7 +1166,8 @@ class RaidenService(Runnable):
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer) -> None:
         init_mediator_statechange = mediator_init(self, transfer)
-        self.handle_and_track_state_change(init_mediator_statechange)
+        if init_mediator_statechange is not None:
+            self.handle_and_track_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer) -> None:
         self.start_health_check_for(Address(transfer.initiator))
