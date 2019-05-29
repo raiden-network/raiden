@@ -139,7 +139,7 @@ class PaymentMappingState(State):
 
 # This is necessary for the routing only, maybe it should be transient state
 # outside of the state tree.
-@dataclass(repr=False)
+@dataclass(repr=False, eq=False)
 class TokenNetworkGraphState(State):
     """ Stores the existing channels in the channel manager contract, used for
     route finding.
@@ -154,6 +154,14 @@ class TokenNetworkGraphState(State):
     def __repr__(self):
         # pylint: disable=no-member
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TokenNetworkGraphState)
+            and self.token_network_address == other.token_network_address
+            and to_comparable_graph(self.network) == to_comparable_graph(other.network)
+            and self.channel_identifier_to_participants == other.channel_identifier_to_participants
+        )
 
 
 @dataclass
