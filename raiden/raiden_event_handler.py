@@ -323,7 +323,7 @@ class RaidenEventHandler(EventHandler):
         canonical_identifier = channel_unlock_event.canonical_identifier
         token_network_address = canonical_identifier.token_network_address
         channel_identifier = canonical_identifier.channel_identifier
-        participant = channel_unlock_event.participant
+        participant = channel_unlock_event.sender
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             canonical_identifier=canonical_identifier

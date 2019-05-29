@@ -380,7 +380,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     canonical_identifier = None
 
     for channel_identifier in channel_identifiers:
-        if partner == args["partner"]:
+        if partner == args["sender"]:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 canonical_identifier=CanonicalIdentifier(
@@ -394,7 +394,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
             if state_change_record is not None:
                 canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
                 break
-        elif partner == args["participant"]:
+        elif partner == args["receiver"]:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 canonical_identifier=CanonicalIdentifier(
