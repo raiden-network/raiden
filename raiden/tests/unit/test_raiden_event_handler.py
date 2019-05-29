@@ -81,7 +81,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         canonical_identifier=make_canonical_identifier(
             token_network_address=token_network_address, channel_identifier=channel_identifier
         ),
-        participant=participant,
+        sender=participant,
         triggered_by_block_hash=make_block_hash(),
     )
 

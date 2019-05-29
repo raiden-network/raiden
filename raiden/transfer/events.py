@@ -84,7 +84,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
     canonical_identifier: CanonicalIdentifier
-    participant: Address
+    sender: Address  # sender of the lock
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
