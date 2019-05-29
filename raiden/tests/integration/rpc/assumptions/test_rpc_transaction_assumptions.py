@@ -7,7 +7,7 @@ from raiden.utils import safe_gas_limit
 
 def test_transact_opcode(deploy_client):
     """ The receipt status field of a transaction that did not throw is 0x1 """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -23,7 +23,7 @@ def test_transact_opcode(deploy_client):
 
 def test_transact_throws_opcode(deploy_client):
     """ The receipt status field of a transaction that threw is 0x0 """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -39,7 +39,7 @@ def test_transact_throws_opcode(deploy_client):
 
 def test_transact_opcode_oog(deploy_client):
     """ The receipt status field of a transaction that did NOT throw is 0x0. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0

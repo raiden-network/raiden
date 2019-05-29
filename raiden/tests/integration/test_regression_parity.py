@@ -94,7 +94,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
         retry_timeout=1,
     )
 
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1000
 
     def send_transaction():

@@ -7,7 +7,7 @@ SSTORE_COST = 20000
 
 def test_estimate_gas_fail(deploy_client):
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -22,7 +22,7 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     """ Gas estimation fails if the transaction execution requires more gas
     then the block's gas limit.
     """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
 
     latest_block_hash = deploy_client.blockhash_from_blocknumber("latest")
     current_gas_limit = deploy_client.get_block(latest_block_hash)["gasLimit"]

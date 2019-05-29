@@ -118,11 +118,11 @@ def get_test_contract(name):
 
 def deploy_rpc_test_contract(deploy_client, name):
     contract_path, contracts = get_test_contract(f"{name}.sol")
-    contract_proxy, _ = deploy_client.deploy_solidity_contract(
+    contract_proxy, receipt = deploy_client.deploy_solidity_contract(
         name, contracts, libraries=dict(), constructor_parameters=None, contract_path=contract_path
     )
 
-    return contract_proxy
+    return contract_proxy, receipt
 
 
 def get_list_of_block_numbers(item):

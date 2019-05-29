@@ -20,7 +20,7 @@ STATE_PRUNNING = {
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNNING])
 def test_parity_request_prunned_data_raises_an_exception(deploy_client):
     """ Interacting with an old block identifier with a pruning client throws. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1000
 
     def send_transaction():
