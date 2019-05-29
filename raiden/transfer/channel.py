@@ -12,7 +12,6 @@ from raiden.constants import (
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
-from raiden.messages import Withdraw, WithdrawRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof, pack_withdraw
@@ -1701,7 +1700,7 @@ def handle_receive_withdraw_request(
     if is_valid_withdraw_request(withdraw_request, channel_state):
         channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
 
-        events.append(
+        events.extend([
             SendWithdraw(
                 recipient=channel_state.partner_state.address,
                 chain_id=channel_state.chain_id,
@@ -1710,8 +1709,13 @@ def handle_receive_withdraw_request(
                 message_identifier=message_identifier_from_prng(pseudo_random_generator),
                 total_withdraw=withdraw_request.total_withdraw,
                 participant=channel_state.partner_state.address,
-            )
-        )
+            ),
+            SendProcessed(
+                recipient=channel_state.partner_state.address,
+                channel_identifier=channel_state.identifier,
+                message_identifier=withdraw_request.message_identifier,
+            ),
+        ])
     return TransitionResult(channel_state, events)
 
 
@@ -1725,15 +1729,19 @@ def handle_receive_withdraw(
     if is_valid_withdraw_confirmation(withdraw, channel_state):
         channel_state.our_state.pending_withdraw = withdraw.total_withdraw
 
-        events.append(
+        events.extend([
             ContractSendChannelWithdraw(
                 canonical_identifier=withdraw.canonical_identifier,
                 total_withdraw=withdraw.total_withdraw,
-                participant_signature=EMPTY_SIGNATURE,
                 partner_signature=withdraw.signature,
                 triggered_by_block_hash=block_hash,
-            )
-        )
+            ),
+            SendProcessed(
+                recipient=channel_state.partner_state.address,
+                channel_identifier=channel_state.identifier,
+                message_identifier=withdraw.message_identifier,
+            ),
+        ])
     return TransitionResult(channel_state, events)
 
 

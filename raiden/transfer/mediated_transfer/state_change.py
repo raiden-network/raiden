@@ -144,7 +144,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
 @dataclass
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A WithdrawRequest message received. """
-
+    message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
     signature: Signature
@@ -161,7 +161,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
 @dataclass
 class ReceiveWithdraw(AuthenticatedSenderStateChange):
     """ A Withdraw message received. """
-
+    message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
     signature: Signature

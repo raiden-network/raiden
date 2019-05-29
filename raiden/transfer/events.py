@@ -38,7 +38,6 @@ class ContractSendChannelWithdraw(ContractSendEvent):
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
-    participant_signature: Signature
     partner_signature: Signature
 
 
