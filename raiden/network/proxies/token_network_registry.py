@@ -23,10 +23,10 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
 )
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import compare_contract_versions
+from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     Address,
     BlockSpecification,
@@ -138,67 +138,58 @@ class TokenNetworkRegistry:
             )
 
         log_details = {
-            "node": pex(self.node_address),
-            "token_address": pex(token_address),
-            "registry_address": pex(self.address),
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "token_address": to_checksum_address(token_address),
         }
-        log.debug("createERC20TokenNetwork called", **log_details)
 
-        checking_block = self.client.get_checking_block()
-        error_prefix = "Call to createERC20TokenNetwork will fail"
+        with log_transaction(log, "add_token", log_details):
+            checking_block = self.client.get_checking_block()
+            error_prefix = "Call to createERC20TokenNetwork will fail"
 
-        kwarguments = {"_token_address": token_address}
-        kwarguments.update(additional_arguments)
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "createERC20TokenNetwork", **kwarguments
-        )
-
-        if gas_limit:
-            error_prefix = "Call to createERC20TokenNetwork failed"
-            transaction_hash = self.proxy.transact(
-                "createERC20TokenNetwork",
-                safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
-                **kwarguments,
+            kwarguments = {"_token_address": token_address}
+            kwarguments.update(additional_arguments)
+            gas_limit = self.proxy.estimate_gas(
+                checking_block, "createERC20TokenNetwork", **kwarguments
             )
 
-            self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            if gas_limit:
+                error_prefix = "Call to createERC20TokenNetwork failed"
+                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK)
+                log_details['gas_limit'] = gas_limit
+                transaction_hash = self.proxy.transact(
+                    "createERC20TokenNetwork", gas_limit, **kwarguments
+                )
 
-        transaction_executed = gas_limit is not None
-        if not transaction_executed or receipt_or_none:
-            if transaction_executed:
-                block = receipt_or_none["blockNumber"]
-            else:
-                block = checking_block
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-            required_gas = gas_limit if gas_limit else GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name="createERC20TokenNetwork",
-                transaction_executed=transaction_executed,
-                required_gas=required_gas,
-                block_identifier=block,
-            )
+            transaction_executed = gas_limit is not None
+            if not transaction_executed or receipt_or_none:
+                if transaction_executed:
+                    block = receipt_or_none["blockNumber"]
+                else:
+                    block = checking_block
 
-            if self.get_token_network(token_address, block):
-                error_msg = f"{error_prefix}. Token already registered"
-                log.warning(error_msg, **log_details)
-                raise RaidenRecoverableError(error_msg)
+                required_gas = (
+                    gas_limit if gas_limit else GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK
+                )
+                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    transaction_name="createERC20TokenNetwork",
+                    transaction_executed=transaction_executed,
+                    required_gas=required_gas,
+                    block_identifier=block,
+                )
 
-            error_msg = f"{error_prefix}"
-            log.critical(error_msg, **log_details)
-            raise RaidenUnrecoverableError(error_msg)
+                if self.get_token_network(token_address, block):
+                    raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
 
-        token_network_address = self.get_token_network(token_address, "latest")
-        if token_network_address is None:
-            msg = "createERC20TokenNetwork succeeded but token network address is Null"
-            log.critical(msg, **log_details)
-            raise RuntimeError(msg)
+                raise RaidenUnrecoverableError(error_prefix)
 
-        log.info(
-            "createERC20TokenNetwork successful",
-            token_network_address=pex(token_network_address),
-            **log_details,
-        )
+            token_network_address = self.get_token_network(token_address, "latest")
+            if token_network_address is None:
+                msg = "createERC20TokenNetwork succeeded but token network address is Null"
+                raise RuntimeError(msg)
 
         return token_network_address
 
