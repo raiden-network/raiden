@@ -14,7 +14,7 @@ WEI_TO_ETH = 10 ** 18
 
 @click.command()
 @click.option("--keystore-file", required=True, type=click.Path(exists=True, dir_okay=False))
-@click.password_option("--password", envvar="ACCOUNT_PASSWORD", required=True)
+@click.password_option("--password", envvar="ACCOUNT_PASSWORD", required=True)  # type: ignore
 @click.option("--rpc-url", default="http://localhost:8545")
 @click.argument("eth-amount", type=int)
 @click.argument("targets_file", type=click.File())
@@ -22,7 +22,10 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
     web3 = Web3(HTTPProvider(rpc_url))
     with open(keystore_file, "r") as keystore:
         account = Account(json.load(keystore), password, keystore_file)
-        print("Using account:", to_checksum_address(account.address))
+
+    assert account.privkey
+    print("Using account:", to_checksum_address(account.address))
+
     client = JSONRPCClient(
         web3, account.privkey, block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )

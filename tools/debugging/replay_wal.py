@@ -19,6 +19,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
 from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
+from raiden.utils.typing import Optional
 
 
 def state_change_contains_secrethash(obj, secrethash):
@@ -84,7 +85,7 @@ class Translator(dict):
             In case the given string is no address, it returns the original string.
         """
         try:
-            addr = to_checksum_address(addr)
+            addr = str(to_checksum_address(addr))
             rxp = "(?:0x)?" + pex(address_checksum_and_decode(addr)) + f"(?:{addr.lower()[10:]})?"
             self._extra_keys[pex(address_checksum_and_decode(addr))] = addr.lower()
             self._extra_keys[addr[2:].lower()] = addr.lower()
@@ -113,7 +114,7 @@ class Translator(dict):
             except KeyError:
                 import pdb
 
-                pdb.set_trace()
+                pdb.set_trace()  # pylint: disable=no-member
                 raise e
 
     def __call__(self, match):
@@ -172,6 +173,8 @@ def replay_wal(storage, token_network_address, partner_address, translator=None)
     'It also allows you to use "Bob" as parameter value for "-n" and "-p" switches.',
 )
 def main(db_file, token_network_address, partner_address, names_translator):
+    translator: Optional[Translator]
+
     if names_translator:
         translator = Translator(json.load(names_translator))
         lookup = {v: k for k, v in translator.items()}
