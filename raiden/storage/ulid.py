@@ -1,6 +1,6 @@
 import random
 from dataclasses import dataclass
-from time import get_clock_info, monotonic_ns, time_ns
+from time import CLOCK_MONOTONIC_RAW, clock_getres, clock_gettime_ns, time_ns
 
 from gevent.lock import Semaphore
 
@@ -44,21 +44,14 @@ class ULIDMonotonicFactory:
     """
 
     def __init__(self, start: int) -> None:
-        monotonic_info = get_clock_info("monotonic")
-
-        msg = (
-            "The monotonic clock must not be adjustable. A monotonic clock is "
-            "*necessary* for safe operation, otherwise database entries may get "
-            "swapped around and the queries can return the wrong values."
-        )
-        assert monotonic_info.adjustable is False, msg
+        resolution = clock_getres(CLOCK_MONOTONIC_RAW)
 
         msg = (
             "The monotonic clock must have nanosecond resolution. This is "
             "necessary because multiple state changes can be written on the same "
             "millisecond."
         )
-        assert monotonic_info.resolution <= 0.000_000_001, msg
+        assert resolution <= 0.000_000_001, msg
 
         current_time = time_ns()
 
@@ -66,21 +59,25 @@ class ULIDMonotonicFactory:
             start = current_time
 
         self._previous_timestamp = start
-        self._previous_monotonic = monotonic_ns()
+        self._previous_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
         self._lock = Semaphore()
 
     def new(self) -> ULID:
         timestamp: int
 
         with self._lock:
-            new_monotonic = monotonic_ns()
+            # Using RAW to circumvent a bug in Pine64/ARM64 and the 3.x family
+            # of Linux Kernels which allowed `CLOCK_MONOTONIC` to go backwards
+            # (PR: #4156).
+            #
+            # A monotonic clock with ns precision must not return the same
+            # value twice, looking up the time itself should take more then 1ns,
+            # https://www.python.org/dev/peps/pep-0564/#annex-clocks-resolution-in-python
+            new_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
 
-            msg = (
-                "A monotonic clock with ns precision must not return the same "
-                "value twice, looking up the time itself should take more then 1ns, "
-                "https://www.python.org/dev/peps/pep-0564/#annex-clocks-resolution-in-python."
-            )
-            assert new_monotonic > self._previous_monotonic, msg
+            assert (
+                new_monotonic > self._previous_monotonic
+            ), "The monotonic clock must not go backwards"
 
             delta = new_monotonic - self._previous_monotonic
             timestamp = self._previous_timestamp + delta
