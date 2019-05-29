@@ -373,9 +373,8 @@ class RaidenEventHandler(EventHandler):
                 locksroot=partner_locksroot,
                 sender=partner_address,
             )
-            state_change_identifier = state_change_record.state_change_identifier
 
-            if not state_change_identifier:
+            if state_change_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find state that matches the current channel locksroots. "
                     f"chain_id:{raiden.chain.network_id} "
@@ -386,6 +385,7 @@ class RaidenEventHandler(EventHandler):
                     f"partner_locksroot:{to_hex(partner_locksroot)} "
                 )
 
+            state_change_identifier = state_change_record.state_change_identifier
             restored_channel_state = channel_state_until_state_change(
                 raiden=raiden,
                 canonical_identifier=canonical_identifier,
@@ -415,9 +415,8 @@ class RaidenEventHandler(EventHandler):
                 locksroot=our_locksroot,
                 recipient=partner_address,
             )
-            state_change_identifier = event_record.state_change_identifier
 
-            if not state_change_identifier:
+            if event_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find event that match current channel locksroots. "
                     f"chain_id:{raiden.chain.network_id} "
@@ -428,6 +427,7 @@ class RaidenEventHandler(EventHandler):
                     f"partner_locksroot:{to_hex(partner_locksroot)} "
                 )
 
+            state_change_identifier = event_record.state_change_identifier
             restored_channel_state = channel_state_until_state_change(
                 raiden=raiden,
                 canonical_identifier=canonical_identifier,
@@ -516,7 +516,7 @@ class RaidenEventHandler(EventHandler):
                 balance_hash=our_details.balance_hash,
             )
 
-            if event_record.data is None:
+            if event_record is None:
                 log.critical("our balance proof not found", **log_details)
                 raise RaidenUnrecoverableError(
                     "Our balance proof could not be found in the database"
@@ -538,7 +538,7 @@ class RaidenEventHandler(EventHandler):
                 balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,
             )
-            if state_change_record.data is None:
+            if state_change_record is None:
                 log.critical("partner balance proof not found", **log_details)
                 raise RaidenUnrecoverableError(
                     "Partner balance proof could not be found in the database"
