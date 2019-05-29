@@ -9,6 +9,7 @@ from gevent.lock import RLock
 
 from raiden.exceptions import DepositMismatch, InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.token import Token
+from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit
@@ -83,8 +84,9 @@ class UserDeposit:
         )
 
         log_details = {
-            "beneficiary": pex(beneficiary),
-            "contract": pex(self.address),
+            "beneficiary": to_checksum_address(beneficiary),
+            "contract": to_checksum_address(self.address),
+            "node": to_checksum_address(self.node_address),
             "total_deposit": total_deposit,
         }
 
@@ -98,48 +100,48 @@ class UserDeposit:
                 token=token,
                 block_identifier=block_identifier,
             )
-            gas_limit = self.proxy.estimate_gas(
-                checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
-            )
 
-            if gas_limit:
-                error_prefix = "Call to deposit failed"
-                log.debug("deposit called", **log_details)
-                transaction_hash = self.proxy.transact(
-                    "deposit",
-                    safe_gas_limit(gas_limit),
-                    to_checksum_address(beneficiary),
-                    total_deposit,
+            with log_transaction(log, "deposit", log_details):
+                gas_limit = self.proxy.estimate_gas(
+                    checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
                 )
 
-                self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                if gas_limit:
+                    error_prefix = "Call to deposit failed"
+                    gas_limit = safe_gas_limit(gas_limit)
+                    log_details['gas_limit'] = gas_limit
 
-            transaction_executed = gas_limit is not None
-            if not transaction_executed or receipt_or_none:
-                if transaction_executed:
-                    block = receipt_or_none["blockNumber"]
-                else:
-                    block = checking_block
+                    transaction_hash = self.proxy.transact(
+                        "deposit",
+                        gas_limit,
+                        to_checksum_address(beneficiary),
+                        total_deposit,
+                    )
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                    transaction_name="deposit",
-                    transaction_executed=transaction_executed,
-                    required_gas=GAS_REQUIRED_FOR_UDC_DEPOSIT,
-                    block_identifier=block,
-                )
+                    self.client.poll(transaction_hash)
+                    receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-                msg = self._check_why_deposit_failed(
-                    token=token,
-                    amount_to_deposit=amount_to_deposit,
-                    total_deposit=total_deposit,
-                    block_identifier=block,
-                )
-                error_msg = f"{error_prefix}. {msg}"
-                log.critical(error_msg, **log_details)
-                raise RaidenUnrecoverableError(error_msg)
+                transaction_executed = gas_limit is not None
+                if not transaction_executed or receipt_or_none:
+                    if transaction_executed:
+                        block = receipt_or_none["blockNumber"]
+                    else:
+                        block = checking_block
 
-        log.info("deposit successful", **log_details)
+                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                        transaction_name="deposit",
+                        transaction_executed=transaction_executed,
+                        required_gas=GAS_REQUIRED_FOR_UDC_DEPOSIT,
+                        block_identifier=block,
+                    )
+
+                    msg = self._check_why_deposit_failed(
+                        token=token,
+                        amount_to_deposit=amount_to_deposit,
+                        total_deposit=total_deposit,
+                        block_identifier=block,
+                    )
+                    raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
