@@ -47,7 +47,9 @@ def test_initiator_task_view():
         secrethash=sha256(secret).digest(),
     )
     transfer_state = InitiatorTransferState(
-        route=factories.make_route_to_channel(),
+        route=RouteState(
+            route=[transfer.initiator, transfer.target], forward_channel_id=channel_id
+        ),
         transfer_description=transfer_description,
         channel_identifier=channel_id,
         transfer=transfer,
