@@ -39,11 +39,11 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.transfer.balance_proof import pack_balance_proof, pack_balance_proof_update
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import MerkleTreeState
 from raiden.utils import pex, safe_gas_limit
+from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
@@ -933,7 +933,7 @@ class TokenNetwork:
         #
         participant_details = self._detail_participant(
             channel_identifier=channel_identifier,
-            participant=self.node_address,
+            detail_for=self.node_address,
             partner=partner,
             block_identifier=block_identifier,
         )
@@ -992,6 +992,7 @@ class TokenNetwork:
             contract_manager=self.contract_manager,
         )
         checking_block = self.client.get_checking_block()
+
         error_prefix = "setTotalWithdraw call will fail"
         with self.channel_operations_lock[partner], self.withdraw_lock:
             amount_to_withdraw, log_details = self._withdraw_preconditions(
@@ -1023,11 +1024,12 @@ class TokenNetwork:
                     channel_identifier,
                     self.node_address,
                     total_withdraw,
-                    partner,
+                    participant_signature,
+                    partner_signature,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
+            """
             transaction_executed = gas_limit is not None
             if not transaction_executed or receipt_or_none:
                 if transaction_executed:
@@ -1057,7 +1059,7 @@ class TokenNetwork:
                 else:
                     log.critical(error_msg, **log_details)
                 raise error_type(error_msg)
-
+            """
             log.info("setTotalWithdraw successful", **log_details)
 
     def _check_why_withdraw_failed(
