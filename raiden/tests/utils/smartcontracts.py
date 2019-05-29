@@ -1,5 +1,7 @@
 import os
-from typing import List, Tuple
+from typing import Any, List, Tuple
+
+from solc import compile_files
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import get_random_service
@@ -8,7 +10,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
-from raiden.utils.solc import compile_files_cwd
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -105,6 +106,34 @@ def deploy_service_registry_and_set_urls(
     c3_service_proxy.set_url(urls[2])
 
     return c1_service_proxy, urls
+
+
+def compile_files_cwd(*args: Any, **kwargs: Any) -> str:
+    """change working directory to contract's dir in order to avoid symbol
+    name conflicts"""
+    # get root directory of the contracts
+    compile_wd = os.path.commonprefix(args[0])
+    # edge case - compiling a single file
+    if os.path.isfile(compile_wd):
+        compile_wd = os.path.dirname(compile_wd)
+    # remove prefix from the files
+    if compile_wd[-1] != "/":
+        compile_wd += "/"
+    file_list = [x.replace(compile_wd, "") for x in args[0]]
+    cwd = os.getcwd()
+    try:
+        os.chdir(compile_wd)
+        compiled_contracts = compile_files(
+            source_files=file_list,
+            # We need to specify output values here because py-solc by default
+            # provides them all and does not know that "clone-bin" does not exist
+            # in solidity >= v0.5.0
+            output_values=("abi", "asm", "ast", "bin", "bin-runtime"),
+            **kwargs,
+        )
+    finally:
+        os.chdir(cwd)
+    return compiled_contracts
 
 
 def deploy_rpc_test_contract(deploy_client, name: str):

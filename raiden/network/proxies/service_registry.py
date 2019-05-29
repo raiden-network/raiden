@@ -83,6 +83,7 @@ class ServiceRegistry:
 
         with log_transaction(log, "set_url", log_details):
             gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+            assert gas_limit
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact("setURL", gas_limit, url)
             self.client.poll(transaction_hash)
