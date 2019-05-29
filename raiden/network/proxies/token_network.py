@@ -985,15 +985,15 @@ class TokenNetwork:
             ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the token address is empty.
         """
-        token_address = self.token_address()
-        token = Token(
-            jsonrpc_client=self.client,
-            token_address=token_address,
-            contract_manager=self.contract_manager,
-        )
+        # token_address = self.token_address()
+        # token = Token(
+        #     jsonrpc_client=self.client,
+        #     token_address=token_address,
+        #     contract_manager=self.contract_manager,
+        # )
         checking_block = self.client.get_checking_block()
 
-        error_prefix = "setTotalWithdraw call will fail"
+        # error_prefix = "setTotalWithdraw call will fail"
         with self.channel_operations_lock[partner], self.withdraw_lock:
             amount_to_withdraw, log_details = self._withdraw_preconditions(
                 channel_identifier=channel_identifier,
@@ -1015,7 +1015,7 @@ class TokenNetwork:
             GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW = 0
             if gas_limit:
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW)
-                error_prefix = "setTotalWithdraw call failed"
+                # error_prefix = "setTotalWithdraw call failed"
 
                 log.debug("setTotalWithdraw called", **log_details)
                 transaction_hash = self.proxy.transact(
@@ -1028,7 +1028,7 @@ class TokenNetwork:
                     partner_signature,
                 )
                 self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                # receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             """
             transaction_executed = gas_limit is not None
             if not transaction_executed or receipt_or_none:
@@ -1076,7 +1076,7 @@ class TokenNetwork:
         msg = ""
         latest_deposit = self._detail_participant(
             channel_identifier=channel_identifier,
-            participant=self.node_address,
+            detail_for=self.node_address,
             partner=partner,
             block_identifier=block_identifier,
         ).deposit

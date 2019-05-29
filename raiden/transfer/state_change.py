@@ -118,7 +118,7 @@ class ActionChannelWithdraw(StateChange):
     """ Withdraw funds from channel. """
 
     canonical_identifier: CanonicalIdentifier
-    total_withdraw: TokenAmount
+    total_withdraw: WithdrawAmount
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -407,6 +407,7 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
 @dataclass
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A WithdrawRequest message received. """
+
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
@@ -424,6 +425,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
 @dataclass
 class ReceiveWithdraw(AuthenticatedSenderStateChange):
     """ A Withdraw message received. """
+
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount

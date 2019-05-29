@@ -1144,7 +1144,10 @@ class RestAPI:  # pragma: no unittest
 
         if total_deposit is None and state is None and total_withdraw is None:
             return api_error(
-                errors="Nothing to do. Should either provide 'total_deposit', 'total_withdraw' or 'state' argument",
+                errors=(
+                    "Nothing to do. Should either provide "
+                    "'total_deposit', 'total_withdraw' or 'state' argument"
+                ),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
         if total_deposit and total_deposit < 0:

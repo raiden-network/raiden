@@ -93,7 +93,7 @@ def test_channel_cleared_after_two_unlocks():
         state_change=settle_channel,
         block_number=block_number,
         block_hash=block_hash,
-        pseudo_random_generator=pseudo_random_generator
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     msg = "both participants have pending locks, merkleroot must not be empty"

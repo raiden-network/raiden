@@ -119,6 +119,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     Tuple,
     Union,
+    WithdrawAmount,
     cast,
 )
 
@@ -1465,7 +1466,7 @@ def events_for_close(
 
 def events_for_withdraw(
     channel_state: NettingChannelState,
-    total_withdraw: TokenAmount,
+    total_withdraw: WithdrawAmount,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
     events: List[Event] = list()
@@ -1683,7 +1684,7 @@ def handle_action_withdraw(
     events: List[Event] = list()
     balance = get_balance(channel_state.our_state, channel_state.partner_state)
     if balance >= withdraw.total_withdraw:
-        channel_state.pending_withdraw = withdraw.total_withdraw
+        channel_state.our_state.pending_withdraw = withdraw.total_withdraw
         events = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
@@ -1699,24 +1700,26 @@ def handle_receive_withdraw_request(
 ) -> TransitionResult:
     events: List[Event] = list()
     if is_valid_withdraw_request(withdraw_request, channel_state):
-        channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
+        channel_state.partner_state.pending_withdraw = withdraw_request.total_withdraw
 
-        events.extend([
-            SendWithdraw(
-                recipient=channel_state.partner_state.address,
-                chain_id=channel_state.chain_id,
-                token_network_address=channel_state.token_network_address,
-                channel_identifier=channel_state.identifier,
-                message_identifier=message_identifier_from_prng(pseudo_random_generator),
-                total_withdraw=withdraw_request.total_withdraw,
-                participant=channel_state.partner_state.address,
-            ),
-            SendProcessed(
-                recipient=channel_state.partner_state.address,
-                channel_identifier=channel_state.identifier,
-                message_identifier=withdraw_request.message_identifier,
-            ),
-        ])
+        events.extend(
+            [
+                SendWithdraw(
+                    recipient=channel_state.partner_state.address,
+                    chain_id=channel_state.chain_id,
+                    token_network_address=channel_state.token_network_address,
+                    channel_identifier=channel_state.identifier,
+                    message_identifier=message_identifier_from_prng(pseudo_random_generator),
+                    total_withdraw=withdraw_request.total_withdraw,
+                    participant=channel_state.partner_state.address,
+                ),
+                SendProcessed(
+                    recipient=channel_state.partner_state.address,
+                    channel_identifier=channel_state.identifier,
+                    message_identifier=withdraw_request.message_identifier,
+                ),
+            ]
+        )
     return TransitionResult(channel_state, events)
 
 
@@ -1728,19 +1731,21 @@ def handle_receive_withdraw(
 ) -> TransitionResult:
     events: List[Event] = list()
     if is_valid_withdraw_confirmation(withdraw, channel_state):
-        events.extend([
-            ContractSendChannelWithdraw(
-                canonical_identifier=withdraw.canonical_identifier,
-                total_withdraw=withdraw.total_withdraw,
-                partner_signature=withdraw.signature,
-                triggered_by_block_hash=block_hash,
-            ),
-            SendProcessed(
-                recipient=channel_state.partner_state.address,
-                channel_identifier=channel_state.identifier,
-                message_identifier=withdraw.message_identifier,
-            ),
-        ])
+        events.extend(
+            [
+                ContractSendChannelWithdraw(
+                    canonical_identifier=withdraw.canonical_identifier,
+                    total_withdraw=withdraw.total_withdraw,
+                    partner_signature=withdraw.signature,
+                    triggered_by_block_hash=block_hash,
+                ),
+                SendProcessed(
+                    recipient=channel_state.partner_state.address,
+                    channel_identifier=channel_state.identifier,
+                    message_identifier=withdraw.message_identifier,
+                ),
+            ]
+        )
     return TransitionResult(channel_state, events)
 
 
@@ -2045,7 +2050,7 @@ def handle_channel_withdraw(
     else:
         end_state = channel_state.partner_state
 
-    end_state.pending_withdraw = 0
+    end_state.pending_withdraw = WithdrawAmount(0)
     end_state.total_withdraw = state_change.total_withdraw
 
     events: List[Event] = list()

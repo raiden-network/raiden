@@ -94,8 +94,8 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     TargetAddress,
-    TokenAmount,
     TokenNetworkAddress,
+    WithdrawAmount,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
@@ -1165,7 +1165,7 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_change(init_target_statechange)
 
-    def withdraw(self, canonical_identifier: CanonicalIdentifier, total_withdraw: TokenAmount):
+    def withdraw(self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount):
         init_withdraw = ActionChannelWithdraw(
             canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
         )

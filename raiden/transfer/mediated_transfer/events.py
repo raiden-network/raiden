@@ -17,7 +17,6 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     TokenAddress,
-    TokenAmount,
     TokenNetworkAddress,
     WithdrawAmount,
     typecheck,
@@ -157,7 +156,7 @@ class SendWithdrawRequest(SendMessageEvent):
 
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
-    total_withdraw: TokenAmount
+    total_withdraw: WithdrawAmount
     participant: Address
 
 
