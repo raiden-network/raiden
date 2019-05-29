@@ -113,11 +113,6 @@ class App:  # pylint: disable=too-few-public-methods
         self.config = config
         self.user_deposit = user_deposit
         self.raiden = raiden
-        self.start_console = self.config["console"]
-
-        # raiden.ui.console:Console assumes that a services
-        # attribute is available for auto-registration
-        self.services: Dict[str, Any] = dict()
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, pex(self.raiden.address))
