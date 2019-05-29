@@ -988,8 +988,7 @@ class RestAPI:
 
         if isinstance(result, EventPaymentSentFailed):
             return api_error(
-                errors="Payment couldn't be completed "
-                "(insufficient funds, no route to target or target offline). " + result.reason,
+                errors=f"Payment couldn't be completed because: {result.reason}",
                 status_code=HTTPStatus.CONFLICT,
             )
 
