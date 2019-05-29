@@ -48,6 +48,7 @@ coverage.xml
 *,cover
 .pytest_cache/
 mypy-out.txt
+.hypothesis/
 
 # Pyenv
 .python-version
