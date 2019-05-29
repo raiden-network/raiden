@@ -511,7 +511,7 @@ class RevealSecret(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawRequest(SignedMessage):
+class WithdrawRequest(SignedRetrieableMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
 
     cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
@@ -522,18 +522,6 @@ class WithdrawRequest(SignedMessage):
     participant: Address
     total_withdraw: WithdrawAmount
 
-    @classmethod
-    def unpack(cls, packed):
-        withdraw_request = cls(
-            chain_id=packed.chain_id,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-            total_withdraw=packed.total_withdraw,
-            participant=packed.participant,
-        )
-        withdraw_request.signature = packed.signature
-        return withdraw_request
-
     def pack(self, packed):
         packed.chain_id = self.chain_id
         packed.token_network_address = self.token_network_address
@@ -546,16 +534,18 @@ class WithdrawRequest(SignedMessage):
     @classmethod
     def from_event(cls, event):
         return cls(
+            message_identifier=event.message_identifier,
             chain_id=event.chain_id,
             token_network_address=event.token_network_address,
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
+            signature=EMPTY_SIGNATURE,
         )
 
 
 @dataclass(repr=False, eq=False)
-class Withdraw(SignedMessage):
+class Withdraw(SignedRetrieableMessage):
     """ Confirms withdraw to partner with a signature """
 
     cmdid: ClassVar[int] = messages.WITHDRAW
@@ -566,18 +556,6 @@ class Withdraw(SignedMessage):
     participant: Address
     total_withdraw: WithdrawAmount
 
-    @classmethod
-    def unpack(cls, packed):
-        withdraw_request = cls(
-            chain_id=packed.chain_id,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-            total_withdraw=packed.total_withdraw,
-            participant=packed.participant,
-        )
-        withdraw_request.signature = packed.signature
-        return withdraw_request
-
     def pack(self, packed):
         packed.chain_id = self.chain_id
         packed.token_network_address = self.token_network_address
@@ -590,11 +568,13 @@ class Withdraw(SignedMessage):
     @classmethod
     def from_event(cls, event):
         return cls(
+            message_identifier=event.message_identifier,
             chain_id=event.chain_id,
             token_network_address=event.token_network_address,
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
+            signature=EMPTY_SIGNATURE,
         )
 
 
