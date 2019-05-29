@@ -83,6 +83,7 @@ class DepositMismatch(RaidenRecoverableError):
 
 class InvalidChannelID(RaidenError):
     """ Raised when the user provided value is not a channel id. """
+
     pass
 
 

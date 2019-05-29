@@ -27,6 +27,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
@@ -204,6 +205,40 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
             )
 
             raiden.add_pending_greenlet(join_channel)
+
+
+def handle_channel_withdraw(raiden: "RaidenService", event: Event):
+    data = event.event_data
+    args = data["args"]
+    block_number = data["block_number"]
+    block_hash = data["block_hash"]
+    channel_identifier = args["channel_identifier"]
+    token_network_address = event.originating_contract
+    participant = args["participant"]
+    total_withdraw = args["total_withdraw"]
+    transaction_hash = data["transaction_hash"]
+
+    chain_state = views.state_from_raiden(raiden)
+    previous_channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
+        ),
+    )
+
+    # Channels will only be registered if this node is a participant
+    if previous_channel_state is not None:
+        withdraw_statechange = ContractReceiveChannelWithdraw(
+            transaction_hash=transaction_hash,
+            canonical_identifier=previous_channel_state.canonical_identifier,
+            total_withdraw=total_withdraw,
+            participant=participant,
+            block_number=block_number,
+            block_hash=block_hash,
+        )
+        raiden.handle_and_track_state_change(withdraw_statechange)
 
 
 def handle_channel_closed(raiden: "RaidenService", event: Event):
@@ -475,6 +510,9 @@ def on_blockchain_event(raiden: "RaidenService", event: Event):  # pragma: no un
 
     elif event_name == ChannelEvent.DEPOSIT:
         handle_channel_new_balance(raiden, event)
+
+    elif event_name == ChannelEvent.WITHDRAW:
+        handle_channel_withdraw(raiden, event)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
         handle_channel_update_transfer(raiden, event)

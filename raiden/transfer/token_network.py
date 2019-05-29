@@ -2,6 +2,7 @@ import random
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.mediated_transfer.state_change import ReceiveWithdraw, ReceiveWithdrawRequest
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -12,6 +13,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
@@ -28,6 +30,9 @@ StateChangeWithChannelID = Union[
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
+    ContractReceiveChannelWithdraw,
+    ReceiveWithdraw,
+    ReceiveWithdrawRequest,
 ]
 
 
@@ -131,6 +136,22 @@ def handle_channelnew(
 def handle_balance(
     token_network_state: TokenNetworkState,
     state_change: ContractReceiveChannelNewBalance,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+def handle_withdraw(
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveChannelWithdraw,
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
@@ -273,6 +294,38 @@ def handle_closeroute(
     return TransitionResult(token_network_state, events)
 
 
+def handle_receive_channel_withdraw_request(
+    token_network_state: TokenNetworkState,
+    state_change: ReceiveWithdrawRequest,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+):
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+def handle_receive_channel_withdraw(
+    token_network_state: TokenNetworkState,
+    state_change: ReceiveWithdraw,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+):
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
 def state_transition(
     token_network_state: TokenNetworkState,
     state_change: StateChange,
@@ -317,6 +370,15 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelNewBalance:
         assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
         iteration = handle_balance(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    elif type(state_change) == ContractReceiveChannelWithdraw:
+        assert isinstance(state_change, ContractReceiveChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_withdraw(
             token_network_state=token_network_state,
             state_change=state_change,
             block_number=block_number,
@@ -368,6 +430,24 @@ def state_transition(
         assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
         iteration = handle_closeroute(
             token_network_state=token_network_state, state_change=state_change
+        )
+    elif type(state_change) == ReceiveWithdrawRequest:
+        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
+        iteration = handle_receive_channel_withdraw_request(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveWithdraw:
+        assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
+        iteration = handle_receive_channel_withdraw(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
 
     return iteration

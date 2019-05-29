@@ -95,9 +95,9 @@ __all__ = (
     "Unlock",
     "ToDevice",
     "UpdatePFS",
-    'Withdraw',
-    'WithdrawRequest',
-    'from_dict',
+    "Withdraw",
+    "WithdrawRequest",
+    "from_dict",
     "message_from_sendevent",
 )
 
