@@ -39,7 +39,7 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
+from raiden.utils.typing import Address, ChainID, Endpoint, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
@@ -127,7 +127,7 @@ def run_app(
     datadir: str,
     transport: str,
     matrix_server: str,
-    network_id: int,
+    network_id: ChainID,
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     pathfinding_service_address: str,

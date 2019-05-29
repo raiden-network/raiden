@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, ChainID
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -53,7 +53,7 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
     print(f"Raiden is running in {environment_type.value.lower()} mode")
 
 
-def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str, Any]:
+def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits

@@ -13,7 +13,8 @@ from raiden.tests.utils.eth_node import (
     run_private_blockchain,
 )
 from raiden.utils import privatekey_to_address, sha3
-from raiden.utils.typing import ChainID, Port
+from raiden.utils.http import JSONRPCExecutor
+from raiden.utils.typing import ChainID, List, Port
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 NUM_GETH_NODES = 3
@@ -52,19 +53,18 @@ def main() -> None:
     rpc_endpoint = f"http://127.0.0.1:{START_RPCPORT}"
     web3 = Web3(HTTPProvider(rpc_endpoint))
 
-    verbosity = 0
     random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
     genesis_description = GenesisDescription(
         prefunded_accounts=DEFAULT_ACCOUNTS,
         random_marker=random_marker,
         chain_id=ChainID(NETWORKNAME_TO_ID["smoketest"]),
     )
-    private_chain: ContextManager = run_private_blockchain(  # NOQA
+    private_chain: ContextManager[List[JSONRPCExecutor]] = run_private_blockchain(
         web3=web3,
         eth_nodes=geth_nodes,
         base_datadir=tmpdir,
         log_dir=tmpdir,
-        verbosity=str(verbosity),
+        verbosity="info",
         genesis_description=genesis_description,
     )
 
