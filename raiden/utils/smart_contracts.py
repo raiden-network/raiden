@@ -9,12 +9,11 @@ def deploy_contract_web3(
     contract_name: str,
     deploy_client: JSONRPCClient,
     contract_manager: ContractManager,
-    constructor_arguments: Tuple[Any] = None,
+    constructor_arguments: Tuple[Any, ...] = None,
 ) -> Address:
-    compiled = {contract_name: contract_manager.get_contract(contract_name)}
-    contract_proxy, _ = deploy_client.deploy_solidity_contract(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=contract_name,
-        all_contracts=compiled,
+        contract=contract_manager.get_contract(contract_name),
         constructor_parameters=constructor_arguments,
     )
     return Address(to_canonical_address(contract_proxy.contract.address))
