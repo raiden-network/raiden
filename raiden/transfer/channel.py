@@ -844,9 +844,6 @@ def is_valid_withdraw_request(
         total_withdraw=withdraw_request.total_withdraw,
     )
 
-    #####
-    # FINALIZE THE PENDING_WITHDRAW STUFF
-    #####
     valid_signature, signature_msg = is_valid_signature(
         data=packed,
         signature=withdraw_request.signature,
@@ -855,7 +852,12 @@ def is_valid_withdraw_request(
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
-    if balance < withdraw_amount:
+    if channel_state.partner_state.pending_withdraw > 0:
+        msg = "A previous withdraw of {} is still pending".format(
+            channel_state.partner_state.pending_withdraw
+        )
+        result = (False, msg)
+    elif balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
             balance, withdraw_request.total_withdraw
         )
@@ -1673,8 +1675,6 @@ def handle_action_set_fee(
 def handle_action_withdraw(
     channel_state: NettingChannelState,
     withdraw: ActionChannelWithdraw,
-    block_number: BlockNumber,  # pylint: disable=unused-argument
-    block_hash: BlockHash,  # pylint: disable=unused-argument
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
     msg = "caller must make sure the ids match"
@@ -1683,6 +1683,7 @@ def handle_action_withdraw(
     events: List[Event] = list()
     balance = get_balance(channel_state.our_state, channel_state.partner_state)
     if balance >= withdraw.total_withdraw:
+        channel_state.pending_withdraw = withdraw.total_withdraw
         events = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
@@ -1727,8 +1728,6 @@ def handle_receive_withdraw(
 ) -> TransitionResult:
     events: List[Event] = list()
     if is_valid_withdraw_confirmation(withdraw, channel_state):
-        channel_state.our_state.pending_withdraw = withdraw.total_withdraw
-
         events.extend([
             ContractSendChannelWithdraw(
                 canonical_identifier=withdraw.canonical_identifier,
@@ -2114,8 +2113,6 @@ def state_transition(
         iteration = handle_action_withdraw(
             channel_state=channel_state,
             withdraw=state_change,
-            block_number=block_number,
-            block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
