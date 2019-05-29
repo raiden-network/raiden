@@ -26,11 +26,15 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
+)
+from raiden.transfer.state import balanceproof_from_envelope
+from raiden.transfer.state_change import (
+    ReceiveDelivered,
+    ReceiveProcessed,
+    ReceiveUnlock,
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
-from raiden.transfer.state import balanceproof_from_envelope
-from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import pex, random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
 

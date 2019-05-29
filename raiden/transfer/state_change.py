@@ -33,6 +33,7 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     SecretRegistryAddress,
+    Signature,
     T_Address,
     T_BlockHash,
     T_BlockNumber,
@@ -401,3 +402,37 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
 class ReceiveProcessed(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
+
+
+@dataclass
+class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
+    """ A WithdrawRequest message received. """
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
+    signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
+@dataclass
+class ReceiveWithdraw(AuthenticatedSenderStateChange):
+    """ A Withdraw message received. """
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
+    signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
