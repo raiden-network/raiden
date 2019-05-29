@@ -29,7 +29,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     gas_price = 2000000000
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
     deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -54,7 +54,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
     gas_price = 2000000000
     deploy_client.web3.eth.setGasPriceStrategy(make_decreasing_gas_price_strategy(gas_price))
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
