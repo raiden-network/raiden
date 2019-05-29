@@ -33,6 +33,7 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
+    UnresolvableRoute,
 )
 from raiden.messages import (
     LockedTransfer,
