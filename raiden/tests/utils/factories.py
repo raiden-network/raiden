@@ -15,7 +15,7 @@ from raiden.messages import (
     Unlock,
     lockedtransfersigned_from_message,
 )
-from raiden.transfer import balance_proof, channel, token_network
+from raiden.transfer import channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -44,6 +44,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, random_secret, sha3
+from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     AdditionalHash,
@@ -584,7 +585,7 @@ def make_signed_balance_proof_from_unsigned(
     if additional_hash is None:
         additional_hash = make_additional_hash()
 
-    data_to_sign = balance_proof.pack_balance_proof(
+    data_to_sign = pack_balance_proof(
         balance_hash=balance_hash,
         additional_hash=additional_hash,
         canonical_identifier=unsigned.canonical_identifier,
@@ -616,7 +617,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ("transferred_amount", "locked_amount", "locksroot")
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        data_to_sign = balance_proof.pack_balance_proof(
+        data_to_sign = pack_balance_proof(
             balance_hash=balance_hash,
             additional_hash=params["message_hash"],
             canonical_identifier=params["canonical_identifier"],

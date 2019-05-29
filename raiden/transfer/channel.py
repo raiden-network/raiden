@@ -14,7 +14,6 @@ from raiden.constants import (
 )
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
-from raiden.transfer.balance_proof import pack_balance_proof, pack_withdraw
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -84,6 +83,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex
+from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,

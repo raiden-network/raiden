@@ -14,11 +14,6 @@ from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.balance_proof import (
-    pack_balance_proof,
-    pack_balance_proof_update,
-    pack_reward_proof,
-)
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -40,6 +35,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3
+from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.utils.signer import Signer, recover
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import (

@@ -18,11 +18,6 @@ from raiden.messages import (
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.tests import fixture_all_combinations
-from raiden.transfer.balance_proof import (
-    pack_balance_proof,
-    pack_balance_proof_update,
-    pack_reward_proof,
-)
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveSecretRequest,
@@ -30,6 +25,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import sha3
+from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.utils.signer import LocalSigner, recover
 
 MSC_ADDRESS = bytes([1] * 20)

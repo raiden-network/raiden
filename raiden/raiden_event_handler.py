@@ -19,7 +19,6 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.architecture import Event
-from raiden.transfer.balance_proof import pack_balance_proof_update, pack_withdraw
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -56,6 +55,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
+from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 
 if TYPE_CHECKING:
