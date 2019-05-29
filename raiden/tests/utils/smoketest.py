@@ -65,7 +65,6 @@ if TYPE_CHECKING:
     from raiden.network.transport.matrix import ParsedURL  # noqa: F401
 
 # the smoketest will assert that a different endpoint got successfully registered
-TEST_ENDPOINT = Endpoint("9.9.9.9:9999")
 TEST_PARTNER_ADDRESS = "2" * 40
 TEST_DEPOSIT_AMOUNT = 5
 
