@@ -8,9 +8,9 @@ from web3 import EthereumTesterProvider, Web3
 
 from raiden.constants import TRANSACTION_GAS_LIMIT_UPPER_BOUND
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
-from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import ChainID, Dict, TokenAmount
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
