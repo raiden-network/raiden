@@ -79,6 +79,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
 )
@@ -2029,6 +2030,21 @@ def apply_channel_newbalance(
         update_contract_balance(channel_state.partner_state, contract_balance)
 
 
+def handle_channel_withdraw(
+    channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
+) -> TransitionResult[NettingChannelState]:
+    if state_change.participant == channel_state.our_state.address:
+        end_state = channel_state.our_state
+    else:
+        end_state = channel_state.partner_state
+
+    end_state.pending_withdraw = 0
+    end_state.total_withdraw = state_change.total_withdraw
+
+    events: List[Event] = list()
+    return TransitionResult(channel_state, events)
+
+
 def handle_channel_batch_unlock(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
 ) -> TransitionResult[NettingChannelState]:
@@ -2109,6 +2125,9 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)
+    elif type(state_change) == ContractReceiveChannelWithdraw:
+        assert isinstance(state_change, ContractReceiveChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_channel_withdraw(channel_state=channel_state, state_change=state_change)
     elif type(state_change) == ReceiveWithdrawRequest:
         assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_request(

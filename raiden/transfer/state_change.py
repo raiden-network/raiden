@@ -41,6 +41,8 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TransferID,
+    WithdrawAmount,
     typecheck,
 )
 
@@ -196,6 +198,23 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
 
     canonical_identifier: CanonicalIdentifier
     deposit_transaction: TransactionChannelNewBalance
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
+@dataclass
+class ContractReceiveChannelWithdraw(ContractReceiveStateChange):
+    """ A channel to which this node IS a participant had a withdraw. """
+
+    canonical_identifier: CanonicalIdentifier
+    participant: Address
+    total_withdraw: WithdrawAmount
 
     @property
     def channel_identifier(self) -> ChannelID:
