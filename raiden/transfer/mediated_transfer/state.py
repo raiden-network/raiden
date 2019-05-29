@@ -239,14 +239,6 @@ class TargetTransferState(State):
     ONCHAIN_UNLOCK = "onchain_unlock"
     SECRET_REQUEST = "secret_request"
 
-    valid_states = (
-        EXPIRED,
-        OFFCHAIN_SECRET_REVEAL,
-        ONCHAIN_SECRET_REVEAL,
-        ONCHAIN_UNLOCK,
-        SECRET_REQUEST,
-    )
-
     from_hop: HopState = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Optional[Secret] = field(repr=False, default=None)
