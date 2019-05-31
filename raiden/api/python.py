@@ -755,8 +755,11 @@ class RaidenAPI:
         if secret is not None and not isinstance(secret, typing.T_Secret):
             raise InvalidSecret("secret is not valid.")
 
-        if secrethash is not None and not isinstance(secrethash, typing.T_SecretHash):
-            raise InvalidSecretHash("secrethash is not valid.")
+        if secrethash is not None:
+            if not isinstance(secrethash, typing.T_SecretHash):
+                raise InvalidSecretHash("secrethash is not valid.")
+            if current_state.payment_mapping.secrethashes_to_task.get(secrethash):
+                raise InvalidSecretHash("task with the same secrethash is still pending")
 
         log.debug(
             "Initiating transfer",
