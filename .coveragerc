@@ -10,3 +10,4 @@ include =
 	raiden/**/*.py
 omit =
 	raiden/tests/**
+concurrency = gevent
