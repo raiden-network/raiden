@@ -3,8 +3,13 @@ import random
 from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, EMPTY_HASH
 from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
-from raiden.transfer.identifiers import QueueIdentifier
-from raiden.transfer.mediated_transfer import events
+from raiden.transfer.events import SendWithdrawRequest
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    SendSecretReveal,
+)
+from raiden.transfer.state_change import ReceiveWithdraw
 
 
 def test_delivered_message_must_clean_unordered_messages(chain_id):
@@ -36,6 +41,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
+
     second_message = events.SendSecretReveal(
         recipient=recipient,
         message_identifier=random.randint(0, 2 ** 16),
@@ -51,6 +57,76 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
 
     assert first_message not in new_queue
+
+
+def test_withdraw_request_message_cleanup(chain_id, token_network_state):
+    pseudo_random_generator = random.Random()
+    block_number = 10
+    our_address = factories.make_address()
+    recipient1 = factories.make_address()
+    recipient2 = factories.make_address()
+    channel_identifier = 1
+    message_identifier = random.randint(0, 2 ** 16)
+
+    chain_state = state.ChainState(
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
+        our_address=our_address,
+        chain_id=chain_id,
+    )
+    queue_identifier = QueueIdentifier(recipient1, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
+
+    withdraw_message = SendWithdrawRequest(
+        message_identifier=message_identifier,
+        chain_id=chain_id,
+        token_network_address=token_network_state.address,
+        total_withdraw=100,
+        participant=our_address,
+        recipient=recipient1,
+        channel_identifier=channel_identifier,
+    )
+
+    chain_state.queueids_to_queues[queue_identifier] = [withdraw_message]
+    processed_message = state_change.ReceiveProcessed(recipient1, message_identifier)
+
+    iteration = node.handle_processed(chain_state, processed_message)
+    new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
+
+    # Processed should not have removed the WithdrawRequest message
+    assert withdraw_message in new_queue
+
+    receive_withdraw = ReceiveWithdraw(
+        message_identifier=message_identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_identifier,
+        ),
+        total_withdraw=100,
+        signature=factories.make_32bytes(),
+        sender=recipient2,
+    )
+    iteration = node.handle_receive_withdraw(chain_state, receive_withdraw)
+    new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
+
+    # ReceiveWithdraw from another recipient should not remove the WithdrawRequest
+    assert withdraw_message in new_queue
+
+    receive_withdraw = ReceiveWithdraw(
+        message_identifier=message_identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_identifier,
+        ),
+        total_withdraw=100,
+        signature=factories.make_32bytes(),
+        sender=recipient1,
+    )
+    iteration = node.handle_receive_withdraw(chain_state, receive_withdraw)
+    new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
+    assert withdraw_message not in new_queue
 
 
 def test_delivered_processed_message_cleanup():

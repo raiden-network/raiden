@@ -14,6 +14,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
@@ -479,6 +480,17 @@ def inplace_delete_message(
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
+        # A withdraw request is only confirmed by a withdraw confirmation.
+        # This is done because Processed is not an indicator that the parner has
+        # processed and **accepted** our withdraw request. Receiving
+        # `Processed` here would cause the withdraw request to be removed
+        # from the queue although the confirmation may have not been sent.
+        # This is avoided by waiting for the confirmation before removing
+        # the withdraw request.
+        if isinstance(message, SendWithdrawRequest):
+            if not isinstance(state_change, ReceiveWithdraw):
+                continue
+
         message_found = (
             message.message_identifier == state_change.message_identifier
             and message.recipient == state_change.sender
@@ -704,11 +716,16 @@ def handle_receive_withdraw_request(
 def handle_receive_withdraw(
     chain_state: ChainState, state_change: ReceiveWithdraw
 ) -> TransitionResult[ChainState]:
-    return subdispatch_by_canonical_id(
+    iteration = subdispatch_by_canonical_id(
         chain_state=chain_state,
         canonical_identifier=state_change.canonical_identifier,
         state_change=state_change,
     )
+    # Clean up any pending SendWithdrawRequest messages
+    for queueid in list(chain_state.queueids_to_queues.keys()):
+        inplace_delete_message_queue(chain_state, state_change, queueid)
+
+    return iteration
 
 
 def handle_receive_lock_expired(
