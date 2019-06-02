@@ -77,16 +77,11 @@ from raiden.utils.typing import (
 )
 from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
     CONTRACT_TOKEN_NETWORK,
-    GAS_REQUIRED_FOR_CLOSE_CHANNEL,
-    GAS_REQUIRED_FOR_OPEN_CHANNEL,
-    GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
-    GAS_REQUIRED_FOR_SETTLE_CHANNEL,
-    GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
     ChannelInfoIndex,
     ChannelState,
     ParticipantInfoIndex,
 )
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 log = structlog.get_logger(__name__)
 
@@ -172,6 +167,8 @@ class TokenNetwork:
             contract_name=CONTRACT_TOKEN_NETWORK,
             address=Address(token_network_address),
         )
+
+        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = token_network_address
         self.proxy = proxy
@@ -290,14 +287,17 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
-                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
+                required_gas=self.gas_measurements['TokenNetwork.openChannel'],
                 block_identifier=checking_block,
             )
             self._new_channel_postconditions(partner=partner, block=checking_block)
 
             raise RaidenUnrecoverableError("Creating a new channel will fail")
         else:
-            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
+            gas_limit = safe_gas_limit(
+                gas_limit,
+                self.gas_measurements['TokenNetwork.openChannel']
+            )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact(
                 "openChannel",
@@ -798,7 +798,10 @@ class TokenNetwork:
         )
 
         if gas_limit:
-            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
+            gas_limit = safe_gas_limit(
+                gas_limit,
+                self.gas_measurements['TokenNetwork.setTotalDeposit']
+            )
             error_prefix = "setTotalDeposit call failed"
             log_details["gas_limit"] = gas_limit
 
@@ -823,7 +826,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=transaction_executed,
-                required_gas=GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
+                required_gas=self.gas_measurements['TokenNetwork.setTotalDeposit'],
                 block_identifier=block,
             )
             error_type, msg = self._check_why_deposit_failed(
@@ -1258,7 +1261,10 @@ class TokenNetwork:
             )
 
             if gas_limit:
-                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CLOSE_CHANNEL)
+                gas_limit = safe_gas_limit(
+                    gas_limit,
+                    self.gas_measurements['TokenNetwork.closeChannel']
+                )
                 log_details["gas_limit"] = gas_limit
                 transaction_hash = self.proxy.transact(
                     "closeChannel",
@@ -1323,7 +1329,7 @@ class TokenNetwork:
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
-                    required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+                    required_gas=self.gas_measurements['TokenNetwork.closeChannel'],
                     block_identifier=failed_at_blocknumber,
                 )
 
@@ -1512,7 +1518,10 @@ class TokenNetwork:
         )
 
         if gas_limit:
-            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF)
+            gas_limit = safe_gas_limit(
+                gas_limit,
+                self.gas_measurements['TokenNetwork.updateNonClosingBalanceProof']
+            )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact(
                 "updateNonClosingBalanceProof",
@@ -1635,7 +1644,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
-                required_gas=GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
+                required_gas=self.gas_measurements['TokenNetwork.updateNonClosingBalanceProof'],
                 block_identifier=failed_at_blocknumber,
             )
 
@@ -1958,7 +1967,10 @@ class TokenNetwork:
 
                 if gas_limit:
                     error_prefix = "settle call failed"
-                    gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+                    gas_limit = safe_gas_limit(
+                        gas_limit,
+                        self.gas_measurements['TokenNetwork.settleChannel']
+                    )
                     log_details["gas_limit"] = gas_limit
 
                     transaction_hash = self.proxy.transact(
@@ -1977,7 +1989,7 @@ class TokenNetwork:
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=transaction_executed,
-                    required_gas=GAS_REQUIRED_FOR_SETTLE_CHANNEL,
+                    required_gas=self.gas_measurements['TokenNetwork.settleChannel'],
                     block_identifier=block,
                 )
                 msg = self._check_channel_state_after_settle(
