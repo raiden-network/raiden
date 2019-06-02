@@ -13,7 +13,11 @@ from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
+from raiden.tests.utils.events import (
+    raiden_state_changes_search_for_item,
+    search_for_item,
+    wait_for_state_change,
+)
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
@@ -22,6 +26,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
 )
 from raiden.utils import pex, sha3
 from raiden.utils.timeout import BlockTimeout
@@ -415,6 +420,7 @@ def test_channel_withdraw(
     deposit,
     blockchain_type,
     network_wait,
+    retry_timeout,
 ):
     raise_on_failure(
         raiden_network,
@@ -426,6 +432,7 @@ def test_channel_withdraw(
         blockchain_type=blockchain_type,
         network_wait=network_wait,
         number_of_nodes=number_of_nodes,
+        retry_timeout=retry_timeout,
     )
 
 
@@ -437,14 +444,17 @@ def run_test_channel_withdraw(
     blockchain_type,
     network_wait,
     number_of_nodes,
+    retry_timeout,
 ):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
-    registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
+
+    token_proxy = bob_app.raiden.chain.token(token_address)
+    bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
     message_handler = WaitForMessage()
     bob_app.raiden.message_handler = message_handler
@@ -483,15 +493,19 @@ def run_test_channel_withdraw(
         total_withdraw=total_withdraw,
     )
 
-    waiting.wait_for_participant_withdraw(
-        raiden=bob_app.raiden,
-        payment_network_address=registry_address,
-        token_address=token_address,
-        partner_address=alice_app.raiden.address,
-        target_address=bob_app.raiden.address,
-        target_withdraw=total_withdraw,
-        retry_timeout=bob_app.raiden.alarm.sleep_time,
-    )
+    with gevent.Timeout(timeout):
+        wait_for_state_change(
+            bob_app.raiden,
+            ContractReceiveChannelWithdraw,
+            {
+                "participant": bob_app.raiden.address,
+                "total_withdraw": total_withdraw,
+            },
+            retry_timeout,
+        )
+
+    bob_balance_after_withdraw = token_proxy.balance_of(bob_app.raiden.address)
+    assert bob_initial_balance + total_withdraw == bob_balance_after_withdraw
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
