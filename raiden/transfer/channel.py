@@ -853,12 +853,7 @@ def is_valid_withdraw_request(
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
-    if channel_state.partner_state.pending_withdraw > 0:
-        msg = "A previous withdraw of {} is still pending".format(
-            channel_state.partner_state.pending_withdraw
-        )
-        result = (False, msg)
-    elif balance < withdraw_amount:
+    if balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
             balance, withdraw_request.total_withdraw
         )
@@ -895,9 +890,9 @@ def is_valid_withdraw_confirmation(
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
 
-    if withdraw.total_withdraw != channel_state.our_state.pending_withdraw:
-        msg = "Total withdraw confirmation {} does not match pending {}".format(
-            withdraw.total_withdraw, channel_state.our_state.pending_withdraw
+    if withdraw.total_withdraw != channel_state.our_state.total_withdraw:
+        msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
+            withdraw.total_withdraw, channel_state.our_state.total_withdraw
         )
         result = (False, msg)
     elif balance < withdraw_amount:
@@ -1684,7 +1679,6 @@ def handle_action_withdraw(
     events: List[Event] = list()
     balance = get_balance(channel_state.our_state, channel_state.partner_state)
     if balance >= withdraw.total_withdraw:
-        channel_state.our_state.pending_withdraw = withdraw.total_withdraw
         events = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
@@ -1700,8 +1694,6 @@ def handle_receive_withdraw_request(
 ) -> TransitionResult:
     events: List[Event] = list()
     if is_valid_withdraw_request(withdraw_request, channel_state):
-        channel_state.partner_state.pending_withdraw = withdraw_request.total_withdraw
-
         events.extend(
             [
                 SendWithdraw(
@@ -2050,7 +2042,6 @@ def handle_channel_withdraw(
     else:
         end_state = channel_state.partner_state
 
-    end_state.pending_withdraw = WithdrawAmount(0)
     end_state.total_withdraw = state_change.total_withdraw
 
     events: List[Event] = list()
