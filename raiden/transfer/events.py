@@ -13,6 +13,7 @@ from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
+    ChainID,
     ChannelID,
     InitiatorAddress,
     List,
@@ -30,6 +31,26 @@ from raiden.utils.typing import (
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
+
+
+@dataclass
+class SendWithdrawRequest(SendMessageEvent):
+    """ Event used by node to request a withdraw from channel partner."""
+
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    total_withdraw: WithdrawAmount
+    participant: Address
+
+
+@dataclass
+class SendWithdraw(SendMessageEvent):
+    """ Event used by node to confirm a withdraw for a channel's partner."""
+
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    total_withdraw: WithdrawAmount
+    participant: Address
 
 
 @dataclass

@@ -25,6 +25,8 @@ from raiden.transfer.events import (
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
     SendProcessed,
+    SendWithdraw,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -32,8 +34,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
-    SendWithdraw,
-    SendWithdrawRequest,
     refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.state import (

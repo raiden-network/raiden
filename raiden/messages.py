@@ -14,7 +14,7 @@ from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.events import SendProcessed
+from raiden.transfer.events import SendProcessed, SendWithdraw, SendWithdrawRequest
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -23,8 +23,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
-    SendWithdraw,
-    SendWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.state import (
