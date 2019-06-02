@@ -24,6 +24,8 @@ from raiden.transfer.events import (
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
+    EventInvalidReceivedWithdraw,
+    EventInvalidReceivedWithdrawRequest,
     SendProcessed,
     SendWithdraw,
     SendWithdrawRequest,
@@ -853,12 +855,16 @@ def is_valid_withdraw_request(
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
-    if balance < withdraw_amount:
+    if withdraw_amount == 0:
+        msg = "Total withdraw {} did not increase".format(
+            withdraw_request.total_withdraw
+        )
+        result = (False, msg)
+    elif balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
             balance, withdraw_request.total_withdraw
         )
         result = (False, msg)
-
     elif not valid_signature:
         result = (False, signature_msg)
 
@@ -890,6 +896,11 @@ def is_valid_withdraw_confirmation(
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
 
+    if withdraw_amount == 0:
+        msg = "Received withdraw confirmation of {} was already processed".format(
+            channel_state.our_state.total_withdraw
+        )
+        result = (False, msg)
     if withdraw.total_withdraw != channel_state.our_state.total_withdraw:
         msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
             withdraw.total_withdraw, channel_state.our_state.total_withdraw
@@ -1679,6 +1690,7 @@ def handle_action_withdraw(
     events: List[Event] = list()
     balance = get_balance(channel_state.our_state, channel_state.partner_state)
     if balance >= withdraw.total_withdraw:
+        channel_state.our_state.total_withdraw = withdraw.total_withdraw
         events = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
@@ -1693,36 +1705,47 @@ def handle_receive_withdraw_request(
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events: List[Event] = list()
-    if is_valid_withdraw_request(withdraw_request, channel_state):
-        events.extend(
-            [
-                SendWithdraw(
-                    recipient=channel_state.partner_state.address,
-                    chain_id=channel_state.chain_id,
-                    token_network_address=channel_state.token_network_address,
-                    channel_identifier=channel_state.identifier,
-                    message_identifier=message_identifier_from_prng(pseudo_random_generator),
-                    total_withdraw=withdraw_request.total_withdraw,
-                    participant=channel_state.partner_state.address,
-                ),
-                SendProcessed(
-                    recipient=channel_state.partner_state.address,
-                    channel_identifier=channel_state.identifier,
-                    message_identifier=withdraw_request.message_identifier,
-                ),
-            ]
+
+    is_valid, msg = is_valid_withdraw_request(
+        channel_state=channel_state,
+        withdraw_request=withdraw_request,
+    )
+    if is_valid:
+        channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
+
+        send_withdraw = SendWithdraw(
+            recipient=channel_state.partner_state.address,
+            chain_id=channel_state.chain_id,
+            token_network_address=channel_state.token_network_address,
+            channel_identifier=channel_state.identifier,
+            message_identifier=withdraw_request.message_identifier,
+            total_withdraw=withdraw_request.total_withdraw,
+            participant=channel_state.partner_state.address,
         )
+
+        events = [send_withdraw]
+    else:
+        assert msg, "is_valid_withdraw_request should return error msg if not valid"
+        invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
+            total_withdraw=withdraw_request.total_withdraw, reason=msg
+        )
+        events = [invalid_withdraw_request]
+
     return TransitionResult(channel_state, events)
 
 
 def handle_receive_withdraw(
     channel_state: NettingChannelState,
     withdraw: ReceiveWithdraw,
-    block_number: BlockNumber,  # pylint: disable=unused-argument
     block_hash: BlockHash,
 ) -> TransitionResult:
     events: List[Event] = list()
-    if is_valid_withdraw_confirmation(withdraw, channel_state):
+
+    is_valid, msg = is_valid_withdraw_confirmation(
+        channel_state=channel_state,
+        withdraw=withdraw,
+    )
+    if is_valid:
         events.extend(
             [
                 ContractSendChannelWithdraw(
@@ -1738,6 +1761,13 @@ def handle_receive_withdraw(
                 ),
             ]
         )
+    else:
+        assert msg, "is_valid_withdraw_confirmation should return error msg if not valid"
+        invalid_withdraw = EventInvalidReceivedWithdraw(
+            total_withdraw=withdraw.total_withdraw, reason=msg
+        )
+        events = [invalid_withdraw]
+
     return TransitionResult(channel_state, events)
 
 
@@ -2141,7 +2171,6 @@ def state_transition(
         iteration = handle_receive_withdraw(
             channel_state=channel_state,
             withdraw=state_change,
-            block_number=block_number,
             block_hash=block_hash,
         )
 
