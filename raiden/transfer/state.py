@@ -302,7 +302,6 @@ class NettingChannelEndState(State):
     address: Address
     contract_balance: Balance
     total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
-    pending_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
