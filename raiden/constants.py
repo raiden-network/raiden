@@ -4,11 +4,14 @@ from hashlib import sha256
 
 from eth_utils import to_checksum_address
 
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
     BalanceHash,
     BlockHash,
     BlockNumber,
+    ChainID,
+    ChannelID,
     LockHash,
     Locksroot,
     RaidenDBVersion,
@@ -17,6 +20,7 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
+    TokenNetworkAddress,
     TransactionHash,
 )
 
@@ -122,3 +126,13 @@ DEFAULT_HTTP_REQUEST_TIMEOUT = 1.0  # seconds
 DISCOVERY_DEFAULT_ROOM = "discovery"
 MONITORING_BROADCASTING_ROOM = "monitoring"
 PATH_FINDING_BROADCASTING_ROOM = "path_finding"
+
+# According to the smart contracts as of 07/08:
+# https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
+# channel_identifier can never be 0. We make this a requirement in the client and use this fact
+# to signify that a channel_identifier of `0` passed to the messages adds them to the
+# global queue
+EMPTY_ADDRESS = b"\0" * 20
+CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
+    ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
+)

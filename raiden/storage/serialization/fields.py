@@ -7,7 +7,7 @@ from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_he
 from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.utils.typing import Address, Any, Optional, Tuple
+from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
 
 
 class IntegerToStringField(marshmallow.fields.Field):
@@ -57,16 +57,36 @@ class AddressField(marshmallow.fields.Field):
 class QueueIdentifierField(marshmallow.fields.Field):
     """ Converts QueueIdentifier objects to a tuple """
 
+    @staticmethod
+    def _canonical_id_from_string(string: str) -> CanonicalIdentifier:
+        try:
+            chain_id_str, token_network_address_hex, channel_id_str = string.split("|")
+            return CanonicalIdentifier(
+                chain_identifier=ChainID(int(chain_id_str)),
+                token_network_address=to_bytes(hexstr=token_network_address_hex),
+                channel_identifier=ChannelID(int(channel_id_str)),
+            )
+        except ValueError:
+            raise ValueError(f"Could not reconstruct canonical identifier from string: {string}")
+
+    @staticmethod
+    def _canonical_id_to_string(canonical_id: CanonicalIdentifier) -> str:
+        return (
+            f"{canonical_id.chain_identifier}|"
+            f"{to_checksum_address(canonical_id.token_network_address)}|"
+            f"{canonical_id.channel_identifier}"
+        )
+
     def _serialize(self, queue_identifier: QueueIdentifier, attr: Any, obj: Any) -> str:
         return (
             f"{to_checksum_address(queue_identifier.recipient)}"
-            f"-{str(queue_identifier.canonical_identifier)}"
+            f"-{self._canonical_id_to_string(queue_identifier.canonical_identifier)}"
         )
 
     def _deserialize(self, queue_identifier_str: str, attr: Any, data: Any) -> QueueIdentifier:
         str_recipient, str_canonical_id = queue_identifier_str.split("-")
         return QueueIdentifier(
-            to_canonical_address(str_recipient), CanonicalIdentifier.from_string(str_canonical_id)
+            to_canonical_address(str_recipient), self._canonical_id_from_string(str_canonical_id)
         )
 
 

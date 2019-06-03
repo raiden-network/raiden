@@ -9,6 +9,7 @@ from matrix_client.errors import MatrixRequestError
 
 import raiden
 from raiden.constants import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
@@ -28,7 +29,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
