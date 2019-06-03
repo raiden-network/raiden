@@ -10,7 +10,9 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BalanceHash,
+    BlockNumber,
     BlockSpecification,
+    BlockTimeout,
     ChannelID,
     Locksroot,
     MerkleTreeLeaves,
@@ -85,7 +87,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def settle_timeout(self) -> int:
+    def settle_timeout(self) -> BlockTimeout:
         """ Returns the channels settle_timeout. """
 
         # There is no way to get the settle timeout after the channel has been closed as
@@ -106,7 +108,7 @@ class PaymentChannel:
         )
         return event["args"]["settle_timeout"]
 
-    def close_block_number(self) -> Optional[int]:
+    def close_block_number(self) -> Optional[BlockNumber]:
         """ Returns the channel's closed block number. """
 
         # The closed block number is not in the smart contract storage to save

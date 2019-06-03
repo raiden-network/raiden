@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from raiden.settings import MEDIATION_FEE
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
@@ -5,42 +7,31 @@ from raiden.transfer.state import (
     NettingChannelState,
     TransactionExecutionStatus,
 )
-from raiden.utils.typing import (
-    BlockNumber,
-    BlockTimeout,
-    Optional,
-    PaymentNetworkAddress,
-    TokenAddress,
-    TokenNetworkAddress,
-)
+from raiden.utils import typing
+
+if TYPE_CHECKING:
+    from raiden.network.proxies.payment_channel import ChannelDetails, PaymentChannel
 
 
-def get_channel_state(
-    token_address: TokenAddress,
-    payment_network_address: PaymentNetworkAddress,
-    token_network_address: TokenNetworkAddress,
-    reveal_timeout: BlockTimeout,
-    payment_channel_proxy,
-    opened_block_number: BlockNumber,
-):
-    # Here we have to query the latest state because if we query with an older block
-    # state (e.g. opened_block_number) the state may have been pruned which will
-    # lead to an error.
-    latest_block_hash = payment_channel_proxy.client.blockhash_from_blocknumber("latest")
-    channel_details = payment_channel_proxy.detail(latest_block_hash)
-
+def create_channel_state_from_blockchain_data(
+    payment_network_address: typing.PaymentNetworkAddress,
+    token_network_address: typing.TokenNetworkAddress,
+    token_address: typing.TokenAddress,
+    channel_details: "ChannelDetails",
+    identifier: typing.ChannelID,
+    reveal_timeout: typing.BlockTimeout,
+    settle_timeout: typing.BlockTimeout,
+    opened_block_number: typing.BlockNumber,
+    closed_block_number: typing.Optional[typing.BlockNumber],
+) -> typing.Optional[NettingChannelState]:
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,
-        channel_details.participants_data.our_details.deposit,
+        typing.Balance(channel_details.participants_data.our_details.deposit),
     )
     partner_state = NettingChannelEndState(
         channel_details.participants_data.partner_details.address,
-        channel_details.participants_data.partner_details.deposit,
+        typing.Balance(channel_details.participants_data.partner_details.deposit),
     )
-
-    identifier = payment_channel_proxy.channel_identifier
-    settle_timeout = payment_channel_proxy.settle_timeout()
-    closed_block_number = payment_channel_proxy.close_block_number()
 
     # ignore bad open block numbers
     if opened_block_number <= 0:
@@ -50,7 +41,7 @@ def get_channel_state(
         None, opened_block_number, TransactionExecutionStatus.SUCCESS
     )
 
-    close_transaction: Optional[TransactionExecutionStatus] = None
+    close_transaction: typing.Optional[TransactionExecutionStatus] = None
     if closed_block_number:
         close_transaction = TransactionExecutionStatus(
             None, closed_block_number, TransactionExecutionStatus.SUCCESS
@@ -79,3 +70,29 @@ def get_channel_state(
     )
 
     return channel
+
+
+def get_channel_state(
+    token_address: typing.TokenAddress,
+    payment_network_address: typing.PaymentNetworkAddress,
+    token_network_address: typing.TokenNetworkAddress,
+    reveal_timeout: typing.BlockTimeout,
+    payment_channel_proxy: "PaymentChannel",
+    opened_block_number: typing.BlockNumber,
+):  # pragma: no unittest
+    # Here we have to query the latest state because if we query with an older block
+    # state (e.g. opened_block_number) the state may have been pruned which will
+    # lead to an error.
+    latest_block_hash = payment_channel_proxy.client.blockhash_from_blocknumber("latest")
+
+    return create_channel_state_from_blockchain_data(
+        payment_network_address=payment_network_address,
+        token_network_address=token_network_address,
+        token_address=token_address,
+        channel_details=payment_channel_proxy.detail(latest_block_hash),
+        identifier=payment_channel_proxy.channel_identifier,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=payment_channel_proxy.settle_timeout(),
+        opened_block_number=opened_block_number,
+        closed_block_number=payment_channel_proxy.close_block_number(),
+    )
