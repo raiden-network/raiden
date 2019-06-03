@@ -5,7 +5,7 @@ from unittest.mock import ANY, Mock, patch
 
 import raiden.utils.upgrades
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import Operator, Query, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.transfer.state_change import ActionInitChain
@@ -109,7 +109,11 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     # in the restored database
     with SQLiteStorage(str(db_path)) as storage:
         state_change_record = storage.get_latest_state_change_by_data_field(
-            {"_type": "raiden.transfer.state_change.ActionInitChain"}
+            Query(
+                filters=[{"_type": "raiden.transfer.state_change.ActionInitChain"}],
+                main_operator=Operator.NONE,
+                inner_operator=Operator.NONE,
+            )
         )
         assert state_change_record.data is not None
 
