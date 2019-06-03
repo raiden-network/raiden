@@ -540,7 +540,7 @@ def make_receive_transfer_mediated(
     chain_id = chain_id or channel_state.chain_id
 
     transfer_route_metadata = RouteMetadata(
-        routes=[channel_state.our_state.address, transfer_target]
+        route=[channel_state.our_state.address, transfer_target]
     )
 
     mediated_transfer_msg = LockedTransfer(
@@ -574,7 +574,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         message_identifier=random.randint(0, UINT64_MAX),
         balance_proof=balance_proof,
-        route=transfer_route_metadata.routes,
+        route=transfer_route_metadata.route,
     )
 
     return receive_lockedtransfer
