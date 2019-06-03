@@ -137,6 +137,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
+        default_msc_address=app0.raiden.default_msc_address,
         transport=transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,

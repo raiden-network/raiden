@@ -70,11 +70,13 @@ class App:  # pylint: disable=too-few-public-methods
         default_secret_registry: SecretRegistry,
         default_service_registry: typing.Optional[ServiceRegistry],
         default_one_to_n_address: typing.Optional[Address],
+        default_msc_address: Address,
         transport,
         raiden_event_handler,
         message_handler,
         user_deposit: UserDeposit = None,
     ):
+        default_msc_address = default_msc_address
         raiden = RaidenService(
             chain=chain,
             query_start_block=query_start_block,
@@ -82,6 +84,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_one_to_n_address=default_one_to_n_address,
             default_secret_registry=default_secret_registry,
             default_service_registry=default_service_registry,
+            default_msc_address=default_msc_address,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,

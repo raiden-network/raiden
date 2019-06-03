@@ -40,7 +40,7 @@ from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import CONTRACT_MONITORING_SERVICE, ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -113,6 +113,7 @@ def run_app(
     service_registry_contract_address: Address,
     endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
+    monitoring_service_contract_address: Address,
     api_address: Endpoint,
     rpc: bool,
     sync_check: bool,
@@ -239,6 +240,8 @@ def run_app(
             default_registry=proxies.token_network_registry,
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
+            default_msc_address=monitoring_service_contract_address
+            or contracts[CONTRACT_MONITORING_SERVICE]["address"],
             transport=transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,

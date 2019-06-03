@@ -227,13 +227,17 @@ def update_services_from_balance_proof(
     raiden: "RaidenService",
     chain_state: "ChainState",
     balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
+    monitoring_service_contract_address: Address,
 ) -> None:
     update_path_finding_service_from_balance_proof(
         raiden=raiden, chain_state=chain_state, new_balance_proof=balance_proof
     )
     if isinstance(balance_proof, BalanceProofSignedState):
         update_monitoring_service_from_balance_proof(
-            raiden=raiden, chain_state=chain_state, new_balance_proof=balance_proof
+            raiden=raiden,
+            chain_state=chain_state,
+            new_balance_proof=balance_proof,
+            monitoring_service_contract_address=monitoring_service_contract_address,
         )
 
 
@@ -263,7 +267,10 @@ def update_path_finding_service_from_balance_proof(
 
 
 def update_monitoring_service_from_balance_proof(
-    raiden: "RaidenService", chain_state: "ChainState", new_balance_proof: BalanceProofSignedState
+    raiden: "RaidenService",
+    chain_state: "ChainState",
+    new_balance_proof: BalanceProofSignedState,
+    monitoring_service_contract_address: Address,
 ) -> None:
     if raiden.config["services"]["monitoring_enabled"] is False:
         return
@@ -309,7 +316,7 @@ def update_monitoring_service_from_balance_proof(
     )
 
     monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
-        new_balance_proof, MONITORING_REWARD
+        new_balance_proof, MONITORING_REWARD, monitoring_service_contract_address
     )
     monitoring_message.sign(raiden.signer)
     raiden.transport.send_global(constants.MONITORING_BROADCASTING_ROOM, monitoring_message)
@@ -326,6 +333,7 @@ class RaidenService(Runnable):
         default_secret_registry: SecretRegistry,
         default_service_registry: Optional[ServiceRegistry],
         default_one_to_n_address: Optional[Address],
+        default_msc_address: Address,
         transport,
         raiden_event_handler: EventHandler,
         message_handler,
@@ -342,6 +350,7 @@ class RaidenService(Runnable):
         self.default_one_to_n_address = default_one_to_n_address
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
+        self.default_msc_address = default_msc_address
         self.config = config
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
@@ -674,7 +683,9 @@ class RaidenService(Runnable):
         new_state, raiden_event_list = self.wal.log_and_dispatch(state_change)
 
         for changed_balance_proof in views.detect_balance_proof_change(old_state, new_state):
-            update_services_from_balance_proof(self, new_state, changed_balance_proof)
+            update_services_from_balance_proof(
+                self, new_state, changed_balance_proof, self.default_msc_address
+            )
 
         log.debug(
             "Raiden events",
@@ -952,7 +963,9 @@ class RaidenService(Runnable):
             current_state=chain_state,
         )
         for balance_proof in current_balance_proofs:
-            update_services_from_balance_proof(self, chain_state, balance_proof)
+            update_services_from_balance_proof(
+                self, chain_state, balance_proof, self.default_msc_address
+            )
 
     def _initialize_whitelists(self, chain_state: ChainState) -> None:
         """ Whitelist neighbors and mediated transfer targets on transport """

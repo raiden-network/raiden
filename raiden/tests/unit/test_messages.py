@@ -31,6 +31,7 @@ from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, Rec
 from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
+MSC_ADDRESS = bytes([1] * 20)
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)
@@ -42,14 +43,17 @@ def test_signature():
     assert ping.sender == ADDRESS
 
 
-def test_request_monitoring():
+def test_request_monitoring() -> None:
     properties = factories.BalanceProofSignedStateProperties(pkey=PARTNER_PRIVKEY)
     balance_proof = factories.create(properties)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
         balance_proof
     )
     request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
+        balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+        signature=EMPTY_SIGNATURE,
+        monitoring_service_contract_address=MSC_ADDRESS,
     )
     assert request_monitoring
     request_monitoring.sign(signer)
@@ -57,7 +61,7 @@ def test_request_monitoring():
     assert DictSerializer.deserialize(as_dict) == request_monitoring
     # RequestMonitoring can be created directly from BalanceProofSignedState
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
-        balance_proof, reward_amount=55
+        balance_proof, reward_amount=55, monitoring_service_contract_address=MSC_ADDRESS
     )
     with pytest.raises(ValueError):
         # equality test uses `validated` packed format
@@ -68,7 +72,7 @@ def test_request_monitoring():
     assert direct_created == request_monitoring
     other_balance_proof = factories.create(factories.replace(properties, message_hash=sha3(b"2")))
     other_instance = RequestMonitoring.from_balance_proof_signed_state(
-        other_balance_proof, reward_amount=55
+        other_balance_proof, reward_amount=55, monitoring_service_contract_address=MSC_ADDRESS
     )
     other_instance.sign(signer)
     # different balance proof ==> non-equality
@@ -83,6 +87,7 @@ def test_request_monitoring():
         ),
         reward_amount=request_monitoring.reward_amount,
         nonce=request_monitoring.balance_proof.nonce,
+        monitoring_service_contract_address=MSC_ADDRESS,
     )
 
     assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
@@ -138,6 +143,7 @@ def test_tamper_request_monitoring():
     """ This test shows ways, how the current implementation of the RequestMonitoring's
     signature scheme might be used by an attacker to tamper with the BalanceProof that is
     incorporated in the RequestMonitoring message, if not all three signatures are verified."""
+    msc_address = bytes([1] * 20)
     properties = factories.BalanceProofSignedStateProperties(pkey=PARTNER_PRIVKEY)
     balance_proof = factories.create(properties)
 
@@ -145,7 +151,10 @@ def test_tamper_request_monitoring():
         balance_proof
     )
     request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
+        balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+        signature=EMPTY_SIGNATURE,
+        monitoring_service_contract_address=msc_address,
     )
     request_monitoring.sign(signer)
 
@@ -162,13 +171,17 @@ def test_tamper_request_monitoring():
         ),
         reward_amount=request_monitoring.reward_amount,
         nonce=request_monitoring.balance_proof.nonce,
+        monitoring_service_contract_address=msc_address,
     )
 
     # An attacker might change the balance hash
     partner_signed_balance_proof.balance_hash = "tampered".encode()
 
     tampered_balance_hash_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
+        balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+        signature=EMPTY_SIGNATURE,
+        monitoring_service_contract_address=MSC_ADDRESS,
     )
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
@@ -180,6 +193,7 @@ def test_tamper_request_monitoring():
         ),
         reward_amount=tampered_balance_hash_request_monitoring.reward_amount,
         nonce=tampered_balance_hash_request_monitoring.balance_proof.nonce,
+        monitoring_service_contract_address=msc_address,
     )
     # The signature works/is unaffected by that change...
     recovered_address_tampered = recover(
@@ -198,7 +212,10 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.additional_hash = "tampered".encode()
 
     tampered_additional_hash_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
+        balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+        signature=EMPTY_SIGNATURE,
+        monitoring_service_contract_address=MSC_ADDRESS,
     )
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
@@ -210,6 +227,7 @@ def test_tamper_request_monitoring():
         ),
         reward_amount=tampered_additional_hash_request_monitoring.reward_amount,
         nonce=tampered_additional_hash_request_monitoring.balance_proof.nonce,
+        monitoring_service_contract_address=msc_address,
     )
 
     # The signature works/is unaffected by that change...
@@ -229,7 +247,10 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.non_closing_signature = "tampered".encode()
 
     tampered_non_closing_signature_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
+        balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+        signature=EMPTY_SIGNATURE,
+        monitoring_service_contract_address=MSC_ADDRESS,
     )
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
@@ -241,6 +262,7 @@ def test_tamper_request_monitoring():
         ),
         reward_amount=tampered_non_closing_signature_request_monitoring.reward_amount,
         nonce=tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
+        monitoring_service_contract_address=msc_address,
     )
 
     # The signature works/is unaffected by that change...

@@ -848,6 +848,7 @@ class RequestMonitoring(SignedMessage):
 
     balance_proof: SignedBlindedBalanceProof
     reward_amount: TokenAmount
+    monitoring_service_contract_address: Address
     non_closing_signature: Optional[Signature] = None
 
     def __post_init__(self):
@@ -859,7 +860,10 @@ class RequestMonitoring(SignedMessage):
 
     @classmethod
     def from_balance_proof_signed_state(
-        cls, balance_proof: BalanceProofSignedState, reward_amount: TokenAmount
+        cls,
+        balance_proof: BalanceProofSignedState,
+        reward_amount: TokenAmount,
+        monitoring_service_contract_address: Address,
     ) -> "RequestMonitoring":
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError(
@@ -874,6 +878,7 @@ class RequestMonitoring(SignedMessage):
             balance_proof=onchain_balance_proof,
             reward_amount=reward_amount,
             signature=EMPTY_SIGNATURE,
+            monitoring_service_contract_address=monitoring_service_contract_address,
         )
         return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
 
@@ -891,6 +896,7 @@ class RequestMonitoring(SignedMessage):
             ),
             reward_amount=self.reward_amount,
             nonce=self.balance_proof.nonce,
+            monitoring_service_contract_address=self.monitoring_service_contract_address,
         )
         return packed
 
@@ -963,6 +969,7 @@ class RequestMonitoring(SignedMessage):
             ),
             reward_amount=self.reward_amount,
             nonce=self.balance_proof.nonce,
+            monitoring_service_contract_address=self.monitoring_service_contract_address,
         )
         reward_proof_signature = self.reward_proof_signature or EMPTY_SIGNATURE
         return (

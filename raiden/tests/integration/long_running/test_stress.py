@@ -105,6 +105,7 @@ def restart_app(app):
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
         default_service_registry=app.raiden.default_service_registry,
+        default_msc_address=app.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),

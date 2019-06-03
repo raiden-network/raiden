@@ -1,6 +1,6 @@
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import AdditionalHash, BalanceHash, Nonce, Signature, TokenAmount
+from raiden.utils.typing import AdditionalHash, Address, BalanceHash, Nonce, Signature, TokenAmount
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -55,12 +55,23 @@ def pack_balance_proof_update(
 
 
 def pack_reward_proof(
-    canonical_identifier: CanonicalIdentifier, reward_amount: TokenAmount, nonce: Nonce
+    canonical_identifier: CanonicalIdentifier,
+    reward_amount: TokenAmount,
+    nonce: Nonce,
+    monitoring_service_contract_address: Address,
 ) -> bytes:
     channel_identifier = canonical_identifier.channel_identifier
     token_network_address = canonical_identifier.token_network_address
     chain_id = canonical_identifier.chain_identifier
     return pack_data(
-        ["uint256", "uint256", "address", "uint256", "uint256"],
-        [channel_identifier, reward_amount, token_network_address, chain_id, nonce],
+        ["address", "uint256", "uint256", "uint256", "uint256", "address", "uint256"],
+        [
+            monitoring_service_contract_address,
+            chain_id,
+            MessageTypeId.MSReward,
+            channel_identifier,
+            reward_amount,
+            token_network_address,
+            nonce,
+        ],
     )
