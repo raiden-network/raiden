@@ -575,6 +575,15 @@ class RouteMetadata:
         return f"RouteMetadata: {' -> '.join([pex(address) for address in self.route])}"
 
 
+@dataclass(frozen=True)
+class Metadata:
+    routes: List[RouteMetadata]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode([r.hash for r in self.routes]))
+
+
 @dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if

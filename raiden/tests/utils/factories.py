@@ -11,6 +11,7 @@ from raiden.messages import (
     Lock,
     LockedTransfer,
     LockExpired,
+    Metadata,
     RefundTransfer,
     RouteMetadata,
     Unlock,
@@ -392,6 +393,15 @@ class RouteMetadataProperties(Properties):
 
 
 RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
+
+
+@dataclass(frozen=True)
+class MetadataProperties(Properties):
+    routes: List[RouteMetadata] = EMPTY
+    TARGET_TYPE = Metadata
+
+
+MetadataProperties.DEFAULTS = MetadataProperties(routes=[RouteMetadata(route=[HOP1, HOP2])])
 
 
 @dataclass(frozen=True)
