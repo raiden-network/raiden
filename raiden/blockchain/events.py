@@ -86,7 +86,7 @@ def get_token_network_registry_events(
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
-) -> List[Dict]:
+) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
         chain=chain,
@@ -105,7 +105,7 @@ def get_token_network_events(
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
-) -> List[Dict]:
+) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the ChannelManagerContract at `token_address`. """
 
     return get_contract_events(
@@ -125,7 +125,7 @@ def get_all_netting_channel_events(
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
-) -> List[Dict]:
+) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of a NettingChannelContract. """
 
     filter_args = get_filter_args_for_all_events_from_channel(
