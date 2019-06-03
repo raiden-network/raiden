@@ -693,14 +693,14 @@ class Lock:
 
 @dataclass(frozen=True)
 class RouteMetadata:
-    routes: List[Address]
+    route: List[Address]
 
     @property
     def hash(self):
-        return sha3(rlp.encode(self.routes))
+        return sha3(rlp.encode(self.route))
 
     def __repr__(self):
-        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.routes])}"
+        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.route])}"
 
 
 @dataclass(repr=False, eq=False)
