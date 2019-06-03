@@ -76,6 +76,7 @@ from raiden.exceptions import (
     TokenNotRegistered,
     TransactionThrew,
     UnknownTokenAddress,
+    WithdrawMismatch,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.events import (
@@ -1073,11 +1074,7 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_withdraw,
             )
-        except InsufficientFunds as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
-        except DepositOverLimit as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        except DepositMismatch as e:
+        except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(

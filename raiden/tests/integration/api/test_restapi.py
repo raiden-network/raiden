@@ -1866,3 +1866,63 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     )
     response = request.send().response
     assert response.status_code == 404 and b"Channel" in response.content
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("deposit", [1000, 1000])
+def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    token_address = token_addresses[0]
+    partner_address = app1.raiden.address
+
+    # Withdraw a 0 amount
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw=0),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # Withdraw an amount larger than balance
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw=1500),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # Withdraw a valid amount
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw=750),
+    )
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # Withdraw same amount as before
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw=750),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
