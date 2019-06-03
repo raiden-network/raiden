@@ -2,6 +2,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
@@ -25,6 +26,18 @@ from raiden.utils.typing import (
     Tuple,
     Union,
 )
+
+
+class Operator(Enum):
+    NONE = ""
+    AND = "AND"
+    OR = "OR"
+
+
+class Query(NamedTuple):
+    filters: List[Dict[str, Any]]
+    main_operator: Operator
+    inner_operator: Operator
 
 
 class EventRecord(NamedTuple):
