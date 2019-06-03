@@ -387,11 +387,11 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 
 @dataclass(frozen=True)
 class RouteMetadataProperties(Properties):
-    routes: List[Address] = EMPTY
+    route: List[Address] = EMPTY
     TARGET_TYPE = RouteMetadata
 
 
-RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(routes=[HOP1, HOP2])
+RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 
 
 @dataclass(frozen=True)
@@ -735,7 +735,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     route = params.pop("route")
     # pylint: disable=E1101
     route_metadata = [transfer.recipient, transfer.target] if route == EMPTY else route
-    params["route_metadata"] = RouteMetadata(routes=route_metadata)
+    params["route_metadata"] = RouteMetadata(route=route_metadata)
 
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
@@ -759,7 +759,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         lock=lock,
         initiator=locked_transfer.initiator,
         target=locked_transfer.target,
-        route=locked_transfer.route_metadata.routes,
+        route=locked_transfer.route_metadata.route,
     )
 
 
