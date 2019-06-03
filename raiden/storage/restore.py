@@ -1,7 +1,13 @@
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.storage.sqlite import EventRecord, SerializedSQLiteStorage, StateChangeRecord
+from raiden.storage.sqlite import (
+    EventRecord,
+    Operator,
+    Query,
+    SerializedSQLiteStorage,
+    StateChangeRecord,
+)
 from raiden.storage.wal import restore_to_state_change
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -12,6 +18,7 @@ from raiden.utils.typing import (
     Any,
     BalanceHash,
     Dict,
+    List,
     Locksroot,
     Optional,
     StateChangeID,
@@ -65,7 +72,8 @@ def get_state_change_with_balance_proof_by_balance_hash(
     Use this function to find a balance proof for a call to settle, which only
     has the blinded balance proof data.
     """
-    return storage.get_latest_state_change_by_data_field(
+    filters: List[Dict[str, Any]] = list()
+    filters.append(
         {
             "balance_proof.canonical_identifier.chain_identifier": str(
                 canonical_identifier.chain_identifier
@@ -80,6 +88,8 @@ def get_state_change_with_balance_proof_by_balance_hash(
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
+    query = Query(filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND)
+    return storage.get_latest_state_change_by_data_field(query)
 
 
 def get_state_change_with_balance_proof_by_locksroot(
@@ -95,7 +105,8 @@ def get_state_change_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    return storage.get_latest_state_change_by_data_field(
+    filters: List[Dict[str, Any]] = list()
+    filters.append(
         {
             "balance_proof.canonical_identifier.chain_identifier": str(
                 canonical_identifier.chain_identifier
@@ -110,6 +121,8 @@ def get_state_change_with_balance_proof_by_locksroot(
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
+    query = Query(filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND)
+    return storage.get_latest_state_change_by_data_field(query)
 
 
 def get_event_with_balance_proof_by_balance_hash(
@@ -123,7 +136,8 @@ def get_event_with_balance_proof_by_balance_hash(
     Use this function to find a balance proof for a call to settle, which only
     has the blinded balance proof data.
     """
-    filters = {
+    filters: List[Dict[str, Any]] = list()
+    balance_proof_filters = {
         "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
         "canonical_identifier.token_network_address": to_checksum_address(
             canonical_identifier.token_network_address
@@ -132,15 +146,14 @@ def get_event_with_balance_proof_by_balance_hash(
         "balance_hash": to_hex(balance_hash),
     }
 
-    event = storage.get_latest_event_by_data_field(
-        balance_proof_query_from_keys(prefix="", filters=filters)
+    filters.append(balance_proof_query_from_keys(prefix="", filters=balance_proof_filters))
+    filters.append(
+        balance_proof_query_from_keys(prefix="transfer.", filters=balance_proof_filters)
     )
-    if event is not None:
-        return event
 
-    event = storage.get_latest_event_by_data_field(
-        balance_proof_query_from_keys(prefix="transfer.", filters=filters)
-    )
+    query = Query(filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND)
+
+    event = storage.get_latest_event_by_data_field(query)
     return event
 
 
@@ -156,7 +169,8 @@ def get_event_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    filters = {"recipient": to_checksum_address(recipient)}
+    filters: List[Dict[str, Any]] = list()
+
     balance_proof_filters = balance_proof_query_from_keys(
         prefix="",
         filters={
@@ -170,13 +184,10 @@ def get_event_with_balance_proof_by_locksroot(
             "locksroot": to_hex(locksroot),
         },
     )
-    balance_proof_filters.update(filters)
+    balance_proof_filters["recipient"] = to_checksum_address(recipient)
+    filters.append(balance_proof_filters)
 
-    event = storage.get_latest_event_by_data_field(balance_proof_filters)
-    if event is not None:
-        return event
-
-    balance_proof_filters = balance_proof_query_from_keys(
+    transfer_filters = balance_proof_query_from_keys(
         prefix="transfer.",
         filters={
             "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
@@ -189,8 +200,11 @@ def get_event_with_balance_proof_by_locksroot(
             "locksroot": to_hex(locksroot),
         },
     )
-    balance_proof_filters.update(filters)
-    event = storage.get_latest_event_by_data_field(balance_proof_filters)
+    transfer_filters["recipient"] = to_checksum_address(recipient)
+    filters.append(transfer_filters)
+
+    query = Query(filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND)
+    event = storage.get_latest_event_by_data_field(query)
     return event
 
 
