@@ -290,22 +290,16 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, filters: Dict[str, Any]) -> Optional[EventRecord]:
+    def get_latest_event_by_data_field(self, query: Query) -> Optional[EventRecord]:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
-        filters = _filter_from_dict(filters)
-        where_clauses = []
-        args = []
-        for field, value in filters.items():
-            where_clauses.append("json_extract(data, ?)=?")
-            args.append(f"$.{field}")
-            args.append(value)
+        query_str, args = _query_to_string(query)
 
         cursor.execute(
-            "SELECT identifier, source_statechange_id, data FROM state_events WHERE "
-            f"{' AND '.join(where_clauses)}"
-            "ORDER BY identifier DESC LIMIT 1",
+            f"SELECT identifier, source_statechange_id, data FROM state_events WHERE "
+            f"{query_str}"
+            f"ORDER BY identifier DESC LIMIT 1",
             args,
         )
 
@@ -354,25 +348,16 @@ class SQLiteStorage:
         cursor.execute(query, args)
         return cursor
 
-    def get_latest_state_change_by_data_field(
-        self, filters: Dict[str, Any]
-    ) -> Optional[StateChangeRecord]:
+    def get_latest_state_change_by_data_field(self, query: Query) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
-        where_clauses = []
-        args = []
-        filters = _filter_from_dict(filters)
-        for field, value in filters.items():
-            where_clauses.append("json_extract(data, ?)=?")
-            args.append(f"$.{field}")
-            args.append(value)
+        query_str, args = _query_to_string(query)
 
-        where = " AND ".join(where_clauses)
         sql = (
             f"SELECT identifier, data "
             f"FROM state_changes "
-            f"WHERE {where} "
+            f"WHERE {query_str} "
             f"ORDER BY identifier "
             f"DESC LIMIT 1"
         )
@@ -680,9 +665,9 @@ class SerializedSQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, filters: Dict[str, Any]) -> Optional[EventRecord]:
+    def get_latest_event_by_data_field(self, query: Query) -> Optional[EventRecord]:
         """ Return all state changes filtered by a named field and value."""
-        event = self.database.get_latest_event_by_data_field(filters)
+        event = self.database.get_latest_event_by_data_field(query)
 
         if event is not None:
             event = EventRecord(
@@ -693,12 +678,10 @@ class SerializedSQLiteStorage:
 
         return event
 
-    def get_latest_state_change_by_data_field(
-        self, filters: Dict[str, str]
-    ) -> Optional[StateChangeRecord]:
+    def get_latest_state_change_by_data_field(self, query: Query) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
 
-        state_change = self.database.get_latest_state_change_by_data_field(filters)
+        state_change = self.database.get_latest_state_change_by_data_field(query)
 
         if state_change is not None:
             state_change = StateChangeRecord(
