@@ -1,4 +1,4 @@
-from raiden.messages import LockedTransfer, RouteMetadata
+from raiden.messages import LockedTransfer, Metadata, RouteMetadata
 from raiden.routing import resolve_route
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
@@ -25,6 +25,30 @@ def test_route_metadata_hashing():
     )
 
     inverted_route_hash = inverted_route_metadata.hash
+
+    assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
+
+
+def test_metadata_hashing():
+    properties = factories.MetadataProperties()
+    one_metadata = factories.create(properties)
+    assert isinstance(one_metadata, Metadata)
+    one_hash = one_metadata.hash
+
+    another_metadata = factories.create(properties)
+    another_hash = another_metadata.hash
+
+    assert one_hash == another_hash, "route metadata with same routes do not match"
+
+    inverted_route_metadata = factories.create(
+        factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
+    )
+
+    metadata_with_inverted_route = factories.create(
+        factories.MetadataProperties(routes=[inverted_route_metadata])
+    )
+
+    inverted_route_hash = metadata_with_inverted_route.hash
 
     assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
 
