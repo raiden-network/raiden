@@ -467,18 +467,19 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise InvalidAddress("No channel with partner_address for the given token")
 
+        if total_withdraw <= channel_state.our_state.total_withdraw:
+            raise WithdrawMismatch(f"Total withdraw {total_withdraw} did not increase")
+
         current_balance = channel.get_balance(
             sender=channel_state.our_state, receiver=channel_state.partner_state
         )
-        if total_withdraw > current_balance:
-            raise DepositOverLimit(
+        amount_to_withdraw = total_withdraw - channel_state.our_state.total_withdraw
+        if amount_to_withdraw > current_balance:
+            raise InsufficientFunds(
                 "The withdraw of {} is bigger than the current balance of {}".format(
-                    total_withdraw, current_balance
+                    amount_to_withdraw, current_balance
                 )
             )
-
-        if total_withdraw == 0:
-            raise WithdrawMismatch("Attempted to withdraw 0 amount")
 
         self.raiden.withdraw(
             canonical_identifier=channel_state.canonical_identifier, total_withdraw=total_withdraw
