@@ -834,6 +834,32 @@ def is_valid_unlock(
     return result
 
 
+def is_valid_action_withdraw(
+    channel_state: NettingChannelState,
+    withdraw: ActionChannelWithdraw,
+) -> SuccessOrError:
+    result: SuccessOrError
+
+    balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
+
+    withdraw_amount = channel_state.our_state.total_withdraw - withdraw.total_withdraw
+
+    if withdraw_amount == 0:
+        msg = "Total withdraw {} did not increase".format(
+            withdraw.total_withdraw
+        )
+        result = (False, msg)
+    elif balance < withdraw_amount:
+        msg = "Insufficient balance: {} . Requested {} for withdraw".format(
+            balance, withdraw_amount
+        )
+        result = (False, msg)
+    else:
+        result = (True, None)
+
+    return result
+
+
 def is_valid_withdraw_request(
     withdraw_request: ReceiveWithdrawRequest, channel_state: NettingChannelState
 ) -> SuccessOrError:
@@ -862,7 +888,7 @@ def is_valid_withdraw_request(
         result = (False, msg)
     elif balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
-            balance, withdraw_request.total_withdraw
+            balance, withdraw_amount
         )
         result = (False, msg)
     elif not valid_signature:
@@ -1688,14 +1714,16 @@ def handle_action_withdraw(
     assert channel_state.identifier == withdraw.channel_identifier, msg
 
     events: List[Event] = list()
-    balance = get_balance(channel_state.our_state, channel_state.partner_state)
-    if balance >= withdraw.total_withdraw:
+    is_valid, _ = is_valid_action_withdraw(channel_state, withdraw)
+
+    if is_valid:
         channel_state.our_state.total_withdraw = withdraw.total_withdraw
         events = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
             pseudo_random_generator=pseudo_random_generator,
         )
+
     return TransitionResult(channel_state, events)
 
 
