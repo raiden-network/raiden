@@ -12,7 +12,7 @@ from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import ChainID, Dict, TokenAmount
+from raiden.utils.typing import ChainID, ChannelID, Dict, Locksroot, Nonce, TokenAmount
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree
 
@@ -169,15 +169,15 @@ def find_max_pending_transfers(gas_limit):
         balance_hash = hash_balance_data(
             transferred_amount=TokenAmount(3000),
             locked_amount=TokenAmount(2000),
-            locksroot=pending_transfers_tree.merkle_root,
+            locksroot=Locksroot(pending_transfers_tree.merkle_root),
         )
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=CHAIN_ID,
             token_network_address=token_network_address,
-            channel_identifier=channel_identifier,
+            channel_identifier=ChannelID(channel_identifier),
         )
         data_to_sign = pack_balance_proof(
-            nonce=nonce,
+            nonce=Nonce(nonce),
             balance_hash=balance_hash,
             additional_hash=additional_hash,
             canonical_identifier=canonical_identifier,

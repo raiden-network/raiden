@@ -85,6 +85,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, NettingChannelState
 from raiden.utils import (
+    Endpoint,
     create_default_identifier,
     optional_address_to_string,
     pex,
@@ -377,11 +378,11 @@ class APIServer(Runnable):  # pragma: no unittest
 
                 # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
                 # which is the hostname by which the client/browser sees/access the raiden node
-                host = request.headers.get("Host")
-                if web3 and host:
+                host_header = request.headers.get("Host")
+                if web3 and host_header:
                     web3_host, web3_port = split_endpoint(web3)
                     if web3_host in ("localhost", "127.0.0.1"):
-                        host, _ = split_endpoint(host)
+                        host, _ = split_endpoint(Endpoint(host_header))
                         web3 = f"http://{host}:{web3_port}"
                         config["web3"] = web3
 

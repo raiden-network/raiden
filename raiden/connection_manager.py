@@ -21,7 +21,7 @@ from raiden.exceptions import (
 )
 from raiden.transfer import views
 from raiden.utils import pex, typing
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, TokenAmount, TokenNetworkAddress
 
 log = structlog.get_logger(__name__)
 RECOVERABLE_ERRORS = (
@@ -70,7 +70,7 @@ class ConnectionManager:  # pragma: no unittest
     BOOTSTRAP_ADDR_HEX = "2" * 40
     BOOTSTRAP_ADDR = decode_hex(BOOTSTRAP_ADDR_HEX)
 
-    def __init__(self, raiden, token_network_address):
+    def __init__(self, raiden, token_network_address: TokenNetworkAddress):
         chain_state = views.state_from_raiden(raiden)
         token_network_state = views.get_token_network_by_address(
             chain_state, token_network_address
@@ -79,13 +79,16 @@ class ConnectionManager:  # pragma: no unittest
             chain_state, token_network_address
         )
 
+        assert token_network_state
+        assert token_network_registry
+
         # TODO:
         # - Add timeout for transaction polling, used to overwrite the RaidenAPI
         # defaults
         # - Add a proper selection strategy (#576)
         self.funds = 0
         self.initial_channel_target = 0
-        self.joinable_funds_target = 0
+        self.joinable_funds_target = 0.0
 
         self.raiden = raiden
         self.registry_address = token_network_registry.address
@@ -281,13 +284,14 @@ class ConnectionManager:  # pragma: no unittest
             views.state_from_raiden(self.raiden), self.registry_address, self.token_address
         )
 
-        available = participants_addresses - known
-        available = list(available)
-        shuffle(available)
-        new_partners = available
+        available_addresses = list(participants_addresses - known)
+        shuffle(available_addresses)
+        new_partners = available_addresses
 
         log.debug(
-            "Found partners", node=pex(self.raiden.address), number_of_partners=len(available)
+            "Found partners",
+            node=pex(self.raiden.address),
+            number_of_partners=len(available_addresses),
         )
 
         return new_partners
@@ -387,7 +391,7 @@ class ConnectionManager:  # pragma: no unittest
         return True
 
     @property
-    def _initial_funding_per_partner(self) -> int:
+    def _initial_funding_per_partner(self) -> TokenAmount:
         """The calculated funding per partner depending on configuration and
         overall funding of the ConnectionManager.
 
@@ -395,12 +399,14 @@ class ConnectionManager:  # pragma: no unittest
             - This attribute must be accessed with the lock held.
         """
         if self.initial_channel_target:
-            return int(self.funds * (1 - self.joinable_funds_target) / self.initial_channel_target)
+            return TokenAmount(
+                int(self.funds * (1 - self.joinable_funds_target) / self.initial_channel_target)
+            )
 
-        return 0
+        return TokenAmount(0)
 
     @property
-    def _funds_remaining(self) -> int:
+    def _funds_remaining(self) -> TokenAmount:
         """The remaining funds after subtracting the already deposited amounts.
 
         Note:
@@ -413,9 +419,9 @@ class ConnectionManager:  # pragma: no unittest
                 views.state_from_raiden(self.raiden), self.registry_address, self.token_address
             )
 
-            return min(self.funds - sum_deposits, token_balance)
+            return TokenAmount(min(self.funds - sum_deposits, token_balance))
 
-        return 0
+        return TokenAmount(0)
 
     @property
     def _leaving_state(self) -> bool:

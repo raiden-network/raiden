@@ -185,7 +185,6 @@ def configure_pfs_or_exit(
             info=pathfinding_service_info, url=pfs_url, eth_address=pfs_eth_address
         )
         click.secho(msg)
-        log.info("Using PFS", pfs_info=pathfinding_service_info)
         pfs_token_network_address = pathfinding_service_info["network_info"]["registry_address"]
         if not is_same_address(pfs_token_network_address, token_network_registry_address):
             click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
@@ -196,6 +195,8 @@ def configure_pfs_or_exit(
                 f"Raiden will shut down. Please choose a different PFS."
             )
             sys.exit(1)
+
+        log.info("Using PFS", pfs_info=pathfinding_service_info)
 
     return PFSConfiguration(url=pfs_url, eth_address=pfs_eth_address, fee=fee)
 

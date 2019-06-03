@@ -298,7 +298,7 @@ def estimate_gas_for_function(
 def patched_contractfunction_estimateGas(self, transaction=None, block_identifier=None):
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
-        estimate_gas_transaction = {}
+        estimate_gas_transaction: Dict[str, Any] = {}
     else:
         estimate_gas_transaction = dict(**transaction)
 

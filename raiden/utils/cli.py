@@ -168,7 +168,7 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
         grouped_options = groupby(sorted(self.get_params(ctx), key=keyfunc), key=keyfunc)
 
-        options = {}
+        options: Dict = {}
         for option_group, params in grouped_options:
             for param in params:
                 rv = param.get_help_record(ctx)
@@ -203,17 +203,17 @@ def command(name=None, cls=GroupableOptionCommand, **attrs):
 
 
 def group(name=None, **attrs):
-    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})
+    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})  # type: ignore
 
 
 def option(*args, **kwargs):
-    return click.option(*args, **{"cls": GroupableOption, **kwargs})
+    return click.option(*args, **{"cls": GroupableOption, **kwargs})  # type: ignore
 
 
-def option_group(name: str, *options: List[Callable]):
+def option_group(name: str, *options: Callable):
     def decorator(f):
         for option_ in reversed(options):
-            for closure_cell in option_.__closure__:
+            for closure_cell in option_.__closure__:  # type: ignore
                 if isinstance(closure_cell.cell_contents, dict):
                     closure_cell.cell_contents["option_group"] = name
                     break
