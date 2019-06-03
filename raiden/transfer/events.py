@@ -263,5 +263,13 @@ class EventInvalidReceivedWithdraw(Event):
 
 
 @dataclass
+class EventInvalidActionWithdraw(Event):
+    """ Event emitted when an invalid withdraw is initiated. """
+
+    total_withdraw: WithdrawAmount
+    reason: str
+
+
+@dataclass
 class SendProcessed(SendMessageEvent):
     pass
