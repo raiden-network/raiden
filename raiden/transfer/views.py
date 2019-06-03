@@ -137,7 +137,7 @@ def get_payment_network_address(chain_state: ChainState) -> List[PaymentNetworkA
 
 
 def get_token_network_registry_by_token_network_address(
-    chain_state: ChainState, token_network_address: Address
+    chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[PaymentNetworkState]:
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         if token_network_address in payment_network.tokennetworkaddresses_to_tokennetworks:

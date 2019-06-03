@@ -78,7 +78,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     names_slices = compute_slices(fields_spec)
     sorted_names = sorted(names_fields.keys())
 
-    @staticmethod
+    @staticmethod  # type: ignore
     def get_bytes_from(buffer_, name):
         slice_ = names_slices[name]
         return buffer_[slice_]
@@ -136,7 +136,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
                 value = value.encode()
             data[slice_] = value
         else:
-            super(self.__class__, self).__setattr__(name, value)
+            super(self.__class__, self).__setattr__(name, value)  # type: ignore
 
     def __repr__(self):
         return "<{} [...]>".format(buffer_name)

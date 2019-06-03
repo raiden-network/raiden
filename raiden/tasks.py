@@ -24,7 +24,7 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
 from raiden.utils import gas_reserve, pex, to_rdn
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Tuple
+from raiden.utils.typing import Callable, List, Tuple
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)
@@ -136,7 +136,7 @@ class AlarmTask(Runnable):
     def __init__(self, chain):
         super().__init__()
 
-        self.callbacks = list()
+        self.callbacks: List[Callable] = list()
         self.chain = chain
         self.chain_id = None
         self.known_block_number = None

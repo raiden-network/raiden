@@ -1,9 +1,11 @@
 import copy
 import random
 from collections import deque
+from typing import Deque, Set
 
 import gevent
 import structlog
+from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import BoundedSemaphore
 from gevent.queue import Queue
@@ -58,9 +60,9 @@ class EchoNode:  # pragma: no unittest
         self.last_poll_offset = 0
         self.received_transfers = Queue()
         self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
-        self.greenlets = set()
+        self.greenlets: Set[Greenlet] = set()
         self.lock = BoundedSemaphore()
-        self.seen_transfers = deque(list(), TRANSFER_MEMORY)
+        self.seen_transfers: Deque[EventPaymentReceivedSuccess] = deque(list(), TRANSFER_MEMORY)
         self.num_handled_transfers = 0
         self.lottery_pool = Queue()
         # register ourselves with the raiden alarm task
