@@ -295,13 +295,13 @@ def resolve_route(
     channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=chain_state,
         token_network_address=token_network_address,
-        partner_address=route_metadata.routes[1],
+        partner_address=route_metadata.route[1],
     )
 
     if channel_state is None:
         raise UnresolvableRoute(f"no channel for {route_metadata} on {pex(token_network_address)}")
 
     return RouteState(
-        route=route_metadata.routes,
+        route=route_metadata.route,
         forward_channel_id=channel_state.canonical_identifier.channel_identifier,
     )
