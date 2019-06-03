@@ -398,6 +398,7 @@ def get_channelstate_settled(
 
 def role_from_transfer_task(transfer_task: TransferTask) -> str:
     """Return the role and type for the transfer. Throws an exception on error"""
+    # pragma: no cover
     if isinstance(transfer_task, InitiatorTask):
         return "initiator"
     if isinstance(transfer_task, MediatorTask):

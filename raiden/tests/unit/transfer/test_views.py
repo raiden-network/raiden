@@ -183,3 +183,99 @@ def test_channelstate_filters():
         token_address=token_address,
     )
     assert settled == [channel_settled]
+
+
+def test_list_all_channelstate():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    assert sorted(
+        channel.partner_state.address
+        for channel in views.list_all_channelstate(test_state.chain_state)
+    ) == sorted(channel.partner_state.address for channel in test_state.channels)
+
+
+def test_get_our_capacity_for_token_network():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    chain_state = test_state.chain_state
+    test_state.channels[-1].close_transaction = TransactionExecutionStatus(
+        started_block_number=chain_state.block_number,
+        finished_block_number=chain_state.block_number,
+        result=TransactionExecutionStatus.SUCCESS,
+    )
+    expected_sum = sum(c.our_state.contract_balance for c in test_state.channels[:-1])
+    assert (
+        views.get_our_capacity_for_token_network(
+            chain_state=chain_state,
+            payment_network_address=test_state.payment_network_address,
+            token_address=test_state.token_address,
+        )
+        == expected_sum
+    )
+
+
+def test_get_token_network_by_address():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    assert (
+        views.get_token_network_by_address(
+            test_state.chain_state, test_state.token_network_address
+        ).address
+        == test_state.token_network_address
+    )
+    unknown_token_network_address = factories.make_address()
+    assert (
+        views.get_token_network_by_address(test_state.chain_state, unknown_token_network_address)
+        is None
+    )
+
+
+def test_get_channelstate_for():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    partner_address = test_state.channels[1].partner_state.address
+    assert (
+        views.get_channelstate_for(
+            chain_state=test_state.chain_state,
+            payment_network_address=test_state.payment_network_address,
+            token_address=test_state.token_address,
+            partner_address=partner_address,
+        )
+        == test_state.channels[1]
+    )
+
+
+def test_get_channelstate_by_token_network_and_partner():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    partner_address = test_state.channels[1].partner_state.address
+    assert (
+        views.get_channelstate_by_token_network_and_partner(
+            chain_state=test_state.chain_state,
+            token_network_address=test_state.token_network_address,
+            partner_address=partner_address,
+        )
+        == test_state.channels[1]
+    )
+
+
+def test_get_channelstate_by_canonical_identifier():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    canonical_identifier = test_state.channels[1].canonical_identifier
+
+    assert (
+        views.get_channelstate_by_canonical_identifier(
+            chain_state=test_state.chain_state, canonical_identifier=canonical_identifier
+        )
+        == test_state.channels[1]
+    )
+
+
+def test_filter_channels_by_partneraddress():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    partner_addresses = [c.partner_state.address for c in test_state.channels[1:]]
+
+    assert (
+        views.filter_channels_by_partneraddress(
+            chain_state=test_state.chain_state,
+            payment_network_address=test_state.payment_network_address,
+            token_address=test_state.token_address,
+            partner_addresses=partner_addresses,
+        )
+        == test_state.channels[1:]
+    )
