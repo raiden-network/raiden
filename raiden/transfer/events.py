@@ -249,6 +249,7 @@ class EventInvalidReceivedUnlock(Event):
 @dataclass
 class EventInvalidReceivedWithdrawRequest(Event):
     """ Event emitted when an invalid withdraw request is received. """
+
     total_withdraw: WithdrawAmount
     reason: str
 
@@ -256,6 +257,7 @@ class EventInvalidReceivedWithdrawRequest(Event):
 @dataclass
 class EventInvalidReceivedWithdraw(Event):
     """ Event emitted when an invalid withdraw confirmation is received. """
+
     total_withdraw: WithdrawAmount
     reason: str
 

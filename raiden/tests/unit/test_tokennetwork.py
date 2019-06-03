@@ -55,6 +55,8 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
         network_graph=TokenNetworkGraphState(token_network_address),
     )
 
+    pseudo_random_generator = random.Random()
+
     properties, _ = channel_properties
     channel_state1 = factories.create(properties)
     channel_state2 = copy.deepcopy(channel_state1)
@@ -71,6 +73,7 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
         state_change=state_change1,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     state_change2 = ContractReceiveChannelNew(
@@ -86,6 +89,7 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
         state_change=state_change2,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     msg = "the channel must not have been overwritten"
@@ -100,6 +104,8 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
 def test_channel_settle_must_properly_cleanup(channel_properties):
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
+
+    pseudo_random_generator = random.Random()
 
     token_network_address = factories.make_address()
     token_id = factories.make_address()
@@ -124,6 +130,7 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     closed_block_number = open_block_number + 10
@@ -141,6 +148,7 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         state_change=channel_close_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
@@ -158,6 +166,7 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         state_change=channel_settled_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_settle = channel_settled_iteration.new_state
@@ -170,6 +179,8 @@ def test_channel_data_removed_after_unlock(
 ):
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
+
+    pseudo_random_generator = random.Random()
 
     properties, pkey = channel_properties
     address = properties.partner_state.address
@@ -187,6 +198,7 @@ def test_channel_data_removed_after_unlock(
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     lock_amount = 30
@@ -224,6 +236,7 @@ def test_channel_data_removed_after_unlock(
         state_change=channel_close_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     channel_state_after_closed = channel_closed_iteration.new_state.channelidentifiers_to_channels[
         channel_state.identifier
@@ -244,6 +257,7 @@ def test_channel_data_removed_after_unlock(
         state_change=channel_settled_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_settle = channel_settled_iteration.new_state
@@ -268,6 +282,7 @@ def test_channel_data_removed_after_unlock(
         state_change=channel_batch_unlock_state_change,
         block_number=unlock_blocknumber,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_unlock = channel_unlock_iteration.new_state
@@ -285,6 +300,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
 
+    pseudo_random_generator = random.Random()
+
     properties, pkey = channel_properties
     address = properties.partner_state.address
     channel_state = factories.create(properties)
@@ -301,6 +318,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     lock_amount = 30
@@ -340,6 +358,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         state_change=channel_close_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
@@ -357,6 +376,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         state_change=channel_settled_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_settle = channel_settled_iteration.new_state
@@ -403,6 +423,8 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
 
+    pseudo_random_generator = random.Random()
+
     properties, pkey = channel_properties
     channel_state = factories.create(properties)
 
@@ -418,6 +440,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     lock_amount = 30
@@ -455,6 +478,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         state_change=channel_close_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
@@ -472,6 +496,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         state_change=channel_settled_state_change,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_settle = channel_settled_iteration.new_state
@@ -500,6 +525,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     token_network_state_after_new_open = channel_new_iteration.new_state
@@ -515,6 +541,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
     address1 = properties.partner_state.address
     address2 = factories.make_address()
     address3 = factories.make_address()
+    pseudo_random_generator = random.Random()
 
     channel_state = factories.create(properties)
 
@@ -532,6 +559,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_new_state_change,
         block_number=open_block_number,
         block_hash=open_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration1.new_state.network_graph
@@ -559,6 +587,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_new_state_change,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration2.new_state.network_graph
@@ -585,6 +614,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_close_state_change1,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     # Check that a second ContractReceiveChannelClosed events is handled properly
@@ -603,6 +633,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_close_state_change2,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_closed_iteration2.new_state.network_graph
@@ -628,6 +659,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_close_state_change3,
         block_number=closed_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     # Check that a second ContractReceiveRouteClosed events is handled properly.
@@ -649,6 +681,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
         state_change=channel_close_state_change4,
         block_number=closed_block_number + 10,
         block_hash=closed_block_plus_10_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_closed_iteration4.new_state.network_graph
@@ -665,6 +698,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
     address2 = factories.make_address()
     address3 = factories.make_address()
     address4 = factories.make_address()
+    pseudo_random_generator = random.Random()
 
     # Create a network with the following topology
     #
@@ -708,6 +742,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         state_change=channel_new_state_change1,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     channel_new_iteration2 = token_network.state_transition(
@@ -715,6 +750,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         state_change=channel_new_state_change2,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration2.new_state.network_graph
@@ -738,6 +774,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         state_change=channel_new_state_change3,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration3.new_state.network_graph
@@ -759,6 +796,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         state_change=channel_new_state_change4,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration4.new_state.network_graph
@@ -780,6 +818,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         state_change=channel_new_state_change5,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     graph_state = channel_new_iteration5.new_state.network_graph

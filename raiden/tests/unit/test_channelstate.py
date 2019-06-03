@@ -249,6 +249,7 @@ def test_channelstate_update_contract_balance():
         state_change=state_change,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=random.Random(),
     )
     new_state = iteration.new_state
 
@@ -292,6 +293,7 @@ def test_channelstate_decreasing_contract_balance():
         state_change=state_change,
         block_number=block_number,
         block_hash=make_block_hash(),
+        pseudo_random_generator=random.Random(),
     )
     new_state = iteration.new_state
 
@@ -336,6 +338,7 @@ def test_channelstate_repeated_contract_balance():
             state_change=state_change,
             block_number=block_number,
             block_hash=make_block_hash(),
+            pseudo_random_generator=random.Random(),
         )
         new_state = iteration.new_state
 
@@ -347,6 +350,8 @@ def test_deposit_must_wait_for_confirmation():
     block_number = 10
     block_hash = make_block_hash()
     confirmed_deposit_block_number = block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+
+    pseudo_random_generator = random.Random()
 
     our_model1, _ = create_model(0)
     partner_model1, partner_key1 = create_model(0)
@@ -379,6 +384,7 @@ def test_deposit_must_wait_for_confirmation():
         state_change=new_balance,
         block_number=block_number,
         block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     unconfirmed_state = iteration.new_state
 
@@ -390,6 +396,7 @@ def test_deposit_must_wait_for_confirmation():
             state_change=unconfirmed_block,
             block_number=block_number,
             block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
         unconfirmed_state = iteration.new_state
 
@@ -409,6 +416,7 @@ def test_deposit_must_wait_for_confirmation():
         state_change=confirmed_block,
         block_number=confirmed_deposit_block_number,
         block_hash=confirmed_block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
     confirmed_state = iteration.new_state
 
@@ -1397,6 +1405,7 @@ def test_action_close_must_change_the_channel_state():
         state_change=state_change,
         block_number=block_number,
         block_hash=make_block_hash(),
+        pseudo_random_generator=random.Random(),
     )
     assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
 
@@ -1431,6 +1440,7 @@ def test_update_must_be_called_if_close_lost_race():
         state_change=state_change,
         block_number=block_number,
         block_hash=make_block_hash(),
+        pseudo_random_generator=random.Random(),
     )
 
     state_change = ContractReceiveChannelClosed(
@@ -1452,6 +1462,8 @@ def test_update_transfer():
     partner_model1, partner_key1 = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
+    pseudo_random_generator = random.Random()
+
     block_number = 10
     state_change = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
     iteration = channel.state_transition(
@@ -1459,6 +1471,7 @@ def test_update_transfer():
         state_change=state_change,
         block_number=block_number,
         block_hash=make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     # update_transaction in channel state should not be set

@@ -264,8 +264,8 @@ def test_batch_unlock(
         raiden_network=raiden_network,
         token_addresses=token_addresses,
         secret_registry_address=secret_registry_address,
-        deposit=deposit,
         blockchain_type=blockchain_type,
+        deposit=deposit,
     )
 
 
@@ -363,15 +363,13 @@ def run_test_batch_unlock(
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
     assert lock.secrethash == sha256(secret).digest()
 
-    timeout = 30
-    with gevent.Timeout(timeout):
-        waiting.wait_for_settle(
-            alice_app.raiden,
-            registry_address,
-            token_address,
-            [alice_bob_channel_state.identifier],
-            alice_app.raiden.alarm.sleep_time,
-        )
+    waiting.wait_for_settle(
+        alice_app.raiden,
+        registry_address,
+        token_address,
+        [alice_bob_channel_state.identifier],
+        alice_app.raiden.alarm.sleep_time,
+    )
 
     token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
@@ -382,6 +380,8 @@ def run_test_batch_unlock(
         in token_network.partneraddresses_to_channelidentifiers[alice_app.raiden.address]
     )
 
+    # Wait for both nodes to call batch unlock
+    timeout = 30 if blockchain_type == "parity" else 10
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
@@ -408,23 +408,14 @@ def run_test_batch_unlock(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw(
-    raiden_network,
-    number_of_nodes,
-    token_addresses,
-    secret_registry_address,
-    deposit,
-    blockchain_type,
-    network_wait,
-    retry_timeout,
+    raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
 ):
     raise_on_failure(
         raiden_network,
         run_test_channel_withdraw,
         raiden_network=raiden_network,
         token_addresses=token_addresses,
-        secret_registry_address=secret_registry_address,
         deposit=deposit,
-        blockchain_type=blockchain_type,
         network_wait=network_wait,
         number_of_nodes=number_of_nodes,
         retry_timeout=retry_timeout,
@@ -432,14 +423,7 @@ def test_channel_withdraw(
 
 
 def run_test_channel_withdraw(
-    raiden_network,
-    token_addresses,
-    secret_registry_address,
-    deposit,
-    blockchain_type,
-    network_wait,
-    number_of_nodes,
-    retry_timeout,
+    raiden_network, token_addresses, deposit, network_wait, number_of_nodes, retry_timeout
 ):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
