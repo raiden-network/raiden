@@ -20,6 +20,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
+    EventInvalidActionWithdraw,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
@@ -841,13 +842,12 @@ def is_valid_action_withdraw(
 
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
-    withdraw_amount = channel_state.our_state.total_withdraw - withdraw.total_withdraw
-
-    if withdraw_amount == 0:
+    withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
+    if withdraw_amount <= 0:
         msg = "Total withdraw {} did not increase".format(withdraw.total_withdraw)
         result = (False, msg)
     elif balance < withdraw_amount:
-        msg = "Insufficient balance: {} . Requested {} for withdraw".format(
+        msg = "Insufficient balance: {}. Requested {} for withdraw".format(
             balance, withdraw_amount
         )
         result = (False, msg)
@@ -878,11 +878,11 @@ def is_valid_withdraw_request(
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
-    if withdraw_amount == 0:
+    if withdraw_amount <= 0:
         msg = "Total withdraw {} did not increase".format(withdraw_request.total_withdraw)
         result = (False, msg)
     elif balance < withdraw_amount:
-        msg = "Insufficient balance: {} . Requested {} for withdraw".format(
+        msg = "Insufficient balance: {}. Requested {} for withdraw".format(
             balance, withdraw_amount
         )
         result = (False, msg)
@@ -901,8 +901,6 @@ def is_valid_withdraw_confirmation(
 
     result: SuccessOrError
 
-    balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
-
     packed = pack_withdraw(
         canonical_identifier=withdraw.canonical_identifier,
         participant=channel_state.our_state.address,
@@ -915,21 +913,9 @@ def is_valid_withdraw_confirmation(
         sender_address=channel_state.partner_state.address,
     )
 
-    withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
-
-    if withdraw_amount == 0:
-        msg = "Received withdraw confirmation of {} was already processed".format(
-            channel_state.our_state.total_withdraw
-        )
-        result = (False, msg)
     if withdraw.total_withdraw != channel_state.our_state.total_withdraw:
         msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
             withdraw.total_withdraw, channel_state.our_state.total_withdraw
-        )
-        result = (False, msg)
-    elif balance < withdraw_amount:
-        msg = "Insufficient balance: {} . Requested {} for withdraw".format(
-            balance, withdraw_amount
         )
         result = (False, msg)
 
@@ -1705,11 +1691,8 @@ def handle_action_withdraw(
     withdraw: ActionChannelWithdraw,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    msg = "caller must make sure the ids match"
-    assert channel_state.identifier == withdraw.channel_identifier, msg
-
     events: List[Event] = list()
-    is_valid, _ = is_valid_action_withdraw(channel_state, withdraw)
+    is_valid, msg = is_valid_action_withdraw(channel_state, withdraw)
 
     if is_valid:
         channel_state.our_state.total_withdraw = withdraw.total_withdraw
@@ -1718,6 +1701,9 @@ def handle_action_withdraw(
             total_withdraw=withdraw.total_withdraw,
             pseudo_random_generator=pseudo_random_generator,
         )
+    else:
+        assert msg, "is_valid_action_withdraw should return error msg if not valid"
+        events = [EventInvalidActionWithdraw(total_withdraw=withdraw.total_withdraw, reason=msg)]
 
     return TransitionResult(channel_state, events)
 
