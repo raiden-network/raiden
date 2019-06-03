@@ -231,9 +231,14 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 
 
 @pytest.fixture(scope="session")
-def port_generator(request):
+def port_generator(request, worker_id):
     """ count generator used to get a unique port number. """
-    return get_free_port(request.config.getoption("base_port"))
+    if worker_id == "master":
+        # xdist is not in use to run parallel tests
+        port_offset = 0
+    else:
+        port_offset = int(worker_id.replace("gw", "")) * 1000
+    return get_free_port(request.config.getoption("base_port") + port_offset)
 
 
 @pytest.fixture

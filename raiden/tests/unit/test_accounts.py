@@ -1,5 +1,6 @@
 import logging
 import os
+from random import randint
 from unittest.mock import patch
 from uuid import UUID
 
@@ -11,7 +12,10 @@ from raiden.accounts import Account, AccountManager
 from raiden.ui.prompt import unlock_account_with_passwordfile
 from raiden.utils import get_project_root, privatekey_to_address, privatekey_to_publickey
 
-KEYFILE_INACCESSIBLE = "UTC--2017-06-20T16-33-00.000000000Z--inaccessible"
+# use random file name so tests can run in parallel
+KEYFILE_INACCESSIBLE = "UTC--2017-06-20T16-33-00.{:09d}Z--inaccessible".format(
+    randint(0, 999999999)
+)
 KEYFILE_INVALID = "UTC--2017-06-20T16-06-00.000000000Z--invalid"
 
 

@@ -20,3 +20,4 @@ omit =
 	raiden/ui/**
 	raiden/network/proxies/**
 	raiden/network/transport/**
+concurrency = gevent

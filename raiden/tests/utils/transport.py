@@ -2,17 +2,18 @@ import logging
 import os
 import re
 import shutil
-import subprocess
 import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
+from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
 from typing import ContextManager, List
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from gevent import subprocess
 from twisted.internet import defer
 
 from raiden.utils.http import HTTPExecutor
@@ -154,8 +155,8 @@ def generate_synapse_config() -> ContextManager:
                 cwd=server_dir,
                 timeout=30,
                 check=True,
-                stderr=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
+                stderr=DEVNULL,
+                stdout=DEVNULL,
             )
         return server_name, config_file
 
@@ -183,7 +184,7 @@ def matrix_server_starter(
             server_url = ParsedURL(f"https://{server_name}")
             server_urls.append(server_url)
 
-            synapse_io = subprocess.DEVNULL
+            synapse_io = DEVNULL
             # Used in CI to capture the logs for failure analysis
             if _SYNAPSE_LOGS_PATH:
                 log_file_path = Path(_SYNAPSE_LOGS_PATH).joinpath(f"{server_name}.log")
@@ -198,7 +199,7 @@ def matrix_server_starter(
                 log_file.write(f"{header:=^100}\n")
                 log_file.flush()
 
-                synapse_io = subprocess.DEVNULL, log_file, subprocess.STDOUT
+                synapse_io = DEVNULL, log_file, STDOUT
 
             exit_stack.enter_context(
                 HTTPExecutor(
