@@ -1,8 +1,10 @@
 import pytest
 
 from raiden.tests.utils import factories
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
+from raiden.transfer.state import TransactionExecutionStatus
 from raiden.transfer.views import (
     count_token_network_channels,
     detect_balance_proof_change,
@@ -113,3 +115,71 @@ def test_detect_balance_proof_chain_handles_attribute_error(chain_state):
     chain_state.identifiers_to_paymentnetworks["123"] = None
     changes_iterator = detect_balance_proof_change(old_state=object(), current_state=chain_state)
     assert len(list(changes_iterator)) == 0
+
+
+def test_channelstate_filters():
+    test_state = factories.make_chain_state(number_of_channels=5)
+    chain_state = test_state.chain_state
+    payment_network_address = test_state.payment_network_address
+    token_address = test_state.token_address
+
+    channel_open, channel_closing, channel_closed, channel_settling, channel_settled = (
+        test_state.channels
+    )
+    in_progress = TransactionExecutionStatus(started_block_number=chain_state.block_number)
+    done = TransactionExecutionStatus(
+        started_block_number=chain_state.block_number,
+        finished_block_number=chain_state.block_number,
+        result=TransactionExecutionStatus.SUCCESS,
+    )
+    channel_closing.close_transaction = in_progress
+    channel_closed.close_transaction = done
+    channel_settling.close_transaction = done
+    channel_settling.settle_transaction = in_progress
+    channel_settled.close_transaction = done
+    channel_settled.settle_transaction = done
+
+    unknown_token = factories.make_address()
+    assert (
+        views.get_channelstate_open(
+            chain_state=chain_state,
+            payment_network_address=payment_network_address,
+            token_address=unknown_token,
+        )
+        == []
+    )
+
+    opened = views.get_channelstate_open(
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+    )
+    assert opened == [channel_open]
+
+    closing = views.get_channelstate_closing(
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+    )
+    assert closing == [channel_closing]
+
+    closed = views.get_channelstate_closed(
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+    )
+    assert closed == [channel_closed]
+
+    settling = views.get_channelstate_settling(
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+    )
+    assert settling == [channel_settling]
+
+    settled = views.get_channelstate_settled(
+        chain_state=chain_state,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+    )
+    assert settled == [channel_settled]
