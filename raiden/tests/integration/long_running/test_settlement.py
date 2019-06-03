@@ -13,11 +13,7 @@ from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import (
-    raiden_state_changes_search_for_item,
-    search_for_item,
-    wait_for_state_change,
-)
+from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
@@ -26,7 +22,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
-    ContractReceiveChannelWithdraw,
 )
 from raiden.utils import pex, sha3
 from raiden.utils.timeout import BlockTimeout
@@ -368,13 +363,15 @@ def run_test_batch_unlock(
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
     assert lock.secrethash == sha256(secret).digest()
 
-    waiting.wait_for_settle(
-        alice_app.raiden,
-        registry_address,
-        token_address,
-        [alice_bob_channel_state.identifier],
-        alice_app.raiden.alarm.sleep_time,
-    )
+    timeout = 30
+    with gevent.Timeout(timeout):
+        waiting.wait_for_settle(
+            alice_app.raiden,
+            registry_address,
+            token_address,
+            [alice_bob_channel_state.identifier],
+            alice_app.raiden.alarm.sleep_time,
+        )
 
     token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
@@ -385,8 +382,6 @@ def run_test_batch_unlock(
         in token_network.partneraddresses_to_channelidentifiers[alice_app.raiden.address]
     )
 
-    # Wait for both nodes to call batch unlock
-    timeout = 30 if blockchain_type == "parity" else 10
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
@@ -493,16 +488,12 @@ def run_test_channel_withdraw(
         total_withdraw=total_withdraw,
     )
 
-    with gevent.Timeout(timeout):
-        wait_for_state_change(
-            bob_app.raiden,
-            ContractReceiveChannelWithdraw,
-            {
-                "participant": bob_app.raiden.address,
-                "total_withdraw": total_withdraw,
-            },
-            retry_timeout,
-        )
+    waiting.wait_for_withdraw_complete(
+        raiden=bob_app.raiden,
+        canonical_identifier=bob_alice_channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        retry_timeout=retry_timeout,
+    )
 
     bob_balance_after_withdraw = token_proxy.balance_of(bob_app.raiden.address)
     assert bob_initial_balance + total_withdraw == bob_balance_after_withdraw

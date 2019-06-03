@@ -11,6 +11,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
 )
+from raiden.transfer.state_change import ContractReceiveChannelWithdraw
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -21,6 +22,7 @@ from raiden.utils.typing import (
     Sequence,
     TokenAddress,
     TokenAmount,
+    WithdrawAmount,
 )
 
 if TYPE_CHECKING:
@@ -334,6 +336,37 @@ def wait_for_transfer_success(
                 isinstance(event, EventPaymentReceivedSuccess)
                 and event.identifier == payment_identifier
                 and event.amount == amount
+            )
+            if found:
+                break
+
+        gevent.sleep(retry_timeout)
+
+
+def wait_for_withdraw_complete(
+    raiden: "RaidenService",
+    canonical_identifier: CanonicalIdentifier,
+    total_withdraw: WithdrawAmount,
+    retry_timeout: float,
+) -> None:
+    """Wait until a transfer with a specific identifier and amount
+    is seen in the WAL.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = False
+    while not found:
+        assert raiden, TRANSPORT_ERROR_MSG
+        assert raiden.wal, TRANSPORT_ERROR_MSG
+        assert raiden.transport, TRANSPORT_ERROR_MSG
+
+        state_changes = raiden.wal.storage.get_state_changes()
+        for state_change in state_changes:
+            found = (
+                isinstance(state_change, ContractReceiveChannelWithdraw)
+                and state_change.total_withdraw == total_withdraw
+                and state_change.canonical_identifier == canonical_identifier
             )
             if found:
                 break

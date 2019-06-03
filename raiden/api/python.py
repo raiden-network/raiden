@@ -484,14 +484,10 @@ class RaidenAPI:  # pragma: no unittest
             canonical_identifier=channel_state.canonical_identifier, total_withdraw=total_withdraw
         )
 
-        target_address = self.raiden.address
-        waiting.wait_for_participant_withdraw(
+        waiting.wait_for_withdraw_complete(
             raiden=self.raiden,
-            payment_network_address=registry_address,
-            token_address=token_address,
-            partner_address=partner_address,
-            target_address=target_address,
-            target_withdraw=total_withdraw,
+            canonical_identifier=channel_state.canonical_identifier,
+            total_withdraw=total_withdraw,
             retry_timeout=retry_timeout,
         )
 
