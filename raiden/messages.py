@@ -713,7 +713,7 @@ class Metadata:
         return sha3(rlp.encode([r.hash for r in self.routes]))
 
     def __repr__(self):
-        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.routes])}"
+        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.route])}"
 
 
 @dataclass(repr=False, eq=False)
