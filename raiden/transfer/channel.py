@@ -835,8 +835,7 @@ def is_valid_unlock(
 
 
 def is_valid_action_withdraw(
-    channel_state: NettingChannelState,
-    withdraw: ActionChannelWithdraw,
+    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
 ) -> SuccessOrError:
     result: SuccessOrError
 
@@ -845,9 +844,7 @@ def is_valid_action_withdraw(
     withdraw_amount = channel_state.our_state.total_withdraw - withdraw.total_withdraw
 
     if withdraw_amount == 0:
-        msg = "Total withdraw {} did not increase".format(
-            withdraw.total_withdraw
-        )
+        msg = "Total withdraw {} did not increase".format(withdraw.total_withdraw)
         result = (False, msg)
     elif balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
@@ -882,9 +879,7 @@ def is_valid_withdraw_request(
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
     if withdraw_amount == 0:
-        msg = "Total withdraw {} did not increase".format(
-            withdraw_request.total_withdraw
-        )
+        msg = "Total withdraw {} did not increase".format(withdraw_request.total_withdraw)
         result = (False, msg)
     elif balance < withdraw_amount:
         msg = "Insufficient balance: {} . Requested {} for withdraw".format(
@@ -1728,15 +1723,12 @@ def handle_action_withdraw(
 
 
 def handle_receive_withdraw_request(
-    channel_state: NettingChannelState,
-    withdraw_request: ReceiveWithdrawRequest,
-    pseudo_random_generator: random.Random,
+    channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> TransitionResult:
     events: List[Event] = list()
 
     is_valid, msg = is_valid_withdraw_request(
-        channel_state=channel_state,
-        withdraw_request=withdraw_request,
+        channel_state=channel_state, withdraw_request=withdraw_request
     )
     if is_valid:
         channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
@@ -1763,16 +1755,11 @@ def handle_receive_withdraw_request(
 
 
 def handle_receive_withdraw(
-    channel_state: NettingChannelState,
-    withdraw: ReceiveWithdraw,
-    block_hash: BlockHash,
+    channel_state: NettingChannelState, withdraw: ReceiveWithdraw, block_hash: BlockHash
 ) -> TransitionResult:
     events: List[Event] = list()
 
-    is_valid, msg = is_valid_withdraw_confirmation(
-        channel_state=channel_state,
-        withdraw=withdraw,
-    )
+    is_valid, msg = is_valid_withdraw_confirmation(channel_state=channel_state, withdraw=withdraw)
     if is_valid:
         events.extend(
             [
@@ -2190,16 +2177,12 @@ def state_transition(
     elif type(state_change) == ReceiveWithdrawRequest:
         assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_request(
-            channel_state=channel_state,
-            withdraw_request=state_change,
-            pseudo_random_generator=pseudo_random_generator,
+            channel_state=channel_state, withdraw_request=state_change
         )
     elif type(state_change) == ReceiveWithdraw:
         assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
         iteration = handle_receive_withdraw(
-            channel_state=channel_state,
-            withdraw=state_change,
-            block_hash=block_hash,
+            channel_state=channel_state, withdraw=state_change, block_hash=block_hash
         )
 
     return iteration

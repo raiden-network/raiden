@@ -1223,6 +1223,7 @@ def create_network(
             state_change=state_change,
             block_number=block_number,
             block_hash=block_hash,
+            pseudo_random_generator=random.Random(),
         )
         state = iteration.new_state
 

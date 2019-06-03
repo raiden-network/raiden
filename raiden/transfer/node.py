@@ -459,7 +459,7 @@ def sanity_check(iteration: TransitionResult[ChainState]) -> None:
 
 def inplace_delete_message_queue(
     chain_state: ChainState,
-    state_change: Union[ReceiveDelivered, ReceiveProcessed],
+    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdraw],
     queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -476,7 +476,8 @@ def inplace_delete_message_queue(
 
 
 def inplace_delete_message(
-    message_queue: List[SendMessageEvent], state_change: Union[ReceiveDelivered, ReceiveProcessed]
+    message_queue: List[SendMessageEvent],
+    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdraw],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):

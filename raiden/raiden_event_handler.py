@@ -31,6 +31,8 @@ from raiden.transfer.events import (
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
+    EventInvalidReceivedWithdraw,
+    EventInvalidReceivedWithdrawRequest,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
@@ -72,6 +74,8 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
+    EventInvalidReceivedWithdrawRequest,
+    EventInvalidReceivedWithdraw,
 )
 
 
