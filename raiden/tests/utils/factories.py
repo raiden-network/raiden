@@ -30,10 +30,12 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    ChainState,
     HopState,
     MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
+    PaymentNetworkState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -270,6 +272,10 @@ UNIT_TRANSFER_TARGET = b"targettargettargetta"
 UNIT_TRANSFER_PKEY_BIN = sha3(b"transfer pkey")
 UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
 UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b"transfer pkey"))
+
+UNIT_OUR_KEY = b"ourourourourourourourourourourou"
+UNIT_OUR_ADDRESS = privatekey_to_address(UNIT_OUR_KEY)
+
 HOP1_KEY = b"11111111111111111111111111111111"
 HOP2_KEY = b"22222222222222222222222222222222"
 HOP3_KEY = b"33333333333333333333333333333333"
@@ -372,6 +378,15 @@ NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
 )
 
 
+NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
+    address=UNIT_OUR_ADDRESS,
+    privatekey=UNIT_OUR_KEY,
+    balance=100,
+    merkletree_leaves=None,
+    merkletree_width=0,
+)
+
+
 @create.register(NettingChannelEndStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelEndState:
     args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
@@ -413,7 +428,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     mediation_fee=0,
-    our_state=NettingChannelEndStateProperties.DEFAULTS,
+    our_state=NettingChannelEndStateProperties.OUR_STATE,
     partner_state=NettingChannelEndStateProperties.DEFAULTS,
     open_transaction=TransactionExecutionStatusProperties.DEFAULTS,
     close_transaction=None,
@@ -924,7 +939,9 @@ def make_channel_set(
 
 def make_channel_set_from_amounts(amounts: List[TokenAmount]) -> ChannelSet:
     properties = [
-        NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=amount))
+        NettingChannelStateProperties(
+            our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=amount)
+        )
         for amount in amounts
     ]
     return make_channel_set(properties)
@@ -936,13 +953,14 @@ def mediator_make_channel_pair(
     properties_list = [
         NettingChannelStateProperties(
             canonical_identifier=make_canonical_identifier(channel_identifier=1),
+            our_state=NettingChannelEndStateProperties.OUR_STATE,
             partner_state=NettingChannelEndStateProperties(
                 address=UNIT_TRANSFER_SENDER, balance=amount
             ),
         ),
         NettingChannelStateProperties(
             canonical_identifier=make_canonical_identifier(channel_identifier=2),
-            our_state=NettingChannelEndStateProperties(balance=amount),
+            our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=amount),
             partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
         ),
     ]
@@ -1059,6 +1077,79 @@ def make_transfers_pair(
         amount=amount,
         block_number=block_number,
         block_hash=make_block_hash(),
+    )
+
+
+@dataclass
+class ContainerForChainStateTests:
+    chain_state: ChainState
+    our_address: Address
+    payment_network_address: PaymentNetworkAddress
+    token_address: TokenAddress
+    token_network_address: TokenNetworkAddress
+    channel_set: ChannelSet
+
+    @property
+    def channels(self):
+        return self.channel_set.channels
+
+
+def make_chain_state(
+    number_of_channels: int,
+    properties: List[NettingChannelStateProperties] = None,
+    defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
+) -> ContainerForChainStateTests:
+    """Factory for populating a complete `ChainState`.
+
+    Sets up a `ChainState` instance with `number_of_channels` `NettingChannelState`s inside one
+    `TokenNetworkState` inside one `PaymentNetworkState`.
+
+    The returned container, `ContainerForChainStateTests`, provides direct access to the most used
+    function parameters when traversing a `ChainState` (i.e. the `token_network_address` of the
+    populated `TokenNetworkState`), as well as the `ChannelSet` that created the
+    `NettingChannelState`s.
+    """
+    channel_set = make_channel_set(
+        number_of_channels=number_of_channels, properties=properties, defaults=defaults
+    )
+    assert (
+        len(set(c.canonical_identifier.token_network_address for c in channel_set.channels)) == 1
+    )
+    assert len(set(c.our_state.address for c in channel_set.channels)) == 1
+    token_network_address = channel_set.channels[0].canonical_identifier.token_network_address
+    token_address = make_address()
+
+    token_network = TokenNetworkState(
+        address=token_network_address, token_address=token_address, network_graph=None
+    )
+    for netting_channel in channel_set.channels:
+        token_network.channelidentifiers_to_channels[
+            netting_channel.canonical_identifier.channel_identifier
+        ] = netting_channel
+        token_network.partneraddresses_to_channelidentifiers[
+            netting_channel.partner_state.address
+        ].append(netting_channel.canonical_identifier.channel_identifier)
+
+    payment_network_address = make_address()
+    our_address = channel_set.channels[0].our_state.address
+
+    chain_state = ChainState(
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=make_block_hash(),
+        our_address=our_address,
+        chain_id=UNIT_CHAIN_ID,
+    )
+    chain_state.identifiers_to_paymentnetworks[payment_network_address] = PaymentNetworkState(
+        address=payment_network_address, token_network_list=[token_network]
+    )
+    return ContainerForChainStateTests(
+        chain_state=chain_state,
+        our_address=our_address,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+        token_network_address=token_network_address,
+        channel_set=channel_set,
     )
 
 
