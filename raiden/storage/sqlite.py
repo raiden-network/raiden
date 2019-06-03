@@ -89,6 +89,23 @@ def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
     return filter_
 
 
+def _query_to_string(query: Query):
+    query_where = []
+    args = []
+    for filter_set in query.filters:
+        where_clauses = []
+        filters = _filter_from_dict(filter_set)
+        for field, value in filters.items():
+            where_clauses.append("json_extract(data, ?)=?")
+            args.append(f"$.{field}")
+            args.append(value)
+
+        filter_set_str = f" {query.inner_operator.value} ".join(where_clauses)
+        query_where.append(f"(" f" {filter_set_str} " f") ")
+    query_where_str = f" {query.main_operator.value } ".join(query_where)
+    return query_where_str, args
+
+
 class SQLiteStorage:
     def __init__(self, database_path: Path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
