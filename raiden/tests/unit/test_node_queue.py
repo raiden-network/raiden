@@ -1,9 +1,9 @@
 import random
 
-from raiden.constants import EMPTY_HASH
+from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, EMPTY_HASH
 from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer import events
 
 

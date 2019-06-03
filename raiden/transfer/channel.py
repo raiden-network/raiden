@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex
 
-from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
+from raiden.constants import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    EMPTY_MERKLE_ROOT,
+    MAXIMUM_PENDING_TRANSFERS,
+    UINT256_MAX,
+)
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
@@ -20,7 +25,7 @@ from raiden.transfer.events import (
     EventInvalidReceivedUnlock,
     SendProcessed,
 )
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
