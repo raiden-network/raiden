@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field, fields
 from hashlib import sha256
 from operator import attrgetter
+from typing import List, Tuple
 
+import rlp
 from cachetools import LRUCache, cached
 from eth_utils import big_endian_to_int
 
@@ -37,6 +39,7 @@ from raiden.transfer.state import (
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3
 from raiden.utils.signer import Signer, recover
+from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     AdditionalHash,
@@ -1028,6 +1031,71 @@ class UpdatePFS(SignedMessage):
         packed.reveal_timeout = self.reveal_timeout
         packed.fee = self.mediation_fee
         packed.signature = self.signature
+
+
+@dataclass
+class FeeSchedule:
+    flat: FeeAmount = FeeAmount(0)
+    proportional: int = 0  # as micros, e.g. 1% = 0.01e6
+    imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None
+
+
+@dataclass
+class FeeUpdate(SignedMessage):
+    """Informs the PFS of mediation fees demanded by the client"""
+
+    canonical_identifier: CanonicalIdentifier
+    updating_participant: Address
+    fee_schedule: FeeSchedule
+    nonce: Nonce
+
+    def __post_init__(self):
+        if self.signature is None:
+            self.signature = EMPTY_SIGNATURE
+
+    def pack(self, packed) -> None:
+        packed.chain_id = self.canonical_identifier.chain_identifier
+        packed.token_network_address = self.canonical_identifier.token_network_address
+        packed.channel_identifier = self.canonical_identifier.channel_identifier
+        packed.updating_participant = self.updating_participant
+        packed.flat = self.fee_schedule.flat
+        packed.proportional = self.fee_schedule.proportional
+        packed.imbalance_penalty = rlp.encode(self.fee_schedule.imbalance_penalty)
+        packed.nonce = self.nonce
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            [
+                "uint256",  # canonical_identifier
+                "address",
+                "uint256",
+                "address",  # updating participant
+                "uint256",  # fees
+                "uint256",
+                "bytes",
+                "uint256",  # nonce
+            ],
+            [
+                self.canonical_identifier.chain_identifier,
+                self.canonical_identifier.token_network_address,
+                self.canonical_identifier.channel_identifier,
+                self.updating_participant,
+                self.fee_schedule.flat,
+                self.fee_schedule.proportional,
+                rlp.encode(self.fee_schedule.imbalance_penalty or 0),
+                self.nonce,
+            ],
+        )
+
+    @classmethod
+    def from_channel_state(cls, channel_state: NettingChannelState):
+        return cls(
+            canonical_identifier=channel_state.canonical_identifier,
+            updating_participant=channel_state.our_state.address,
+            fee_schedule=FeeSchedule(flat=channel_state.mediation_fee),
+            nonce=Nonce(1),
+            signature=EMPTY_SIGNATURE,
+        )
 
 
 def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":

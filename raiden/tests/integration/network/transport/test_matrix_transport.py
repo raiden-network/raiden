@@ -1,3 +1,4 @@
+import json
 import random
 from unittest.mock import MagicMock
 
@@ -16,7 +17,7 @@ from raiden.constants import (
     UINT64_MAX,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Delivered, Processed, SecretRequest, ToDevice
+from raiden.messages import Delivered, FeeUpdate, Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -667,6 +668,7 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
+    # send UpdatePFS
     balance_proof = factories.create(HOP1_BALANCE_PROOF)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
@@ -680,11 +682,24 @@ def test_pfs_global_messages(
         raiden=raiden_service, chain_state=None, new_balance_proof=balance_proof
     )
     gevent.idle()
-
     with gevent.Timeout(2):
         while pfs_room.send_text.call_count < 1:
             gevent.idle()
     assert pfs_room.send_text.call_count == 1
+
+    # send FeeUpdate
+    channel_state = factories.create(factories.NettingChannelStateProperties())
+    fee_update = FeeUpdate.from_channel_state(channel_state)
+    fee_update.sign(raiden_service.signer)
+    raiden_service.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
+    with gevent.Timeout(2):
+        while pfs_room.send_text.call_count < 2:
+            gevent.idle()
+    assert pfs_room.send_text.call_count == 2
+    msg_data = json.loads(pfs_room.send_text.call_args[0][0])
+    assert msg_data["_type"] == "raiden.messages.FeeUpdate"
+    assert msg_data["nonce"] == "1"
+
     transport.stop()
     transport.get()
 
