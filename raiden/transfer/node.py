@@ -71,9 +71,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentNetworkAddress,
     SecretHash,
-    TokenAddress,
     TokenNetworkAddress,
-    Tuple,
     Union,
 )
 
@@ -90,27 +88,6 @@ TokenNetworkStateChange = Union[
     ContractReceiveChannelClosed,
     ContractReceiveChannelWithdraw,
 ]
-
-
-def get_networks(
-    chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
-    token_address: TokenAddress,
-) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
-    token_network_state = None
-    payment_network_state = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
-
-    if payment_network_state:
-        token_network_address = payment_network_state.tokenaddresses_to_tokennetworkaddresses.get(
-            token_address
-        )
-
-        if token_network_address:
-            token_network_state = payment_network_state.tokennetworkaddresses_to_tokennetworks.get(
-                token_network_address
-            )
-
-    return payment_network_state, token_network_state
 
 
 def get_token_network_by_address(
@@ -431,7 +408,7 @@ def maybe_add_tokennetwork(
     token_network_address = token_network_state.address
     token_address = token_network_state.token_address
 
-    payment_network_state, token_network_state_previous = get_networks(
+    payment_network_state, token_network_state_previous = views.get_networks(
         chain_state, payment_network_address, token_address
     )
 
