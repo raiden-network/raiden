@@ -489,7 +489,7 @@ class RaidenService(Runnable):
                 node=pex(self.address),
             )
 
-            known_networks = views.get_payment_network_addresss(views.state_from_raiden(self))
+            known_networks = views.get_payment_network_address(views.state_from_raiden(self))
             if known_networks and self.default_registry.address not in known_networks:
                 configured_registry = pex(self.default_registry.address)
                 known_registries = lpex(known_networks)
