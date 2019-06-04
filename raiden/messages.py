@@ -65,6 +65,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     Type,
+    typecheck,
 )
 
 __all__ = (
@@ -796,10 +797,7 @@ class SignedBlindedBalanceProof:
     def from_balance_proof_signed_state(
         cls, balance_proof: BalanceProofSignedState
     ) -> "SignedBlindedBalanceProof":
-        if not isinstance(balance_proof, BalanceProofSignedState):
-            raise ValueError(
-                "balance_proof is not an instance of the type BalanceProofSignedState"
-            )
+        typecheck(balance_proof, BalanceProofSignedState)
 
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -852,11 +850,7 @@ class RequestMonitoring(SignedMessage):
     non_closing_signature: Optional[Signature] = None
 
     def __post_init__(self):
-        if self.balance_proof is None:
-            raise ValueError("no balance proof given")
-
-        if not isinstance(self.balance_proof, SignedBlindedBalanceProof):
-            raise ValueError("onchain_balance_proof is not a SignedBlindedBalanceProof")
+        typecheck(self.balance_proof, SignedBlindedBalanceProof)
 
     @classmethod
     def from_balance_proof_signed_state(
@@ -865,10 +859,7 @@ class RequestMonitoring(SignedMessage):
         reward_amount: TokenAmount,
         monitoring_service_contract_address: Address,
     ) -> "RequestMonitoring":
-        if not isinstance(balance_proof, BalanceProofSignedState):
-            raise ValueError(
-                "balance_proof is not an instance of the type BalanceProofSignedState"
-            )
+        typecheck(balance_proof, BalanceProofSignedState)
 
         onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
             balance_proof=balance_proof

@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
+    typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import ContractManager
@@ -82,8 +83,7 @@ class TokenNetworkRegistry:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
-        if not isinstance(token_address, T_TargetAddress):
-            raise ValueError("token_address must be an address")
+        typecheck(token_address, T_TargetAddress)
 
         address = self.proxy.contract.functions.token_to_token_networks(
             to_checksum_address(token_address)

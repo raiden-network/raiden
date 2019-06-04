@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     SecretHash,
     TokenAddress,
     TokenNetworkAddress,
+    typecheck,
 )
 
 
@@ -44,8 +45,7 @@ class SendLockedTransfer(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.transfer, LockedTransferUnsignedState):
-            raise ValueError("transfer must be a LockedTransferUnsignedState instance")
+        typecheck(self.transfer, LockedTransferUnsignedState)
 
     @property
     def balance_proof(self) -> BalanceProofUnsignedState:

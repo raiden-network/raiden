@@ -34,6 +34,7 @@ from raiden.utils.typing import (
     TransactionHash,
     Tuple,
     TypeVar,
+    typecheck,
 )
 
 # Quick overview
@@ -159,8 +160,7 @@ class ContractSendEvent(Event):
     triggered_by_block_hash: BlockHash
 
     def __post_init__(self) -> None:
-        if not isinstance(self.triggered_by_block_hash, T_BlockHash):
-            raise ValueError("triggered_by_block_hash must be of type block_hash")
+        typecheck(self.triggered_by_block_hash, T_BlockHash)
 
 
 @dataclass
@@ -181,10 +181,8 @@ class ContractReceiveStateChange(StateChange):
     block_hash: BlockHash
 
     def __post_init__(self) -> None:
-        if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError("block_number must be of type block_number")
-        if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of type block_hash")
+        typecheck(self.block_number, T_BlockNumber)
+        typecheck(self.block_hash, T_BlockHash)
 
 
 ST = TypeVar("ST", bound=State)
@@ -208,7 +206,7 @@ class StateManager(Generic[ST]):
             state_transition: function that can apply a StateChange message.
             current_state: current application state.
         """
-        if not callable(state_transition):
+        if not callable(state_transition):  # pragma: no unittest
             raise ValueError("state_transition must be a callable")
 
         self.state_transition = state_transition
@@ -291,17 +289,10 @@ class BalanceProofUnsignedState(State):
     balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.nonce, int):
-            raise ValueError("nonce must be int")
-
-        if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError("transferred_amount must be a token_amount instance")
-
-        if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError("locked_amount must be a token_amount instance")
-
-        if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError("locksroot must be a keccak256 instance")
+        typecheck(self.nonce, int)
+        typecheck(self.transferred_amount, T_TokenAmount)
+        typecheck(self.locked_amount, T_TokenAmount)
+        typecheck(self.locksroot, T_Keccak256)
 
         if self.nonce <= 0:
             raise ValueError("nonce cannot be zero or negative")
@@ -356,26 +347,13 @@ class BalanceProofSignedState(State):
     balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.nonce, int):
-            raise ValueError("nonce must be int")
-
-        if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError("transferred_amount must be a token_amount instance")
-
-        if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError("locked_amount must be a token_amount instance")
-
-        if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError("locksroot must be a keccak256 instance")
-
-        if not isinstance(self.message_hash, T_Keccak256):
-            raise ValueError("message_hash must be a keccak256 instance")
-
-        if not isinstance(self.signature, T_Signature):
-            raise ValueError("signature must be a signature instance")
-
-        if not isinstance(self.sender, T_Address):
-            raise ValueError("sender must be an address instance")
+        typecheck(self.nonce, int)
+        typecheck(self.transferred_amount, T_TokenAmount)
+        typecheck(self.locked_amount, T_TokenAmount)
+        typecheck(self.locksroot, T_Keccak256)
+        typecheck(self.message_hash, T_Keccak256)
+        typecheck(self.signature, T_Signature)
+        typecheck(self.sender, T_Address)
 
         if self.nonce <= 0:
             raise ValueError("nonce cannot be zero or negative")

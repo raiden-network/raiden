@@ -130,7 +130,7 @@ def get_transfer_from_task(
             transfer = transfer_task.mediator_state.waiting_transfer.transfer
     elif isinstance(transfer_task, TargetTask):
         transfer = transfer_task.target_state.transfer
-    else:
+    else:  # pragma: no unittest
         raise ValueError("get_tranfer_from_task for a non TransferTask argument")
 
     return transfer, role
@@ -160,9 +160,8 @@ def transfer_tasks_view(
     return view
 
 
-class RaidenAPI:
+class RaidenAPI:  # pragma: no unittest
     # pylint: disable=too-many-public-methods
-    # pragma: no unittest
 
     def __init__(self, raiden):
         self.raiden = raiden
@@ -729,7 +728,7 @@ class RaidenAPI:
         current_state = views.state_from_raiden(self.raiden)
         payment_network_address = self.raiden.default_registry.address
 
-        if not isinstance(amount, int):
+        if not isinstance(amount, int):  # pragma: no unittest
             raise InvalidAmount("Amount not a number")
 
         if amount <= 0:

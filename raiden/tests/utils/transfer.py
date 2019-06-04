@@ -44,6 +44,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    typecheck,
 )
 
 
@@ -513,8 +514,7 @@ def make_receive_transfer_mediated(
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
 
-    if not isinstance(lock, HashTimeLockState):
-        raise ValueError("lock must be of type HashTimeLockState")
+    typecheck(lock, HashTimeLockState)
 
     signer = LocalSigner(privkey)
     address = signer.address
@@ -584,8 +584,7 @@ def make_receive_expired_lock(
     chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
 
-    if not isinstance(lock, HashTimeLockState):
-        raise ValueError("lock must be of type HashTimeLockState")
+    typecheck(lock, HashTimeLockState)
 
     signer = LocalSigner(privkey)
     address = signer.address

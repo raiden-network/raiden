@@ -22,6 +22,12 @@ if TYPE_CHECKING:
 
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"
 
+
+def typecheck(value: Any, expected: Type):
+    if not isinstance(value, expected):
+        raise ValueError(f"Expected a value of type {expected}")
+
+
 ABI = List[Dict[str, Any]]
 
 T_Address = bytes

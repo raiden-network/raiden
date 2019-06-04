@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAddress,
     TokenNetworkAddress,
+    typecheck,
 )
 
 if TYPE_CHECKING:
@@ -56,11 +57,9 @@ class LockedTransferUnsignedState(LockedTransferState):
     target: TargetAddress
 
     def __post_init__(self) -> None:
-        if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError("lock must be a HashTimeLockState instance")
 
-        if not isinstance(self.balance_proof, BalanceProofUnsignedState):
-            raise ValueError("balance_proof must be a BalanceProofUnsignedState instance")
+        typecheck(self.lock, HashTimeLockState)
+        typecheck(self.balance_proof, BalanceProofUnsignedState)
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
@@ -83,11 +82,8 @@ class LockedTransferSignedState(LockedTransferState):
     target: TargetAddress
 
     def __post_init__(self) -> None:
-        if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError("lock must be a HashTimeLockState instance")
-
-        if not isinstance(self.balance_proof, BalanceProofSignedState):
-            raise ValueError("balance_proof must be a BalanceProofSignedState instance")
+        typecheck(self.lock, HashTimeLockState)
+        typecheck(self.balance_proof, BalanceProofSignedState)
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
@@ -199,14 +195,9 @@ class MediationPairState(State):
     )
 
     def __post_init__(self) -> None:
-        if not isinstance(self.payer_transfer, LockedTransferSignedState):
-            raise ValueError("payer_transfer must be a LockedTransferSignedState instance")
-
-        if not isinstance(self.payee_address, T_Address):
-            raise ValueError("payee_address must be an address")
-
-        if not isinstance(self.payee_transfer, LockedTransferUnsignedState):
-            raise ValueError("payee_transfer must be a LockedTransferUnsignedState instance")
+        typecheck(self.payer_transfer, LockedTransferSignedState)
+        typecheck(self.payee_address, T_Address)
+        typecheck(self.payee_transfer, LockedTransferUnsignedState)
 
     @property
     def payer_address(self) -> Address:

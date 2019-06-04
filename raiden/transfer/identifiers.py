@@ -9,6 +9,7 @@ from raiden.utils.typing import (
     T_ChainID,
     T_ChannelID,
     TokenNetworkAddress,
+    typecheck,
 )
 
 
@@ -19,14 +20,9 @@ class CanonicalIdentifier:
     channel_identifier: ChannelID
 
     def validate(self) -> None:
-        if not isinstance(self.token_network_address, T_Address):
-            raise ValueError("token_network_address must be an address instance")
-
-        if not isinstance(self.channel_identifier, T_ChannelID):
-            raise ValueError("channel_identifier must be an ChannelID instance")
-
-        if not isinstance(self.chain_identifier, T_ChainID):
-            raise ValueError("chain_id must be a ChainID instance")
+        typecheck(self.chain_identifier, T_ChainID)
+        typecheck(self.token_network_address, T_Address)
+        typecheck(self.channel_identifier, T_ChannelID)
 
         if self.channel_identifier < 0 or self.channel_identifier > constants.UINT256_MAX:
             raise ValueError("channel id is invalid")
