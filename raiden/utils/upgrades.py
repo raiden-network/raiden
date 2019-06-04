@@ -176,28 +176,29 @@ class UpgradeManager:
         with get_file_lock(from_file), get_file_lock(target_file):
             _copy(from_file, target_file)
 
-            storage = SQLiteStorage(target_file)
+            # Only instantiate `SQLiteStorage` after the copy. Otherwise
+            # `_copy` will deadlock because only one connection is allowed to
+            # `target_file`.
 
-            log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
+            with SQLiteStorage(target_file) as storage:
+                log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
 
-            try:
-                version_iteration = from_version
+                try:
+                    version_iteration = from_version
 
-                with storage.transaction():
-                    for upgrade_record in UPGRADES_LIST:
-                        if upgrade_record.from_version < from_version:
-                            continue
+                    with storage.transaction():
+                        for upgrade_record in UPGRADES_LIST:
+                            if upgrade_record.from_version < from_version:
+                                continue
 
-                        version_iteration = upgrade_record.function(
-                            storage=storage,
-                            old_version=version_iteration,
-                            current_version=RAIDEN_DB_VERSION,
-                            **self._kwargs,
-                        )
+                            version_iteration = upgrade_record.function(
+                                storage=storage,
+                                old_version=version_iteration,
+                                current_version=RAIDEN_DB_VERSION,
+                                **self._kwargs,
+                            )
 
-                    update_version(storage, RAIDEN_DB_VERSION)
-            except BaseException as e:
-                log.error(f"Failed to upgrade database: {e}")
-                raise
-
-            storage.conn.close()
+                        update_version(storage, RAIDEN_DB_VERSION)
+                except BaseException as e:
+                    log.error(f"Failed to upgrade database: {e}")
+                    raise
