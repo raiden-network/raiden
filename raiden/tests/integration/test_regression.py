@@ -242,10 +242,12 @@ def test_regression_register_secret_once(secret_registry_address, deploy_service
     assert previous_nonce == deploy_service.client._available_nonce
 
 
+@pytest.mark.skip("issue #3915")
 @pytest.mark.parametrize("number_of_nodes", [5])
 def test_regression_payment_complete_after_refund_to_the_initiator(
     raiden_network, token_addresses, settle_timeout, deposit
 ):
+    """Regression test for issue #3915"""
     raise_on_failure(
         raiden_network,
         run_regression_payment_complete_after_refund_to_the_initiator,
@@ -277,7 +279,7 @@ def run_regression_payment_complete_after_refund_to_the_initiator(
         initiator_app=app1, target_app=app2, token_address=token, amount=deposit, identifier=1
     )
 
-    # Send a refund that will refund the initiator
+    # Send a transfer that will result in a refund app1->app0
     transfer(
         initiator_app=app0, target_app=app2, token_address=token, amount=deposit, identifier=1
     )
