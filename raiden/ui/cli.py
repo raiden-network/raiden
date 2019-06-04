@@ -149,6 +149,11 @@ def options(func):
             help="hex encoded address of the User Deposit contract.",
             type=ADDRESS_TYPE,
         ),
+        option(
+            "--monitoring-service-contract-address",
+            help="hex encoded address of the Monitorin Service contract.",
+            type=ADDRESS_TYPE,
+        ),
         option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
             "--transport",

@@ -45,6 +45,7 @@ def raiden_chain(
     blockchain_type,
     contracts_path,
     user_deposit_address,
+    monitoring_service_contract_address,
     global_rooms,
     tmpdir,
     request,
@@ -73,6 +74,7 @@ def raiden_chain(
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
         user_deposit_address=user_deposit_address,
+        monitoring_service_contract_address=monitoring_service_contract_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,
@@ -126,6 +128,11 @@ def raiden_chain(
 
 
 @pytest.fixture
+def monitoring_service_contract_address():
+    return bytes([1] * 20)
+
+
+@pytest.fixture
 def raiden_network(
     token_addresses,
     token_network_registry_address,
@@ -145,6 +152,7 @@ def raiden_network(
     blockchain_type,
     contracts_path,
     user_deposit_address,
+    monitoring_service_contract_address,
     global_rooms,
     tmpdir,
     request,
@@ -166,6 +174,7 @@ def raiden_network(
         service_registry_address=service_registry_address,
         one_to_n_address=one_to_n_address,
         user_deposit_address=user_deposit_address,
+        monitoring_service_contract_address=monitoring_service_contract_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,

@@ -233,7 +233,10 @@ def update_services_from_balance_proof(
     )
     if isinstance(balance_proof, BalanceProofSignedState):
         update_monitoring_service_from_balance_proof(
-            raiden=raiden, chain_state=chain_state, new_balance_proof=balance_proof
+            raiden=raiden,
+            chain_state=chain_state,
+            new_balance_proof=balance_proof,
+            monitoring_service_contract_address=raiden.default_msc_address,
         )
 
 
@@ -263,7 +266,10 @@ def update_path_finding_service_from_balance_proof(
 
 
 def update_monitoring_service_from_balance_proof(
-    raiden: "RaidenService", chain_state: "ChainState", new_balance_proof: BalanceProofSignedState
+    raiden: "RaidenService",
+    chain_state: "ChainState",
+    new_balance_proof: BalanceProofSignedState,
+    monitoring_service_contract_address: Address,
 ) -> None:
     if raiden.config["services"]["monitoring_enabled"] is False:
         return
@@ -309,7 +315,7 @@ def update_monitoring_service_from_balance_proof(
     )
 
     monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
-        new_balance_proof, MONITORING_REWARD
+        new_balance_proof, MONITORING_REWARD, monitoring_service_contract_address
     )
     monitoring_message.sign(raiden.signer)
     raiden.transport.send_global(constants.MONITORING_BROADCASTING_ROOM, monitoring_message)
@@ -326,6 +332,7 @@ class RaidenService(Runnable):
         default_secret_registry: SecretRegistry,
         default_service_registry: Optional[ServiceRegistry],
         default_one_to_n_address: Optional[Address],
+        default_msc_address: Address,
         transport,
         raiden_event_handler: EventHandler,
         message_handler,
@@ -342,6 +349,7 @@ class RaidenService(Runnable):
         self.default_one_to_n_address = default_one_to_n_address
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
+        self.default_msc_address = default_msc_address
         self.config = config
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)

@@ -937,7 +937,9 @@ class RaidenAPI:
         """
         # create RequestMonitoring message from the above + `reward_amount`
         monitor_request = RequestMonitoring.from_balance_proof_signed_state(
-            balance_proof=balance_proof, reward_amount=reward_amount
+            balance_proof=balance_proof,
+            reward_amount=reward_amount,
+            monitoring_service_contract_address=self.raiden.default_msc_address,
         )
         # sign RequestMonitoring and return
         monitor_request.sign(self.raiden.signer)

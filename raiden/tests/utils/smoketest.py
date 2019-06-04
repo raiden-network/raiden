@@ -50,6 +50,7 @@ from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Endpoint, It
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_MONITORING_SERVICE,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -125,6 +126,8 @@ def deploy_smoketest_contracts(
         CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
+        # The MSC is not used, no need to waste time on deployment
+        CONTRACT_MONITORING_SERVICE: bytes([11] * 20),
     }
     if contract_manager.contracts_version == DEVELOPMENT_CONTRACT_VERSION:
         service_registry_address = deploy_contract_web3(
@@ -297,6 +300,9 @@ def setup_raiden(
     secret_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_SECRET_REGISTRY]
     )
+    monitoring_service_contract_address = to_checksum_address(
+        contract_addresses[CONTRACT_MONITORING_SERVICE]
+    )
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -310,6 +316,7 @@ def setup_raiden(
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "tokennetwork_registry_contract_address": tokennetwork_registry_contract_address,
         "secret_registry_contract_address": secret_registry_contract_address,
+        "monitoring_service_contract_address": monitoring_service_contract_address,
         "sync_check": False,
         "transport": transport,
     }

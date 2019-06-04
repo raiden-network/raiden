@@ -615,7 +615,10 @@ def test_monitoring_global_messages(
     raiden_service.user_deposit.effective_balance.return_value = 100
 
     update_monitoring_service_from_balance_proof(
-        raiden=raiden_service, chain_state=None, new_balance_proof=balance_proof
+        raiden=raiden_service,
+        chain_state=None,
+        new_balance_proof=balance_proof,
+        monitoring_service_contract_address=bytes([1] * 20),
     )
     gevent.idle()
 
