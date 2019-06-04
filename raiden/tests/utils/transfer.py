@@ -10,7 +10,7 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Message, RouteMetadata, Unlock
+from raiden.messages import LockedTransfer, LockExpired, Message, Metadata, RouteMetadata, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
@@ -539,8 +539,8 @@ def make_receive_transfer_mediated(
     transfer_initiator = make_address()
     chain_id = chain_id or channel_state.chain_id
 
-    transfer_route_metadata = RouteMetadata(
-        route=[channel_state.our_state.address, transfer_target]
+    transfer_metadata = Metadata(
+        routes=[RouteMetadata(route=[channel_state.our_state.address, transfer_target])]
     )
 
     mediated_transfer_msg = LockedTransfer(
@@ -560,7 +560,7 @@ def make_receive_transfer_mediated(
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
         fee=0,
-        route_metadata=transfer_route_metadata,
+        metadata=transfer_metadata,
     )
     mediated_transfer_msg.sign(signer)
 
@@ -574,7 +574,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         message_identifier=random.randint(0, UINT64_MAX),
         balance_proof=balance_proof,
-        route=transfer_route_metadata.route,
+        routes=transfer_metadata.routes,
     )
 
     return receive_lockedtransfer

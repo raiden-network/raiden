@@ -33,7 +33,6 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
-    UnresolvableRoute,
 )
 from raiden.messages import (
     LockedTransfer,
@@ -171,30 +170,16 @@ def mediator_init(
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
-    try:
-
-        route_state = routing.resolve_route(
-            route_metadata=transfer.route_metadata,
-            # pylint: disable=E1101
-            token_network_address=from_transfer.balance_proof.token_network_address,
-            chain_state=views.state_from_raiden(raiden),
-        )
-    except UnresolvableRoute as exc:
-        log.warn(
-            str(exc),
-            sender=pex(transfer.sender),
-            message_identifier=transfer.message_identifier,
-            # pylint: disable=E1101
-            channel_identifier=from_transfer.balance_proof.canonical_identifier.channel_identifier,
-            # pylint: disable=E1101
-            token_network_address=pex(from_transfer.balance_proof.token_network_address),
-            node=pex(raiden.address),
-        )
-        return None
+    route_states = routing.resolve_routes(
+        routes=transfer.metadata.routes,
+        # pylint: disable=E1101
+        token_network_address=from_transfer.balance_proof.token_network_address,
+        chain_state=views.state_from_raiden(raiden),
+    )
 
     init_mediator_statechange = ActionInitMediator(
         from_hop=from_hop,
-        route_state=route_state,
+        route_states=route_states,
         from_transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member

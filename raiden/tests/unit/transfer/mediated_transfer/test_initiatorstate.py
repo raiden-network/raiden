@@ -159,7 +159,7 @@ def test_next_route():
         payment_state=state,
         initiator_state=initiator_state,
         transfer_description=initiator_state.transfer_description,
-        available_routes=channels.get_routes(),
+        candidate_route_states=channels.get_routes(),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=prng,
         block_number=block_number,
@@ -359,7 +359,8 @@ def test_state_wait_unlock_valid():
     assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert balance_proof
     assert complete
-    assert complete.route == setup.available_routes[0].route
+    assert len(complete.route) == 1
+    assert complete.route[0] == balance_proof.recipient
 
     assert balance_proof.recipient == setup.channel.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER
