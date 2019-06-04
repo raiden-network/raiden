@@ -56,7 +56,7 @@ def log_open_channels(raiden, registry_address, token_address, funds):
         )
 
 
-class ConnectionManager:
+class ConnectionManager:  # pragma: no unittest
     """The ConnectionManager provides a high level abstraction for connecting to a
     Token network.
 

@@ -277,7 +277,7 @@ def restapi_setup_type_converters(flask_app, names_to_converters):
         flask_app.url_map.converters[key] = value
 
 
-class APIServer(Runnable):
+class APIServer(Runnable):  # pragma: no unittest
     """
     Runs the API-server that routes the endpoint to the resources.
     The API is wrapped in multiple layers, and the Server should be invoked this way::
@@ -475,7 +475,7 @@ class APIServer(Runnable):
         return api_error([str(exception)], HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
-class RestAPI:
+class RestAPI:  # pragma: no unittest
     """
     This wraps around the actual RaidenAPI in api/python.
     It will provide the additional, neccessary RESTful logic and
