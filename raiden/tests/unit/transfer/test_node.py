@@ -1,7 +1,7 @@
 import pytest
 
 import raiden.transfer.node
-from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, EMPTY_MERKLE_ROOT
 from raiden.settings import GAS_LIMIT
 from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
 from raiden.tests.utils import factories
@@ -21,7 +21,6 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask
@@ -401,7 +400,7 @@ def test_handle_new_payment_network(chain_state, token_network_address):
 
 def test_inplace_delete_message_queue(chain_state):
     sender = factories.make_address()
-    channel_id = factories.make_channel_identifier()
+    canonical_identifier = factories.make_canonical_identifier()
     message_id = factories.make_message_identifier()
     delivered_state_change = ReceiveDelivered(sender=sender, message_identifier=message_id)
     handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
@@ -410,7 +409,7 @@ def test_inplace_delete_message_queue(chain_state):
     handle_processed(chain_state=chain_state, state_change=processed_state_change)
 
     global_identifier = QueueIdentifier(
-        recipient=sender, channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
     )
 
     chain_state.queueids_to_queues[global_identifier] = None
@@ -422,18 +421,22 @@ def test_inplace_delete_message_queue(chain_state):
 
     chain_state.queueids_to_queues[global_identifier] = [
         SendMessageEvent(
-            recipient=sender, channel_identifier=channel_id, message_identifier=message_id
+            recipient=sender,
+            canonical_identifier=canonical_identifier,
+            message_identifier=message_id,
         )
     ]
     assert global_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
     handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
     assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
 
-    queue_identifier = QueueIdentifier(recipient=sender, channel_identifier=channel_id)
+    queue_identifier = QueueIdentifier(recipient=sender, canonical_identifier=canonical_identifier)
     assert queue_identifier not in chain_state.queueids_to_queues, "queue not empty"
     chain_state.queueids_to_queues[queue_identifier] = [
         SendMessageEvent(
-            recipient=sender, channel_identifier=channel_id, message_identifier=message_id
+            recipient=sender,
+            canonical_identifier=canonical_identifier,
+            message_identifier=message_id,
         )
     ]
     assert queue_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
