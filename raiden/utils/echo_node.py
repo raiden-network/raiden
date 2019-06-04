@@ -22,7 +22,7 @@ log = structlog.get_logger(__name__)
 TRANSFER_MEMORY = 4096
 
 
-class EchoNode:
+class EchoNode:  # pragma: no unittest
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
         self.ready = Event()

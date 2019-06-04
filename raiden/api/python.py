@@ -162,6 +162,7 @@ def transfer_tasks_view(
 
 class RaidenAPI:
     # pylint: disable=too-many-public-methods
+    # pragma: no unittest
 
     def __init__(self, raiden):
         self.raiden = raiden
