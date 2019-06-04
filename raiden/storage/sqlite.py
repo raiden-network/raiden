@@ -566,10 +566,20 @@ class SQLiteStorage:
             self.in_transaction = False
 
     def close(self):
+        if not hasattr(self, "conn"):
+            raise RuntimeError("The database connection was closed already.")
+
         self.conn.close()
         del self.conn
 
     def __del__(self):
+        if hasattr(self, "conn"):
+            raise RuntimeError("The database connection was not closed.")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):  # pylint: disable=unused-arguments
         self.close()
 
 
@@ -691,6 +701,3 @@ class SerializedSQLiteStorage:
 
     def close(self):
         self.database.close()
-
-    def __del__(self):
-        del self.database

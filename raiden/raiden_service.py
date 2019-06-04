@@ -582,6 +582,7 @@ class RaidenService(Runnable):
         # Close storage DB to release internal DB lock
         assert self.wal, "The Service must have been started before it can be stopped"
         self.wal.storage.close()
+        self.wal = None
 
         if self.db_lock is not None:
             self.db_lock.release()
