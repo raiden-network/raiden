@@ -233,7 +233,7 @@ class Message:
 
 @dataclass(repr=False, eq=False)
 class AuthenticatedMessage(Message):
-    """ Message, that has a sender. """
+    """ Messages which the sender can be verified. """
 
     def sender(self) -> Address:
         raise NotImplementedError("Property needs to be implemented in subclass.")
@@ -344,8 +344,33 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Processed(SignedRetrieableMessage):
-    """ All accepted messages should be confirmed by a `Processed` message which echoes the
-    orginals Message hash.
+    """ Used by the recipient when a message which has to be validated against
+    blockchain data was successfully processed.
+
+    This message is only used to confirm the processing of messages which have
+    some blockchain related data, where receiving the message is not
+    sufficient. Consider the following scenario:
+
+    - Node A starts a deposit of 5 tokens.
+    - Node A sees the deposit, and starts a transfer.
+    - Node B receives the the transfer, however it has not seen the deposit,
+      therefore the transfer is rejected.
+
+    Second scenario:
+
+    - Node A has a lock which has expired, and sends the RemoveExpiredLock
+      message.
+    - Node B receives the message, but from its perspective the block at which
+      the lock expires has not been confirmed yet, meaning that a reorg is
+      possible and the secret can be registered on-chain.
+
+    For both scenarios A has to keep retrying until B accepts the message.
+
+    Notes:
+        - This message is required even if the transport guarantees durability
+          of the data.
+        - This message provides a stronger guarantee then a Delivered,
+          therefore it can replace it.
     """
 
     # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
@@ -373,8 +398,14 @@ class ToDevice(SignedMessage):
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
-    """ Message used to inform the partner node that a message was received *and*
-    persisted.
+    """ Informs the sender that the message was received *and* persisted.
+
+    Notes:
+        - This message provides a weaker guarantee in respect to the Processed
+          message. It can be emulated by a transport layer that guarantess
+          persistance, or it can be sent by the recipient before the received
+          message is processed (threfore it does not matter if the message was
+          successfully processed or not).
     """
 
     cmdid: ClassVar[int] = messages.DELIVERED
@@ -403,7 +434,7 @@ class Ping(SignedMessage):
 
 @dataclass(repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
-    """ Requests the secret which unlocks a secrethash. """
+    """ Reveals the secret/preimage which unlocks a lock. """
 
     cmdid: ClassVar[int] = messages.SECRETREQUEST
 
@@ -427,11 +458,32 @@ class SecretRequest(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Unlock(EnvelopeMessage):
-    """ Message used to do state changes on a partner Raiden Channel.
+    """ Message used to succesfully unlock a lock.
 
-    Locksroot changes need to be synchronized among both participants, the
-    protocol is for only the side unlocking to send the Unlock message allowing
-    the other party to claim the unlocked lock.
+    For this message to be valid the balance proof has to be updated to:
+
+    - Remove the succesfull lock from the merkle tree and decrement the
+      locked_amount by the lock's amount, otherwise the sender will pay twice.
+    - Increase the transferred_amount, otherwise the recepient will reject it
+      because it is not being paid.
+
+    This message is needed to unlock off-chain transfers for channels that used
+    less frequently then the pending locks' expiration, otherwise the receiving
+    end would have to go on-chain to register the secret.
+
+    This message is needed in addition to the RevealSecret to fix
+    synchronization problems. The recipient can not preemptively update its
+    channel state because there may other messages in-flight. Consider the
+    following case:
+
+    1. Node A sends a LockedTransfer to B.
+    2. Node B forwards and eventually receives the secret
+    3. Node A sends a second LockedTransfer to B.
+
+    At point 3, node A had no knowledge about the first payment having its
+    secret revealed, therefore the merkletree from message at step 3 will
+    include both locks. If B were to preemptively remove the lock it would
+    reject the message.
     """
 
     cmdid: ClassVar[int] = messages.UNLOCK
@@ -476,12 +528,9 @@ class Unlock(EnvelopeMessage):
 
 @dataclass(repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
-    """Message used to reveal a secret to party known to have interest in it.
+    """Reveal the a lock's secret.
 
-    This message is not sufficient for state changes in the raiden Channel, the
-    reason is that a node participating in split transfer or in both mediated
-    transfer for an exchange might can reveal the secret to it's partners, but
-    that must not update the internal channel state.
+    This message is not sufficient to unlock a lock, vide Unlock.
     """
 
     cmdid: ClassVar[int] = messages.REVEALSECRET
@@ -505,7 +554,7 @@ class RevealSecret(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Lock:
-    """ Describes a locked `amount`.
+    """ The lock datastructure.
 
     Args:
         amount: Amount of the token being transferred.
@@ -568,18 +617,6 @@ class Lock:
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `secrethash`.
-
-    The token amount is implicitly represented in the `locksroot` and won't be
-    reflected in the `transferred_amount` until the secret is revealed.
-
-    This signs Carol, that she can claim locked_amount from Bob if she knows
-    the secret to secrethash.
-
-    If the secret to secrethash becomes public, but Bob fails to sign Carol a
-    netted balance, with an updated rootlock which reflects the deletion of the
-    lock, then Carol can request settlement on chain by providing: any signed
-    [nonce, token, balance, recipient, locksroot, ...] along a merkle proof
-    from locksroot to the not yet netted formerly locked amount.
     """
 
     payment_identifier: PaymentID
@@ -614,23 +651,24 @@ class LockedTransferBase(EnvelopeMessage):
 
 @dataclass(repr=False, eq=False)
 class LockedTransfer(LockedTransferBase):
-    """
-    A LockedTransfer has a `target` address to which a chain of transfers shall
-    be established. Here the `secrethash` is mandatory.
+    """ Message to used to reserve tokens for a new mediated transfer.
 
-    `fee` is the remaining fee a recipient shall use to complete the mediated transfer.
-    The recipient can deduct his own fee from the amount and lower `fee` to the remaining fee.
-    Just as the recipient can fail to forward at all, or the assumed amount,
-    it can deduct a too high fee, but this would render completion of the transfer unlikely.
+    For this message to be valid, the sender must:
 
-    The initiator of a mediated transfer will calculate fees based on the likely fees along the
-    path. Note, it can not determine the path, as it does not know which nodes are available.
+    - Use a lock.amount smaller then its current capacity. If the amount is
+      higher then the recipient will be reject it, as it means spending money
+      it does not own.
+    - Have the new lock represented in merkleroot.
+    - Increase the locked_amount by exactly `lock.amount` otherwise the message
+      would be rejected by the recipient. If the locked_amount is increase by
+      more, then funds may get locked in the channel. If the locked_amount is
+      increase by less, then the recipient will reject the message as it may
+      mean it receive the funds with an on-chain unlock.
 
-    Initial `amount` should be expected received amount + fees.
-
-    Fees are always payable by the initiator.
-
-    `initiator` is the party that knows the secret to the `secrethash`
+    The initiator will estipulate the fees based on the available routes and
+    incorporate it in the lock's amount. Note that with permissive routing it
+    is not possible to predetermine the exact fee amount, as the initiator does
+    not know which nodes are available, thus an estimated value is used.
     """
 
     cmdid: ClassVar[int] = messages.LOCKEDTRANSFER
@@ -708,10 +746,17 @@ class LockedTransfer(LockedTransferBase):
 
 @dataclass(repr=False, eq=False)
 class RefundTransfer(LockedTransfer):
-    """ A special LockedTransfer sent from a payee to a payer indicating that
-    no route is available, this transfer will effectively refund the payer the
-    transfer amount allowing him to try a new path to complete the transfer.
+    """ A message used when a payee does not have any available routes to
+    further the transfer.
+
+    This message is used by the payee to refund the payer when no route is
+    available. This transfer refunds the payer, allowing him to try a new path
+    to complete the transfer.
     """
+
+    # TODO: Consider removing this message. The same transfer may loop back to
+    # the same node through a different path. Consider the graph at
+    # https://github.com/raiden-network/raiden/issues/490
 
     cmdid: ClassVar[int] = messages.REFUNDTRANSFER
 
@@ -749,8 +794,21 @@ class RefundTransfer(LockedTransfer):
 
 @dataclass(repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
-    """Message used to notify opposite channel participant that a lock has
-    expired.
+    """ Message used when a lock expires.
+
+    This will complete an unsuccesful transfer off-chain.
+
+    For this message to be valid the balance proof has to be updated to:
+
+    - Remove the expired lock from the merkletree and reflect it in the
+      merkleroot.
+    - Decrease the locked_amount by exactly by lock.amount. If less tokens are
+      decreased the the sender may get tokens locked. If more tokens are
+      decreased the the recipient will reject the message as on-chain unlocks
+      may fail.
+
+    This message is necessary for synchronization since other messages may be
+    in-flight, vide Unlock for examples.
     """
 
     cmdid: ClassVar[int] = messages.LOCKEXPIRED
