@@ -279,3 +279,42 @@ def test_filter_channels_by_partneraddress():
         )
         == test_state.channels[1:]
     )
+
+
+def test_total_token_network_channels():
+    number_of_channels = 3
+    test_state = factories.make_chain_state(number_of_channels=number_of_channels)
+    unknown_token_address = factories.make_address()
+    unknown_payment_network_address = factories.make_address()
+    assert (
+        views.total_token_network_channels(
+            chain_state=test_state.chain_state,
+            payment_network_address=unknown_payment_network_address,
+            token_address=unknown_token_address,
+        )
+        == 0
+    )
+    assert (
+        views.total_token_network_channels(
+            chain_state=test_state.chain_state,
+            payment_network_address=unknown_payment_network_address,
+            token_address=test_state.token_address,
+        )
+        == 0
+    )
+    assert (
+        views.total_token_network_channels(
+            chain_state=test_state.chain_state,
+            payment_network_address=test_state.payment_network_address,
+            token_address=unknown_token_address,
+        )
+        == 0
+    )
+    assert (
+        views.total_token_network_channels(
+            chain_state=test_state.chain_state,
+            payment_network_address=test_state.payment_network_address,
+            token_address=test_state.token_address,
+        )
+        == number_of_channels
+    )
