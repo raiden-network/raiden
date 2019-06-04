@@ -1,15 +1,23 @@
+from copy import deepcopy
+
 import pytest
 
 from raiden.tests.utils import factories
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import TransactionExecutionStatus
+from raiden.transfer.state import (
+    PaymentNetworkState,
+    TokenNetworkGraphState,
+    TokenNetworkState,
+    TransactionExecutionStatus,
+)
 from raiden.transfer.views import (
     count_token_network_channels,
     detect_balance_proof_change,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
+    get_networks,
     get_participants_addresses,
     get_token_identifiers,
     get_token_network_addresses,
@@ -404,3 +412,40 @@ def test_listings():
     assert views.get_payment_network_address(chain_state=test_state.chain_state) == [
         test_state.payment_network_address
     ]
+
+
+def test_get_networks(chain_state, token_network_address):
+    orig_chain_state = deepcopy(chain_state)
+    token_address = factories.make_address()
+    payment_network_empty = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[]
+    )
+    chain_state.identifiers_to_paymentnetworks[
+        payment_network_empty.address
+    ] = payment_network_empty
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_address=payment_network_empty.address,
+        token_address=token_address,
+    ) == (payment_network_empty, None)
+
+    chain_state = orig_chain_state
+    token_network = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_address,
+        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
+    )
+    payment_network = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[token_network]
+    )
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_address=payment_network.address,
+        token_address=token_address,
+    ) == (None, None)
+    chain_state.identifiers_to_paymentnetworks[payment_network.address] = payment_network
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_address=payment_network.address,
+        token_address=token_address,
+    ) == (payment_network, token_network)

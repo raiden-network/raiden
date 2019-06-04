@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 import raiden.transfer.node
@@ -29,7 +27,6 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
-    get_networks,
     handle_delivered,
     handle_new_payment_network,
     handle_new_token_network,
@@ -67,6 +64,7 @@ from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
 )
+from raiden.transfer.views import get_networks
 
 
 def test_is_transaction_effect_satisfied(
@@ -117,38 +115,6 @@ def test_is_transaction_effect_satisfied(
     iteration = state_transition(chain_state=chain_state, state_change=channel_settled)
 
     assert is_transaction_effect_satisfied(iteration.new_state, transaction, state_change)
-
-
-def test_get_networks(chain_state, token_network_address):
-    orig_chain_state = deepcopy(chain_state)
-    token_address = factories.make_address()
-    payment_network_empty = PaymentNetworkState(
-        address=factories.make_address(), token_network_list=[]
-    )
-    chain_state.identifiers_to_paymentnetworks[
-        payment_network_empty.address
-    ] = payment_network_empty
-    assert get_networks(
-        chain_state=chain_state,
-        payment_network_address=payment_network_empty.address,
-        token_address=token_address,
-    ) == (payment_network_empty, None)
-
-    chain_state = orig_chain_state
-    token_network = TokenNetworkState(
-        address=token_network_address,
-        token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
-    )
-    payment_network = PaymentNetworkState(
-        address=factories.make_address(), token_network_list=[token_network]
-    )
-    chain_state.identifiers_to_paymentnetworks[payment_network.address] = payment_network
-    assert get_networks(
-        chain_state=chain_state,
-        payment_network_address=payment_network.address,
-        token_address=token_address,
-    ) == (payment_network, token_network)
 
 
 def test_subdispatch_invalid_initiatortask(chain_state, token_network_address):
