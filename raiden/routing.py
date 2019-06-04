@@ -6,12 +6,11 @@ import networkx
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.exceptions import ServiceRequestFailed, UnresolvableRoute
+from raiden.exceptions import ServiceRequestFailed
 from raiden.messages import RouteMetadata
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
-from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -285,23 +284,30 @@ def get_best_routes_pfs(
     return True, paths, feedback_token
 
 
-def resolve_route(
-    route_metadata: RouteMetadata,
+def resolve_routes(
+    routes: List[RouteMetadata],
     token_network_address: TokenNetworkAddress,
     chain_state: ChainState,
-) -> RouteState:
+) -> List[RouteState]:
     """ resolve the forward_channel_id for a given route """
 
-    channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=chain_state,
-        token_network_address=token_network_address,
-        partner_address=route_metadata.route[1],
-    )
+    resolvable = []
+    unresolvable = []
 
-    if channel_state is None:
-        raise UnresolvableRoute(f"no channel for {route_metadata} on {pex(token_network_address)}")
+    for route_metadata in routes:
+        channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_address=token_network_address,
+            partner_address=route_metadata.route[1],
+        )
 
-    return RouteState(
-        route=route_metadata.route,
-        forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-    )
+        if channel_state is not None:
+            resolvable.append(
+                RouteState(
+                    route=route_metadata.route,
+                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+                )
+            )
+        else:
+            unresolvable.append(RouteState(route=route_metadata.route))
+    return resolvable + unresolvable
