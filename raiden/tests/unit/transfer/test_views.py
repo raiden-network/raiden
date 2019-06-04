@@ -377,3 +377,30 @@ def test_get_token_network_address_by_token_address():
         )
         == test_state.token_network_address
     )
+
+
+def test_listings():
+    test_state = factories.make_chain_state(number_of_channels=3)
+    assert (
+        views.get_token_network_addresses(
+            chain_state=test_state.chain_state, payment_network_address=factories.make_address()
+        )
+        == []
+    )
+    assert views.get_token_network_addresses(
+        chain_state=test_state.chain_state,
+        payment_network_address=test_state.payment_network_address,
+    ) == [test_state.token_network_address]
+    assert (
+        views.get_token_identifiers(
+            chain_state=test_state.chain_state, payment_network_address=factories.make_address()
+        )
+        == []
+    )
+    assert views.get_token_identifiers(
+        chain_state=test_state.chain_state,
+        payment_network_address=test_state.payment_network_address,
+    ) == [test_state.token_address]
+    assert views.get_payment_network_address(chain_state=test_state.chain_state) == [
+        test_state.payment_network_address
+    ]
