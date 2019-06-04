@@ -6,12 +6,11 @@ import networkx
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.exceptions import ServiceRequestFailed, UnresolvableRoute
+from raiden.exceptions import ServiceRequestFailed
 from raiden.messages import RouteMetadata
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
-from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
     ChannelID,
