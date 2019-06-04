@@ -71,7 +71,7 @@ def check_version(current_version: str):
             gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
-def check_gas_reserve(raiden):
+def check_gas_reserve(raiden):  # pragma: no unittest
     """ Check periodically for gas reserve in the account """
     while True:
         has_enough_balance, estimated_required_balance = gas_reserve.has_enough_gas_reserve(
@@ -116,7 +116,7 @@ def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
         gevent.sleep(CHECK_RDN_MIN_DEPOSIT_INTERVAL)
 
 
-def check_network_id(network_id, web3: Web3):
+def check_network_id(network_id, web3: Web3):  # pragma: no unittest
     """ Check periodically if the underlying ethereum client's network id has changed"""
     while True:
         current_id = int(web3.version.network)

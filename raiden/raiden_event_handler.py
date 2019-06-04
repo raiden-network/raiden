@@ -78,7 +78,7 @@ def unlock(
     sender: Address,
     receiver: Address,
     given_block_identifier: BlockSpecification,
-) -> None:
+) -> None:  # pragma: no unittest
     merkle_tree_locks = get_batch_unlock(end_state)
     assert merkle_tree_locks, "merkle tree is missing"
 
@@ -97,7 +97,9 @@ class EventHandler(ABC):
 
 
 class RaidenEventHandler(EventHandler):
-    def on_raiden_event(self, raiden: "RaidenService", chain_state: ChainState, event: Event):
+    def on_raiden_event(
+        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    ):  # pragma: no unittest
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
             assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
@@ -150,7 +152,9 @@ class RaidenEventHandler(EventHandler):
             log.error("Unknown event", event_type=str(type(event)), node=pex(raiden.address))
 
     @staticmethod
-    def handle_send_lockexpired(raiden: "RaidenService", send_lock_expired: SendLockExpired):
+    def handle_send_lockexpired(
+        raiden: "RaidenService", send_lock_expired: SendLockExpired
+    ):  # pragma: no unittest
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
         raiden.transport.send_async(send_lock_expired.queue_identifier, lock_expired_message)
@@ -158,7 +162,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_lockedtransfer(
         raiden: "RaidenService", send_locked_transfer: SendLockedTransfer
-    ):
+    ):  # pragma: no unittest
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
         raiden.transport.send_async(
@@ -166,13 +170,17 @@ class RaidenEventHandler(EventHandler):
         )
 
     @staticmethod
-    def handle_send_secretreveal(raiden: "RaidenService", reveal_secret_event: SendSecretReveal):
+    def handle_send_secretreveal(
+        raiden: "RaidenService", reveal_secret_event: SendSecretReveal
+    ):  # pragma: no unittest
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
         raiden.transport.send_async(reveal_secret_event.queue_identifier, reveal_secret_message)
 
     @staticmethod
-    def handle_send_balanceproof(raiden: "RaidenService", balance_proof_event: SendBalanceProof):
+    def handle_send_balanceproof(
+        raiden: "RaidenService", balance_proof_event: SendBalanceProof
+    ):  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
         raiden.transport.send_async(balance_proof_event.queue_identifier, unlock_message)
@@ -180,7 +188,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_secretrequest(
         raiden: "RaidenService", secret_request_event: SendSecretRequest
-    ):
+    ):  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, secret_request_event):
             return
 
@@ -191,7 +199,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_refundtransfer(
         raiden: "RaidenService", refund_transfer_event: SendRefundTransfer
-    ):
+    ):  # pragma: no unittest
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
         raiden.transport.send_async(
@@ -199,7 +207,9 @@ class RaidenEventHandler(EventHandler):
         )
 
     @staticmethod
-    def handle_send_processed(raiden: "RaidenService", processed_event: SendProcessed):
+    def handle_send_processed(
+        raiden: "RaidenService", processed_event: SendProcessed
+    ):  # pragma: no unittest
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
         raiden.transport.send_async(processed_event.queue_identifier, processed_message)
@@ -233,7 +243,9 @@ class RaidenEventHandler(EventHandler):
             payment_status.payment_done.set(payment_sent_failed_event)
 
     @staticmethod
-    def handle_unlockfailed(raiden: "RaidenService", unlock_failed_event: EventUnlockFailed):
+    def handle_unlockfailed(
+        raiden: "RaidenService", unlock_failed_event: EventUnlockFailed
+    ):  # pragma: no unittest
         # pylint: disable=unused-argument
         log.error(
             "UnlockFailed!",
@@ -245,7 +257,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_secretreveal(
         raiden: "RaidenService", channel_reveal_secret_event: ContractSendSecretReveal
-    ):
+    ):  # pragma: no unittest
         raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
 
     @staticmethod
@@ -572,7 +584,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
 
     def on_raiden_event(
         self, raiden: "RaidenService", chain_state: ChainState, event: Event
-    ) -> None:
+    ) -> None:  # pragma: no unittest
         if type(event) == EventRouteFailed:
             assert isinstance(event, EventRouteFailed), MYPY_ANNOTATION
             self.handle_routefailed(raiden, event)
@@ -584,8 +596,10 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         self.wrapped.on_raiden_event(raiden, chain_state, event)
 
     @staticmethod
-    def handle_routefailed(raiden: "RaidenService", route_failed_event: EventRouteFailed) -> None:
-        feedback_token = raiden.route_to_feedback_token.get(tuple(route_failed_event.route))
+    def handle_routefailed(
+        raiden: "RaidenService", route_failed_event: EventRouteFailed
+    ) -> None:  # pragma: no unittest
+        feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
 
         if feedback_token:
             log.debug(
@@ -605,7 +619,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
     @staticmethod
     def handle_paymentsentsuccess(
         raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
-    ) -> None:
+    ) -> None:  # pragma: no unittest
         feedback_token = raiden.route_to_feedback_token.get(
             tuple(payment_sent_success_event.route)
         )

@@ -33,7 +33,7 @@ RECOVERABLE_ERRORS = (
 )
 
 
-def log_open_channels(raiden, registry_address, token_address, funds):
+def log_open_channels(raiden, registry_address, token_address, funds):  # pragma: no unittest
     chain_state = views.state_from_raiden(raiden)
     open_channels = views.get_channelstate_open(
         chain_state=chain_state,
