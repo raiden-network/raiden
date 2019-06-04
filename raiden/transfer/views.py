@@ -132,7 +132,7 @@ def get_our_capacity_for_token_network(
     return total_deposit
 
 
-def get_payment_network_addresss(chain_state: ChainState) -> List[PaymentNetworkAddress]:
+def get_payment_network_address(chain_state: ChainState) -> List[PaymentNetworkAddress]:
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
