@@ -449,7 +449,7 @@ def handle_secret_revealed(raiden: "RaidenService", event: Event):
     raiden.handle_and_track_state_change(registeredsecret_state_change)
 
 
-def on_blockchain_event(raiden: "RaidenService", event: Event):
+def on_blockchain_event(raiden: "RaidenService", event: Event):  # pragma: no unittest
     data = event.event_data
     log.debug(
         "Blockchain event",

@@ -76,11 +76,11 @@ def count_token_network_channels(
     return count
 
 
-def state_from_raiden(raiden) -> ChainState:
+def state_from_raiden(raiden) -> ChainState:  # pragma: no unittest
     return raiden.wal.state_manager.current_state
 
 
-def state_from_app(app) -> ChainState:
+def state_from_app(app) -> ChainState:  # pragma: no unittest
     return app.raiden.wal.state_manager.current_state
 
 

@@ -34,7 +34,7 @@ TRANSPORT_ERROR_MSG = "Waiting for protocol messags requires a running transport
 
 def wait_for_block(
     raiden: "RaidenService", block_number: BlockNumber, retry_timeout: float
-) -> None:
+) -> None:  # pragma: no unittest
     while raiden.get_block_number() < block_number:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
@@ -48,7 +48,7 @@ def wait_for_newchannel(
     token_address: TokenAddress,
     partner_address: Address,
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until the channel with partner_address is registered.
 
     Note:
@@ -79,7 +79,7 @@ def wait_for_participant_newbalance(
     target_address: Address,
     target_balance: TokenAmount,
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until a given channels balance exceeds the target balance.
 
     Note:
@@ -117,7 +117,7 @@ def wait_for_payment_balance(
     target_address: Address,
     target_balance: TokenAmount,
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until a given channel's balance exceeds the target balance.
 
     Note:
@@ -223,7 +223,7 @@ def wait_for_close(
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until all channels are closed.
 
     Note:
@@ -244,7 +244,7 @@ def wait_for_payment_network(
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(raiden), payment_network_address, token_address
     )
@@ -264,7 +264,7 @@ def wait_for_settle(
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until all channels are settled.
 
     Note:
@@ -282,7 +282,7 @@ def wait_for_settle(
 
 def wait_for_network_state(
     raiden: "RaidenService", node_address: Address, network_state: str, retry_timeout: float
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until `node_address` becomes healthy.
 
     Note:
@@ -298,7 +298,9 @@ def wait_for_network_state(
         network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
 
 
-def wait_for_healthy(raiden: "RaidenService", node_address: Address, retry_timeout: float) -> None:
+def wait_for_healthy(
+    raiden: "RaidenService", node_address: Address, retry_timeout: float
+) -> None:  # pragma: no unittest
     """Wait until `node_address` becomes healthy.
 
     Note:
@@ -313,7 +315,7 @@ def wait_for_transfer_success(
     payment_identifier: PaymentID,
     amount: PaymentAmount,
     retry_timeout: float,
-) -> None:
+) -> None:  # pragma: no unittest
     """Wait until a transfer with a specific identifier and amount
     is seen in the WAL.
 
