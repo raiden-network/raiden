@@ -219,7 +219,7 @@ def setup_proxies_or_exit(
             pfs_address=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
-            token_network_registry_address=tokennetwork_registry_contract_address,
+            token_network_registry_address=Address(token_network_registry.address),
         )
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_config.eth_address is not None, msg

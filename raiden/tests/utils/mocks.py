@@ -72,7 +72,7 @@ class MockChain:
     def token_network_registry(  # pylint: disable=unused-argument, no-self-use
         self, address: Address
     ):
-        return object()
+        return Mock(address=address)
 
     def secret_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
