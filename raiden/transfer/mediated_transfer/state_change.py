@@ -43,12 +43,12 @@ class ActionInitMediator(BalanceProofStateChange):
 
     Args:
         from_hop: The payee route.
-        route_state: The forward route state.
+        route_states: list of forward route states.
         from_transfer: The payee transfer.
     """
 
     from_hop: HopState
-    route_state: RouteState = field(repr=False)
+    route_states: List[RouteState]
     from_transfer: LockedTransferSignedState
 
     def __post_init__(self) -> None:

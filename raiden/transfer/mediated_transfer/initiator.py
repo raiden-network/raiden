@@ -180,21 +180,42 @@ def get_initial_lock_expiration(
 
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-    available_routes: List[RouteState],
+    candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorTransferState]:
 
-    route_infos = channel.next_channel_from_routes(
-        available_routes=available_routes,
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
-        transfer_amount=PaymentWithFeeAmount(transfer_description.amount),
+    initiator_state = None
+    events: List[Event] = list()
+    amount_with_fee: PaymentWithFeeAmount = PaymentWithFeeAmount(
+        transfer_description.amount + transfer_description.allocated_fee
     )
 
-    events: List[Event] = list()
-    if route_infos is None:
-        if not available_routes:
+    channel_state = None
+    route_state = None
+
+    for candidate_route_state in candidate_route_states:
+        forward_channel_id = candidate_route_state.forward_channel_id
+        candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
+            forward_channel_id
+        )
+
+        if (
+            forward_channel_id
+            and candidate_channel_state
+            and channel.is_channel_usable(
+                candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+            )
+        ):
+            channel_state = candidate_channel_state
+            route_state = RouteState(
+                route=candidate_route_state.route[1:], forward_channel_id=forward_channel_id
+            )
+            break
+
+    if route_state is None:
+        if not candidate_route_states:
             reason = "there is no route available"
         else:
             reason = "none of the available routes could be used"
@@ -211,7 +232,8 @@ def try_new_route(
         initiator_state = None
 
     else:
-        channel_state, route_state = route_infos
+        assert channel_state is not None
+
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             transfer_description=transfer_description,
@@ -219,6 +241,7 @@ def try_new_route(
             message_identifier=message_identifier,
             block_number=block_number,
             route_state=route_state,
+            route_states=candidate_route_states,
         )
         assert lockedtransfer_event
 
@@ -239,6 +262,7 @@ def send_lockedtransfer(
     message_identifier: MessageID,
     block_number: BlockNumber,
     route_state: RouteState,
+    route_states: List[RouteState],
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
     assert channel_state.token_network_address == transfer_description.token_network_address
@@ -261,7 +285,9 @@ def send_lockedtransfer(
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
-        route_state=route_state,
+        route_states=channel.prune_route_table(
+            route_state_table=route_states, selected_route=route_state
+        ),
     )
     return lockedtransfer_event
 

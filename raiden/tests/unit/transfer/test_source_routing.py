@@ -1,5 +1,5 @@
 from raiden.messages import LockedTransfer, Metadata, RouteMetadata
-from raiden.routing import resolve_route
+from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner, recover
@@ -53,22 +53,23 @@ def test_metadata_hashing():
     assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
 
 
-def test_locked_transfer_with_route_metadata():
+def test_locked_transfer_with_metadata():
     locked_transfer = factories.create(factories.LockedTransferProperties())
     assert isinstance(locked_transfer, LockedTransfer)
-    assert isinstance(locked_transfer.route_metadata, RouteMetadata)
+    assert isinstance(locked_transfer.metadata, Metadata)
 
     # pylint: disable=E1101
-    assert locked_transfer.route_metadata.route == [factories.HOP1, factories.HOP2]
+    assert locked_transfer.metadata.routes[0].route == [factories.HOP1, factories.HOP2]
 
 
 def test_locked_transfer_additional_hash_contains_route_metadata_hash():
     one_locked_transfer = factories.create(factories.LockedTransferProperties())
+    route_metadata = factories.create(
+        factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
+    )
     another_locked_transfer = factories.create(
         factories.LockedTransferProperties(
-            route_metadata=factories.create(
-                factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
-            )
+            metadata=factories.create(factories.MetadataProperties(routes=[route_metadata]))
         )
     )
 
@@ -86,11 +87,13 @@ def test_changing_route_metadata_will_invalidate_lock_transfer_signature():
         factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
     )
 
+    new_metadata = factories.create(factories.Metadata(routes=[new_route_metadata]))
+
     assert ADDRESS == recover(
         one_locked_transfer._data_to_sign(), one_locked_transfer.signature
     ), "signature does not match signer address"
 
-    one_locked_transfer.route_metadata = new_route_metadata
+    one_locked_transfer.metadata = new_metadata
 
     assert ADDRESS != recover(
         one_locked_transfer._data_to_sign(), one_locked_transfer.signature
@@ -106,7 +109,7 @@ def test_can_round_trip_serialize_locked_transfer():
     assert DictSerializer.deserialize(as_dict) == locked_transfer
 
 
-def test_resolve_route(netting_channel_state, chain_state, token_network_state):
+def test_resolve_routes(netting_channel_state, chain_state, token_network_state):
     route_metadata = factories.create(
         factories.RouteMetadataProperties(
             route=[
@@ -116,15 +119,15 @@ def test_resolve_route(netting_channel_state, chain_state, token_network_state):
         )
     )
 
-    route_state = resolve_route(
-        route_metadata=route_metadata,
+    route_states = resolve_routes(
+        routes=[route_metadata],
         token_network_address=token_network_state.address,
         chain_state=chain_state,
     )
 
     msg = "route resolved with wrong channel id"
     channel_id = netting_channel_state.canonical_identifier.channel_identifier
-    assert route_state.forward_channel_id == channel_id, msg
+    assert route_states[0].forward_channel_id == channel_id, msg
 
 
 def test_mediator_forwards_pruned_route():

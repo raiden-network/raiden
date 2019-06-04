@@ -447,11 +447,13 @@ def test_channelstate_send_lockedtransfer():
         payment_identifier,
         lock_expiration,
         lock_secrethash,
-        route_state=RouteState(
-            # pylint: disable=E1101
-            route=[channel_state.partner_state.address],
-            forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-        ),
+        route_states=[
+            RouteState(
+                # pylint: disable=E1101
+                route=[channel_state.partner_state.address],
+                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+            )
+        ],
     )
 
     our_model2 = our_model1._replace(
@@ -945,11 +947,13 @@ def test_channel_never_expires_lock_with_secret_onchain():
         payment_identifier=payment_identifier,
         expiration=lock_expiration,
         secrethash=lock_secrethash,
-        route_state=RouteState(
-            # pylint: disable=E1101
-            route=[channel_state.partner_state.address],
-            forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-        ),
+        route_states=[
+            RouteState(
+                # pylint: disable=E1101
+                route=[channel_state.partner_state.address],
+                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+            )
+        ],
     )
 
     # pylint: disable=E1101

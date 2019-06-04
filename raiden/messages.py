@@ -77,6 +77,7 @@ __all__ = (
     "LockedTransferBase",
     "LockExpired",
     "Message",
+    "Metadata",
     "Ping",
     "Pong",
     "Processed",
@@ -658,8 +659,7 @@ class LockedTransfer(LockedTransferBase):
     target: TargetAddress
     initiator: InitiatorAddress
     fee: int
-
-    route_metadata: RouteMetadata
+    metadata: Metadata
 
     def __post_init__(self):
         super().__post_init__()
@@ -675,7 +675,7 @@ class LockedTransfer(LockedTransferBase):
 
     @property
     def message_hash(self):
-        route_metadata_hash = (self.route_metadata and self.route_metadata.hash) or sha3(b"")
+        metadata_hash = (self.metadata and self.metadata.hash) or sha3(b"")
         packed = self.packed()
         klass = type(packed)
 
@@ -684,7 +684,7 @@ class LockedTransfer(LockedTransferBase):
 
         data = packed.data
         message_data = data[: -field.size_bytes]
-        message_hash = sha3(message_data + route_metadata_hash)
+        message_hash = sha3(message_data + metadata_hash)
 
         return message_hash
 
@@ -740,7 +740,9 @@ class LockedTransfer(LockedTransferBase):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
-            route_metadata=RouteMetadata(transfer.route_state.route[1:]),
+            metadata=Metadata(
+                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
+            ),
         )
 
 
@@ -1106,7 +1108,7 @@ def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransfer
         lock=lock,
         initiator=message.initiator,
         target=message.target,
-        route=message.route_metadata.routes,
+        routes=[r.route for r in message.metadata.routes],
     )
 
     return transfer_state

@@ -94,7 +94,7 @@ def maybe_try_new_route(
     payment_state: InitiatorPaymentState,
     initiator_state: InitiatorTransferState,
     transfer_description: TransferDescriptionWithSecretState,
-    available_routes: List[RouteState],
+    candidate_route_states: List[RouteState],
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -105,7 +105,7 @@ def maybe_try_new_route(
 
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            available_routes=available_routes,
+            candidate_route_states=candidate_route_states,
             transfer_description=transfer_description,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
@@ -202,7 +202,7 @@ def handle_init(
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            available_routes=state_change.routes,
+            candidate_route_states=state_change.routes,
             transfer_description=state_change.transfer,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
@@ -321,7 +321,7 @@ def handle_transferrefundcancelroute(
         payment_state=payment_state,
         initiator_state=initiator_state,
         transfer_description=transfer_description,
-        available_routes=state_change.routes,
+        candidate_route_states=state_change.routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,

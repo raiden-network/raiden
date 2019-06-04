@@ -42,7 +42,6 @@ def test_invalid_instantiation_locked_transfer_state():
 
 def test_invalid_instantiation_mediation_pair_state():
     valid = MediationPairState(
-        route=RouteState([], -1),
         payer_transfer=factories.create(factories.LockedTransferSignedStateProperties()),
         payee_address=factories.make_address(),
         payee_transfer=factories.create(factories.LockedTransferUnsignedStateProperties()),
@@ -92,7 +91,7 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         ActionInitMediator(
             from_transfer=wrong_type_transfer,
             from_hop=hop_state,
-            route_state=route_state,
+            route_states=[route_state],
             **additional_args,
         )
 
@@ -100,7 +99,7 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         ActionInitMediator(
             from_transfer=valid_transfer,
             from_hop=not_a_route_state,
-            route_state=route_state,
+            route_states=[route_state],
             **additional_args,
         )
 
