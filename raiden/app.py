@@ -76,7 +76,6 @@ class App:  # pylint: disable=too-few-public-methods
         message_handler,
         user_deposit: UserDeposit = None,
     ):
-        default_msc_address = default_msc_address
         raiden = RaidenService(
             chain=chain,
             query_start_block=query_start_block,
