@@ -318,3 +318,26 @@ def test_total_token_network_channels():
         )
         == number_of_channels
     )
+
+
+def test_get_token_network_registry_by_token_network_address():
+    test_state = factories.make_chain_state(number_of_channels=1)
+    assert (
+        views.get_token_network_registry_by_token_network_address(
+            chain_state=test_state.chain_state, token_network_address=factories.make_address()
+        )
+        is None
+    )
+    assert (
+        views.get_token_network_registry_by_token_network_address(
+            chain_state=test_state.chain_state, token_network_address=test_state.token_address
+        )
+        is None
+    )
+    assert (
+        views.get_token_network_registry_by_token_network_address(
+            chain_state=test_state.chain_state,
+            token_network_address=test_state.token_network_address,
+        ).address
+        == test_state.payment_network_address
+    )
