@@ -675,16 +675,17 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     netting_channel_state = create(
         NettingChannelStateProperties(canonical_identifier=balance_proof.canonical_identifier)
     )
+
     route_state = RouteState(
         # pylint: disable=E1101
-        route=[netting_channel_state.partner_state.address],
+        route=[netting_channel_state.partner_state.address, transfer.target],
         forward_channel_id=netting_channel_state.canonical_identifier.channel_identifier,
     )
 
     return LockedTransferUnsignedState(
         balance_proof=balance_proof,
         lock=lock,
-        route_state=route_state,
+        route_states=[route_state],
         **transfer.partial_dict("initiator", "target", "payment_identifier", "token"),
     )
 
@@ -745,12 +746,12 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     route = params.pop("route")
     # pylint: disable=E1101
     route_metadata = [transfer.recipient, transfer.target] if route == EMPTY else route
-    params["route_metadata"] = RouteMetadata(route=route_metadata)
+    params["metadata"] = Metadata(routes=[RouteMetadata(route=route_metadata)])
 
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
 
-    assert locked_transfer.route_metadata
+    assert locked_transfer.metadata
     assert locked_transfer.sender == sender
 
     balance_proof = balanceproof_from_envelope(locked_transfer)
@@ -769,20 +770,20 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         lock=lock,
         initiator=locked_transfer.initiator,
         target=locked_transfer.target,
-        route=locked_transfer.route_metadata.route,
+        routes=[rm.route for rm in locked_transfer.metadata.routes],
     )
 
 
 @dataclass(frozen=True)
 class LockedTransferProperties(LockedTransferSignedStateProperties):
     fee: FeeAmount = EMPTY
-    route_metadata: RouteMetadata = EMPTY
+    metadata: Metadata = EMPTY
     TARGET_TYPE = LockedTransfer
 
 
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
     **replace(LockedTransferSignedStateProperties.DEFAULTS, locksroot=GENERATE).__dict__,
-    route_metadata=GENERATE,
+    metadata=GENERATE,
     fee=0,
 )
 
@@ -801,8 +802,8 @@ def prepare_locked_transfer(properties, defaults):
     params["signature"] = EMPTY_SIGNATURE
 
     params.pop("route")
-    if params["route_metadata"] == GENERATE:
-        params["route_metadata"] = create(RouteMetadataProperties())
+    if params["metadata"] == GENERATE:
+        params["metadata"] = create(MetadataProperties())
 
     return params, LocalSigner(params.pop("pkey")), params.pop("sender")
 
@@ -976,10 +977,13 @@ class ChannelSet:
         return [self.get_hop(index) for index in (args or range(len(self.channels)))]
 
     def get_route(self, channel_index: int) -> RouteState:
+        """ Creates an *outbound* RouteState, based on channel our/partner addresses. """
+
         channel = self.channels[channel_index]
+        route = [channel.our_state.address, channel.partner_state.address]
+
         return RouteState(
-            route=[channel.our_state.address, channel.partner_state.address],
-            forward_channel_id=channel.canonical_identifier.channel_identifier,
+            route=route, forward_channel_id=channel.canonical_identifier.channel_identifier
         )
 
     def get_routes(self, *args) -> List[RouteState]:
@@ -1048,13 +1052,14 @@ def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
 
-    route_state = RouteState(
-        route=transfer.route, forward_channel_id=channels.get_hop(1).channel_identifier
-    )
+    route_states = [
+        RouteState(route=route, forward_channel_id=channels.get_hop(1).channel_identifier)
+        for route in transfer.routes
+    ]
 
     return ActionInitMediator(
         from_hop=channels.get_hop(0),
-        route_state=route_state,
+        route_states=route_states,
         from_transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,
@@ -1124,6 +1129,13 @@ def make_transfers_pair(
         assert is_valid, msg
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        route_states = [
+            RouteState(
+                route=channels[payer_index:],
+                forward_channel_id=channels[payee_index].canonical_identifier.channel_identifier,
+            )
+        ]
+
         lockedtransfer_event = channel.send_lockedtransfer(
             channel_state=channels[payee_index],
             initiator=UNIT_TRANSFER_INITIATOR,
@@ -1133,10 +1145,7 @@ def make_transfers_pair(
             payment_identifier=UNIT_TRANSFER_IDENTIFIER,
             expiration=lock_expiration,
             secrethash=UNIT_SECRETHASH,
-            route_state=RouteState(
-                route=channels[payer_index:],
-                forward_channel_id=channels[payee_index].canonical_identifier.channel_identifier,
-            ),
+            route_states=route_states,
         )
         assert lockedtransfer_event
 
@@ -1149,7 +1158,6 @@ def make_transfers_pair(
         sent_transfer = lockedtransfer_event.transfer
 
         pair = MediationPairState(
-            route=RouteState([], 0),
             payer_transfer=received_transfer,
             payee_address=lockedtransfer_event.recipient,
             payee_transfer=sent_transfer,

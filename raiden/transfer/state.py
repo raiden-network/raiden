@@ -182,11 +182,11 @@ class RouteState(State):
 
     # TODO: Add timestamp
     route: List[Address]
-    forward_channel_id: ChannelID
+    forward_channel_id: Optional[ChannelID] = None
 
     @property
     def next_hop_address(self) -> Address:
-        assert len(self.route) >= 2
+        assert len(self.route) >= 1
         return self.route[1]
 
 

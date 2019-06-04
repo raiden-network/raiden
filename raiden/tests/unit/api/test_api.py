@@ -103,7 +103,6 @@ def test_mediator_task_view():
     # pylint: disable=E1101
     transfer_state1.transfers_pair.append(
         MediationPairState(
-            route=route_state,
             payer_transfer=payer_transfer,
             payee_transfer=payee_transfer,
             payee_address=payee_transfer.target,

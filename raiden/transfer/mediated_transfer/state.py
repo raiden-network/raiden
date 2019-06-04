@@ -58,7 +58,7 @@ class LockedTransferUnsignedState(LockedTransferState):
     """
 
     balance_proof: BalanceProofUnsignedState
-    route_state: RouteState
+    route_states: List[RouteState]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -80,7 +80,7 @@ class LockedTransferSignedState(LockedTransferState):
 
     message_identifier: MessageID
     balance_proof: BalanceProofSignedState = field(repr=False)
-    route: List[Address]
+    routes: List[List[Address]]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -156,11 +156,10 @@ class InitiatorPaymentState(State):
 class MediationPairState(State):
     """ State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
-    the token expenses. This state keeps track of the routes and transfer for
+    the token expenses. This state keeps track of transfers for
     the payer and payee, and the current state of the payment.
     """
 
-    route: RouteState
     payer_transfer: LockedTransferSignedState
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState
