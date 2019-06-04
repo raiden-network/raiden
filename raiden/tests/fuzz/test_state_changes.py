@@ -537,7 +537,7 @@ class MediatorMixin:
         target_channel = self.address_to_channel[transfer.target]
 
         return ActionInitMediator(
-            route_state=factories.make_route_from_channel(target_channel),
+            route_states=[factories.make_route_from_channel(target_channel)],
             from_hop=factories.make_hop_to_channel(initiator_channel),
             from_transfer=transfer,
             balance_proof=transfer.balance_proof,
