@@ -41,6 +41,7 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     TokenAmount,
     TokenNetworkAddress,
+    typecheck,
 )
 
 
@@ -51,8 +52,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
     balance_proof: BalanceProofSignedState
 
     def __post_init__(self):
-        if not isinstance(self.balance_proof, BalanceProofSignedState):
-            raise ValueError("balance_proof must be an instance of BalanceProofSignedState")
+        typecheck(self.balance_proof, BalanceProofSignedState)
 
 
 @dataclass
@@ -67,8 +67,7 @@ class Block(StateChange):
     block_hash: BlockHash
 
     def __post_init__(self) -> None:
-        if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError("block_number must be of type block_number")
+        typecheck(self.block_number, T_BlockNumber)
 
 
 @dataclass
@@ -161,14 +160,9 @@ class ActionInitChain(StateChange):
     chain_id: ChainID
 
     def __post_init__(self) -> None:
-        if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError("block_number must be of type BlockNumber")
-
-        if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of type BlockHash")
-
-        if not isinstance(self.chain_id, int):
-            raise ValueError("chain_id must be int")
+        typecheck(self.block_number, T_BlockNumber)
+        typecheck(self.block_hash, T_BlockHash)
+        typecheck(self.chain_id, int)
 
 
 @dataclass
@@ -181,8 +175,7 @@ class ActionNewTokenNetwork(StateChange):
     token_network: TokenNetworkState
 
     def __post_init__(self) -> None:
-        if not isinstance(self.token_network, TokenNetworkState):
-            raise ValueError("token_network must be a TokenNetworkState instance.")
+        typecheck(self.token_network, TokenNetworkState)
 
 
 @dataclass
@@ -233,8 +226,7 @@ class ActionChangeNodeNetworkState(StateChange):
     network_state: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.node_address, T_Address):
-            raise ValueError("node_address must be an address instance")
+        typecheck(self.node_address, T_Address)
 
 
 @dataclass
@@ -247,8 +239,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.payment_network, PaymentNetworkState):
-            raise ValueError("payment_network must be a PaymentNetworkState instance")
+        typecheck(self.payment_network, PaymentNetworkState)
 
 
 @dataclass
@@ -260,8 +251,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.token_network, TokenNetworkState):
-            raise ValueError("token_network must be a TokenNetworkState instance")
+        typecheck(self.token_network, TokenNetworkState)
 
 
 @dataclass
@@ -274,12 +264,9 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.secret_registry_address, T_SecretRegistryAddress):
-            raise ValueError("secret_registry_address must be of type SecretRegistryAddress")
-        if not isinstance(self.secrethash, T_SecretHash):
-            raise ValueError("secrethash must be of type SecretHash")
-        if not isinstance(self.secret, T_Secret):
-            raise ValueError("secret must be of type Secret")
+        typecheck(self.secret_registry_address, T_SecretRegistryAddress)
+        typecheck(self.secrethash, T_SecretHash)
+        typecheck(self.secret, T_Secret)
 
 
 @dataclass
@@ -303,11 +290,8 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.receiver, T_Address):
-            raise ValueError("receiver must be of type address")
-
-        if not isinstance(self.sender, T_Address):
-            raise ValueError("sender must be of type address")
+        typecheck(self.receiver, T_Address)
+        typecheck(self.sender, T_Address)
 
     @property
     def token_network_address(self) -> TokenNetworkAddress:
@@ -324,11 +308,8 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.participant1, T_Address):
-            raise ValueError("participant1 must be of type address")
-
-        if not isinstance(self.participant2, T_Address):
-            raise ValueError("participant2 must be of type address")
+        typecheck(self.participant1, T_Address)
+        typecheck(self.participant2, T_Address)
 
     @property
     def channel_identifier(self) -> ChannelID:

@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    typecheck,
 )
 
 
@@ -33,8 +34,7 @@ class ActionInitInitiator(StateChange):
     routes: List[RouteState]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.transfer, TransferDescriptionWithSecretState):
-            raise ValueError("transfer must be an TransferDescriptionWithSecretState instance.")
+        typecheck(self.transfer, TransferDescriptionWithSecretState)
 
 
 @dataclass
@@ -53,11 +53,8 @@ class ActionInitMediator(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.from_hop, HopState):
-            raise ValueError("from_route must be a HopState instance")
-
-        if not isinstance(self.from_transfer, LockedTransferSignedState):
-            raise ValueError("from_transfer must be a LockedTransferSignedState instance")
+        typecheck(self.from_hop, HopState)
+        typecheck(self.from_transfer, LockedTransferSignedState)
 
 
 @dataclass
@@ -74,12 +71,8 @@ class ActionInitTarget(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-
-        if not isinstance(self.from_hop, HopState):
-            raise ValueError("route must be a RouteState instance")
-
-        if not isinstance(self.transfer, LockedTransferSignedState):
-            raise ValueError("transfer must be a LockedTransferSignedState instance")
+        typecheck(self.from_hop, HopState)
+        typecheck(self.transfer, LockedTransferSignedState)
 
 
 @dataclass
@@ -125,8 +118,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.transfer, LockedTransferSignedState):
-            raise ValueError("transfer must be an instance of LockedTransferSignedState")
+        typecheck(self.transfer, LockedTransferSignedState)
 
         self.secrethash = SecretHash(sha256(self.secret).digest())
 
@@ -140,5 +132,4 @@ class ReceiveTransferRefund(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if not isinstance(self.transfer, LockedTransferSignedState):
-            raise ValueError("transfer must be an instance of LockedTransferSignedState")
+        typecheck(self.transfer, LockedTransferSignedState)

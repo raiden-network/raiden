@@ -71,6 +71,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     Tuple,
     cast,
+    typecheck,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -420,7 +421,7 @@ class TokenNetwork:
                 participant2=participant2,
                 block_identifier=block_identifier,
             )
-        elif not isinstance(channel_identifier, T_ChannelID):
+        elif not isinstance(channel_identifier, T_ChannelID):  # pragma: no unittest
             raise InvalidChannelID("channel_identifier must be of type T_ChannelID")
         elif channel_identifier <= 0 or channel_identifier > UINT256_MAX:
             raise InvalidChannelID(
@@ -464,7 +465,7 @@ class TokenNetwork:
                 participant2=participant2,
                 block_identifier=block_identifier,
             )
-        elif not isinstance(channel_identifier, T_ChannelID):
+        elif not isinstance(channel_identifier, T_ChannelID):  # pragma: no unittest
             raise InvalidChannelID("channel_identifier must be of type T_ChannelID")
         elif channel_identifier <= 0 or channel_identifier > UINT256_MAX:
             raise InvalidChannelID(
@@ -703,8 +704,7 @@ class TokenNetwork:
             RuntimeError: If the token address is empty.
             ValueError: If an argument is of the invalid type.
         """
-        if not isinstance(total_deposit, int):
-            raise ValueError("total_deposit needs to be an integer number.")
+        typecheck(total_deposit, int)
 
         with self.channel_operations_lock[partner], self.deposit_lock:
             previous_total_deposit = self._detail_participant(
@@ -1840,8 +1840,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
-        if not isinstance(channel_data.state, T_ChannelState):
-            raise ValueError("channel state must be of type ChannelState")
+        typecheck(channel_data.state, T_ChannelState)
 
         return channel_data.state
 

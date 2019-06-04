@@ -1,3 +1,5 @@
+from raiden.utils.typing import typecheck
+
 __all__ = ("integer",)
 
 
@@ -10,8 +12,7 @@ class integer:  # pylint: disable=invalid-name
 
     def validate(self, value: int):
         """ Validates the integer is in the value range. """
-        if not isinstance(value, int):
-            raise ValueError("value is not an integer")
+        typecheck(value, int)
 
         if self.minimum > value or self.maximum < value:
             msg = ("{} is outside the valide range [{},{}]").format(

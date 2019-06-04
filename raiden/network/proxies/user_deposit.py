@@ -21,6 +21,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     Tuple,
+    typecheck,
 )
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT, GAS_REQUIRED_FOR_UDC_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
@@ -158,8 +159,7 @@ class UserDeposit:
         token: Token,
         block_identifier: BlockSpecification,
     ) -> Tuple[TokenAmount, Dict]:
-        if not isinstance(total_deposit, int):
-            raise ValueError("total_deposit needs to be an integer number.")
+        typecheck(total_deposit, int)
 
         previous_total_deposit = self.get_total_deposit(
             address=beneficiary, block_identifier=block_identifier

@@ -61,6 +61,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     Union,
+    typecheck,
 )
 
 if TYPE_CHECKING:
@@ -172,8 +173,7 @@ class HopState(State):
     channel_identifier: ChannelID
 
     def __post_init__(self) -> None:
-        if not isinstance(self.node_address, T_Address):
-            raise ValueError("node_address must be an address instance")
+        typecheck(self.node_address, T_Address)
 
 
 @dataclass
@@ -201,14 +201,9 @@ class HashTimeLockState(State):
     lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.amount, T_PaymentWithFeeAmount):
-            raise ValueError("amount must be a PaymentWithFeeAmount instance")
-
-        if not isinstance(self.expiration, T_BlockNumber):
-            raise ValueError("expiration must be a BlockNumber instance")
-
-        if not isinstance(self.secrethash, T_Secret):
-            raise ValueError("secrethash must be a Secret instance")
+        typecheck(self.amount, T_PaymentWithFeeAmount)
+        typecheck(self.expiration, T_BlockNumber)
+        typecheck(self.secrethash, T_Secret)
 
         packed = messages.Lock(buffer_for(messages.Lock))
         # pylint: disable=assigning-non-slot
@@ -234,11 +229,8 @@ class UnlockPartialProofState(State):
     lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError("lock must be a HashTimeLockState instance")
-
-        if not isinstance(self.secret, T_Secret):
-            raise ValueError("secret must be a secret instance")
+        typecheck(self.lock, HashTimeLockState)
+        typecheck(self.secret, T_Secret)
 
         self.amount = self.lock.amount
         self.expiration = self.lock.expiration
@@ -291,14 +283,9 @@ class TransactionChannelNewBalance(State):
     deposit_block_number: BlockNumber
 
     def __post_init__(self) -> None:
-        if not isinstance(self.participant_address, T_Address):
-            raise ValueError("participant_address must be of type address")
-
-        if not isinstance(self.contract_balance, T_TokenAmount):
-            raise ValueError("contract_balance must be of type token_amount")
-
-        if not isinstance(self.deposit_block_number, T_BlockNumber):
-            raise ValueError("deposit_block_number must be of type block_number")
+        typecheck(self.participant_address, T_Address)
+        typecheck(self.contract_balance, T_TokenAmount)
+        typecheck(self.deposit_block_number, T_BlockNumber)
 
 
 @dataclass(order=True)
@@ -335,11 +322,8 @@ class NettingChannelEndState(State):
     onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
 
     def __post_init__(self) -> None:
-        if not isinstance(self.address, T_Address):
-            raise ValueError("address must be an address instance")
-
-        if not isinstance(self.contract_balance, T_TokenAmount):
-            raise ValueError("balance must be a token_amount isinstance")
+        typecheck(self.address, T_Address)
+        typecheck(self.contract_balance, T_TokenAmount)
 
 
 @dataclass
@@ -364,22 +348,21 @@ class NettingChannelState(State):
         if self.reveal_timeout >= self.settle_timeout:
             raise ValueError("reveal_timeout must be smaller than settle_timeout")
 
-        if not isinstance(self.reveal_timeout, int) or self.reveal_timeout <= 0:
+        typecheck(self.reveal_timeout, int)
+        typecheck(self.settle_timeout, int)
+        typecheck(self.open_transaction, TransactionExecutionStatus)
+        typecheck(self.canonical_identifier.channel_identifier, T_ChannelID)
+
+        if self.reveal_timeout <= 0:
             raise ValueError("reveal_timeout must be a positive integer")
 
-        if not isinstance(self.settle_timeout, int) or self.settle_timeout <= 0:
+        if self.settle_timeout <= 0:
             raise ValueError("settle_timeout must be a positive integer")
-
-        if not isinstance(self.open_transaction, TransactionExecutionStatus):
-            raise ValueError("open_transaction must be a TransactionExecutionStatus instance")
 
         if self.open_transaction.result != TransactionExecutionStatus.SUCCESS:
             raise ValueError(
                 "Cannot create a NettingChannelState with a non successfull open_transaction"
             )
-
-        if not isinstance(self.canonical_identifier.channel_identifier, T_ChannelID):
-            raise ValueError("channel identifier must be of type T_ChannelID")
 
         if (
             self.canonical_identifier.channel_identifier < 0
@@ -439,11 +422,8 @@ class TokenNetworkState(State):
     )
 
     def __post_init__(self) -> None:
-        if not isinstance(self.address, T_Address):
-            raise ValueError("address must be an address instance")
-
-        if not isinstance(self.token_address, T_Address):
-            raise ValueError("token_address must be an address instance")
+        typecheck(self.address, T_Address)
+        typecheck(self.token_address, T_Address)
 
         self.partneraddresses_to_channelidentifiers = defaultdict(
             list, self.partneraddresses_to_channelidentifiers
@@ -464,8 +444,7 @@ class PaymentNetworkState(State):
     )
 
     def __post_init__(self) -> None:
-        if not isinstance(self.address, T_Address):
-            raise ValueError("address must be an address instance")
+        typecheck(self.address, T_Address)
 
         if not self.tokennetworkaddresses_to_tokennetworks:
             self.tokennetworkaddresses_to_tokennetworks: Dict[
@@ -507,14 +486,9 @@ class ChainState(State):
     ] = field(repr=False, default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError("block_number must be of BlockNumber type")
-
-        if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of BlockHash type")
-
-        if not isinstance(self.chain_id, T_ChainID):
-            raise ValueError("chain_id must be of ChainID type")
+        typecheck(self.block_number, T_BlockNumber)
+        typecheck(self.block_hash, T_BlockHash)
+        typecheck(self.chain_id, T_ChainID)
 
     def __repr__(self):
         return (
