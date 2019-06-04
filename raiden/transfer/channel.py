@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
-from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
 
@@ -55,6 +54,7 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     PendingLocksState,
+    RouteState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     TransactionOrder,
@@ -89,7 +89,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
-    Dict,
     EncodedData,
     InitiatorAddress,
     List,
@@ -113,10 +112,6 @@ from raiden.utils.typing import (
     Union,
     WithdrawAmount,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.transfer.state import RouteState  # noqa: F401
 
 # This should be changed to `Union[str, PendingLocksState]`
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
@@ -149,38 +144,18 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
     return BlockNumber(lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
 
-def next_channel_from_routes(
-    available_routes: List["RouteState"],
-    channelidentifiers_to_channels: Dict,
-    transfer_amount: PaymentWithFeeAmount,
-    lock_timeout: BlockTimeout = None,
-) -> Optional[Tuple[NettingChannelState, "RouteState"]]:
-    """ Returns the first route that may be used to mediated the transfer.
-    The routing service can race with local changes, so the recommended routes
-    must be validated.
-    Args:
-        available_routes: Current available routes that may be used, it's
-            assumed that the available_routes list is ordered from best to
-            worst.
-        channelidentifiers_to_channels: Mapping from channel identifier
-            to NettingChannelState.
-        transfer_amount: The amount of tokens that will be transferred
-            through the given route.
-        lock_timeout: Number of blocks until the lock expires, used to filter
-            out channels that have a smaller settlement window.
-    Returns:
-        The next route.
-    """
-    for route in available_routes:
-        channel_state = channelidentifiers_to_channels.get(route.forward_channel_id)
+def prune_route_table(
+    route_state_table: List[RouteState], selected_route: RouteState
+) -> List[RouteState]:
+    pruned_route_table = [rs for rs in route_state_table if rs.route != selected_route.route]
 
-        if not channel_state:
-            continue
-
-        if is_channel_usable(channel_state, transfer_amount, lock_timeout):
-            return channel_state, route
-
-    return None
+    pruned_route_table.insert(
+        0,
+        RouteState(
+            route=selected_route.route[1:], forward_channel_id=selected_route.forward_channel_id
+        ),
+    )
+    return pruned_route_table
 
 
 def is_channel_usable(
@@ -1218,7 +1193,7 @@ def create_sendlockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-    route_state: "RouteState",
+    route_states: List[RouteState],
 ) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -1268,7 +1243,7 @@ def create_sendlockedtransfer(
         lock=lock,
         initiator=initiator,
         target=target,
-        route_state=route_state,
+        route_states=route_states,
     )
 
     lockedtransfer = SendLockedTransfer(
@@ -1347,7 +1322,7 @@ def send_lockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-    route_state: "RouteState",
+    route_states: List[RouteState],
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state,
@@ -1358,7 +1333,7 @@ def send_lockedtransfer(
         payment_identifier,
         expiration,
         secrethash,
-        route_state=route_state,
+        route_states=route_states,
     )
 
     transfer = send_locked_transfer_event.transfer
@@ -1380,7 +1355,7 @@ def send_refundtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-    route_state: "RouteState",
+    route_state: RouteState,
 ) -> SendRefundTransfer:
     msg = "Refunds are only valid for *known and pending* transfers"
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
@@ -1397,7 +1372,7 @@ def send_refundtransfer(
         payment_identifier=payment_identifier,
         expiration=expiration,
         secrethash=secrethash,
-        route_state=route_state,
+        route_states=[route_state],
     )
 
     mediated_transfer = send_mediated_transfer.transfer

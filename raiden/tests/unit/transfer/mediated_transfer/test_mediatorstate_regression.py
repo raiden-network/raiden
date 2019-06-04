@@ -316,7 +316,7 @@ def test_regression_mediator_task_no_routes():
 
     init_state_change = ActionInitMediator(
         from_hop=channels.get_hop(0),
-        route_state=channels.get_routes()[0],
+        route_states=channels.get_routes(),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -406,7 +406,7 @@ def test_regression_mediator_not_update_payer_state_twice():
 
     init_state_change = ActionInitMediator(
         from_hop=payer_route,
-        route_state=pair.get_route(1),
+        route_states=pair.get_routes(),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
