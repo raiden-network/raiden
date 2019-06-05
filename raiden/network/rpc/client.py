@@ -45,7 +45,7 @@ from raiden.utils.typing import (
     TransactionHash,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpecification) -> None:

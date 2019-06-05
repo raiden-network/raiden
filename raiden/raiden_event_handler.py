@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 UNEVENTFUL_EVENTS = (
     EventPaymentReceivedSuccess,
     EventUnlockSuccess,

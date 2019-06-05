@@ -17,7 +17,7 @@ from raiden.utils.typing import (
     Union,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def restore_to_state_change(

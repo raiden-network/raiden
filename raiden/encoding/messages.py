@@ -22,7 +22,6 @@ LOCKEXPIRED = 13
 TODEVICE = 14
 
 
-# pylint: disable=invalid-name
 log = structlog.get_logger(__name__)
 
 

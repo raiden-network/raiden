@@ -10,7 +10,7 @@ from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optiona
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 class ServiceRegistry:

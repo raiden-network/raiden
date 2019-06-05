@@ -85,7 +85,7 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import ContractManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:

@@ -26,7 +26,7 @@ from raiden.utils.typing import (
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 ALARM_TASK_ERROR_MSG = "Waiting relies on alarm task polling to update the node's internal state."
 TRANSPORT_ERROR_MSG = "Waiting for protocol messags requires a running transport."

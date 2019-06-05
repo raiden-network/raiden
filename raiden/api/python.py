@@ -64,7 +64,7 @@ from raiden.utils.typing import (
     Tuple,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 EVENTS_PAYMENT_HISTORY_RELATED = (
     EventPaymentSentSuccess,

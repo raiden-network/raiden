@@ -12,7 +12,7 @@ from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddre
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 # Determined by safe_gas_limit(estimateGas(approve)) on 17/01/19 with geth 1.8.20
 GAS_REQUIRED_FOR_APPROVE = 58792

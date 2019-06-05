@@ -25,7 +25,7 @@ from raiden.utils import pex, typing
 from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 class App:  # pylint: disable=too-few-public-methods
