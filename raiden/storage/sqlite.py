@@ -67,17 +67,17 @@ class SnapshotRecord(NamedTuple):
     data: Any
 
 
-def assert_sqlite_version() -> bool:
+def assert_sqlite_version() -> bool:  # pragma: no unittest
     if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
         return False
     return True
 
 
 def _sanitize_limit_and_offset(limit: int = None, offset: int = None) -> Tuple[int, int]:
-    if limit is not None and (not isinstance(limit, int) or limit < 0):
+    if limit is not None and (not isinstance(limit, int) or limit < 0):  # pragma: no unittest
         raise InvalidNumberInput("limit must be a positive integer")
 
-    if offset is not None and (not isinstance(offset, int) or offset < 0):
+    if offset is not None and (not isinstance(offset, int) or offset < 0):  # pragma: no unittest
         raise InvalidNumberInput("offset must be a positive integer")
 
     limit = -1 if limit is None else limit
@@ -304,7 +304,9 @@ class SQLiteStorage:
     ) -> Optional[SnapshotRecord]:
         """ Get snapshots earlier than state_change with provided ID. """
 
-        if not (state_change_identifier == "latest" or isinstance(state_change_identifier, int)):
+        if not (
+            state_change_identifier == "latest" or isinstance(state_change_identifier, int)
+        ):  # pragma: no unittest
             raise ValueError("from_identifier must be an integer or 'latest'")
 
         cursor = self.conn.cursor()
@@ -480,7 +482,9 @@ class SQLiteStorage:
         if not (from_identifier == "latest" or isinstance(from_identifier, T_StateChangeID)):
             raise ValueError("from_identifier must be an integer or 'latest'")
 
-        if not (to_identifier == "latest" or isinstance(to_identifier, T_StateChangeID)):
+        if not (
+            to_identifier == "latest" or isinstance(to_identifier, T_StateChangeID)
+        ):  # pragma: no unittest
             raise ValueError("to_identifier must be an integer or 'latest'")
 
         cursor = self.conn.cursor()
@@ -651,7 +655,7 @@ class SerializedSQLiteStorage:
         self.database = SQLiteStorage(database_path)
         self.serializer = serializer
 
-    def update_version(self) -> None:
+    def update_version(self) -> None:  # pragma: no unittest
         self.database.update_version()
 
     def count_state_changes(self) -> int:
