@@ -21,7 +21,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def get_best_routes(

@@ -18,7 +18,7 @@ from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.typing import Address, Any, ChainID, Dict, List, NamedTuple, Port, PrivateKey
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 Command = List[str]

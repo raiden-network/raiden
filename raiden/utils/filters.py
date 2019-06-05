@@ -20,7 +20,7 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 # The maximum block range to query in a single filter query
 # Helps against timeout errors that occur if you query a filter for

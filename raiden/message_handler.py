@@ -29,7 +29,7 @@ from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, Rec
 from raiden.utils import pex, random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 class MessageHandler:

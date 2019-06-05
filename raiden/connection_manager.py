@@ -23,7 +23,7 @@ from raiden.transfer import views
 from raiden.utils import pex, typing
 from raiden.utils.typing import Address
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 RECOVERABLE_ERRORS = (
     DepositMismatch,
     DepositOverLimit,

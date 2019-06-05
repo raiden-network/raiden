@@ -27,7 +27,7 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Tuple
 
 REMOVE_CALLBACK = object()
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def _do_check_version(current_version: Tuple[str, ...]):

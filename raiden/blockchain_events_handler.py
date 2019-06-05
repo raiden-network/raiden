@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # noqa: F401
 
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def handle_tokennetwork_new(raiden: "RaidenService", event: Event):
