@@ -26,7 +26,6 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
 )
-from raiden.tests.utils.transport import ParsedURL
 from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec
 from raiden.utils.cli import (
@@ -523,7 +522,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         setup_matrix_for_smoketest,
         setup_testchain_for_smoketest,
     )
-    from raiden.tests.utils.transport import make_requests_insecure
+    from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
     from raiden.utils.debugging import enable_gevent_monitoring_signal
 
     step_count = 8
