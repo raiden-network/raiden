@@ -5,6 +5,8 @@ from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from raiden.messages import Lock
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
@@ -215,8 +217,12 @@ def test_get_state_change_with_balance_proof():
 
     timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
 
+    assert storage.count_state_changes() == 0
+
     for state_change, _ in statechanges_balanceproofs:
         storage.write_state_change(state_change, timestamp)
+
+    assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
     # Make sure state changes are returned in the correct order in which they were stored
     stored_statechanges = storage.get_statechanges_by_identifier(1, "latest")
@@ -340,16 +346,20 @@ def test_log_run():
     assert run[1] == "1.2.3"
 
 
-def test_batch_query_state_changes():
-    storage = SQLiteStorage(":memory:")
+@pytest.fixture
+def storage():
     state_changes_file = Path(__file__).parent / "test_data/db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
-    for state_change_record in state_changes_data:
-        storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]),
-            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
-        )
+    with SQLiteStorage(":memory:") as storage:
+        for state_change_record in state_changes_data:
+            storage.write_state_change(
+                state_change=json.dumps(state_change_record[1]),
+                log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
+            )
+        yield storage
 
+
+def test_batch_query_state_changes(storage):
     # Test that querying the state changes in batches of 10 works
     state_changes_num = 87
     state_changes = []
@@ -386,16 +396,7 @@ def test_batch_query_state_changes():
     assert len(state_changes) == 6
 
 
-def test_batch_query_event_records():
-    storage = SQLiteStorage(":memory:")
-    state_changes_file = Path(__file__).parent / "test_data/db_statechanges.json"
-    state_changes_data = json.loads(state_changes_file.read_text())
-    for state_change_record in state_changes_data:
-        storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]),
-            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
-        )
-
+def test_batch_query_event_records(storage):
     events_file = Path(__file__).parent / "test_data/db_events.json"
     events_data = json.loads(events_file.read_text())
     for event in events_data:
@@ -435,3 +436,29 @@ def test_batch_query_event_records():
     for events_batch in events_batch_query:
         events.extend(events_batch)
     assert len(events) == 2
+
+
+def test_update_event_get_event():
+    storage = SQLiteStorage(":memory:")
+    state_changes_file = Path(__file__).parent / "test_data/db_statechanges.json"
+    state_changes_data = json.loads(state_changes_file.read_text())
+    for state_change_record in state_changes_data:
+        storage.write_state_change(
+            state_change=json.dumps(state_change_record[1]),
+            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
+        )
+
+
+def test_storage_get_and_update(storage):
+    other_storage = SQLiteStorage(":memory:")
+    data = storage.get_events()
+    event_data = [(item, number) for number, item in enumerate(data)]
+    other_storage.update_events(event_data)
+    assert other_storage
+
+
+def test_storage_close():
+    storage = SerializedSQLiteStorage(":memory:", JSONSerializer)
+    storage.close()
+    with pytest.raises(RuntimeError):  # attempt to close an already closed database
+        storage.close()
