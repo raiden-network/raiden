@@ -276,7 +276,7 @@ jobs:
       - restore_cache:
           keys:
             - lint-cache-v2-{{ checksum "requirements-lint.txt" }}-{{ .Branch }}-
-            - lint-cache-v2-{{ checksum "requirements-lint.txt" }}-master-
+            - lint-cache-v2-{{ checksum "requirements-lint.txt" }}-develop-
       - run:
           name: Run Lint
           command: make lint
@@ -1022,4 +1022,4 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - develop
