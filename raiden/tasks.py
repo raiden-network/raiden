@@ -54,7 +54,7 @@ def _do_check_version(current_version: Tuple[str, ...]):
     return True
 
 
-def check_version(current_version: str):
+def check_version(current_version: str):  # pragma: no unittest
     """ Check periodically for a new release """
     app_version = parse_version(current_version)
     while True:
@@ -95,7 +95,7 @@ def check_gas_reserve(raiden):  # pragma: no unittest
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
+def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):  # pragma: no unittest
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
         rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
