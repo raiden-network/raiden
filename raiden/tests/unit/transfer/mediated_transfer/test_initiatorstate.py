@@ -1609,7 +1609,7 @@ def test_initiator_init():
     with patch(
         "raiden.routing.get_best_routes", return_value=(route_states, feedback_token)
     ) as best_routes:
-        assert len(service.route_to_feeback_token) == 0
+        assert len(service.route_to_feedback_token) == 0
 
         state = initiator_init(
             raiden=service,
@@ -1623,7 +1623,7 @@ def test_initiator_init():
         )
 
         assert best_routes.called
-        assert len(service.route_to_feeback_token) == 1
-        assert service.route_to_feeback_token[tuple(route_states[0].route)] == feedback_token
+        assert len(service.route_to_feedback_token) == 1
+        assert service.route_to_feedback_token[tuple(route_states[0].route)] == feedback_token
 
         assert state.routes == route_states

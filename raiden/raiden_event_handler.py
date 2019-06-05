@@ -585,7 +585,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
 
     @staticmethod
     def handle_routefailed(raiden: "RaidenService", route_failed_event: EventRouteFailed) -> None:
-        feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
+        feedback_token = raiden.route_to_feedback_token.get(tuple(route_failed_event.route))
 
         if feedback_token:
             log.debug(
@@ -606,7 +606,9 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
     def handle_paymentsentsuccess(
         raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
     ) -> None:
-        feedback_token = raiden.route_to_feeback_token.get(tuple(payment_sent_success_event.route))
+        feedback_token = raiden.route_to_feedback_token.get(
+            tuple(payment_sent_success_event.route)
+        )
 
         if feedback_token:
             log.debug(
