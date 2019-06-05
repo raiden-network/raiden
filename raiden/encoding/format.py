@@ -61,7 +61,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     if any(field.size_bytes < 0 for field in fields):
         raise ValueError("negative size_bytes")
 
-    if any(len(field.name) < 0 for field in fields):
+    if any(len(field.name) == 0 for field in fields):
         raise ValueError("field missing name")
 
     names_fields = {field.name: field for field in fields}
