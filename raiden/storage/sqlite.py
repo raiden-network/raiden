@@ -25,6 +25,7 @@ from raiden.utils.typing import (
     T_StateChangeID,
     Tuple,
     Union,
+    typecheck,
 )
 
 
@@ -477,10 +478,9 @@ class SQLiteStorage:
         self.maybe_commit()
 
     def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
+        self, from_identifier: StateChangeID, to_identifier: Union[StateChangeID, str]
     ) -> List[str]:
-        if not (from_identifier == "latest" or isinstance(from_identifier, T_StateChangeID)):
-            raise ValueError("from_identifier must be an integer or 'latest'")
+        typecheck(from_identifier, T_StateChangeID)
 
         if not (
             to_identifier == "latest" or isinstance(to_identifier, T_StateChangeID)
@@ -488,12 +488,6 @@ class SQLiteStorage:
             raise ValueError("to_identifier must be an integer or 'latest'")
 
         cursor = self.conn.cursor()
-
-        if from_identifier == "latest":
-            assert to_identifier is None
-
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1")
-            from_identifier = cursor.fetchone()
 
         if to_identifier == "latest":
             cursor.execute(
@@ -746,7 +740,7 @@ class SerializedSQLiteStorage:
         return state_change
 
     def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
+        self, from_identifier: StateChangeID, to_identifier: Union[StateChangeID, str]
     ) -> List[StateChange]:
         state_changes = self.database.get_statechanges_by_identifier(
             from_identifier, to_identifier
