@@ -3,6 +3,7 @@ import structlog
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer
 from raiden.encoding.format import make_field, namedbuffer, pad
+from raiden.exceptions import InvalidProtocolMessage
 
 
 def cmdid(id_):
@@ -289,7 +290,7 @@ def wrap(data):
 
     try:
         message = message_type(data)
-    except ValueError:
+    except (InvalidProtocolMessage, ValueError):
         log.error("trying to decode invalid message")
         return None
 
