@@ -127,7 +127,7 @@ class MockRaidenService:
         self.default_registry.address = factories.make_address()
         self.default_one_to_n_address = factories.make_address()
 
-        self.route_to_feeback_token = {}
+        self.route_to_feedback_token = {}
 
         if state_transition is None:
             state_transition = node.state_transition
