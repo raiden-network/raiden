@@ -6,6 +6,7 @@ from raiden.blockchain.events import Event
 from raiden.blockchain_events_handler import (
     create_batch_unlock_state_change,
     create_channel_closed_state_change,
+    create_new_balance_state_change,
     create_new_tokennetwork_state_change,
     create_update_transfer_state_change,
 )
@@ -16,6 +17,7 @@ from raiden.transfer.state_change import (
     BalanceProofStateChange,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelNewBalance,
     ContractReceiveRouteClosed,
     ContractReceiveUpdateTransfer,
 )
@@ -183,13 +185,40 @@ def test_create_new_tokennetwork_state_change(event_data):
     event_data["args"]["token_address"] = token_address
     event_data["args"]["token_network_address"] = token_network_address
 
-    event = Event(
-        originating_contract=token_network_address,
-        event_data=event_data,
-    )
+    event = Event(originating_contract=token_network_address, event_data=event_data)
     state_change = create_new_tokennetwork_state_change(event)
 
     assert state_change.transaction_hash == event_data["transaction_hash"]
     assert state_change.payment_network_address == event.originating_contract
     assert state_change.token_network.network_graph.token_network_address == token_network_address
     assert not state_change.token_network.network_graph.channel_identifier_to_participants
+
+
+@pytest.fixture
+def new_balance(container, event_data):
+    event_data["args"]["participant"] = factories.make_address()
+    event_data["args"]["total_deposit"] = 20000
+
+    return Event(originating_contract=container.token_network_address, event_data=event_data)
+
+
+def test_create_new_balance_state_change(container, new_balance):
+    state_change, _ = create_new_balance_state_change(
+        chain_state=container.chain_state, event=new_balance
+    )
+    assert isinstance(state_change, ContractReceiveChannelNewBalance)
+    assert (
+        state_change.canonical_identifier.token_network_address == container.token_network_address
+    )
+    assert (
+        state_change.deposit_transaction.participant_address
+        == new_balance.event_data["args"]["participant"]
+    )
+
+
+def test_create_new_balance_state_change_unknown_channel(container, new_balance):
+    new_balance.event_data["args"]["channel_identifier"] = factories.make_channel_identifier()
+    state_change, _ = create_new_balance_state_change(
+        chain_state=container.chain_state, event=new_balance
+    )
+    assert state_change is None

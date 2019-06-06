@@ -22,7 +22,6 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer import views
-from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     TokenNetworkGraphState,
@@ -52,7 +51,7 @@ from raiden_contracts.constants import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
-    from raiden.storage import SQLiteStorage  # noqa: F401
+    from raiden.storage.sqlite import SerializedSQLiteStorage  # noqa: F401
     from raiden.transfer.state import ChainState  # noqa: F401
 
 
@@ -177,7 +176,9 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
     raiden.add_pending_greenlet(retry_connect)
 
 
-def handle_channel_new_balance(raiden: "RaidenService", event: Event):
+def create_new_balance_state_change(
+    chain_state: "ChainState", event: Event
+) -> typing.Tuple[typing.Optional[ContractReceiveChannelNewBalance], bool]:
     data = event.event_data
     args = data["args"]
     block_number = data["block_number"]
@@ -188,7 +189,6 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
     total_deposit = args["total_deposit"]
     transaction_hash = data["transaction_hash"]
 
-    chain_state = views.state_from_raiden(raiden)
     previous_channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
@@ -199,22 +199,39 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):
     )
 
     # Channels will only be registered if this node is a participant
-    if previous_channel_state is not None:
-        previous_balance = previous_channel_state.our_state.contract_balance
-        balance_was_zero = previous_balance == 0
+    if previous_channel_state is None:
+        return None, False
 
-        deposit_transaction = TransactionChannelNewBalance(
-            participant_address, total_deposit, block_number
-        )
+    previous_balance = previous_channel_state.our_state.contract_balance
+    balance_was_zero = previous_balance == 0
 
-        newbalance_statechange = ContractReceiveChannelNewBalance(
-            transaction_hash=transaction_hash,
-            canonical_identifier=previous_channel_state.canonical_identifier,
-            deposit_transaction=deposit_transaction,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-        raiden.handle_and_track_state_change(newbalance_statechange)
+    deposit_transaction = TransactionChannelNewBalance(
+        participant_address, total_deposit, block_number
+    )
+
+    state_change = ContractReceiveChannelNewBalance(
+        transaction_hash=transaction_hash,
+        canonical_identifier=previous_channel_state.canonical_identifier,
+        deposit_transaction=deposit_transaction,
+        block_number=block_number,
+        block_hash=block_hash,
+    )
+
+    return state_change, balance_was_zero
+
+
+def handle_channel_new_balance(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    state_change, balance_was_zero = create_new_balance_state_change(
+        chain_state=views.state_from_raiden(raiden), event=event
+    )
+
+    if state_change:
+        raiden.handle_and_track_state_change(state_change)
+
+        args = event.event_data["args"]
+        token_network_address = event.originating_contract
+        participant_address = args["participant"]
+        total_deposit = args["total_deposit"]
 
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(token_network_address)
@@ -285,7 +302,6 @@ def create_channel_closed_state_change(chain_state: "ChainState", event: Event):
         ),
     )
 
-    channel_closed: StateChange
     if channel_state:
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
@@ -298,7 +314,7 @@ def create_channel_closed_state_change(chain_state: "ChainState", event: Event):
         )
     else:
         # This is a channel close event of a channel we're not a participant of
-        route_closed = ContractReceiveRouteClosed(
+        return ContractReceiveRouteClosed(
             transaction_hash=transaction_hash,
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
@@ -308,7 +324,6 @@ def create_channel_closed_state_change(chain_state: "ChainState", event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        return route_closed
 
 
 def handle_channel_closed(raiden: "RaidenService", event: Event):  # pragma: no unittest
@@ -347,6 +362,8 @@ def create_update_transfer_state_change(
             block_number=block_number,
             block_hash=block_hash,
         )
+
+    return None
 
 
 def handle_channel_update_transfer(raiden: "RaidenService", event: Event):  # pragma: no unittest
@@ -438,7 +455,10 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no
 
 
 def create_batch_unlock_state_change(
-    chain_state: "ChainState", our_address: typing.Address, storage: "SQLiteStorage", event: Event
+    chain_state: "ChainState",
+    our_address: typing.Address,
+    storage: "SerializedSQLiteStorage",
+    event: Event,
 ) -> typing.Optional[ContractReceiveChannelBatchUnlock]:
     token_network_address = event.originating_contract
     data = event.event_data
@@ -463,7 +483,7 @@ def create_batch_unlock_state_change(
             participant1=to_checksum_address(participant1),
             participant2=to_checksum_address(participant2),
         )
-        return
+        return None
 
     channel_identifiers = token_network_state.partneraddresses_to_channelidentifiers[partner]
     canonical_identifier = None
