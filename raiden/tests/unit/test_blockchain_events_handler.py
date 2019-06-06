@@ -6,6 +6,7 @@ from raiden.blockchain.events import Event
 from raiden.blockchain_events_handler import (
     create_batch_unlock_state_change,
     create_channel_closed_state_change,
+    create_new_tokennetwork_state_change,
     create_update_transfer_state_change,
 )
 from raiden.storage.sqlite import EventRecord, StateChangeRecord
@@ -174,3 +175,21 @@ def test_create_channel_batch_unlock_state_change_as_sender(container, unlock):
             chain_state=container.chain_state, event=unlock, our_address=sender, storage=None
         )
     assert isinstance(state_change, ContractReceiveChannelBatchUnlock)
+
+
+def test_create_new_tokennetwork_state_change(event_data):
+    token_address = factories.make_address()
+    token_network_address = factories.make_address()
+    event_data["args"]["token_address"] = token_address
+    event_data["args"]["token_network_address"] = token_network_address
+
+    event = Event(
+        originating_contract=token_network_address,
+        event_data=event_data,
+    )
+    state_change = create_new_tokennetwork_state_change(event)
+
+    assert state_change.transaction_hash == event_data["transaction_hash"]
+    assert state_change.payment_network_address == event.originating_contract
+    assert state_change.token_network.network_graph.token_network_address == token_network_address
+    assert not state_change.token_network.network_graph.channel_identifier_to_participants
