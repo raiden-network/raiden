@@ -359,8 +359,8 @@ def test_state_wait_unlock_valid():
     assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert balance_proof
     assert complete
-    assert len(complete.route) == 1
-    assert complete.route[0] == balance_proof.recipient
+    assert len(complete.route) == 2
+    assert complete.route[1] == balance_proof.recipient
 
     assert balance_proof.recipient == setup.channel.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER

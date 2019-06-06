@@ -210,9 +210,7 @@ def try_new_route(
             )
         ):
             channel_state = candidate_channel_state
-            route_state = RouteState(
-                route=candidate_route_state.route[1:], forward_channel_id=forward_channel_id
-            )
+            route_state = candidate_route_state
             break
 
     if route_state is None:

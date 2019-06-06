@@ -5,7 +5,7 @@ import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
-from raiden.messages import Lock, LockedTransfer, RouteMetadata
+from raiden.messages import Lock, LockedTransfer, Metadata, RouteMetadata
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
@@ -147,7 +147,9 @@ def run_test_receive_lockedtransfer_invalidnonce(
         initiator=app0.raiden.address,
         fee=0,
         signature=EMPTY_SIGNATURE,
-        route_metadata=RouteMetadata(routes=[app1.raiden.address, app2.raiden.address]),
+        metadata=Metadata(
+            routes=[RouteMetadata(route=[app1.raiden.address, app2.raiden.address])]
+        ),
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
@@ -211,7 +213,7 @@ def run_test_receive_lockedtransfer_invalidsender(
         initiator=other_address,
         fee=0,
         signature=EMPTY_SIGNATURE,
-        route_metadata=RouteMetadata(routes=[app0.raiden.address]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app0.raiden.address])]),
     )
 
     sign_and_inject(mediated_transfer_message, LocalSigner(other_key), app0)
@@ -266,7 +268,7 @@ def run_test_receive_lockedtransfer_invalidrecipient(
         initiator=app0.raiden.address,
         fee=0,
         signature=EMPTY_SIGNATURE,
-        route_metadata=RouteMetadata(routes=[app1.raiden.address]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
@@ -327,7 +329,7 @@ def run_test_received_lockedtransfer_closedchannel(
         initiator=app0.raiden.address,
         fee=0,
         signature=EMPTY_SIGNATURE,
-        route_metadata=RouteMetadata(routes=[app1.raiden.address]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)

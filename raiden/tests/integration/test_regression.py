@@ -6,7 +6,7 @@ import pytest
 from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
-from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
+from raiden.messages import Lock, LockedTransfer, Metadata, RevealSecret, RouteMetadata, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -186,6 +186,9 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
         target=app1.raiden.address,
         initiator=app0.raiden.address,
         signature=EMPTY_SIGNATURE,
+        metadata=Metadata(
+            routes=[RouteMetadata(route=[app0.raiden.address, app1.raiden.address])]
+        ),
     )
     app0.raiden.sign(mediated_transfer)
 
