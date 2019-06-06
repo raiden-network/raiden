@@ -127,8 +127,6 @@ It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev
 After you have done that you can proceed to install the dependencies::
 
     make install-dev
-    # or alternatively, manually:
-    # pip install -c constraints-dev.txt -r requirements-dev.txt -e .
 
 You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
@@ -194,7 +192,7 @@ Run the client and let it sync::
 .. note::
     When you want to use a testnet add the ``--chain ropsten`` or ``--chain kovan`` flags or set the network id with ``--network-id`` directly.
 
-.. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the `--no-warp` option.
+.. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the ``--no-warp`` option.
 
 After syncing the chain, an existing Ethereum account can be used or a new one can be generated using ``parity-ethkey``.
 After account creation, launch Raiden with the path of your keystore supplied::

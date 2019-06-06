@@ -51,10 +51,6 @@ checkout of raiden.
     $ cd raiden
     $ make install-dev
 
-    # or alternatively, manually:
-    # pip install -c constraints-dev.txt -r requirements-dev.txt -e .
-
-
 Now you have a working source installation of Raiden.
 To actually use it you also need the solidity compiler solc_ and an `Ethereum client`_.
 Both can be installed as follows::
