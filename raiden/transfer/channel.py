@@ -8,7 +8,6 @@ from eth_utils import encode_hex
 from raiden.constants import (
     CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     EMPTY_MERKLE_ROOT,
-    EMPTY_SIGNATURE,
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
@@ -1500,10 +1499,12 @@ def events_for_withdraw(
     channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
 
     withdraw_event = SendWithdrawRequest(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_address,
+            channel_identifier=channel_state.identifier,
+        ),
         recipient=channel_state.partner_state.address,
-        chain_id=channel_state.chain_id,
-        token_network_address=channel_state.token_network_address,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         total_withdraw=total_withdraw,
         participant=channel_state.our_state.address,
@@ -1737,10 +1738,12 @@ def handle_receive_withdraw_request(
         channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
 
         send_withdraw = SendWithdraw(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=channel_state.chain_id,
+                token_network_address=channel_state.token_network_address,
+                channel_identifier=channel_state.identifier,
+            ),
             recipient=channel_state.partner_state.address,
-            chain_id=channel_state.chain_id,
-            token_network_address=channel_state.token_network_address,
-            channel_identifier=channel_state.identifier,
             message_identifier=withdraw_request.message_identifier,
             total_withdraw=withdraw_request.total_withdraw,
             participant=channel_state.partner_state.address,
@@ -1776,8 +1779,8 @@ def handle_receive_withdraw(
                 ),
                 SendProcessed(
                     recipient=channel_state.partner_state.address,
-                    channel_identifier=channel_state.identifier,
                     message_identifier=withdraw.message_identifier,
+                    canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
                 ),
             ]
         )

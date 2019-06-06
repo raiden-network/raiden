@@ -9,7 +9,6 @@ from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
-    ChannelID,
     List,
     PaymentID,
     PaymentWithFeeAmount,
@@ -17,7 +16,6 @@ from raiden.utils.typing import (
     SecretHash,
     TokenAddress,
     TokenNetworkAddress,
-    WithdrawAmount,
     typecheck,
 )
 

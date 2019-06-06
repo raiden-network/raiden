@@ -35,14 +35,14 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
-    first_message = events.SendSecretReveal(
+    first_message = SendSecretReveal(
         recipient=recipient,
         message_identifier=message_identifier,
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
 
-    second_message = events.SendSecretReveal(
+    second_message = SendSecretReveal(
         recipient=recipient,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
@@ -137,13 +137,13 @@ def test_delivered_processed_message_cleanup():
     canonical_identifier = factories.make_canonical_identifier()
     secret = factories.random_secret()
 
-    first_message = events.SendSecretReveal(
+    first_message = SendSecretReveal(
         recipient=recipient,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
-    second_message = events.SendSecretReveal(
+    second_message = SendSecretReveal(
         recipient=recipient,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
