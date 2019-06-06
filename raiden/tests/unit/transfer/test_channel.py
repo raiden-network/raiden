@@ -14,11 +14,29 @@ from raiden.tests.utils.factories import make_block_hash, make_transaction_hash
 from raiden.transfer import channel
 from raiden.transfer.channel import (
     compute_locksroot,
+    get_batch_unlock_gain,
+    get_secret,
+    get_status,
+    handle_action_set_fee,
+    handle_block,
     handle_receive_lockedtransfer,
     is_balance_proof_usable_onchain,
+    is_valid_balanceproof_signature,
+    set_settled,
 )
-from raiden.transfer.state import HashTimeLockState, PendingLocksState
+from raiden.transfer.state import PendingLocksState
+from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_SETTLING,
+    CHANNEL_STATE_UNUSABLE,
+    HashTimeLockState,
+    TransactionExecutionStatus,
+    UnlockPartialProofState,
+)
 from raiden.transfer.state_change import (
+    ActionChannelSetFee,
+    Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
 )
@@ -240,3 +258,141 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
     assert msg.startswith("Balance proof total transferred amount would overflow "), msg
     assert str(factories.UINT256_MAX) in msg, msg
     assert str(factories.UINT256_MAX + 1) in msg, msg
+
+
+def test_is_valid_balanceproof_signature():
+    balance_proof = factories.create(factories.BalanceProofSignedStateProperties())
+    valid, _ = is_valid_balanceproof_signature(balance_proof, factories.make_address())
+    assert not valid, "Address does not match."
+
+    balance_proof = factories.create(
+        factories.BalanceProofSignedStateProperties(signature=b"\0" * 65)
+    )
+    valid, _ = is_valid_balanceproof_signature(balance_proof, factories.make_address())
+    assert not valid, "Invalid signature."
+
+
+def test_get_secret():
+    secret1 = factories.make_secret()
+    secret2 = factories.make_secret()
+    secrethash3 = factories.make_keccak_hash()
+    secrethash4 = factories.make_keccak_hash()
+
+    lock_state = HashTimeLockState(amount=10, expiration=10, secrethash=factories.UNIT_SECRETHASH)
+    end_state = factories.create(factories.NettingChannelEndStateProperties())
+    end_state = factories.replace(
+        end_state,
+        secrethashes_to_lockedlocks={secrethash3: lock_state},
+        secrethashes_to_unlockedlocks={
+            sha3(secret1): UnlockPartialProofState(lock=lock_state, secret=secret1)
+        },
+        secrethashes_to_onchain_unlockedlocks={
+            sha3(secret2): UnlockPartialProofState(lock=lock_state, secret=secret2)
+        },
+    )
+
+    assert get_secret(end_state, sha3(secret1)) == secret1  # known secret from offchain unlock
+    assert get_secret(end_state, sha3(secret2)) == secret2  # known secret from offchain unlock
+    assert get_secret(end_state, secrethash3) is None  # known lock but not unlocked yet
+    assert get_secret(end_state, secrethash4) is None  # unknown secrethash
+
+
+def test_get_status():
+    failed_status = TransactionExecutionStatus(
+        finished_block_number=10, result=TransactionExecutionStatus.FAILURE
+    )
+
+    close_failed = factories.create(
+        factories.NettingChannelStateProperties(close_transaction=failed_status)
+    )
+    assert get_status(close_failed) == CHANNEL_STATE_UNUSABLE
+
+    settle_failed = factories.create(
+        factories.NettingChannelStateProperties(settle_transaction=failed_status)
+    )
+    assert get_status(settle_failed) == CHANNEL_STATE_UNUSABLE
+
+
+def test_set_settled():
+    channel = factories.create(
+        factories.NettingChannelStateProperties(
+            settle_transaction=TransactionExecutionStatus(finished_block_number=None, result=None)
+        )
+    )
+
+    assert get_status(channel) == CHANNEL_STATE_SETTLING
+    set_settled(channel, block_number=100)
+    assert get_status(channel) == CHANNEL_STATE_SETTLED
+
+
+def test_handle_action_set_fee():
+    state = factories.create(factories.NettingChannelStateProperties())
+    mediation_fee = 130
+    action = ActionChannelSetFee(
+        canonical_identifier=state.canonical_identifier, mediation_fee=mediation_fee
+    )
+    result = handle_action_set_fee(state, action)
+    assert result.new_state.mediation_fee == mediation_fee
+    assert not result.events
+
+
+def make_hash_time_lock_state(amount):
+    return HashTimeLockState(amount=amount, expiration=5, secrethash=factories.UNIT_SECRETHASH)
+
+
+def make_unlock_partial_proof_state(amount):
+    return UnlockPartialProofState(
+        lock=make_hash_time_lock_state(amount), secret=factories.UNIT_SECRET
+    )
+
+
+def test_get_batch_unlock_gain():
+    channel_state = factories.create(factories.NettingChannelStateProperties())
+    channel_state.our_state = replace(
+        channel_state.our_state,
+        secrethashes_to_lockedlocks={
+            factories.make_keccak_hash(): make_hash_time_lock_state(1),
+            factories.make_keccak_hash(): make_hash_time_lock_state(2),
+        },
+        secrethashes_to_unlockedlocks={
+            factories.make_keccak_hash(): make_unlock_partial_proof_state(4)
+        },
+        secrethashes_to_onchain_unlockedlocks={
+            factories.make_keccak_hash(): make_unlock_partial_proof_state(8)
+        },
+    )
+    channel_state.partner_state = replace(
+        channel_state.partner_state,
+        secrethashes_to_lockedlocks={factories.make_keccak_hash(): make_hash_time_lock_state(16)},
+        secrethashes_to_unlockedlocks={
+            factories.make_keccak_hash(): make_unlock_partial_proof_state(32)
+        },
+        secrethashes_to_onchain_unlockedlocks={
+            factories.make_keccak_hash(): make_unlock_partial_proof_state(64),
+            factories.make_keccak_hash(): make_unlock_partial_proof_state(128),
+        },
+    )
+    unlock_gain = get_batch_unlock_gain(channel_state)
+    assert unlock_gain.from_partner_locks == 192
+    assert unlock_gain.from_our_locks == 7
+
+
+def test_handle_block_closed_channel():
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            close_transaction=TransactionExecutionStatus(
+                finished_block_number=50, result=TransactionExecutionStatus.SUCCESS
+            ),
+            settle_timeout=50,
+        )
+    )
+
+    block = Block(block_number=90, gas_limit=100000, block_hash=factories.make_block_hash())
+    before_settle = handle_block(channel_state, block, block.block_number)
+    assert get_status(before_settle.new_state) == CHANNEL_STATE_CLOSED
+    assert not before_settle.events
+
+    block = Block(block_number=102, gas_limit=100000, block_hash=factories.make_block_hash())
+    after_settle = handle_block(before_settle.new_state, block, block.block_number)
+    assert get_status(after_settle.new_state) == CHANNEL_STATE_SETTLING
+    assert after_settle.events
