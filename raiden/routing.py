@@ -37,8 +37,24 @@ def get_best_routes(
 ) -> Tuple[List[RouteState], Optional[UUID]]:
     services_config = config.get("services", None)
 
+    is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
+    can_use_pfs = (
+        services_config
+        and services_config["pathfinding_service_address"] is not None
+        and one_to_n_address is not None
+    )
+
+    log.debug(
+        "Getting route for payment",
+        source=to_checksum_address(from_address),
+        target=to_checksum_address(to_address),
+        amount=amount,
+        target_is_direct_partner=is_direct_partner,
+        can_use_pfs=can_use_pfs,
+    )
+
     # the pfs should not be requested when the target is linked via a direct channel
-    if to_address in views.all_neighbour_nodes(chain_state):
+    if is_direct_partner:
         internal_routes = get_best_routes_internal(
             chain_state=chain_state,
             token_network_address=token_network_address,
@@ -64,11 +80,8 @@ def get_best_routes(
             ):
                 return [route_state], None
 
-    if (
-        services_config
-        and services_config["pathfinding_service_address"] is not None
-        and one_to_n_address is not None
-    ):
+    if can_use_pfs:
+        assert one_to_n_address  # mypy doesn't realize this has been checked above
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_address=token_network_address,
