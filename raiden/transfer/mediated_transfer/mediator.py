@@ -1189,6 +1189,10 @@ def handle_refundtransfer(
             if route.forward_channel_id != payer_channel.canonical_identifier.channel_identifier
         ]
 
+        # To avoid duplicated attempts at an already-tried route, we
+        # remove the unusable routes from the state.routes
+        mediator_state.routes = candidate_route_states
+
         iteration = mediate_transfer(
             state=mediator_state,
             candidate_route_states=candidate_route_states,
