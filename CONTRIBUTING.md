@@ -186,8 +186,6 @@ isolate the python dependencies used by Raiden from your system:
 Install the development dependencies:
 
     make install-dev
-    # or alternatively, manually:
-    # pip install -r requirements-dev.txt -c constraints-dev.txt -e .
 
 ## Development Guidelines
 
