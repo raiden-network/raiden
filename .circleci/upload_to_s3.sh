@@ -20,6 +20,6 @@ s3cmd \
     --no-delete-removed \
     --guess-mime-type \
     --acl-public \
-    sync \
-    ${dir} \
-    s3://${bucket}/${RELEASE_TYPE}
+    put \
+    ${dir}/* \
+    s3://${bucket}/
