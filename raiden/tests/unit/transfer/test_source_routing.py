@@ -1,4 +1,4 @@
-from raiden.messages import LockedTransfer, Metadata, RouteMetadata
+from raiden.messages import LockedTransfer, Metadata, RefundTransfer, RouteMetadata
 from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
@@ -7,6 +7,15 @@ from raiden.utils.signer import LocalSigner, recover
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)
+
+
+def test_can_create_refund_transfer_messages():
+    refund_transfer = factories.create(factories.RefundTransferProperties())
+
+    assert refund_transfer is not None
+    assert isinstance(refund_transfer, RefundTransfer)
+    assert isinstance(refund_transfer.metadata, Metadata)
+    assert len(refund_transfer.metadata.routes) == 1
 
 
 def test_route_metadata_hashing():
