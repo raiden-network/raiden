@@ -350,7 +350,7 @@ def handle_channel_update_transfer(raiden: "RaidenService", event: Event):  # pr
         raiden.handle_and_track_state_change(update_transfer)
 
 
-def handle_channel_settled(raiden: "RaidenService", event: Event):
+def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no unittest
     data = event.event_data
     token_network_address = event.originating_contract
     channel_identifier = data["args"]["channel_identifier"]
@@ -516,7 +516,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     raiden.handle_and_track_state_change(unlock_state_change)
 
 
-def handle_secret_revealed(raiden: "RaidenService", event: Event):
+def handle_secret_revealed(raiden: "RaidenService", event: Event):  # pragma: no unittest
     secret_registry_address = event.originating_contract
     data = event.event_data
     args = data["args"]

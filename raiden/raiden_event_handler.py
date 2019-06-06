@@ -261,7 +261,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_paymentsentsuccess(
         raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
-    ):
+    ):  # pragma: no unittest
         target = payment_sent_success_event.target
         payment_identifier = payment_sent_success_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(payment_identifier)
@@ -274,7 +274,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_paymentsentfailed(
         raiden: "RaidenService", payment_sent_failed_event: EventPaymentSentFailed
-    ):
+    ):  # pragma: no unittest
         target = payment_sent_failed_event.target
         payment_identifier = payment_sent_failed_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
