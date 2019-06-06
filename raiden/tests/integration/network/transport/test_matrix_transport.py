@@ -20,7 +20,7 @@ from raiden.messages import Delivered, Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.raiden_service import (
+from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_path_finding_service_from_balance_proof,
 )
