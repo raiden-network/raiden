@@ -107,6 +107,8 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
             initial_args["service_registry_contract_address"],
             "--environment-type",
             environment_type,
+            "--one-to-n-contract-address",
+            initial_args["one_to_n_contract_address"],
         ]
 
     for arg_name, arg_value in initial_args.items():

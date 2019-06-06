@@ -40,7 +40,11 @@ from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
-from raiden_contracts.constants import CONTRACT_MONITORING_SERVICE, ID_TO_NETWORKNAME
+from raiden_contracts.constants import (
+    CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
+    ID_TO_NETWORKNAME,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -236,7 +240,8 @@ def run_app(
             config=config,
             chain=blockchain_service,
             query_start_block=BlockNumber(start_block),
-            default_one_to_n_address=one_to_n_contract_address,
+            default_one_to_n_address=one_to_n_contract_address
+            or contracts[CONTRACT_ONE_TO_N]["address"],
             default_registry=proxies.token_network_registry,
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
