@@ -34,7 +34,17 @@ class Operator(Enum):
     OR = "OR"
 
 
-class Query(NamedTuple):
+class FilteredDBQuery(NamedTuple):
+    """
+    FilteredDBQuery is a datastructure that helps
+    form a list of conditions and how they're grouped
+    in order to form more complicated queries
+    on the internal JSON representation
+    of states / state changes and events.
+    Note that it is not used to search
+    the top-level attributes of the sqlite tables.
+    """
+
     filters: List[Dict[str, Any]]
     main_operator: Operator
     inner_operator: Operator
@@ -89,7 +99,43 @@ def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
     return filter_
 
 
-def _query_to_string(query: Query):
+def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
+    """
+    Converts a query object to a valid SQL string
+    which can be used in the WHERE clause.
+    A query object will contain a list of dictionaries
+    where each key-value pair is used to filter records.
+    All the key-value pairs in a dictionary are grouped
+    together by `inner_operator` so that they form a SQL condition
+    indepedently from other dictionaries in the list.
+
+    Examples:
+    - Performing a query with 1 filter
+    FilteredDBQuery(
+      filters=[{'a': 1, 'b': 2}],
+      main_operator=NONE,
+      inner_operator='AND'
+    )
+    Will result in:
+    (a=1 AND b=2)
+
+    - Performing a query with multiple filters
+      `inner_operator` is used in the inner subqueries
+      of the key-value pairs in a single dictionary.
+      While `main_operator` is used in the outer query.
+
+    FilteredDBQuery(
+      filters=[
+        {'a': 1, 'b': 2},
+        {'c': 3, 'd': 4},
+      ],
+      main_operator='OR',
+      inner_operator='AND'
+    )
+    Will result in:
+    (a=1 AND b=2) OR (c=3 AND d=4)
+    """
+
     query_where = []
     args = []
     for filter_set in query.filters:
@@ -101,8 +147,8 @@ def _query_to_string(query: Query):
             args.append(value)
 
         filter_set_str = f" {query.inner_operator.value} ".join(where_clauses)
-        query_where.append(f"(" f" {filter_set_str} " f") ")
-    query_where_str = f" {query.main_operator.value } ".join(query_where)
+        query_where.append(f"({filter_set_str}) ")
+    query_where_str = f" {query.main_operator.value} ".join(query_where)
     return query_where_str, args
 
 
@@ -290,7 +336,7 @@ class SQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, query: Query) -> Optional[EventRecord]:
+    def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -348,7 +394,9 @@ class SQLiteStorage:
         cursor.execute(query, args)
         return cursor
 
-    def get_latest_state_change_by_data_field(self, query: Query) -> Optional[StateChangeRecord]:
+    def get_latest_state_change_by_data_field(
+        self, query: FilteredDBQuery
+    ) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -665,7 +713,7 @@ class SerializedSQLiteStorage:
 
         return result
 
-    def get_latest_event_by_data_field(self, query: Query) -> Optional[EventRecord]:
+    def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
         """ Return all state changes filtered by a named field and value."""
         event = self.database.get_latest_event_by_data_field(query)
 
@@ -678,7 +726,9 @@ class SerializedSQLiteStorage:
 
         return event
 
-    def get_latest_state_change_by_data_field(self, query: Query) -> Optional[StateChangeRecord]:
+    def get_latest_state_change_by_data_field(
+        self, query: FilteredDBQuery
+    ) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
 
         state_change = self.database.get_latest_state_change_by_data_field(query)

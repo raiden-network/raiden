@@ -3,8 +3,8 @@ from eth_utils import to_checksum_address, to_hex
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.storage.sqlite import (
     EventRecord,
+    FilteredDBQuery,
     Operator,
-    Query,
     SerializedSQLiteStorage,
     StateChangeRecord,
 )
@@ -88,7 +88,10 @@ def get_state_change_with_balance_proof_by_balance_hash(
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
-    query = Query(filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND)
+
+    query = FilteredDBQuery(
+        filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND
+    )
     return storage.get_latest_state_change_by_data_field(query)
 
 
@@ -121,7 +124,9 @@ def get_state_change_with_balance_proof_by_locksroot(
             "balance_proof.sender": to_checksum_address(sender),
         }
     )
-    query = Query(filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND)
+    query = FilteredDBQuery(
+        filters=filters, main_operator=Operator.NONE, inner_operator=Operator.AND
+    )
     return storage.get_latest_state_change_by_data_field(query)
 
 
@@ -151,7 +156,9 @@ def get_event_with_balance_proof_by_balance_hash(
         balance_proof_query_from_keys(prefix="transfer.", filters=balance_proof_filters)
     )
 
-    query = Query(filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND)
+    query = FilteredDBQuery(
+        filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND
+    )
 
     event = storage.get_latest_event_by_data_field(query)
     return event
@@ -203,7 +210,9 @@ def get_event_with_balance_proof_by_locksroot(
     transfer_filters["recipient"] = to_checksum_address(recipient)
     filters.append(transfer_filters)
 
-    query = Query(filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND)
+    query = FilteredDBQuery(
+        filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND
+    )
     event = storage.get_latest_event_by_data_field(query)
     return event
 
