@@ -260,7 +260,7 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
         update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
 
-def handle_channel_closed(raiden: "RaidenService", event: Event):
+def create_channel_closed_state_change(chain_state: "ChainState", event: Event):
     token_network_address = event.originating_contract
     data = event.event_data
     block_number = data["block_number"]
@@ -268,8 +268,6 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
     channel_identifier = args["channel_identifier"]
     transaction_hash = data["transaction_hash"]
     block_hash = data["block_hash"]
-
-    chain_state = views.state_from_raiden(raiden)
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
@@ -283,14 +281,13 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
     if channel_state:
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
-        channel_closed = ContractReceiveChannelClosed(
+        return ContractReceiveChannelClosed(
             transaction_hash=transaction_hash,
             transaction_from=args["closing_participant"],
             canonical_identifier=channel_state.canonical_identifier,
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(channel_closed)
     else:
         # This is a channel close event of a channel we're not a participant of
         route_closed = ContractReceiveRouteClosed(
@@ -303,7 +300,15 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(route_closed)
+        return route_closed
+
+
+def handle_channel_closed(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    raiden.handle_and_track_state_change(
+        create_channel_closed_state_change(
+            chain_state=views.state_from_raiden(raiden), event=event
+        )
+    )
 
 
 def create_update_transfer_state_change(
