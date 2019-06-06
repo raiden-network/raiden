@@ -98,6 +98,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
+            nonce=message.nonce,
             signature=message.signature,
         )
         raiden.handle_and_track_state_change(withdraw_request)
@@ -113,6 +114,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
+            nonce=message.nonce,
             signature=message.signature,
         )
         raiden.handle_and_track_state_change(withdraw)
