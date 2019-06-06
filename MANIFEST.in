@@ -1,3 +1,2 @@
 include README.rst
 include requirements.txt
-include constraints.txt
