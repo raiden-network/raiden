@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -ex
+set -o errexit
+set -o xtrace
+set -o nounset
 
 access_key=$1
 secret_key=$2

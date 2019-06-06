@@ -1,0 +1,4 @@
+-r requirements-dev.txt
+
+pyinstaller
+s3cmd
