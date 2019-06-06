@@ -121,10 +121,10 @@ dist: clean
 	ls -l dist
 
 install: clean-pyc
-	pip install -c constraints.txt -r requirements.txt .
+	$(MAKE) -C requirements install
 
 install-dev: clean-pyc
-	pip install -c constraints-dev.txt -r requirements-dev.txt -e .
+	$(MAKE) -C requirements install-dev
 
 logging_settings = :info,contracts:debug
 mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))

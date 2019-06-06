@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-set -ex
+set -o errexit
+set -o xtrace
+set -o nounset
 
 access_key=$1
 secret_key=$2
@@ -18,6 +20,6 @@ s3cmd \
     --no-delete-removed \
     --guess-mime-type \
     --acl-public \
-    sync \
-    ${dir} \
+    cp \
+    ${dir}/* \
     s3://${bucket}/
