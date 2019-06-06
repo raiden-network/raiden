@@ -6,6 +6,8 @@ import structlog
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
+from raiden.constants import PATH_FINDING_BROADCASTING_ROOM
+from raiden.messages import FeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
@@ -125,6 +127,12 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
+
+        # Tell PFS about fees for this channel
+        fee_update = FeeUpdate.from_channel_state(channel_state)
+        fee_update.sign(raiden.signer)
+        # Appends message to queue, so it's not blocking
+        raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
 
     # Raiden node is not participant of channel
     else:

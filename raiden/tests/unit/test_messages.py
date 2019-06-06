@@ -6,6 +6,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
     Delivered,
+    FeeUpdate,
     Ping,
     Processed,
     RequestMonitoring,
@@ -135,6 +136,14 @@ def test_update_pfs():
     signer2 = LocalSigner(privkey2)
     message.sign(signer2)
     assert recover(message._data_to_sign(), message.signature) == address2
+
+    assert message == DictSerializer.deserialize(DictSerializer.serialize(message))
+
+
+def test_fee_update():
+    channel_state = factories.create(factories.NettingChannelStateProperties())
+    message = FeeUpdate.from_channel_state(channel_state)
+    message.sign(signer)
 
     assert message == DictSerializer.deserialize(DictSerializer.serialize(message))
 
