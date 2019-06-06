@@ -20,6 +20,6 @@ s3cmd \
     --no-delete-removed \
     --guess-mime-type \
     --acl-public \
-    cp \
+    put \
     ${dir}/* \
     s3://${bucket}/
