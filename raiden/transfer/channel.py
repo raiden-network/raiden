@@ -2097,7 +2097,7 @@ def state_transition(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[Optional[NettingChannelState]]:
+) -> TransitionResult[Optional[NettingChannelState]]:  # pragma: no unittest
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events: List[Event] = list()
