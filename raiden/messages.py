@@ -530,9 +530,9 @@ class WithdrawRequest(SignedRetrieableMessage):
     def from_event(cls, event):
         return cls(
             message_identifier=event.message_identifier,
-            chain_id=event.chain_id,
-            token_network_address=event.token_network_address,
-            channel_identifier=event.channel_identifier,
+            chain_id=event.canonical_identifier.chain_identifier,
+            token_network_address=event.canonical_identifier.token_network_address,
+            channel_identifier=event.canonical_identifier.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
             nonce=event.nonce,
@@ -566,9 +566,9 @@ class Withdraw(SignedRetrieableMessage):
     def from_event(cls, event):
         return cls(
             message_identifier=event.message_identifier,
-            chain_id=event.chain_id,
-            token_network_address=event.token_network_address,
-            channel_identifier=event.channel_identifier,
+            chain_id=event.canonical_identifier.chain_identifier,
+            token_network_address=event.canonical_identifier.token_network_address,
+            channel_identifier=event.canonical_identifier.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
             nonce=event.nonce,
