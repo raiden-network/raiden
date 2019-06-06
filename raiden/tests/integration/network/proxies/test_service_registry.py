@@ -68,7 +68,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # With basic routing configure pfs should raise assertion
     with pytest.raises(AssertionError):
         config = configure_pfs_or_exit(
-            pfs_address=None,
+            pfs_url=None,
             routing_mode=RoutingMode.BASIC,
             service_registry=service_proxy,
             token_network_registry_address=token_network_registry_address_test_default,
@@ -77,7 +77,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # Asking for auto address
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address="auto",
+            pfs_url="auto",
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
             token_network_registry_address=token_network_registry_address_test_default,
@@ -89,7 +89,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     given_address = "http://ourgivenaddress"
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address=given_address,
+            pfs_url=given_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
             token_network_registry_address=token_network_registry_address_test_default,
@@ -106,7 +106,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         with patch.object(requests, "get", side_effect=requests.RequestException()):
             # Configuring a given address
             config = configure_pfs_or_exit(
-                pfs_address=bad_address,
+                pfs_url=bad_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_proxy,
                 token_network_registry_address=token_network_registry_address_test_default,
@@ -119,7 +119,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             configure_pfs_or_exit(
-                pfs_address="adad",
+                pfs_url="adad",
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),
                 token_network_registry_address="0x2222222222222222222222222222222222222221",

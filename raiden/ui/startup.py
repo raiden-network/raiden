@@ -216,7 +216,7 @@ def setup_proxies_or_exit(
         )
 
         pfs_config = configure_pfs_or_exit(
-            pfs_address=pathfinding_service_address,
+            pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
             token_network_registry_address=Address(token_network_registry.address),
