@@ -59,21 +59,13 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
-def handle_tokennetwork_new(raiden: "RaidenService", event: Event):
-    """ Handles a `TokenNetworkCreated` event. """
+def create_new_tokennetwork_state_change(event: Event) -> ContractReceiveNewTokenNetwork:
     data = event.event_data
     args = data["args"]
     block_number = data["block_number"]
     token_network_address = args["token_network_address"]
     token_address = typing.TokenAddress(args["token_address"])
     block_hash = data["block_hash"]
-
-    token_network_proxy = raiden.chain.token_network(token_network_address)
-    raiden.blockchain_events.add_token_network_listener(
-        token_network_proxy=token_network_proxy,
-        contract_manager=raiden.contract_manager,
-        from_block=block_number,
-    )
 
     token_network_graph_state = TokenNetworkGraphState(token_network_address)
     token_network_state = TokenNetworkState(
@@ -84,14 +76,29 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):
 
     transaction_hash = event.event_data["transaction_hash"]
 
-    new_token_network = ContractReceiveNewTokenNetwork(
+    return ContractReceiveNewTokenNetwork(
         transaction_hash=transaction_hash,
         payment_network_address=event.originating_contract,
         token_network=token_network_state,
         block_number=block_number,
         block_hash=block_hash,
     )
-    raiden.handle_and_track_state_change(new_token_network)
+
+
+def handle_tokennetwork_new(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    """ Handles a `TokenNetworkCreated` event. """
+    data = event.event_data
+    block_number = data["block_number"]
+    token_network_address = data["args"]["token_network_address"]
+
+    token_network_proxy = raiden.chain.token_network(token_network_address)
+    raiden.blockchain_events.add_token_network_listener(
+        token_network_proxy=token_network_proxy,
+        contract_manager=raiden.contract_manager,
+        from_block=block_number,
+    )
+
+    raiden.handle_and_track_state_change(create_new_tokennetwork_state_change(event))
 
 
 def handle_channel_new(raiden: "RaidenService", event: Event):
