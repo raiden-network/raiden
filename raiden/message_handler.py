@@ -1,7 +1,8 @@
+import typing
+
 import structlog
 from eth_utils import to_hex
 
-from raiden.constants import ABSENT_SECRET
 from raiden.messages import (
     Delivered,
     LockedTransfer,
@@ -17,7 +18,6 @@ from raiden.messages import (
     lockedtransfersigned_from_message,
 )
 from raiden.raiden_service import RaidenService
-from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -37,7 +37,10 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
+from raiden.utils.typing import MYPY_ANNOTATION, List
+
+if typing.TYPE_CHECKING:
+    from raiden.transfer.state import RouteState
 
 log = structlog.get_logger(__name__)
 
@@ -160,35 +163,25 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
-        token_network_address = message.token_network_address
         chain_state = views.state_from_raiden(raiden)
         from_transfer = lockedtransfersigned_from_message(message=message)
-
-        # FIXME: Shouldn't request routes here
-        routes, _ = get_best_routes(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            one_to_n_address=raiden.default_one_to_n_address,
-            from_address=InitiatorAddress(raiden.address),
-            to_address=from_transfer.target,
-            amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated by #3863
-            previous_address=message.sender,
-            config=raiden.config,
-            privkey=raiden.privkey,
-        )
 
         role = views.get_transfer_role(
             chain_state=chain_state, secrethash=from_transfer.lock.secrethash
         )
 
-        if role == "initiator":
-            old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
-            # We currently don't allow multi routes if the initiator does not
-            # hold the secret. In such case we remove all other possible routes
-            # which allow the API call to return with with an error message.
-            if old_secret == ABSENT_SECRET:
-                routes = list()
+        routes: List[RouteState] = list()
 
+        # FIXME: need to look into initiator case.
+
+        # We currently don't allow multi routes if the initiator does not
+        # hold the secret. In such case we remove all other possible routes
+        # which allow the API call to return with with an error message.
+        # old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
+        # if old_secret == ABSENT_SECRET:
+        #     routes = list()
+
+        if role == "initiator":
             secret = random_secret()
             state_change: StateChange = ReceiveTransferRefundCancelRoute(
                 routes=routes,
