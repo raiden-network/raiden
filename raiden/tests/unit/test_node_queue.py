@@ -5,10 +5,7 @@ from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
 from raiden.transfer.events import SendWithdrawRequest
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    SendSecretReveal,
-)
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state_change import ReceiveWithdraw
 
 
@@ -75,16 +72,18 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         our_address=our_address,
         chain_id=chain_id,
     )
-    queue_identifier = QueueIdentifier(recipient1, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
+    queue_identifier = QueueIdentifier(recipient1, CANONICAL_IDENTIFIER_GLOBAL_QUEUE)
 
     withdraw_message = SendWithdrawRequest(
         message_identifier=message_identifier,
-        chain_id=chain_id,
-        token_network_address=token_network_state.address,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_identifier,
+        ),
         total_withdraw=100,
         participant=our_address,
         recipient=recipient1,
-        channel_identifier=channel_identifier,
         nonce=1,
     )
 

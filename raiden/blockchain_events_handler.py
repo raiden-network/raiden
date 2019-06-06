@@ -10,6 +10,7 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import PATH_FINDING_BROADCASTING_ROOM
 from raiden.messages import FeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
+from raiden.services import update_path_finding_service_from_channel_state
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
@@ -220,26 +221,34 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
     transaction_hash = data["transaction_hash"]
 
     chain_state = views.state_from_raiden(raiden)
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=chain_state.chain_id,
+        token_network_address=token_network_address,
+        channel_identifier=channel_identifier,
+    )
     previous_channel_state = views.get_channelstate_by_canonical_identifier(
-        chain_state=chain_state,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_address,
-            channel_identifier=channel_identifier,
-        ),
+        chain_state=chain_state, canonical_identifier=canonical_identifier
     )
 
     # Channels will only be registered if this node is a participant
     if previous_channel_state is not None:
         withdraw_statechange = ContractReceiveChannelWithdraw(
             transaction_hash=transaction_hash,
-            canonical_identifier=previous_channel_state.canonical_identifier,
+            canonical_identifier=canonical_identifier,
             total_withdraw=total_withdraw,
             participant=participant,
             block_number=block_number,
             block_hash=block_hash,
         )
         raiden.handle_and_track_state_change(withdraw_statechange)
+
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            chain_state=chain_state, canonical_identifier=canonical_identifier
+        )
+        msg = "Failed to find channel state after withdraw"
+        assert channel_state is not None, msg
+        update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
 
 def handle_channel_closed(raiden: "RaidenService", event: Event):
