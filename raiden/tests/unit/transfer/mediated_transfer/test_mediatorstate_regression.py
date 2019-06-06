@@ -137,9 +137,7 @@ def test_regression_send_refund():
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(3)
 
-    mediator_state = MediatorTransferState(
-        secrethash=UNIT_SECRETHASH, routes=setup.channels.get_hops()
-    )
+    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=[])
     mediator_state.transfers_pair = setup.transfers_pair
 
     last_pair = setup.transfers_pair[-1]
