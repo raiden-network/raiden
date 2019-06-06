@@ -2027,9 +2027,10 @@ def test_receive_unlock():
     state = MediatorTransferState(secrethash=factories.UNIT_SECRETHASH, routes=[])
     balance_proof = factories.create(
         factories.BalanceProofSignedStateProperties(
-            canonical_identifier=channels[0].canonical_identifier, nonce=2
+            canonical_identifier=channels[0].canonical_identifier, nonce=1
         )
     )
+
     state_change = ReceiveUnlock(
         message_identifier=1,
         secret=factories.UNIT_SECRET,

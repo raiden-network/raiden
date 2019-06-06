@@ -515,6 +515,7 @@ class WithdrawRequest(SignedRetrieableMessage):
     channel_identifier: ChannelID
     participant: Address
     total_withdraw: WithdrawAmount
+    nonce: Nonce
 
     def pack(self, packed):
         packed.chain_id = self.chain_id
@@ -534,6 +535,7 @@ class WithdrawRequest(SignedRetrieableMessage):
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
+            nonce=event.nonce,
             signature=EMPTY_SIGNATURE,
         )
 
@@ -549,6 +551,7 @@ class Withdraw(SignedRetrieableMessage):
     channel_identifier: ChannelID
     participant: Address
     total_withdraw: WithdrawAmount
+    nonce: Nonce
 
     def pack(self, packed):
         packed.chain_id = self.chain_id
@@ -568,6 +571,7 @@ class Withdraw(SignedRetrieableMessage):
             channel_identifier=event.channel_identifier,
             total_withdraw=event.total_withdraw,
             participant=event.participant,
+            nonce=event.nonce,
             signature=EMPTY_SIGNATURE,
         )
 

@@ -158,6 +158,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 canonical_identifier=channel_state.canonical_identifier,
             )
         )
+        channel_state.our_state.nonce = our_unsigned.nonce
     else:
         our_unsigned = None
 
@@ -178,6 +179,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
         partner_signed = make_signed_balance_proof_from_unsigned(
             partner_unsigned, LocalSigner(partner_pkey)
         )
+        channel_state.partner_state.nonce = partner_signed.nonce
     else:
         partner_signed = None
 
@@ -1704,6 +1706,7 @@ def test_receive_withdraw_request():
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1739,6 +1742,7 @@ def test_receive_withdraw_request():
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1759,6 +1763,7 @@ def test_receive_withdraw_request():
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1783,6 +1788,7 @@ def test_receive_withdraw_request():
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1825,6 +1831,7 @@ def test_receive_withdraw_confirmation():
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw(
@@ -1852,6 +1859,7 @@ def test_receive_withdraw_confirmation():
         total_withdraw=70,
         signature=make_32bytes(),
         sender=channel_state.partner_state.address,
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw(
@@ -1873,6 +1881,7 @@ def test_receive_withdraw_confirmation():
         total_withdraw=70,
         signature=partner_signature,
         sender=channel_state.partner_state.address,
+        nonce=1,
     )
 
     iteration = channel.handle_receive_withdraw(

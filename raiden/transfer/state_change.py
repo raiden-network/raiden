@@ -411,6 +411,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+    nonce: Nonce
     signature: Signature
 
     @property
@@ -429,6 +430,7 @@ class ReceiveWithdraw(AuthenticatedSenderStateChange):
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+    nonce: Nonce
     signature: Signature
 
     @property

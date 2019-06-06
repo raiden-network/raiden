@@ -858,10 +858,11 @@ def is_valid_action_withdraw(
 
 
 def is_valid_withdraw_request(
-    withdraw_request: ReceiveWithdrawRequest, channel_state: NettingChannelState
+    channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> SuccessOrError:
     result: SuccessOrError
 
+    expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
     packed = pack_withdraw(
@@ -888,7 +889,13 @@ def is_valid_withdraw_request(
         result = (False, msg)
     elif not valid_signature:
         result = (False, signature_msg)
+    elif withdraw_request.nonce != expected_nonce:
+        msg = (
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {withdraw_request.nonce}."
+        )
 
+        result = (False, msg)
     else:
         result = (True, None)
 
@@ -900,6 +907,8 @@ def is_valid_withdraw_confirmation(
 ) -> SuccessOrError:
 
     result: SuccessOrError
+
+    expected_nonce = get_next_nonce(channel_state.partner_state)
 
     packed = pack_withdraw(
         canonical_identifier=withdraw.canonical_identifier,
@@ -921,7 +930,13 @@ def is_valid_withdraw_confirmation(
 
     elif not valid_signature:
         result = (False, signature_msg)
+    elif withdraw.nonce != expected_nonce:
+        msg = (
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {withdraw.nonce}."
+        )
 
+        result = (False, msg)
     else:
         result = (True, None)
 
@@ -1006,7 +1021,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
 
     if balance_proof:
         locksroot = balance_proof.locksroot
-        nonce = balance_proof.nonce
+        nonce = end_state.nonce
         transferred_amount = balance_proof.transferred_amount
         locked_amount = get_amount_locked(end_state)
     else:
@@ -1019,12 +1034,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
 
 
 def get_current_nonce(end_state: NettingChannelEndState) -> Nonce:
-    balance_proof = end_state.balance_proof
-
-    if balance_proof:
-        return balance_proof.nonce
-    else:
-        return Nonce(0)
+    return end_state.nonce
 
 
 def get_distributable(
@@ -1115,11 +1125,7 @@ def lock_exists_in_either_channel_side(
 
 
 def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
-    if end_state.balance_proof:
-        return Nonce(end_state.balance_proof.nonce + 1)
-
-    # 0 must not be used since in the netting contract it represents null.
-    return Nonce(1)
+    return Nonce(end_state.nonce + 1)
 
 
 def _merkletree_width(merkletree: MerkleTreeState) -> int:
@@ -1284,10 +1290,12 @@ def create_sendlockedtransfer(
     assert transferred_amount + amount <= UINT256_MAX, msg
 
     token = channel_state.token_address
-    nonce = get_next_nonce(channel_state.our_state)
     recipient = channel_state.partner_state.address
     # the new lock is not registered yet
     locked_amount = TokenAmount(get_amount_locked(our_state) + amount)
+
+    nonce = get_next_nonce(channel_state.our_state)
+    channel_state.our_state.nonce = nonce
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1338,10 +1346,12 @@ def create_unlock(
     locksroot = merkleroot(merkletree)
 
     token_address = channel_state.token_address
-    nonce = get_next_nonce(our_state)
     recipient = channel_state.partner_state.address
     # the lock is still registered
     locked_amount = TokenAmount(get_amount_locked(our_state) - lock.amount)
+
+    nonce = get_next_nonce(our_state)
+    channel_state.our_state.nonce = nonce
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1487,6 +1497,8 @@ def events_for_withdraw(
     if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
         return events
 
+    channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
+
     withdraw_event = SendWithdrawRequest(
         recipient=channel_state.partner_state.address,
         chain_id=channel_state.chain_id,
@@ -1495,6 +1507,7 @@ def events_for_withdraw(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         total_withdraw=total_withdraw,
         participant=channel_state.our_state.address,
+        nonce=channel_state.our_state.nonce,
     )
 
     events.append(withdraw_event)
@@ -1511,10 +1524,11 @@ def create_sendexpiredlock(
     channel_identifier: ChannelID,
     recipient: Address,
 ) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:
-    nonce = get_next_nonce(sender_end_state)
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
+
+    nonce = get_next_nonce(sender_end_state)
 
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
@@ -1571,6 +1585,7 @@ def events_for_expired_lock(
         assert merkletree, "create_sendexpiredlock should return both message and merkle tree"
         channel_state.our_state.merkletree = merkletree
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
+        channel_state.our_state.nonce = send_lock_expired.balance_proof.nonce
 
         _del_unclaimed_lock(channel_state.our_state, locked_lock.secrethash)
 
@@ -1718,6 +1733,8 @@ def handle_receive_withdraw_request(
     )
     if is_valid:
         channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
+        channel_state.partner_state.nonce = withdraw_request.nonce
+        channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
 
         send_withdraw = SendWithdraw(
             recipient=channel_state.partner_state.address,
@@ -1727,6 +1744,7 @@ def handle_receive_withdraw_request(
             message_identifier=withdraw_request.message_identifier,
             total_withdraw=withdraw_request.total_withdraw,
             participant=channel_state.partner_state.address,
+            nonce=channel_state.our_state.nonce,
         )
 
         events = [send_withdraw]
@@ -1747,6 +1765,7 @@ def handle_receive_withdraw(
 
     is_valid, msg = is_valid_withdraw_confirmation(channel_state=channel_state, withdraw=withdraw)
     if is_valid:
+        channel_state.partner_state.nonce = withdraw.nonce
         events.extend(
             [
                 ContractSendChannelWithdraw(
@@ -1789,6 +1808,7 @@ def handle_refundtransfer(
         assert merkletree, "is_valid_refund should return merkletree if valid"
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
         channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = refund.transfer.balance_proof.nonce
 
         lock = refund.transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
@@ -1826,6 +1846,7 @@ def handle_receive_lock_expired(
         assert merkletree, "is_valid_lock_expired should return merkletree if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
         channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = state_change.balance_proof.nonce
 
         _del_unclaimed_lock(channel_state.partner_state, state_change.secrethash)
 
@@ -1864,6 +1885,7 @@ def handle_receive_lockedtransfer(
         assert merkletree, "is_valid_lock_expired should return merkletree if valid"
         channel_state.partner_state.balance_proof = mediated_transfer.balance_proof
         channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = mediated_transfer.balance_proof.nonce
 
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
@@ -1899,6 +1921,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         assert unlocked_merkletree, "is_valid_unlock should return merkletree if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
         channel_state.partner_state.merkletree = unlocked_merkletree
+        channel_state.partner_state.nonce = unlock.balance_proof.nonce
 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 

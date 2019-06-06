@@ -44,6 +44,7 @@ from raiden.utils.typing import (
     LockHash,
     Locksroot,
     MessageID,
+    Nonce,
     Optional,
     PaymentNetworkAddress,
     PaymentWithFeeAmount,
@@ -321,6 +322,7 @@ class NettingChannelEndState(State):
     merkletree: MerkleTreeState = field(repr=False, default_factory=make_empty_merkle_tree)
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
     onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
+    nonce: Nonce = field(default=Nonce(0))
 
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)

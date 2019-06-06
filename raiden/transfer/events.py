@@ -17,6 +17,7 @@ from raiden.utils.typing import (
     ChannelID,
     InitiatorAddress,
     List,
+    Nonce,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -41,6 +42,7 @@ class SendWithdrawRequest(SendMessageEvent):
     token_network_address: TokenNetworkAddress
     total_withdraw: WithdrawAmount
     participant: Address
+    nonce: Nonce
 
 
 @dataclass
@@ -51,6 +53,7 @@ class SendWithdraw(SendMessageEvent):
     token_network_address: TokenNetworkAddress
     total_withdraw: WithdrawAmount
     participant: Address
+    nonce: Nonce
 
 
 @dataclass
