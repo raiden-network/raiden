@@ -15,7 +15,7 @@ from raiden.messages import (
     Unlock,
     lockedtransfersigned_from_message,
 )
-from raiden.transfer import channel, token_network
+from raiden.transfer import channel, token_network, views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -1093,6 +1093,12 @@ class ContainerForChainStateTests:
     @property
     def channels(self):
         return self.channel_set.channels
+
+    @property
+    def token_network(self):
+        return views.get_token_network_by_address(
+            chain_state=self.chain_state, token_network_address=self.token_network_address
+        )
 
 
 def make_chain_state(
