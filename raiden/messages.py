@@ -48,7 +48,6 @@ from raiden.utils.typing import (
     ClassVar,
     Dict,
     InitiatorAddress,
-    List,
     Locksroot,
     MessageID,
     Nonce,
@@ -1260,20 +1259,20 @@ class FeeUpdate(SignedMessage):
         )
 
 
-def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":
+def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransferSignedState:
     """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-
     transfer_state = LockedTransferSignedState(
-        message.message_identifier,
-        message.payment_identifier,
-        message.token,
-        balance_proof,
-        lock,
-        message.initiator,
-        message.target,
+        message_identifier=message.message_identifier,
+        payment_identifier=message.payment_identifier,
+        token=message.token,
+        balance_proof=balance_proof,
+        lock=lock,
+        initiator=message.initiator,
+        target=message.target,
+        routes=[r.route for r in message.metadata.routes],
     )
 
     return transfer_state
@@ -1295,22 +1294,3 @@ CMDID_TO_CLASS: Dict[int, Type[Message]] = {
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
 CLASSNAME_TO_CLASS["Secret"] = Unlock
-
-
-def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransferSignedState:
-    """ Create LockedTransferSignedState from a LockedTransfer message. """
-    balance_proof = balanceproof_from_envelope(message)
-
-    lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-    transfer_state = LockedTransferSignedState(
-        message_identifier=message.message_identifier,
-        payment_identifier=message.payment_identifier,
-        token=message.token,
-        balance_proof=balance_proof,
-        lock=lock,
-        initiator=message.initiator,
-        target=message.target,
-        routes=[r.route for r in message.metadata.routes],
-    )
-
-    return transfer_state
