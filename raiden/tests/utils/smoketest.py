@@ -51,6 +51,7 @@ from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -125,8 +126,6 @@ def deploy_smoketest_contracts(
         CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
-        # The MSC is not used, no need to waste time on deployment
-        CONTRACT_MONITORING_SERVICE: bytes([11] * 20),
     }
     if contract_manager.contracts_version == DEVELOPMENT_CONTRACT_VERSION:
         service_registry_address = deploy_contract_web3(
@@ -136,6 +135,12 @@ def deploy_smoketest_contracts(
             constructor_arguments=(token_address,),
         )
         addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
+
+        # The MSC is not used, no need to waste time on deployment
+        addresses[CONTRACT_MONITORING_SERVICE] = "0x" + "1" * 40
+        # The OneToN contract is not used, no need to waste time on deployment
+        addresses[CONTRACT_ONE_TO_N] = "0x" + "1" * 40
+
     return addresses
 
 
@@ -299,9 +304,6 @@ def setup_raiden(
     secret_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_SECRET_REGISTRY]
     )
-    monitoring_service_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_MONITORING_SERVICE]
-    )
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -315,7 +317,6 @@ def setup_raiden(
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "tokennetwork_registry_contract_address": tokennetwork_registry_contract_address,
         "secret_registry_contract_address": secret_registry_contract_address,
-        "monitoring_service_contract_address": monitoring_service_contract_address,
         "sync_check": False,
         "transport": transport,
     }
@@ -325,6 +326,14 @@ def setup_raiden(
             contract_addresses[CONTRACT_SERVICE_REGISTRY]
         )
         args["service_registry_contract_address"] = service_registry_contract_address
+
+        monitoring_service_contract_address = to_checksum_address(
+            contract_addresses[CONTRACT_MONITORING_SERVICE]
+        )
+        args["monitoring_service_contract_address"] = monitoring_service_contract_address
+
+        one_to_n_contract_address = to_checksum_address(contract_addresses[CONTRACT_ONE_TO_N])
+        args["one_to_n_contract_address"] = one_to_n_contract_address
 
     return {"args": args, "contract_addresses": contract_addresses, "token": token}
 

@@ -631,7 +631,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             args["config"] = deepcopy(App.DEFAULT_CONFIG)
             args["environment_type"] = environment_type
             args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
-            args["one_to_n_contract_address"] = None
+            args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.BASIC
 
             for option_ in run.params:
