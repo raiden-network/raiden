@@ -713,7 +713,7 @@ class Metadata:
         return sha3(rlp.encode([r.hash for r in self.routes]))
 
     def __repr__(self):
-        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.route])}"
+        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.routes])}"
 
 
 @dataclass(repr=False, eq=False)
@@ -780,8 +780,6 @@ class LockedTransfer(LockedTransferBase):
     initiator: InitiatorAddress
     fee: int
     metadata: Metadata
-
-    route_metadata: RouteMetadata
 
     def __post_init__(self):
         super().__post_init__()
