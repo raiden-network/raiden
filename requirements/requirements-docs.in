@@ -1,0 +1,7 @@
+# Documentation
+sphinx<2.0
+sphinx_rtd_theme
+sphinxcontrib-httpdomain
+sphinxcontrib-httpexample
+sphinxcontrib-images
+releases

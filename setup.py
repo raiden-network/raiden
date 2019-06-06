@@ -43,7 +43,7 @@ with open("README.rst") as readme_file:
 history = ""
 
 
-with open("constraints.txt") as req_file:
+with open("requirements/requirements.txt") as req_file:
     install_requires = list(
         {
             requirement

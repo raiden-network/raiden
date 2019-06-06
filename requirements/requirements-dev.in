@@ -1,0 +1,44 @@
+# We need to include the compiled base requirements to make sure we're not pulling in
+# incompatible dependencies
+-r requirements.txt
+
+# split out to allow faster building of docs and to not require python 3.7
+# since they don't support it in RTD yet: https://github.com/rtfd/readthedocs.org/issues/4713
+-r requirements-docs.txt
+
+# Dependencies
+pip-tools~=3.8.0  # this is used by 'deps.py'
+
+# Linting
+autopep8
+flake8
+flake8-bugbear
+flake8-tuple
+isort
+readme-renderer
+pylint
+mypy
+black==19.3b0
+
+# Testing
+pytest
+pytest-random
+pytest-timeout
+pytest-select
+pytest-xdist
+grequests
+pexpect
+hypothesis
+
+# Debugging
+pdbpp
+colour
+
+# Continuous Integration
+coverage
+
+# Release
+bump2version
+
+# Test support
+matrix-synapse==0.33.9
