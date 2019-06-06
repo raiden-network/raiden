@@ -124,7 +124,7 @@ def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> s
 
 
 def configure_pfs_or_exit(
-    pfs_address: Optional[str],
+    pfs_url: Optional[str],
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
     token_network_registry_address: Address,
@@ -144,25 +144,25 @@ def configure_pfs_or_exit(
     assert routing_mode == RoutingMode.PFS, msg
 
     msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
-    assert pfs_address, msg
-    if pfs_address == "auto":
+    assert pfs_url, msg
+    if pfs_url == "auto":
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
-        pfs_address = get_random_service(
+        pfs_url = get_random_service(
             service_registry=service_registry, block_identifier=block_hash
         )
-        if pfs_address is None:
+        if pfs_url is None:
             click.secho(
                 "The service registry has no registered path finding service "
                 "and we don't use basic routing."
             )
             sys.exit(1)
 
-    pathfinding_service_info = get_pfs_info(pfs_address)
+    pathfinding_service_info = get_pfs_info(pfs_url)
     if not pathfinding_service_info:
         click.secho(
             f"There is an error with the pathfinding service with address "
-            f"{pfs_address}. Raiden will shut down."
+            f"{pfs_url}. Raiden will shut down."
         )
         sys.exit(1)
     else:
@@ -170,34 +170,34 @@ def configure_pfs_or_exit(
         pfs_eth_address = pathfinding_service_info.get("payment_address", None)
         if fee > 0 and not pfs_eth_address:
             click.secho(
-                f"The pathfinding service at {pfs_address} did not provide an eth address "
+                f"The pathfinding service at {pfs_url} did not provide an eth address "
                 f"to pay it. Raiden will shut down. Please try a different PFS."
             )
             sys.exit(1)
         if fee > 0 and not is_checksum_address(pfs_eth_address):
             click.secho(
-                f"Invalid reply from pathfinding service {pfs_address}: Payment address "
+                f"Invalid reply from pathfinding service {pfs_url}: Payment address "
                 f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut "
                 f"down. Please choose a different PFS."
             )
             sys.exit(1)
         msg = configure_pfs_message(
-            info=pathfinding_service_info, url=pfs_address, eth_address=pfs_eth_address
+            info=pathfinding_service_info, url=pfs_url, eth_address=pfs_eth_address
         )
         click.secho(msg)
         log.info("Using PFS", pfs_info=pathfinding_service_info)
         pfs_token_network_address = pathfinding_service_info["network_info"]["registry_address"]
         if not is_same_address(pfs_token_network_address, token_network_registry_address):
+            click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
             click.secho(
-                f"Invalid reply from pathfinding service {pfs_address}:"
-                f"PFS is not operating on the same Token Network Registry"
-                f"'{pfs_token_network_address}' as your node is"
-                f"'{token_network_registry_address}'. Raiden will shut "
-                f"down. Please choose a different PFS."
+                f"PFS is not operating on the same Token Network Registry "
+                f"({to_checksum_address(pfs_token_network_address)}) as your node is "
+                f"({to_checksum_address(token_network_registry_address)}).\n"
+                f"Raiden will shut down. Please choose a different PFS."
             )
             sys.exit(1)
 
-    return PFSConfiguration(url=pfs_address, eth_address=pfs_eth_address, fee=fee)
+    return PFSConfiguration(url=pfs_url, eth_address=pfs_eth_address, fee=fee)
 
 
 def get_last_iou(
