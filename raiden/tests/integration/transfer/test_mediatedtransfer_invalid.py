@@ -88,6 +88,7 @@ def run_test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     assert isinstance(payment_status.payment_done.get(), EventPaymentSentFailed)
 
 
+@pytest.mark.flaky(max_runs=3)
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_receive_lockedtransfer_invalidnonce(

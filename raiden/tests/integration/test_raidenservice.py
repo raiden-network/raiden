@@ -19,6 +19,7 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer.state_change import Block
 
 
+@pytest.mark.flaky(max_runs=3)
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])

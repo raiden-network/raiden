@@ -94,6 +94,7 @@ def test_log_filter():
     assert filter_.should_log("other", "WARN") is True
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("module", ["", "raiden", "raiden.network"])
 @pytest.mark.parametrize("level", ["DEBUG", "WARNING"])
 @pytest.mark.parametrize("logger", ["test", "raiden", "raiden.network"])

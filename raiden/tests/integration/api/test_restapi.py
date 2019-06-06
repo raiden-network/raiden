@@ -204,6 +204,7 @@ def test_payload_with_address_invalid_length(api_server_test_instance):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_address_not_eip55(api_server_test_instance):
@@ -269,6 +270,7 @@ def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_
     assert "token_network_address" in channel_info
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_channel_status_channel_nonexistant(api_server_test_instance, token_addresses):
@@ -448,6 +450,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     assert "The account balance is below the estimated amount" in response["errors"]
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_close_and_settle_channel(
@@ -957,6 +960,7 @@ def test_api_payments_with_secret_no_hash(
     assert secret == response["secret"]
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_hash_no_secret(
     api_server_test_instance, raiden_network, token_addresses
@@ -993,6 +997,7 @@ def test_api_payments_with_hash_no_secret(
     assert payment == payment
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_secret_and_hash(
     api_server_test_instance, raiden_network, token_addresses
@@ -1091,6 +1096,7 @@ def test_api_payments_conflicts(api_server_test_instance, raiden_network, token_
     assert all(response.status_code == HTTPStatus.OK for response in responses)
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -1307,6 +1313,7 @@ def test_connect_insufficient_reserve(api_server_test_instance, token_addresses)
     assert "The account balance is below the estimated amount" in response["errors"]
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_network_events(api_server_test_instance, token_addresses):
@@ -1370,6 +1377,7 @@ def test_token_events(api_server_test_instance, token_addresses):
     assert len(response.json()) > 0
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_events(api_server_test_instance, token_addresses):
@@ -1492,6 +1500,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     )
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_payment_events_endpoints(api_server_test_instance, raiden_network, token_addresses):
     app0, app1, app2 = raiden_network
@@ -1780,6 +1789,7 @@ def test_channel_events_raiden(api_server_test_instance, raiden_network, token_a
     assert_proper_response(response)
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_pending_transfers_endpoint(raiden_network, token_addresses):

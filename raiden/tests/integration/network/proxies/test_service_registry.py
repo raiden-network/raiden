@@ -42,6 +42,7 @@ def test_service_registry_random_pfs(
     assert get_random_service(c1_service_proxy, "latest") in urls
 
 
+@pytest.mark.flaky
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
     service_proxy, urls = deploy_service_registry_and_set_urls(
         private_keys=private_keys,

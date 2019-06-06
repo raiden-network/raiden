@@ -46,6 +46,7 @@ def wait_for_batch_unlock(app, token_network_address, receiver, sender):
         )
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_settle_is_automatically_called(raiden_network, token_addresses):
     raise_on_failure(
@@ -253,6 +254,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     assert transfer_2_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_batch_unlock(
     raiden_network, token_addresses, secret_registry_address, deposit, blockchain_type
@@ -405,6 +407,7 @@ def run_test_batch_unlock(
     assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, deposit):
@@ -504,6 +507,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     assert token_proxy.balance_of(address1) == expected_balance1
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_automatic_secret_registration(raiden_chain, token_addresses):
@@ -682,6 +686,7 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     assert hub_contract.participants[app1.raiden.address]["netted"] == deposit - amount
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_automatic_dispute(raiden_network, deposit, token_addresses):
     raise_on_failure(
@@ -765,6 +770,7 @@ def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     assert token_proxy.balance_of(app1.raiden.address) == expected_balance1
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
     raise_on_failure(

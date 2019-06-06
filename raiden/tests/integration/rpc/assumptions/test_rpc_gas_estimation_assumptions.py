@@ -1,3 +1,4 @@
+import pytest
 from eth_utils import to_checksum_address
 
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
@@ -5,6 +6,7 @@ from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 SSTORE_COST = 20000
 
 
+@pytest.mark.flaky
 def test_estimate_gas_fail(deploy_client):
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")

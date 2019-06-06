@@ -30,6 +30,7 @@ from raiden_contracts.constants import (
 SIGNATURE_SIZE_IN_BITS = 520
 
 
+@pytest.mark.flaky
 def test_token_network_deposit_race(
     token_network_proxy, private_keys, token_proxy, web3, contract_manager
 ):
@@ -627,6 +628,7 @@ def test_token_network_proxy_update_transfer(
         assert "getChannelIdentifier returned 0" in str(exc)
 
 
+@pytest.mark.flaky
 def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_manager):
     """A test for https://github.com/raiden-network/raiden/issues/3566
 

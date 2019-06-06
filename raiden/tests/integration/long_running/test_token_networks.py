@@ -60,6 +60,7 @@ def saturated_count(connection_managers, registry_address, token_address):
     ].count(True)
 
 
+@pytest.mark.flaky(max_runs=4)
 # TODO: add test scenarios for
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels

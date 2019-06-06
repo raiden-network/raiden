@@ -1,3 +1,4 @@
+import pytest
 from eth_utils import to_checksum_address
 
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -21,6 +22,7 @@ def test_transact_opcode(deploy_client):
     assert check_transaction_threw(deploy_client, transaction) is None, "must be empty"
 
 
+@pytest.mark.flaky
 def test_transact_throws_opcode(deploy_client):
     """ The receipt status field of a transaction that threw is 0x0 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")

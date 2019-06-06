@@ -157,6 +157,7 @@ def run_test_locked_transfer_secret_registered_onchain(
     assert not transfer_statechange_dispatched
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_with_entire_deposit(
@@ -211,6 +212,7 @@ def run_test_mediated_transfer_with_entire_deposit(
         )
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argument
@@ -375,6 +377,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             assert patched.call_count == 2
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [4])
 def test_mediated_transfer_with_allocated_fee(

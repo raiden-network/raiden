@@ -39,6 +39,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [64])  # default settlement is too low for 3 hops
@@ -242,6 +243,7 @@ def test_regression_register_secret_once(secret_registry_address, deploy_service
     assert previous_nonce == deploy_service.client._available_nonce
 
 
+@pytest.mark.flaky
 @pytest.mark.skip("issue #3915")
 @pytest.mark.parametrize("number_of_nodes", [5])
 def test_regression_payment_complete_after_refund_to_the_initiator(

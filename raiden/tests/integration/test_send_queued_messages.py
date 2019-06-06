@@ -20,6 +20,7 @@ from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.utils import BlockNumber
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

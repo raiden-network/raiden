@@ -35,6 +35,7 @@ def run_test_token_addresses(raiden_network, token_addresses):
     assert set(api.get_tokens_list(registry_address)) == set(token_addresses)
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):

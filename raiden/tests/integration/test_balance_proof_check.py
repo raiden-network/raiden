@@ -12,6 +12,7 @@ from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -99,6 +100,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     )
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

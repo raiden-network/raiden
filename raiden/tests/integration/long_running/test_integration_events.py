@@ -159,6 +159,7 @@ def wait_both_channel_deposit(
     )
 
 
+@pytest.mark.flaky(max_runs=3)
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_new(raiden_chain, retry_timeout, token_addresses):
@@ -191,6 +192,7 @@ def run_test_channel_new(raiden_chain, retry_timeout, token_addresses):
     assert channelcount0 + 1 == channelcount1
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("privatekey_seed", ["event_new_channel:{}"])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -242,6 +244,7 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_query_events(
@@ -442,6 +445,7 @@ def run_test_query_events(
     assert must_have_event(all_netting_channel_events, settled_event)
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_secret_revealed_on_chain(

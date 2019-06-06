@@ -145,6 +145,7 @@ def run_test_register_token_insufficient_eth(raiden_network, token_amount, contr
         )
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -429,6 +430,7 @@ def run_test_funds_check_for_openchannel(raiden_network, token_addresses):
         gevent.joinall(greenlets, raise_error=True)
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("reveal_timeout", [8])
@@ -478,6 +480,7 @@ def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=
         assert not greenlet.value
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("privatekey_seed", ["test_set_deposit_limit_crash:{}"])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -546,6 +549,7 @@ def run_test_set_deposit_limit_crash(
         )
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

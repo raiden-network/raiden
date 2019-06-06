@@ -316,6 +316,7 @@ def test_matrix_message_sync(matrix_transports):
         assert any(getattr(m, "message_identifier", -1) == i for m in received_messages)
 
 
+@pytest.mark.flaky(max_runs=3)
 @pytest.mark.skipif(getattr(pytest, "config").getvalue("usepdb"), reason="test fails with pdb")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
@@ -704,6 +705,7 @@ def test_pfs_global_messages(
     transport.get()
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule",
     [
@@ -761,6 +763,7 @@ def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_
     assert join_rule1 == expected_join_rule
 
 
+@pytest.mark.flaky(max_runs=4)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule0, expected_join_rule1",
     [
@@ -820,6 +823,7 @@ def test_matrix_invite_private_room_unhappy_case1(
     assert join_rule1 == expected_join_rule1
 
 
+@pytest.mark.flaky(max_runs=10)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule0, expected_join_rule1",
     [
@@ -892,6 +896,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert join_rule1 == expected_join_rule1
 
 
+@pytest.mark.flaky(max_runs=8)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule",
     [
@@ -946,6 +951,7 @@ def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_j
     assert join_rule1 == expected_join_rule
 
 
+@pytest.mark.flaky(max_runs=3)
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [3])
 def test_matrix_user_roaming(matrix_transports):

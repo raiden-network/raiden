@@ -102,6 +102,7 @@ def test_register_secret_batch_happy_path(secret_registry_proxy):
     secret_registry_batch_happy_path(secret_registry_proxy)
 
 
+@pytest.mark.flaky
 def test_register_secret_batch_with_pruned_block(
     secret_registry_proxy, web3, private_keys, contract_manager
 ):

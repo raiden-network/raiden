@@ -5,6 +5,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import views
 
 
+@pytest.mark.flaky
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_with_self(raiden_network, settle_timeout, token_addresses):

@@ -1,4 +1,5 @@
 import gc
+import time
 from itertools import chain, combinations, product
 
 import gevent
@@ -75,3 +76,8 @@ def fixture_all_combinations(invalid_values):
 
         for instance in invalid_instances:
             yield dict(instance)
+
+
+def delay_rerun(*_args):
+    time.sleep(1)
+    return True

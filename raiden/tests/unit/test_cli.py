@@ -16,6 +16,7 @@ def cli_runner(tmp_path):
         yield partial(runner.invoke, env={"HOME": str(tmp_path)})
 
 
+@pytest.mark.flaky
 def test_cli_version(cli_runner):
     result = cli_runner(run, ["version"])
     result_json = json.loads(result.output)

@@ -1,9 +1,11 @@
 import gevent
+import pytest
 
 from raiden.network.rpc.client import geth_discover_next_available_nonce
 from raiden.tests.utils.factories import make_address
 
 
+@pytest.mark.flaky
 def test_geth_discover_next_available_nonce(
     deploy_client, skip_if_parity  # pylint: disable=unused-argument
 ):
