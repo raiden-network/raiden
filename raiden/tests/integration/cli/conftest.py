@@ -88,28 +88,10 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
     )
     os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
 
-    args = [
-        "--gas-price",
-        "1000000000",
-        "--no-sync-check",
-        "--tokennetwork-registry-contract-address",
-        initial_args["tokennetwork_registry_contract_address"],
-        "--secret-registry-contract-address",
-        initial_args["secret_registry_contract_address"],
-        "--endpoint-registry-contract-address",
-        initial_args["endpoint_registry_contract_address"],
-        f"--debug-logfile-name={base_logfile}",
-    ]
+    args = ["--gas-price", "1000000000", "--no-sync-check", f"--debug-logfile-name={base_logfile}"]
 
     if environment_type == Environment.DEVELOPMENT.value:
-        args += [
-            "--service-registry-contract-address",
-            initial_args["service_registry_contract_address"],
-            "--environment-type",
-            environment_type,
-            "--one-to-n-contract-address",
-            initial_args["one_to_n_contract_address"],
-        ]
+        args += ["--environment-type", environment_type]
 
     for arg_name, arg_value in initial_args.items():
         if arg_name == "sync_check":

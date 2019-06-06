@@ -240,13 +240,16 @@ def run_app(
             config=config,
             chain=blockchain_service,
             query_start_block=BlockNumber(start_block),
-            default_one_to_n_address=one_to_n_contract_address
-            or contracts[CONTRACT_ONE_TO_N]["address"],
+            default_one_to_n_address=(
+                one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
+            ),
             default_registry=proxies.token_network_registry,
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
-            default_msc_address=monitoring_service_contract_address
-            or contracts[CONTRACT_MONITORING_SERVICE]["address"],
+            default_msc_address=(
+                monitoring_service_contract_address
+                or contracts[CONTRACT_MONITORING_SERVICE]["address"]
+            ),
             transport=transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,
