@@ -1,11 +1,17 @@
 import pytest
 
-from raiden_contracts.constants import ChannelEvent
-
 from raiden.blockchain.events import Event
-from raiden.blockchain_events_handler import create_update_transfer_state_change
+from raiden.blockchain_events_handler import (
+    create_channel_closed_state_change,
+    create_update_transfer_state_change,
+)
 from raiden.tests.utils import factories
-from raiden.transfer.state_change import ContractReceiveUpdateTransfer
+from raiden.transfer.state_change import (
+    ContractReceiveChannelClosed,
+    ContractReceiveRouteClosed,
+    ContractReceiveUpdateTransfer,
+)
+from raiden_contracts.constants import ChannelEvent
 
 
 @pytest.fixture
@@ -51,3 +57,33 @@ def test_create_update_transfer_state_change_unknown_channel(container, update_t
         chain_state=container.chain_state, event=update_transfer
     )
     assert state_change is None
+
+
+@pytest.fixture
+def channel_closed(container, event_data):
+    event_data["event"] = ChannelEvent.CLOSED
+    event_data["args"]["closing_participant"] = factories.make_address()
+    return Event(originating_contract=container.token_network_address, event_data=event_data)
+
+
+def test_create_channel_closed_state_change(container, channel_closed):
+    state_change = create_channel_closed_state_change(
+        chain_state=container.chain_state, event=channel_closed
+    )
+    assert isinstance(state_change, ContractReceiveChannelClosed)
+
+
+def test_create_channel_closed_state_change_unknown_token_network(container, channel_closed):
+    channel_closed.originating_contract = factories.make_token_network_address()
+    state_change = create_channel_closed_state_change(
+        chain_state=container.chain_state, event=channel_closed
+    )
+    assert isinstance(state_change, ContractReceiveRouteClosed)
+
+
+def test_create_channel_closed_state_change_unknown_channel(container, channel_closed):
+    channel_closed.event_data["args"]["channel_identifier"] = factories.make_channel_identifier()
+    state_change = create_channel_closed_state_change(
+        chain_state=container.chain_state, event=channel_closed
+    )
+    assert isinstance(state_change, ContractReceiveRouteClosed)
