@@ -52,6 +52,7 @@ from raiden_contracts.constants import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
+    from raiden.storage import SQLiteStorage  # noqa: F401
     from raiden.transfer.state import ChainState  # noqa: F401
 
 
@@ -328,7 +329,7 @@ def create_update_transfer_state_change(
             chain_identifier=chain_state.chain_id,
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
-        )
+        ),
     )
 
     if channel_state:
@@ -429,9 +430,9 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no
     raiden.handle_and_track_state_change(channel_settled)
 
 
-def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
-    assert raiden.wal, "The Raiden Service must be initialize to handle events"
-
+def create_batch_unlock_state_change(
+    chain_state: "ChainState", our_address: typing.Address, storage: "SQLiteStorage", event: Event
+) -> typing.Optional[ContractReceiveChannelBatchUnlock]:
     token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
@@ -442,13 +443,12 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     participant2 = args["sender"]
     locksroot = args["locksroot"]
 
-    chain_state = views.state_from_raiden(raiden)
     token_network_state = views.get_token_network_by_address(chain_state, token_network_address)
     assert token_network_state is not None
 
-    if participant1 == raiden.address:
+    if participant1 == our_address:
         partner = participant2
-    elif participant2 == raiden.address:
+    elif participant2 == our_address:
         partner = participant1
     else:
         log.debug(
@@ -464,9 +464,9 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     for channel_identifier in channel_identifiers:
         if partner == args["sender"]:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
-                storage=raiden.wal.storage,
+                storage=storage,
                 canonical_identifier=CanonicalIdentifier(
-                    chain_identifier=raiden.chain.network_id,
+                    chain_identifier=chain_state.chain_id,
                     token_network_address=token_network_address,
                     channel_identifier=channel_identifier,
                 ),
@@ -480,9 +480,9 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 break
         elif partner == args["receiver"]:
             event_record = get_event_with_balance_proof_by_locksroot(
-                storage=raiden.wal.storage,
+                storage=storage,
                 canonical_identifier=CanonicalIdentifier(
-                    chain_identifier=raiden.chain.network_id,
+                    chain_identifier=chain_state.chain_id,
                     token_network_address=token_network_address,
                     channel_identifier=channel_identifier,
                 ),
@@ -501,7 +501,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     )
     assert canonical_identifier is not None, msg
 
-    unlock_state_change = ContractReceiveChannelBatchUnlock(
+    return ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
         canonical_identifier=canonical_identifier,
         receiver=args["receiver"],
@@ -513,7 +513,19 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
         block_hash=block_hash,
     )
 
-    raiden.handle_and_track_state_change(unlock_state_change)
+
+def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    assert raiden.wal, "The Raiden Service must be initialize to handle events"
+
+    state_change = create_batch_unlock_state_change(
+        chain_state=views.state_from_raiden(raiden),
+        our_address=raiden.address,
+        storage=raiden.wal.storage,
+        event=event,
+    )
+
+    if state_change:
+        raiden.handle_and_track_state_change(state_change)
 
 
 def handle_secret_revealed(raiden: "RaidenService", event: Event):  # pragma: no unittest
