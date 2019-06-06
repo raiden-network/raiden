@@ -52,6 +52,7 @@ from raiden_contracts.constants import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
+    from raiden.transfer.state import ChainState  # noqa: F401
 
 
 log = structlog.get_logger(__name__)
@@ -305,7 +306,9 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):
         raiden.handle_and_track_state_change(route_closed)
 
 
-def handle_channel_update_transfer(raiden: "RaidenService", event: Event):
+def create_update_transfer_state_change(
+    chain_state: "ChainState", event: Event
+) -> typing.Optional[ContractReceiveUpdateTransfer]:
     token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
@@ -314,25 +317,32 @@ def handle_channel_update_transfer(raiden: "RaidenService", event: Event):
     block_number = data["block_number"]
     block_hash = data["block_hash"]
 
-    chain_state = views.state_from_raiden(raiden)
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
-        ),
+        )
     )
 
     if channel_state:
-        channel_transfer_updated = ContractReceiveUpdateTransfer(
+        return ContractReceiveUpdateTransfer(
             transaction_hash=transaction_hash,
             canonical_identifier=channel_state.canonical_identifier,
             nonce=args["nonce"],
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(channel_transfer_updated)
+
+
+def handle_channel_update_transfer(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    update_transfer = create_update_transfer_state_change(
+        chain_state=views.state_from_raiden(raiden), event=event
+    )
+
+    if update_transfer:
+        raiden.handle_and_track_state_change(update_transfer)
 
 
 def handle_channel_settled(raiden: "RaidenService", event: Event):
