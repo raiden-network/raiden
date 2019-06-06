@@ -146,6 +146,7 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
 def prune_route_table(
     route_state_table: List[RouteState], selected_route: RouteState
 ) -> List[RouteState]:
+
     pruned_route_table = [rs for rs in route_state_table if rs.route != selected_route.route]
 
     pruned_route_table.insert(

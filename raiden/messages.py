@@ -784,7 +784,9 @@ class RefundTransfer(LockedTransfer):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
-            route_metadata=RouteMetadata(routes=transfer.route_state.route),
+            metadata=Metadata(
+                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
+            ),
         )
 
 

@@ -1183,9 +1183,16 @@ def handle_refundtransfer(
         if not is_valid:
             return TransitionResult(mediator_state, channel_events)
 
+        # We remove all routes where the sender of the refund is our forward hop
+        candidate_route_states = [
+            route
+            for route in mediator_state.routes
+            if route.forward_channel_id != payer_channel.canonical_identifier.channel_identifier
+        ]
+
         iteration = mediate_transfer(
             state=mediator_state,
-            candidate_route_states=mediator_state_change.routes,
+            candidate_route_states=candidate_route_states,
             payer_channel=payer_channel,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,

@@ -640,7 +640,7 @@ class LockedTransferUnsignedStateProperties(BalanceProofProperties):
     payment_identifier: PaymentID = EMPTY
     token: TokenAddress = EMPTY
     secret: Secret = EMPTY
-    route_state: RouteState = EMPTY
+    route_states: List[RouteState] = EMPTY
 
     TARGET_TYPE = LockedTransferUnsignedState
 
@@ -712,7 +712,7 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
 LOCKED_TRANSFER_BASE_DEFAULTS = {
     k: v
     for k, v in LockedTransferUnsignedStateProperties.DEFAULTS.__dict__.items()
-    if k not in ["route_state"]
+    if k not in ["route_states"]
 }
 
 LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperties(
@@ -898,7 +898,7 @@ def make_signed_transfer_for(
             locksroot=locksroot, canonical_identifier=channel_state.canonical_identifier
         )
 
-    transfer_properties.__dict__.pop("route_state")
+    transfer_properties.__dict__.pop("route_states", None)
 
     transfer = create(
         LockedTransferSignedStateProperties(recipient=recipient, **transfer_properties.__dict__),

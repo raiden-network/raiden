@@ -189,6 +189,11 @@ class RouteState(State):
         assert len(self.route) >= 1
         return self.route[1]
 
+    def __repr__(self):
+        return "RouteState ({}), channel_id: {}".format(
+            " -> ".join([pex(a) for a in self.route]), self.forward_channel_id
+        )
+
 
 @dataclass
 class HashTimeLockState(State):
