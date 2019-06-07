@@ -836,9 +836,7 @@ def make_signed_transfer_for(
             secrethash=sha256(properties.secret).digest(),
         )
         locksroot = merkleroot(
-            channel.compute_merkletree_with(
-                merkletree=channel_state.partner_state.merkletree, lockhash=sha3(lock.as_bytes)
-            )
+            channel.compute_locks_with(locks=channel_state.partner_state.merkletree, lock=lock)
         )
     else:
         locksroot = properties.locksroot
