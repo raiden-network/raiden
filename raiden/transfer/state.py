@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 from random import Random
 from typing import TYPE_CHECKING, Tuple
@@ -8,13 +8,7 @@ from typing import TYPE_CHECKING, Tuple
 import networkx
 from eth_utils import to_hex
 
-from raiden.constants import (
-    EMPTY_LOCK_HASH,
-    EMPTY_MERKLE_ROOT,
-    EMPTY_SECRETHASH,
-    UINT64_MAX,
-    UINT256_MAX,
-)
+from raiden.constants import EMPTY_LOCK_HASH, EMPTY_SECRETHASH, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import (
@@ -44,6 +38,7 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockHash,
+    LockHashLockOrderedDict,
     Locksroot,
     MessageID,
     Nonce,
@@ -67,6 +62,7 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -108,10 +104,8 @@ def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "Balance
     )
 
 
-def make_empty_merkle_tree() -> "MerkleTreeState":
-    return MerkleTreeState(
-        [[], [Keccak256(EMPTY_MERKLE_ROOT)]]  # the leaves are empty  # the root is the constant 0
-    )
+def make_empty_lockhash_lock_ordered_dict() -> LockHashLockOrderedDict:
+    return LockHashLockOrderedDict(OrderedDict())
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -321,9 +315,13 @@ class NettingChannelEndState(State):
     secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
-    merkletree: MerkleTreeState = field(repr=False, default_factory=make_empty_merkle_tree)
+    #: An OrderedDict that maps secrethashes to lock states.
+    #: Used for calculating the locksroot.
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
-    onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
+    pending_locks: LockHashLockOrderedDict = field(
+        repr=False, default_factory=make_empty_lockhash_lock_ordered_dict
+    )
+    onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))
 
     def __post_init__(self) -> None:

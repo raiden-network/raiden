@@ -3,7 +3,7 @@ import heapq
 import random
 from typing import TYPE_CHECKING
 
-from eth_utils import encode_hex, to_hex
+from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import (
     CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
@@ -11,6 +11,7 @@ from raiden.constants import (
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
+from raiden.messages import Lock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import (
@@ -46,7 +47,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
 )
-from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
+from raiden.transfer.merkle_tree import LEAVES
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_CLOSING,
@@ -65,7 +66,6 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     TransactionOrder,
     UnlockPartialProofState,
-    make_empty_merkle_tree,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -98,9 +98,9 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     InitiatorAddress,
-    Keccak256,
     List,
     LockHash,
+    LockHashLockOrderedDict,
     Locksroot,
     LockType,
     MerkleTreeLeaves,
@@ -129,10 +129,10 @@ if TYPE_CHECKING:
     from raiden.transfer.state import RouteState  # noqa: F401
 
 # This should be changed to `Union[str, MerkleTreeState]`
-MerkletreeOrError = Tuple[bool, Optional[str], Optional[MerkleTreeState]]
+LockHashLockOrderedDictOrError = Tuple[bool, Optional[str], Optional[LockHashLockOrderedDict]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
-SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
+SendUnlockAndLockHashLockOrderedDict = Tuple[SendBalanceProof, LockHashLockOrderedDict]
 
 
 class UnlockGain(NamedTuple):
@@ -498,7 +498,7 @@ def is_valid_lockedtransfer(
     channel_state: NettingChannelState,
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
-) -> MerkletreeOrError:
+) -> LockHashLockOrderedDictOrError:
     return valid_lockedtransfer_check(
         channel_state,
         sender_state,
@@ -515,7 +515,7 @@ def is_valid_lock_expired(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     block_number: BlockNumber,
-) -> MerkletreeOrError:
+) -> LockHashLockOrderedDictOrError:
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
 
@@ -543,10 +543,10 @@ def is_valid_lock_expired(
     )
 
     if lock:
-        merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
+        pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
         expected_locked_amount = current_locked_amount - lock.amount
 
-    result: MerkletreeOrError = (False, None, None)
+    result: LockHashLockOrderedDictOrError = (False, None, None)
 
     if secret_registered_on_chain:
         msg = "Invalid LockExpired mesage. Lock was unlocked on-chain."
@@ -563,12 +563,12 @@ def is_valid_lock_expired(
         msg = f"Invalid LockExpired message. {invalid_balance_proof_msg}"
         result = (False, msg, None)
 
-    elif merkletree is None:
+    elif pending_locks is None:
         msg = "Invalid LockExpired message. Same lockhash handled twice."
         result = (False, msg, None)
 
     else:
-        locksroot_without_lock = merkleroot(merkletree)
+        locksroot_without_lock = compute_locksroot(pending_locks)
         has_expired, lock_expired_message = is_lock_expired(
             end_state=receiver_state,
             lock=lock,
@@ -610,7 +610,7 @@ def is_valid_lock_expired(
             result = (False, msg, None)
 
         else:
-            result = (True, None, merkletree)
+            result = (True, None, pending_locks)
 
     return result
 
@@ -622,10 +622,10 @@ def valid_lockedtransfer_check(
     message_name: str,
     received_balance_proof: BalanceProofSignedState,
     lock: HashTimeLockState,
-) -> MerkletreeOrError:
+) -> LockHashLockOrderedDictOrError:
 
     current_balance_proof = get_current_balanceproof(sender_state)
-    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
+    pending_locks = compute_locks_with(sender_state.pending_locks, lock)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
     distributable = get_distributable(sender_state, receiver_state)
@@ -637,17 +637,17 @@ def valid_lockedtransfer_check(
         sender_state=sender_state,
     )
 
-    result: MerkletreeOrError = (False, None, None)
+    result: LockHashLockOrderedDictOrError = (False, None, None)
 
     if not is_balance_proof_usable:
         msg = f"Invalid {message_name} message. {invalid_balance_proof_msg}"
         result = (False, msg, None)
 
-    elif merkletree is None:
+    elif pending_locks is None:
         msg = f"Invalid {message_name} message. Same lockhash handled twice."
         result = (False, msg, None)
 
-    elif _merkletree_width(merkletree) > MAXIMUM_PENDING_TRANSFERS:
+    elif len(pending_locks) > MAXIMUM_PENDING_TRANSFERS:
         msg = (
             f"Invalid {message_name} message. Adding the transfer would exceed the allowed "
             f"limit of {MAXIMUM_PENDING_TRANSFERS} pending transfers per channel."
@@ -655,7 +655,7 @@ def valid_lockedtransfer_check(
         result = (False, msg, None)
 
     else:
-        locksroot_with_lock = merkleroot(merkletree)
+        locksroot_with_lock = compute_locksroot(pending_locks)
 
         if received_balance_proof.locksroot != locksroot_with_lock:
             # The locksroot must be updated to include the new lock
@@ -702,7 +702,7 @@ def valid_lockedtransfer_check(
             result = (False, msg, None)
 
         else:
-            result = (True, None, merkletree)
+            result = (True, None, pending_locks)
 
     return result
 
@@ -736,8 +736,8 @@ def is_valid_refund(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     received_transfer: LockedTransferUnsignedState,
-) -> MerkletreeOrError:
-    is_valid_locked_transfer, msg, merkletree = valid_lockedtransfer_check(
+) -> LockHashLockOrderedDictOrError:
+    is_valid_locked_transfer, msg, pending_locks = valid_lockedtransfer_check(
         channel_state,
         sender_state,
         receiver_state,
@@ -752,12 +752,12 @@ def is_valid_refund(
     if not refund_transfer_matches_transfer(refund.transfer, received_transfer):
         return False, "Refund transfer did not match the received transfer", None
 
-    return True, "", merkletree
+    return True, "", pending_locks
 
 
 def is_valid_unlock(
     unlock: ReceiveUnlock, channel_state: NettingChannelState, sender_state: NettingChannelEndState
-) -> MerkletreeOrError:
+) -> LockHashLockOrderedDictOrError:
     received_balance_proof = unlock.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
@@ -770,12 +770,12 @@ def is_valid_unlock(
 
         return (False, msg, None)
 
-    merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
-    if not merkletree:
+    pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
+    if not pending_locks:
         msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
         return (False, msg, None)
 
-    locksroot_without_lock = merkleroot(merkletree)
+    locksroot_without_lock = compute_locksroot(pending_locks)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
 
@@ -788,7 +788,7 @@ def is_valid_unlock(
         sender_state=sender_state,
     )
 
-    result: MerkletreeOrError = (False, None, None)
+    result: LockHashLockOrderedDictOrError = (False, None, None)
 
     if not is_balance_proof_usable:
         msg = f"Invalid Unlock message. {invalid_balance_proof_msg}"
@@ -825,7 +825,7 @@ def is_valid_unlock(
         result = (False, msg, None)
 
     else:
-        result = (True, None, merkletree)
+        result = (True, None, pending_locks)
 
     return result
 
@@ -1058,7 +1058,7 @@ def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[MerkleTreeL
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
-    if len(end_state.merkletree.layers[LEAVES]) == 0:  # pylint: disable=len-as-condition
+    if len(end_state.pending_locks) == 0:  # pylint: disable=len-as-condition
         return None
 
     lockhashes_to_locks = dict()
@@ -1079,7 +1079,7 @@ def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[MerkleTreeL
     )
 
     ordered_locks = [
-        lockhashes_to_locks[LockHash(lockhash)] for lockhash in end_state.merkletree.layers[LEAVES]
+        lockhashes_to_locks[LockHash(lockhash)] for lockhash in end_state.pending_locks
     ]
 
     # Not sure why the cast is needed here. The error was:
@@ -1128,7 +1128,7 @@ def _merkletree_width(merkletree: MerkleTreeState) -> int:
 
 
 def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -> int:
-    return _merkletree_width(channel_end_state.merkletree)
+    return len(channel_end_state.pending_locks)
 
 
 def get_status(channel_state: NettingChannelState) -> str:
@@ -1213,39 +1213,42 @@ def update_contract_balance(end_state: NettingChannelEndState, contract_balance:
         end_state.contract_balance = contract_balance
 
 
-def compute_merkletree_with(
-    merkletree: MerkleTreeState, lockhash: LockHash
-) -> Optional[MerkleTreeState]:
+def compute_locks_with(
+    locks: LockHashLockOrderedDict, lock: Union[HashTimeLockState, UnlockPartialProofState]
+) -> Optional[LockHashLockOrderedDict]:
     """Register the given lockhash with the existing merkle tree."""
-    # Use None to inform the caller the lockshash is already known
-    result = None
-
-    leaves = merkletree.layers[LEAVES]
-    if lockhash not in leaves:
-        leaves = list(leaves)
-        leaves.append(Keccak256(lockhash))
-        result = MerkleTreeState(compute_layers(leaves))
-
-    return result
+    lockhash = lock.lockhash
+    if lockhash not in locks:
+        locks.update({lockhash: lock})
+        return locks
+    else:
+        return None
 
 
-def compute_merkletree_without(
-    merkletree: MerkleTreeState, lockhash: LockHash
-) -> Optional[MerkleTreeState]:
+def compute_locks_without(
+    locks: LockHashLockOrderedDict, lockhash: LockHash
+) -> Optional[LockHashLockOrderedDict]:
     # Use None to inform the caller the lockhash is unknown
-    result = None
+    if lockhash in locks:
+        del locks[lockhash]
+        return locks
+    else:
+        return None
 
-    leaves = merkletree.layers[LEAVES]
-    if lockhash in leaves:
-        leaves = list(leaves)
-        leaves.remove(Keccak256(lockhash))
 
-        if leaves:
-            result = MerkleTreeState(compute_layers(leaves))
-        else:
-            result = make_empty_merkle_tree()
+def compute_locksroot(locks: LockHashLockOrderedDict) -> Locksroot:
+    """ Compute the hash representing all pending locks
+    The hash is submitted in TokenNetwork.settleChannel() call.
+    """
 
-    return result
+    def as_bytes(l: Union[HashTimeLockState, UnlockPartialProofState]) -> bytes:
+        lock = Lock(amount=l.amount, expiration=l.expiration, secrethash=l.secrethash)
+        ret = lock.as_bytes()
+        assert len(ret) == 96
+        return ret
+
+    locks_as_bytes = map(as_bytes, locks.values())
+    return Locksroot(keccak(b"".join(locks_as_bytes)))
 
 
 def create_sendlockedtransfer(
@@ -1257,7 +1260,7 @@ def create_sendlockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-) -> Tuple[SendLockedTransfer, MerkleTreeState]:
+) -> Tuple[SendLockedTransfer, LockHashLockOrderedDict]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
     our_balance_proof = our_state.balance_proof
@@ -1270,11 +1273,11 @@ def create_sendlockedtransfer(
 
     lock = HashTimeLockState(amount=amount, expiration=expiration, secrethash=secrethash)
 
-    merkletree = compute_merkletree_with(channel_state.our_state.merkletree, lock.lockhash)
+    pending_locks = compute_locks_with(channel_state.our_state.pending_locks, lock)
     # The caller must ensure the same lock is not being used twice
-    assert merkletree, "lock is already registered"
+    assert pending_locks, "lock is already registered"
 
-    locksroot = merkleroot(merkletree)
+    locksroot = compute_locksroot(pending_locks)
 
     if our_balance_proof:
         transferred_amount = our_balance_proof.transferred_amount
@@ -1310,7 +1313,7 @@ def create_sendlockedtransfer(
         canonical_identifier=channel_state.canonical_identifier,
     )
 
-    return lockedtransfer, merkletree
+    return lockedtransfer, pending_locks
 
 
 def create_unlock(
@@ -1319,7 +1322,7 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
-) -> SendUnlockAndMerkleTree:
+) -> SendUnlockAndLockHashLockOrderedDict:
     our_state = channel_state.our_state
 
     msg = "caller must make sure the lock is known"
@@ -1333,11 +1336,11 @@ def create_unlock(
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
-    merkletree = compute_merkletree_without(our_state.merkletree, lock.lockhash)
+    pending_locks = compute_locks_without(our_state.pending_locks, lock.lockhash)
     msg = "the lock is pending, it must be in the merkletree"
-    assert merkletree is not None, msg
+    assert pending_locks is not None, msg
 
-    locksroot = merkleroot(merkletree)
+    locksroot = compute_locksroot(pending_locks)
 
     token_address = channel_state.token_address
     recipient = channel_state.partner_state.address
@@ -1365,7 +1368,7 @@ def create_unlock(
         canonical_identifier=channel_state.canonical_identifier,
     )
 
-    return unlock_lock, merkletree
+    return unlock_lock, pending_locks
 
 
 def send_lockedtransfer(
@@ -1378,7 +1381,7 @@ def send_lockedtransfer(
     expiration: BlockExpiration,
     secrethash: SecretHash,
 ) -> SendLockedTransfer:
-    send_locked_transfer_event, merkletree = create_sendlockedtransfer(
+    send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
@@ -1392,8 +1395,8 @@ def send_lockedtransfer(
     transfer = send_locked_transfer_event.transfer
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
-    channel_state.our_state.merkletree = merkletree
     channel_state.our_state.nonce = transfer.balance_proof.nonce
+    channel_state.our_state.pending_locks = pending_locks
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return send_locked_transfer_event
@@ -1415,7 +1418,7 @@ def send_refundtransfer(
     msg = "caller must make sure the channel is open"
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
-    send_mediated_transfer, merkletree = create_sendlockedtransfer(
+    send_mediated_transfer, pending_locks = create_sendlockedtransfer(
         channel_state,
         initiator,
         target,
@@ -1430,8 +1433,8 @@ def send_refundtransfer(
     lock = mediated_transfer.lock
 
     channel_state.our_state.balance_proof = mediated_transfer.balance_proof
-    channel_state.our_state.merkletree = merkletree
     channel_state.our_state.nonce = mediated_transfer.balance_proof.nonce
+    channel_state.our_state.pending_locks = pending_locks
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     refund_transfer = refund_from_sendmediated(send_mediated_transfer)
@@ -1448,12 +1451,12 @@ def send_unlock(
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 
-    unlock, merkletree = create_unlock(
+    unlock, pending_locks = create_unlock(
         channel_state, message_identifier, payment_identifier, secret, lock
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof
-    channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.pending_locks = pending_locks
 
     _del_lock(channel_state.our_state, lock.secrethash)
 
@@ -1521,7 +1524,7 @@ def create_sendexpiredlock(
     token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     recipient: Address,
-) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:
+) -> Tuple[Optional[SendLockExpired], Optional[LockHashLockOrderedDict]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
@@ -1529,14 +1532,14 @@ def create_sendexpiredlock(
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
 
-    merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
+    pending_locks = compute_locks_without(sender_end_state.pending_locks, locked_lock.lockhash)
 
-    if not merkletree:
+    if not pending_locks:
         return None, None
 
     nonce = get_next_nonce(sender_end_state)
 
-    locksroot = merkleroot(merkletree)
+    locksroot = compute_locksroot(pending_locks)
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1558,7 +1561,7 @@ def create_sendexpiredlock(
         secrethash=locked_lock.secrethash,
     )
 
-    return send_lock_expired, merkletree
+    return send_lock_expired, pending_locks
 
 
 def events_for_expired_lock(
@@ -1569,7 +1572,7 @@ def events_for_expired_lock(
     msg = "caller must make sure the channel is open"
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
-    send_lock_expired, merkletree = create_sendexpiredlock(
+    send_lock_expired, pending_locks = create_sendexpiredlock(
         sender_end_state=channel_state.our_state,
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
@@ -1580,8 +1583,8 @@ def events_for_expired_lock(
     )
 
     if send_lock_expired:
-        assert merkletree, "create_sendexpiredlock should return both message and merkle tree"
-        channel_state.our_state.merkletree = merkletree
+        assert pending_locks, "create_sendexpiredlock should return both message and merkle tree"
+        channel_state.our_state.pending_locks = pending_locks
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
         channel_state.our_state.nonce = send_lock_expired.balance_proof.nonce
 
@@ -1795,7 +1798,7 @@ def handle_refundtransfer(
     refund: ReceiveTransferRefund,
 ) -> EventsOrError:
     events: List[Event]
-    is_valid, msg, merkletree = is_valid_refund(
+    is_valid, msg, pending_locks = is_valid_refund(
         refund=refund,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1803,10 +1806,9 @@ def handle_refundtransfer(
         received_transfer=received_transfer,
     )
     if is_valid:
-        assert merkletree, "is_valid_refund should return merkletree if valid"
+        assert pending_locks, "is_valid_refund should return merkletree if valid"
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
-        channel_state.partner_state.merkletree = merkletree
-        channel_state.partner_state.nonce = refund.transfer.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         lock = refund.transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
@@ -1831,7 +1833,7 @@ def handle_receive_lock_expired(
     channel_state: NettingChannelState, state_change: ReceiveLockExpired, block_number: BlockNumber
 ) -> TransitionResult[NettingChannelState]:
     """Remove expired locks from channel states."""
-    is_valid, msg, merkletree = is_valid_lock_expired(
+    is_valid, msg, pending_locks = is_valid_lock_expired(
         state_change=state_change,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1841,10 +1843,9 @@ def handle_receive_lock_expired(
 
     events: List[Event] = list()
     if is_valid:
-        assert merkletree, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return merkletree if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
-        channel_state.partner_state.merkletree = merkletree
-        channel_state.partner_state.nonce = state_change.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         _del_unclaimed_lock(channel_state.partner_state, state_change.secrethash)
 
@@ -1875,15 +1876,14 @@ def handle_receive_lockedtransfer(
     secrethash included, otherwise it won't be able to claim it.
     """
     events: List[Event]
-    is_valid, msg, merkletree = is_valid_lockedtransfer(
+    is_valid, msg, pending_locks = is_valid_lockedtransfer(
         mediated_transfer, channel_state, channel_state.partner_state, channel_state.our_state
     )
 
     if is_valid:
-        assert merkletree, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return merkletree if valid"
         channel_state.partner_state.balance_proof = mediated_transfer.balance_proof
-        channel_state.partner_state.merkletree = merkletree
-        channel_state.partner_state.nonce = mediated_transfer.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
@@ -1911,15 +1911,14 @@ def handle_receive_refundtransfercancelroute(
 
 
 def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
-    is_valid, msg, unlocked_merkletree = is_valid_unlock(
+    is_valid, msg, unlocked_pending_locks = is_valid_unlock(
         unlock, channel_state, channel_state.partner_state
     )
 
     if is_valid:
-        assert unlocked_merkletree, "is_valid_unlock should return merkletree if valid"
+        assert unlocked_pending_locks, "is_valid_unlock should return merkletree if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
-        channel_state.partner_state.merkletree = unlocked_merkletree
-        channel_state.partner_state.nonce = unlock.balance_proof.nonce
+        channel_state.partner_state.pending_locks = unlocked_pending_locks
 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
