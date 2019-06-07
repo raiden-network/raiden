@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -6,6 +6,7 @@ from raiden.blockchain.events import Event
 from raiden.blockchain_events_handler import (
     create_batch_unlock_state_change,
     create_channel_closed_state_change,
+    create_channel_new_state_change,
     create_new_balance_state_change,
     create_new_tokennetwork_state_change,
     create_update_transfer_state_change,
@@ -17,8 +18,10 @@ from raiden.transfer.state_change import (
     BalanceProofStateChange,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelNew,
     ContractReceiveChannelNewBalance,
     ContractReceiveRouteClosed,
+    ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
 )
 from raiden_contracts.constants import ChannelEvent
@@ -192,6 +195,54 @@ def test_create_new_tokennetwork_state_change(event_data):
     assert state_change.payment_network_address == event.originating_contract
     assert state_change.token_network.network_graph.token_network_address == token_network_address
     assert not state_change.token_network.network_graph.channel_identifier_to_participants
+
+
+@pytest.fixture
+def channel_new(event_data):
+    event_data["args"]["channel_identifier"] = factories.make_channel_identifier()
+    event_data["args"]["participant1"] = factories.make_address()
+    event_data["args"]["participant2"] = factories.make_address()
+
+    return Event(originating_contract=factories.make_address(), event_data=event_data)
+
+
+def test_create_channel_new_state_change_as_participant(channel_new):
+    chain = Mock(payment_channel=Mock(token_address=factories.make_address()))
+    channel_state = factories.create(factories.NettingChannelStateProperties(mediation_fee=33))
+    our_address = channel_new.event_data["args"]["participant1"]
+
+    with patch("raiden.blockchain_events_handler.get_channel_state", return_value=channel_state):
+        state_change, to_health_check, fee_update = create_channel_new_state_change(
+            chain=chain,
+            chain_id=factories.UNIT_CHAIN_ID,
+            our_address=our_address,
+            payment_network_address=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
+            reveal_timeout=factories.UNIT_REVEAL_TIMEOUT,
+            event=channel_new,
+        )
+        assert isinstance(state_change, ContractReceiveChannelNew)
+        assert to_health_check == channel_state.partner_state.address
+        assert fee_update.canonical_identifier == channel_state.canonical_identifier
+        assert fee_update.fee_schedule.flat == 33
+
+
+def test_create_channel_new_state_change_as_non_participant(channel_new):
+    chain = Mock(payment_channel=Mock(token_address=factories.make_address()))
+    channel_state = factories.create(factories.NettingChannelStateProperties(mediation_fee=33))
+    our_address = factories.make_address()
+
+    with patch("raiden.blockchain_events_handler.get_channel_state", return_value=channel_state):
+        state_change, to_health_check, fee_update = create_channel_new_state_change(
+            chain=chain,
+            chain_id=factories.UNIT_CHAIN_ID,
+            our_address=our_address,
+            payment_network_address=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
+            reveal_timeout=factories.UNIT_REVEAL_TIMEOUT,
+            event=channel_new,
+        )
+        assert isinstance(state_change, ContractReceiveRouteNew)
+        assert to_health_check is None
+        assert fee_update is None
 
 
 @pytest.fixture
