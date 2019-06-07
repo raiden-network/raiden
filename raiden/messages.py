@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
 from hashlib import sha256
 from operator import attrgetter
 from typing import List, Tuple
@@ -1180,21 +1181,11 @@ class FeeUpdate(SignedMessage):
     canonical_identifier: CanonicalIdentifier
     updating_participant: Address
     fee_schedule: FeeSchedule
-    nonce: Nonce
+    timestamp: datetime
 
     def __post_init__(self):
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
-
-    def pack(self, packed) -> None:
-        packed.chain_id = self.canonical_identifier.chain_identifier
-        packed.token_network_address = self.canonical_identifier.token_network_address
-        packed.channel_identifier = self.canonical_identifier.channel_identifier
-        packed.updating_participant = self.updating_participant
-        packed.flat = self.fee_schedule.flat
-        packed.proportional = self.fee_schedule.proportional
-        packed.imbalance_penalty = rlp.encode(self.fee_schedule.imbalance_penalty)
-        packed.nonce = self.nonce
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
@@ -1206,7 +1197,7 @@ class FeeUpdate(SignedMessage):
                 "uint256",  # fees
                 "uint256",
                 "bytes",
-                "uint256",  # nonce
+                "string",  # timestamp
             ],
             [
                 self.canonical_identifier.chain_identifier,
@@ -1216,7 +1207,7 @@ class FeeUpdate(SignedMessage):
                 self.fee_schedule.flat,
                 self.fee_schedule.proportional,
                 rlp.encode(self.fee_schedule.imbalance_penalty or 0),
-                self.nonce,
+                DictSerializer.serialize(self)["timestamp"],
             ],
         )
 
@@ -1226,7 +1217,7 @@ class FeeUpdate(SignedMessage):
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
             fee_schedule=FeeSchedule(flat=channel_state.mediation_fee),
-            nonce=Nonce(1),
+            timestamp=datetime.now(timezone.utc),
             signature=EMPTY_SIGNATURE,
         )
 
