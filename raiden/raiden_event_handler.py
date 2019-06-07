@@ -87,13 +87,13 @@ def unlock(
     receiver: Address,
     given_block_identifier: BlockSpecification,
 ) -> None:  # pragma: no unittest
-    merkle_tree_locks = get_batch_unlock(end_state)
-    assert merkle_tree_locks, "merkle tree is missing"
+    pending_locks = get_batch_unlock(end_state)
+    assert pending_locks, "pending lock set is missing"
 
     payment_channel.unlock(
         sender=sender,
         receiver=receiver,
-        merkle_tree_locks=merkle_tree_locks,
+        pending_locks=pending_locks,
         given_block_identifier=given_block_identifier,
     )
 

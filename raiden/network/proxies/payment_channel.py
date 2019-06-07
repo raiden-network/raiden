@@ -14,8 +14,8 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     ChannelID,
+    LockHashLockOrderedDict,
     Locksroot,
-    MerkleTreeLeaves,
     Nonce,
     Signature,
     TokenAddress,
@@ -235,14 +235,14 @@ class PaymentChannel:
         self,
         sender: Address,
         receiver: Address,
-        merkle_tree_locks: MerkleTreeLeaves,
+        pending_locks: LockHashLockOrderedDict,
         given_block_identifier: BlockSpecification,
     ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
             sender=sender,
             receiver=receiver,
-            merkle_tree_locks=merkle_tree_locks,
+            pending_locks=pending_locks,
             given_block_identifier=given_block_identifier,
         )
 

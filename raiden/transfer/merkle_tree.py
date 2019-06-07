@@ -1,16 +1,10 @@
 # the layers grow from the leaves to the root
-from typing import TYPE_CHECKING
-
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3, split_in_pairs
-from raiden.utils.typing import Keccak256, List, Locksroot, Optional
+from raiden.utils.typing import Keccak256, List, Optional
 
 LEAVES = 0
 MERKLEROOT = -1
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.transfer.state import MerkleTreeState
 
 
 def hash_pair(first: Keccak256, second: Optional[Keccak256]) -> Keccak256:
@@ -62,14 +56,6 @@ def compute_layers(elements: List[Keccak256]) -> List[List[Keccak256]]:
         tree.append(layer)
 
     return tree
-
-
-def merkleroot(merkletree: "MerkleTreeState") -> Locksroot:
-    """ Return the root element of the merkle tree. """
-    assert merkletree.layers, "the merkle tree layers are empty"
-    assert merkletree.layers[MERKLEROOT], "the root layer is empty"
-
-    return Locksroot(merkletree.layers[MERKLEROOT][0])
 
 
 def merkle_leaves_from_packed_data(packed_data: bytes) -> List[Keccak256]:
