@@ -47,7 +47,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
 )
-from raiden.transfer.merkle_tree import LEAVES
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_CLOSING,
@@ -59,7 +58,6 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     TransactionChannelNewBalance,
@@ -1121,10 +1119,6 @@ def lock_exists_in_either_channel_side(
 
 def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
     return Nonce(end_state.nonce + 1)
-
-
-def _merkletree_width(merkletree: MerkleTreeState) -> int:
-    return len(merkletree.layers[LEAVES])
 
 
 def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -> int:
