@@ -698,7 +698,6 @@ def test_pfs_global_messages(
     assert pfs_room.send_text.call_count == 2
     msg_data = json.loads(pfs_room.send_text.call_args[0][0])
     assert msg_data["_type"] == "raiden.messages.FeeUpdate"
-    assert msg_data["nonce"] == "1"
 
     transport.stop()
     transport.get()
