@@ -434,7 +434,7 @@ class Ping(SignedMessage):
 
 @dataclass(repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
-    """ Reveals the secret/preimage which unlocks a lock. """
+    """ Requests the secret/preimage which unlocks a lock. """
 
     cmdid: ClassVar[int] = messages.SECRETREQUEST
 
@@ -528,9 +528,9 @@ class Unlock(EnvelopeMessage):
 
 @dataclass(repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
-    """Reveal the a lock's secret.
+    """Reveal the lock's secret.
 
-    This message is not sufficient to unlock a lock, vide Unlock.
+    This message is not sufficient to unlock a lock, refer to the Unlock.
     """
 
     cmdid: ClassVar[int] = messages.REVEALSECRET
@@ -651,21 +651,21 @@ class LockedTransferBase(EnvelopeMessage):
 
 @dataclass(repr=False, eq=False)
 class LockedTransfer(LockedTransferBase):
-    """ Message to used to reserve tokens for a new mediated transfer.
+    """ Message used to reserve tokens for a new mediated transfer.
 
     For this message to be valid, the sender must:
 
     - Use a lock.amount smaller then its current capacity. If the amount is
-      higher then the recipient will be reject it, as it means spending money
-      it does not own.
+      higher, then the recipient will reject it, as it means spending money it
+      does not own.
     - Have the new lock represented in merkleroot.
     - Increase the locked_amount by exactly `lock.amount` otherwise the message
-      would be rejected by the recipient. If the locked_amount is increase by
+      would be rejected by the recipient. If the locked_amount is increased by
       more, then funds may get locked in the channel. If the locked_amount is
-      increase by less, then the recipient will reject the message as it may
-      mean it receive the funds with an on-chain unlock.
+      increased by less, then the recipient will reject the message as it may
+      mean it received the funds with an on-chain unlock.
 
-    The initiator will estipulate the fees based on the available routes and
+    The initiator will estimate the fees based on the available routes and
     incorporate it in the lock's amount. Note that with permissive routing it
     is not possible to predetermine the exact fee amount, as the initiator does
     not know which nodes are available, thus an estimated value is used.
@@ -747,7 +747,7 @@ class LockedTransfer(LockedTransferBase):
 @dataclass(repr=False, eq=False)
 class RefundTransfer(LockedTransfer):
     """ A message used when a payee does not have any available routes to
-    further the transfer.
+    forward the transfer.
 
     This message is used by the payee to refund the payer when no route is
     available. This transfer refunds the payer, allowing him to try a new path
@@ -803,9 +803,8 @@ class LockExpired(EnvelopeMessage):
     - Remove the expired lock from the merkletree and reflect it in the
       merkleroot.
     - Decrease the locked_amount by exactly by lock.amount. If less tokens are
-      decreased the the sender may get tokens locked. If more tokens are
-      decreased the the recipient will reject the message as on-chain unlocks
-      may fail.
+      decreased the sender may get tokens locked. If more tokens are decreased
+      the recipient will reject the message as on-chain unlocks may fail.
 
     This message is necessary for synchronization since other messages may be
     in-flight, vide Unlock for examples.
