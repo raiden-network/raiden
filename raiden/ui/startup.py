@@ -112,7 +112,6 @@ def setup_proxies_or_exit(
     config: Dict[str, Any],
     tokennetwork_registry_contract_address: Address,
     secret_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,
     blockchain_service: BlockChainService,
@@ -138,7 +137,6 @@ def setup_proxies_or_exit(
         node_network_id,
         tokennetwork_registry_contract_address,
         secret_registry_contract_address,
-        endpoint_registry_contract_address,
         contracts,
     )
     try:
