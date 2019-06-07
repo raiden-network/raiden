@@ -123,7 +123,7 @@ if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.transfer.state import RouteState  # noqa: F401
 
-# This should be changed to `Union[str, MerkleTreeState]`
+# This should be changed to `Union[str, LockHashLockOrderedDict]`
 LockHashLockOrderedDictOrError = Tuple[bool, Optional[str], Optional[LockHashLockOrderedDict]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
@@ -1047,7 +1047,7 @@ def get_distributable(
 
 
 def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[LockHashLockOrderedDict]:
-    """ Unlock proof for an entire merkle tree of pending locks
+    """ Unlock proof for entire pending locks
 
     The unlock proof contains all the locks, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
@@ -1142,7 +1142,7 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None
     """Removes the lock from the indexing structures.
 
     Note:
-        This won't change the merkletree!
+        This won't change the pending locks!
     """
     assert is_lock_pending(end_state, secrethash)
 
@@ -1182,7 +1182,7 @@ def update_contract_balance(end_state: NettingChannelEndState, contract_balance:
 def compute_locks_with(
     locks: LockHashLockOrderedDict, lock: Union[HashTimeLockState, UnlockPartialProofState]
 ) -> Optional[LockHashLockOrderedDict]:
-    """Register the given lockhash with the existing merkle tree."""
+    """Register the given lock with as a pending locks."""
     lockhash = lock.lockhash
     if lockhash not in locks:
         locks.update({lockhash: lock})
@@ -1291,12 +1291,12 @@ def create_unlock(
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
     our_balance_proof = our_state.balance_proof
-    msg = "the lock is pending, it must be in the merkletree"
+    msg = "the lock is pending, it must be in the pending locks"
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
     pending_locks = compute_locks_without(our_state.pending_locks, lock.lockhash)
-    msg = "the lock is pending, it must be in the merkletree"
+    msg = "the lock is pending, it must be in the pending locks"
     assert pending_locks is not None, msg
 
     locksroot = compute_locksroot(pending_locks)
@@ -1542,7 +1542,7 @@ def events_for_expired_lock(
     )
 
     if send_lock_expired:
-        assert pending_locks, "create_sendexpiredlock should return both message and merkle tree"
+        assert pending_locks, "create_sendexpiredlock should return both message and pending locks"
         channel_state.our_state.pending_locks = pending_locks
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
         channel_state.our_state.nonce = send_lock_expired.balance_proof.nonce
@@ -1765,7 +1765,7 @@ def handle_refundtransfer(
         received_transfer=received_transfer,
     )
     if is_valid:
-        assert pending_locks, "is_valid_refund should return merkletree if valid"
+        assert pending_locks, "is_valid_refund should return pending locks if valid"
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
         channel_state.partner_state.pending_locks = pending_locks
 
@@ -1802,7 +1802,7 @@ def handle_receive_lock_expired(
 
     events: List[Event] = list()
     if is_valid:
-        assert pending_locks, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
         channel_state.partner_state.pending_locks = pending_locks
 
@@ -1831,7 +1831,7 @@ def handle_receive_lockedtransfer(
 
     The receiver needs to use this method to update the container with a
     _valid_ transfer, otherwise the locksroot will not contain the pending
-    transfer. The receiver needs to ensure that the merkle root has the
+    transfer. The receiver needs to ensure that the locksroot has the
     secrethash included, otherwise it won't be able to claim it.
     """
     events: List[Event]
@@ -1840,7 +1840,7 @@ def handle_receive_lockedtransfer(
     )
 
     if is_valid:
-        assert pending_locks, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = mediated_transfer.balance_proof
         channel_state.partner_state.pending_locks = pending_locks
 
@@ -1875,7 +1875,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
     )
 
     if is_valid:
-        assert unlocked_pending_locks, "is_valid_unlock should return merkletree if valid"
+        assert unlocked_pending_locks, "is_valid_unlock should return pending locks if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
         channel_state.partner_state.pending_locks = unlocked_pending_locks
 
