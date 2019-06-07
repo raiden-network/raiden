@@ -135,14 +135,14 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     original_format = getattr(TracebackException, "_original", None)
     if original_format is None:
         original_format = TracebackException.format
-        setattr(TracebackException, "_original", original_format)
+        setattr(TracebackException, "_original", original_format)  # noqa: B010
 
     @wraps(original_format)
     def tracebackexception_format(self, *, chain=True):
         for line in original_format(self, chain=chain):
             yield redact(line)
 
-    setattr(TracebackException, "format", tracebackexception_format)
+    setattr(TracebackException, "format", tracebackexception_format)  # noqa: B010
 
 
 def configure_logging(

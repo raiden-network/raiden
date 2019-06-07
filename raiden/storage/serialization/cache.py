@@ -33,14 +33,16 @@ def remove_class_type(schema, data):  # pylint: disable=unused-argument
 def inject_type_resolver_hook(schema: Schema, clazz: type):  # pylint: disable=unused-argument
     key = ("post_dump", False)
     schema._hooks[key].append("set_class_type")
-    setattr(set_class_type, "__marshmallow_hook__", {key: {"pass_original": True}})
+    setattr(set_class_type, "__marshmallow_hook__", {key: {"pass_original": True}})  # noqa: B010
     bind(schema, set_class_type)
 
 
 def inject_remove_type_field_hook(schema: Schema):
     key = ("pre_load", False)
     schema._hooks[key].append("remove_class_type")
-    setattr(remove_class_type, "__marshmallow_hook__", {key: {"pass_original": False}})
+    setattr(  # noqa: B010
+        remove_class_type, "__marshmallow_hook__", {key: {"pass_original": False}}
+    )
     bind(schema, remove_class_type)
 
 
