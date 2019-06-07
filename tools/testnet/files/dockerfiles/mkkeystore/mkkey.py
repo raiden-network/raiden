@@ -57,11 +57,11 @@ def make_keystore_json_patched(private_key, password):
     # Fix py3 bytes/string incompatibility in `make_keystore_json()`
     # See: https://github.com/ethereum/pyethereum/issues/758
     _encode_hex = keys.encode_hex
-    setattr(keys, "encode_hex", lambda *args: _encode_hex(*args).encode("ASCII"))
+    keys.encode_hex = lambda *args: _encode_hex(*args).encode("ASCII")
     try:
         return make_keystore_json(private_key, password)
     finally:
-        setattr(keys, "encode_hex", _encode_hex)
+        keys.encode_hex = _encode_hex
 
 
 if __name__ == "__main__":
