@@ -7,7 +7,6 @@ from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import (
     CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
-    EMPTY_MERKLE_ROOT,
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
@@ -118,6 +117,7 @@ from raiden.utils.typing import (
     Union,
     WithdrawAmount,
 )
+from raiden_contracts.tests.utils.constants import NONEXISTENT_LOCKSROOT
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -1015,7 +1015,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         transferred_amount = balance_proof.transferred_amount
         locked_amount = get_amount_locked(end_state)
     else:
-        locksroot = EMPTY_MERKLE_ROOT
+        locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
         nonce = Nonce(0)
         transferred_amount = TokenAmount(0)
         locked_amount = TokenAmount(0)
@@ -1996,7 +1996,7 @@ def handle_channel_settled(
         partner_locksroot = state_change.partner_onchain_locksroot
 
         should_clear_channel = (
-            our_locksroot == EMPTY_MERKLE_ROOT and partner_locksroot == EMPTY_MERKLE_ROOT
+            our_locksroot == NONEXISTENT_LOCKSROOT and partner_locksroot == NONEXISTENT_LOCKSROOT
         )
 
         if should_clear_channel:
@@ -2073,15 +2073,14 @@ def handle_channel_batch_unlock(
 
         # partner is the address of the sender
         if state_change.sender == our_state.address:
-            our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+            our_state.onchain_locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
         elif state_change.sender == partner_state.address:
-            partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+            partner_state.onchain_locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
 
         # only clear the channel state once all unlocks have been done
-        no_unlock_left_to_do = (
-            our_state.onchain_locksroot == EMPTY_MERKLE_ROOT
-            and partner_state.onchain_locksroot == EMPTY_MERKLE_ROOT
-        )
+        no_unlock_left_to_do = our_state.onchain_locksroot == Locksroot(
+            NONEXISTENT_LOCKSROOT
+        ) and partner_state.onchain_locksroot == Locksroot(NONEXISTENT_LOCKSROOT)
         if no_unlock_left_to_do:
             new_channel_state = None
 
