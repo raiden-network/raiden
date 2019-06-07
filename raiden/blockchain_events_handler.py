@@ -22,6 +22,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer import views
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     TokenNetworkGraphState,
@@ -50,6 +51,7 @@ from raiden_contracts.constants import (
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
+    from raiden.network.blockchain_service import BlockChainService  # noqa: F401
     from raiden.raiden_service import RaidenService  # noqa: F401
     from raiden.storage.sqlite import SerializedSQLiteStorage  # noqa: F401
     from raiden.transfer.state import ChainState  # noqa: F401
@@ -100,7 +102,14 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):  # pragma: n
     raiden.handle_and_track_state_change(create_new_tokennetwork_state_change(event))
 
 
-def handle_channel_new(raiden: "RaidenService", event: Event):
+def create_channel_new_state_change(
+    chain: "BlockChainService",
+    chain_id: typing.ChainID,
+    our_address: typing.Address,
+    payment_network_address: typing.PaymentNetworkAddress,
+    reveal_timeout: typing.BlockTimeout,
+    event: Event,
+) -> typing.Tuple[StateChange, typing.Optional[typing.Address], typing.Optional[FeeUpdate]]:
     data = event.event_data
     block_number = data["block_number"]
     block_hash = data["block_hash"]
@@ -110,13 +119,16 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
     channel_identifier = args["channel_identifier"]
     participant1 = args["participant1"]
     participant2 = args["participant2"]
-    is_participant = raiden.address in (participant1, participant2)
+    is_participant = our_address in (participant1, participant2)
+
+    to_health_check = None
+    fee_update = None
 
     # Raiden node is participant
     if is_participant:
-        channel_proxy = raiden.chain.payment_channel(
+        channel_proxy = chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
-                chain_identifier=views.state_from_raiden(raiden).chain_id,
+                chain_identifier=chain_id,
                 token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             )
@@ -124,41 +136,36 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
             token_address=typing.TokenAddress(token_address),
-            payment_network_address=raiden.default_registry.address,
+            payment_network_address=payment_network_address,
             token_network_address=token_network_address,
-            reveal_timeout=raiden.config["reveal_timeout"],
+            reveal_timeout=reveal_timeout,
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
             fee_schedule=replace(raiden.config["default_fee_schedule"]),
         )
 
-        new_channel = ContractReceiveChannelNew(
+        state_change: StateChange = ContractReceiveChannelNew(
             transaction_hash=transaction_hash,
             channel_state=channel_state,
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(new_channel)
 
         # pylint: disable=E1101
         partner_address = channel_state.partner_state.address
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
-            raiden.start_health_check_for(partner_address)
+            to_health_check = partner_address
 
         # Tell PFS about fees for this channel, when not in private mode
-        if raiden.routing_mode != RoutingMode.PRIVATE:
-            fee_update = PFSFeeUpdate.from_channel_state(channel_state)
-            fee_update.sign(raiden.signer)
-            # Appends message to queue, so it's not blocking
-            raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
+        fee_update = FeeUpdate.from_channel_state(channel_state)
 
     # Raiden node is not participant of channel
     else:
-        new_route = ContractReceiveRouteNew(
+        state_change = ContractReceiveRouteNew(
             transaction_hash=transaction_hash,
             canonical_identifier=CanonicalIdentifier(
-                chain_identifier=raiden.chain.network_id,
+                chain_identifier=chain_id,
                 token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
             ),
@@ -167,10 +174,33 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(new_route)
+
+    return state_change, to_health_check, fee_update
+
+
+def handle_channel_new(raiden: "RaidenService", event: Event):  # pragma: no unittest
+    state_change, to_health_check, fee_update = create_channel_new_state_change(
+        chain=raiden.chain,
+        chain_id=(views.state_from_raiden(raiden).chain_id),
+        our_address=raiden.address,
+        payment_network_address=raiden.default_registry.address,
+        reveal_timeout=raiden.config["reveal_timeout"],
+        event=event,
+    )
+
+    raiden.handle_and_track_state_change(state_change)
+
+    if to_health_check:
+        raiden.start_health_check_for(to_health_check)
+
+    if fee_update is not None and raiden.routing_mode != RoutingMode.PRIVATE:
+        fee_update.sign(raiden.signer)
+        # Appends message to queue, so it's not blocking
+        raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
 
     # A new channel is available, run the connection manager in case more
     # connections are needed
+    token_network_address = event.originating_contract
     connection_manager = raiden.connection_manager_for_token_network(token_network_address)
     retry_connect = gevent.spawn(connection_manager.retry_connect)
     raiden.add_pending_greenlet(retry_connect)
