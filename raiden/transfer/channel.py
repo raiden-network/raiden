@@ -11,7 +11,6 @@ from raiden.constants import (
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
-from raiden.messages import Lock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import (
@@ -101,7 +100,6 @@ from raiden.utils.typing import (
     LockHashLockOrderedDict,
     Locksroot,
     LockType,
-    MerkleTreeLeaves,
     MessageID,
     NamedTuple,
     Nonce,
@@ -119,7 +117,6 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
-    cast,
 )
 
 if TYPE_CHECKING:
@@ -1049,41 +1046,16 @@ def get_distributable(
     return TokenAmount(min(overflow_limit, distributable))
 
 
-def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[MerkleTreeLeaves]:
+def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[LockHashLockOrderedDict]:
     """ Unlock proof for an entire merkle tree of pending locks
 
-    The unlock proof contains all the merkle tree data, tightly packed, needed by the token
+    The unlock proof contains all the locks, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
     if len(end_state.pending_locks) == 0:  # pylint: disable=len-as-condition
         return None
-
-    lockhashes_to_locks = dict()
-    lockhashes_to_locks.update(
-        {lock.lockhash: lock for secrethash, lock in end_state.secrethashes_to_lockedlocks.items()}
-    )
-    lockhashes_to_locks.update(
-        {
-            proof.lock.lockhash: proof.lock
-            for secrethash, proof in end_state.secrethashes_to_unlockedlocks.items()
-        }
-    )
-    lockhashes_to_locks.update(
-        {
-            proof.lock.lockhash: proof.lock
-            for secrethash, proof in end_state.secrethashes_to_onchain_unlockedlocks.items()
-        }
-    )
-
-    ordered_locks = [
-        lockhashes_to_locks[LockHash(lockhash)] for lockhash in end_state.pending_locks
-    ]
-
-    # Not sure why the cast is needed here. The error was:
-    # Incompatible return value type
-    # (got "List[HashTimeLockState]", expected "Optional[MerkleTreeLeaves]")
-    return cast(MerkleTreeLeaves, ordered_locks)
+    return end_state.pending_locks
 
 
 def get_lock(
@@ -1234,14 +1206,7 @@ def compute_locksroot(locks: LockHashLockOrderedDict) -> Locksroot:
     """ Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
-
-    def as_bytes(l: Union[HashTimeLockState, UnlockPartialProofState]) -> bytes:
-        lock = Lock(amount=l.amount, expiration=l.expiration, secrethash=l.secrethash)
-        ret = lock.as_bytes()
-        assert len(ret) == 96
-        return ret
-
-    locks_as_bytes = map(as_bytes, locks.values())
+    locks_as_bytes = map(lambda l: l.encoded, locks.values())
     return Locksroot(keccak(b"".join(locks_as_bytes)))
 
 
