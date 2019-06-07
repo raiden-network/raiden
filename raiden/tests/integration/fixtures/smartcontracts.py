@@ -20,7 +20,6 @@ from raiden.tests.utils.smartcontracts import (
 from raiden.utils import privatekey_to_address, typing
 from raiden.utils.typing import Optional
 from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -74,16 +73,6 @@ def deploy_all_tokens_register_and_return_their_addresses(
                 )
 
     return token_addresses
-
-
-@pytest.fixture
-def endpoint_registry_address(deploy_client, contract_manager) -> typing.Address:
-    address = deploy_contract_web3(
-        contract_name=CONTRACT_ENDPOINT_REGISTRY,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-    )
-    return address
 
 
 @pytest.fixture(name="secret_registry_address")

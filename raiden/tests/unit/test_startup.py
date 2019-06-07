@@ -10,7 +10,6 @@ from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succes
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -47,11 +46,7 @@ def test_setup_environment():
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:
-    return (
-        CONTRACT_SECRET_REGISTRY in contracts
-        and CONTRACT_TOKEN_NETWORK_REGISTRY in contracts
-        and CONTRACT_ENDPOINT_REGISTRY in contracts
-    )
+    return CONTRACT_SECRET_REGISTRY in contracts and CONTRACT_TOKEN_NETWORK_REGISTRY in contracts
 
 
 def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
@@ -156,7 +151,6 @@ def test_setup_proxies_raiden_addresses_are_given():
         config=config,
         tokennetwork_registry_contract_address=token_network_registry_address_test_default,
         secret_registry_contract_address=make_address(),
-        endpoint_registry_contract_address=make_address(),
         user_deposit_contract_address=None,
         service_registry_contract_address=None,
         blockchain_service=blockchain_service,
@@ -186,7 +180,6 @@ def test_setup_proxies_all_addresses_are_given():
             config=config,
             tokennetwork_registry_contract_address=token_network_registry_address_test_default,
             secret_registry_contract_address=make_address(),
-            endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=make_address(),
             blockchain_service=blockchain_service,
@@ -216,7 +209,6 @@ def test_setup_proxies_all_addresses_are_known():
             config=config,
             tokennetwork_registry_contract_address=None,
             secret_registry_contract_address=None,
-            endpoint_registry_contract_address=None,
             user_deposit_contract_address=None,
             service_registry_contract_address=None,
             blockchain_service=blockchain_service,
@@ -249,7 +241,6 @@ def test_setup_proxies_no_service_registry_but_pfs():
             config=config,
             tokennetwork_registry_contract_address=token_network_registry_address_test_default,
             secret_registry_contract_address=make_address(),
-            endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=None,
             blockchain_service=blockchain_service,
@@ -277,7 +268,6 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
                 config=config,
                 tokennetwork_registry_contract_address=make_address(),
                 secret_registry_contract_address=make_address(),
-                endpoint_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,
                 blockchain_service=blockchain_service,
