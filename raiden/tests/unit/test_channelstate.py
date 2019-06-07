@@ -603,6 +603,13 @@ def test_channelstate_receive_lockedtransfer():
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model3)
 
+    # receive lockedtransfer for a closed channel
+    channel_state.close_transaction = create(
+        TransactionExecutionStatusProperties(finished_block_number=2)
+    )
+    is_valid, _, _ = channel.handle_receive_lockedtransfer(channel_state, receive_lockedtransfer)
+    assert not is_valid
+
 
 def test_channelstate_lockedtransfer_overspent():
     """Receiving a lock with an amount large than distributable must be
