@@ -19,6 +19,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
+from raiden.messages import FeeSchedule
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -39,7 +40,7 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, ChainID, Endpoint, Optional, PrivateKey, Tuple
+from raiden.utils.typing import Address, ChainID, Endpoint, FeeAmount, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
@@ -136,6 +137,8 @@ def run_app(
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
+    flat_fee: FeeAmount,
+    proportional_fee: int,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -171,6 +174,7 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
+    config["default_fee_schedule"] = FeeSchedule(flat=flat_fee, proportional=proportional_fee)
 
     setup_environment(config, environment_type)
 
