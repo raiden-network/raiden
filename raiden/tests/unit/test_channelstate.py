@@ -35,6 +35,7 @@ from raiden.tests.utils.factories import (
 )
 from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated
 from raiden.transfer import channel
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
@@ -49,7 +50,6 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.merkle_tree import (
     LEAVES,
-    MERKLEROOT,
     compute_layers,
     merkle_leaves_from_packed_data,
     merkleroot,
@@ -91,7 +91,7 @@ PartnerStateModel = namedtuple(
         "balance",
         "distributable",
         "next_nonce",
-        "merkletree_leaves",
+        "pending_locks",
         "contract_balance",
     ),
 )
@@ -474,7 +474,7 @@ def test_channelstate_send_lockedtransfer():
         distributable=our_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks={lock.lockhash: lock},
     )
     partner_model2 = partner_model1
 
@@ -518,7 +518,7 @@ def test_channelstate_receive_lockedtransfer():
         distributable=partner_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks={lock.lockhash: lock},
     )
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -690,7 +690,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         distributable=partner_model1.distributable - lock1.amount,
         amount_locked=lock1.amount,
         next_nonce=2,
-        merkletree_leaves=[lock1.lockhash],
+        pending_locks=[lock1],
     )
 
     # The valid transfer is handled normally
@@ -710,7 +710,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 
     nonce2 = 2
     receive_lockedtransfer2 = make_receive_transfer_mediated(
-        channel_state, privkey2, nonce2, transferred_amount, lock2, merkletree_leaves=leaves
+        channel_state, privkey2, nonce2, transferred_amount, lock2, pending_locks=leaves
     )
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(
@@ -834,14 +834,14 @@ def test_interwoven_transfers():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        merkletree_leaves = list(partner_model_current.merkletree_leaves)
-        merkletree_leaves.append(lock.lockhash)
+        pending_locks = partner_model_current.pending_locks
+        pending_locks.append(lock)
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,
             amount_locked=partner_model_current.amount_locked + lock_amount,
             next_nonce=partner_model_current.next_nonce + 1,
-            merkletree_leaves=merkletree_leaves,
+            pending_locks=pending_locks,
         )
 
         receive_lockedtransfer = make_receive_transfer_mediated(
@@ -850,7 +850,7 @@ def test_interwoven_transfers():
             nonce,
             transferred_amount,
             lock,
-            merkletree_leaves=merkletree_leaves,
+            pending_locks=pending_locks,
             locked_amount=locked_amount,
         )
 
@@ -880,17 +880,13 @@ def test_interwoven_transfers():
             nonce += 1
             transferred_amount += lock_amount
             locked_amount -= lock_amount
-
-            merkletree_leaves = list(partner_model_current.merkletree_leaves)
-            merkletree_leaves.remove(lock.lockhash)
-            tree = compute_layers(merkletree_leaves)
-            locksroot = tree[MERKLEROOT][0]
+            locksroot = compute_locksroot(partner_model_current.pending_locks)
 
             partner_model_current = partner_model_current._replace(
                 amount_locked=partner_model_current.amount_locked - lock_amount,
                 balance=partner_model_current.balance - lock_amount,
                 next_nonce=partner_model_current.next_nonce + 1,
-                merkletree_leaves=merkletree_leaves,
+                pending_locks=pending_locks,
             )
 
             our_model_current = our_model_current._replace(
@@ -1163,7 +1159,7 @@ def test_channel_must_accept_expired_locks():
         amount_locked=lock_amount,
         distributable=partner_model1.distributable - lock_amount,
         next_nonce=partner_model1.next_nonce + 1,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks={lock.lockhash: lock},
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)

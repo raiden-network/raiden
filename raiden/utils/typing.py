@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import OrderedDict
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
@@ -75,10 +77,9 @@ Locksroot = NewType("Locksroot", T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType("LockHash", T_LockHash)
 
-T_LockHashLockOrderedDict = OrderedDict[
+LockHashLockOrderedDict = OrderedDict[
     LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]
 ]
-LockHashLockOrderedDict = NewType("LockHashLockOrderedDict", T_LockHashLockOrderedDict)
 
 T_MerkleTreeLeaves = List[Union["HashTimeLockState", "UnlockPartialProofState"]]
 MerkleTreeLeaves = NewType("MerkleTreeLeaves", T_MerkleTreeLeaves)
