@@ -12,8 +12,11 @@ from raiden.tests.unit.test_channelstate import (
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_block_hash, make_transaction_hash
 from raiden.transfer import channel
-from raiden.transfer.channel import handle_receive_lockedtransfer, is_balance_proof_usable_onchain
-from raiden.transfer.merkle_tree import merkleroot
+from raiden.transfer.channel import (
+    compute_locksroot,
+    handle_receive_lockedtransfer,
+    is_balance_proof_usable_onchain,
+)
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -83,8 +86,8 @@ def test_channel_cleared_after_two_unlocks():
     settle_channel = ContractReceiveChannelSettled(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        our_onchain_locksroot=merkleroot(channel_state.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
         block_number=1,
         block_hash=make_block_hash(),
     )
@@ -164,8 +167,8 @@ def test_channel_cleared_after_our_unlock():
     settle_channel = ContractReceiveChannelSettled(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        our_onchain_locksroot=merkleroot(channel_state.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
         block_number=1,
         block_hash=make_block_hash(),
     )
