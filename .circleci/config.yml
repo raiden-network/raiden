@@ -275,8 +275,8 @@ jobs:
       # will make unrelated PRs fail.
       - restore_cache:
           keys:
-            - lint-cache-v2-{{ checksum "requirements-lint.txt" }}-{{ .Branch }}-
-            - lint-cache-v2-{{ checksum "requirements-lint.txt" }}-develop-
+            - lint-cache-v4-{{ checksum "requirements-lint.txt" }}-{{ .Branch }}-
+            - lint-cache-v4-{{ checksum "requirements-lint.txt" }}-develop-
       - run:
           name: Run Lint
           command: make lint
@@ -285,7 +285,7 @@ jobs:
           command: .circleci/enforce_decreasing_lint_errors.sh
       # a new cache has to be generated on every run because they are immutable
       - save_cache:
-          key: lint-cache-v2-{{ checksum "requirements-lint.txt" }}-{{ .Branch }}-{{ .BuildNum }}
+          key: lint-cache-v4-{{ checksum "requirements-lint.txt" }}-{{ .Branch }}-{{ .BuildNum }}
           paths:
           - "~/lint-cache"
 
