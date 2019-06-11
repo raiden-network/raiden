@@ -1,6 +1,6 @@
 # pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
@@ -108,7 +108,8 @@ def assert_partner_state(end_state, partner_state, model):
 def create_model(balance, merkletree_width=0):
     privkey, address = make_privkey_address()
 
-    pending_locks = [make_lock() for _ in range(merkletree_width)]
+    locks = [make_lock() for _ in range(merkletree_width)]
+    pending_locks = OrderedDict((lock.lockhash, lock) for lock in locks)
 
     our_model = PartnerStateModel(
         participant_address=address,
@@ -832,7 +833,7 @@ def test_interwoven_transfers():
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
         pending_locks = partner_model_current.pending_locks
-        pending_locks.append(lock)
+        pending_locks.update({lock.lockhash: lock})
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,

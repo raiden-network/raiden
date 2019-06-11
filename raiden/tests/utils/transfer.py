@@ -522,7 +522,8 @@ def make_receive_transfer_mediated(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        locks = OrderedDict((lock.lockhash, lock))
+        locks = OrderedDict()
+        locks.update({lock.lockhash: lock})
     else:
         assert lock.lockhash in pending_locks
         locks = pending_locks
