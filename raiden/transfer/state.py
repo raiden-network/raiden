@@ -315,9 +315,9 @@ class NettingChannelEndState(State):
     secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
+    balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
     #: An OrderedDict that maps secrethashes to lock states.
     #: Used for calculating the locksroot.
-    balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
     pending_locks: LockHashLockOrderedDict = field(
         repr=False, default_factory=make_empty_lockhash_lock_ordered_dict
     )
