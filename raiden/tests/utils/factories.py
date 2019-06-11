@@ -65,8 +65,8 @@ from raiden.utils.typing import (
     InitiatorAddress,
     Keccak256,
     List,
+    LockHashLockOrderedDict,
     Locksroot,
-    MerkleTreeLeaves,
     MessageID,
     NamedTuple,
     NodeNetworkStateMap,
@@ -401,22 +401,17 @@ class NettingChannelEndStateProperties(Properties):
     address: Address = EMPTY
     privatekey: bytes = EMPTY
     balance: TokenAmount = EMPTY
-    merkletree_leaves: MerkleTreeLeaves = EMPTY
-    merkletree_width: int = EMPTY
+    pending_locks: LockHashLockOrderedDict = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
 
 NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
-    address=None, privatekey=None, balance=100, merkletree_leaves=None, merkletree_width=0
+    address=None, privatekey=None, balance=100, pending_locks=None
 )
 
 
 NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
-    address=UNIT_OUR_ADDRESS,
-    privatekey=UNIT_OUR_KEY,
-    balance=100,
-    merkletree_leaves=None,
-    merkletree_width=0,
+    address=UNIT_OUR_ADDRESS, privatekey=UNIT_OUR_KEY, balance=100, pending_locks=None
 )
 
 
@@ -425,11 +420,9 @@ def _(properties, defaults=None) -> NettingChannelEndState:
     args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
     state = NettingChannelEndState(args["address"] or make_address(), args["balance"])
 
-    merkletree_leaves = (
-        args["merkletree_leaves"] or make_merkletree_leaves(args["merkletree_width"]) or None
-    )
-    if merkletree_leaves:
-        state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+    pending_locks = args["pending_locks"] or None
+    if pending_locks:
+        state.pending_locks = pending_locks
 
     return state
 
