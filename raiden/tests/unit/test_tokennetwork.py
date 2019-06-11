@@ -9,8 +9,8 @@ from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import node, token_network, views
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
@@ -248,8 +248,12 @@ def test_channel_data_removed_after_unlock(
         canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        our_onchain_locksroot=merkleroot(channel_state_after_closed.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state_after_closed.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(
+            channel_state_after_closed.our_state.pending_locks
+        ),
+        partner_onchain_locksroot=compute_locksroot(
+            channel_state_after_closed.partner_state.pending_locks
+        ),
     )
 
     channel_settled_iteration = token_network.state_transition(

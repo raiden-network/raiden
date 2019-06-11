@@ -7,7 +7,7 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import MerkleTreeState
 from raiden.utils import sha3
-from raiden_contracts.tests.constants import LOCKSROOT_OF_NO_LOCKS
+from raiden_contracts.tests.utils import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_empty():
