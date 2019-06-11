@@ -101,7 +101,7 @@ def assert_partner_state(end_state, partner_state, model):
     assert channel.get_balance(end_state, partner_state) == model.balance
     assert channel.get_distributable(end_state, partner_state) == model.distributable
     assert channel.get_next_nonce(end_state) == model.next_nonce
-    assert set(end_state.merkletree.layers[LEAVES]) == set(model.merkletree_leaves)
+    assert set(end_state.pending_locks) == set(model.pending_locks)
     assert end_state.contract_balance == model.contract_balance
 
 
