@@ -1310,7 +1310,7 @@ def test_channelstate_get_unlock_proof():
 
     unlock_proof = channel.get_batch_unlock(end_state)
     assert len(unlock_proof) == len(end_state.pending_locks)
-    leaves_packed = b"".join(lock.encoded for lock in unlock_proof)
+    leaves_packed = b"".join(unlock_proof)
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
     assert len(recomputed_pending_locks) == len(end_state.pending_locks)
