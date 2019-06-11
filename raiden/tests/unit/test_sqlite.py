@@ -15,7 +15,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import RANGE_ALL_ELEMENTS, Range, SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -225,7 +225,8 @@ def test_get_state_change_with_balance_proof():
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_identifier("earliest", "latest")
+    stored_statechanges = storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    assert len(stored_statechanges) == 6
     assert isinstance(stored_statechanges[0].data, ReceiveLockExpired)
     assert isinstance(stored_statechanges[1].data, ReceiveUnlock)
     assert isinstance(stored_statechanges[2].data, ReceiveTransferRefund)
@@ -234,10 +235,14 @@ def test_get_state_change_with_balance_proof():
     assert isinstance(stored_statechanges[5].data, ActionInitTarget)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_identifier(
-        stored_statechanges[1].state_change_identifier,
-        stored_statechanges[2].state_change_identifier,
+    stored_statechanges = storage.get_statechanges_by_range(
+        Range(
+            stored_statechanges[1].state_change_identifier,
+            stored_statechanges[2].state_change_identifier,
+        )
     )
+
+    assert len(stored_statechanges) == 2
     assert isinstance(stored_statechanges[0].data, ReceiveUnlock)
     assert isinstance(stored_statechanges[1].data, ReceiveTransferRefund)
 

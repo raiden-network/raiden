@@ -12,6 +12,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
+from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
@@ -33,9 +34,7 @@ def wait_for_batch_unlock(app, token_network_address, receiver, sender):
     while not unlock_event:
         gevent.sleep(1)
 
-        state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
-            from_identifier="earliest", to_identifier="latest"
-        )
+        state_changes = app.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
 
         unlock_event = search_for_item(
             state_changes,
@@ -112,9 +111,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
         not in token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
     )
 
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier="earliest", to_identifier="latest"
-    )
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
 
     assert search_for_item(
         state_changes,
