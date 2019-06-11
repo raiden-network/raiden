@@ -132,12 +132,12 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             our_state=NettingChannelEndStateProperties(
                 address=our_model.participant_address,
                 balance=our_model.balance,
-                merkletree_leaves=our_model.merkletree_leaves,
+                pending_locks=our_model.pending_locks,
             ),
             partner_state=NettingChannelEndStateProperties(
                 address=partner_model.participant_address,
                 balance=partner_model.balance,
-                merkletree_leaves=partner_model.merkletree_leaves,
+                pending_locks=partner_model.pending_locks,
             ),
             open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
         )
