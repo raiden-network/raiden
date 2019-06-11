@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
 from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
@@ -46,8 +47,8 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
-    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier="earliest", to_identifier="latest"
+    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_ELEMENTS
     )
 
     assert search_for_item(

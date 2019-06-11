@@ -162,8 +162,10 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
         node1.raiden,
         ContractReceiveChannelSettled,
         {
-            "token_network_address": token_network_address,
-            "channel_identifier": channel12.identifier,
+            "canonical_identifier": {
+                "token_network_address": token_network_address,
+                "channel_identifier": channel12.identifier,
+            }
         },
         retry_timeout,
     )

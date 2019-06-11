@@ -1,5 +1,6 @@
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -14,6 +15,7 @@ from raiden.utils import get_system_spec
 from raiden.utils.typing import (
     Any,
     Dict,
+    Generic,
     Iterator,
     List,
     NamedTuple,
@@ -21,6 +23,7 @@ from raiden.utils.typing import (
     Optional,
     RaidenDBVersion,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -28,7 +31,26 @@ from raiden.utils.typing import (
 StateChangeID = NewType("StateChangeID", ULID)
 SnapshotID = NewType("SnapshotID", ULID)
 EventID = NewType("EventID", ULID)
-NULL_ULID = ULID((0).to_bytes(16, "big"))
+ID = TypeVar("ID", bound=ULID)
+
+
+@dataclass
+class Range(Generic[ID]):
+    """Inclusive range used to filter database entries."""
+
+    first: ID
+    last: ID
+
+    def __post_init__(self) -> None:
+        if self.first > self.last:
+            raise ValueError("last must be larger then first")
+
+
+FIRST_ULID = ULID((0).to_bytes(16, "big"))
+LAST_ULID = ULID((2 ** 128 - 1).to_bytes(16, "big"))
+RANGE_LAST_ELEMENT = Range(LAST_ULID, LAST_ULID)
+RANGE_FIRST_ELEMENT = Range(FIRST_ULID, FIRST_ULID)
+RANGE_ALL_ELEMENTS = Range(FIRST_ULID, LAST_ULID)
 
 
 class Operator(Enum):
@@ -330,36 +352,13 @@ class SQLiteStorage:
         )
         self.maybe_commit()
 
-    def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: Union[StateChangeID, str]
+    def get_snapshot_before_state_change(
+        self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotRecord]:
         """ Get snapshots earlier than state_change with provided ID. """
 
-        is_valid_identifier = state_change_identifier in ("earliest", "latest") or isinstance(
-            state_change_identifier, ULID
-        )
-
-        if not is_valid_identifier:  # pragma: no unittest
-            raise ValueError("from_identifier must be an ULID, 'earliest' or 'latest'")
-
-        cursor = self.conn.cursor()
-        if state_change_identifier == "latest":
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1")
-            result = cursor.fetchone()
-
-            if result:
-                state_change_identifier = result[0]
-            else:
-                state_change_identifier = StateChangeID(NULL_ULID)
-
-        elif state_change_identifier == "earliest":
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier ASC LIMIT 1")
-            result = cursor.fetchone()
-
-            if result:
-                state_change_identifier = result[0]
-            else:
-                state_change_identifier = StateChangeID(NULL_ULID)
+        if not isinstance(state_change_identifier, ULID):  # pragma: no unittest
+            raise ValueError("from_identifier must be an ULID")
 
         cursor = self.conn.execute(
             "SELECT identifier, statechange_id, data FROM state_snapshot "
@@ -370,14 +369,13 @@ class SQLiteStorage:
 
         rows = cursor.fetchall()
 
+        result: Optional[SnapshotRecord] = None
         if rows:
             assert len(rows) == 1, "LIMIT 1 must return one element"
             identifier = rows[0][0]
             last_applied_state_change_id = rows[0][1]
             snapshot_state = rows[0][2]
             result = SnapshotRecord(identifier, last_applied_state_change_id, snapshot_state)
-        else:
-            result = None
 
         return result
 
@@ -519,49 +517,20 @@ class SQLiteStorage:
         )
         self.maybe_commit()
 
-    def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
-    ) -> List[StateChangeRecord]:
-        is_valid_from_identifier = from_identifier in ("latest", "earliest") or isinstance(
-            from_identifier, ULID
-        )
-        if not is_valid_from_identifier:  # pragma: no unittest
-            raise ValueError("from_identifier must be an ULID, 'earliest' or 'latest'")
-
-        is_valid_to_identifier = to_identifier in ("latest", "earliest") or isinstance(
-            to_identifier, ULID
-        )
-        if not is_valid_to_identifier:  # pragma: no unittest
-            raise ValueError("to_identifier must be an ULID, 'earliest'  or 'latest'")
+    def get_statechanges_by_range(self, db_range: Range[StateChangeID]) -> List[StateChangeRecord]:
+        if not isinstance(db_range, Range):  # pragma: no unittest
+            raise ValueError("db_range must be an Range")
 
         cursor = self.conn.cursor()
 
-        from_: ULID
-        if from_identifier == "earliest":
-            from_ = NULL_ULID
-        elif from_identifier == "latest":
-            assert to_identifier is None
-
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1")
-            from_ = cursor.fetchone()
-        else:
-            assert isinstance(from_identifier, ULID)
-            from_ = from_identifier
-
-        if to_identifier == "latest":
-            query = (
-                "SELECT identifier, data "
-                "FROM state_changes "
-                "WHERE identifier >= ? "
-                "ORDER BY identifier ASC"
-            )
-            cursor.execute(query, (from_,))
-        else:
-            cursor.execute(
-                "SELECT identifier, data FROM state_changes WHERE identifier "
-                "BETWEEN ? AND ? ORDER BY identifier ASC",
-                (from_, to_identifier),
-            )
+        query = (
+            "SELECT identifier, data "
+            "FROM state_changes "
+            "WHERE identifier "
+            "BETWEEN ? AND ? "
+            "ORDER BY identifier ASC"
+        )
+        cursor.execute(query, (db_range.first, db_range.last))
 
         return [
             StateChangeRecord(state_change_identifier=entry[0], data=entry[1]) for entry in cursor
@@ -749,13 +718,13 @@ class SerializedSQLiteStorage:
         ]
         return self.database.write_events(events_data)
 
-    def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: Union[StateChangeID, str]
+    def get_snapshot_before_state_change(
+        self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotRecord]:
         """ Get snapshots earlier than state_change with provided ID. """
         result: Optional[SnapshotRecord]
 
-        row = self.database.get_snapshot_closest_to_state_change(state_change_identifier)
+        row = self.database.get_snapshot_before_state_change(state_change_identifier)
 
         if row is not None:
             result = SnapshotRecord(
@@ -794,12 +763,8 @@ class SerializedSQLiteStorage:
 
         return state_change
 
-    def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
-    ) -> List[StateChangeRecord]:
-        state_changes = self.database.get_statechanges_by_identifier(
-            from_identifier, to_identifier
-        )
+    def get_statechanges_by_range(self, db_range: Range[StateChangeID]) -> List[StateChangeRecord]:
+        state_changes = self.database.get_statechanges_by_range(db_range=db_range)
         return [
             StateChangeRecord(
                 state_change_identifier=state_change.state_change_identifier,
