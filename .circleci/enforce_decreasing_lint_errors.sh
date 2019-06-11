@@ -24,21 +24,25 @@ function compare_reports() {
         if [[ $new_error_count -gt $previous_error_count ]]; then
             diff ${old} ${new}
 
-            # For the first build master will work as a baseline, subsequent reports
-            # will be against the PR itself. Because of this, it is possible for a PR
-            # to undo linting fixes from another. Example:
+            # For the first build the PR's base branch will work as a baseline,
+            # subsequent reports will be against the PR itself. Because of
+            # this, it is possible for a PR to undo linting fixes from another.
+            # Example:
             #
             # 1. PR1 is opened, it does not fix any linting errors
-            # 2. PR2 is opened, and merged, it fixes linting errors
-            # 3. PR1 is rebased on master. This may introduce as many errors as PR2
-            #    fixed without failling the build.
+            # 2. PR2 is opened against the same base branch, and merged, it
+            #    fixes linting errors
+            # 3. PR1 is rebased on the base branch. This may introduce as many
+            #    errors as PR2 fixed without failling the build (because the
+            #    baseline is outdated).
             # 4. PR1 is merged.
             #
             # This is fine, at least the number of errors doesn't increase.
-            # Additionally, because on step 4 above PR1 was merged on msater, master
-            # itself got more linting errors, for this reason master should not break
-            # if linting errors increase.
-            if [[ "${CIRCLE_BRANCH}" != "master" ]]; then
+            # Additionally, because on step 4 above PR1 was merged, the base
+            # branch itself got more linting errors, for this reason topic
+            # branches (e.g. master or develop) should not break if linting
+            # errors increase.
+            if [[ ! -e ~/.local/BASE_COMMIT ]]; then
                 return 1
             fi
 
