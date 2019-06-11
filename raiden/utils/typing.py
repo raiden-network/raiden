@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
+
+# I wanted to import this from typing, but that causes
+# a mypy failure https://github.com/python/mypy/issues/6904
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
+    from collections import OrderedDict  # noqa: F401
     from raiden.transfer.state import (  # noqa: F401
         HashTimeLockState,
         NettingChannelState,
@@ -77,9 +80,10 @@ Locksroot = NewType("Locksroot", T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType("LockHash", T_LockHash)
 
-LockHashLockOrderedDict = OrderedDict[
-    LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]
-]
+LockHashLockOrderedDict = NewType(
+    "LockHashLockOrderedDict",
+    'OrderedDict[LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]]',
+)
 
 T_MerkleTreeLeaves = List[Union["HashTimeLockState", "UnlockPartialProofState"]]
 MerkleTreeLeaves = NewType("MerkleTreeLeaves", T_MerkleTreeLeaves)
