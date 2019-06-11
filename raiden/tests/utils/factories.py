@@ -237,6 +237,14 @@ def make_secret_hash(i: int = EMPTY) -> SecretHash:
         return make_32bytes()
 
 
+def make_lock() -> HashTimeLockState:
+    return HashTimeLockState(
+        amount=random.randint(0, UINT256_MAX),
+        expiration=random.randint(0, UINT64_MAX),
+        secrethash=random_secret(),
+    )
+
+
 def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)

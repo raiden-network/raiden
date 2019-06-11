@@ -27,6 +27,7 @@ from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
     make_canonical_identifier,
+    make_lock,
     make_payment_network_address,
     make_privkey_address,
     make_secret,
@@ -75,7 +76,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import random_secret, sha3
+from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
 
@@ -107,15 +108,15 @@ def assert_partner_state(end_state, partner_state, model):
 def create_model(balance, merkletree_width=0):
     privkey, address = make_privkey_address()
 
-    merkletree_leaves = [random_secret() for _ in range(merkletree_width)]
+    pending_locks = [make_lock() for _ in range(merkletree_width)]
 
     our_model = PartnerStateModel(
         participant_address=address,
         amount_locked=0,
         balance=balance,
         distributable=balance,
-        next_nonce=len(merkletree_leaves) + 1,
-        merkletree_leaves=merkletree_leaves,
+        next_nonce=len(pending_locks) + 1,
+        pending_locks=pending_locks,
         contract_balance=balance,
     )
 
