@@ -46,6 +46,7 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
+from raiden.transfer.mediation_fee import FeeSchedule
 from raiden.transfer.merkle_tree import (
     LEAVES,
     MERKLEROOT,
@@ -761,6 +762,7 @@ def test_invalid_timeouts():
             open_transaction=opened_transaction,
             close_transaction=closed_transaction,
             settle_transaction=settled_transaction,
+            fee_schedule=FeeSchedule(),
         )
 
     # TypeError: 'a', [], {}
@@ -780,6 +782,7 @@ def test_invalid_timeouts():
                 open_transaction=opened_transaction,
                 close_transaction=closed_transaction,
                 settle_transaction=settled_transaction,
+                fee_schedule=FeeSchedule(),
             )
 
         with pytest.raises(ValueError):
@@ -797,6 +800,7 @@ def test_invalid_timeouts():
                 open_transaction=opened_transaction,
                 close_transaction=closed_transaction,
                 settle_transaction=settled_transaction,
+                fee_schedule=FeeSchedule(),
             )
 
 
