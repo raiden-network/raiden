@@ -64,7 +64,7 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
-    make_empty_merkle_tree,
+    make_empty_lockhash_lock_ordered_dict,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -1042,7 +1042,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
     msg = "the balance proof must be updated"
     assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
-    assert new_channel_state.partner_state.merkletree == make_empty_merkle_tree()
+    assert new_channel_state.partner_state.pending_locks == make_empty_lockhash_lock_ordered_dict()
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
