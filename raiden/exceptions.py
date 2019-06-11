@@ -286,3 +286,10 @@ class ServiceRequestIOURejected(ServiceRequestFailed):
     def __init__(self, message: str, error_code: int) -> None:
         super().__init__(f"{message} ({error_code})")
         self.error_code = error_code
+
+
+class UndefinedMediationFee(RaidenError):
+    """The fee schedule is not applicable resulting in undefined fees
+
+    Either the raiden node is not capable of mediating this payment, or the
+    FeeSchedule is outdated/inconsistent."""
