@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
+from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
@@ -762,10 +763,10 @@ def is_valid_unlock(
         msg = "Invalid Unlock message. There is no corresponding lock for {}".format(
             encode_hex(unlock.secrethash)
         )
-
         return (False, msg, None)
 
     pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
+
     if not pending_locks:
         msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
         return (False, msg, None)
@@ -1185,7 +1186,8 @@ def compute_locks_with(
     """Register the given lock with as a pending locks."""
     lockhash = lock.lockhash
     if lockhash not in locks:
-        locks.update({lockhash: lock})
+        locks = LockHashLockOrderedDict(OrderedDict(locks))
+        locks.update({lockhash: lock})  # pylint: disable=E1101
         return locks
     else:
         return None
@@ -1196,6 +1198,7 @@ def compute_locks_without(
 ) -> Optional[LockHashLockOrderedDict]:
     # Use None to inform the caller the lockhash is unknown
     if lockhash in locks:
+        locks = LockHashLockOrderedDict(OrderedDict(locks))
         del locks[lockhash]
         return locks
     else:
