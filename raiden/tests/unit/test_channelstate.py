@@ -50,11 +50,9 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     TransactionChannelNewBalance,
@@ -1287,7 +1285,7 @@ def test_channelstate_get_unlock_proof():
     block_number = 1000
     locked_amount = 0
     settle_timeout = 8
-    merkletree_leaves = []
+    pending_locks = make_empty_lockhash_lock_ordered_dict()
     locked_locks = {}
     unlocked_locks = {}
 
@@ -1299,7 +1297,7 @@ def test_channelstate_get_unlock_proof():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        merkletree_leaves.append(lock.lockhash)
+        pending_locks.update({lock.lockhash: lock})  # pylint: disable=E1101
         if random.randint(0, 1) == 0:
             locked_locks[lock_secrethash] = lock
         else:
@@ -1308,10 +1306,10 @@ def test_channelstate_get_unlock_proof():
     end_state = NettingChannelEndState(HOP1, 300)
     end_state.secrethashes_to_lockedlocks = locked_locks
     end_state.secrethashes_to_unlockedlocks = unlocked_locks
-    end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+    end_state.pending_locks = pending_locks
 
     unlock_proof = channel.get_batch_unlock(end_state)
-    assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES])
+    assert len(unlock_proof) == len(end_state.pending_locks)
     leaves_packed = b"".join(lock.encoded for lock in unlock_proof)
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
