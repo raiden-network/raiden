@@ -1278,7 +1278,13 @@ def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
     locks = make_empty_lockhash_lock_ordered_dict()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.update({lock.lockhash: lock})  # pylint: disable=E1101
+        locks.update(  # pylint: disable=E1101
+            {
+                lock.lockhash: HashTimeLockState(
+                    amount=lock.amount, expiration=lock.expiration, secrethash=lock.secrethash
+                )
+            }
+        )
     return locks
 
 
@@ -1315,7 +1321,8 @@ def test_channelstate_get_unlock_proof():
 
     unlock_proof = channel.get_batch_unlock(end_state)
     assert len(unlock_proof) == len(end_state.pending_locks)
-    leaves_packed = b"".join(unlock_proof)
+    unlock_proof_locks = [l.encoded for l in unlock_proof.values()]
+    leaves_packed = b"".join(unlock_proof_locks)
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
     assert len(recomputed_pending_locks) == len(end_state.pending_locks)
