@@ -18,7 +18,7 @@ WEI_TO_ETH = 10 ** 18
 @click.option("--rpc-url", default="http://localhost:8545")
 @click.argument("eth-amount", type=int)
 @click.argument("targets_file", type=click.File())
-def main(keystore_file, password, rpc_url, eth_amount, targets_file):
+def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
     web3 = Web3(HTTPProvider(rpc_url))
     with open(keystore_file, "r") as keystore:
         account = Account(json.load(keystore), password, keystore_file)

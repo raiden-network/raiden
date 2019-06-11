@@ -12,7 +12,15 @@ from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import ChainID, ChannelID, Dict, Locksroot, Nonce, TokenAmount
+from raiden.utils.typing import (
+    AdditionalHash,
+    ChainID,
+    ChannelID,
+    Dict,
+    Locksroot,
+    Nonce,
+    TokenAmount,
+)
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree
 
@@ -73,7 +81,7 @@ class ContractTester:
         # return self.web3.eth.getTransactionReceipt(tx_hash)
 
 
-def find_max_pending_transfers(gas_limit):
+def find_max_pending_transfers(gas_limit) -> None:
     """Measure gas consumption of TokenNetwork.unlock() depending on number of
     pending transfers and find the maximum number of pending transfers so
     gas_limit is not exceeded."""
@@ -112,7 +120,7 @@ def find_max_pending_transfers(gas_limit):
         settle_timeout=150,
     )
 
-    channel_identifier = int(encode_hex(receipt["logs"][0]["topics"][1]), 16)
+    channel_identifier = ChannelID(int(encode_hex(receipt["logs"][0]["topics"][1]), 16))
 
     tester.call_transaction(
         "HumanStandardToken",
@@ -154,8 +162,8 @@ def find_max_pending_transfers(gas_limit):
     enough = 0
     too_much = 1024
 
-    nonce = 10
-    additional_hash = urandom(32)
+    nonce = Nonce(10)
+    additional_hash = AdditionalHash(urandom(32))
     token_network_address = tester.contract_address("TokenNetwork")
 
     while enough + 1 < too_much:

@@ -2,6 +2,7 @@
 import random
 import signal
 import tempfile
+from typing import ContextManager
 
 from eth_utils import remove_0x_prefix
 from web3 import HTTPProvider, Web3
@@ -12,6 +13,7 @@ from raiden.tests.utils.eth_node import (
     run_private_blockchain,
 )
 from raiden.utils import privatekey_to_address, sha3
+from raiden.utils.typing import ChainID, Port
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 NUM_GETH_NODES = 3
@@ -27,15 +29,15 @@ DEFAULT_ACCOUNTS_KEYS = [sha3(seed) for seed in DEFAULT_ACCOUNTS_SEEDS]
 DEFAULT_ACCOUNTS = [privatekey_to_address(key) for key in DEFAULT_ACCOUNTS_KEYS]
 
 
-def main():
+def main() -> None:
     tmpdir = tempfile.mkdtemp()
 
     geth_nodes = []
     for i in range(NUM_GETH_NODES):
         is_miner = i == 0
         node_key = sha3(f"node:{i}".encode())
-        p2p_port = START_PORT + i
-        rpc_port = START_RPCPORT + i
+        p2p_port = Port(START_PORT + i)
+        rpc_port = Port(START_RPCPORT + i)
 
         description = EthNodeDescription(
             private_key=node_key,
@@ -55,14 +57,14 @@ def main():
     genesis_description = GenesisDescription(
         prefunded_accounts=DEFAULT_ACCOUNTS,
         random_marker=random_marker,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
+        chain_id=ChainID(NETWORKNAME_TO_ID["smoketest"]),
     )
-    private_chain = run_private_blockchain(  # NOQA
+    private_chain: ContextManager = run_private_blockchain(  # NOQA
         web3=web3,
         eth_nodes=geth_nodes,
         base_datadir=tmpdir,
         log_dir=tmpdir,
-        verbosity=verbosity,
+        verbosity=str(verbosity),
         genesis_description=genesis_description,
     )
 
