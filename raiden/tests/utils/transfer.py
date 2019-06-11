@@ -4,6 +4,7 @@ from enum import Enum
 from hashlib import sha256
 
 import gevent
+from collection import OrderedDict
 from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
@@ -15,6 +16,7 @@ from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
@@ -22,10 +24,9 @@ from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelState,
     balanceproof_from_envelope,
-    make_empty_merkle_tree,
+    make_empty_lockhash_lock_ordered_dict,
 )
 from raiden.utils import random_secret, sha3
 from raiden.utils.signer import LocalSigner, Signer
@@ -452,13 +453,11 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        leaves = [sha3(lock.encoded) for lock in pending_locks]
-        layers = compute_layers(leaves)
-        tree = MerkleTreeState(layers)
+        locks = OrderedDict((sha3(lock.encoded), lock) for lock in pending_locks)
     else:
-        tree = make_empty_merkle_tree()
+        locks = make_empty_lockhash_lock_ordered_dict()
 
-    assert from_channel.our_state.merkletree == tree
+    assert from_channel.our_state.pending_locks == locks
 
     for lock in pending_locks:
         pending = lock.secrethash in from_channel.our_state.secrethashes_to_lockedlocks
@@ -581,7 +580,7 @@ def make_receive_expired_lock(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    merkletree_leaves: List[Keccak256] = None,
+    pending_locks: List[Keccak256] = None,
     locked_amount: LockedAmount = None,
     chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
@@ -593,13 +592,12 @@ def make_receive_expired_lock(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError("Private key does not match any of the participants.")
 
-    if merkletree_leaves is None:
-        layers = make_empty_merkle_tree().layers
+    if pending_locks is None:
+        pending_locks = make_empty_lockhash_lock_ordered_dict()
     else:
-        assert lock.lockhash not in merkletree_leaves
-        layers = compute_layers(merkletree_leaves)
+        assert lock.lockhash not in pending_locks
 
-    locksroot = layers[MERKLEROOT][0]
+    locksroot = compute_locksroot(pending_locks)
 
     chain_id = chain_id or channel_state.chain_id
     lock_expired_msg = LockExpired(
