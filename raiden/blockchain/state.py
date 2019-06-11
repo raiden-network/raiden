@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from raiden.settings import MEDIATION_FEE
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.mediation_fee import FeeSchedule
 from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
@@ -23,6 +24,7 @@ def create_channel_state_from_blockchain_data(
     settle_timeout: typing.BlockTimeout,
     opened_block_number: typing.BlockNumber,
     closed_block_number: typing.Optional[typing.BlockNumber],
+    fee_schedule: FeeSchedule,
 ) -> typing.Optional[NettingChannelState]:
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,
@@ -62,6 +64,7 @@ def create_channel_state_from_blockchain_data(
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         mediation_fee=MEDIATION_FEE,
+        fee_schedule=fee_schedule,
         our_state=our_state,
         partner_state=partner_state,
         open_transaction=open_transaction,
@@ -79,6 +82,7 @@ def get_channel_state(
     reveal_timeout: typing.BlockTimeout,
     payment_channel_proxy: "PaymentChannel",
     opened_block_number: typing.BlockNumber,
+    fee_schedule: FeeSchedule,
 ):  # pragma: no unittest
     # Here we have to query the latest state because if we query with an older block
     # state (e.g. opened_block_number) the state may have been pruned which will
@@ -95,4 +99,5 @@ def get_channel_state(
         settle_timeout=payment_channel_proxy.settle_timeout(),
         opened_block_number=opened_block_number,
         closed_block_number=payment_channel_proxy.close_block_number(),
+        fee_schedule=fee_schedule,
     )

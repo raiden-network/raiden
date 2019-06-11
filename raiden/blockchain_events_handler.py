@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import gevent
@@ -115,6 +116,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
             reveal_timeout=raiden.config["reveal_timeout"],
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
+            fee_schedule=replace(raiden.config["default_fee_schedule"]),
         )
 
         new_channel = ContractReceiveChannelNew(

@@ -2,6 +2,7 @@ import random
 from copy import deepcopy
 
 from raiden.tests.utils import factories
+from raiden.transfer.mediation_fee import FeeSchedule
 from raiden.transfer.state import (
     ChainState,
     NettingChannelEndState,
@@ -62,6 +63,7 @@ def test_detect_balance_proof_change():
         settle_transaction=None,
         update_transaction=None,
         close_transaction=None,
+        fee_schedule=FeeSchedule(),
     )
     channel_copy = deepcopy(channel)
     token_network.channelidentifiers_to_channels["a"] = channel

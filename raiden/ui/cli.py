@@ -42,6 +42,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.typing import FeeAmount
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -379,7 +380,7 @@ def options(func):
             ),
         ),
         option_group(
-            "Hash Resolver options",
+            "Hash Resolver Options",
             option(
                 "--resolver-endpoint",
                 help=(
@@ -389,6 +390,23 @@ def options(func):
                 ),
                 default=None,
                 type=str,
+                show_default=True,
+            ),
+        ),
+        option_group(
+            "Mediation Fee Options",
+            option(
+                "--flat-fee",
+                help=("Flat fee required for every mediation in wei of the mediated token."),
+                default=FeeAmount(0),
+                type=FeeAmount,
+                show_default=True,
+            ),
+            option(
+                "--proportional-fee",
+                help=("Mediation for as ratio of mediated amount in parts-per-million (10^-6)"),
+                default=0,
+                type=int,
                 show_default=True,
             ),
         ),
