@@ -923,13 +923,6 @@ class TokenNetwork:
 
         amount_to_withdraw = total_withdraw - previous_total_withdraw
 
-        if total_withdraw <= previous_total_withdraw:
-            msg = (
-                f"Current total withdraw ({previous_total_withdraw}) is already larger "
-                f"than the requested total withdraw amount ({total_withdraw})"
-            )
-            raise DepositMismatch(msg)
-
         if amount_to_withdraw <= 0:
             msg = (
                 f"new_total_withdraw - previous_total_withdraw must be greater than 0. "
@@ -951,7 +944,7 @@ class TokenNetwork:
 
         Raises:
             ChannelBusyError: If the channel is busy with another operation
-            RuntimeError: If the token address is empty.
+            ValueError: If provided total_withdraw is not an integer value.
         """
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
@@ -1025,8 +1018,8 @@ class TokenNetwork:
             log_details["gas_limit"] = gas_limit
 
             transaction_hash = self.proxy.transact(
-                "setTotalWithdraw",
-                gas_limit,
+                function_name="setTotalWithdraw",
+                startgas=gas_limit,
                 channel_identifier=channel_identifier,
                 participant=self.node_address,
                 total_withdraw=total_withdraw,
@@ -1091,21 +1084,21 @@ class TokenNetwork:
                 block_identifier=block_identifier,
                 channel_identifier=channel_identifier,
             )
-            # Check if deposit is being made on a nonexistent channel
+            # Check if withdraw is being tried on a nonexistent channel
             if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
                 msg = (
                     f"Channel between participant {to_checksum_address(self.node_address)} "
                     f"and {to_checksum_address(partner)} does not exist"
                 )
-            # Deposit was prohibited because the channel is settled
+            # Withdraw was prohibited because the channel is settled
             elif channel_state == ChannelState.SETTLED:
-                msg = "Deposit is not possible due to channel being settled"
-            # Deposit was prohibited because the channel is closed
+                msg = "Withdraw is not possible due to channel being settled"
+            # Withdraw was prohibited because the channel is closed
             elif channel_state == ChannelState.CLOSED:
                 error_type = RaidenRecoverableError
                 msg = "Channel is already closed"
             elif participant_details.our_details.deposit < total_withdraw:
-                msg = "Deposit amount did not increase after deposit transaction"
+                msg = "Withdraw amount did not increase after withdraw transaction"
 
         return error_type, msg
 
