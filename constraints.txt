@@ -32,7 +32,7 @@ idna==2.7
 ipython-genutils==0.2.0
 ipython==4.2.1
 itsdangerous==0.24
-Jinja2==2.8.1
+Jinja2==2.10
 lru-dict==1.1.6
 MarkupSafe==1.0
 marshmallow-polyfield==5.5
