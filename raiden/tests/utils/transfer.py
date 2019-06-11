@@ -27,7 +27,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
     make_empty_lockhash_lock_ordered_dict,
 )
-from raiden.utils import random_secret, sha3
+from raiden.utils import random_secret
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,
@@ -452,7 +452,7 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = OrderedDict((sha3(lock.encoded), lock) for lock in pending_locks)
+        locks = OrderedDict((lock.lockhash, lock) for lock in pending_locks)
     else:
         locks = make_empty_lockhash_lock_ordered_dict()
 

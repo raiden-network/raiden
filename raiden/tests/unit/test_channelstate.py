@@ -9,7 +9,7 @@ from typing import List
 import pytest
 
 from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
-from raiden.messages import Unlock
+from raiden.messages import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -1274,7 +1274,12 @@ def test_channelstate_unlock_without_locks():
 
 
 def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
-    raise NotImplementedError
+    number_of_bytes = len(packed)
+    locks = make_empty_lockhash_lock_ordered_dict()
+    for i in range(0, number_of_bytes, 96):
+        lock = Lock.from_bytes(packed[i : i + 96])
+        locks.update({lock.lockhash: lock})  # pylint: disable=E1101
+    return locks
 
 
 def test_channelstate_get_unlock_proof():
