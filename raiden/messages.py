@@ -2,7 +2,6 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from hashlib import sha256
 from operator import attrgetter
-from typing import List, Tuple
 
 import rlp
 from cachetools import LRUCache, cached
@@ -26,6 +25,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
+from raiden.transfer.mediation_fee import FeeSchedule
 from raiden.transfer.state import (
     BalanceProofSignedState,
     HashTimeLockState,
@@ -1165,13 +1165,6 @@ class UpdatePFS(SignedMessage):
         packed.reveal_timeout = self.reveal_timeout
         packed.fee = self.mediation_fee
         packed.signature = self.signature
-
-
-@dataclass
-class FeeSchedule:
-    flat: FeeAmount = FeeAmount(0)
-    proportional: int = 0  # as micros, e.g. 1% = 0.01e6
-    imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None
 
 
 @dataclass
