@@ -20,7 +20,6 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
-from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     HashTimeLockState,
@@ -523,17 +522,17 @@ def make_receive_transfer_mediated(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        layers = [[lock.lockhash]]
+        locks = OrderedDict((lock.lockhash, lock))
     else:
         assert lock.lockhash in pending_locks
-        layers = compute_layers(pending_locks)
+        locks = pending_locks
 
     if locked_amount is None:
         locked_amount = lock.amount
 
     assert locked_amount >= lock.amount
 
-    locksroot = layers[MERKLEROOT][0]
+    locksroot = compute_locksroot(locks)
 
     payment_identifier = nonce
     transfer_target = make_address()
