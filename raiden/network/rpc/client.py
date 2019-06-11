@@ -42,6 +42,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     CompiledContract,
     Nonce,
+    PrivateKey,
     TransactionHash,
 )
 
@@ -383,7 +384,7 @@ class JSONRPCClient:
     def __init__(
         self,
         web3: Web3,
-        privkey: bytes,
+        privkey: Optional[PrivateKey],
         gas_price_strategy: Callable = rpc_gas_price_strategy,
         gas_estimate_correction: Callable = lambda gas: gas,
         block_num_confirmations: int = 0,
