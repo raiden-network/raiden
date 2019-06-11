@@ -1,10 +1,10 @@
 """ Utilities to make and assert transfers. """
 import random
+from collections import OrderedDict
 from enum import Enum
 from hashlib import sha256
 
 import gevent
-from collection import OrderedDict
 from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
