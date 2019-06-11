@@ -67,7 +67,9 @@ pylint --jobs=0 \
     --load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker \
     raiden/ tools/scenario-player/ > ${new_report_pylint} || true
 
-mypy raiden tools > ${new_report_mypy} || true
+mypy --config-file /dev/null --strict --disallow-subclassing-any \
+    --disallow-any-expr --disallow-any-decorated --disallow-any-explicit \
+    --disallow-any-generics raiden tools > ${new_report_mypy} || true
 
 exit_code=0
 
