@@ -3,9 +3,9 @@ from datetime import datetime
 import gevent.lock
 import structlog
 
-from raiden.storage.sqlite import SerializedSQLiteStorage, StateChangeID
+from raiden.storage.sqlite import FIRST_ULID, Range, SerializedSQLiteStorage, StateChangeID
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, Generic, List, RaidenDBVersion, Tuple, TypeVar, Union
+from raiden.utils.typing import Callable, Generic, List, RaidenDBVersion, Tuple, TypeVar
 
 log = structlog.get_logger(__name__)
 
@@ -13,11 +13,11 @@ log = structlog.get_logger(__name__)
 def restore_to_state_change(
     transition_function: Callable,
     storage: SerializedSQLiteStorage,
-    state_change_identifier: Union[StateChangeID, str],
+    state_change_identifier: StateChangeID,
 ) -> "WriteAheadLog":
-    from_identifier: Union[str, StateChangeID]
+    from_identifier: StateChangeID
 
-    snapshot = storage.get_snapshot_closest_to_state_change(
+    snapshot = storage.get_snapshot_before_state_change(
         state_change_identifier=state_change_identifier
     )
 
@@ -34,11 +34,11 @@ def restore_to_state_change(
             "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
         )
-        from_identifier = "earliest"
+        from_identifier = StateChangeID(FIRST_ULID)
         chain_state = None
 
-    unapplied_state_changes = storage.get_statechanges_by_identifier(
-        from_identifier=from_identifier, to_identifier=state_change_identifier
+    unapplied_state_changes = storage.get_statechanges_by_range(
+        Range(from_identifier, state_change_identifier)
     )
 
     state_manager = StateManager(transition_function, chain_state)

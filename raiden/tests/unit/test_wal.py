@@ -8,7 +8,7 @@ import pytest
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.sqlite import LAST_ULID, RANGE_ALL_ELEMENTS, SerializedSQLiteStorage
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils import factories
@@ -90,24 +90,18 @@ def test_write_read_log():
         block_hash=block_hash,
     )
 
-    state_changes1 = wal.storage.get_statechanges_by_identifier(
-        from_identifier="earliest", to_identifier="latest"
-    )
+    state_changes1 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
     count1 = len(state_changes1)
 
     wal.log_and_dispatch(block)
 
-    state_changes2 = wal.storage.get_statechanges_by_identifier(
-        from_identifier="earliest", to_identifier="latest"
-    )
+    state_changes2 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
     count2 = len(state_changes2)
     assert count1 + 1 == count2
 
     wal.log_and_dispatch(contract_receive_unlock)
 
-    state_changes3 = wal.storage.get_statechanges_by_identifier(
-        from_identifier="earliest", to_identifier="latest"
-    )
+    state_changes3 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
     count3 = len(state_changes3)
     assert count2 + 1 == count3
 
@@ -189,14 +183,14 @@ def test_restore_without_snapshot():
     newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
         storage=wal.storage,
-        state_change_identifier="latest",
+        state_change_identifier=LAST_ULID,
     )
 
     aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
 
 
-def test_get_snapshot_closest_to_state_change():
+def test_get_snapshot_before_state_change():
     wal = new_wal(state_transtion_acc)
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
@@ -211,5 +205,5 @@ def test_get_snapshot_closest_to_state_change():
     wal.log_and_dispatch(block3)
     wal.snapshot()
 
-    snapshot = wal.storage.get_snapshot_closest_to_state_change("latest")
+    snapshot = wal.storage.get_snapshot_before_state_change(LAST_ULID)
     assert snapshot.data == AccState([block1, block2, block3])

@@ -344,7 +344,7 @@ class RaidenService(Runnable):
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
             storage=storage,
-            state_change_identifier="latest",
+            state_change_identifier=sqlite.StateChangeID(sqlite.LAST_ULID),
         )
 
         if self.wal.state_manager.current_state is None:

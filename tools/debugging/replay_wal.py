@@ -127,7 +127,7 @@ class Translator(dict):
 
 
 def replay_wal(storage, token_network_address, partner_address, translator=None):
-    all_state_changes = storage.get_statechanges_by_identifier(
+    all_state_changes = storage.get_statechanges_by_range(
         from_identifier="earliest", to_identifier="latest"
     )
 
