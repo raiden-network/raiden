@@ -4,6 +4,7 @@ from collections import namedtuple
 from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
+from typing import List
 
 import pytest
 
@@ -48,12 +49,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import (
-    LEAVES,
-    compute_layers,
-    merkle_leaves_from_packed_data,
-    merkleroot,
-)
+from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     HashTimeLockState,
@@ -155,7 +151,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 transferred_amount=0,
                 locked_amount=len(our_model.merkletree_leaves),
                 # pylint: disable=no-member
-                locksroot=merkleroot(channel_state.our_state.merkletree),
+                locksroot=compute_locksroot(channel_state.our_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
         )
@@ -172,7 +168,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 transferred_amount=0,
                 locked_amount=len(partner_model.merkletree_leaves),
                 # pylint: disable=no-member
-                locksroot=merkleroot(channel_state.partner_state.merkletree),
+                locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
         )
@@ -210,7 +206,7 @@ def test_new_end_state():
     assert channel.is_lock_locked(end_state, lock_secrethash) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
-    assert merkleroot(end_state.merkletree) == EMPTY_MERKLE_ROOT
+    assert compute_locksroot(end_state.pending_locks) == EMPTY_MERKLE_ROOT
 
     assert not end_state.secrethashes_to_lockedlocks
     assert not end_state.secrethashes_to_unlockedlocks
@@ -1275,6 +1271,10 @@ def test_channelstate_unlock_without_locks():
     assert not iteration.events
 
 
+def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
+    raise NotImplementedError
+
+
 def test_channelstate_get_unlock_proof():
     number_of_transfers = 100
     lock_amounts = cycle([1, 3, 5, 7, 11])
@@ -1310,13 +1310,11 @@ def test_channelstate_get_unlock_proof():
     assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES])
     leaves_packed = b"".join(lock.encoded for lock in unlock_proof)
 
-    recomputed_merkle_tree = MerkleTreeState(
-        compute_layers(merkle_leaves_from_packed_data(leaves_packed))
-    )
-    assert len(recomputed_merkle_tree.layers[LEAVES]) == len(end_state.merkletree.layers[LEAVES])
+    recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
+    assert len(recomputed_pending_locks) == len(end_state.pending_locks)
 
-    computed_merkleroot = merkleroot(recomputed_merkle_tree)
-    assert merkleroot(end_state.merkletree) == computed_merkleroot
+    computed_locksroot = compute_locksroot(recomputed_pending_locks)
+    assert compute_locksroot(end_state.pending_locks) == computed_locksroot
 
 
 def test_channelstate_unlock_unlocked_onchain():
