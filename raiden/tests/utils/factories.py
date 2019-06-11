@@ -26,7 +26,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import compute_layers, merkleroot
+from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
@@ -835,7 +835,7 @@ def make_signed_transfer_for(
             expiration=properties.expiration,
             secrethash=sha256(properties.secret).digest(),
         )
-        locksroot = merkleroot(
+        locksroot = compute_locksroot(
             channel.compute_locks_with(locks=channel_state.partner_state.pending_locks, lock=lock)
         )
     else:

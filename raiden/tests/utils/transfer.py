@@ -38,6 +38,7 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockedAmount,
+    LockHashLockOrderedDict,
     Nonce,
     Optional,
     PaymentAmount,
@@ -510,7 +511,7 @@ def make_receive_transfer_mediated(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    merkletree_leaves: List[Keccak256] = None,
+    pending_locks: LockHashLockOrderedDict = None,
     locked_amount: Optional[LockedAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
@@ -522,11 +523,11 @@ def make_receive_transfer_mediated(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError("Private key does not match any of the participants.")
 
-    if merkletree_leaves is None:
+    if pending_locks is None:
         layers = [[lock.lockhash]]
     else:
-        assert lock.lockhash in merkletree_leaves
-        layers = compute_layers(merkletree_leaves)
+        assert lock.lockhash in pending_locks
+        layers = compute_layers(pending_locks)
 
     if locked_amount is None:
         locked_amount = lock.amount

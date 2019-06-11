@@ -36,7 +36,7 @@ def _channel_and_transfer(merkletree_width):
         nonce=partner_model.next_nonce,
         transferred_amount=0,
         lock=lock,
-        merkletree_leaves=partner_model.merkletree_leaves + [lock.lockhash],
+        pending_locks=partner_model.pending_locks + {lock.lockhash: lock},
         locked_amount=lock.amount,
     )
 
