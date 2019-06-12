@@ -825,19 +825,38 @@ class TokenNetwork:
                 if total_deposit_done:
                     raise RaidenRecoverableError("Requested total deposit was already performed")
 
+                failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                failed_at_blockhash = encode_hex(failed_at["hash"])
+                latest_deposit = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier=failed_at_blockhash,
+                ).deposit
+                if latest_deposit < total_deposit:
+                    raise RaidenUnrecoverableError("The tokens were not transferred")
+
                 raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
         else:
-            latest_deposit = self._detail_participant(
-                channel_identifier=channel_identifier,
-                detail_for=self.node_address,
-                partner=partner,
-                block_identifier=given_block_identifier,
-            ).deposit
+            # The transaction has failed, figure out why.
+
+            # The latest block can not be used reliably because of reorgs,
+            # therefore every call using this block has to handle pruned data.
+            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at_blockhash = encode_hex(failed_at["hash"])
+            failed_at_blocknumber = failed_at["number"]
+
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name="closeChannel",
+                transaction_executed=True,
+                required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+                block_identifier=failed_at_blocknumber,
+            )
 
             allowance = token.allowance(
                 owner=self.node_address,
                 spender=Address(self.address),
-                block_identifier=given_block_identifier,
+                block_identifier=failed_at_blockhash,
             )
             if allowance < amount_to_deposit:
                 msg = (
@@ -846,19 +865,17 @@ class TokenNetwork:
                 )
             elif token.balance_of(self.node_address, given_block_identifier) < amount_to_deposit:
                 msg = "The address doesnt have enough tokens"
-            elif latest_deposit < total_deposit:
-                msg = "The tokens were not transferred"
             else:
                 participant_details = self.detail_participants(
                     participant1=self.node_address,
                     participant2=partner,
-                    block_identifier=given_block_identifier,
+                    block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
                 channel_state = self._get_channel_state(
                     participant1=self.node_address,
                     participant2=partner,
-                    block_identifier=given_block_identifier,
+                    block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
                 # Check if deposit is being made on a nonexistent channel
