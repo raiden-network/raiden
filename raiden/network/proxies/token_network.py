@@ -1089,7 +1089,7 @@ class TokenNetwork:
             detail = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
-                block_identifier=given_block_identifier,
+                block_identifier=failed_at_blockhash,
                 channel_identifier=channel_identifier,
             )
             sender_details = self._detail_participant(
