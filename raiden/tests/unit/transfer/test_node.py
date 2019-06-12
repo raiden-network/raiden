@@ -418,7 +418,7 @@ def test_inplace_delete_message_queue(chain_state):
     )
 
     chain_state.queueids_to_queues[global_identifier] = None
-    assert global_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
+    assert global_identifier in chain_state.queueids_to_queues, "queue mapping insertion failed"
     inplace_delete_message_queue(
         chain_state=chain_state, state_change=delivered_state_change, queueid=global_identifier
     )
@@ -431,7 +431,7 @@ def test_inplace_delete_message_queue(chain_state):
             message_identifier=message_id,
         )
     ]
-    assert global_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
+    assert global_identifier in chain_state.queueids_to_queues, "queue mapping insertion failed"
     handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
     assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
 
