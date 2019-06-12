@@ -177,7 +177,7 @@ def test_token_network_proxy(
         )
 
     msg = "Trying a deposit to an inexisting channel must fail."
-    with pytest.raises(RaidenUnrecoverableError, message=msg, match="does not exist"):
+    with pytest.raises(RaidenUnrecoverableError, message=msg, match="was not opened"):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=1,
@@ -365,7 +365,10 @@ def test_token_network_proxy(
         )
 
     msg = "depositing to a closed channel must fail"
-    match = "setTotalDeposit call will fail. Channel is already closed"
+    match = (
+        f"The channel was not opened at the provided block (latest). "
+        f"This call should never have been attempted."
+    )
     with pytest.raises(RaidenRecoverableError, message=msg, match=match):
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier=blocknumber_prior_to_close,
