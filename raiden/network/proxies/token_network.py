@@ -784,6 +784,7 @@ class TokenNetwork:
             gas_limit = safe_gas_limit(
                 gas_limit, self.gas_measurements["TokenNetwork.setTotalDeposit"]
             )
+            log_details["gas_limit"] = gas_limit
 
             transaction_hash = self.proxy.transact(
                 "setTotalDeposit",
@@ -849,7 +850,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="closeChannel",
                 transaction_executed=True,
-                required_gas=self.gas_measurements["TokenNetwork.closeChannel"],
+                required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
                 block_identifier=failed_at_blocknumber,
             )
 
