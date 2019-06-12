@@ -365,10 +365,7 @@ def test_token_network_proxy(
         )
 
     msg = "depositing to a closed channel must fail"
-    match = (
-        f"The channel was not opened at the provided block (latest). "
-        f"This call should never have been attempted."
-    )
+    match = "Channel is already closed"
     with pytest.raises(RaidenRecoverableError, message=msg, match=match):
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier=blocknumber_prior_to_close,
@@ -420,7 +417,7 @@ def test_token_network_proxy(
     assert token_proxy.balance_of(c2_client.address) == (initial_balance_c2 + transferred_amount)
 
     msg = "depositing to a settled channel must fail"
-    match = "setTotalDeposit call will fail."
+    match = "The channel was not opened"
     with pytest.raises(RaidenUnrecoverableError, message=msg, match=match):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
