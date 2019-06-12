@@ -3,7 +3,7 @@ from datetime import datetime
 import gevent.lock
 import structlog
 
-from raiden.storage.sqlite import FIRST_ULID, Range, SerializedSQLiteStorage, StateChangeID
+from raiden.storage.sqlite import FIRST_STATECHANGE_ULID, Range, SerializedSQLiteStorage, StateChangeID
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
 from raiden.utils.typing import Callable, Generic, List, RaidenDBVersion, Tuple, TypeVar
 
@@ -34,7 +34,7 @@ def restore_to_state_change(
             "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
         )
-        from_identifier = StateChangeID(FIRST_ULID)
+        from_identifier = FIRST_STATECHANGE_ULID
         chain_state = None
 
     unapplied_state_changes = storage.get_statechanges_by_range(

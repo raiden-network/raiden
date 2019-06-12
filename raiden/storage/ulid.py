@@ -4,7 +4,7 @@ from time import CLOCK_MONOTONIC_RAW, clock_getres, clock_gettime_ns, time_ns
 
 from gevent.lock import Semaphore
 
-from raiden.utils.typing import Any, Iterable, Iterator, List, Tuple
+from raiden.utils.typing import Any, Generic, Iterable, Iterator, List, Tuple, TypeVar, cast
 
 
 @dataclass(frozen=True, order=True)
@@ -32,7 +32,10 @@ class ULID:
         return int.from_bytes(timestamp_bytes, "big")
 
 
-class ULIDMonotonicFactory:
+ID = TypeVar("ID", bound=ULID)
+
+
+class ULIDMonotonicFactory(Generic[ID]):
     """Monotonic ULID factory that guarantees new ULIDs will not be decrease.
 
     This factory does not follow the SPEC. The timestamp is not walltime and
@@ -62,7 +65,7 @@ class ULIDMonotonicFactory:
         self._previous_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
         self._lock = Semaphore()
 
-    def new(self) -> ULID:
+    def new(self) -> ID:
         timestamp: int
 
         with self._lock:
@@ -88,9 +91,9 @@ class ULIDMonotonicFactory:
         rnd = random.getrandbits(64)
         identifier = timestamp.to_bytes(8, "big") + rnd.to_bytes(8, "big")
 
-        return ULID(identifier)
+        return cast(ID, identifier)
 
-    def prepend_and_save_ids(self, ids: List[ULID], items: Iterable[Tuple[Any, ...]]) -> Iterator:
+    def prepend_and_save_ids(self, ids: List[ID], items: Iterable[Tuple[Any, ...]]) -> Iterator:
         for item in items:
             next_id = self.new()
             ids.append(next_id)
