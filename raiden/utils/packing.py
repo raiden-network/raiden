@@ -88,16 +88,16 @@ def pack_reward_proof(
 def pack_withdraw(
     canonical_identifier: CanonicalIdentifier, participant: Address, total_withdraw: WithdrawAmount
 ) -> bytes:
-    """Packs balance proof data to be signed
+    """Packs withdraw data to be signed
 
     Packs the given arguments in a byte array in the same configuration the
     contracts expect the signed data to have.
-address(this),
-            chain_id,
-            uint256(MessageTypeId.Withdraw),
-            channel_identifier,
-            participant,
-            total_withdraw
+    token_network_address,
+    chain_id,
+    uint256(MessageTypeId.Withdraw),
+    channel_identifier,
+    participant_address,
+    total_withdraw
     """
     return pack_data(
         ["address", "uint256", "uint256", "uint256", "address", "uint256"],

@@ -762,7 +762,7 @@ class SerializedSQLiteStorage:
         events = self.database.get_events(limit, offset)
         return [self.serializer.deserialize(event) for event in events]
 
-    def get_state_changes(self, limit: int = None, offset: int = None) -> List[Event]:
+    def get_state_changes(self, limit: int = None, offset: int = None) -> List[StateChange]:
         state_changes = self.database.get_state_changes(limit, offset)
         return [self.serializer.deserialize(state_change) for state_change in state_changes]
 

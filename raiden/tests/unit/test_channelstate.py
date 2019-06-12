@@ -1641,7 +1641,7 @@ def test_action_withdraw():
             iteration.events,
             EventInvalidActionWithdraw,
             {
-                "total_withdraw": 100,
+                "attempted_withdraw": 100,
                 "reason": "Insufficient balance: 70. Requested 100 for withdraw",
             },
         )
@@ -1681,7 +1681,7 @@ def test_action_withdraw():
             iteration.events,
             EventInvalidActionWithdraw,
             {
-                "total_withdraw": our_balance,
+                "attempted_withdraw": our_balance,
                 "reason": f"Total withdraw {our_balance} did not increase",
             },
         )
@@ -1718,7 +1718,7 @@ def test_receive_withdraw_request():
             iteration.events,
             EventInvalidReceivedWithdrawRequest,
             {
-                "total_withdraw": 120,
+                "attempted_withdraw": 120,
                 "reason": "Insufficient balance: 100. Requested 120 for withdraw",
             },
         )
@@ -1774,7 +1774,7 @@ def test_receive_withdraw_request():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdrawRequest,
-            {"total_withdraw": 20, "reason": "Total withdraw 20 did not increase"},
+            {"attempted_withdraw": 20, "reason": "Total withdraw 20 did not increase"},
         )
         is not None
     )
@@ -1799,7 +1799,7 @@ def test_receive_withdraw_request():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdrawRequest,
-            {"total_withdraw": 40, "reason": "Signature invalid, could not be recovered."},
+            {"attempted_withdraw": 40, "reason": "Signature invalid, could not be recovered."},
         )
         is not None
     )
@@ -1843,7 +1843,7 @@ def test_receive_withdraw_confirmation():
             iteration.events,
             EventInvalidReceivedWithdraw,
             {
-                "total_withdraw": 100,
+                "attempted_withdraw": 100,
                 "reason": "Total withdraw confirmation 100 does not match our total withdraw 0",
             },
         )
@@ -1870,7 +1870,7 @@ def test_receive_withdraw_confirmation():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdraw,
-            {"total_withdraw": 70, "reason": "Signature invalid, could not be recovered."},
+            {"attempted_withdraw": 70, "reason": "Signature invalid, could not be recovered."},
         )
         is not None
     )
