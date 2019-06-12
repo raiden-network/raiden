@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 
 import raiden.transfer.node
@@ -297,18 +299,20 @@ def test_subdispatch_by_canonical_id(chain_state):
     chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
         canonical_identifier.token_network_address
     ] = payment_network.address
-    # dispatching a Block will raise an assertion error
-    with pytest.raises(AssertionError):
-        state_change = Block(
-            block_number=chain_state.block_number,
-            gas_limit=GAS_LIMIT,
-            block_hash=chain_state.block_hash,
-        )
-        subdispatch_by_canonical_id(
-            chain_state=chain_state,
-            canonical_identifier=canonical_identifier,
-            state_change=state_change,
-        )
+    # dispatching a Block will be ignored
+    previous_state = copy.deepcopy(chain_state)
+    state_change = Block(
+        block_number=chain_state.block_number,
+        gas_limit=GAS_LIMIT,
+        block_hash=chain_state.block_hash,
+    )
+    transition_result = subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=canonical_identifier,
+        state_change=state_change,
+    )
+    assert transition_result.new_state == previous_state
+    assert transition_result.events == []
 
     state_change = ActionChannelClose(canonical_identifier=canonical_identifier)
 

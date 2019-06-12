@@ -335,6 +335,7 @@ def state_transition(
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
+    iteration = TransitionResult(token_network_state, [])
 
     if type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
@@ -449,11 +450,6 @@ def state_transition(
             block_number=block_number,
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
-        )
-    else:
-        raise AssertionError(
-            f"Illegal dispatch: state_change {state_change} "
-            "must not be dispatched to token_network."
         )
 
     return iteration
