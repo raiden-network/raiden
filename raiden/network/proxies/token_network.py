@@ -903,34 +903,6 @@ class TokenNetwork:
 
         return error_type, msg
 
-    def _withdraw_preconditions(
-        self,
-        channel_identifier: ChannelID,
-        total_withdraw: WithdrawAmount,
-        previous_total_withdraw: WithdrawAmount,
-        partner: Address,
-        block_identifier: BlockSpecification,
-    ) -> None:
-        if not self.client.can_query_state_for_block(block_identifier):
-            raise NoStateForBlockIdentifier()
-
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        amount_to_withdraw = total_withdraw - previous_total_withdraw
-
-        if amount_to_withdraw <= 0:
-            msg = (
-                f"new_total_withdraw - previous_total_withdraw must be greater than 0. "
-                f"new_total_withdraw={total_withdraw} "
-                f"previous_total_withdraw={previous_total_withdraw}"
-            )
-            raise WithdrawMismatch(msg)
-
     def set_total_withdraw(
         self,
         given_block_identifier: BlockSpecification,
@@ -990,7 +962,7 @@ class TokenNetwork:
                         f"{sender_details.withdrawn}. Requested total withdraw "
                         f"{total_withdraw} did not increase."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise WithdrawMismatch(msg)
 
                 total_channel_deposit = sender_details.deposit + partner_details.deposit
                 total_channel_withdraw = total_withdraw + partner_details.withdrawn
@@ -1000,7 +972,7 @@ class TokenNetwork:
                         f"{total_channel_withdraw} is larger than the total channel "
                         f"deposit of {total_channel_deposit}."
                     )
-                    raise RaidenRecoverableError(msg)
+                    raise WithdrawMismatch(msg)
 
             log_details = {
                 "node": to_checksum_address(self.node_address),
@@ -1104,7 +1076,7 @@ class TokenNetwork:
                         f"{total_channel_withdraw} became larger than the total channel "
                         f"deposit of {total_channel_deposit}."
                     )
-                    raise RaidenRecoverableError(msg)
+                    raise WithdrawMismatch(msg)
 
                 raise RaidenUnrecoverableError("SetTotalwithdraw failed for an unknown reason")
         else:

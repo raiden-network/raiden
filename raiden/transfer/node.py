@@ -482,7 +482,7 @@ def inplace_delete_message(
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
         # A withdraw request is only confirmed by a withdraw confirmation.
-        # This is done because Processed is not an indicator that the parner has
+        # This is done because Processed is not an indicator that the partner has
         # processed and **accepted** our withdraw request. Receiving
         # `Processed` here would cause the withdraw request to be removed
         # from the queue although the confirmation may have not been sent.
