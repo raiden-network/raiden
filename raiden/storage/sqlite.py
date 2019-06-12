@@ -248,7 +248,7 @@ class SQLiteStorage:
         would be error prone (it would depend on configuration of which tables
         have an ULID), this is not done.
         """
-        assert table_name not in (None, ""), "A table name must be provided"
+        assert table_name, "A table name must be provided"
 
         factory = self._ulid_factories.get(table_name)
 
