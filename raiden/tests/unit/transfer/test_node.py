@@ -408,10 +408,7 @@ def test_inplace_delete_message_queue(chain_state):
     canonical_identifier = factories.make_canonical_identifier()
     message_id = factories.make_message_identifier()
     delivered_state_change = ReceiveDelivered(sender=sender, message_identifier=message_id)
-    handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
-
     processed_state_change = ReceiveProcessed(sender=sender, message_identifier=message_id)
-    handle_processed(chain_state=chain_state, state_change=processed_state_change)
 
     global_identifier = QueueIdentifier(
         recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
