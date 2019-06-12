@@ -1799,7 +1799,7 @@ class TokenNetwork:
 
                 raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
         else:
-            # The transaction would have failed if sent, figure out why.
+            # The transaction has failed, figure out why.
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
@@ -1816,7 +1816,7 @@ class TokenNetwork:
             detail = self._detail_channel(
                 participant1=sender,
                 participant2=receiver,
-                block_identifier=given_block_identifier,
+                block_identifier=failed_at_blockhash,
                 channel_identifier=channel_identifier,
             )
             sender_details = self._detail_participant(
