@@ -92,7 +92,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             token_network_registry_address=token_network_registry_address_test_default,
         )
     assert config.url in urls
-    assert is_checksum_address(config.eth_address)
+    assert is_checksum_address(config.payment_address)
 
     # Configuring a given address
     given_address = "http://ourgivenaddress"
