@@ -2,7 +2,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
 from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
@@ -14,6 +13,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -49,9 +49,7 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
-    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(
-        RANGE_ALL_ELEMENTS
-    )
+    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
         app0_state_changes,

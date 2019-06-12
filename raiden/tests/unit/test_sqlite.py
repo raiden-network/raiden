@@ -15,7 +15,12 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS, Range, SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import (
+    RANGE_ALL_STATE_CHANGES,
+    Range,
+    SerializedSQLiteStorage,
+    SQLiteStorage,
+)
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -225,7 +230,7 @@ def test_get_state_change_with_balance_proof():
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    stored_statechanges = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     assert len(stored_statechanges) == 6
     assert isinstance(stored_statechanges[0].data, ReceiveLockExpired)
     assert isinstance(stored_statechanges[1].data, ReceiveUnlock)

@@ -8,7 +8,7 @@ from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -171,7 +171,9 @@ def test_recovery_unhappy_case(
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
 
-    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_STATE_CHANGES
+    )
 
     assert search_for_item(
         state_changes,
@@ -235,6 +237,6 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
     waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
     restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
-        RANGE_ALL_ELEMENTS
+        RANGE_ALL_STATE_CHANGES
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})

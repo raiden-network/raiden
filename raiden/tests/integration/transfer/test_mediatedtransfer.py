@@ -8,7 +8,7 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret, SecretRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
@@ -151,7 +151,7 @@ def run_test_locked_transfer_secret_registered_onchain(
     message_handler = MessageHandler()
     message_handler.handle_message_lockedtransfer(app0.raiden, locked_transfer)
 
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     transfer_statechange_dispatched = search_for_item(
         state_changes, ActionInitMediator, {}
     ) or search_for_item(state_changes, ActionInitTarget, {})

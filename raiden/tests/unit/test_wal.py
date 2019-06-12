@@ -8,7 +8,7 @@ import pytest
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import LAST_ULID, RANGE_ALL_ELEMENTS, SerializedSQLiteStorage
+from raiden.storage.sqlite import LAST_ULID, RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils import factories
@@ -90,18 +90,18 @@ def test_write_read_log():
         block_hash=block_hash,
     )
 
-    state_changes1 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes1 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count1 = len(state_changes1)
 
     wal.log_and_dispatch(block)
 
-    state_changes2 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes2 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count2 = len(state_changes2)
     assert count1 + 1 == count2
 
     wal.log_and_dispatch(contract_receive_unlock)
 
-    state_changes3 = wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes3 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count3 = len(state_changes3)
     assert count2 + 1 == count3
 
