@@ -15,7 +15,7 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
             primitive_calls, total_calls, total_time, acc_time, _ = data
 
             if primitive_calls != total_calls:
-                calls = "{}/{}".format(total_calls, primitive_calls)
+                calls = f"{total_calls}/{primitive_calls}"
             else:
                 calls = str(primitive_calls)
 
@@ -33,7 +33,7 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
                 )
             )
 
-    print(" Runtime: {}, Total %: {}".format(pstats.total_tt, total_pct))
+    print(f" Runtime: {pstats.total_tt}, Total %: {total_pct}")
 
 
 def print_slow_path(pstats):

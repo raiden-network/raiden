@@ -276,7 +276,7 @@ class ConnectionManager:  # pragma: no unittest
             payment_network_address=self.registry_address,
             token_address=self.token_address,
         )
-        known = set(channel_state.partner_state.address for channel_state in open_channels)
+        known = {channel_state.partner_state.address for channel_state in open_channels}
         known.add(self.BOOTSTRAP_ADDR)
         known.add(self.raiden.address)
 
@@ -386,7 +386,7 @@ class ConnectionManager:  # pragma: no unittest
             num_greenlets=len(join_partners),
         )
 
-        greenlets = set(gevent.spawn(self._join_partner, partner) for partner in join_partners)
+        greenlets = {gevent.spawn(self._join_partner, partner) for partner in join_partners}
         gevent.joinall(greenlets, raise_error=True)
         return True
 

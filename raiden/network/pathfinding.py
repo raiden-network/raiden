@@ -1,6 +1,7 @@
 import json
 import random
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum, unique
 from uuid import UUID
@@ -26,12 +27,14 @@ from raiden.utils.typing import (
     Any,
     BlockNumber,
     BlockSpecification,
+    ChainID,
     Dict,
     InitiatorAddress,
     List,
     NamedTuple,
     Optional,
     PaymentAmount,
+    Signature,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -81,7 +84,7 @@ def get_pfs_info(url: str) -> Optional[Dict]:
         return None
 
 
-def get_random_service(
+def get_random_pfs(
     service_registry: ServiceRegistry, block_identifier: BlockSpecification
 ) -> Optional[str]:
     """Selects a random PFS from service_registry.
@@ -104,27 +107,16 @@ def get_random_service(
     return url
 
 
-class PFSConfiguration(NamedTuple):
+@dataclass
+class PFSConfiguration:
     url: str
-    eth_address: Optional[str]
+    eth_address: Optional[Address]
     fee: TokenAmount
-
-
-def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> str:
-    message = info.get("message", "PFS info request successful.")
-    operator = info.get("operator", "unknown")
-    version = info.get("version", "unknown")
-    chain_id = info.get("network_info", {}).get("chain_id", "unknown")
-    price = info.get("price_info", "0 (no price given by the PFS)")
-    return (
-        f"{message} - You have chosen the pathfinding service at {url}. "
-        f"Operator: {operator}, running version: {version}, chain_id: {chain_id}. "
-        f"Fees will be paid to {eth_address}. For each request we will pay {price}."
-    )
+    maximum_fee: TokenAmount
 
 
 def configure_pfs_or_exit(
-    pfs_url: Optional[str],
+    pfs_url: str,
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
     token_network_registry_address: Address,
@@ -133,12 +125,8 @@ def configure_pfs_or_exit(
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
 
-    If pfs_address is None then basic routing must have been requested.
-    If pfs_address is provided we use that.
-    If pfs_address is 'auto' then we randomly choose a PFS address from the registry
-
-    Returns a NamedTuple containing url, eth_address and fee (per paths request) of
-    the selected PFS, or None if we use basic routing instead of a PFS.
+    If pfs_url is provided we use that.
+    If pfs_url is 'auto' then we randomly choose a PFS address from the registry
     """
     msg = "Invalid code path; configure pfs needs routing mode PFS"
     assert routing_mode == RoutingMode.PFS, msg
@@ -148,9 +136,7 @@ def configure_pfs_or_exit(
     if pfs_url == "auto":
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
-        pfs_url = get_random_service(
-            service_registry=service_registry, block_identifier=block_hash
-        )
+        pfs_url = get_random_pfs(service_registry=service_registry, block_identifier=block_hash)
         if pfs_url is None:
             click.secho(
                 "The service registry has no registered path finding service "
@@ -165,38 +151,39 @@ def configure_pfs_or_exit(
             f"{pfs_url}. Raiden will shut down."
         )
         sys.exit(1)
-    else:
-        fee = pathfinding_service_info.get("price_info", 0)
-        pfs_eth_address = pathfinding_service_info.get("payment_address", None)
-        if fee > 0 and not pfs_eth_address:
-            click.secho(
-                f"The pathfinding service at {pfs_url} did not provide an eth address "
-                f"to pay it. Raiden will shut down. Please try a different PFS."
-            )
-            sys.exit(1)
-        if fee > 0 and not is_checksum_address(pfs_eth_address):
-            click.secho(
-                f"Invalid reply from pathfinding service {pfs_url}: Payment address "
-                f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut "
-                f"down. Please choose a different PFS."
-            )
-            sys.exit(1)
-        msg = configure_pfs_message(
-            info=pathfinding_service_info, url=pfs_url, eth_address=pfs_eth_address
-        )
-        click.secho(msg)
-        pfs_token_network_address = pathfinding_service_info["network_info"]["registry_address"]
-        if not is_same_address(pfs_token_network_address, token_network_registry_address):
-            click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
-            click.secho(
-                f"PFS is not operating on the same Token Network Registry "
-                f"({to_checksum_address(pfs_token_network_address)}) as your node is "
-                f"({to_checksum_address(token_network_registry_address)}).\n"
-                f"Raiden will shut down. Please choose a different PFS."
-            )
-            sys.exit(1)
 
-        log.info("Using PFS", pfs_info=pathfinding_service_info)
+    fee = pathfinding_service_info.get("price_info", 0)
+    pfs_eth_address = pathfinding_service_info.get("payment_address", None)
+    if fee > 0 and not pfs_eth_address:
+        click.secho(
+            f"The pathfinding service at {pfs_url} did not provide an eth address "
+            f"to pay it. Raiden will shut down. Please try a different PFS."
+        )
+        sys.exit(1)
+
+    message = pathfinding_service_info.get("message", "PFS info request successful.")
+    operator = pathfinding_service_info.get("operator", "unknown")
+    version = pathfinding_service_info.get("version", "unknown")
+    chain_id = pathfinding_service_info.get("network_info", {}).get("chain_id", "unknown")
+    price = pathfinding_service_info.get("price_info", "0 (no price given by the PFS)")
+    click.secho(
+        f"{message} - You have chosen the pathfinding service at {pfs_url}. "
+        f"Operator: {operator}, running version: {version}, chain_id: {chain_id}. "
+        f"Fees will be paid to {pfs_eth_address}. For each request we will pay {price}."
+    )
+    log.info("Using PFS", pfs_info=pathfinding_service_info)
+    pfs_token_network_address = pathfinding_service_info["network_info"]["registry_address"]
+    if not is_same_address(pfs_token_network_address, token_network_registry_address):
+        click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
+        click.secho(
+            f"PFS is not operating on the same Token Network Registry "
+            f"({to_checksum_address(pfs_token_network_address)}) as your node is "
+            f"({to_checksum_address(token_network_registry_address)}).\n"
+            f"Raiden will shut down. Please choose a different PFS."
+        )
+        sys.exit(1)
+
+    log.info("Using PFS", pfs_info=pathfinding_service_info)
 
     return PFSConfiguration(url=pfs_url, eth_address=pfs_eth_address, fee=fee)
 
@@ -232,21 +219,32 @@ def get_last_iou(
         raise ServiceRequestFailed(str(e))
 
 
+@dataclass
+class IOU:
+    sender: Address
+    receiver: Address
+    one_to_n_address: Address
+    amount: TokenAmount
+    expiration_block: BlockNumber
+    chain_id: ChainID
+    signature: Optional[Signature]
+
+
 def make_iou(
-    config: Dict[str, Any],
+    config: PFSConfiguration,
     our_address: Address,
     one_to_n_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
-    chain_id: int,
+    chain_id: ChainID,
     offered_fee: TokenAmount = None,
 ) -> Dict:
     expiration = block_number + config["pathfinding_iou_timeout"]
 
     iou = dict(
         sender=to_checksum_address(our_address),
-        receiver=config["pathfinding_eth_address"],
-        amount=offered_fee or config["pathfinding_max_fee"],
+        receiver=config.eth_address,
+        amount=offered_fee or config.maximum_fee,
         expiration_block=expiration,
         one_to_n_address=to_checksum_address(one_to_n_address),
         chain_id=chain_id,
@@ -300,7 +298,7 @@ def update_iou(
 
 
 def create_current_iou(
-    config: Dict[str, Any],
+    config: PFSConfiguration,
     token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     our_address: Address,
@@ -311,15 +309,13 @@ def create_current_iou(
     scrap_existing_iou: bool = False,
 ) -> Dict[str, Any]:
 
-    url = config["pathfinding_service_address"]
-
     latest_iou = None
     if not scrap_existing_iou:
         latest_iou = get_last_iou(
-            url=url,
+            url=config.url,
             token_network_address=token_network_address,
             sender=our_address,
-            receiver=to_canonical_address(config["pathfinding_eth_address"]),
+            receiver=to_canonical_address(config.eth_address),
             privkey=privkey,
         )
 
@@ -334,7 +330,7 @@ def create_current_iou(
             one_to_n_address=one_to_n_address,
         )
     else:
-        added_amount = offered_fee or config["pathfinding_max_fee"]
+        added_amount = offered_fee or config.max
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 

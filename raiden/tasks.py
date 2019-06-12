@@ -49,7 +49,7 @@ def _do_check_version(current_version: Tuple[str, ...]):
             current_version, latest_release
         )
         click.secho(msg, fg="red")
-        click.secho("It's time to update! Releases: {}".format(RELEASE_PAGE), fg="red")
+        click.secho(f"It's time to update! Releases: {RELEASE_PAGE}", fg="red")
         return False
     return True
 

@@ -527,9 +527,7 @@ class MatrixTransport(Runnable):
 
         # These are not protocol messages, but transport specific messages
         if isinstance(message, (Delivered, Ping, Pong)):
-            raise ValueError(
-                "Do not use send_async for {} messages".format(message.__class__.__name__)
-            )
+            raise ValueError(f"Do not use send_async for {message.__class__.__name__} messages")
 
         self.log.debug(
             "Send async",

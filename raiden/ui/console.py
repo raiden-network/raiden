@@ -30,22 +30,18 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ("gevent",)
 
 
 def print_usage():
-    print(
-        "\t{}use `{}raiden{}` to interact with the raiden service.".format(OKBLUE, HEADER, OKBLUE)
-    )
-    print("\tuse `{}chain{}` to interact with the blockchain.".format(HEADER, OKBLUE))
+    print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
+    print(f"\tuse `{HEADER}chain{OKBLUE}` to interact with the blockchain.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
             HEADER, OKBLUE
         )
     )
-    print("\tuse `{}denoms{}` for ether calculations".format(HEADER, OKBLUE))
-    print(
-        "\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(HEADER, OKBLUE)
-    )
-    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(HEADER, OKBLUE))
-    print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(HEADER, OKBLUE))
-    print("\ttype `{}usage(){}` to see this help again.".format(HEADER, OKBLUE))
+    print(f"\tuse `{HEADER}denoms{OKBLUE}` for ether calculations")
+    print(f"\tuse `{HEADER}lastlog(n){OKBLUE}` to see n lines of log-output. [default 10] ")
+    print(f"\tuse `{HEADER}lasterr(n){OKBLUE}` to see n lines of stderr. [default 1]")
+    print(f"\tuse `{HEADER}help(<topic>){OKBLUE}` for help on a specific topic.")
+    print(f"\ttype `{HEADER}usage(){OKBLUE}` to see this help again.")
     print("\n" + ENDC)
 
 

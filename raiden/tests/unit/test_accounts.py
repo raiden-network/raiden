@@ -103,7 +103,7 @@ def test_account_manager_invalid_files(keystore_mock, caplog):
             if msg in message and file_name in message and reason in message:
                 break
         else:
-            assert False, "'{}' not in log messages".format(msg)
+            assert False, f"'{msg}' not in log messages"
 
 
 def test_account_manager_invalid_directory(caplog):
@@ -119,7 +119,7 @@ def test_account_manager_invalid_directory(caplog):
             if msg in message and path in message and reason in message:
                 break
         else:
-            assert False, "'{}' not in log messages".format(msg)
+            assert False, f"'{msg}' not in log messages"
 
 
 def test_unlock_account_with_passwordfile(keystore_mock):

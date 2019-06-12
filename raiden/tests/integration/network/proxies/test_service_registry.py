@@ -5,7 +5,7 @@ import requests
 from eth_utils import is_checksum_address, to_checksum_address
 
 from raiden.constants import RoutingMode
-from raiden.network.pathfinding import configure_pfs_or_exit, get_random_service
+from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
@@ -39,7 +39,7 @@ def test_service_registry_random_pfs(
     assert not c1_service_proxy.get_service_address("latest", 9999)
 
     # Test that getting a random service from the proxy works
-    assert get_random_service(c1_service_proxy, "latest") in urls
+    assert get_random_pfs(c1_service_proxy, "latest") in urls
 
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):

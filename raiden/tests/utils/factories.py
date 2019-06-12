@@ -1112,10 +1112,8 @@ def make_chain_state(
     channel_set = make_channel_set(
         number_of_channels=number_of_channels, properties=properties, defaults=defaults
     )
-    assert (
-        len(set(c.canonical_identifier.token_network_address for c in channel_set.channels)) == 1
-    )
-    assert len(set(c.our_state.address for c in channel_set.channels)) == 1
+    assert len({c.canonical_identifier.token_network_address for c in channel_set.channels}) == 1
+    assert len({c.our_state.address for c in channel_set.channels}) == 1
     token_network_address = channel_set.channels[0].canonical_identifier.token_network_address
     token_address = make_address()
 

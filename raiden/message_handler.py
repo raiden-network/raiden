@@ -68,7 +68,7 @@ class MessageHandler:
             assert isinstance(message, Processed), MYPY_ANNOTATION
             self.handle_message_processed(raiden, message)
         else:
-            log.error("Unknown message cmdid {}".format(message.cmdid))
+            log.error(f"Unknown message cmdid {message.cmdid}")
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:

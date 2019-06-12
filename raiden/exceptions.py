@@ -211,7 +211,7 @@ class TransactionThrew(RaidenError):
     the receipt has a 0x0 status field"""
 
     def __init__(self, txname: str, receipt: Optional[Dict[str, Any]]) -> None:
-        super().__init__("{} transaction threw. Receipt={}".format(txname, receipt))
+        super().__init__(f"{txname} transaction threw. Receipt={receipt}")
 
 
 class InvalidProtocolMessage(RaidenError):

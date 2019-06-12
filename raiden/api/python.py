@@ -291,11 +291,9 @@ class RaidenAPI:  # pragma: no unittest
 
         if not has_enough_reserve:
             raise InsufficientGasReserve(
-                (
-                    "The account balance is below the estimated amount necessary to "
-                    "finish the lifecycles of all active channels. A balance of at "
-                    f"least {estimated_required_reserve} wei is required."
-                )
+                "The account balance is below the estimated amount necessary to "
+                "finish the lifecycles of all active channels. A balance of at "
+                f"least {estimated_required_reserve} wei is required."
             )
 
         connection_manager.connect(
@@ -384,11 +382,9 @@ class RaidenAPI:  # pragma: no unittest
 
             if not has_enough_reserve:
                 raise InsufficientGasReserve(
-                    (
-                        "The account balance is below the estimated amount necessary to "
-                        "finish the lifecycles of all active channels. A balance of at "
-                        f"least {estimated_required_reserve} wei is required."
-                    )
+                    "The account balance is below the estimated amount necessary to "
+                    "finish the lifecycles of all active channels. A balance of at "
+                    f"least {estimated_required_reserve} wei is required."
                 )
 
             try:

@@ -303,7 +303,7 @@ class APIServer(Runnable):  # pragma: no unittest
     ):
         super().__init__()
         if rest_api.version != 1:
-            raise ValueError("Invalid api version: {}".format(rest_api.version))
+            raise ValueError(f"Invalid api version: {rest_api.version}")
         self._api_prefix = f"/api/v{rest_api.version}"
 
         flask_app = Flask(__name__)
@@ -312,7 +312,7 @@ class APIServer(Runnable):  # pragma: no unittest
 
         if eth_rpc_endpoint:
             if not eth_rpc_endpoint.startswith("http"):
-                eth_rpc_endpoint = "http://{}".format(eth_rpc_endpoint)
+                eth_rpc_endpoint = f"http://{eth_rpc_endpoint}"
             flask_app.config["WEB3_ENDPOINT"] = eth_rpc_endpoint
 
         blueprint = create_blueprint()
@@ -1137,7 +1137,7 @@ class RestAPI:  # pragma: no unittest
 
         else:  # should never happen, channel_state is validated in the schema
             result = api_error(
-                errors="Provided invalid channel state {}".format(state),
+                errors=f"Provided invalid channel state {state}",
                 status_code=HTTPStatus.BAD_REQUEST,
             )
         return result
