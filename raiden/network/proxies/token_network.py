@@ -949,59 +949,77 @@ class TokenNetwork:
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
 
-        try:
-            channel_onchain_detail = self._detail_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=given_block_identifier,
-                channel_identifier=channel_identifier,
-            )
-            sender_details = self._detail_participant(
-                channel_identifier=channel_identifier,
-                detail_for=self.node_address,
-                partner=partner,
-                block_identifier=given_block_identifier,
-            )
-        except ValueError:
-            # If `given_block_identifier` has been pruned the checks cannot be
-            # performed.
-            pass
-        except BadFunctionCallOutput:
-            raise_on_call_returned_empty(given_block_identifier)
-        else:
-            if channel_onchain_detail.state != ChannelState.OPENED:
-                msg = (
-                    f"The channel was not opened at the provided block "
-                    f"({given_block_identifier}). This call should never have "
-                    f"been attempted."
+        with self.channel_operations_lock[partner], self.withdraw_lock:
+            try:
+                channel_onchain_detail = self._detail_channel(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
+                    channel_identifier=channel_identifier,
                 )
-                raise RaidenUnrecoverableError(msg)
-
-            if sender_details.withdrawn >= total_withdraw:
-                msg = (
-                    f"The provided total_withdraw amount on-chain is {sender_details.withdrawn}. "
-                    f"Requested total withdraw {total_withdraw} did not increase."
+                sender_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier=given_block_identifier,
                 )
-                raise RaidenUnrecoverableError(msg)
+                partner_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=partner,
+                    partner=self.node_address,
+                    block_identifier=given_block_identifier,
+                )
+            except ValueError:
+                # If `given_block_identifier` has been pruned the checks cannot be
+                # performed.
+                pass
+            except BadFunctionCallOutput:
+                raise_on_call_returned_empty(given_block_identifier)
+            else:
+                if channel_onchain_detail.state != ChannelState.OPENED:
+                    msg = (
+                        f"The channel was not opened at the provided block "
+                        f"({given_block_identifier}). This call should never have "
+                        f"been attempted."
+                    )
+                    raise RaidenUnrecoverableError(msg)
 
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "participant": to_checksum_address(self.node_address),
-            "partner": to_checksum_address(partner),
-            "total_withdraw": total_withdraw,
-        }
+                if sender_details.withdrawn >= total_withdraw:
+                    msg = (
+                        f"The provided total_withdraw amount on-chain is "
+                        f"{sender_details.withdrawn}. Requested total withdraw "
+                        f"{total_withdraw} did not increase."
+                    )
+                    raise RaidenUnrecoverableError(msg)
 
-        with log_transaction(log, "set_total_withdraw", log_details):
-            self._set_total_withdraw(
-                channel_identifier=channel_identifier,
-                total_withdraw=total_withdraw,
-                partner=partner,
-                partner_signature=partner_signature,
-                participant_signature=participant_signature,
-                given_block_identifier=given_block_identifier,
-                log_details=log_details,
-            )
+                total_channel_deposit = sender_details.deposit + partner_details.deposit
+                total_channel_withdraw = total_withdraw + partner_details.withdrawn
+                if total_channel_withdraw > total_channel_deposit:
+                    msg = (
+                        f"The total channel withdraw amount "
+                        f"{total_channel_withdraw} is larger than the total channel "
+                        f"deposit of {total_channel_deposit}."
+                    )
+                    raise RaidenRecoverableError(msg)
+
+            log_details = {
+                "node": to_checksum_address(self.node_address),
+                "contract": to_checksum_address(self.address),
+                "participant": to_checksum_address(self.node_address),
+                "partner": to_checksum_address(partner),
+                "total_withdraw": total_withdraw,
+            }
+
+            with log_transaction(log, "set_total_withdraw", log_details):
+                self._set_total_withdraw(
+                    channel_identifier=channel_identifier,
+                    total_withdraw=total_withdraw,
+                    partner=partner,
+                    partner_signature=partner_signature,
+                    participant_signature=participant_signature,
+                    given_block_identifier=given_block_identifier,
+                    log_details=log_details,
+                )
 
     def _set_total_withdraw(
         self,
@@ -1045,8 +1063,8 @@ class TokenNetwork:
 
             if receipt_or_none:
                 # Because the gas estimation succeeded it is known that:
-                # - The channel was settled.
-                # - The channel had pending locks on-chain for that participant.
+                # - The channel was open.
+                # - The total withdraw amount increased.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
@@ -1067,10 +1085,26 @@ class TokenNetwork:
                     partner=partner,
                     block_identifier=given_block_identifier,
                 )
+                partner_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=partner,
+                    partner=self.node_address,
+                    block_identifier=given_block_identifier,
+                )
 
                 total_withdraw_done = sender_details.withdrawn >= total_withdraw
                 if total_withdraw_done:
                     raise RaidenRecoverableError("Requested total withdraw was already performed")
+
+                total_channel_deposit = sender_details.deposit + partner_details.deposit
+                total_channel_withdraw = total_withdraw + partner_details.withdrawn
+                if total_channel_withdraw > total_channel_deposit:
+                    msg = (
+                        f"The total channel withdraw amount "
+                        f"{total_channel_withdraw} became larger than the total channel "
+                        f"deposit of {total_channel_deposit}."
+                    )
+                    raise RaidenRecoverableError(msg)
 
                 raise RaidenUnrecoverableError("SetTotalwithdraw failed for an unknown reason")
         else:
