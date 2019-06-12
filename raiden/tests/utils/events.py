@@ -3,7 +3,7 @@ from collections import Mapping
 import gevent
 
 from raiden.raiden_service import RaidenService
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
 from raiden.utils.typing import Any, Dict, List, Optional
 
@@ -98,7 +98,9 @@ def raiden_state_changes_search_for_item(
     `attributes` are compared using the utility `check_nested_attrs`.
     """
     return search_for_item(
-        raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS), item_type, attributes
+        raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES),
+        item_type,
+        attributes,
     )
 
 
