@@ -44,6 +44,7 @@ from raiden.transfer.node import (
     subdispatch_to_paymenttask,
 )
 from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSING,
     CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
@@ -335,7 +336,7 @@ def test_subdispatch_by_canonical_id(chain_state):
         state_change=state_change,
     )
 
-    assert get_status(channel_state) != CHANNEL_STATE_OPENED
+    assert get_status(channel_state) == CHANNEL_STATE_CLOSING
     assert transition_result.new_state == chain_state, transition_result
 
 
