@@ -434,16 +434,13 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             InvalidAddress: If either token_address or partner_address is not
                 20 bytes long.
-            TransactionThrew: May happen for multiple reasons:
-                - If the token approval fails, e.g. the token may validate if
-                account has enough balance for the allowance.
-                - The deposit failed, e.g. the allowance did not set the token
-                aside for use and the user spent it before deposit was called.
-                - The channel was closed/settled between the allowance call and
-                the deposit call.
-            AddressWithoutCode: The channel was settled during the deposit
-                execution.
-            DepositOverLimit: The total withdraw amount is higher than the limit.
+            RaidenUnrecoverableError: May happen for multiple reasons:
+                - During preconditions checks, if the channel was not open
+                  at the time of the set_total_deposit call.
+                - If the transaction fails during gas estimation or
+                  if a previous withdraw transaction with the same value
+                   was already mined.
+            DepositMismatch: The total withdraw amount did not increase.
         """
         chain_state = views.state_from_raiden(self.raiden)
 
