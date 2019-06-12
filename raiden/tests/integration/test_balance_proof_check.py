@@ -4,7 +4,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.storage.sqlite import RANGE_ALL_ELEMENTS
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -90,7 +90,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         channel_ids=[channel_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
@@ -165,7 +165,7 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
         channel_ids=[channel_identifier],
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_ELEMENTS)
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
