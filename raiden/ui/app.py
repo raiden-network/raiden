@@ -154,11 +154,9 @@ def run_app(
     check_ethereum_client_is_supported(web3)
     check_ethereum_network_id(network_id, web3)
 
-    (address, privatekey_bin) = get_account_and_private_key(
-        account_manager, address, password_file
-    )
+    address, privatekey_bin = get_account_and_private_key(account_manager, address, password_file)
 
-    (api_host, api_port) = split_endpoint(api_address)
+    api_host, api_port = split_endpoint(api_address)
 
     config["console"] = console
     config["rpc"] = rpc

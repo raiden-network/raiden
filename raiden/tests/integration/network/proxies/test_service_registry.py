@@ -105,7 +105,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         )
     assert config.url == given_address
     assert config.eth_address == json_data["payment_address"]
-    assert config.fee == json_data["price_info"]
+    assert config.price == json_data["price_info"]
 
     # Bad address, should exit the program
     response = Mock()
