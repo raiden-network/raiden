@@ -248,7 +248,7 @@ class EventInvalidReceivedUnlock(Event):
 class EventInvalidReceivedWithdrawRequest(Event):
     """ Event emitted when an invalid withdraw request is received. """
 
-    total_withdraw: WithdrawAmount
+    attempted_withdraw: WithdrawAmount
     reason: str
 
 
@@ -256,7 +256,7 @@ class EventInvalidReceivedWithdrawRequest(Event):
 class EventInvalidReceivedWithdraw(Event):
     """ Event emitted when an invalid withdraw confirmation is received. """
 
-    total_withdraw: WithdrawAmount
+    attempted_withdraw: WithdrawAmount
     reason: str
 
 
@@ -264,7 +264,7 @@ class EventInvalidReceivedWithdraw(Event):
 class EventInvalidActionWithdraw(Event):
     """ Event emitted when an invalid withdraw is initiated. """
 
-    total_withdraw: WithdrawAmount
+    attempted_withdraw: WithdrawAmount
     reason: str
 
 

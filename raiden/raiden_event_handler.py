@@ -298,12 +298,12 @@ class RaidenEventHandler(EventHandler):
     def handle_contract_send_channelwithdraw(
         raiden: "RaidenService", channel_withdraw_event: ContractSendChannelWithdraw
     ):
-        non_closing_data = pack_withdraw(
+        withdraw_confirmation_data = pack_withdraw(
             canonical_identifier=channel_withdraw_event.canonical_identifier,
             participant=raiden.address,
             total_withdraw=channel_withdraw_event.total_withdraw,
         )
-        our_signature = raiden.signer.sign(data=non_closing_data)
+        our_signature = raiden.signer.sign(data=withdraw_confirmation_data)
 
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=channel_withdraw_event.canonical_identifier

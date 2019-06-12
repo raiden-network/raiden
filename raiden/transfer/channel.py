@@ -420,7 +420,7 @@ def is_balance_proof_usable_onchain(
     """
     expected_nonce = get_next_nonce(sender_state)
 
-    is_valid_balanceproof_signature_, signature_msg = is_valid_balanceproof_signature(
+    balanceproof_signature_valid, signature_msg = is_valid_balanceproof_signature(
         received_balance_proof, sender_state.address
     )
 
@@ -486,7 +486,7 @@ def is_balance_proof_usable_onchain(
 
         result = (False, msg)
 
-    elif not is_valid_balanceproof_signature_:
+    elif not balanceproof_signature_valid:
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
         result = (False, signature_msg)
@@ -1294,7 +1294,6 @@ def create_sendlockedtransfer(
     locked_amount = TokenAmount(get_amount_locked(our_state) + amount)
 
     nonce = get_next_nonce(channel_state.our_state)
-    channel_state.our_state.nonce = nonce
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1398,6 +1397,7 @@ def send_lockedtransfer(
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.nonce = transfer.balance_proof.nonce
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return send_locked_transfer_event
@@ -1435,6 +1435,7 @@ def send_refundtransfer(
 
     channel_state.our_state.balance_proof = mediated_transfer.balance_proof
     channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.nonce = mediated_transfer.balance_proof.nonce
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     refund_transfer = refund_from_sendmediated(send_mediated_transfer)
@@ -1529,8 +1530,6 @@ def create_sendexpiredlock(
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
 
-    nonce = get_next_nonce(sender_end_state)
-
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
 
@@ -1538,6 +1537,8 @@ def create_sendexpiredlock(
 
     if not merkletree:
         return None, None
+
+    nonce = get_next_nonce(sender_end_state)
 
     locksroot = merkleroot(merkletree)
 
@@ -1719,7 +1720,9 @@ def handle_action_withdraw(
         )
     else:
         assert msg, "is_valid_action_withdraw should return error msg if not valid"
-        events = [EventInvalidActionWithdraw(total_withdraw=withdraw.total_withdraw, reason=msg)]
+        events = [
+            EventInvalidActionWithdraw(attempted_withdraw=withdraw.total_withdraw, reason=msg)
+        ]
 
     return TransitionResult(channel_state, events)
 
@@ -1738,11 +1741,7 @@ def handle_receive_withdraw_request(
         channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
 
         send_withdraw = SendWithdraw(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=channel_state.chain_id,
-                token_network_address=channel_state.token_network_address,
-                channel_identifier=channel_state.identifier,
-            ),
+            canonical_identifier=channel_state.canonical_identifier,
             recipient=channel_state.partner_state.address,
             message_identifier=withdraw_request.message_identifier,
             total_withdraw=withdraw_request.total_withdraw,
@@ -1754,7 +1753,7 @@ def handle_receive_withdraw_request(
     else:
         assert msg, "is_valid_withdraw_request should return error msg if not valid"
         invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
-            total_withdraw=withdraw_request.total_withdraw, reason=msg
+            attempted_withdraw=withdraw_request.total_withdraw, reason=msg
         )
         events = [invalid_withdraw_request]
 
@@ -1787,7 +1786,7 @@ def handle_receive_withdraw(
     else:
         assert msg, "is_valid_withdraw_confirmation should return error msg if not valid"
         invalid_withdraw = EventInvalidReceivedWithdraw(
-            total_withdraw=withdraw.total_withdraw, reason=msg
+            attempted_withdraw=withdraw.total_withdraw, reason=msg
         )
         events = [invalid_withdraw]
 
