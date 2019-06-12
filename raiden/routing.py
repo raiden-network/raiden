@@ -8,7 +8,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.messages import RouteMetadata
-from raiden.network.pathfinding import query_paths
+from raiden.network.pathfinding import PFSConfiguration, query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
 from raiden.utils.typing import (
@@ -36,14 +36,10 @@ def get_best_routes(
     config: Dict[str, Any],
     privkey: bytes,
 ) -> Tuple[List[RouteState], Optional[UUID]]:
-    services_config = config.get("services", None)
+    pfs_config = config.get("pfs_config", None)
 
     is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
-    can_use_pfs = (
-        services_config
-        and services_config["pathfinding_service_address"] is not None
-        and one_to_n_address is not None
-    )
+    can_use_pfs = pfs_config and one_to_n_address is not None
 
     log.debug(
         "Getting route for payment",
@@ -91,7 +87,7 @@ def get_best_routes(
             to_address=to_address,
             amount=amount,
             previous_address=previous_address,
-            config=services_config,
+            pfs_config=pfs_config,
             privkey=privkey,
         )
 
@@ -225,12 +221,12 @@ def get_best_routes_pfs(
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    config: Dict[str, Any],
+    pfs_config: PFSConfiguration,
     privkey: bytes,
 ) -> Tuple[bool, List[RouteState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
-            service_config=config,
+            pfs_config=pfs_config,
             our_address=chain_state.our_address,
             privkey=privkey,
             current_block_number=chain_state.block_number,

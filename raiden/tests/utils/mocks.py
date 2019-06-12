@@ -192,13 +192,14 @@ def patched_get_for_succesful_pfs_info():
     json_data = {
         "price_info": 5,
         "network_info": {
-            "chain_id": 1,
+            "chain_id": 42,
             "registry_address": token_network_registry_address_test_default,
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
         "version": "0.0.1",
         "payment_address": "0x2222222222222222222222222222222222222222",
+        "settings": "",
     }
 
     response = Mock()
