@@ -495,7 +495,7 @@ def run_private_blockchain(
     else:
         raise TypeError(f'Unknown blockchain client type "{blockchain_type}"')
 
-    runner = eth_run_nodes(
+    runner: ContextManager[List[JSONRPCExecutor]] = eth_run_nodes(
         eth_node_descs=eth_nodes,
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
