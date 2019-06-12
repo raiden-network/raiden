@@ -849,7 +849,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="closeChannel",
                 transaction_executed=True,
-                required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+                required_gas=self.gas_measurements["TokenNetwork.closeChannel"],
                 block_identifier=failed_at_blocknumber,
             )
 
