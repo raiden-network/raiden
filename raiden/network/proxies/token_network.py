@@ -55,7 +55,6 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
-    ErrorType,
     List,
     Locksroot,
     NamedTuple,
@@ -68,7 +67,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    Tuple,
     WithdrawAmount,
     typecheck,
 )
@@ -617,55 +615,6 @@ class TokenNetwork:
         ).deposit
         return deposit > 0
 
-    def _deposit_preconditions(
-        self,
-        channel_identifier: ChannelID,
-        total_deposit: TokenAmount,
-        partner: Address,
-        token: Token,
-        previous_total_deposit: TokenAmount,
-        block_identifier: BlockSpecification,
-    ) -> None:
-        if not self.client.can_query_state_for_block(block_identifier):
-            raise NoStateForBlockIdentifier()
-
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        amount_to_deposit = total_deposit - previous_total_deposit
-
-        if total_deposit <= previous_total_deposit:
-            msg = (
-                f"Current total deposit ({previous_total_deposit}) is already larger "
-                f"than the requested total deposit amount ({total_deposit})"
-            )
-            raise DepositMismatch(msg)
-
-        # A node may be setting up multiple channels for the same token
-        # concurrently. Because each deposit changes the user balance this
-        # check must be serialized with the operation locks.
-        #
-        # This check is merely informational, used to avoid sending
-        # transactions which are known to fail.
-        #
-        # It is serialized with the deposit_lock to avoid sending invalid
-        # transactions on-chain (account without balance). The lock
-        # channel_operations_lock is not sufficient, as it allows two
-        # concurrent deposits for different channels.
-        #
-        current_balance = token.balance_of(self.node_address)
-        if current_balance < amount_to_deposit:
-            msg = (
-                f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
-                f"be larger than the available balance {current_balance}, "
-                f"for token at address {to_checksum_address(token.address)}"
-            )
-            raise DepositMismatch(msg)
-
     def set_total_deposit(
         self,
         given_block_identifier: BlockSpecification,
@@ -705,49 +654,87 @@ class TokenNetwork:
         """
         typecheck(total_deposit, int)
 
-        with self.channel_operations_lock[partner], self.deposit_lock:
-            previous_total_deposit = self._detail_participant(
-                channel_identifier=channel_identifier,
-                detail_for=self.node_address,
-                partner=partner,
-                block_identifier=given_block_identifier,
-            ).deposit
+        token_address = self.token_address()
+        token = Token(
+            jsonrpc_client=self.client,
+            token_address=token_address,
+            contract_manager=self.contract_manager,
+        )
 
-            token_address = self.token_address()
-            token = Token(
-                jsonrpc_client=self.client,
-                token_address=token_address,
-                contract_manager=self.contract_manager,
-            )
+        with self.channel_operations_lock[partner], self.deposit_lock:
             try:
-                self._deposit_preconditions(
+                channel_onchain_detail = self._detail_channel(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
                     channel_identifier=channel_identifier,
-                    total_deposit=total_deposit,
+                )
+                sender_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
                     partner=partner,
-                    token=token,
-                    previous_total_deposit=previous_total_deposit,
                     block_identifier=given_block_identifier,
                 )
-            except NoStateForBlockIdentifier:
-                # If preconditions end up being on pruned state skip them. Estimate
-                # gas will stop us from sending a transaction that will fail
+            except ValueError:
+                # If `given_block_identifier` has been pruned the checks cannot be
+                # performed.
                 pass
+            except BadFunctionCallOutput:
+                raise_on_call_returned_empty(given_block_identifier)
+            else:
+                if channel_onchain_detail.state != ChannelState.OPENED:
+                    msg = (
+                        f"The channel was not opened at the provided block "
+                        f"({given_block_identifier}). This call should never have "
+                        f"been attempted."
+                    )
+                    raise RaidenUnrecoverableError(msg)
+
+                amount_to_deposit = total_deposit - sender_details.deposit
+
+                if total_deposit <= sender_details.deposit:
+                    msg = (
+                        f"Current total deposit ({sender_details.deposit}) is already larger "
+                        f"than the requested total deposit amount ({total_deposit})"
+                    )
+                    raise DepositMismatch(msg)
+
+                # A node may be setting up multiple channels for the same token
+                # concurrently. Because each deposit changes the user balance this
+                # check must be serialized with the operation locks.
+                #
+                # This check is merely informational, used to avoid sending
+                # transactions which are known to fail.
+                #
+                # It is serialized with the deposit_lock to avoid sending invalid
+                # transactions on-chain (account without balance). The lock
+                # channel_operations_lock is not sufficient, as it allows two
+                # concurrent deposits for different channels.
+                #
+                current_balance = token.balance_of(self.node_address)
+                if current_balance < amount_to_deposit:
+                    msg = (
+                        f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can "
+                        f"not be larger than the available balance {current_balance}, "
+                        f"for token at address {pex(token.address)}"
+                    )
+                    raise DepositMismatch(msg)
 
             log_details = {
                 "node": to_checksum_address(self.node_address),
                 "contract": to_checksum_address(self.address),
-                "channel_identifier": channel_identifier,
-                "partner": to_checksum_address(partner),
-                "new_total_deposit": total_deposit,
-                "previous_total_deposit": previous_total_deposit,
+                "participant": to_checksum_address(self.node_address),
+                "receiver": to_checksum_address(partner),
             }
+
             with log_transaction(log, "set_total_deposit", log_details):
                 self._set_total_deposit(
                     channel_identifier,
                     total_deposit,
                     partner,
-                    previous_total_deposit,
+                    sender_details.deposit,
                     token,
+                    given_block_identifier,
                     log_details,
                 )
 
@@ -758,10 +745,10 @@ class TokenNetwork:
         partner: Address,
         previous_total_deposit: TokenAmount,
         token: Token,
+        given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        error_prefix = "setTotalDeposit call will fail"
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         # If there are channels being set up concurrenlty either the
@@ -797,8 +784,6 @@ class TokenNetwork:
             gas_limit = safe_gas_limit(
                 gas_limit, self.gas_measurements["TokenNetwork.setTotalDeposit"]
             )
-            error_prefix = "setTotalDeposit call failed"
-            log_details["gas_limit"] = gas_limit
 
             transaction_hash = self.proxy.transact(
                 "setTotalDeposit",
@@ -811,94 +796,87 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-        transaction_executed = gas_limit is not None
-        if not transaction_executed or receipt_or_none:
-            if transaction_executed:
-                block = receipt_or_none["blockNumber"]
-            else:
-                block = checking_block
+            if receipt_or_none:
+                # Because the gas estimation succeeded it is known that:
+                # - The channel was open.
+                # - The account had enough balance to deposit
+                # - The account had enough balance to pay for the gas (however
+                #   there is a race condition for multiple transactions #3890)
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name="setTotalDeposit",
-                transaction_executed=transaction_executed,
-                required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
-                block_identifier=block,
-            )
-            error_type, msg = self._check_why_deposit_failed(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                token=token,
-                amount_to_deposit=amount_to_deposit,
-                total_deposit=total_deposit,
-                transaction_executed=transaction_executed,
-                block_identifier=block,
-            )
+                if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                    msg = (
+                        f"setTotalDeposit failed and all gas was used "
+                        f"({gas_limit}). Estimate gas may have underestimated "
+                        f"setTotalDeposit, or succeeded even though an assert is "
+                        f"triggered, or the smart contract code has an "
+                        f"conditional assert."
+                    )
+                    raise RaidenUnrecoverableError(msg)
 
-            raise error_type(f"{error_prefix}. {msg}")
-
-    def _check_why_deposit_failed(
-        self,
-        channel_identifier: ChannelID,
-        partner: Address,
-        token: Token,
-        amount_to_deposit: TokenAmount,
-        total_deposit: TokenAmount,
-        transaction_executed: bool,
-        block_identifier: BlockSpecification,
-    ) -> Tuple[ErrorType, str]:
-        error_type: ErrorType = RaidenUnrecoverableError
-        msg = ""
-        latest_deposit = self._detail_participant(
-            channel_identifier=channel_identifier,
-            detail_for=self.node_address,
-            partner=partner,
-            block_identifier=block_identifier,
-        ).deposit
-
-        allowance = token.allowance(
-            owner=self.node_address,
-            spender=Address(self.address),
-            block_identifier=block_identifier,
-        )
-        if allowance < amount_to_deposit:
-            msg = (
-                "The allowance is insufficient. Check concurrent deposits "
-                "for the same token network but different proxies."
-            )
-        elif token.balance_of(self.node_address, block_identifier) < amount_to_deposit:
-            msg = "The address doesnt have enough tokens"
-        elif transaction_executed and latest_deposit < total_deposit:
-            msg = "The tokens were not transferred"
-        else:
-            participant_details = self.detail_participants(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=block_identifier,
-                channel_identifier=channel_identifier,
-            )
-            channel_state = self._get_channel_state(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=block_identifier,
-                channel_identifier=channel_identifier,
-            )
-            # Check if deposit is being made on a nonexistent channel
-            if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-                msg = (
-                    f"Channel between participant {to_checksum_address(self.node_address)} "
-                    f"and {to_checksum_address(partner)} does not exist"
+                # Query the current state to check for transaction races
+                sender_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier=given_block_identifier,
                 )
-            # Deposit was prohibited because the channel is settled
-            elif channel_state == ChannelState.SETTLED:
-                msg = "Deposit is not possible due to channel being settled"
-            # Deposit was prohibited because the channel is closed
-            elif channel_state == ChannelState.CLOSED:
-                error_type = RaidenRecoverableError
-                msg = "Channel is already closed"
-            elif participant_details.our_details.deposit < total_deposit:
-                msg = "Deposit amount did not increase after deposit transaction"
 
-        return error_type, msg
+                total_deposit_done = sender_details.deposit >= total_deposit
+                if total_deposit_done:
+                    raise RaidenRecoverableError("Requested total deposit was already performed")
+
+                raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
+        else:
+            latest_deposit = self._detail_participant(
+                channel_identifier=channel_identifier,
+                detail_for=self.node_address,
+                partner=partner,
+                block_identifier=given_block_identifier,
+            ).deposit
+
+            allowance = token.allowance(
+                owner=self.node_address,
+                spender=Address(self.address),
+                block_identifier=given_block_identifier,
+            )
+            if allowance < amount_to_deposit:
+                msg = (
+                    "The allowance is insufficient. Check concurrent deposits "
+                    "for the same token network but different proxies."
+                )
+            elif token.balance_of(self.node_address, given_block_identifier) < amount_to_deposit:
+                msg = "The address doesnt have enough tokens"
+            elif latest_deposit < total_deposit:
+                msg = "The tokens were not transferred"
+            else:
+                participant_details = self.detail_participants(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
+                    channel_identifier=channel_identifier,
+                )
+                channel_state = self._get_channel_state(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
+                    channel_identifier=channel_identifier,
+                )
+                # Check if deposit is being made on a nonexistent channel
+                if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+                    msg = (
+                        f"Channel between participant {to_checksum_address(self.node_address)} "
+                        f"and {to_checksum_address(partner)} does not exist"
+                    )
+                # Deposit was prohibited because the channel is settled
+                elif channel_state == ChannelState.SETTLED:
+                    msg = "Deposit is not possible due to channel being settled"
+                # Deposit was prohibited because the channel is closed
+                elif channel_state == ChannelState.CLOSED:
+                    msg = "Channel is already closed"
+                    raise RaidenRecoverableError(msg)
+                elif participant_details.our_details.deposit < total_deposit:
+                    msg = "Deposit amount did not increase after deposit transaction"
+            raise RaidenUnrecoverableError(msg)
 
     def set_total_withdraw(
         self,
