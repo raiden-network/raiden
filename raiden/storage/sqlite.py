@@ -322,12 +322,6 @@ class SQLiteStorage:
         return snapshot_id
 
     def write_events(self, events: List[Tuple[StateChangeID, datetime, str]]) -> List[EventID]:
-        """ Save events.
-
-        Args:
-            state_change_identifier: Id of the state change that generate these events.
-            events: List of Event objects.
-        """
         ulid_factory = self._ulid_factory("state_events")
         events_ids: List[ULID] = list()
 
@@ -342,11 +336,6 @@ class SQLiteStorage:
         return cast(List[EventID], events_ids)
 
     def delete_state_changes(self, state_changes_to_delete: List[Tuple[StateChangeID]]) -> None:
-        """ Delete state changes.
-
-        Args:
-            state_changes_to_delete: List of ids to delete.
-        """
         self.conn.executemany(
             "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
         )
@@ -355,7 +344,23 @@ class SQLiteStorage:
     def get_snapshot_before_state_change(
         self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotRecord]:
-        """ Get snapshots earlier than state_change with provided ID. """
+        """ Returns the Snapshot which can be used to restore the State with
+        the StateChange `state_change_identifier` applied.
+
+        If `state_change_identifier` has a snapshot, that is returned,
+        otherwise the closest and newest snapshot is used. Example:
+
+        Queried:                        v
+        State Changes: |x---x---x---x---x---x---x--->
+        Snapshots:     |x-----------x-----------x--->
+        Returned:                   ^
+        Ignored:        !1                      !2
+
+        1- The returned snapshot is closer to the state change. Restoring the
+           state will be faster since less state changes have to be replayed.
+        2- This snapshot cannot be used because undoing state changes is not
+           supported.
+        """
 
         if not isinstance(state_change_identifier, ULID):  # pragma: no unittest
             raise ValueError("from_identifier must be an ULID")
@@ -380,7 +385,7 @@ class SQLiteStorage:
         return result
 
     def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
-        """ Return all state changes filtered by a named field and value."""
+        """ Return the latest event filtered query."""
         cursor = self.conn.cursor()
 
         query_str, args = _query_to_string(query)
@@ -677,6 +682,14 @@ class SQLiteStorage:
 
 
 class SerializedSQLiteStorage:
+    """ A wrapper around SQLiteStorage that automatically serializes and
+    deserializes the data.
+
+    SQLiteStorage is necessary for database upgrades. Upgrades are necessary
+    when the data model changes, and as a consequence before the upgrades are
+    applied the automatic encoding/deconding will not work.
+    """
+
     def __init__(self, database_path: Path, serializer: SerializationBase) -> None:
         self.database = SQLiteStorage(database_path)
         self.serializer = serializer
