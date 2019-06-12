@@ -23,9 +23,9 @@ from raiden.utils.typing import (
     Optional,
     RaidenDBVersion,
     Tuple,
+    Type,
     TypeVar,
     Union,
-    cast,
 )
 
 StateChangeID = NewType("StateChangeID", ULID)
@@ -46,12 +46,9 @@ class Range(Generic[ID]):
             raise ValueError("last must be larger then first")
 
 
-FIRST_ULID = ULID((0).to_bytes(16, "big"))
-LAST_ULID = ULID((2 ** 128 - 1).to_bytes(16, "big"))
-
-FIRST_SC_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
-LAST_SC_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
-RANGE_ALL_STATE_CHANGES = Range(FIRST_SC_ULID, LAST_SC_ULID)
+FIRST_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
+LAST_STATECHANGE_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
+RANGE_ALL_STATE_CHANGES = Range(FIRST_STATECHANGE_ULID, LAST_STATECHANGE_ULID)
 
 
 class Operator(Enum):
@@ -235,9 +232,12 @@ class SQLiteStorage:
 
         self.conn = conn
         self.in_transaction = False
-        self._ulid_factories: Dict[str, ULIDMonotonicFactory] = dict()
 
-    def _ulid_factory(self, table_name: str) -> ULIDMonotonicFactory:
+        # Dict[Type[ID], ULIDMonotonicFactory[ID]] is not supported yet.
+        # Reference: https://github.com/python/mypy/issues/4928
+        self._ulid_factories: Dict = dict()
+
+    def _ulid_factory(self, id_type: Type[ID]) -> ULIDMonotonicFactory[ID]:
         """Return an ULID Factory for a specific table.
 
         In order to guarantee ID monotonicity for a specific table it's
@@ -248,7 +248,15 @@ class SQLiteStorage:
         would be error prone (it would depend on configuration of which tables
         have an ULID), this is not done.
         """
-        assert table_name, "A table name must be provided"
+        expected_types: Dict[Type, str] = {
+            StateChangeID: "state_changes",
+            EventID: "state_events",
+            SnapshotID: "state_snapshot",
+        }
+        table_name = expected_types.get(id_type)
+
+        if not table_name:
+            raise ValueError(f"Unexpected ID type {id_type}")
 
         factory = self._ulid_factories.get(table_name)
 
@@ -314,7 +322,7 @@ class SQLiteStorage:
         return int(result[0][0])
 
     def write_state_change(self, state_change: StateChange, timestamp: datetime) -> StateChangeID:
-        state_change_id = StateChangeID(self._ulid_factory("state_changes").new())
+        state_change_id = self._ulid_factory(StateChangeID).new()
 
         self.conn.execute(
             "INSERT INTO state_changes(identifier, data, timestamp) VALUES(?, ?, ?)",
@@ -327,7 +335,7 @@ class SQLiteStorage:
     def write_state_snapshot(
         self, snapshot: str, statechange_id: StateChangeID, timestamp: datetime
     ) -> SnapshotID:
-        snapshot_id = SnapshotID(self._ulid_factory("state_snapshot").new())
+        snapshot_id = self._ulid_factory(SnapshotID).new()
 
         query = (
             "INSERT INTO state_snapshot ("
@@ -340,8 +348,8 @@ class SQLiteStorage:
         return snapshot_id
 
     def write_events(self, events: List[Tuple[StateChangeID, datetime, str]]) -> List[EventID]:
-        ulid_factory = self._ulid_factory("state_events")
-        events_ids: List[ULID] = list()
+        ulid_factory = self._ulid_factory(EventID)
+        events_ids: List[EventID] = list()
 
         query = (
             "INSERT INTO state_events("
@@ -351,7 +359,7 @@ class SQLiteStorage:
         self.conn.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
         self.maybe_commit()
 
-        return cast(List[EventID], events_ids)
+        return events_ids
 
     def delete_state_changes(self, state_changes_to_delete: List[Tuple[StateChangeID]]) -> None:
         self.conn.executemany(
