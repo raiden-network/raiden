@@ -354,11 +354,8 @@ def is_valid_signature(
     try:
         signer_address = recover(data=data, signature=signature)
         # InvalidSignature is raised by raiden.utils.signer.recover if signature
-        # is not bytes or has the incorrect length
-        #
-        # ValueError is raised if the PublicKey instantiation failed, let it
-        # propagate because it's a memory pressure problem.
-        #
+        # is not bytes or has the incorrect length.
+        # ValueError is raised if the PublicKey instantiation failed.
         # Exception is raised if the public key recovery failed.
     except Exception:  # pylint: disable=broad-except
         msg = "Signature invalid, could not be recovered."
