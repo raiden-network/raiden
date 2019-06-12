@@ -1,7 +1,7 @@
 import json
 import random
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import IntEnum, unique
 from uuid import UUID
@@ -10,7 +10,8 @@ import click
 import requests
 import structlog
 from eth_utils import (
-    is_checksum_address,
+    decode_hex,
+    encode_hex,
     is_same_address,
     to_canonical_address,
     to_checksum_address,
@@ -31,7 +32,6 @@ from raiden.utils.typing import (
     Dict,
     InitiatorAddress,
     List,
-    NamedTuple,
     Optional,
     PaymentAmount,
     Signature,
@@ -74,7 +74,35 @@ class IOU:
     amount: TokenAmount
     expiration_block: BlockNumber
     chain_id: ChainID
-    signature: Optional[Signature]
+    signature: Optional[Signature] = None
+
+    def sign(self, privkey: bytes) -> None:
+        self.signature = Signature(
+            sign_one_to_n_iou(
+                privatekey=encode_hex(privkey),
+                sender=to_checksum_address(self.sender),
+                receiver=to_checksum_address(self.receiver),
+                amount=self.amount,
+                expiration_block=self.expiration_block,
+                one_to_n_address=to_checksum_address(self.one_to_n_address),
+                chain_id=self.chain_id,
+            )
+        )
+
+    def as_json(self) -> Dict[str, Any]:
+        data = dict(
+            sender=to_checksum_address(self.sender),
+            receiver=to_checksum_address(self.receiver),
+            one_to_n_address=to_checksum_address(self.one_to_n_address),
+            amount=self.amount,
+            expiration_block=self.expiration_block,
+            chain_id=self.chain_id,
+        )
+
+        if self.signature is not None:
+            data["signature"] = to_hex(self.signature)
+
+        return data
 
 
 @unique
@@ -246,14 +274,14 @@ def get_last_iou(
     sender: Address,
     receiver: Address,
     privkey: bytes,
-) -> Optional[Dict]:
+) -> Optional[IOU]:
 
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
     signature_data = sender + receiver + Web3.toBytes(text=timestamp)
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
-        return (
+        data = (
             requests.get(
                 f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
                 params=dict(
@@ -267,7 +295,20 @@ def get_last_iou(
             .json()
             .get("last_iou")
         )
-    except (requests.exceptions.RequestException, ValueError) as e:
+
+        if data is None:
+            return None
+
+        return IOU(
+            sender=to_canonical_address(data["sender"]),
+            receiver=to_canonical_address(data["receiver"]),
+            one_to_n_address=to_canonical_address(data["one_to_n_address"]),
+            amount=data["amount"],
+            expiration_block=data["expiration_block"],
+            chain_id=data["chain_id"],
+            signature=Signature(decode_hex(data["signature"])),
+        )
+    except (requests.exceptions.RequestException, ValueError, KeyError) as e:
         raise ServiceRequestFailed(str(e))
 
 
@@ -279,61 +320,50 @@ def make_iou(
     block_number: BlockNumber,
     chain_id: ChainID,
     offered_fee: TokenAmount = None,
-) -> Dict:
-    expiration = block_number + pfs_config.iou_timeout
+) -> IOU:
+    expiration = BlockNumber(block_number + pfs_config.iou_timeout)
 
-    iou = dict(
-        sender=to_checksum_address(our_address),
-        receiver=to_checksum_address(pfs_config.info.payment_address),
+    iou = IOU(
+        sender=our_address,
+        receiver=pfs_config.info.payment_address,
+        one_to_n_address=one_to_n_address,
         amount=offered_fee or pfs_config.maximum_fee,
         expiration_block=expiration,
-        one_to_n_address=to_checksum_address(one_to_n_address),
         chain_id=chain_id,
     )
-
-    iou.update(signature=to_hex(sign_one_to_n_iou(privatekey=to_hex(privkey), **iou)))
+    iou.sign(privkey)
 
     return iou
 
 
 def update_iou(
-    iou: Dict[str, Any],
+    iou: IOU,
     privkey: bytes,
     added_amount: TokenAmount = ZERO_TOKENS,
     expiration_block: Optional[BlockNumber] = None,
-) -> Dict[str, Any]:
+) -> IOU:
 
-    expected_signature = to_hex(
+    expected_signature = Signature(
         sign_one_to_n_iou(
             privatekey=to_hex(privkey),
-            expiration_block=iou["expiration_block"],
-            sender=iou["sender"],
-            receiver=iou["receiver"],
-            amount=iou["amount"],
-            one_to_n_address=iou["one_to_n_address"],
-            chain_id=iou["chain_id"],
+            sender=to_checksum_address(iou.sender),
+            receiver=to_checksum_address(iou.receiver),
+            amount=iou.amount,
+            expiration_block=iou.expiration_block,
+            one_to_n_address=to_checksum_address(iou.one_to_n_address),
+            chain_id=iou.chain_id,
         )
     )
-    if iou.get("signature") != expected_signature:
+    if iou.signature != expected_signature:
         raise ServiceRequestFailed(
             "Last IOU as given by the pathfinding service is invalid (signature does not match)"
         )
 
-    iou["amount"] += added_amount
+    iou.amount = TokenAmount(iou.amount + added_amount)
     if expiration_block:
-        iou["expiration_block"] = expiration_block
+        iou.expiration_block = expiration_block
 
-    iou["signature"] = to_hex(
-        sign_one_to_n_iou(
-            privatekey=to_hex(privkey),
-            expiration_block=iou["expiration_block"],
-            sender=iou["sender"],
-            receiver=iou["receiver"],
-            amount=iou["amount"],
-            chain_id=iou["chain_id"],
-            one_to_n_address=iou["one_to_n_address"],
-        )
-    )
+    iou.sign(privkey)
 
     return iou
 
@@ -348,7 +378,7 @@ def create_current_iou(
     chain_id: ChainID,
     offered_fee: TokenAmount = None,
     scrap_existing_iou: bool = False,
-) -> Dict[str, Any]:
+) -> IOU:
 
     latest_iou = None
     if not scrap_existing_iou:
@@ -449,7 +479,7 @@ def query_paths(
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
-        payload["iou"] = create_current_iou(
+        new_iou = create_current_iou(
             pfs_config=pfs_config,
             token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
@@ -460,6 +490,7 @@ def query_paths(
             offered_fee=offered_fee,
             scrap_existing_iou=scrap_existing_iou,
         )
+        payload["iou"] = asdict(new_iou)
 
         log.info(
             "Requesting paths from Pathfinding Service",

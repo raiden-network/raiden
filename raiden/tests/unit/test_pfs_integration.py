@@ -1,20 +1,22 @@
 from copy import copy
+from dataclasses import replace
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
 import requests
 from eth_utils import (
-    encode_hex,
     is_checksum_address,
     is_hex,
     is_hex_address,
     to_canonical_address,
     to_checksum_address,
+    to_hex,
 )
 
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
+    IOU,
     MAX_PATHS_QUERY_ATTEMPTS,
     PFSConfiguration,
     PFSError,
@@ -46,7 +48,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
 )
-from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
 
@@ -293,7 +294,17 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             from_address=our_address,
             to_address=address4,
             amount=50,
-            iou_json_data=dict(last_iou=iou),
+            iou_json_data=dict(
+                last_iou=dict(
+                    sender=to_checksum_address(iou.sender),
+                    receiver=to_checksum_address(iou.receiver),
+                    one_to_n_address=to_checksum_address(one_to_n_address),
+                    amount=iou.amount,
+                    expiration_block=iou.expiration_block,
+                    chain_id=iou.chain_id,
+                    signature=to_hex(iou.signature),
+                )
+            ),
         )
 
     assert_checksum_address_in_url(patched.call_args[0][0])
@@ -304,11 +315,12 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 
     # Check for iou arguments in request payload
     payload = patched.call_args[1]["json"]
-    config = CONFIG["services"]
-    old_amount = last_iou["amount"]
-    assert old_amount < payload["iou"]["amount"] <= config["pathfinding_max_fee"] + old_amount
-    for key in ("expiration_block", "sender", "receiver"):
-        assert payload["iou"][key] == last_iou[key]
+    pfs_config = CONFIG["pfs_config"]
+    old_amount = last_iou.amount
+    assert old_amount < payload["iou"]["amount"] <= pfs_config.maximum_fee + old_amount
+    assert payload["iou"]["expiration_block"] == last_iou.expiration_block
+    assert payload["iou"]["sender"] == last_iou.sender
+    assert payload["iou"]["receiver"] == last_iou.receiver
     assert "signature" in payload["iou"]
 
 
@@ -586,23 +598,24 @@ def test_get_and_update_iou(one_to_n_address):
         one_to_n_address=one_to_n_address,
         chain_id=4,
     )
-    response.json = Mock(return_value=dict(last_iou=last_iou))
+    response.json = Mock(return_value=dict(last_iou=last_iou.as_json()))
     with patch.object(requests, "get", return_value=response):
         iou = get_last_iou(**request_args)
     assert iou == last_iou
 
-    new_iou_1 = update_iou(iou.copy(), PRIVKEY, added_amount=10)
-    assert new_iou_1["amount"] == last_iou["amount"] + 10
-    for key in ("expiration_block", "sender", "receiver"):
-        assert new_iou_1[key] == iou[key]
-    assert is_hex(new_iou_1["signature"])
+    new_iou_1 = update_iou(replace(iou), PRIVKEY, added_amount=10)
+    assert new_iou_1.amount == last_iou.amount + 10
+    assert new_iou_1.sender == last_iou.sender
+    assert new_iou_1.receiver == last_iou.receiver
+    assert new_iou_1.expiration_block == last_iou.expiration_block
+    assert new_iou_1.signature is not None
 
-    new_iou_2 = update_iou(iou, PRIVKEY, expiration_block=45)
-    assert new_iou_2["expiration_block"] == 45
-    for key in ("amount", "sender", "receiver"):
-        assert new_iou_2[key] == iou[key]
-    assert all(new_iou_2[k] == iou[k] for k in ("amount", "sender", "receiver"))
-    assert is_hex(new_iou_2["signature"])
+    new_iou_2 = update_iou(replace(iou), PRIVKEY, expiration_block=45)
+    assert new_iou_2.expiration_block == 45
+    assert new_iou_1.sender == iou.sender
+    assert new_iou_1.receiver == iou.receiver
+    assert new_iou_1.expiration_block == iou.expiration_block
+    assert new_iou_2.signature is not None
 
 
 def test_get_pfs_iou(one_to_n_address):
@@ -619,24 +632,17 @@ def test_get_pfs_iou(one_to_n_address):
         )
 
         # Previous IOU
-        iou = dict(
+        iou = IOU(
             sender=sender,
             receiver=receiver,
             amount=10,
             expiration_block=1000,
-            one_to_n_address=to_checksum_address(one_to_n_address),
+            one_to_n_address=one_to_n_address,
             chain_id=4,
         )
-        iou["signature"] = sign_one_to_n_iou(
-            privatekey=encode_hex(privkey),
-            sender=to_checksum_address(sender),
-            receiver=to_checksum_address(receiver),
-            amount=iou["amount"],
-            expiration_block=iou["expiration_block"],
-            one_to_n_address=iou["one_to_n_address"],
-            chain_id=iou["chain_id"],
-        )
-        get_mock.return_value.json.return_value = {"last_iou": iou}
+        iou.sign(privkey)
+
+        get_mock.return_value.json.return_value = {"last_iou": iou.as_json()}
         assert (
             get_last_iou("http://example.com", token_network_address, sender, receiver, PRIVKEY)
             == iou
@@ -675,9 +681,9 @@ def test_make_iou():
         chain_id=chain_id,
     )
 
-    assert iou["sender"] == to_checksum_address(sender)
-    assert iou["receiver"] == encode_hex(receiver)
-    assert 0 < iou["amount"] <= max_fee
+    assert iou.sender == sender
+    assert iou.receiver == receiver
+    assert 0 < iou.amount <= max_fee
 
 
 def test_update_iou():
@@ -687,37 +693,27 @@ def test_update_iou():
     one_to_n_address = Address(bytes([2] * 20))
 
     # prepare iou
-    iou = {
-        "sender": encode_hex(sender),
-        "receiver": encode_hex(receiver),
-        "amount": 10,
-        "expiration_block": 1000,
-        "chain_id": 4,
-        "one_to_n_address": encode_hex(one_to_n_address),
-    }
-    iou["signature"] = encode_hex(
-        sign_one_to_n_iou(
-            privatekey=encode_hex(privkey),
-            sender=iou["sender"],
-            receiver=iou["receiver"],
-            amount=iou["amount"],
-            expiration_block=iou["expiration_block"],
-            one_to_n_address=iou["one_to_n_address"],
-            chain_id=iou["chain_id"],
-        )
+    iou = IOU(
+        sender=sender,
+        receiver=receiver,
+        amount=10,
+        expiration_block=1000,
+        chain_id=4,
+        one_to_n_address=one_to_n_address,
     )
+    iou.sign(privkey)
 
     # update and compare
     added_amount = 10
-    new_iou = update_iou(iou=iou.copy(), privkey=privkey, added_amount=added_amount)
-    assert new_iou["amount"] == iou["amount"] + added_amount
-    assert new_iou["sender"] == iou["sender"]
-    assert new_iou["receiver"] == iou["receiver"]
-    assert new_iou["signature"] != iou["signature"]
+    new_iou = update_iou(iou=replace(iou), privkey=privkey, added_amount=added_amount)
+    assert new_iou.amount == iou.amount + added_amount
+    assert new_iou.sender == iou.sender
+    assert new_iou.receiver == iou.receiver
+    assert new_iou.signature != iou.signature
 
     # Previous IOU with increased amount by evil PFS
-    tampered_iou = new_iou.copy()
-    tampered_iou["amount"] += 10
+    tampered_iou = replace(new_iou)
+    tampered_iou.amount += 10
     with pytest.raises(ServiceRequestFailed):
         update_iou(iou=tampered_iou, privkey=privkey, added_amount=added_amount)
 
