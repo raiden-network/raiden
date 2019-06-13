@@ -144,7 +144,7 @@ def test_resolve_routes(netting_channel_state, chain_state, token_network_state)
     assert route_states[0].forward_channel_id == channel_id, msg
 
 
-def test_mediator_skips_routes_that_have_failed():
+def test_mediator_skips_used_routes():
     prng = random.Random()
     block_number = 3
     defaults = factories.NettingChannelStateProperties(
@@ -174,20 +174,17 @@ def test_mediator_skips_routes_that_have_failed():
     channels = factories.make_channel_set(
         properties=properties, number_of_channels=3, defaults=defaults
     )
+    bob = channels.channels[1].partner_state.address
+    charlie = channels.channels[2].partner_state.address
+    dave = factories.make_address()
+    eric = factories.make_address()
     locked_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
             expiration=10,
             routes=[
-                [
-                    factories.UNIT_OUR_ADDRESS,
-                    channels.channels[1].partner_state.address,
-                    factories.UNIT_TRANSFER_TARGET,
-                ],
-                [
-                    factories.UNIT_OUR_ADDRESS,
-                    channels.channels[2].partner_state.address,
-                    factories.UNIT_TRANSFER_TARGET,
-                ],
+                [factories.UNIT_OUR_ADDRESS, bob, dave, factories.UNIT_TRANSFER_TARGET],
+                [factories.UNIT_OUR_ADDRESS, bob, eric, factories.UNIT_TRANSFER_TARGET],
+                [factories.UNIT_OUR_ADDRESS, charlie, eric, factories.UNIT_TRANSFER_TARGET],
             ],
             canonical_identifier=channels.channels[0].canonical_identifier,
             pkey=factories.HOP1_KEY,
@@ -198,6 +195,7 @@ def test_mediator_skips_routes_that_have_failed():
     nodeaddresses_to_networkstates = {
         channel.partner_state.address: "reachable" for channel in channels.channels
     }
+
     transition_result = mediator.handle_init(
         state_change=init_action,
         channelidentifiers_to_channels=channels.channel_map,
@@ -209,6 +207,11 @@ def test_mediator_skips_routes_that_have_failed():
     events = transition_result.events
     assert mediator_state is not None
     assert events
+
+    assert len(mediator_state.routes) == 3
+    assert mediator_state.routes[0].route[1] == bob
+    assert mediator_state.routes[1].route[1] == bob
+    assert mediator_state.routes[2].route[1] == charlie
     # now we receive a refund from whoever we forwarded to (should be HOP2)
     assert isinstance(events[-1], SendLockedTransfer)
     assert events[-1].recipient == factories.HOP2
@@ -247,10 +250,14 @@ def test_mediator_skips_routes_that_have_failed():
     events = transition_result.events
     assert mediator_state is not None
     assert events
+    assert len(mediator_state.routes) == 1
+    assert mediator_state.routes[0].route[1] == charlie
 
     # now we should have a forward transfer to HOP3
     assert isinstance(events[-1], SendLockedTransfer)
     assert events[-1].recipient == factories.HOP3
+
+    # now we will receive a refund from HOP3
 
     last_pair = mediator_state.transfers_pair[-1]
     canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
@@ -273,6 +280,7 @@ def test_mediator_skips_routes_that_have_failed():
         balance_proof=received_transfer.balance_proof,
         sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
+
     transition_result = mediator.handle_refundtransfer(
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
@@ -284,6 +292,11 @@ def test_mediator_skips_routes_that_have_failed():
 
     mediator_state = transition_result.new_state
     events = transition_result.events
+    assert mediator_state is not None
+    assert events
 
-    # now we should have a refund transfer from HOP3
+    assert len(mediator_state.routes) == 0
+    # no other routes available, so refund HOP1
+
     assert isinstance(events[-1], SendRefundTransfer)
+    assert events[-1].recipient == factories.HOP1

@@ -1092,9 +1092,9 @@ def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
     def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
-        for candidate_channel in channels.channels:
-            if route[1] == candidate_channel.partner_state.address:
-                return candidate_channel.identifier
+        for channel_state in channels.channels:
+            if route[1] == channel_state.partner_state.address:
+                return channel_state.identifier
         return None
 
     forwards = [get_forward_channel(route) for route in transfer.routes]
