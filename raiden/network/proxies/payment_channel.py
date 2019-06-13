@@ -5,6 +5,7 @@ from web3.utils.filters import Filter
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
+from raiden.transfer.state import LockHashLockDict
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
     AdditionalHash,
@@ -14,7 +15,6 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     ChannelID,
-    LockHashLockDict,
     Locksroot,
     Nonce,
     Signature,

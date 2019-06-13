@@ -38,7 +38,6 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockHash,
-    LockHashLockDict,
     Locksroot,
     MessageID,
     Nonce,
@@ -102,10 +101,6 @@ def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "Balance
             channel_identifier=envelope_message.channel_identifier,
         ),
     )
-
-
-def make_empty_lockhash_lock_dict() -> LockHashLockDict:
-    return LockHashLockDict(dict())
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -272,6 +267,15 @@ class TransactionExecutionStatus(State):
 @dataclass
 class MerkleTreeState(State):
     layers: List[List[Keccak256]]
+
+
+@dataclass
+class LockHashLockDict(State):
+    locks: Dict[LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]]
+
+
+def make_empty_lockhash_lock_dict() -> LockHashLockDict:
+    return LockHashLockDict(dict())
 
 
 @dataclass(order=True)

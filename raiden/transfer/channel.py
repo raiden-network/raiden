@@ -56,6 +56,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
+    LockHashLockDict,
     NettingChannelEndState,
     NettingChannelState,
     TransactionChannelNewBalance,
@@ -96,7 +97,6 @@ from raiden.utils.typing import (
     InitiatorAddress,
     List,
     LockHash,
-    LockHashLockDict,
     Locksroot,
     LockType,
     MessageID,
@@ -642,7 +642,7 @@ def valid_lockedtransfer_check(
         msg = f"Invalid {message_name} message. Same lockhash handled twice."
         result = (False, msg, None)
 
-    elif len(pending_locks) > MAXIMUM_PENDING_TRANSFERS:
+    elif len(pending_locks.locks) > MAXIMUM_PENDING_TRANSFERS:
         msg = (
             f"Invalid {message_name} message. Adding the transfer would exceed the allowed "
             f"limit of {MAXIMUM_PENDING_TRANSFERS} pending transfers per channel."
@@ -1053,7 +1053,7 @@ def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[LockHashLoc
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
-    if len(end_state.pending_locks) == 0:  # pylint: disable=len-as-condition
+    if len(end_state.pending_locks.locks) == 0:  # pylint: disable=len-as-condition
         return None
     return end_state.pending_locks
 
@@ -1094,7 +1094,7 @@ def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
 
 
 def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -> int:
-    return len(channel_end_state.pending_locks)
+    return len(channel_end_state.pending_locks.locks)
 
 
 def get_status(channel_state: NettingChannelState) -> str:
@@ -1184,9 +1184,9 @@ def compute_locks_with(
 ) -> Optional[LockHashLockDict]:
     """Register the given lock with as a pending locks."""
     lockhash = lock.lockhash
-    if lockhash not in locks:
-        locks = LockHashLockDict(dict(locks))
-        locks.update({lockhash: lock})  # pylint: disable=E1101
+    if lockhash not in locks.locks:
+        locks = LockHashLockDict(dict(locks.locks))
+        locks.locks.update({lockhash: lock})  # pylint: disable=E1101
         return locks
     else:
         return None
@@ -1196,9 +1196,9 @@ def compute_locks_without(
     locks: LockHashLockDict, lockhash: LockHash
 ) -> Optional[LockHashLockDict]:
     # Use None to inform the caller the lockhash is unknown
-    if lockhash in locks:
-        locks = LockHashLockDict(dict(locks))
-        del locks[lockhash]
+    if lockhash in locks.locks:
+        locks = LockHashLockDict(dict(locks.locks))
+        del locks.locks[lockhash]
         return locks
     else:
         return None
@@ -1208,7 +1208,7 @@ def compute_locksroot(locks: LockHashLockDict) -> Locksroot:
     """ Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
-    locks_as_bytes = map(lambda l: l.encoded, locks.values())
+    locks_as_bytes = map(lambda l: l.encoded, locks.locks.values())
     return Locksroot(keccak(b"".join(locks_as_bytes)))
 
 

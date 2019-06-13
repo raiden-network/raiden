@@ -77,9 +77,6 @@ Locksroot = NewType("Locksroot", T_Locksroot)
 T_LockHash = bytes
 LockHash = NewType("LockHash", T_LockHash)
 
-T_LockHashLockDict = Dict[LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]]
-LockHashLockDict = NewType("LockHashLockDict", T_LockHashLockDict)
-
 T_MerkleTreeLeaves = List[Union["HashTimeLockState", "UnlockPartialProofState"]]
 MerkleTreeLeaves = NewType("MerkleTreeLeaves", T_MerkleTreeLeaves)
 
