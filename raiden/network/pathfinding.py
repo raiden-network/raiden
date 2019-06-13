@@ -1,7 +1,7 @@
 import json
 import random
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum, unique
 from uuid import UUID
@@ -59,7 +59,7 @@ class PFSInfo:
 
 
 @dataclass
-class PFSConfiguration:
+class PFSConfig:
     info: PFSInfo
     maximum_fee: TokenAmount
     iou_timeout: BlockNumber
@@ -313,7 +313,7 @@ def get_last_iou(
 
 
 def make_iou(
-    pfs_config: PFSConfiguration,
+    pfs_config: PFSConfig,
     our_address: Address,
     one_to_n_address: Address,
     privkey: bytes,
@@ -369,7 +369,7 @@ def update_iou(
 
 
 def create_current_iou(
-    pfs_config: PFSConfiguration,
+    pfs_config: PFSConfig,
     token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     our_address: Address,
@@ -452,7 +452,7 @@ def post_pfs_paths(
 
 
 def query_paths(
-    pfs_config: PFSConfiguration,
+    pfs_config: PFSConfig,
     our_address: Address,
     privkey: bytes,
     current_block_number: BlockNumber,
@@ -490,7 +490,7 @@ def query_paths(
             offered_fee=offered_fee,
             scrap_existing_iou=scrap_existing_iou,
         )
-        payload["iou"] = asdict(new_iou)
+        payload["iou"] = new_iou.as_json()
 
         log.info(
             "Requesting paths from Pathfinding Service",
@@ -521,7 +521,7 @@ def query_paths(
 
 
 def post_pfs_feedback(
-    pfs_config: PFSConfiguration,
+    pfs_config: PFSConfig,
     token_network_address: TokenNetworkAddress,
     route: List[Address],
     token: UUID,

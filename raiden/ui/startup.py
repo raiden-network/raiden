@@ -7,7 +7,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.pathfinding import PFSConfiguration, configure_pfs_or_exit
+from raiden.network.pathfinding import PFSConfig, configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -225,7 +225,7 @@ def setup_proxies_or_exit(
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_info.payment_address is not None, msg
 
-        config["pfs_config"] = PFSConfiguration(
+        config["pfs_config"] = PFSConfig(
             info=pfs_info,
             maximum_fee=config["services"]["pathfinding_max_fee"],
             iou_timeout=config["services"]["pathfinding_iou_timeout"],
