@@ -8,7 +8,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.messages import RouteMetadata
-from raiden.network.pathfinding import PFSConfiguration, query_paths
+from raiden.network.pathfinding import PFSConfig, query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
 from raiden.utils.typing import (
@@ -221,7 +221,7 @@ def get_best_routes_pfs(
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    pfs_config: PFSConfiguration,
+    pfs_config: PFSConfig,
     privkey: bytes,
 ) -> Tuple[bool, List[RouteState], Optional[UUID]]:
     try:
