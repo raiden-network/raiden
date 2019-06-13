@@ -17,7 +17,7 @@ from raiden.transfer.channel import (
     handle_receive_lockedtransfer,
     is_balance_proof_usable_onchain,
 )
-from raiden.transfer.state import HashTimeLockState
+from raiden.transfer.state import HashTimeLockState, PendingLocksState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
@@ -39,7 +39,9 @@ def _channel_and_transfer(merkletree_width):
         nonce=partner_model.next_nonce,
         transferred_amount=0,
         lock=lock,
-        pending_locks=partner_model.pending_locks + {lock.lockhash: lock},
+        pending_locks=PendingLocksState(
+            {**partner_model.pending_locks, lock.lockhash: lock.encoded}
+        ),
         locked_amount=lock.amount,
     )
 
