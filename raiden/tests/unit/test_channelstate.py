@@ -133,12 +133,12 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             our_state=NettingChannelEndStateProperties(
                 address=our_model.participant_address,
                 balance=our_model.balance,
-                pending_locks=our_model.pending_locks,
+                pending_locks=PendingLocksState(our_model.pending_locks),
             ),
             partner_state=NettingChannelEndStateProperties(
                 address=partner_model.participant_address,
                 balance=partner_model.balance,
-                pending_locks=partner_model.pending_locks,
+                pending_locks=PendingLocksState(partner_model.pending_locks),
             ),
             open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
         )
@@ -151,8 +151,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             BalanceProofProperties(
                 nonce=our_nonce,
                 transferred_amount=0,
-                locked_amount=len(our_model.merkletree_leaves),
-                # pylint: disable=no-member
+                locked_amount=len(our_model.pending_locks),
                 locksroot=compute_locksroot(channel_state.our_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
