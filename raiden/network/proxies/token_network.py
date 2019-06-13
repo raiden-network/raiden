@@ -41,6 +41,7 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import LockHashLockDict
 from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
@@ -56,7 +57,6 @@ from raiden.utils.typing import (
     Dict,
     ErrorType,
     List,
-    LockHashLockDict,
     Locksroot,
     NamedTuple,
     Nonce,
@@ -1764,7 +1764,7 @@ class TokenNetwork:
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        leaves_packed = b"".join(lock.encoded for lock in pending_locks.values())
+        leaves_packed = b"".join(lock.encoded for lock in pending_locks.locks.values())
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             "unlock",
