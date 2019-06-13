@@ -47,6 +47,7 @@ scenario:
       - start_node: 1
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 500, but we've already waited 400 blocks.
-      - wait_blocks: 100
+      ## Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
+      ## To make sure the transactions gets mined in time, 10 additional blocks are added
+      - wait_blocks: 110
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}
