@@ -4,7 +4,6 @@ from hashlib import sha256
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
@@ -29,6 +28,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
 )
 from raiden.utils import sha3
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 @pytest.fixture
@@ -158,8 +158,8 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -373,7 +373,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -395,7 +395,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         canonical_identifier=channel_state.canonical_identifier,
         receiver=address,
         sender=our_address,
-        locksroot=compute_locksroot({lock.lockhash: lock.encoded}),
+        locksroot=compute_locksroot(PendingLocksState({lock.lockhash: lock.encoded})),
         unlocked_amount=lock_amount,
         returned_tokens=0,
         block_number=block_number,
@@ -493,7 +493,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
