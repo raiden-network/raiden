@@ -23,8 +23,9 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     HashTimeLockState,
     NettingChannelState,
+    PendingLocksState,
     balanceproof_from_envelope,
-    make_empty_lockhash_lock_dict,
+    make_empty_pending_locks_state,
 )
 from raiden.utils import random_secret
 from raiden.utils.signer import LocalSigner, Signer
@@ -37,7 +38,6 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockedAmount,
-    LockHashLockDict,
     Nonce,
     Optional,
     PaymentAmount,
@@ -453,7 +453,7 @@ def assert_locked(
     if pending_locks:
         locks = dict((lock.lockhash, lock) for lock in pending_locks)
     else:
-        locks = make_empty_lockhash_lock_dict()
+        locks = make_empty_pending_locks_state()
 
     assert from_channel.our_state.pending_locks == locks
 
@@ -508,7 +508,7 @@ def make_receive_transfer_mediated(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    pending_locks: LockHashLockDict = None,
+    pending_locks: PendingLocksState = None,
     locked_amount: Optional[LockedAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
@@ -521,10 +521,10 @@ def make_receive_transfer_mediated(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        locks = dict()
-        locks.update({lock.lockhash: lock})
+        locks = make_empty_pending_locks_state()
+        locks.locks.update({lock.lockhash: lock.encoded})
     else:
-        assert lock.lockhash in pending_locks
+        assert lock.lockhash in pending_locks.locks
         locks = pending_locks
 
     if locked_amount is None:
@@ -592,7 +592,7 @@ def make_receive_expired_lock(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        pending_locks = make_empty_lockhash_lock_dict()
+        pending_locks = make_empty_pending_locks_state()
     else:
         assert lock.lockhash not in pending_locks
 

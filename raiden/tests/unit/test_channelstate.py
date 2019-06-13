@@ -55,11 +55,12 @@ from raiden.transfer.state import (
     HashTimeLockState,
     NettingChannelEndState,
     NettingChannelState,
+    PendingLocksState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
-    make_empty_lockhash_lock_dict,
+    make_empty_pending_locks_state,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -77,7 +78,6 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import LockHashLockDict
 from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 PartnerStateModel = namedtuple(
@@ -101,7 +101,7 @@ def assert_partner_state(end_state, partner_state, model):
     assert channel.get_balance(end_state, partner_state) == model.balance
     assert channel.get_distributable(end_state, partner_state) == model.distributable
     assert channel.get_next_nonce(end_state) == model.next_nonce
-    assert set(end_state.pending_locks) == set(model.pending_locks)
+    assert set(end_state.pending_locks.locks) == set(model.pending_locks)
     assert end_state.contract_balance == model.contract_balance
 
 
@@ -592,7 +592,7 @@ def test_channelstate_receive_lockedtransfer():
         balance=partner_model2.balance - lock_amount,
         amount_locked=0,
         next_nonce=3,
-        pending_locks=LockHashLockDict(dict()),
+        pending_locks=dict(),
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
@@ -832,14 +832,14 @@ def test_interwoven_transfers():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks = partner_model_current.pending_locks
-        pending_locks.update({lock.lockhash: lock})
+        pending_locks = PendingLocksState(partner_model_current.pending_locks)
+        pending_locks.locks.update({lock.lockhash: lock})
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,
             amount_locked=partner_model_current.amount_locked + lock_amount,
             next_nonce=partner_model_current.next_nonce + 1,
-            pending_locks=pending_locks,
+            pending_locks=pending_locks.locks,
         )
 
         receive_lockedtransfer = make_receive_transfer_mediated(
@@ -880,7 +880,7 @@ def test_interwoven_transfers():
             locked_amount -= lock_amount
             pending_locks = dict(partner_model_current.pending_locks)
             del pending_locks[lock.lockhash]
-            locksroot = compute_locksroot(pending_locks)
+            locksroot = compute_locksroot(PendingLocksState(pending_locks))
 
             partner_model_current = partner_model_current._replace(
                 amount_locked=partner_model_current.amount_locked - lock_amount,
@@ -1042,7 +1042,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
     msg = "the balance proof must be updated"
     assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
-    assert new_channel_state.partner_state.pending_locks == make_empty_lockhash_lock_dict()
+    assert new_channel_state.partner_state.pending_locks == make_empty_pending_locks_state()
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
@@ -1277,10 +1277,10 @@ def test_channelstate_unlock_without_locks():
 
 def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
     number_of_bytes = len(packed)
-    locks = make_empty_lockhash_lock_dict()
+    locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.update(  # pylint: disable=E1101
+        locks.locks.update(  # pylint: disable=E1101
             {
                 lock.lockhash: HashTimeLockState(
                     amount=lock.amount, expiration=lock.expiration, secrethash=lock.secrethash
@@ -1298,7 +1298,7 @@ def test_channelstate_get_unlock_proof():
     block_number = 1000
     locked_amount = 0
     settle_timeout = 8
-    pending_locks = make_empty_lockhash_lock_dict()
+    pending_locks = make_empty_pending_locks_state()
     locked_locks = {}
     unlocked_locks = {}
 
@@ -1310,7 +1310,7 @@ def test_channelstate_get_unlock_proof():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks.update({lock.lockhash: lock})  # pylint: disable=E1101
+        pending_locks.locks.update({lock.lockhash: lock})  # pylint: disable=E1101
         if random.randint(0, 1) == 0:
             locked_locks[lock_secrethash] = lock
         else:
@@ -1322,12 +1322,12 @@ def test_channelstate_get_unlock_proof():
     end_state.pending_locks = pending_locks
 
     unlock_proof = channel.get_batch_unlock(end_state)
-    assert len(unlock_proof) == len(end_state.pending_locks)
-    unlock_proof_locks = [l.encoded for l in unlock_proof.values()]
+    assert len(unlock_proof.locks) == len(end_state.pending_locks.locks)
+    unlock_proof_locks = [l.encoded for l in unlock_proof.locks.values()]
     leaves_packed = b"".join(unlock_proof_locks)
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
-    assert len(recomputed_pending_locks) == len(end_state.pending_locks)
+    assert len(recomputed_pending_locks.locks) == len(end_state.pending_locks.locks)
 
     computed_locksroot = compute_locksroot(recomputed_pending_locks)
     assert compute_locksroot(end_state.pending_locks) == computed_locksroot

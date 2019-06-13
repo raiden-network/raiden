@@ -1764,7 +1764,7 @@ class TokenNetwork:
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        leaves_packed = b"".join(lock.encoded for lock in pending_locks.locks.values())
+        leaves_packed = b"".join(pending_locks.locks.values())
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             "unlock",
