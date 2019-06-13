@@ -77,6 +77,8 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import LockHashLockDict
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",
@@ -206,7 +208,7 @@ def test_new_end_state():
     assert channel.is_lock_locked(end_state, lock_secrethash) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
-    assert compute_locksroot(end_state.pending_locks) == EMPTY_MERKLE_ROOT
+    assert compute_locksroot(end_state.pending_locks) == LOCKSROOT_OF_NO_LOCKS
 
     assert not end_state.secrethashes_to_lockedlocks
     assert not end_state.secrethashes_to_unlockedlocks
@@ -540,7 +542,7 @@ def test_channelstate_receive_lockedtransfer():
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
-        locksroot=EMPTY_MERKLE_ROOT,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=lock_secret,
         signature=EMPTY_SIGNATURE,
     )
@@ -555,7 +557,7 @@ def test_channelstate_receive_lockedtransfer():
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
-        locksroot=EMPTY_MERKLE_ROOT,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=lock_secret,
         signature=EMPTY_SIGNATURE,
     )
@@ -590,7 +592,7 @@ def test_channelstate_receive_lockedtransfer():
         balance=partner_model2.balance - lock_amount,
         amount_locked=0,
         next_nonce=3,
-        merkletree_leaves=[],
+        pending_locks=LockHashLockDict(dict()),
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
