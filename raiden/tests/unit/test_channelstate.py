@@ -1,6 +1,6 @@
 # pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
@@ -59,7 +59,7 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
-    make_empty_lockhash_lock_ordered_dict,
+    make_empty_lockhash_lock_dict,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -107,7 +107,7 @@ def create_model(balance, merkletree_width=0):
     privkey, address = make_privkey_address()
 
     locks = [make_lock() for _ in range(merkletree_width)]
-    pending_locks = OrderedDict((lock.lockhash, lock) for lock in locks)
+    pending_locks = dict((lock.lockhash, lock) for lock in locks)
 
     our_model = PartnerStateModel(
         participant_address=address,
@@ -876,7 +876,7 @@ def test_interwoven_transfers():
             nonce += 1
             transferred_amount += lock_amount
             locked_amount -= lock_amount
-            pending_locks = OrderedDict(partner_model_current.pending_locks)
+            pending_locks = dict(partner_model_current.pending_locks)
             del pending_locks[lock.lockhash]
             locksroot = compute_locksroot(pending_locks)
 
@@ -1040,7 +1040,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
     msg = "the balance proof must be updated"
     assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
-    assert new_channel_state.partner_state.pending_locks == make_empty_lockhash_lock_ordered_dict()
+    assert new_channel_state.partner_state.pending_locks == make_empty_lockhash_lock_dict()
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
@@ -1275,7 +1275,7 @@ def test_channelstate_unlock_without_locks():
 
 def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
     number_of_bytes = len(packed)
-    locks = make_empty_lockhash_lock_ordered_dict()
+    locks = make_empty_lockhash_lock_dict()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
         locks.update(  # pylint: disable=E1101
@@ -1296,7 +1296,7 @@ def test_channelstate_get_unlock_proof():
     block_number = 1000
     locked_amount = 0
     settle_timeout = 8
-    pending_locks = make_empty_lockhash_lock_ordered_dict()
+    pending_locks = make_empty_lockhash_lock_dict()
     locked_locks = {}
     unlocked_locks = {}
 

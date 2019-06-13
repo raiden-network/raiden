@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass, field
 from random import Random
 from typing import TYPE_CHECKING, Tuple
@@ -38,7 +38,7 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockHash,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Locksroot,
     MessageID,
     Nonce,
@@ -104,8 +104,8 @@ def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "Balance
     )
 
 
-def make_empty_lockhash_lock_ordered_dict() -> LockHashLockOrderedDict:
-    return LockHashLockOrderedDict(OrderedDict())
+def make_empty_lockhash_lock_dict() -> LockHashLockDict:
+    return LockHashLockDict(dict())
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -316,10 +316,10 @@ class NettingChannelEndState(State):
         repr=False, default_factory=dict
     )
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
-    #: An OrderedDict that maps secrethashes to lock states.
+    #: A dictionary that maps secrethashes to lock states.
     #: Used for calculating the locksroot.
-    pending_locks: LockHashLockOrderedDict = field(
-        repr=False, default_factory=make_empty_lockhash_lock_ordered_dict
+    pending_locks: LockHashLockDict = field(
+        repr=False, default_factory=make_empty_lockhash_lock_dict
     )
     onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))

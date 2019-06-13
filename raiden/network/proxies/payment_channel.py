@@ -14,7 +14,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     ChannelID,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Locksroot,
     Nonce,
     Signature,
@@ -235,7 +235,7 @@ class PaymentChannel:
         self,
         sender: Address,
         receiver: Address,
-        pending_locks: LockHashLockOrderedDict,
+        pending_locks: LockHashLockDict,
         given_block_identifier: BlockSpecification,
     ):
         self.token_network.unlock(

@@ -56,7 +56,7 @@ from raiden.utils.typing import (
     Dict,
     ErrorType,
     List,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Locksroot,
     NamedTuple,
     Nonce,
@@ -1681,7 +1681,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        pending_locks: LockHashLockOrderedDict,
+        pending_locks: LockHashLockDict,
         given_block_identifier: BlockSpecification,
     ) -> None:
         if not pending_locks:
@@ -1759,7 +1759,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        pending_locks: LockHashLockOrderedDict,
+        pending_locks: LockHashLockDict,
         given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:

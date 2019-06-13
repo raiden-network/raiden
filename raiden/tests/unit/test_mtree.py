@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pytest
 
 from raiden.exceptions import HashLengthNot32
@@ -10,7 +8,7 @@ from raiden_contracts.tests.utils import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_empty():
-    locks = OrderedDict()
+    locks = dict()
     assert compute_locksroot(locks) == LOCKSROOT_OF_NO_LOCKS
 
 

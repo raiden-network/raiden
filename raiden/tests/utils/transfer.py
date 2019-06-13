@@ -1,6 +1,5 @@
 """ Utilities to make and assert transfers. """
 import random
-from collections import OrderedDict
 from enum import Enum
 from hashlib import sha256
 
@@ -25,7 +24,7 @@ from raiden.transfer.state import (
     HashTimeLockState,
     NettingChannelState,
     balanceproof_from_envelope,
-    make_empty_lockhash_lock_ordered_dict,
+    make_empty_lockhash_lock_dict,
 )
 from raiden.utils import random_secret
 from raiden.utils.signer import LocalSigner, Signer
@@ -38,7 +37,7 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     LockedAmount,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Nonce,
     Optional,
     PaymentAmount,
@@ -452,9 +451,9 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = OrderedDict((lock.lockhash, lock) for lock in pending_locks)
+        locks = dict((lock.lockhash, lock) for lock in pending_locks)
     else:
-        locks = make_empty_lockhash_lock_ordered_dict()
+        locks = make_empty_lockhash_lock_dict()
 
     assert from_channel.our_state.pending_locks == locks
 
@@ -509,7 +508,7 @@ def make_receive_transfer_mediated(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    pending_locks: LockHashLockOrderedDict = None,
+    pending_locks: LockHashLockDict = None,
     locked_amount: Optional[LockedAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
@@ -522,7 +521,7 @@ def make_receive_transfer_mediated(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        locks = OrderedDict()
+        locks = dict()
         locks.update({lock.lockhash: lock})
     else:
         assert lock.lockhash in pending_locks
@@ -593,7 +592,7 @@ def make_receive_expired_lock(
         raise ValueError("Private key does not match any of the participants.")
 
     if pending_locks is None:
-        pending_locks = make_empty_lockhash_lock_ordered_dict()
+        pending_locks = make_empty_lockhash_lock_dict()
     else:
         assert lock.lockhash not in pending_locks
 
