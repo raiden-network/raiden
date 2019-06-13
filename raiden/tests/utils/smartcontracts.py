@@ -4,7 +4,7 @@ from typing import Any, List, Tuple
 from solc import compile_files
 
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.pathfinding import get_random_service
+from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -97,7 +97,7 @@ def deploy_service_registry_and_set_urls(
     )
 
     # Test that getting a random service for an empty registry returns None
-    pfs_address = get_random_service(c1_service_proxy, "latest")
+    pfs_address = get_random_pfs(c1_service_proxy, "latest")
     assert pfs_address is None
 
     # Test that setting the urls works
