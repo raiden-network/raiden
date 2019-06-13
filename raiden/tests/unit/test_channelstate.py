@@ -167,7 +167,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             BalanceProofProperties(
                 nonce=partner_nonce,
                 transferred_amount=0,
-                locked_amount=len(partner_model.merkletree_leaves),
+                locked_amount=len(partner_model.pending_locks),
                 # pylint: disable=no-member
                 locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
@@ -687,7 +687,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         distributable=partner_model1.distributable - lock1.amount,
         amount_locked=lock1.amount,
         next_nonce=2,
-        pending_locks=[lock1],
+        pending_locks={lock1.lockhash: lock1.encoded},
     )
 
     # The valid transfer is handled normally
@@ -703,11 +703,11 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         b"test_receive_cannot_overspend_with_multiple_pending_transfers2"
     ).digest()
     lock2 = HashTimeLockState(lock2_amount, lock2_expiration, lock2_secrethash)
-    leaves = [lock1.lockhash, lock2.lockhash]
+    locks = PendingLocksState({lock1.lockhash: lock1.encoded, lock2.lockhash: lock2.encoded})
 
     nonce2 = 2
     receive_lockedtransfer2 = make_receive_transfer_mediated(
-        channel_state, privkey2, nonce2, transferred_amount, lock2, pending_locks=leaves
+        channel_state, privkey2, nonce2, transferred_amount, lock2, pending_locks=locks
     )
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(
