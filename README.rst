@@ -1,6 +1,5 @@
 <!-- PROJECT SHIELDS -->
 
-
 <h2 align="center">
   <br/>
   <a href='https://raiden.network/'><img 
@@ -8,7 +7,7 @@
       alt='' 
       src="https://user-images.githubusercontent.com/35398162/54018436-ee3f6300-4188-11e9-9b4e-0666c44cda53.png" /></a>
   <br/>
-  Raiden Network
+  Raiden Light Client SDK and dApp
   <br/>
 </h2>
 
@@ -19,7 +18,6 @@
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
 > **INFO:** The Raiden client and smart contracts have been [released for mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) with a limited alpha release of the Raiden Network in December 2018.
-
 
 ## Table of Contents
 
