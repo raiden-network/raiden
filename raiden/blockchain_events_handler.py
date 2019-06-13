@@ -448,7 +448,9 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 sender=partner,
             )
             if state_change_record is not None:
-                canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
+                canonical_identifier = (
+                    state_change_record.data.balance_proof.canonical_identifier  # type: ignore
+                )
                 break
         elif partner == args["receiver"]:
             event_record = get_event_with_balance_proof_by_locksroot(
@@ -462,7 +464,9 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 recipient=partner,
             )
             if event_record is not None:
-                canonical_identifier = event_record.data.balance_proof.canonical_identifier
+                canonical_identifier = (
+                    event_record.data.balance_proof.canonical_identifier  # type: ignore
+                )
                 break
 
     msg = (
