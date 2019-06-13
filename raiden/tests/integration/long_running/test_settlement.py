@@ -3,6 +3,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
+from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden import waiting
@@ -23,7 +24,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import pex, sha3
+from raiden.utils import sha3
 from raiden.utils.timeout import BlockTimeout
 
 
@@ -459,8 +460,8 @@ def run_test_channel_withdraw(
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
         msg = (
-            f"transfer from {pex(alice_app.raiden.address)} "
-            f"to {pex(bob_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(alice_app.raiden.address)} "
+            f"to {to_checksum_address(bob_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 

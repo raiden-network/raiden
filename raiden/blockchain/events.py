@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Dict, List
 
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput, UnknownEventType
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden.utils.filters import (
     StatelessFilter,
     decode_event,
@@ -200,7 +200,7 @@ class Event:
 
     def __repr__(self):
         return "<Event contract: {} event: {}>".format(
-            pex(self.originating_contract), self.event_data
+            to_checksum_address(self.originating_contract), self.event_data
         )
 
 
@@ -243,7 +243,7 @@ class BlockchainEvents:
         token_network_registry_address = token_network_registry_proxy.address
 
         self.add_event_listener(
-            "TokenNetworkRegistry {}".format(pex(token_network_registry_address)),
+            "TokenNetworkRegistry {}".format(to_checksum_address(token_network_registry_address)),
             token_new_filter,
             contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         )
@@ -258,7 +258,7 @@ class BlockchainEvents:
         token_network_address = token_network_proxy.address
 
         self.add_event_listener(
-            "TokenNetwork {}".format(pex(token_network_address)),
+            "TokenNetwork {}".format(to_checksum_address(token_network_address)),
             token_network_filter,
             contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         )
@@ -274,7 +274,7 @@ class BlockchainEvents:
         )
         secret_registry_address = secret_registry_proxy.address
         self.add_event_listener(
-            "SecretRegistry {}".format(pex(secret_registry_address)),
+            "SecretRegistry {}".format(to_checksum_address(secret_registry_address)),
             secret_registry_filter,
             contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
         )

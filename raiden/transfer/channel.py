@@ -3,7 +3,7 @@ import heapq
 import random
 from typing import TYPE_CHECKING
 
-from eth_utils import encode_hex
+from eth_utils import encode_hex, to_hex
 
 from raiden.constants import (
     CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
@@ -84,7 +84,6 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import pex
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
@@ -556,7 +555,7 @@ def is_valid_lock_expired(
     elif lock is None:
         msg = (
             f"Invalid LockExpired message. "
-            f"Lock with secrethash {pex(secrethash)} is not known."
+            f"Lock with secrethash {to_hex(secrethash)} is not known."
         )
         result = (False, msg, None)
 

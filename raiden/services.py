@@ -1,6 +1,7 @@
 from typing import Union
 
 import structlog
+from eth_utils import to_checksum_address
 
 from raiden import constants
 from raiden.messages import RequestMonitoring, UpdatePFS
@@ -8,7 +9,7 @@ from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.transfer.state import ChainState, NettingChannelState
-from raiden.utils import pex, to_rdn
+from raiden.utils import to_rdn
 from raiden.utils.typing import TYPE_CHECKING, Address
 
 if TYPE_CHECKING:
@@ -55,7 +56,7 @@ def update_path_finding_service_from_balance_proof(
     network_address = new_balance_proof.canonical_identifier.token_network_address
     error_msg = (
         f"tried to send a balance proof in non-existant channel "
-        f"token_network_address: {pex(network_address)} "
+        f"token_network_address: {to_checksum_address(network_address)} "
     )
     assert channel_state is not None, error_msg
     update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
@@ -77,7 +78,7 @@ def update_monitoring_service_from_balance_proof(
     msg = (
         f"Failed to update monitoring service due to inability to find "
         f"channel: {new_balance_proof.channel_identifier} "
-        f"token_network_address: {pex(new_balance_proof.token_network_address)}."
+        f"token_network_address: {to_checksum_address(new_balance_proof.token_network_address)}."
     )
     assert channel_state, msg
 

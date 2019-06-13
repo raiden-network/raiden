@@ -3,7 +3,13 @@ from typing import List
 
 import gevent
 import structlog
-from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
+from eth_utils import (
+    encode_hex,
+    event_abi_to_log_topic,
+    is_binary_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -20,7 +26,7 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     Any,
     BlockNumber,
@@ -129,8 +135,8 @@ class SecretRegistry:
         # for the gas estimation and the transaction, however the
         # synchronization data is limited to the open_secret_transactions
         log_details = {
-            "node": pex(self.node_address),
-            "contract": pex(self.address),
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
             "secrethashes": secrethashes_to_register,
             "secrethashes_not_sent": secrethashes_not_sent,
         }

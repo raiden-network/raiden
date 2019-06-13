@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import gevent
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
@@ -36,7 +36,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -424,8 +424,8 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     else:
         log.debug(
             "Discarding unlock event, we're not part of it",
-            participant1=pex(participant1),
-            participant2=pex(participant2),
+            participant1=to_checksum_address(participant1),
+            participant2=to_checksum_address(participant2),
         )
         return
 
@@ -463,8 +463,8 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 break
 
     msg = (
-        f"Can not resolve channel_id for unlock with locksroot {pex(locksroot)} and "
-        f"partner {pex(partner)}."
+        f"Can not resolve channel_id for unlock with locksroot {to_hex(locksroot)} and "
+        f"partner {to_checksum_address(partner)}."
     )
     assert canonical_identifier is not None, msg
 
@@ -506,8 +506,8 @@ def on_blockchain_event(raiden: "RaidenService", event: Event):  # pragma: no un
     data = event.event_data
     log.debug(
         "Blockchain event",
-        node=pex(raiden.address),
-        contract=pex(event.originating_contract),
+        node=to_checksum_address(raiden.address),
+        contract=to_checksum_address(event.originating_contract),
         event_data=data,
     )
 

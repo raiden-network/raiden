@@ -6,6 +6,7 @@ from random import Random
 from typing import TYPE_CHECKING, Tuple
 
 import networkx
+from eth_utils import to_hex
 
 from raiden.constants import (
     EMPTY_LOCK_HASH,
@@ -25,7 +26,7 @@ from raiden.transfer.architecture import (
     TransferTask,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.utils import lpex, pex, sha3
+from raiden.utils import lpex, sha3
 from raiden.utils.typing import (
     Address,
     Any,
@@ -498,7 +499,7 @@ class ChainState(State):
             "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
         ).format(
             self.block_number,
-            pex(self.block_hash),
+            to_hex(self.block_hash),
             # pylint: disable=E1101
             lpex(self.identifiers_to_paymentnetworks.keys()),
             # pylint: disable=E1101

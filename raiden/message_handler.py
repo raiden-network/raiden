@@ -1,4 +1,5 @@
 import structlog
+from eth_utils import to_hex
 
 from raiden.constants import ABSENT_SECRET
 from raiden.messages import (
@@ -35,7 +36,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import pex, random_secret
+from raiden.utils import random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
 
 log = structlog.get_logger(__name__)
@@ -223,7 +224,7 @@ class MessageHandler:
         )
         if registered:
             log.warning(
-                f"Ignoring received locked transfer with secrethash {pex(secrethash)} "
+                f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
                 f"since it is already registered in the secret registry"
             )
             return

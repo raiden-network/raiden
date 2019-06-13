@@ -42,7 +42,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import MerkleTreeState
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
@@ -665,7 +665,7 @@ class TokenNetwork:
             msg = (
                 f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
                 f"be larger than the available balance {current_balance}, "
-                f"for token at address {pex(token.address)}"
+                f"for token at address {to_checksum_address(token.address)}"
             )
             raise DepositMismatch(msg)
 
