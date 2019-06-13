@@ -1768,6 +1768,7 @@ def handle_refundtransfer(
     if is_valid:
         assert pending_locks, "is_valid_refund should return pending locks if valid"
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
+        channel_state.partner_state.nonce = refund.transfer.balance_proof.nonce
         channel_state.partner_state.pending_locks = pending_locks
 
         lock = refund.transfer.lock
@@ -1843,6 +1844,7 @@ def handle_receive_lockedtransfer(
     if is_valid:
         assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = mediated_transfer.balance_proof
+        channel_state.partner_state.nonce = mediated_transfer.balance_proof.nonce
         channel_state.partner_state.pending_locks = pending_locks
 
         lock = mediated_transfer.lock
@@ -1880,6 +1882,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
             unlocked_pending_locks is not None
         ), "is_valid_unlock should return pending locks if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
+        channel_state.partner_state.nonce = unlock.balance_proof.nonce
         channel_state.partner_state.pending_locks = unlocked_pending_locks
 
         _del_lock(channel_state.partner_state, unlock.secrethash)

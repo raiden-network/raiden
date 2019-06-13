@@ -16,7 +16,7 @@ from raiden.tests.utils.factories import (
     make_block_hash,
 )
 from raiden.transfer.architecture import SendMessageEvent, TransitionResult
-from raiden.transfer.channel import compute_merkletree_with, get_status
+from raiden.transfer.channel import get_status
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
@@ -26,7 +26,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask
-from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
     handle_delivered,
     handle_new_payment_network,
@@ -50,10 +49,10 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     HopState,
     PaymentNetworkState,
+    PendingLocksState,
     RouteState,
     TokenNetworkGraphState,
     TokenNetworkState,
-    make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -165,8 +164,8 @@ def test_subdispatch_to_paymenttask_target(chain_state, netting_channel_state):
     lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
 
     netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
-    netting_channel_state.partner_state.merkletree = compute_merkletree_with(
-        merkletree=make_empty_merkle_tree(), lockhash=lock.lockhash
+    netting_channel_state.partner_state.pending_locks = PendingLocksState(
+        {lock.lockhash: lock.encoded}
     )
     state_change = Block(
         block_number=chain_state.block_number,
@@ -187,7 +186,7 @@ def test_subdispatch_to_paymenttask_target(chain_state, netting_channel_state):
             sender=netting_channel_state.partner_state.address,
             transferred_amount=0,
             pkey=factories.UNIT_TRANSFER_PKEY,
-            locksroot=merkleroot(make_empty_merkle_tree()),
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
         )
     )
     state_change = ReceiveLockExpired(
@@ -367,8 +366,8 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
     lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
 
     netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
-    netting_channel_state.partner_state.merkletree = compute_merkletree_with(
-        merkletree=make_empty_merkle_tree(), lockhash=lock.lockhash
+    netting_channel_state.partner_state.pending_locks = PendingLocksState(
+        {lock.lockhash: lock.encoded}
     )
     result = object()
     monkeypatch.setattr(
