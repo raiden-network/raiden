@@ -59,6 +59,7 @@ from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -421,9 +422,9 @@ class RaidenEventHandler(EventHandler):
         partner_locksroot = channel_state.partner_state.onchain_locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        search_events = our_locksroot != EMPTY_HASH
+        search_events = our_locksroot != LOCKSROOT_OF_NO_LOCKS
         # we want to unlock, because there are unlocked/unclaimed locks
-        search_state_changes = partner_locksroot != EMPTY_HASH
+        search_state_changes = partner_locksroot != LOCKSROOT_OF_NO_LOCKS
 
         if not search_events and not search_state_changes:
             # In the case that someone else sent the unlock we do nothing

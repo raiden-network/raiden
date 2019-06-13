@@ -1,4 +1,4 @@
-from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT
+from raiden.constants import EMPTY_HASH
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.factories import (
@@ -11,6 +11,7 @@ from raiden.tests.utils.mocks import make_raiden_service_mock
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_handle_contract_send_channelunlock_already_unlocked():
@@ -37,8 +38,8 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         partner_address=participant,
     )
 
-    channel_state.our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
-    channel_state.partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+    channel_state.our_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
+    channel_state.partner_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
 
     def detail_participants(  # pylint: disable=unused-argument
         participant1, participant2, block_identifier, channel_identifier
