@@ -117,7 +117,7 @@ from raiden.utils.typing import (
     Union,
     WithdrawAmount,
 )
-from raiden_contracts.tests.utils.constants import NONEXISTENT_LOCKSROOT
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -1015,7 +1015,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         transferred_amount = balance_proof.transferred_amount
         locked_amount = get_amount_locked(end_state)
     else:
-        locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
+        locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
         nonce = Nonce(0)
         transferred_amount = TokenAmount(0)
         locked_amount = TokenAmount(0)
@@ -1999,7 +1999,7 @@ def handle_channel_settled(
         partner_locksroot = state_change.partner_onchain_locksroot
 
         should_clear_channel = (
-            our_locksroot == NONEXISTENT_LOCKSROOT and partner_locksroot == NONEXISTENT_LOCKSROOT
+            our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
         )
 
         if should_clear_channel:
@@ -2076,14 +2076,15 @@ def handle_channel_batch_unlock(
 
         # partner is the address of the sender
         if state_change.sender == our_state.address:
-            our_state.onchain_locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
+            our_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
         elif state_change.sender == partner_state.address:
-            partner_state.onchain_locksroot = Locksroot(NONEXISTENT_LOCKSROOT)
+            partner_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
 
         # only clear the channel state once all unlocks have been done
         no_unlock_left_to_do = our_state.onchain_locksroot == Locksroot(
-            NONEXISTENT_LOCKSROOT
-        ) and partner_state.onchain_locksroot == Locksroot(NONEXISTENT_LOCKSROOT)
+            LOCKSROOT_OF_NO_LOCKS
+        ) and partner_state.onchain_locksroot == Locksroot(LOCKSROOT_OF_NO_LOCKS)
+
         if no_unlock_left_to_do:
             new_channel_state = None
 
