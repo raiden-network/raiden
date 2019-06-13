@@ -3,7 +3,7 @@ import copy
 import pytest
 
 import raiden.transfer.node
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, EMPTY_MERKLE_ROOT
+from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.settings import GAS_LIMIT
 from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
 from raiden.tests.utils import factories
@@ -67,6 +67,7 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
 )
 from raiden.transfer.views import get_networks
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_is_transaction_effect_satisfied(
@@ -84,7 +85,7 @@ def test_is_transaction_effect_satisfied(
         canonical_identifier=canonical_identifier,
         receiver=HOP1,
         sender=HOP2,
-        locksroot=EMPTY_MERKLE_ROOT,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         unlocked_amount=0,
         returned_tokens=0,
         block_number=1,
@@ -108,8 +109,8 @@ def test_is_transaction_effect_satisfied(
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=bytes(32),
         canonical_identifier=canonical_identifier,
-        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
         block_number=1,
         block_hash=make_block_hash(),
     )
