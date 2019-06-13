@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 import rlp
 from cachetools import LRUCache, cached
-from eth_utils import big_endian_to_int
+from eth_utils import big_endian_to_int, to_hex
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -32,7 +32,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, pex, sha3
+from raiden.utils import ishash, sha3
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.utils.signer import Signer, recover
 from raiden.utils.signing import pack_data
@@ -213,7 +213,7 @@ class Message:
 
     def __repr__(self):
         return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=pex(self.hash)
+            klass=self.__class__.__name__, msghash=to_hex(self.hash)
         )
 
     @property

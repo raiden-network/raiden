@@ -4,6 +4,7 @@ from enum import Enum
 from hashlib import sha256
 
 import gevent
+from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden.app import App
@@ -26,7 +27,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
     make_empty_merkle_tree,
 )
-from raiden.utils import lpex, pex, random_secret, sha3
+from raiden.utils import random_secret, sha3
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,
@@ -157,8 +158,8 @@ def _transfer_unlocked(
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
         msg = (
-            f"transfer from {pex(initiator_app.raiden.address)} "
-            f"to {pex(target_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
+            f"to {to_checksum_address(target_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
@@ -210,8 +211,8 @@ def _transfer_expired(
     with Timeout(seconds=timeout):
         wait_for_remove_expired_lock.get()
         msg = (
-            f"transfer from {pex(initiator_app.raiden.address)} "
-            f"to {pex(target_app.raiden.address)} did not expire."
+            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
+            f"to {to_checksum_address(target_app.raiden.address)} did not expire."
         )
         assert payment_status.payment_done.get() is False, msg
 
@@ -312,16 +313,16 @@ def transfer_and_assert_path(
         )
 
         msg = (
-            f"{pex(from_app.raiden.address)} does not have a channel with "
-            f"{pex(to_app.raiden.address)} needed to transfer through the "
-            f"path {lpex(app.raiden.address for app in path)}."
+            f"{to_checksum_address(from_app.raiden.address)} does not have a channel with "
+            f"{to_checksum_address(to_app.raiden.address)} needed to transfer through the "
+            f"path {[to_checksum_address(app.raiden.address) for app in path]}."
         )
         assert from_channel_state, msg
         assert to_channel_state, msg
 
         msg = (
-            f"channel among {pex(from_app.raiden.address)} and "
-            f"{pex(to_app.raiden.address)} must be open to be used for a "
+            f"channel among {to_checksum_address(from_app.raiden.address)} and "
+            f"{to_checksum_address(to_app.raiden.address)} must be open to be used for a "
             f"transfer"
         )
         assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
@@ -355,8 +356,8 @@ def transfer_and_assert_path(
     with Timeout(seconds=timeout):
         gevent.wait(results)
         msg = (
-            f"transfer from {pex(first_app.raiden.address)} "
-            f"to {pex(last_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(first_app.raiden.address)} "
+            f"to {to_checksum_address(last_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 

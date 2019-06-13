@@ -9,7 +9,7 @@ from uuid import UUID
 import filelock
 import gevent
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_checksum_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
@@ -71,7 +71,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, pex, random_secret
+from raiden.utils import create_default_identifier, lpex, random_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -346,7 +346,8 @@ class RaidenService(Runnable):
 
         if self.wal.state_manager.current_state is None:
             log.debug(
-                "No recoverable state available, creating inital state.", node=pex(self.address)
+                "No recoverable state available, creating inital state.",
+                node=to_checksum_address(self.address),
             )
             # On first run Raiden needs to fetch all events for the payment
             # network, to reconstruct all token network graphs and find opened
@@ -384,12 +385,12 @@ class RaidenService(Runnable):
             log.debug(
                 "Restored state from WAL",
                 last_restored_block=last_log_block_number,
-                node=pex(self.address),
+                node=to_checksum_address(self.address),
             )
 
             known_networks = views.get_payment_network_address(views.state_from_raiden(self))
             if known_networks and self.default_registry.address not in known_networks:
-                configured_registry = pex(self.default_registry.address)
+                configured_registry = to_checksum_address(self.default_registry.address)
                 known_registries = lpex(known_networks)
                 raise RuntimeError(
                     f"Token network address mismatch.\n"
@@ -438,12 +439,12 @@ class RaidenService(Runnable):
         self._start_transport(chain_state)
         self._start_alarm_task()
 
-        log.debug("Raiden Service started", node=pex(self.address))
+        log.debug("Raiden Service started", node=to_checksum_address(self.address))
         super().start()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
-        self.greenlet.name = f"RaidenService._run node:{pex(self.address)}"
+        self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
         try:
             self.stop_event.wait()
         except gevent.GreenletExit:  # killed without exception
@@ -485,7 +486,7 @@ class RaidenService(Runnable):
         if self.db_lock is not None:
             self.db_lock.release()
 
-        log.debug("Raiden Service stopped", node=pex(self.address))
+        log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
 
     @property
     def confirmation_blocks(self) -> BlockTimeout:
@@ -506,7 +507,7 @@ class RaidenService(Runnable):
         greenlet.link_value(remove)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} node:{pex(self.address)}>"
+        return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
     def _start_transport(self, chain_state: ChainState) -> None:
         """ Initialize the transport and related facilities.
@@ -573,7 +574,7 @@ class RaidenService(Runnable):
         assert self.wal, f"WAL not restored. node:{self!r}"
         log.debug(
             "State change",
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
             state_change=_redact_secret(JSONSerializer.serialize(state_change)),
         )
 
@@ -585,7 +586,7 @@ class RaidenService(Runnable):
 
         log.debug(
             "Raiden events",
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
             raiden_events=[
                 _redact_secret(JSONSerializer.serialize(event)) for event in raiden_event_list
             ],
@@ -735,7 +736,7 @@ class RaidenService(Runnable):
         log.debug(
             "Processing pending transactions",
             num_pending_transactions=len(pending_transactions),
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
         )
 
         for transaction in pending_transactions:
@@ -1007,7 +1008,7 @@ class RaidenService(Runnable):
         )
         if secret_registered:
             raise RaidenUnrecoverableError(
-                f"Attempted to initiate a locked transfer with secrethash {pex(secrethash)}."
+                f"Attempted to initiate a locked transfer with secrethash {to_hex(secrethash)}."
                 f" That secret is already registered onchain."
             )
 

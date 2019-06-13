@@ -2,6 +2,7 @@ from collections import defaultdict
 from unittest.mock import patch
 
 import structlog
+from eth_utils import to_checksum_address
 from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
@@ -12,7 +13,7 @@ from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
 from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
 from raiden.transfer.state import ChainState
-from raiden.utils import pex, typing
+from raiden.utils import typing
 
 log = structlog.get_logger(__name__)
 
@@ -123,7 +124,7 @@ class HoldRaidenEventHandler(EventHandler):
 
         hold = holds.pop(found[0])
         self.wrapped.on_raiden_event(raiden, hold.chain_state, event)
-        log.debug(f"{event} released.", node=pex(raiden.address))
+        log.debug(f"{event} released.", node=to_checksum_address(raiden.address))
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash) -> AsyncResult:
         return self.hold(SendSecretRequest, {"secrethash": secrethash})

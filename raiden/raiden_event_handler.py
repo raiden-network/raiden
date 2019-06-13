@@ -57,7 +57,6 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
-from raiden.utils import pex
 from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 
@@ -167,7 +166,11 @@ class RaidenEventHandler(EventHandler):
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
-            log.error("Unknown event", event_type=str(type(event)), node=pex(raiden.address))
+            log.error(
+                "Unknown event",
+                event_type=str(type(event)),
+                node=to_checksum_address(raiden.address),
+            )
 
     @staticmethod
     def handle_send_lockexpired(
@@ -283,9 +286,9 @@ class RaidenEventHandler(EventHandler):
         # pylint: disable=unused-argument
         log.error(
             "UnlockFailed!",
-            secrethash=pex(unlock_failed_event.secrethash),
+            secrethash=to_hex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
-            node=pex(raiden.address),
+            node=to_checksum_address(raiden.address),
         )
 
     @staticmethod
@@ -559,7 +562,7 @@ class RaidenEventHandler(EventHandler):
             "chain_id": canonical_identifier.chain_identifier,
             "token_network_address": canonical_identifier.token_network_address,
             "channel_identifier": canonical_identifier.channel_identifier,
-            "node": pex(raiden.address),
+            "node": to_checksum_address(raiden.address),
             "partner": to_checksum_address(partner_details.address),
             "our_deposit": our_details.deposit,
             "our_withdrawn": our_details.withdrawn,

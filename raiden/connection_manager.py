@@ -2,7 +2,7 @@ from random import shuffle
 
 import gevent
 import structlog
-from eth_utils import decode_hex
+from eth_utils import decode_hex, to_checksum_address
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -20,7 +20,7 @@ from raiden.exceptions import (
     TransactionThrew,
 )
 from raiden.transfer import views
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden.utils.typing import Address, TokenAmount, TokenNetworkAddress
 
 log = structlog.get_logger(__name__)
@@ -47,9 +47,9 @@ def log_open_channels(raiden, registry_address, token_address, funds):  # pragma
         )
         log.debug(
             "connect() called on an already joined token network",
-            node=pex(raiden.address),
-            registry_address=pex(registry_address),
-            token_address=pex(token_address),
+            node=to_checksum_address(raiden.address),
+            registry_address=to_checksum_address(registry_address),
+            token_address=to_checksum_address(token_address),
             open_channels=len(open_channels),
             sum_deposits=sum_deposits,
             funds=funds,
@@ -123,7 +123,9 @@ class ConnectionManager:  # pragma: no unittest
         token_balance = token.balance_of(self.raiden.address)
 
         if token_balance < funds:
-            raise InvalidAmount(f"Insufficient balance for token {pex(self.token_address)}")
+            raise InvalidAmount(
+                f"Insufficient balance for token {to_checksum_address(self.token_address)}"
+            )
 
         if funds <= 0:
             raise InvalidAmount("The funds to use in the connection need to be a positive integer")
@@ -147,9 +149,9 @@ class ConnectionManager:  # pragma: no unittest
             if not qty_network_channels:
                 log.info(
                     "Bootstrapping token network.",
-                    node=pex(self.raiden.address),
-                    network_id=pex(self.registry_address),
-                    token_id=pex(self.token_address),
+                    node=to_checksum_address(self.raiden.address),
+                    network_id=to_checksum_address(self.registry_address),
+                    token_id=to_checksum_address(self.token_address),
                 )
                 self.api.channel_open(
                     self.registry_address, self.token_address, self.BOOTSTRAP_ADDR
@@ -238,7 +240,9 @@ class ConnectionManager:  # pragma: no unittest
                     self.registry_address, self.token_address, partner_address, joining_funds
                 )
             except RaidenRecoverableError:
-                log.info("Channel not in opened state", node=pex(self.raiden.address))
+                log.info(
+                    "Channel not in opened state", node=to_checksum_address(self.raiden.address)
+                )
             except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
@@ -249,12 +253,12 @@ class ConnectionManager:  # pragma: no unittest
                 if should_crash:
                     raise
 
-                log.critical(str(e), node=pex(self.raiden.address))
+                log.critical(str(e), node=to_checksum_address(self.raiden.address))
             else:
                 log.info(
                     "Joined a channel",
-                    node=pex(self.raiden.address),
-                    partner=pex(partner_address),
+                    node=to_checksum_address(self.raiden.address),
+                    partner=to_checksum_address(partner_address),
                     funds=joining_funds,
                 )
 
@@ -290,7 +294,7 @@ class ConnectionManager:  # pragma: no unittest
 
         log.debug(
             "Found partners",
-            node=pex(self.raiden.address),
+            node=to_checksum_address(self.raiden.address),
             number_of_partners=len(available_addresses),
         )
 
@@ -319,7 +323,11 @@ class ConnectionManager:  # pragma: no unittest
         except InvalidDBData:
             raise
         except RECOVERABLE_ERRORS:
-            log.info("Deposit failed", node=pex(self.raiden.address), partner=pex(partner))
+            log.info(
+                "Deposit failed",
+                node=to_checksum_address(self.raiden.address),
+                partner=to_checksum_address(partner),
+            )
         except RaidenUnrecoverableError:
             should_crash = (
                 self.raiden.config["environment_type"] != Environment.PRODUCTION
@@ -328,7 +336,11 @@ class ConnectionManager:  # pragma: no unittest
             if should_crash:
                 raise
 
-            log.critical("Deposit failed", node=pex(self.raiden.address), partner=pex(partner))
+            log.critical(
+                "Deposit failed",
+                node=to_checksum_address(self.raiden.address),
+                partner=to_checksum_address(partner),
+            )
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`
@@ -382,7 +394,7 @@ class ConnectionManager:  # pragma: no unittest
 
         log.debug(
             "Spawning greenlets to join partners",
-            node=pex(self.raiden.address),
+            node=to_checksum_address(self.raiden.address),
             num_greenlets=len(join_partners),
         )
 

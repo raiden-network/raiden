@@ -21,7 +21,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     PRODUCTION_CONTRACT_VERSION,
 )
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
@@ -115,7 +115,7 @@ class App:  # pylint: disable=too-few-public-methods
         self.raiden = raiden
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, pex(self.raiden.address))
+        return "<{} {}>".format(self.__class__.__name__, to_checksum_address(self.raiden.address))
 
     def start(self):
         """ Start the raiden app. """

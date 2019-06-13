@@ -41,7 +41,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.typing import (
     Address,
@@ -574,7 +574,7 @@ class RaidenAPI:  # pragma: no unittest
         # transaction.
         if not balance >= addendum:
             msg = "Not enough balance to deposit. {} Available={} Needed={}".format(
-                pex(token_address), balance, addendum
+                to_checksum_address(token_address), balance, addendum
             )
             raise InsufficientFunds(msg)
 
@@ -826,9 +826,9 @@ class RaidenAPI:  # pragma: no unittest
 
         log.debug(
             "Initiating transfer",
-            initiator=pex(self.raiden.address),
-            target=pex(target),
-            token=pex(token_address),
+            initiator=to_checksum_address(self.raiden.address),
+            target=to_checksum_address(target),
+            token=to_checksum_address(token_address),
             amount=amount,
             identifier=identifier,
         )

@@ -12,7 +12,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     Address,
     Balance,
@@ -167,9 +167,9 @@ class UserDeposit:
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         log_details = {
-            "user_deposit_address": pex(self.address),
-            "node": pex(self.node_address),
-            "beneficiary": pex(beneficiary),
+            "user_deposit_address": to_checksum_address(self.address),
+            "node": to_checksum_address(self.node_address),
+            "beneficiary": to_checksum_address(beneficiary),
             "new_total_deposit": total_deposit,
             "previous_total_deposit": previous_total_deposit,
         }
@@ -189,7 +189,7 @@ class UserDeposit:
             msg = (
                 f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
                 f"be larger than the available balance {current_balance}, "
-                f"for token at address {pex(token.address)}"
+                f"for token at address {to_checksum_address(token.address)}"
             )
             log.info("deposit failed", reason=msg, **log_details)
             raise DepositMismatch(msg)
