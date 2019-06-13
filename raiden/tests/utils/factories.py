@@ -6,7 +6,7 @@ from hashlib import sha256
 
 from eth_utils import to_checksum_address
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -87,6 +87,7 @@ from raiden.utils.typing import (
     Type,
     TypeVar,
 )
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 EMPTY = "empty"
 GENERATE = "generate"
@@ -520,7 +521,7 @@ BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     nonce=1,
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
-    locksroot=EMPTY_MERKLE_ROOT,
+    locksroot=LOCKSROOT_OF_NO_LOCKS,
     canonical_identifier=UNIT_CANONICAL_ID,
 )
 
@@ -691,7 +692,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         expiration=transfer.expiration,
         secrethash=sha256(transfer.secret).digest(),
     )
-    if transfer.locksroot == EMPTY_MERKLE_ROOT:
+    if transfer.locksroot == LOCKSROOT_OF_NO_LOCKS:
         transfer = replace(transfer, locksroot=lock.lockhash)
 
     return LockedTransferUnsignedState(
@@ -733,7 +734,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     pkey = params.pop("pkey")
     signer = LocalSigner(pkey)
     sender = params.pop("sender")
-    if params["locksroot"] == EMPTY_MERKLE_ROOT:
+    if params["locksroot"] == LOCKSROOT_OF_NO_LOCKS:
         params["locksroot"] = lock.lockhash
     params["fee"] = 0
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
