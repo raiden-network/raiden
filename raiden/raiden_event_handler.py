@@ -594,7 +594,7 @@ class RaidenEventHandler(EventHandler):
                     "Our balance proof could not be found in the database"
                 )
 
-            our_balance_proof = event_record.data.balance_proof
+            our_balance_proof = event_record.data.balance_proof  # type: ignore
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
@@ -616,7 +616,7 @@ class RaidenEventHandler(EventHandler):
                     "Partner balance proof could not be found in the database"
                 )
 
-            partner_balance_proof = state_change_record.data.balance_proof
+            partner_balance_proof = state_change_record.data.balance_proof  # type: ignore
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot

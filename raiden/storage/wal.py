@@ -3,9 +3,14 @@ from datetime import datetime
 import gevent.lock
 import structlog
 
-from raiden.storage.sqlite import FIRST_STATECHANGE_ULID, Range, SerializedSQLiteStorage, StateChangeID
+from raiden.storage.sqlite import (
+    FIRST_STATECHANGE_ULID,
+    Range,
+    SerializedSQLiteStorage,
+    StateChangeID,
+)
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, Generic, List, RaidenDBVersion, Tuple, TypeVar
+from raiden.utils.typing import Callable, Generic, List, Optional, RaidenDBVersion, Tuple, TypeVar
 
 log = structlog.get_logger(__name__)
 
@@ -15,6 +20,7 @@ def restore_to_state_change(
     storage: SerializedSQLiteStorage,
     state_change_identifier: StateChangeID,
 ) -> "WriteAheadLog":
+    chain_state: Optional[State]
     from_identifier: StateChangeID
 
     snapshot = storage.get_snapshot_before_state_change(
