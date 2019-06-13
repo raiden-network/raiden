@@ -3,7 +3,7 @@ from eth_utils import is_binary_address, to_checksum_address, to_normalized_addr
 from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
+from raiden.exceptions import RaidenRecoverableError, TransactionThrew
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -17,6 +17,16 @@ log = structlog.get_logger(__name__)
 
 # Determined by safe_gas_limit(estimateGas(approve)) on 17/01/19 with geth 1.8.20
 GAS_REQUIRED_FOR_APPROVE = 58792
+
+
+def _insufficient_balance_message(prefix, balance, required):
+    msg = f"{prefix} Your balance of {balance} is below the required amount of {required}."
+    if balance == 0:
+        msg += (
+            " Note: The balance was 0, which may also happen if the contract "
+            "is not a valid ERC20 token (balanceOf method missing)."
+        )
+    return msg
 
 
 class Token:
@@ -50,12 +60,14 @@ class Token:
         ).call(block_identifier=block_identifier)
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
-        """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
+        """ Approve `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
 
             For channel deposit please use the channel proxy, since it does
             additional validations.
+            We assume there to be sufficient balance as a precondition if this
+            is called, so it is not checked as a precondition here.
         """
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
@@ -99,49 +111,23 @@ class Token:
                         block_identifier=block,
                     )
 
-                    msg = self._check_why_approved_failed(allowance, block)
-                    raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
+                    balance = self.balance_of(self.client.address, checking_block)
+                    if balance < allowance:
+                        raise RaidenRecoverableError(
+                            _insufficient_balance_message(error_prefix, balance, allowance)
+                        )
 
-    def _check_why_approved_failed(
-        self, allowance: TokenAmount, block_identifier: BlockSpecification
-    ) -> str:
-        user_balance = self.balance_of(
-            address=self.client.address, block_identifier=block_identifier
-        )
-
-        # If the balance is zero, either the smart contract doesnt have a
-        # balanceOf function or the actual balance is zero
-        if user_balance == 0:
-            msg = (
-                "Approve failed. \n"
-                "Your account balance is 0 (zero), either the smart "
-                "contract is not a valid ERC20 token or you don't have funds "
-                "to use for openning a channel. "
-            )
-
-        # The approve call failed, check the user has enough balance
-        # (assuming the token smart contract may check for the maximum
-        # allowance, which is not necessarily the case)
-        elif user_balance < allowance:
-            msg = (
-                f"Approve failed. \n"
-                f"Your account balance is {user_balance}. "
-                f"The requested allowance is {allowance}. "
-                f"The smart contract may be rejecting your request due to the "
-                f"lack of balance."
-            )
-
-        # If the user has enough balance, warn the user the smart contract
-        # may not have the approve function.
-        else:
-            msg = (
-                f"Approve failed. \n"
-                f"Your account balance is {user_balance}. Nevertheless the call to"
-                f"approve failed. Please make sure the corresponding smart "
-                f"contract is a valid ERC20 token."
-            ).format(user_balance)
-
-        return msg
+                    if gas_limit is None:
+                        raise RaidenRecoverableError(
+                            f"{error_prefix} Gas estimation failed for unknown reason. "
+                            f"Please make sure the contract is a valid ERC20 token."
+                        )
+                    else:
+                        raise RaidenRecoverableError(
+                            f"{error_prefix}. The reason is unknown, you have enough tokens for "
+                            f"the requested allowance and enough eth to pay the gas. There may "
+                            f"be a problem with the token contract."
+                        )
 
     def balance_of(
         self, address: Address, block_identifier: BlockSpecification = "latest"
