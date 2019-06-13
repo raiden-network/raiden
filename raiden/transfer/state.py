@@ -271,7 +271,7 @@ class MerkleTreeState(State):
 
 @dataclass
 class PendingLocksState(State):
-    locks: Dict[LockHash, bytes]
+    locks: Dict[LockHash, EncodedData]
 
 
 def make_empty_pending_locks_state() -> PendingLocksState:

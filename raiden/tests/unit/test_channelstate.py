@@ -109,7 +109,7 @@ def create_model(balance, merkletree_width=0):
     privkey, address = make_privkey_address()
 
     locks = [make_lock() for _ in range(merkletree_width)]
-    pending_locks = dict((lock.lockhash, lock) for lock in locks)
+    pending_locks = dict((lock.lockhash, lock.encoded) for lock in locks)
 
     our_model = PartnerStateModel(
         participant_address=address,
@@ -833,7 +833,7 @@ def test_interwoven_transfers():
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
         pending_locks = PendingLocksState(partner_model_current.pending_locks)
-        pending_locks.locks.update({lock.lockhash: lock})
+        pending_locks.locks.update({lock.lockhash: lock.encoded})
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,
@@ -1280,13 +1280,7 @@ def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
     locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.locks.update(  # pylint: disable=E1101
-            {
-                lock.lockhash: HashTimeLockState(
-                    amount=lock.amount, expiration=lock.expiration, secrethash=lock.secrethash
-                )
-            }
-        )
+        locks.locks.update({lock.lockhash: lock.as_bytes})  # pylint: disable=E1101
     return locks
 
 
@@ -1310,7 +1304,7 @@ def test_channelstate_get_unlock_proof():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks.locks.update({lock.lockhash: lock})  # pylint: disable=E1101
+        pending_locks.locks.update({lock.lockhash: lock.encoded})  # pylint: disable=E1101
         if random.randint(0, 1) == 0:
             locked_locks[lock_secrethash] = lock
         else:
@@ -1323,8 +1317,7 @@ def test_channelstate_get_unlock_proof():
 
     unlock_proof = channel.get_batch_unlock(end_state)
     assert len(unlock_proof.locks) == len(end_state.pending_locks.locks)
-    unlock_proof_locks = [l.encoded for l in unlock_proof.locks.values()]
-    leaves_packed = b"".join(unlock_proof_locks)
+    leaves_packed = b"".join(unlock_proof.locks.values())
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
     assert len(recomputed_pending_locks.locks) == len(end_state.pending_locks.locks)
