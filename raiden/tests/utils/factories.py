@@ -329,6 +329,13 @@ def make_merkletree(leaves: List[SecretHash]) -> MerkleTreeState:
     return MerkleTreeState(compute_layers(leaves))
 
 
+def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
+    ret = PendingLocksState(dict())
+    for lock in locks:
+        ret.locks.update({lock.lockhash: lock.encoded})
+    return ret
+
+
 @singledispatch
 def create(properties: Any, defaults: Optional[Properties] = None) -> Any:
     """Create objects from their associated property class.
