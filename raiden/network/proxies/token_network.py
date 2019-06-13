@@ -720,23 +720,23 @@ class TokenNetwork:
                     )
                     raise DepositMismatch(msg)
 
-            log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(self.node_address),
-                "receiver": to_checksum_address(partner),
-            }
+                log_details = {
+                    "node": to_checksum_address(self.node_address),
+                    "contract": to_checksum_address(self.address),
+                    "participant": to_checksum_address(self.node_address),
+                    "receiver": to_checksum_address(partner),
+                }
 
-            with log_transaction(log, "set_total_deposit", log_details):
-                self._set_total_deposit(
-                    channel_identifier,
-                    total_deposit,
-                    partner,
-                    sender_details.deposit,
-                    token,
-                    given_block_identifier,
-                    log_details,
-                )
+                with log_transaction(log, "set_total_deposit", log_details):
+                    self._set_total_deposit(
+                        channel_identifier=channel_identifier,
+                        total_deposit=total_deposit,
+                        previous_total_deposit=sender_details.deposit,
+                        partner=partner,
+                        token=token,
+                        given_block_identifier=given_block_identifier,
+                        log_details=log_details,
+                    )
 
     def _set_total_deposit(
         self,
