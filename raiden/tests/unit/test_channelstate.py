@@ -831,7 +831,7 @@ def test_interwoven_transfers():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks = PendingLocksState(partner_model_current.pending_locks)
+        pending_locks = PendingLocksState(dict(partner_model_current.pending_locks))
         pending_locks.locks.update({lock.lockhash: lock.encoded})
 
         partner_model_current = partner_model_current._replace(
