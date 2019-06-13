@@ -120,6 +120,6 @@ def test_payment_channel_proxy_basics(
             block_identifier="latest",
         )
 
-    msg = "The channel is closed, set total deposit must fail"
-    with pytest.raises(ChannelOutdatedError, message=msg):
+    msg = "The channel was not opened at the provided block (latest). This call should never have been attempted."
+    with pytest.raises(RaidenUnrecoverableError, message=msg):
         channel_proxy_1.set_total_deposit(total_deposit=20, block_identifier="latest")
