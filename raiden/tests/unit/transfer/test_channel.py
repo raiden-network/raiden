@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 
-from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
@@ -23,6 +23,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 def _channel_and_transfer(merkletree_width):
@@ -102,8 +103,8 @@ def test_channel_cleared_after_two_unlocks():
     )
 
     msg = "both participants have pending locks, merkleroot must not be empty"
-    assert iteration.new_state.our_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.our_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
+    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
 
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
@@ -114,9 +115,9 @@ def test_channel_cleared_after_two_unlocks():
         pseudo_random_generator=pseudo_random_generator,
     )
     msg = "all of our locks has been unlocked, onchain state must be updated"
-    assert iteration.new_state.our_state.onchain_locksroot is EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.our_state.onchain_locksroot is LOCKSROOT_OF_NO_LOCKS, msg
     msg = "partner has pending locks, the merkleroot must not be cleared"
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -129,7 +130,7 @@ def test_channel_cleared_after_two_unlocks():
         pseudo_random_generator=pseudo_random_generator,
     )
     msg = "partner has pending locks, the merkleroot must not be cleared"
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -175,8 +176,8 @@ def test_channel_cleared_after_our_unlock():
         block_hash=make_block_hash(),
     )
 
-    assert settle_channel.our_onchain_locksroot is not EMPTY_MERKLE_ROOT
-    assert settle_channel.partner_onchain_locksroot is EMPTY_MERKLE_ROOT
+    assert settle_channel.our_onchain_locksroot != LOCKSROOT_OF_NO_LOCKS
+    assert settle_channel.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
 
     iteration = channel.state_transition(
         channel_state=channel_state,
