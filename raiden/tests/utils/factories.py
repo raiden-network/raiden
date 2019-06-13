@@ -37,6 +37,7 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     PaymentNetworkState,
+    PendingLocksState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -65,7 +66,6 @@ from raiden.utils.typing import (
     InitiatorAddress,
     Keccak256,
     List,
-    LockHashLockDict,
     Locksroot,
     MessageID,
     NamedTuple,
@@ -401,7 +401,7 @@ class NettingChannelEndStateProperties(Properties):
     address: Address = EMPTY
     privatekey: bytes = EMPTY
     balance: TokenAmount = EMPTY
-    pending_locks: LockHashLockDict = EMPTY
+    pending_locks: PendingLocksState = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
 

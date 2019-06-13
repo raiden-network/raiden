@@ -1186,7 +1186,7 @@ def compute_locks_with(
     lockhash = lock.lockhash
     if lockhash not in locks.locks:
         locks = PendingLocksState(dict(locks.locks))
-        locks.locks.update({lockhash: lock})  # pylint: disable=E1101
+        locks.locks.update({lockhash: lock.encoded})  # pylint: disable=E1101
         return locks
     else:
         return None
@@ -1208,8 +1208,7 @@ def compute_locksroot(locks: PendingLocksState) -> Locksroot:
     """ Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
-    locks_as_bytes = map(lambda l: l.encoded, locks.locks.values())
-    return Locksroot(keccak(b"".join(locks_as_bytes)))
+    return Locksroot(keccak(b"".join(locks.locks.values())))
 
 
 def create_sendlockedtransfer(
