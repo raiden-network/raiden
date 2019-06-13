@@ -175,7 +175,7 @@ def pytest_configure():
             if func_only is None:
                 return False
             if not isinstance(func_only, bool):
-                raise ValueError("Invalid func_only value %s from %s" % (func_only, where))
+                raise ValueError(f"Invalid func_only value {func_only} from {where}")
         return func_only
 
     pytest_timeout._validate_func_only = _validate_func_only
@@ -251,7 +251,7 @@ if sys.platform == "darwin":
                     user = get_user() or "unknown"
                     # use a sub-directory in the temproot to speed-up
                     # make_numbered_dir() call
-                    rootdir = temproot.joinpath("pyt-{}".format(user))
+                    rootdir = temproot.joinpath(f"pyt-{user}")
                     rootdir.mkdir(exist_ok=True)
                     basetemp = make_numbered_dir_with_cleanup(
                         prefix="", root=rootdir, keep=3, lock_timeout=LOCK_TIMEOUT

@@ -13,7 +13,7 @@ def pack_data(abi_types: List[str], values: List[Any]) -> bytes:
     if len(abi_types) != len(values):
         raise ValueError(
             "Length mismatch between provided abi types and values.  Got "
-            "{0} types and {1} values.".format(len(abi_types), len(values))
+            "{} types and {} values.".format(len(abi_types), len(values))
         )
 
     normalized_values = map_abi_data([abi_address_to_hex], abi_types, values)
