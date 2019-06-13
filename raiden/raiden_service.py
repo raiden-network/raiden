@@ -689,8 +689,7 @@ class RaidenService(Runnable):
             # Handle testing with private chains. The block number can be
             # smaller than confirmation_blocks
             confirmed_block_number = max(
-                GENESIS_BLOCK_NUMBER,
-                latest_block_number - self.config["blockchain"]["confirmation_blocks"],
+                GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
             )
             confirmed_block = self.chain.client.web3.eth.getBlock(confirmed_block_number)
 
