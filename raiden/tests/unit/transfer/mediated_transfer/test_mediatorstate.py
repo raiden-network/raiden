@@ -1370,7 +1370,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 transferred_amount=0,
                 message_identifier=index,
             ),
-            compute_locksroot=True,
+            calculate_locksroot=True,
             allow_invalid=True,
             only_transfer=False,
         )
