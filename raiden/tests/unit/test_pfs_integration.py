@@ -11,14 +11,13 @@ from eth_utils import (
     is_hex_address,
     to_canonical_address,
     to_checksum_address,
-    to_hex,
 )
 
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
     IOU,
     MAX_PATHS_QUERY_ATTEMPTS,
-    PFSConfiguration,
+    PFSConfig,
     PFSError,
     PFSInfo,
     get_last_iou,
@@ -97,6 +96,22 @@ def create_square_network_topology(
     return new_state, [address1, address2, address3, address4], channels
 
 
+PFS_CONFIG = PFSConfig(
+    info=PFSInfo(
+        url="abc",
+        price=TokenAmount(12),
+        chain_id=ChainID(42),
+        token_network_registry_address=factories.make_token_network_address(),
+        payment_address=factories.make_address(),
+        message="",
+        operator="",
+        version="",
+        settings="",
+    ),
+    maximum_fee=TokenAmount(100),
+    iou_timeout=BlockNumber(100),
+    max_paths=5,
+)
 CONFIG = {
     "services": {
         "pathfinding_service_address": "my-pfs",
@@ -106,22 +121,7 @@ CONFIG = {
         "pathfinding_max_fee": 50,
         "pathfinding_fee": 5,
     },
-    "pfs_config": PFSConfiguration(
-        info=PFSInfo(
-            url="abc",
-            price=12,
-            chain_id=42,
-            token_network_registry_address=factories.make_token_network_address(),
-            payment_address=factories.make_address(),
-            message="",
-            operator="",
-            version="",
-            settings="",
-        ),
-        maximum_fee=100,
-        iou_timeout=100,
-        max_paths=5,
-    ),
+    "pfs_config": PFS_CONFIG,
 }
 
 PRIVKEY = b"privkeyprivkeyprivkeyprivkeypriv"
@@ -246,7 +246,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
 
     # Check for iou arguments in request payload
     iou = patched.call_args[1]["json"]["iou"]
-    pfs_config: PFSConfiguration = CONFIG["pfs_config"]
+    pfs_config: PFSConfig = CONFIG["pfs_config"]
     for key in ("amount", "expiration_block", "signature", "sender", "receiver"):
         assert key in iou
     assert iou["amount"] <= pfs_config.maximum_fee
@@ -262,22 +262,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
     _, channel_state2 = channel_states
 
     iou = make_iou(
-        pfs_config=PFSConfiguration(
-            info=PFSInfo(
-                url="",
-                price=1,
-                chain_id=1,
-                token_network_registry_address=factories.make_token_network_address(),
-                payment_address=factories.make_address(),
-                message="",
-                operator="",
-                version="",
-                settings="",
-            ),
-            maximum_fee=TokenAmount(13),
-            iou_timeout=BlockNumber(100),
-            max_paths=5,
-        ),
+        pfs_config=PFS_CONFIG,
         our_address=factories.UNIT_TRANSFER_SENDER,
         one_to_n_address=one_to_n_address,
         privkey=PRIVKEY,
@@ -294,17 +279,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             from_address=our_address,
             to_address=address4,
             amount=50,
-            iou_json_data=dict(
-                last_iou=dict(
-                    sender=to_checksum_address(iou.sender),
-                    receiver=to_checksum_address(iou.receiver),
-                    one_to_n_address=to_checksum_address(one_to_n_address),
-                    amount=iou.amount,
-                    expiration_block=iou.expiration_block,
-                    chain_id=iou.chain_id,
-                    signature=to_hex(iou.signature),
-                )
-            ),
+            iou_json_data=dict(last_iou=last_iou.as_json()),
         )
 
     assert_checksum_address_in_url(patched.call_args[0][0])
@@ -319,8 +294,8 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
     old_amount = last_iou.amount
     assert old_amount < payload["iou"]["amount"] <= pfs_config.maximum_fee + old_amount
     assert payload["iou"]["expiration_block"] == last_iou.expiration_block
-    assert payload["iou"]["sender"] == last_iou.sender
-    assert payload["iou"]["receiver"] == last_iou.receiver
+    assert payload["iou"]["sender"] == to_checksum_address(last_iou.sender)
+    assert payload["iou"]["receiver"] == to_checksum_address(last_iou.receiver)
     assert "signature" in payload["iou"]
 
 
@@ -576,22 +551,7 @@ def test_get_and_update_iou(one_to_n_address):
     response = Mock()
     response.configure_mock(status_code=200)
     last_iou = make_iou(
-        pfs_config=PFSConfiguration(
-            info=PFSInfo(
-                url="",
-                price=1,
-                chain_id=1,
-                token_network_registry_address=factories.make_token_network_address(),
-                payment_address=factories.UNIT_TRANSFER_TARGET,
-                message="",
-                operator="",
-                version="",
-                settings="",
-            ),
-            maximum_fee=TokenAmount(100),
-            iou_timeout=BlockNumber(500),
-            max_paths=5,
-        ),
+        pfs_config=PFS_CONFIG,
         our_address=factories.UNIT_TRANSFER_INITIATOR,
         privkey=PRIVKEY,
         block_number=10,
@@ -657,23 +617,10 @@ def test_make_iou():
     chain_id = ChainID(4)
     max_fee = 100
 
+    pfs_config_copy = replace(PFS_CONFIG)
+    pfs_config_copy.info = replace(pfs_config_copy.info, payment_address=receiver)
     iou = make_iou(
-        pfs_config=PFSConfiguration(
-            info=PFSInfo(
-                url="",
-                price=1,
-                chain_id=1,
-                token_network_registry_address=factories.make_token_network_address(),
-                payment_address=receiver,
-                message="",
-                operator="",
-                version="",
-                settings="",
-            ),
-            maximum_fee=TokenAmount(max_fee),
-            iou_timeout=BlockNumber(10_000),
-            max_paths=5,
-        ),
+        pfs_config=pfs_config_copy,
         our_address=sender,
         privkey=privkey,
         block_number=10,
@@ -798,32 +745,11 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
 
 
 @pytest.fixture
-def pfs_max_fee():
-    return 1000
-
-
-@pytest.fixture
 def query_paths_args(
-    chain_id, token_network_state, one_to_n_address, our_address, pfs_max_fee
+    chain_id, token_network_state, one_to_n_address, our_address
 ) -> Dict[str, Any]:
-    pfs_config = PFSConfiguration(
-        info=PFSInfo(
-            url="mock.pathservice",
-            price=int(pfs_max_fee / 2),
-            chain_id=1,
-            token_network_registry_address=b'""""""""""""""""""""',
-            payment_address=factories.make_address(),
-            message="",
-            operator="",
-            version="",
-            settings="",
-        ),
-        maximum_fee=TokenAmount(pfs_max_fee),
-        iou_timeout=BlockNumber(500),
-        max_paths=3,
-    )
     return dict(
-        pfs_config=pfs_config,
+        pfs_config=PFS_CONFIG,
         our_address=our_address,
         privkey=PRIVKEY,
         current_block_number=10,
