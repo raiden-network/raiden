@@ -80,7 +80,7 @@ def api_url_for(api_server, endpoint, **kwargs):
         if isinstance(val, str) and val.startswith("0x"):
             kwargs[key] = to_canonical_address(val)
     with api_server.flask_app.app_context():
-        return url_for("v1_resources.{}".format(endpoint), **kwargs)
+        return url_for(f"v1_resources.{endpoint}", **kwargs)
 
 
 def test_hex_converter():

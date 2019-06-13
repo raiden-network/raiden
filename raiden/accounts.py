@@ -234,4 +234,4 @@ class Account:
             address = encode_hex(self.address)
         else:
             address = "?"
-        return "<Account(address={address}, id={id})>".format(address=address, id=self.uuid)
+        return f"<Account(address={address}, id={self.uuid})>"

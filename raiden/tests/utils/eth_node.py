@@ -60,7 +60,7 @@ def geth_clique_extradata(extra_vanity: str, extra_seal: str) -> str:
     # https://github.com/ethereum/EIPs/issues/225
     # - First EXTRA_VANITY bytes (fixed) may contain arbitrary signer vanity data
     # - Last EXTRA_SEAL bytes (fixed) is the signer's signature sealing the header
-    return "0x{:0<64}{:0<170}".format(extra_vanity, extra_seal)
+    return f"0x{extra_vanity:0<64}{extra_seal:0<170}"
 
 
 def parity_extradata(random_marker: str) -> str:

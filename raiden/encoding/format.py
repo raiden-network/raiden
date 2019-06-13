@@ -18,7 +18,7 @@ def make_field(name, size_bytes, format_string, encoder=None):
 
 
 def pad(bytes_):
-    return Pad(bytes_, "{}x".format(bytes_))
+    return Pad(bytes_, f"{bytes_}x")
 
 
 def buffer_for(klass):
@@ -85,9 +85,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
 
     def __init__(self, data):
         if len(data) < size:
-            raise InvalidProtocolMessage(
-                "data buffer has less than the expected size {}".format(size)
-            )
+            raise InvalidProtocolMessage(f"data buffer has less than the expected size {size}")
 
         object.__setattr__(self, "data", data)
 
@@ -139,7 +137,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
             super(self.__class__, self).__setattr__(name, value)  # type: ignore
 
     def __repr__(self):
-        return "<{} [...]>".format(buffer_name)
+        return f"<{buffer_name} [...]>"
 
     def __len__(self):
         return size

@@ -31,7 +31,7 @@ def _url_for(apiserver, endpoint, **kwargs):
             kwargs[key] = to_canonical_address(val)
 
     with apiserver.flask_app.app_context():
-        return url_for("v1_resources.{}".format(endpoint), **kwargs)
+        return url_for(f"v1_resources.{endpoint}", **kwargs)
 
 
 def _trimmed_logging(logger_level_config):
@@ -82,7 +82,7 @@ def start_apiserver(raiden_app, rest_api_port_number):
     api_server = APIServer(rest_api, config={"host": "localhost", "port": rest_api_port_number})
 
     # required for url_for
-    api_server.flask_app.config["SERVER_NAME"] = "localhost:{}".format(rest_api_port_number)
+    api_server.flask_app.config["SERVER_NAME"] = f"localhost:{rest_api_port_number}"
 
     api_server.start()
 

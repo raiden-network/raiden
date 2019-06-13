@@ -561,7 +561,7 @@ def is_valid_lock_expired(
         result = (False, msg, None)
 
     elif not is_balance_proof_usable:
-        msg = "Invalid LockExpired message. {}".format(invalid_balance_proof_msg)
+        msg = f"Invalid LockExpired message. {invalid_balance_proof_msg}"
         result = (False, msg, None)
 
     elif merkletree is None:
@@ -645,7 +645,7 @@ def valid_lockedtransfer_check(
         result = (False, msg, None)
 
     elif merkletree is None:
-        msg = "Invalid {} message. Same lockhash handled twice.".format(message_name)
+        msg = f"Invalid {message_name} message. Same lockhash handled twice."
         result = (False, msg, None)
 
     elif _merkletree_width(merkletree) > MAXIMUM_PENDING_TRANSFERS:
@@ -792,7 +792,7 @@ def is_valid_unlock(
     result: MerkletreeOrError = (False, None, None)
 
     if not is_balance_proof_usable:
-        msg = "Invalid Unlock message. {}".format(invalid_balance_proof_msg)
+        msg = f"Invalid Unlock message. {invalid_balance_proof_msg}"
         result = (False, msg, None)
 
     elif received_balance_proof.locksroot != locksroot_without_lock:
@@ -840,7 +840,7 @@ def is_valid_action_withdraw(
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
     if withdraw_amount <= 0:
-        msg = "Total withdraw {} did not increase".format(withdraw.total_withdraw)
+        msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
         result = (False, msg)
     elif balance < withdraw_amount:
         msg = "Insufficient balance: {}. Requested {} for withdraw".format(
@@ -876,7 +876,7 @@ def is_valid_withdraw_request(
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
     if withdraw_amount <= 0:
-        msg = "Total withdraw {} did not increase".format(withdraw_request.total_withdraw)
+        msg = f"Total withdraw {withdraw_request.total_withdraw} did not increase"
         result = (False, msg)
     elif balance < withdraw_amount:
         msg = "Insufficient balance: {}. Requested {} for withdraw".format(

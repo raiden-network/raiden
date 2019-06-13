@@ -172,7 +172,7 @@ def check_address_has_code(client: "JSONRPCClient", address: Address, contract_n
 
     if not result:
         if contract_name:
-            formated_contract_name = "[{}]: ".format(contract_name)
+            formated_contract_name = f"[{contract_name}]: "
         else:
             formated_contract_name = ""
 

@@ -85,7 +85,7 @@ def wait_for_sync(
     try:
         wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep)
     except (RequestException, ValueError, KeyError):
-        print("Cannot use {}. Request failed".format(url))
+        print(f"Cannot use {url}. Request failed")
         print("Falling back to eth_sync api.")
 
         wait_for_sync_rpc_api(blockchain_service, sleep)
