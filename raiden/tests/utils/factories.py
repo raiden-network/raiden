@@ -16,6 +16,7 @@ from raiden.messages import (
     lockedtransfersigned_from_message,
 )
 from raiden.transfer import channel, token_network, views
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -806,7 +807,7 @@ def make_signed_transfer_for(
     channel_state: NettingChannelState = EMPTY,
     properties: LockedTransferSignedStateProperties = None,
     defaults: LockedTransferSignedStateProperties = None,
-    compute_locksroot: bool = False,
+    calculate_locksroot: bool = False,
     allow_invalid: bool = False,
     only_transfer: bool = True,
 ) -> LockedTransferSignedState:
@@ -830,8 +831,8 @@ def make_signed_transfer_for(
     else:
         raise RuntimeError("Given sender does not participate in given channel.")
 
-    if compute_locksroot:
-        lock = Lock(
+    if calculate_locksroot:
+        lock = HashTimeLockState(
             amount=properties.amount,
             expiration=properties.expiration,
             secrethash=sha256(properties.secret).digest(),
