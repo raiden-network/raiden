@@ -41,7 +41,7 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.state import LockHashLockDict
+from raiden.transfer.state import PendingLocksState
 from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
@@ -1681,7 +1681,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        pending_locks: LockHashLockDict,
+        pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
     ) -> None:
         if not pending_locks:
@@ -1759,7 +1759,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        pending_locks: LockHashLockDict,
+        pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:

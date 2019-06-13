@@ -270,12 +270,12 @@ class MerkleTreeState(State):
 
 
 @dataclass
-class LockHashLockDict(State):
+class PendingLocksState(State):
     locks: Dict[LockHash, Union["HashTimeLockState", "UnlockPartialProofState"]]
 
 
-def make_empty_lockhash_lock_dict() -> LockHashLockDict:
-    return LockHashLockDict(dict())
+def make_empty_lockhash_lock_dict() -> PendingLocksState:
+    return PendingLocksState(dict())
 
 
 @dataclass(order=True)
@@ -322,7 +322,7 @@ class NettingChannelEndState(State):
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
     #: A dictionary that maps secrethashes to lock states.
     #: Used for calculating the locksroot.
-    pending_locks: LockHashLockDict = field(
+    pending_locks: PendingLocksState = field(
         repr=False, default_factory=make_empty_lockhash_lock_dict
     )
     onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
