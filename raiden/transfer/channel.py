@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
-from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
@@ -97,7 +96,7 @@ from raiden.utils.typing import (
     InitiatorAddress,
     List,
     LockHash,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Locksroot,
     LockType,
     MessageID,
@@ -124,11 +123,11 @@ if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.transfer.state import RouteState  # noqa: F401
 
-# This should be changed to `Union[str, LockHashLockOrderedDict]`
-LockHashLockOrderedDictOrError = Tuple[bool, Optional[str], Optional[LockHashLockOrderedDict]]
+# This should be changed to `Union[str, LockHashLockDict]`
+LockHashLockDictOrError = Tuple[bool, Optional[str], Optional[LockHashLockDict]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
-SendUnlockAndLockHashLockOrderedDict = Tuple[SendBalanceProof, LockHashLockOrderedDict]
+SendUnlockAndLockHashLockDict = Tuple[SendBalanceProof, LockHashLockDict]
 
 
 class UnlockGain(NamedTuple):
@@ -494,7 +493,7 @@ def is_valid_lockedtransfer(
     channel_state: NettingChannelState,
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
-) -> LockHashLockOrderedDictOrError:
+) -> LockHashLockDictOrError:
     return valid_lockedtransfer_check(
         channel_state,
         sender_state,
@@ -511,7 +510,7 @@ def is_valid_lock_expired(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     block_number: BlockNumber,
-) -> LockHashLockOrderedDictOrError:
+) -> LockHashLockDictOrError:
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
 
@@ -542,7 +541,7 @@ def is_valid_lock_expired(
         pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
         expected_locked_amount = current_locked_amount - lock.amount
 
-    result: LockHashLockOrderedDictOrError = (False, None, None)
+    result: LockHashLockDictOrError = (False, None, None)
 
     if secret_registered_on_chain:
         msg = "Invalid LockExpired mesage. Lock was unlocked on-chain."
@@ -618,7 +617,7 @@ def valid_lockedtransfer_check(
     message_name: str,
     received_balance_proof: BalanceProofSignedState,
     lock: HashTimeLockState,
-) -> LockHashLockOrderedDictOrError:
+) -> LockHashLockDictOrError:
 
     current_balance_proof = get_current_balanceproof(sender_state)
     pending_locks = compute_locks_with(sender_state.pending_locks, lock)
@@ -633,7 +632,7 @@ def valid_lockedtransfer_check(
         sender_state=sender_state,
     )
 
-    result: LockHashLockOrderedDictOrError = (False, None, None)
+    result: LockHashLockDictOrError = (False, None, None)
 
     if not is_balance_proof_usable:
         msg = f"Invalid {message_name} message. {invalid_balance_proof_msg}"
@@ -732,7 +731,7 @@ def is_valid_refund(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     received_transfer: LockedTransferUnsignedState,
-) -> LockHashLockOrderedDictOrError:
+) -> LockHashLockDictOrError:
     is_valid_locked_transfer, msg, pending_locks = valid_lockedtransfer_check(
         channel_state,
         sender_state,
@@ -753,7 +752,7 @@ def is_valid_refund(
 
 def is_valid_unlock(
     unlock: ReceiveUnlock, channel_state: NettingChannelState, sender_state: NettingChannelEndState
-) -> LockHashLockOrderedDictOrError:
+) -> LockHashLockDictOrError:
     received_balance_proof = unlock.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
@@ -784,7 +783,7 @@ def is_valid_unlock(
         sender_state=sender_state,
     )
 
-    result: LockHashLockOrderedDictOrError = (False, None, None)
+    result: LockHashLockDictOrError = (False, None, None)
 
     if not is_balance_proof_usable:
         msg = f"Invalid Unlock message. {invalid_balance_proof_msg}"
@@ -1047,7 +1046,7 @@ def get_distributable(
     return TokenAmount(min(overflow_limit, distributable))
 
 
-def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[LockHashLockOrderedDict]:
+def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[LockHashLockDict]:
     """ Unlock proof for entire pending locks
 
     The unlock proof contains all the locks, tightly packed, needed by the token
@@ -1181,12 +1180,12 @@ def update_contract_balance(end_state: NettingChannelEndState, contract_balance:
 
 
 def compute_locks_with(
-    locks: LockHashLockOrderedDict, lock: Union[HashTimeLockState, UnlockPartialProofState]
-) -> Optional[LockHashLockOrderedDict]:
+    locks: LockHashLockDict, lock: Union[HashTimeLockState, UnlockPartialProofState]
+) -> Optional[LockHashLockDict]:
     """Register the given lock with as a pending locks."""
     lockhash = lock.lockhash
     if lockhash not in locks:
-        locks = LockHashLockOrderedDict(OrderedDict(locks))
+        locks = LockHashLockDict(dict(locks))
         locks.update({lockhash: lock})  # pylint: disable=E1101
         return locks
     else:
@@ -1194,18 +1193,18 @@ def compute_locks_with(
 
 
 def compute_locks_without(
-    locks: LockHashLockOrderedDict, lockhash: LockHash
-) -> Optional[LockHashLockOrderedDict]:
+    locks: LockHashLockDict, lockhash: LockHash
+) -> Optional[LockHashLockDict]:
     # Use None to inform the caller the lockhash is unknown
     if lockhash in locks:
-        locks = LockHashLockOrderedDict(OrderedDict(locks))
+        locks = LockHashLockDict(dict(locks))
         del locks[lockhash]
         return locks
     else:
         return None
 
 
-def compute_locksroot(locks: LockHashLockOrderedDict) -> Locksroot:
+def compute_locksroot(locks: LockHashLockDict) -> Locksroot:
     """ Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
@@ -1222,7 +1221,7 @@ def create_sendlockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-) -> Tuple[SendLockedTransfer, LockHashLockOrderedDict]:
+) -> Tuple[SendLockedTransfer, LockHashLockDict]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
     our_balance_proof = our_state.balance_proof
@@ -1284,7 +1283,7 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
-) -> SendUnlockAndLockHashLockOrderedDict:
+) -> SendUnlockAndLockHashLockDict:
     our_state = channel_state.our_state
 
     msg = "caller must make sure the lock is known"
@@ -1486,7 +1485,7 @@ def create_sendexpiredlock(
     token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     recipient: Address,
-) -> Tuple[Optional[SendLockExpired], Optional[LockHashLockOrderedDict]]:
+) -> Tuple[Optional[SendLockExpired], Optional[LockHashLockDict]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)

@@ -65,7 +65,7 @@ from raiden.utils.typing import (
     InitiatorAddress,
     Keccak256,
     List,
-    LockHashLockOrderedDict,
+    LockHashLockDict,
     Locksroot,
     MessageID,
     NamedTuple,
@@ -401,7 +401,7 @@ class NettingChannelEndStateProperties(Properties):
     address: Address = EMPTY
     privatekey: bytes = EMPTY
     balance: TokenAmount = EMPTY
-    pending_locks: LockHashLockOrderedDict = EMPTY
+    pending_locks: LockHashLockDict = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
 
