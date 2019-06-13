@@ -153,17 +153,44 @@ class Token:
             }
 
             with log_transaction(log, "transfer", log_details):
-                gas_limit = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-                gas_limit = safe_gas_limit(gas_limit)
-                log_details["gas_limit"] = gas_limit
-
-                transaction_hash = self.proxy.transact(
-                    "transfer", gas_limit, to_checksum_address(to_address), amount
+                checking_block = self.client.get_checking_block()
+                gas_limit = self.proxy.estimate_gas(
+                    checking_block, "transfer", to_checksum_address(to_address), amount
                 )
+                failed_receipt = None
 
-                self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-                if receipt_or_none:
-                    raise TransactionThrew("Transfer", receipt_or_none)
+                if gas_limit is not None:
+                    gas_limit = safe_gas_limit(gas_limit)
+                    log_details["gas_limit"] = gas_limit
 
-                # TODO: check Transfer event (issue: #2598)
+                    transaction_hash = self.proxy.transact(
+                        "transfer", gas_limit, to_checksum_address(to_address), amount
+                    )
+
+                    self.client.poll(transaction_hash)
+                    # TODO: check Transfer event (issue: #2598)
+                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
+
+                if gas_limit is None or failed_receipt is not None:
+                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                        transaction_name="transfer",
+                        transaction_executed=False,
+                        required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,
+                        block_identifier=checking_block,
+                    )
+
+                    balance = self.balance_of(self.client.address, checking_block)
+                    if balance < amount:
+                        raise RaidenRecoverableError(
+                            _insufficient_balance_message(
+                                "Call to transfer will fail.", balance, amount
+                            )
+                        )
+
+                    if gas_limit is None:
+                        raise RaidenRecoverableError(
+                            "Call to transfer will fail. Gas estimation failed for unknown "
+                            "reason. Please make sure the contract is a valid ERC20 token."
+                        )
+                    else:
+                        raise TransactionThrew("Transfer", failed_receipt)
