@@ -766,7 +766,7 @@ def is_valid_unlock(
 
     pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
 
-    if not pending_locks:
+    if pending_locks is None:
         msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
         return (False, msg, None)
 
@@ -1877,7 +1877,9 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
     )
 
     if is_valid:
-        assert unlocked_pending_locks, "is_valid_unlock should return pending locks if valid"
+        assert (
+            unlocked_pending_locks is not None
+        ), "is_valid_unlock should return pending locks if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
         channel_state.partner_state.pending_locks = unlocked_pending_locks
 
