@@ -147,6 +147,10 @@ def make_uint64() -> int:
     return random.randint(0, UINT64_MAX)
 
 
+def make_payment_id() -> PaymentID:
+    return random.randint(0, UINT64_MAX)
+
+
 def make_balance() -> Balance:
     return Balance(random.randint(0, UINT256_MAX))
 
@@ -171,8 +175,20 @@ def make_address() -> Address:
     return Address(make_20bytes())
 
 
+def make_initiator_address() -> InitiatorAddress:
+    return InitiatorAddress(make_20bytes())
+
+
+def make_target_address() -> TargetAddress:
+    return TargetAddress(make_20bytes())
+
+
 def make_checksum_address() -> AddressHex:
     return to_checksum_address(make_address())
+
+
+def make_token_address() -> TokenAddress:
+    return make_20bytes()
 
 
 def make_token_network_address() -> TokenNetworkAddress:
@@ -210,6 +226,13 @@ def make_keccak_hash() -> Keccak256:
 def make_secret(i: int = EMPTY) -> Secret:
     if i is not EMPTY:
         return format(i, ">032").encode()
+    else:
+        return make_32bytes()
+
+
+def make_secret_hash(i: int = EMPTY) -> SecretHash:
+    if i is not EMPTY:
+        return sha256(format(i, ">032").encode()).digest()
     else:
         return make_32bytes()
 

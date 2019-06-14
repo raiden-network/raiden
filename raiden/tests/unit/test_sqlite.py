@@ -1,7 +1,6 @@
 import itertools
 import json
 from datetime import datetime, timedelta
-from hashlib import sha256
 from pathlib import Path
 from unittest.mock import patch
 
@@ -36,15 +35,16 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.transfer.state_change import ReceiveUnlock
+from raiden.transfer.state_change import Block, ReceiveUnlock
 from raiden.utils import sha3
+from raiden.utils.typing import BlockExpiration, BlockGasLimit, BlockNumber, MessageID, TokenAmount
 
 
 def make_signed_balance_proof_from_counter(counter):
     lock = Lock(
         amount=next(counter),
         expiration=next(counter),
-        secrethash=sha256(factories.make_secret(next(counter))).digest(),
+        secrethash=factories.make_secret_hash(next(counter)),
     )
     lock_expired_balance_proof = factories.create(
         factories.BalanceProofSignedStateProperties(
@@ -82,8 +82,8 @@ def make_transfer_from_counter(counter):
     return factories.create(
         factories.LockedTransferUnsignedStateProperties(
             amount=next(counter),
-            initiator=factories.make_address(),
-            target=factories.make_address(),
+            initiator=factories.make_initiator_address(),
+            target=factories.make_target_address(),
             expiration=next(counter),
             secret=factories.make_secret(next(counter)),
         )
@@ -94,18 +94,18 @@ def make_signed_transfer_from_counter(counter):
     lock = Lock(
         amount=next(counter),
         expiration=next(counter),
-        secrethash=sha256(factories.make_secret(next(counter))).digest(),
+        secrethash=factories.make_secret_hash(next(counter)),
     )
 
     signed_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
             amount=next(counter),
-            initiator=factories.make_address(),
-            target=factories.make_address(),
+            initiator=factories.make_initiator_address(),
+            target=factories.make_target_address(),
             expiration=next(counter),
             secret=factories.make_secret(next(counter)),
             payment_identifier=next(counter),
-            token=factories.make_address(),
+            token=factories.make_token_address(),
             nonce=next(counter),
             transferred_amount=next(counter),
             locked_amount=next(counter),
@@ -126,7 +126,7 @@ def make_from_route_from_counter(counter):
     from_channel = factories.create(
         factories.NettingChannelStateProperties(
             canonical_identifier=factories.make_canonical_identifier(),
-            token_address=factories.make_address(),
+            token_address=factories.make_token_address(),
             partner_state=factories.NettingChannelEndStateProperties(
                 balance=next(counter), address=factories.HOP1
             ),
@@ -134,20 +134,20 @@ def make_from_route_from_counter(counter):
     )
     from_hop = factories.make_hop_from_channel(from_channel)
 
-    expiration = factories.UNIT_REVEAL_TIMEOUT + 1
+    expiration = BlockExpiration(factories.UNIT_REVEAL_TIMEOUT + 1)
 
     from_transfer = factories.make_signed_transfer_for(
         from_channel,
         factories.LockedTransferSignedStateProperties(
-            transferred_amount=0,
+            transferred_amount=TokenAmount(0),
             canonical_identifier=factories.make_canonical_identifier(
                 token_network_address=from_channel.token_network_address
             ),
-            amount=1,
+            amount=TokenAmount(1),
             expiration=expiration,
             secret=sha3(factories.make_secret(next(counter))),
-            initiator=factories.make_address(),
-            target=factories.make_address(),
+            initiator=factories.make_initiator_address(),
+            target=factories.make_target_address(),
             payment_identifier=next(counter),
             sender=factories.HOP1,
             pkey=factories.HOP1_KEY,
@@ -160,7 +160,7 @@ def test_get_state_change_with_balance_proof():
     """ All state changes which contain a balance proof must be found by when
     querying the database.
     """
-    serializer = JSONSerializer
+    serializer = JSONSerializer()
     storage = SerializedSQLiteStorage(":memory:", serializer)
     counter = itertools.count()
 
@@ -169,15 +169,15 @@ def test_get_state_change_with_balance_proof():
     lock_expired = ReceiveLockExpired(
         sender=balance_proof.sender,
         balance_proof=balance_proof,
-        secrethash=sha256(factories.make_secret(next(counter))).digest(),
-        message_identifier=next(counter),
+        secrethash=factories.make_secret_hash(next(counter)),
+        message_identifier=MessageID(next(counter)),
     )
 
     received_balance_proof = make_signed_balance_proof_from_counter(counter)
     unlock = ReceiveUnlock(
         sender=received_balance_proof.sender,
-        message_identifier=next(counter),
-        secret=sha3(factories.make_secret(next(counter))),
+        message_identifier=MessageID(next(counter)),
+        secret=factories.make_secret(next(counter)),
         balance_proof=received_balance_proof,
     )
     transfer = make_signed_transfer_from_counter(counter)
@@ -258,6 +258,7 @@ def test_get_state_change_with_balance_proof():
             sender=balance_proof.sender,
             balance_hash=balance_proof.balance_hash,
         )
+        assert state_change_record
         assert state_change_record.data == state_change
 
         state_change_record = get_state_change_with_balance_proof_by_locksroot(
@@ -266,6 +267,7 @@ def test_get_state_change_with_balance_proof():
             sender=balance_proof.sender,
             locksroot=balance_proof.locksroot,
         )
+        assert state_change_record
         assert state_change_record.data == state_change
 
     storage.close()
@@ -275,7 +277,7 @@ def test_get_event_with_balance_proof():
     """ All events which contain a balance proof must be found by when
     querying the database.
     """
-    serializer = JSONSerializer
+    serializer = JSONSerializer()
     storage = SerializedSQLiteStorage(":memory:", serializer)
     counter = itertools.count(1)
     partner_address = factories.make_address()
@@ -283,22 +285,22 @@ def test_get_event_with_balance_proof():
     balance_proof = make_balance_proof_from_counter(counter)
     lock_expired = SendLockExpired(
         recipient=partner_address,
-        message_identifier=next(counter),
+        message_identifier=MessageID(next(counter)),
         balance_proof=balance_proof,
-        secrethash=sha256(factories.make_secret(next(counter))).digest(),
+        secrethash=factories.make_secret_hash(next(counter)),
         canonical_identifier=balance_proof.canonical_identifier,
     )
     locked_transfer = SendLockedTransfer(
         recipient=partner_address,
-        message_identifier=next(counter),
+        message_identifier=MessageID(next(counter)),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
-    balance_proof = SendBalanceProof(
+    send_balance_proof = SendBalanceProof(
         recipient=partner_address,
-        message_identifier=next(counter),
-        payment_identifier=next(counter),
-        token_address=factories.make_address(),
+        message_identifier=MessageID(next(counter)),
+        payment_identifier=factories.make_payment_id(),
+        token_address=factories.make_token_address(),
         secret=factories.make_secret(next(counter)),
         balance_proof=make_balance_proof_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
@@ -306,7 +308,7 @@ def test_get_event_with_balance_proof():
 
     refund_transfer = SendRefundTransfer(
         recipient=partner_address,
-        message_identifier=next(counter),
+        message_identifier=MessageID(next(counter)),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
@@ -314,12 +316,12 @@ def test_get_event_with_balance_proof():
     events_balanceproofs = [
         (lock_expired, lock_expired.balance_proof),
         (locked_transfer, locked_transfer.balance_proof),
-        (balance_proof, balance_proof.balance_proof),
+        (send_balance_proof, send_balance_proof.balance_proof),
         (refund_transfer, refund_transfer.transfer.balance_proof),
     ]
 
     timestamp = datetime.utcnow()
-    state_change = ""
+    state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())
     for event, _ in events_balanceproofs:
         state_change_identifier = storage.write_state_change(state_change, timestamp)
         storage.write_events(
@@ -333,6 +335,7 @@ def test_get_event_with_balance_proof():
             balance_hash=balance_proof.balance_hash,
             recipient=partner_address,
         )
+        assert event_record
         assert event_record.data == event
 
         event_record = get_event_with_balance_proof_by_locksroot(
@@ -341,11 +344,12 @@ def test_get_event_with_balance_proof():
             recipient=event.recipient,
             locksroot=balance_proof.locksroot,
         )
+        assert event_record
         assert event_record.data == event
 
         # Checking that balance proof attribute can be accessed for all events.
         # Issue https://github.com/raiden-network/raiden/issues/3179
-        assert event_record.data.balance_proof == event.balance_proof
+        assert event_record.data.balance_proof == event.balance_proof  # type: ignore
 
     storage.close()
 
@@ -353,7 +357,8 @@ def test_get_event_with_balance_proof():
 def test_log_run():
     with patch("raiden.storage.sqlite.get_system_spec") as get_speck_mock:
         get_speck_mock.return_value = dict(raiden="1.2.3")
-        store = SerializedSQLiteStorage(":memory:", None)
+        serializer = JSONSerializer()
+        store = SerializedSQLiteStorage(":memory:", serializer)
         store.log_run()
     cursor = store.database.conn.cursor()
     cursor.execute("SELECT started_at, raiden_version FROM runs")
@@ -448,8 +453,7 @@ def test_batch_query_event_records():
     for event in events_data:
         state_change_id = state_change_identifiers[event[1]]
         event_data = json.dumps(event[2])
-        log_time = datetime.utcnow().isoformat(timespec="milliseconds")
-        event_tuple = (state_change_id, log_time, event_data)
+        event_tuple = (state_change_id, datetime.utcnow(), event_data)
         storage.write_events([event_tuple])
 
     # Test that querying the events in batches of 1 works
