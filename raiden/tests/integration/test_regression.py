@@ -3,6 +3,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
@@ -180,7 +181,7 @@ def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, t
         locked_amount=lock_amount,
         fee=0,
         recipient=app1.raiden.address,
-        locksroot=lock.secrethash,
+        locksroot=keccak(lock.as_bytes),
         lock=lock,
         target=app1.raiden.address,
         initiator=app0.raiden.address,
