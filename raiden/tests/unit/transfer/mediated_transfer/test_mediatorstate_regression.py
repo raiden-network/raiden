@@ -156,13 +156,10 @@ def test_regression_send_refund():
     )
 
     # All three channels have been used
-    routes = []
-
     refund_state_change = ReceiveTransferRefund(
         transfer=received_transfer,
         balance_proof=received_transfer.balance_proof,
         sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
-        routes=routes,
     )
 
     iteration = mediator.handle_refundtransfer(

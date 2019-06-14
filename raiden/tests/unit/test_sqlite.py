@@ -185,11 +185,9 @@ def test_get_state_change_with_balance_proof():
         transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,  # pylint: disable=no-member
-        routes=list(),
     )
     transfer = make_signed_transfer_from_counter(counter)
     transfer_refund_cancel_route = ReceiveTransferRefundCancelRoute(
-        routes=list(),
         transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,  # pylint: disable=no-member
