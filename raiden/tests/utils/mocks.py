@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
+from raiden.constants import RoutingMode
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
@@ -120,6 +121,7 @@ class MockRaidenService:
         self.signer = LocalSigner(self.privkey)
 
         self.message_handler = message_handler
+        self.routing_mode = RoutingMode.PRIVATE
         self.config = config
 
         self.user_deposit = Mock()
