@@ -16,11 +16,11 @@ from hypothesis.stateful import (
 )
 from hypothesis.strategies import binary, builds, composite, integers, random_module, randoms
 
-from raiden.constants import EMPTY_MERKLE_ROOT, GENESIS_BLOCK_NUMBER, UINT64_MAX
-from raiden.messages import Lock
+from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
@@ -36,14 +36,14 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     ChainState,
+    HashTimeLockState,
     PaymentNetworkState,
     TokenNetworkGraphState,
     TokenNetworkState,
-    make_empty_merkle_tree,
+    make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import (
     Block,
@@ -52,6 +52,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import random_secret
 from raiden.utils.typing import BlockNumber
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 @composite
@@ -456,16 +457,16 @@ class InitiatorMixin:
 class BalanceProofData:
     def __init__(self, canonical_identifier):
         self._canonical_identifier = canonical_identifier
-        self._merkletree = make_empty_merkle_tree()
+        self._pending_locks = make_empty_pending_locks_state()
         self.properties = None
 
-    def update(self, amount, lockhash):
-        self._merkletree = channel.compute_merkletree_with(self._merkletree, lockhash)
+    def update(self, amount, lock):
+        self._pending_locks = channel.compute_locks_with(self._pending_locks, lock)
         if self.properties:
             self.properties = factories.replace(
                 self.properties,
                 locked_amount=self.properties.locked_amount + amount,
-                locksroot=merkleroot(self._merkletree),
+                locksroot=compute_locksroot(self._pending_locks),
                 nonce=self.properties.nonce + 1,
             )
         else:
@@ -473,7 +474,7 @@ class BalanceProofData:
                 transferred_amount=0,
                 locked_amount=amount,
                 nonce=1,
-                locksroot=merkleroot(self._merkletree),
+                locksroot=compute_locksroot(self._pending_locks),
                 canonical_identifier=self._canonical_identifier,
             )
 
@@ -496,8 +497,10 @@ class MediatorMixin:
 
     def _update_balance_proof_data(self, partner, amount, expiration, secret):
         expected = self._get_balance_proof_data(partner)
-        lock = Lock(amount=amount, expiration=expiration, secrethash=sha256(secret).digest())
-        expected.update(amount, lock.lockhash)
+        lock = HashTimeLockState(
+            amount=amount, expiration=expiration, secrethash=sha256(secret).digest()
+        )
+        expected.update(amount, lock)
         return expected
 
     init_mediators = Bundle("init_mediators")
@@ -658,8 +661,8 @@ class OnChainMixin:
             ),
             block_number=self.block_number + 1,
             block_hash=factories.make_block_hash(),
-            our_onchain_locksroot=EMPTY_MERKLE_ROOT,
-            partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+            our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+            partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
         )
 
         node.state_transition(self.chain_state, channel_settled_state_change)
