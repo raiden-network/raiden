@@ -257,23 +257,24 @@ def test_get_event_with_balance_proof():
     serializer = JSONSerializer
     storage = SerializedSQLiteStorage(":memory:", serializer)
     counter = itertools.count(1)
+    partner_address = factories.make_address()
 
     balance_proof = make_balance_proof_from_counter(counter)
     lock_expired = SendLockExpired(
-        recipient=factories.make_address(),
+        recipient=partner_address,
         message_identifier=next(counter),
         balance_proof=balance_proof,
         secrethash=sha256(factories.make_secret(next(counter))).digest(),
         canonical_identifier=balance_proof.canonical_identifier,
     )
     locked_transfer = SendLockedTransfer(
-        recipient=factories.make_address(),
+        recipient=partner_address,
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
     balance_proof = SendBalanceProof(
-        recipient=factories.make_address(),
+        recipient=partner_address,
         message_identifier=next(counter),
         payment_identifier=next(counter),
         token_address=factories.make_address(),
@@ -281,8 +282,9 @@ def test_get_event_with_balance_proof():
         balance_proof=make_balance_proof_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
+
     refund_transfer = SendRefundTransfer(
-        recipient=factories.make_address(),
+        recipient=partner_address,
         message_identifier=next(counter),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
@@ -308,6 +310,7 @@ def test_get_event_with_balance_proof():
             storage=storage,
             canonical_identifier=balance_proof.canonical_identifier,
             balance_hash=balance_proof.balance_hash,
+            recipient=partner_address,
         )
         assert event_record.data == event
 
