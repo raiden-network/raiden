@@ -19,6 +19,7 @@ from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.utils import BlockNumber
+from raiden.utils.typing import TokenAmount
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -180,7 +181,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
 
     # make a few transfers from app0 to app1
     amount = 1
-    spent_amount = 7
+    spent_amount = TokenAmount(7)
 
     for identifier in range(spent_amount):
         identifier = identifier + 1

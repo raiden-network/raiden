@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     Iterable,
     List,
     Optional,
+    PaymentID,
     Port,
     PrivateKey,
     PublicKey,
@@ -192,9 +193,9 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     return zip_longest(iterator, iterator)
 
 
-def create_default_identifier() -> int:
+def create_default_identifier() -> PaymentID:
     """ Generates a random identifier. """
-    return random.randint(0, constants.UINT64_MAX)
+    return PaymentID(random.randint(0, constants.UINT64_MAX))
 
 
 def merge_dict(to_update: dict, other_dict: dict) -> None:

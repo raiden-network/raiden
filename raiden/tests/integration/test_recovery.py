@@ -21,7 +21,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import create_default_identifier
+from raiden.utils import BlockNumber, create_default_identifier
+from raiden.utils.typing import PaymentID, TokenAmount
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -112,7 +113,7 @@ def test_recovery_unhappy_case(
     )
 
     # make a few transfers from app0 to app2
-    amount = 1
+    amount = TokenAmount(1)
     spent_amount = deposit - 2
     for identifier in range(spent_amount):
         transfer(
@@ -120,7 +121,7 @@ def test_recovery_unhappy_case(
             target_app=app2,
             token_address=token_address,
             amount=amount,
-            identifier=identifier,
+            identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
         )
 
@@ -155,7 +156,7 @@ def test_recovery_unhappy_case(
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
@@ -215,7 +216,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
