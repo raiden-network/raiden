@@ -251,6 +251,7 @@ class ChannelStateSchema(BaseSchema):
     balance = fields.Method("get_balance")
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
+    total_withdraw = fields.Method("get_total_withdraw")
 
     @staticmethod
     def get_partner_address(channel_state):
@@ -268,6 +269,11 @@ class ChannelStateSchema(BaseSchema):
     def get_total_deposit(channel_state):
         """Return our total deposit in the contract for this channel"""
         return channel_state.our_total_deposit
+
+    @staticmethod
+    def get_total_withdraw(channel_state):
+        """Return our total withdraw from this channel"""
+        return channel_state.our_total_withdraw
 
     class Meta:
         strict = True
