@@ -585,6 +585,7 @@ class RaidenEventHandler(EventHandler):
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 balance_hash=our_details.balance_hash,
+                recipient=participants_details.partner_details.address,
             )
 
             if event_record is None:
