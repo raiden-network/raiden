@@ -15,7 +15,6 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
     EMPTY_HASH,
-    EMPTY_MERKLE_ROOT,
     EMPTY_SIGNATURE,
     GENESIS_BLOCK_NUMBER,
     NULL_ADDRESS_BYTES,
@@ -79,6 +78,7 @@ from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 log = structlog.get_logger(__name__)
 
@@ -1685,7 +1685,7 @@ class TokenNetwork:
         given_block_identifier: BlockSpecification,
     ) -> None:
         if not pending_locks:
-            raise ValueError("unlock cannot be done without merkle_tree_leaves")
+            raise ValueError("unlock cannot be done without pending locks")
 
         # Check the preconditions for calling unlock at the time the event was
         # emitted.
@@ -1720,7 +1720,7 @@ class TokenNetwork:
             local_locksroot = compute_locksroot(pending_locks)
             if sender_details.locksroot != local_locksroot:
                 msg = (
-                    f"The provided merkle tree ({to_hex(local_locksroot)}) "
+                    f"The provided locksroot ({to_hex(local_locksroot)}) "
                     f"does correspond to the on-chain locksroot "
                     f"{to_hex(sender_details.locksroot)} for sender "
                     f"{to_checksum_address(sender)}."
@@ -1771,7 +1771,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
             receiver=receiver,
             sender=sender,
-            merkle_tree_leaves=leaves_packed,
+            locks=leaves_packed,
         )
 
         if gas_limit:
@@ -1784,7 +1784,7 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 receiver=receiver,
                 sender=sender,
-                merkle_tree_leaves=leaves_packed,
+                locks=leaves_packed,
             )
 
             self.client.poll(transaction_hash)
@@ -1815,9 +1815,9 @@ class TokenNetwork:
                     block_identifier=given_block_identifier,
                 )
 
-                is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
+                is_unlock_done = sender_details.locksroot == LOCKSROOT_OF_NO_LOCKS
                 if is_unlock_done:
-                    raise RaidenRecoverableError("The merkle tree is already unlocked")
+                    raise RaidenRecoverableError("The locks are already unlocked")
 
                 raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
         else:
@@ -1855,9 +1855,9 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
+            is_unlock_done = sender_details.locksroot == LOCKSROOT_OF_NO_LOCKS
             if is_unlock_done:
-                raise RaidenRecoverableError("The merkle tree is already unlocked ")
+                raise RaidenRecoverableError("The locks are already unlocked ")
 
             raise RaidenUnrecoverableError("unlock failed for an unknown reason")
 
