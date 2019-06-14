@@ -89,7 +89,7 @@ class ULIDMonotonicFactory(Generic[ID]):
             self._previous_timestamp = timestamp
 
         rnd = random.getrandbits(64)
-        identifier = timestamp.to_bytes(8, "big") + rnd.to_bytes(8, "big")
+        identifier = ULID(timestamp.to_bytes(8, "big") + rnd.to_bytes(8, "big"))
 
         return cast(ID, identifier)
 
