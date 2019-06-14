@@ -35,22 +35,6 @@ The Raiden Network is an off-chain scaling solution, enabling near-instant, low-
 
 >**INFO:** The Raiden client and smart contracts have been [released for mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) with a limited alpha release of the Raiden Network in December 2018.
 
-## Table of Contents
-- [About The Project](#about-the-project)
-- [Getting Started](#getting-started)
-  * [Learn about Raiden](#learn-about-raiden)
-- [Specification](#specification)
-- [Repositories](#repositories)
-  * [Core](#core)
-  * [Tools](#tools)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
-
-## About The Project
-
-The [Raiden Network](https://raiden.network/) is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token.
-
 The Raiden Network is an infrastructure layer on top of the Ethereum blockchain. While the basic idea is simple, the underlying protocol is quite complex and the implementation non-trivial. Nonetheless the technicalities can be abstracted away, such that developers can interface with a rather simple API to build scalable decentralized applications based on the Raiden Network.
 
 <p align="left">
@@ -62,6 +46,17 @@ The Raiden Network is an infrastructure layer on top of the Ethereum blockchain.
     />
   </a>
 </p>
+
+## Table of Contents
+- [Getting Started](#getting-started)
+  * [Learn about Raiden](#learn-about-raiden)
+- [Specification](#specification)
+- [Repositories](#repositories)
+  * [Core](#core)
+  * [Tools](#tools)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
 ## Getting Started
 
@@ -85,7 +80,7 @@ If you want to use Raiden:
 Read the [tentative specification for the Raiden Network](https://raiden-network-specification.readthedocs.io/en/latest/index.html) to understand in detail how Raiden works. It is maintained within [this repository](https://github.com/raiden-network/spec).
 
 ## Repositories
-The Raiden Network is getting created with a set of tools, which are maintained within different repositories.
+The Raiden Network is getting created with a set of tools, which are maintained in different repositories.
 ### Core
 - The [solidity smart contracts, librairies and deployment tools](https://github.com/raiden-network/raiden-contracts) are used to bootstrap a Raiden Network on an Ethereum Chain.
 
