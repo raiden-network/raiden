@@ -15,6 +15,7 @@ from raiden.constants import (
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     UINT64_MAX,
+    RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
 from raiden.messages import Delivered, FeeUpdate, Processed, SecretRequest, ToDevice
@@ -630,6 +631,7 @@ def test_monitoring_global_messages(
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("route_mode", [RoutingMode.LOCAL, RoutingMode.PFS])
 def test_pfs_global_messages(
     local_matrix_servers,
     private_rooms,
@@ -637,6 +639,7 @@ def test_pfs_global_messages(
     retries_before_backoff,
     monkeypatch,
     global_rooms,
+    route_mode,
 ):
     """
     Test that RaidenService sends UpdatePFS messages to global
@@ -657,6 +660,7 @@ def test_pfs_global_messages(
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
     raiden_service.config = dict(services=dict(monitoring_enabled=True))
+    raiden_service.routing_mode = route_mode
 
     transport.start(raiden_service, raiden_service.message_handler, None)
 
