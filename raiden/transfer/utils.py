@@ -6,7 +6,6 @@ from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
 from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
-
 from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
