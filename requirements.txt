@@ -28,3 +28,4 @@ requests==2.20.0
 structlog==18.2.0
 web3==4.9.1
 webargs==5.3.1
+typing_extensions==3.7.2
