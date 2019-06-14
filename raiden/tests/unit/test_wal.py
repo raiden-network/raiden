@@ -110,15 +110,15 @@ def test_write_read_log():
     assert count2 + 1 == count3
 
     result1, result2 = state_changes3[-2:]
-    assert isinstance(result1.data, Block)
-    assert result1.data.block_number == block_number
+    assert isinstance(result1, Block)
+    assert result1.block_number == block_number
 
-    assert isinstance(result2.data, ContractReceiveChannelBatchUnlock)
-    assert result2.data.receiver == participant
-    assert result2.data.sender == partner
-    assert result2.data.locksroot == locksroot
-    assert result2.data.unlocked_amount == unlocked_amount
-    assert result2.data.returned_tokens == returned_amount
+    assert isinstance(result2, ContractReceiveChannelBatchUnlock)
+    assert result2.receiver == participant
+    assert result2.sender == partner
+    assert result2.locksroot == locksroot
+    assert result2.unlocked_amount == unlocked_amount
+    assert result2.returned_tokens == returned_amount
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
