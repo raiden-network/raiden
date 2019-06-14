@@ -27,14 +27,12 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import compute_layers
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
     HopState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     PaymentNetworkState,
@@ -319,14 +317,6 @@ HOP5_KEY = b"55555555555555555555555555555555"
 HOP1 = privatekey_to_address(HOP1_KEY)
 HOP2 = privatekey_to_address(HOP2_KEY)
 ADDR = b"addraddraddraddraddr"
-
-
-def make_merkletree_leaves(width: int) -> List[Keccak256]:
-    return [make_secret() for _ in range(width)]
-
-
-def make_merkletree(leaves: List[SecretHash]) -> MerkleTreeState:
-    return MerkleTreeState(compute_layers(leaves))
 
 
 def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:

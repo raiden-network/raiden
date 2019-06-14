@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRETHASH
+from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -32,6 +32,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     typecheck,
 )
+from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -63,7 +64,7 @@ class LockedTransferUnsignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+        if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
 
@@ -87,7 +88,7 @@ class LockedTransferSignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+        if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
     @property
