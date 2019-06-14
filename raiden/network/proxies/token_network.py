@@ -697,7 +697,7 @@ class TokenNetwork:
                         f"Current total deposit ({sender_details.deposit}) is already larger "
                         f"than the requested total deposit amount ({total_deposit})"
                     )
-                    raise DepositMismatch(msg)
+                    raise RaidenUnrecoverableError(msg)
 
                 # A node may be setting up multiple channels for the same token
                 # concurrently. Because each deposit changes the user balance this
@@ -718,7 +718,7 @@ class TokenNetwork:
                         f"not be larger than the available balance {current_balance}, "
                         f"for token at address {pex(token.address)}"
                     )
-                    raise DepositMismatch(msg)
+                    raise RaidenUnrecoverableError(msg)
 
                 log_details = {
                     "node": to_checksum_address(self.node_address),
