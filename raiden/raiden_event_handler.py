@@ -602,7 +602,7 @@ class RaidenEventHandler(EventHandler):
         else:
             our_transferred_amount = 0
             our_locked_amount = 0
-            our_locksroot = EMPTY_HASH
+            our_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
@@ -624,7 +624,7 @@ class RaidenEventHandler(EventHandler):
         else:
             partner_transferred_amount = 0
             partner_locked_amount = 0
-            partner_locksroot = EMPTY_HASH
+            partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         payment_channel.settle(
             transferred_amount=our_transferred_amount,
