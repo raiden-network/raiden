@@ -27,6 +27,7 @@ from raiden_contracts.constants import (
     MessageTypeId,
 )
 
+
 SIGNATURE_SIZE_IN_BITS = 520
 
 
