@@ -3,6 +3,7 @@ import pytest
 
 from raiden import waiting
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -83,6 +84,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
 
     app0.stop()
@@ -205,6 +207,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         transport=MatrixTransport(app0.raiden.config["transport"]["matrix"]),
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
     app0.stop()
     del app0  # from here on the app0_restart should be used

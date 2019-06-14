@@ -4,6 +4,7 @@ import pytest
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -163,6 +164,7 @@ def test_recovery_unhappy_case(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
@@ -222,6 +224,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
 
     del app0  # from here on the app0_restart should be used
