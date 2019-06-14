@@ -822,14 +822,22 @@ class TokenNetwork:
                     partner=partner,
                     block_identifier=failed_at_blockhash,
                 )
+
+                channel_state = self._get_channel_state(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=failed_at_blockhash,
+                    channel_identifier=channel_identifier,
                 )
+                # Check if deposit is being made on a nonexistent channel
+                if channel_state != ChannelState.OPENED:
+                    msg = "Deposit failed as the channel was not open"
+                    raise RaidenUnrecoverableError(msg)
 
                 total_deposit_done = sender_details.deposit >= total_deposit
                 if total_deposit_done:
-                    raise RaidenRecoverableError("Requested total deposit was already performed")
+                    raise DepositMismatch("Requested total deposit was already performed")
 
-                failed_at = self.proxy.jsonrpc_client.get_block("latest")
-                failed_at_blockhash = encode_hex(failed_at["hash"])
                 latest_deposit = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
