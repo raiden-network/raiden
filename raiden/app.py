@@ -1,7 +1,7 @@
 import structlog
 from eth_utils import to_checksum_address
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
@@ -74,6 +74,7 @@ class App:  # pylint: disable=too-few-public-methods
         transport,
         raiden_event_handler,
         message_handler,
+        routing_mode: RoutingMode,
         user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
@@ -87,6 +88,7 @@ class App:  # pylint: disable=too-few-public-methods
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
+            routing_mode=routing_mode,
             config=config,
             user_deposit=user_deposit,
         )

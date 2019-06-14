@@ -100,8 +100,9 @@ class Environment(Enum):
 class RoutingMode(Enum):
     """Routing mode configuration that can be chosen on the command line"""
 
-    BASIC = "basic"
     PFS = "pfs"
+    LOCAL = "local"
+    PRIVATE = "private"
 
 
 GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK = 3_234_716

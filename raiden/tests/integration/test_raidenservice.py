@@ -7,6 +7,7 @@ from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
+    RoutingMode,
 )
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
@@ -17,6 +18,7 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
 from raiden.transfer.state_change import Block
+from raiden.utils import BlockNumber
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -132,7 +134,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
@@ -141,6 +143,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         transport=transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,  # only monitoring is tested here
         user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
     )
     app0_restart.start()
