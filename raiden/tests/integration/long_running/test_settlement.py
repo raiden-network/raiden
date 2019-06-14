@@ -12,7 +12,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
-from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
+from raiden.storage.sqlite import LAST_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
@@ -341,7 +341,7 @@ def run_test_batch_unlock(
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app.raiden,
         canonical_identifier=alice_bob_channel_state.canonical_identifier,
-        state_change_identifier="latest",
+        state_change_identifier=LAST_STATECHANGE_ULID,
     )
 
     our_restored_balance_proof = restored_channel_state.our_state.balance_proof

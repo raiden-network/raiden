@@ -104,13 +104,11 @@ def raiden_state_changes_search_for_item(
     """
     assert raiden.wal, "RaidenService must be started"
 
-    state_changes = (
-        state_change_record.data
-        for state_change_record in raiden.wal.storage.get_statechanges_by_range(
-            RANGE_ALL_STATE_CHANGES
-        )
+    return search_for_item(
+        raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES),
+        item_type,
+        attributes,
     )
-    return search_for_item(state_changes, item_type, attributes)
 
 
 def must_have_event(event_list: Iterable[TM], dict_data: TM) -> Optional[TM]:

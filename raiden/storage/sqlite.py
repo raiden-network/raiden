@@ -556,7 +556,7 @@ class SQLiteStorage:
         )
         self.maybe_commit()
 
-    def get_statechanges_by_range(
+    def get_statechanges_records_by_range(
         self, db_range: Range[StateChangeID]
     ) -> List[StateChangeEncodedRecord]:
         if not isinstance(db_range, Range):  # pragma: no unittest
@@ -821,14 +821,22 @@ class SerializedSQLiteStorage:
 
         return state_change
 
-    def get_statechanges_by_range(self, db_range: Range[StateChangeID]) -> List[StateChangeRecord]:
-        state_changes = self.database.get_statechanges_by_range(db_range=db_range)
+    def get_statechanges_records_by_range(
+        self, db_range: Range[StateChangeID]
+    ) -> List[StateChangeRecord]:
+        state_changes = self.database.get_statechanges_records_by_range(db_range=db_range)
         return [
             StateChangeRecord(
                 state_change_identifier=state_change.state_change_identifier,
                 data=self.serializer.deserialize(state_change.data),
             )
             for state_change in state_changes
+        ]
+
+    def get_statechanges_by_range(self, db_range: Range[StateChangeID]) -> List[StateChange]:
+        return [
+            state_change_record.data
+            for state_change_record in self.get_statechanges_records_by_range(db_range=db_range)
         ]
 
     def get_events_with_timestamps(
