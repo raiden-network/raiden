@@ -230,26 +230,28 @@ def test_get_state_change_with_balance_proof():
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
     # Make sure state changes are returned in the correct order in which they were stored
-    stored_statechanges = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
-    assert len(stored_statechanges) == 6
-    assert isinstance(stored_statechanges[0].data, ReceiveLockExpired)
-    assert isinstance(stored_statechanges[1].data, ReceiveUnlock)
-    assert isinstance(stored_statechanges[2].data, ReceiveTransferRefund)
-    assert isinstance(stored_statechanges[3].data, ReceiveTransferRefundCancelRoute)
-    assert isinstance(stored_statechanges[4].data, ActionInitMediator)
-    assert isinstance(stored_statechanges[5].data, ActionInitTarget)
+    stored_statechanges_records = storage.get_statechanges_records_by_range(
+        RANGE_ALL_STATE_CHANGES
+    )
+    assert len(stored_statechanges_records) == 6
+    assert isinstance(stored_statechanges_records[0].data, ReceiveLockExpired)
+    assert isinstance(stored_statechanges_records[1].data, ReceiveUnlock)
+    assert isinstance(stored_statechanges_records[2].data, ReceiveTransferRefund)
+    assert isinstance(stored_statechanges_records[3].data, ReceiveTransferRefundCancelRoute)
+    assert isinstance(stored_statechanges_records[4].data, ActionInitMediator)
+    assert isinstance(stored_statechanges_records[5].data, ActionInitTarget)
 
     # Make sure state changes are returned in the correct order in which they were stored
     stored_statechanges = storage.get_statechanges_by_range(
         Range(
-            stored_statechanges[1].state_change_identifier,
-            stored_statechanges[2].state_change_identifier,
+            stored_statechanges_records[1].state_change_identifier,
+            stored_statechanges_records[2].state_change_identifier,
         )
     )
 
     assert len(stored_statechanges) == 2
-    assert isinstance(stored_statechanges[0].data, ReceiveUnlock)
-    assert isinstance(stored_statechanges[1].data, ReceiveTransferRefund)
+    assert isinstance(stored_statechanges[0], ReceiveUnlock)
+    assert isinstance(stored_statechanges[1], ReceiveTransferRefund)
 
     for state_change, balance_proof in statechanges_balanceproofs:
         state_change_record = get_state_change_with_balance_proof_by_balance_hash(
