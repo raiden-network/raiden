@@ -157,7 +157,7 @@ def test_is_channel_usable():
             ),
             NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=0)),
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(),
+                our_state=NettingChannelEndStateProperties(balance=amount),
                 reveal_timeout=timeout_blocks,
                 settle_timeout=timeout_blocks * 2,
             ),
@@ -165,13 +165,26 @@ def test_is_channel_usable():
     )
 
     # the first channel is usable
-    assert channel.is_channel_usable(channels[0], amount, timeout_blocks)
+    assert channel.is_channel_usable(
+        candidate_channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
+    )
 
     # a channel without capacity must be skipped
-    assert not channel.is_channel_usable(channels[1], amount, timeout_blocks)
+    assert not channel.is_channel_usable(
+        candidate_channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
+    )
 
-    # channels
-    assert not channel.is_channel_usable(channels[2], reveal_timeout, timeout_blocks)
+    # channel should be usable, due to lock_timeout larger than channel.reveal_timeout
+    assert channel.is_channel_usable(
+        candidate_channel_state=channels[2],
+        transfer_amount=amount,
+        lock_timeout=timeout_blocks + 1,
+    )
+
+    # channel should not be usable, when lock_timeout equal or greater than channel.reveal_timeout
+    assert not channel.is_channel_usable(
+        candidate_channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
+    )
 
 
 def test_next_transfer_pair():
@@ -1341,7 +1354,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 canonical_identifier=factories.make_canonical_identifier(channel_identifier=2),
                 transferred_amount=0,
                 message_identifier=index,
-                route=[factories.UNIT_OUR_ADDRESS, channels.channels[1].partner_state.address],
+                routes=[[factories.UNIT_OUR_ADDRESS, channels.channels[1].partner_state.address]],
             ),
             calculate_locksroot=True,
             allow_invalid=True,
@@ -1985,7 +1998,9 @@ def test_sanity_check_for_refund_transfer_with_fees():
         properties=LockedTransferSignedStateProperties(
             initiator=UNIT_TRANSFER_SENDER,
             amount=from_transfer_amount,
-            route=[factories.UNIT_OUR_ADDRESS, next_hop_address, factories.UNIT_TRANSFER_TARGET],
+            routes=[
+                [factories.UNIT_OUR_ADDRESS, next_hop_address, factories.UNIT_TRANSFER_TARGET]
+            ],
         ),
     )
 

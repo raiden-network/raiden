@@ -92,7 +92,7 @@ def cancel_current_route(
     return events_for_cancel_current_route(transfer_description)
 
 
-def maybe_try_new_route(
+def maybe_try_new_route_or_cancel(
     payment_state: InitiatorPaymentState,
     initiator_state: InitiatorTransferState,
     transfer_description: TransferDescriptionWithSecretState,
@@ -100,10 +100,16 @@ def maybe_try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
+    is_reroute_allowed: bool = True,
 ) -> TransitionResult[InitiatorPaymentState]:
     events: List[Event] = list()
+
     if can_cancel(initiator_state):
         cancel_events = cancel_current_route(payment_state, initiator_state)
+        events.extend(cancel_events)
+
+        if not is_reroute_allowed:
+            return TransitionResult(payment_state, events)
 
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
@@ -113,7 +119,6 @@ def maybe_try_new_route(
             block_number=block_number,
         )
 
-        events.extend(cancel_events)
         events.extend(sub_iteration.events)
 
         if sub_iteration.new_state is None:
@@ -319,14 +324,15 @@ def handle_transferrefundcancelroute(
         secrethash=state_change.secrethash,
     )
 
-    sub_iteration = maybe_try_new_route(
+    sub_iteration = maybe_try_new_route_or_cancel(
         payment_state=payment_state,
         initiator_state=initiator_state,
         transfer_description=transfer_description,
-        candidate_route_states=state_change.routes,
+        candidate_route_states=payment_state.routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        is_reroute_allowed=state_change.is_reroute_allowed,
     )
 
     events.extend(sub_iteration.events)

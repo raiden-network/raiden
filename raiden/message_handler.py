@@ -1,8 +1,7 @@
-import typing
-
 import structlog
 from eth_utils import to_hex
 
+from raiden.constants import ABSENT_SECRET
 from raiden.messages import (
     Delivered,
     LockedTransfer,
@@ -37,10 +36,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, List
-
-if typing.TYPE_CHECKING:
-    from raiden.transfer.state import RouteState
+from raiden.utils.typing import MYPY_ANNOTATION
 
 log = structlog.get_logger(__name__)
 
@@ -170,32 +166,22 @@ class MessageHandler:
             chain_state=chain_state, secrethash=from_transfer.lock.secrethash
         )
 
-        routes: List[RouteState] = list()
-
-        # FIXME: need to look into initiator case.
-
-        # We currently don't allow multi routes if the initiator does not
-        # hold the secret. In such case we remove all other possible routes
-        # which allow the API call to return with with an error message.
-        # old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
-        # if old_secret == ABSENT_SECRET:
-        #     routes = list()
-
         if role == "initiator":
             secret = random_secret()
+            old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
+            is_reroute_allowed = bool(old_secret) and old_secret != ABSENT_SECRET
             state_change: StateChange = ReceiveTransferRefundCancelRoute(
-                routes=routes,
                 transfer=from_transfer,
                 balance_proof=from_transfer.balance_proof,
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
                 secret=secret,
+                is_reroute_allowed=is_reroute_allowed,
             )
         else:
             state_change = ReceiveTransferRefund(
                 transfer=from_transfer,
                 balance_proof=from_transfer.balance_proof,
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-                routes=routes,
             )
 
         raiden.handle_and_track_state_change(state_change)

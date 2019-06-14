@@ -112,13 +112,12 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
 
 def test_invalid_instantiation_receive_transfer_refund(additional_args):
     wrong_type_transfer = factories.create(factories.TransferDescriptionProperties())
-    routes = list()
     secret = factories.UNIT_SECRET
 
     with pytest.raises(ValueError):
-        ReceiveTransferRefund(transfer=wrong_type_transfer, routes=routes, **additional_args)
+        ReceiveTransferRefund(transfer=wrong_type_transfer, **additional_args)
 
     with pytest.raises(ValueError):
         ReceiveTransferRefundCancelRoute(
-            transfer=wrong_type_transfer, routes=routes, secret=secret, **additional_args
+            transfer=wrong_type_transfer, secret=secret, **additional_args
         )

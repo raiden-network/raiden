@@ -1,7 +1,12 @@
+import random
+
 from raiden.messages import LockedTransfer, Metadata, RefundTransfer, RouteMetadata
 from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
+from raiden.transfer.mediated_transfer import mediator
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.state_change import ReceiveTransferRefund
 from raiden.utils.signer import LocalSigner, recover
 
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
@@ -139,5 +144,146 @@ def test_resolve_routes(netting_channel_state, chain_state, token_network_state)
     assert route_states[0].forward_channel_id == channel_id, msg
 
 
-def test_mediator_forwards_pruned_route():
-    pass
+def test_mediator_skips_routes_that_have_failed():
+    prng = random.Random()
+    block_number = 3
+    defaults = factories.NettingChannelStateProperties(
+        our_state=factories.NettingChannelEndStateProperties.OUR_STATE,
+        partner_state=factories.NettingChannelEndStateProperties(balance=10),
+        open_transaction=factories.TransactionExecutionStatusProperties(
+            started_block_number=1, finished_block_number=2, result="success"
+        ),
+    )
+    properties = [
+        factories.NettingChannelStateProperties(
+            partner_state=factories.NettingChannelEndStateProperties(
+                privatekey=factories.HOP1_KEY, address=factories.HOP1
+            )
+        ),
+        factories.NettingChannelStateProperties(
+            partner_state=factories.NettingChannelEndStateProperties(
+                privatekey=factories.HOP2_KEY, address=factories.HOP2
+            )
+        ),
+        factories.NettingChannelStateProperties(
+            partner_state=factories.NettingChannelEndStateProperties(
+                privatekey=factories.HOP3_KEY, address=factories.HOP3
+            )
+        ),
+    ]
+    channels = factories.make_channel_set(
+        properties=properties, number_of_channels=3, defaults=defaults
+    )
+    locked_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            expiration=10,
+            routes=[
+                [
+                    factories.UNIT_OUR_ADDRESS,
+                    channels.channels[1].partner_state.address,
+                    factories.UNIT_TRANSFER_TARGET,
+                ],
+                [
+                    factories.UNIT_OUR_ADDRESS,
+                    channels.channels[2].partner_state.address,
+                    factories.UNIT_TRANSFER_TARGET,
+                ],
+            ],
+            canonical_identifier=channels.channels[0].canonical_identifier,
+            pkey=factories.HOP1_KEY,
+            sender=factories.HOP1,
+        )
+    )
+    init_action = factories.mediator_make_init_action(channels=channels, transfer=locked_transfer)
+    nodeaddresses_to_networkstates = {
+        channel.partner_state.address: "reachable" for channel in channels.channels
+    }
+    transition_result = mediator.handle_init(
+        state_change=init_action,
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        pseudo_random_generator=prng,
+        block_number=block_number,
+    )
+    mediator_state = transition_result.new_state
+    events = transition_result.events
+    assert mediator_state is not None
+    assert events
+    # now we receive a refund from whoever we forwarded to (should be HOP2)
+    assert isinstance(events[-1], SendLockedTransfer)
+    assert events[-1].recipient == factories.HOP2
+
+    last_pair = mediator_state.transfers_pair[-1]
+    canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
+    lock_expiration = last_pair.payee_transfer.lock.expiration
+    payment_identifier = last_pair.payee_transfer.payment_identifier
+
+    received_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            expiration=lock_expiration,
+            payment_identifier=payment_identifier,
+            canonical_identifier=canonical_identifier,
+            sender=factories.HOP2,
+            pkey=factories.HOP2_KEY,
+            message_identifier=factories.make_message_identifier(),
+        )
+    )
+
+    refund_state_change = ReceiveTransferRefund(
+        transfer=received_transfer,
+        balance_proof=received_transfer.balance_proof,
+        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
+    transition_result = mediator.handle_refundtransfer(
+        mediator_state=mediator_state,
+        mediator_state_change=refund_state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        pseudo_random_generator=prng,
+        block_number=block_number,
+    )
+
+    mediator_state = transition_result.new_state
+    events = transition_result.events
+    assert mediator_state is not None
+    assert events
+
+    # now we should have a forward transfer to HOP3
+    assert isinstance(events[-1], SendLockedTransfer)
+    assert events[-1].recipient == factories.HOP3
+
+    last_pair = mediator_state.transfers_pair[-1]
+    canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
+    lock_expiration = last_pair.payee_transfer.lock.expiration
+    payment_identifier = last_pair.payee_transfer.payment_identifier
+
+    received_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            expiration=lock_expiration,
+            payment_identifier=payment_identifier,
+            canonical_identifier=canonical_identifier,
+            sender=factories.HOP3,
+            pkey=factories.HOP3_KEY,
+            message_identifier=factories.make_message_identifier(),
+        )
+    )
+
+    refund_state_change = ReceiveTransferRefund(
+        transfer=received_transfer,
+        balance_proof=received_transfer.balance_proof,
+        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
+    transition_result = mediator.handle_refundtransfer(
+        mediator_state=mediator_state,
+        mediator_state_change=refund_state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        pseudo_random_generator=prng,
+        block_number=block_number,
+    )
+
+    mediator_state = transition_result.new_state
+    events = transition_result.events
+
+    # now we should have a refund transfer from HOP3
+    assert isinstance(events[-1], SendRefundTransfer)

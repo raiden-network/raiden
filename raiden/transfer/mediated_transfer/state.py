@@ -59,7 +59,7 @@ class LockedTransferUnsignedState(LockedTransferState):
     """
 
     balance_proof: BalanceProofUnsignedState
-    route_states: List[RouteState]
+    route_states: List[RouteState] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         super().__post_init__()
