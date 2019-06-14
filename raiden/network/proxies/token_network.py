@@ -800,9 +800,10 @@ class TokenNetwork:
             if receipt_or_none:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
-                # - The account had enough balance to deposit
+                # - The account had enough tokens to deposit
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
+                failed_at_blockhash = encode_hex(receipt_or_none["blockHash"])
 
                 if receipt_or_none["cumulativeGasUsed"] == gas_limit:
                     msg = (
@@ -819,7 +820,8 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
                     partner=partner,
-                    block_identifier=given_block_identifier,
+                    block_identifier=failed_at_blockhash,
+                )
                 )
 
                 total_deposit_done = sender_details.deposit >= total_deposit
@@ -848,7 +850,7 @@ class TokenNetwork:
             failed_at_blocknumber = failed_at["number"]
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name="closeChannel",
+                transaction_name="setTotalDeposit",
                 transaction_executed=True,
                 required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
                 block_identifier=failed_at_blocknumber,
