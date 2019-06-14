@@ -451,7 +451,7 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = dict((lock.lockhash, lock) for lock in pending_locks)
+        locks = PendingLocksState(dict((lock.lockhash, lock.encoded) for lock in pending_locks))
     else:
         locks = make_empty_pending_locks_state()
 
