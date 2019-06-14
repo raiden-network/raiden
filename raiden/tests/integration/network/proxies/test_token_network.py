@@ -177,7 +177,7 @@ def test_token_network_proxy(
         )
 
     msg = "Trying a deposit to an inexisting channel must fail."
-    with pytest.raises(RaidenUnrecoverableError, message=msg, match="was not opened"):
+    with pytest.raises(RaidenUnrecoverableError, message=msg):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=1,
