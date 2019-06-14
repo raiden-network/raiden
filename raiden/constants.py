@@ -13,7 +13,6 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     LockHash,
-    Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
     Secret,
@@ -54,7 +53,6 @@ EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
 EMPTY_LOCK_HASH = LockHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_SIGNATURE = Signature(bytes(65))
-EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 EMPTY_SECRET = Secret(bytes(32))
 EMPTY_SECRET_SHA256 = SecretHash(sha256(EMPTY_SECRET).digest())
