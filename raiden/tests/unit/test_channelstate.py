@@ -8,7 +8,7 @@ from typing import List
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
@@ -1375,7 +1375,7 @@ def test_channelstate_unlock_unlocked_onchain():
         block_number=settle_block_number,
         block_hash=make_block_hash(),
         partner_onchain_locksroot=make_32bytes(),  # non empty
-        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     iteration = channel.handle_channel_settled(channel_state, settle_state_change)

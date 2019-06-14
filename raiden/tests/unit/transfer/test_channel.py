@@ -103,8 +103,8 @@ def test_channel_cleared_after_two_unlocks():
     )
 
     msg = "both participants have pending locks, merkleroot must not be empty"
-    assert iteration.new_state.our_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
-    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
+    assert iteration.new_state.our_state.onchain_locksroot != LOCKSROOT_OF_NO_LOCKS, msg
+    assert iteration.new_state.partner_state.onchain_locksroot != LOCKSROOT_OF_NO_LOCKS, msg
 
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
