@@ -152,7 +152,13 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
 def prune_route_table(
     route_state_table: List[RouteState], selected_route: RouteState
 ) -> List[RouteState]:
+    """ Takes a selected route and places it on top of the route table,
+    with the current node address removed.
 
+    The idea is that the current node is the first address on the route
+    state entry, so this address needs to be removed from the table when
+    passing it to the next hop.
+    """
     pruned_route_table = [rs for rs in route_state_table if rs.route != selected_route.route]
 
     pruned_route_table.insert(
@@ -1331,14 +1337,14 @@ def send_lockedtransfer(
     route_states: List[RouteState],
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
-        channel_state,
-        initiator,
-        target,
-        amount,
-        message_identifier,
-        payment_identifier,
-        expiration,
-        secrethash,
+        channel_state=channel_state,
+        initiator=initiator,
+        target=target,
+        amount=amount,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        expiration=expiration,
+        secrethash=secrethash,
         route_states=route_states,
     )
 

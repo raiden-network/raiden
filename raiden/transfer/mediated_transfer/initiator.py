@@ -197,17 +197,17 @@ def try_new_route(
 
     for candidate_route_state in candidate_route_states:
         forward_channel_id = candidate_route_state.forward_channel_id
+
         candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
             forward_channel_id
         )
 
-        if (
-            forward_channel_id
-            and candidate_channel_state
-            and channel.is_channel_usable(
-                candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
-            )
-        ):
+        assert isinstance(candidate_channel_state, NettingChannelState)
+
+        is_usable_route = channel.is_channel_usable(
+            candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+        )
+        if is_usable_route:
             channel_state = candidate_channel_state
             route_state = candidate_route_state
             break

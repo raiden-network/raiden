@@ -31,7 +31,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
     RouteState,
     message_identifier_from_prng,
@@ -162,18 +161,13 @@ def has_secret_registration_started(
 def filter_reachable_routes(
     route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
 ) -> List[RouteState]:
-    """This function makes sure we use reachable routes only."""
-    reachable_routes = []
+    """ This function makes sure we use reachable routes only. """
 
-    for route_state in route_states:
-        node_network_state = nodeaddresses_to_networkstates.get(
-            route_state.next_hop_address, NODE_NETWORK_UNREACHABLE
-        )
-
-        if node_network_state == NODE_NETWORK_REACHABLE:
-            reachable_routes.append(route_state)
-
-    return reachable_routes
+    return [
+        route
+        for route in route_states
+        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NODE_NETWORK_REACHABLE
+    ]
 
 
 def filter_used_routes(
@@ -364,7 +358,7 @@ def forward_transfer_pair(
 
     Args:
         payer_transfer: The transfer received from the payer_channel.
-        route_state: oute to be tried.
+        route_state: route to be tried.
         route_state_table: list of all candidate routes
         channelidentifiers_to_channels: All the channels available for this
             transfer.
@@ -377,12 +371,13 @@ def forward_transfer_pair(
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
     payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
-
-    if payee_channel and channel.is_channel_usable(
+    is_payee_channel_usable = payee_channel is not None and channel.is_channel_usable(
         candidate_channel_state=payee_channel,
         transfer_amount=payer_transfer.lock.amount,
         lock_timeout=lock_timeout,
-    ):
+    )
+
+    if payee_channel is not None and is_payee_channel_usable:
         assert payee_channel.settle_timeout >= lock_timeout
         assert payee_channel.token_address == payer_transfer.token
 
@@ -1008,11 +1003,9 @@ def mediate_transfer(
     transfer_pair: Optional[MediationPairState] = None
     mediated_events: List[Event] = list()
 
-    reachable_route_states = [
-        r
-        for r in candidate_route_states
-        if nodeaddresses_to_networkstates.get(r.next_hop_address) == NODE_NETWORK_REACHABLE
-    ]
+    reachable_route_states = filter_reachable_routes(
+        candidate_route_states, nodeaddresses_to_networkstates
+    )
 
     for route_state in reachable_route_states:
         transfer_pair, mediated_events = forward_transfer_pair(

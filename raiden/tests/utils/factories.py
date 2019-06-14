@@ -307,6 +307,7 @@ HOP4_KEY = b"44444444444444444444444444444444"
 HOP5_KEY = b"55555555555555555555555555555555"
 HOP1 = privatekey_to_address(HOP1_KEY)
 HOP2 = privatekey_to_address(HOP2_KEY)
+HOP3 = privatekey_to_address(HOP3_KEY)
 ADDR = b"addraddraddraddraddr"
 
 
@@ -743,7 +744,7 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
     recipient: Address = EMPTY
     pkey: bytes = EMPTY
     message_identifier: MessageID = EMPTY
-    route: List[Address] = EMPTY
+    routes: List[List[Address]] = EMPTY
 
     TARGET_TYPE = LockedTransferSignedState
 
@@ -783,10 +784,11 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params["fee"] = 0
 
     # Dancing with parameters for different LockedState and LockedTransfer classes
-    route = params.pop("route")
+    routes = params.pop("routes")
     # pylint: disable=E1101
-    route_metadata = [transfer.recipient, transfer.target] if route == EMPTY else route
-    params["metadata"] = Metadata(routes=[RouteMetadata(route=route_metadata)])
+    if routes == EMPTY:
+        routes = [[transfer.recipient, transfer.target]]
+    params["metadata"] = Metadata(routes=[RouteMetadata(route=route) for route in routes])
 
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
@@ -841,7 +843,7 @@ def prepare_locked_transfer(properties, defaults):
 
     params["signature"] = EMPTY_SIGNATURE
 
-    params.pop("route")
+    params.pop("routes")
     if params["metadata"] == GENERATE:
         params["metadata"] = create(MetadataProperties())
 
@@ -1089,10 +1091,18 @@ def mediator_make_channel_pair(
 def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
+    def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
+        for candidate_channel in channels.channels:
+            if route[1] == candidate_channel.partner_state.address:
+                return candidate_channel.identifier
+        return None
+
+    forwards = [get_forward_channel(route) for route in transfer.routes]
+    assert len(forwards) == len(transfer.routes)
 
     route_states = [
-        RouteState(route=route, forward_channel_id=channels.get_hop(1).channel_identifier)
-        for route in transfer.routes
+        RouteState(route=route, forward_channel_id=forwards[idx])
+        for idx, route in enumerate(transfer.routes)
     ]
 
     return ActionInitMediator(
@@ -1169,7 +1179,7 @@ def make_transfers_pair(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         route_states = [
             RouteState(
-                route=channels[payer_index:],
+                route=[channel.partner_state.address for channel in channels[payer_index:]],
                 forward_channel_id=channels[payee_index].canonical_identifier.channel_identifier,
             )
         ]
