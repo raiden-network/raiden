@@ -569,7 +569,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
         netting_channel.unlock(
             sender=channelstate_0_1.our_state.address,
             receiver=channelstate_0_1.partner_state.address,
-            merkle_tree_locks=batch_unlock,
+            pending_locks=batch_unlock,
             given_block_identifier=current_block,
         )
 
