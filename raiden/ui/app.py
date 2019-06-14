@@ -51,7 +51,7 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config):
+def _setup_matrix(config: Dict, routing_mode: RoutingMode):
     if config["transport"]["matrix"].get("available_servers") is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
@@ -59,9 +59,8 @@ def _setup_matrix(config):
         log.debug("Fetching available matrix servers", available_servers=available_servers)
         config["transport"]["matrix"]["available_servers"] = available_servers
 
-    # TODO: This needs to be adjusted once #3735 gets implemented
-    # Add PFS broadcast room if enabled
-    if config["services"]["pathfinding_service_address"] is not None:
+    # Add PFS broadcast room when not in privat mode
+    if routing_mode != RoutingMode.PRIVATE:
         if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["global_rooms"]:
             config["transport"]["matrix"]["global_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
 
@@ -224,12 +223,13 @@ def run_app(
     )
 
     if transport == "matrix":
-        transport = _setup_matrix(config)
+        transport = _setup_matrix(config, routing_mode)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     event_handler: EventHandler = RaidenEventHandler()
 
+    # Only send feedback when PFS was used
     if routing_mode == RoutingMode.PFS:
         event_handler = PFSFeedbackEventHandler(event_handler)
 
@@ -257,6 +257,7 @@ def run_app(
             transport=transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,
+            routing_mode=routing_mode,
             user_deposit=proxies.user_deposit,
         )
     except RaidenError as e:

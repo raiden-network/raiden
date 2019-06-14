@@ -9,6 +9,7 @@ from eth_utils import to_checksum_address
 
 from raiden import waiting
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -371,6 +372,7 @@ def create_apps(
             raiden_event_handler=hold_handler,
             message_handler=message_handler,
             user_deposit=user_deposit,
+            routing_mode=RoutingMode.PRIVATE,
         )
         apps.append(app)
 

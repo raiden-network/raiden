@@ -1,6 +1,8 @@
+from typing import List
+
 import pytest
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.network.transport import MatrixTransport
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
@@ -44,9 +46,8 @@ def local_matrix_servers(
 
 # Beware: the arguments to `global_rooms` should be lists
 @pytest.fixture
-def global_rooms():
-    # TODO: adjust this depending on configuration once #3735 gets implemented
-    return [DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]
+def global_rooms() -> List[str]:
+    return [DISCOVERY_DEFAULT_ROOM]
 
 
 @pytest.fixture

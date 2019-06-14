@@ -65,11 +65,20 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
 
-    # With basic routing configure pfs should raise assertion
+    # With local routing configure pfs should raise assertion
     with pytest.raises(AssertionError):
-        config = configure_pfs_or_exit(
-            pfs_url=None,
-            routing_mode=RoutingMode.BASIC,
+        _ = configure_pfs_or_exit(
+            pfs_url="",
+            routing_mode=RoutingMode.LOCAL,
+            service_registry=service_proxy,
+            token_network_registry_address=token_network_registry_address_test_default,
+        )
+
+    # With private routing configure pfs should raise assertion
+    with pytest.raises(AssertionError):
+        _ = configure_pfs_or_exit(
+            pfs_url="",
+            routing_mode=RoutingMode.PRIVATE,
             service_registry=service_proxy,
             token_network_registry_address=token_network_registry_address_test_default,
         )
@@ -105,7 +114,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", side_effect=requests.RequestException()):
             # Configuring a given address
-            config = configure_pfs_or_exit(
+            _ = configure_pfs_or_exit(
                 pfs_url=bad_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_proxy,
@@ -118,7 +127,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
-            configure_pfs_or_exit(
+            _ = configure_pfs_or_exit(
                 pfs_url="adad",
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),

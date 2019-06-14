@@ -4,6 +4,7 @@ import structlog
 from eth_utils import to_checksum_address
 
 from raiden import constants
+from raiden.constants import RoutingMode
 from raiden.messages import RequestMonitoring, UpdatePFS
 from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.transfer import channel, views
@@ -38,7 +39,10 @@ def update_services_from_balance_proof(
 
 def update_path_finding_service_from_channel_state(
     raiden: "RaidenService", channel_state: NettingChannelState
-):
+) -> None:
+    if raiden.routing_mode == RoutingMode.PRIVATE:
+        return
+
     msg = UpdatePFS.from_channel_state(channel_state)
     msg.sign(raiden.signer)
     raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
@@ -50,6 +54,9 @@ def update_path_finding_service_from_balance_proof(
     chain_state: ChainState,
     new_balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
 ) -> None:
+    if raiden.routing_mode == RoutingMode.PRIVATE:
+        return
+
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state, canonical_identifier=new_balance_proof.canonical_identifier
     )

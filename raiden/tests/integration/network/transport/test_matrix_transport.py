@@ -644,7 +644,7 @@ def test_pfs_global_messages(
     """
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms,  # FIXME: #3735
+            "global_rooms": global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],

@@ -161,7 +161,7 @@ def test_setup_proxies_raiden_addresses_are_given():
         service_registry_contract_address=None,
         blockchain_service=blockchain_service,
         contracts=contracts,
-        routing_mode=RoutingMode.BASIC,
+        routing_mode=RoutingMode.LOCAL,
         pathfinding_service_address=None,
     )
     assert proxies
@@ -191,7 +191,7 @@ def test_setup_proxies_all_addresses_are_given():
             service_registry_contract_address=make_address(),
             blockchain_service=blockchain_service,
             contracts=contracts,
-            routing_mode=RoutingMode.BASIC,
+            routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
         )
     assert proxies
@@ -221,7 +221,7 @@ def test_setup_proxies_all_addresses_are_known():
             service_registry_contract_address=None,
             blockchain_service=blockchain_service,
             contracts=contracts,
-            routing_mode=RoutingMode.BASIC,
+            routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
         )
     assert proxies

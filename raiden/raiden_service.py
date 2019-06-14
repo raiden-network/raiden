@@ -23,6 +23,7 @@ from raiden.constants import (
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
     Environment,
+    RoutingMode,
 )
 from raiden.exceptions import (
     InvalidAddress,
@@ -234,6 +235,7 @@ class RaidenService(Runnable):
         transport,
         raiden_event_handler: EventHandler,
         message_handler,
+        routing_mode: RoutingMode,
         config: Dict[str, Any],
         user_deposit: UserDeposit = None,
     ) -> None:
@@ -248,6 +250,7 @@ class RaidenService(Runnable):
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
         self.default_msc_address = default_msc_address
+        self.routing_mode = routing_mode
         self.config = config
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
