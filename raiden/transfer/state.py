@@ -21,7 +21,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.utils import lpex
+from raiden.utils import lpex, pex
 from raiden.utils.typing import (
     Address,
     Any,

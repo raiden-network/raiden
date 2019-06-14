@@ -33,7 +33,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, sha3
+from raiden.utils import ishash, pex, sha3
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.utils.signer import Signer, recover
 from raiden.utils.signing import pack_data
