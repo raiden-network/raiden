@@ -87,30 +87,30 @@ Read the [tentative specification for the Raiden Network](https://raiden-network
 ## Repositories
 The Raiden Network is getting created with a set of tools, which are maintained within different repositories.
 ### Core
-- [The solidity smart contracts, librairies and deployment tools](https://github.com/raiden-network/raiden-contracts) are used to bootstrap a Raiden Network on an Ethereum Chain.
+- The [solidity smart contracts, librairies and deployment tools](https://github.com/raiden-network/raiden-contracts) are used to bootstrap a Raiden Network on an Ethereum Chain.
 
-- **The Raiden Python client within the current repository** is used to manage payment channels and to make token transfers.
+- The Raiden Python client within the current repository is used to manage payment channels and to make token transfers.
 
-- [A configured matrix server](https://github.com/raiden-network/raiden-transport) joins a federation of Matrix servers which is used as the transport layer for the Raiden Network. 
+- A [configured matrix server](https://github.com/raiden-network/raiden-transport) joins a federation of Matrix servers which is used as the transport layer for the Raiden Network. 
 
-- [The Service repository](https://github.com/raiden-network/raiden-services) contains the code for following services:
+- The [Service repository](https://github.com/raiden-network/raiden-services) contains the code for following services:
     - The Monitoring Service watches open payment channels when the user is not online. 
     - The Pathfinding service supports users in finding the cheapest or shortest way to route a payment through the network.
     
-- [The Light Client repository](https://github.com/raiden-network/light-client) contains the code for following applications:
-- The Raiden Light Client SDK is a Raiden Network compatible client written in JavaScript/Typescript.
-- The Raiden dApp is a reference implementation of the Raiden Light Client SDK.
+- The [Light Client repository](https://github.com/raiden-network/light-client) contains the code for following applications:
+    - The Raiden Light Client SDK is a Raiden Network compatible client written in JavaScript/Typescript.
+    - The Raiden dApp is a reference implementation of the Raiden Light Client SDK.
 
 ### Tools
-- [The Raiden WebUI](https://github.com/raiden-network/webui) is Raiden Web User Inteface to manage channels and make token transfers.
+- The [Raiden WebUI](https://github.com/raiden-network/webui) is Raiden Web User Inteface to manage channels and make token transfers.
 
-- [The Raiden Explorer](https://github.com/raiden-network/explorer) visualizes the nodes of the Raiden Networks and shows more statistical information.
+- The [Raiden Explorer](https://github.com/raiden-network/explorer) visualizes the nodes of the Raiden Networks and shows more statistical information.
 
-- [The One-Click-Installer](https://github.com/raiden-network/raiden-installer) makes it easy to install a Raiden client and join the Raiden Network.
+- The [One-Click-Installer](https://github.com/raiden-network/raiden-installer) makes it easy to install a Raiden client and join the Raiden Network.
 
-- [The Scenario Player](https://github.com/raiden-network/scenario-player) is an integration testing tool for the Raiden contracts, the Raiden client and the services.
+- The [Scenario Player](https://github.com/raiden-network/scenario-player) is an integration testing tool for the Raiden contracts, the Raiden client and the services.
 
-- [The Workshop Scripts](https://github.com/raiden-network/workshop) enable workshop fascilitators to easily host a Raiden Workshop.
+- The [Workshop Scripts](https://github.com/raiden-network/workshop) enable workshop fascilitators to easily host a Raiden Workshop.
 
 ## Contributing
 
