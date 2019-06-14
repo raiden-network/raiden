@@ -406,6 +406,11 @@ class NettingChannelState(State):
         return self.our_state.contract_balance
 
     @property
+    def our_total_withdraw(self) -> WithdrawAmount:
+        # pylint: disable=E1101
+        return self.our_state.total_withdraw
+
+    @property
     def partner_total_deposit(self) -> Balance:
         # pylint: disable=E1101
         return self.partner_state.contract_balance
