@@ -1,4 +1,4 @@
-[0002] Better testing framework for entire Raiden suite (client, MS and PFS)
+Better testing framework for the entire Raiden suite (client, MS and PFS)
 *********************************************************************
 
 * **Status**: proposed
