@@ -48,6 +48,7 @@ from raiden.utils.typing import (
     ClassVar,
     Dict,
     InitiatorAddress,
+    List,
     Locksroot,
     MessageID,
     Nonce,
@@ -712,7 +713,7 @@ class Metadata:
         return sha3(rlp.encode([r.hash for r in self.routes]))
 
     def __repr__(self):
-        return f"RouteMetadata: {' -> '.join([pex(address) for address in self.routes])}"
+        return f"Metadata: routes: {[repr(route) for route in self.routes]}"
 
 
 @dataclass(repr=False, eq=False)
