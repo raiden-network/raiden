@@ -47,7 +47,6 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     Dict,
-    FeeAmount,
     InitiatorAddress,
     Locksroot,
     MessageID,
@@ -1119,7 +1118,6 @@ class UpdatePFS(SignedMessage):
     updating_capacity: TokenAmount
     other_capacity: TokenAmount
     reveal_timeout: int
-    mediation_fee: FeeAmount
 
     def __post_init__(self):
         if self.signature is None:
@@ -1141,7 +1139,6 @@ class UpdatePFS(SignedMessage):
                 sender=channel_state.partner_state, receiver=channel_state.our_state
             ),
             reveal_timeout=channel_state.reveal_timeout,
-            mediation_fee=channel_state.mediation_fee,
             signature=EMPTY_SIGNATURE,
         )
 
@@ -1163,7 +1160,6 @@ class UpdatePFS(SignedMessage):
         packed.updating_capacity = self.updating_capacity
         packed.other_capacity = self.other_capacity
         packed.reveal_timeout = self.reveal_timeout
-        packed.fee = self.mediation_fee
         packed.signature = self.signature
 
 
