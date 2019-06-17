@@ -559,7 +559,7 @@ def is_valid_lock_expired(
         result = (False, msg, None)
 
     elif pending_locks is None:
-        msg = "Invalid LockExpired message. Same lockhash handled twice."
+        msg = "Invalid LockExpired message. Same lock handled twice."
         result = (False, msg, None)
 
     else:
@@ -639,7 +639,7 @@ def valid_lockedtransfer_check(
         result = (False, msg, None)
 
     elif pending_locks is None:
-        msg = f"Invalid {message_name} message. Same lockhash handled twice."
+        msg = f"Invalid {message_name} message. Same lock handled twice."
         result = (False, msg, None)
 
     elif len(pending_locks.locks) > MAXIMUM_PENDING_TRANSFERS:
@@ -767,7 +767,7 @@ def is_valid_unlock(
     pending_locks = compute_locks_without(sender_state.pending_locks, lock.encoded)
 
     if pending_locks is None:
-        msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
+        msg = f"Invalid unlock message. The lock is unknown {encode_hex(lock.encoded)}"
         return (False, msg, None)
 
     locksroot_without_lock = compute_locksroot(pending_locks)
@@ -1183,10 +1183,9 @@ def compute_locks_with(
     locks: PendingLocksState, lock: Union[HashTimeLockState, UnlockPartialProofState]
 ) -> Optional[PendingLocksState]:
     """Register the given lock with as a pending locks."""
-    lockhash = lock.lockhash
-    if lockhash not in locks.locks:
+    if bytes(lock.encoded) not in locks.locks:
         locks = PendingLocksState(list(locks.locks))
-        locks.locks.append(lock.encoded)  # pylint: disable=E1101
+        locks.locks.append(bytes(lock.encoded))  # pylint: disable=E1101
         return locks
     else:
         return None
@@ -1195,10 +1194,10 @@ def compute_locks_with(
 def compute_locks_without(
     locks: PendingLocksState, lock_encoded: EncodedData
 ) -> Optional[PendingLocksState]:
-    # Use None to inform the caller the lockhash is unknown
-    if lock_encoded in locks.locks:
+    # Use None to inform the caller the lock is unknown
+    if bytes(lock_encoded) in locks.locks:
         locks = PendingLocksState(list(locks.locks))
-        locks.locks.remove(lock_encoded)
+        locks.locks.remove(bytes(lock_encoded))
         return locks
     else:
         return None

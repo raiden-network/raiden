@@ -108,7 +108,7 @@ def create_model(balance, num_pending_locks=0):
     privkey, address = make_privkey_address()
 
     locks = [make_lock() for _ in range(num_pending_locks)]
-    pending_locks = dict((lock.lockhash, lock.encoded) for lock in locks)
+    pending_locks = list(bytes(lock.encoded) for lock in locks)
 
     our_model = PartnerStateModel(
         participant_address=address,
@@ -469,7 +469,7 @@ def test_channelstate_send_lockedtransfer():
         distributable=our_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        pending_locks={lock.lockhash: lock},
+        pending_locks=[bytes(lock.encoded)],
     )
     partner_model2 = partner_model1
 
@@ -513,7 +513,7 @@ def test_channelstate_receive_lockedtransfer():
         distributable=partner_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        pending_locks={lock.lockhash: lock},
+        pending_locks=[bytes(lock.encoded)],
     )
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -589,7 +589,7 @@ def test_channelstate_receive_lockedtransfer():
         balance=partner_model2.balance - lock_amount,
         amount_locked=0,
         next_nonce=3,
-        pending_locks=dict(),
+        pending_locks=list(),
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
@@ -685,7 +685,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         distributable=partner_model1.distributable - lock1.amount,
         amount_locked=lock1.amount,
         next_nonce=2,
-        pending_locks={lock1.lockhash: lock1.encoded},
+        pending_locks=[bytes(lock1.encoded)],
     )
 
     # The valid transfer is handled normally
@@ -701,7 +701,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         b"test_receive_cannot_overspend_with_multiple_pending_transfers2"
     ).digest()
     lock2 = HashTimeLockState(lock2_amount, lock2_expiration, lock2_secrethash)
-    locks = PendingLocksState({lock1.lockhash: lock1.encoded, lock2.lockhash: lock2.encoded})
+    locks = PendingLocksState([bytes(lock1.encoded), bytes(lock2.encoded)])
 
     nonce2 = 2
     receive_lockedtransfer2 = make_receive_transfer_mediated(
@@ -829,8 +829,8 @@ def test_interwoven_transfers():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks = PendingLocksState(dict(partner_model_current.pending_locks))
-        pending_locks.locks.update({lock.lockhash: lock.encoded})
+        pending_locks = PendingLocksState(list(partner_model_current.pending_locks))
+        pending_locks.locks.append(bytes(lock.encoded))
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,
@@ -876,8 +876,8 @@ def test_interwoven_transfers():
             transferred_amount += lock_amount
             locked_amount -= lock_amount
 
-            pending_locks = dict(partner_model_current.pending_locks)
-            del pending_locks[lock.lockhash]
+            pending_locks = list(partner_model_current.pending_locks)
+            pending_locks.remove(bytes(lock.encoded))
             locksroot = compute_locksroot(PendingLocksState(pending_locks))
 
             partner_model_current = partner_model_current._replace(
@@ -1157,7 +1157,7 @@ def test_channel_must_accept_expired_locks():
         amount_locked=lock_amount,
         distributable=partner_model1.distributable - lock_amount,
         next_nonce=partner_model1.next_nonce + 1,
-        pending_locks={lock.lockhash: lock},
+        pending_locks=[bytes(lock.encoded)],
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
@@ -1278,7 +1278,7 @@ def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
     locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.locks.update({lock.lockhash: lock.as_bytes})  # pylint: disable=E1101
+        locks.locks.append(lock.as_bytes)  # pylint: disable=E1101
     return locks
 
 
@@ -1302,7 +1302,7 @@ def test_channelstate_get_unlock_proof():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        pending_locks.locks.update({lock.lockhash: lock.encoded})  # pylint: disable=E1101
+        pending_locks.locks.append(bytes(lock.encoded))  # pylint: disable=E1101
         if random.randint(0, 1) == 0:
             locked_locks[lock_secrethash] = lock
         else:
@@ -1315,7 +1315,7 @@ def test_channelstate_get_unlock_proof():
 
     unlock_proof = channel.get_batch_unlock(end_state)
     assert len(unlock_proof.locks) == len(end_state.pending_locks.locks)
-    leaves_packed = b"".join(unlock_proof.locks.values())
+    leaves_packed = b"".join(unlock_proof.locks)
 
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
     assert len(recomputed_pending_locks.locks) == len(end_state.pending_locks.locks)

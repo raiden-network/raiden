@@ -1,6 +1,8 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
+from eth_utils import keccak
+
 from raiden.messages import message_from_sendevent
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -198,7 +200,7 @@ def test_regression_send_refund():
                 "balance_proof": {
                     "transferred_amount": 0,
                     "locked_amount": 10,
-                    "locksroot": lock.lockhash,
+                    "locksroot": keccak(lock.encoded),
                     "token_network_address": token_network_address,
                     "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
                     "chain_id": first_payer_transfer.balance_proof.chain_id,

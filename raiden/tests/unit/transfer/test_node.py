@@ -163,9 +163,7 @@ def test_subdispatch_to_paymenttask_target(chain_state, netting_channel_state):
     lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
 
     netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
-    netting_channel_state.partner_state.pending_locks = PendingLocksState(
-        {lock.lockhash: lock.encoded}
-    )
+    netting_channel_state.partner_state.pending_locks = PendingLocksState([bytes(lock.encoded)])
     state_change = Block(
         block_number=chain_state.block_number,
         gas_limit=GAS_LIMIT,
@@ -365,9 +363,7 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
     lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
 
     netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
-    netting_channel_state.partner_state.pending_locks = PendingLocksState(
-        {lock.lockhash: lock.encoded}
-    )
+    netting_channel_state.partner_state.pending_locks = PendingLocksState([bytes(lock.encoded)])
     result = object()
     monkeypatch.setattr(
         raiden.transfer.node,

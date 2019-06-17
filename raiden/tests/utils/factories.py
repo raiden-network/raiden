@@ -4,7 +4,7 @@ from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from hashlib import sha256
 
-from eth_utils import to_checksum_address
+from eth_utils import keccak, to_checksum_address
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.messages import (
@@ -319,9 +319,9 @@ ADDR = b"addraddraddraddraddr"
 
 
 def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
-    ret = PendingLocksState(dict())
+    ret = PendingLocksState(list())
     for lock in locks:
-        ret.locks.update({lock.lockhash: lock.encoded})
+        ret.locks.append(bytes(lock.encoded))
     return ret
 
 
@@ -689,7 +689,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         secrethash=sha256(transfer.secret).digest(),
     )
     if transfer.locksroot == LOCKSROOT_OF_NO_LOCKS:
-        transfer = replace(transfer, locksroot=lock.lockhash)
+        transfer = replace(transfer, locksroot=keccak(lock.encoded))
 
     return LockedTransferUnsignedState(
         balance_proof=create(transfer.extract(BalanceProofProperties)),
@@ -731,7 +731,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     signer = LocalSigner(pkey)
     sender = params.pop("sender")
     if params["locksroot"] == LOCKSROOT_OF_NO_LOCKS:
-        params["locksroot"] = lock.lockhash
+        params["locksroot"] = keccak(lock.as_bytes)
     params["fee"] = 0
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)

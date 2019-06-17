@@ -451,7 +451,7 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = PendingLocksState(dict((lock.lockhash, lock.encoded) for lock in pending_locks))
+        locks = PendingLocksState(list(bytes(lock.encoded) for lock in pending_locks))
     else:
         locks = make_empty_pending_locks_state()
 
@@ -522,9 +522,9 @@ def make_receive_transfer_mediated(
 
     if pending_locks is None:
         locks = make_empty_pending_locks_state()
-        locks.locks.update({lock.lockhash: lock.encoded})
+        locks.locks.append(bytes(lock.encoded))
     else:
-        assert lock.lockhash in pending_locks.locks
+        assert bytes(lock.encoded) in pending_locks.locks
         locks = pending_locks
 
     if locked_amount is None:
@@ -594,7 +594,7 @@ def make_receive_expired_lock(
     if pending_locks is None:
         pending_locks = make_empty_pending_locks_state()
     else:
-        assert lock.lockhash not in pending_locks
+        assert bytes(lock.encoded) not in pending_locks
 
     locksroot = compute_locksroot(pending_locks)
 

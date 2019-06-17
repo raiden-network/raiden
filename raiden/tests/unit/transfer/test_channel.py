@@ -39,9 +39,7 @@ def _channel_and_transfer(num_pending_locks):
         nonce=partner_model.next_nonce,
         transferred_amount=0,
         lock=lock,
-        pending_locks=PendingLocksState(
-            {**partner_model.pending_locks, lock.lockhash: lock.encoded}
-        ),
+        pending_locks=PendingLocksState(partner_model.pending_locks + [bytes(lock.encoded)]),
         locked_amount=lock.amount,
     )
 
