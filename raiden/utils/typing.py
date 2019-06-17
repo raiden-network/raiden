@@ -1,7 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 
-# I wanted to import this from typing, but that causes
-# a mypy failure https://github.com/python/mypy/issues/6904
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
