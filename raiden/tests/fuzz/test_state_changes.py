@@ -16,7 +16,7 @@ from hypothesis.stateful import (
 )
 from hypothesis.strategies import binary, builds, composite, integers, random_module, randoms
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
+from raiden.constants import GENESIS_BLOCK_NUMBER, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
@@ -52,7 +52,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import random_secret
 from raiden.utils.typing import BlockNumber
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 @composite

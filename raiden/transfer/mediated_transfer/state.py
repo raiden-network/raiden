@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 
-from raiden.constants import EMPTY_SECRETHASH
+from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -32,7 +32,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     typecheck,
 )
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import

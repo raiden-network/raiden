@@ -1,11 +1,10 @@
 from eth_utils import decode_hex, encode_hex
 from web3 import Web3
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import Address, ChannelID
 from raiden_contracts.constants import MessageTypeId
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
 

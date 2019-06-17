@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.state import MediationPairState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -21,7 +21,7 @@ def test_invalid_instantiation_locked_transfer_state():
 
     # neither class can be instantiated with an empty locksroot
     for valid in (valid_unsigned, valid_signed):
-        empty_balance_proof = replace(valid.balance_proof, locksroot=EMPTY_MERKLE_ROOT)
+        empty_balance_proof = replace(valid.balance_proof, locksroot=LOCKSROOT_OF_NO_LOCKS)
         with pytest.raises(ValueError):
             replace(valid, balance_proof=empty_balance_proof)
 

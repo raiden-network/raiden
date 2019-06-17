@@ -2,7 +2,7 @@ import math
 from enum import Enum
 from hashlib import sha256
 
-from eth_utils import to_checksum_address
+from eth_utils import keccak, to_checksum_address
 
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
@@ -13,6 +13,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     LockHash,
+    Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
     Secret,
@@ -56,6 +57,7 @@ EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 EMPTY_SECRET = Secret(bytes(32))
 EMPTY_SECRET_SHA256 = SecretHash(sha256(EMPTY_SECRET).digest())
+LOCKSROOT_OF_NO_LOCKS = Locksroot(keccak(b""))
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")

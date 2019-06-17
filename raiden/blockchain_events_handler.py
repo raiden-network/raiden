@@ -8,7 +8,12 @@ from eth_utils import to_canonical_address, to_checksum_address, to_hex
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import EMPTY_HASH, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
+from raiden.constants import (
+    EMPTY_HASH,
+    LOCKSROOT_OF_NO_LOCKS,
+    PATH_FINDING_BROADCASTING_ROOM,
+    RoutingMode,
+)
 from raiden.messages import FeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.services import update_path_finding_service_from_channel_state
@@ -43,7 +48,6 @@ from raiden_contracts.constants import (
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import

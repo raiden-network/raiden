@@ -4,7 +4,13 @@ from typing import TYPE_CHECKING
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
+from raiden.constants import (
+    EMPTY_BALANCE_HASH,
+    EMPTY_HASH,
+    EMPTY_MESSAGE_HASH,
+    EMPTY_SIGNATURE,
+    LOCKSROOT_OF_NO_LOCKS,
+)
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
@@ -59,7 +65,6 @@ from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import

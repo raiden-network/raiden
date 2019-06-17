@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.exceptions import (
     ChannelOutdatedError,
     RaidenRecoverableError,
@@ -74,10 +74,10 @@ def test_payment_channel_proxy_basics(
     channel_proxy_1.settle(
         transferred_amount=0,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner_transferred_amount=0,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         block_identifier="latest",
     )
     assert channel_proxy_1.settled("latest") is True

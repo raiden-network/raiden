@@ -1,6 +1,6 @@
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.state import PendingLocksState
-from raiden_contracts.tests.utils import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_empty():

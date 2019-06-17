@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
@@ -23,7 +23,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 def _channel_and_transfer(num_pending_locks):
