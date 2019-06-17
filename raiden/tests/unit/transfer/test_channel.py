@@ -65,8 +65,8 @@ def test_handle_receive_lockedtransfer_enforces_transfer_limit():
 
 
 def test_channel_cleared_after_two_unlocks():
-    our_model, _ = create_model(balance=700, merkletree_width=1)
-    partner_model, partner_key1 = create_model(balance=700, merkletree_width=1)
+    our_model, _ = create_model(balance=700, num_pending_locks=1)
+    partner_model, partner_key1 = create_model(balance=700, num_pending_locks=1)
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()
@@ -147,8 +147,8 @@ def test_channel_cleared_after_two_unlocks():
 
 def test_channel_cleared_after_our_unlock():
     pseudo_random_generator = random.Random()
-    our_model, _ = create_model(balance=700, merkletree_width=1)
-    partner_model, partner_key1 = create_model(balance=700, merkletree_width=0)
+    our_model, _ = create_model(balance=700, num_pending_locks=1)
+    partner_model, partner_key1 = create_model(balance=700, num_pending_locks=0)
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()

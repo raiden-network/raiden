@@ -274,8 +274,8 @@ def test_is_transaction_expired():
 
 
 def test_subdispatch_by_canonical_id(chain_state):
-    our_model, _ = create_model(balance=10, merkletree_width=1)
-    partner_model, _ = create_model(balance=0, merkletree_width=0)
+    our_model, _ = create_model(balance=10, num_pending_locks=1)
+    partner_model, _ = create_model(balance=0, num_pending_locks=0)
     channel_state = create_channel_from_models(
         our_model, partner_model, factories.make_privatekey_bin()
     )

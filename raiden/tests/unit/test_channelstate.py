@@ -105,10 +105,10 @@ def assert_partner_state(end_state, partner_state, model):
     assert end_state.contract_balance == model.contract_balance
 
 
-def create_model(balance, merkletree_width=0):
+def create_model(balance, num_pending_locks=0):
     privkey, address = make_privkey_address()
 
-    locks = [make_lock() for _ in range(merkletree_width)]
+    locks = [make_lock() for _ in range(num_pending_locks)]
     pending_locks = dict((lock.lockhash, lock.encoded) for lock in locks)
 
     our_model = PartnerStateModel(
@@ -868,7 +868,7 @@ def test_interwoven_transfers():
         if i % 2:
             # Update our model:
             # - Increase nonce because the secret is a new balance proof
-            # - The lock is removed from the merkle tree, the balance proof must be updated
+            # - The lock is removed from the pending locks, the balance proof must be updated
             #   - The locksroot must have unlocked lock removed
             #   - The transferred amount must be increased by the lock amount
             # - This changes the balance for both participants:
@@ -980,7 +980,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
 def test_regression_must_update_balanceproof_remove_expired_lock():
     """ A remove expire lock message contains a balance proof and changes the
-    merkle tree, the receiver must update the channel state.
+    pending locks, the receiver must update the channel state.
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
