@@ -498,8 +498,7 @@ def test_update_event_get_event():
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]),
-            timestamp=datetime.utcnow().isoformat(timespec="milliseconds"),
+            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
         )
 
 
@@ -512,7 +511,7 @@ def test_storage_get_and_update(storage):
 
 
 def test_storage_close():
-    storage = SerializedSQLiteStorage(":memory:", JSONSerializer)
+    storage = SerializedSQLiteStorage(":memory:", JSONSerializer())
     storage.close()
     with pytest.raises(RuntimeError):  # attempt to close an already closed database
         storage.close()
