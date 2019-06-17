@@ -148,7 +148,7 @@ class TokenNetwork:
         jsonrpc_client,
         token_network_address: TokenNetworkAddress,
         contract_manager: ContractManager,
-        blockchain_service: BlockChainService,
+        blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(token_network_address):
             raise InvalidAddress("Expected binary address format for token nework")
@@ -172,17 +172,13 @@ class TokenNetwork:
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
-        self.token: Token = Token(
-            jsonrpc_client=jsonrpc_client,
-            token_address=self.token_address(),
-            contract_manager=contract_manager,
-        )
-
         self.address = token_network_address
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
         self.open_channel_transactions: Dict[Address, AsyncResult] = dict()
+
+        self.token: Token = blockchain_service.token(token_address=self.token_address())
 
         # Forbids concurrent operations on the same channel
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
@@ -770,7 +766,7 @@ class TokenNetwork:
                     msg = (
                         f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can "
                         f"not be larger than the available balance {current_balance}, "
-                        f"for token at address {pex(self.token.address)}"
+                        f"for token at address {to_checksum_address(self.token.address)}"
                     )
                     raise RaidenUnrecoverableError(msg)
 

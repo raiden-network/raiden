@@ -45,10 +45,16 @@ def test_token_network_deposit_race(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
+
+    blockchain_service = BlockChainService(
+        jsonrpc_client=c1_client, contract_manager=contract_manager
+    )
+
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
     token_proxy.transfer(c1_client.address, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -85,15 +91,18 @@ def test_token_network_proxy(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
 
     initial_token_balance = 100
@@ -436,15 +445,18 @@ def test_token_network_proxy_update_transfer(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -646,6 +658,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     # create a channel and query the state at the current block hash
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -673,18 +686,25 @@ def test_token_network_actions_at_pruned_blocks(
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
+
+    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+
     c3_client = JSONRPCClient(web3, private_keys[0])
+
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)

@@ -70,6 +70,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         jsonrpc_client=app1.raiden.chain.client,
         token_network_address=token_network_address,
         contract_manager=app1.raiden.contract_manager,
+        blockchain_service=app1.raiden.chain,
     )
 
     # app1 closes the channel with an empty hash instead of the expected hash
