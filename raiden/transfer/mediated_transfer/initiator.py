@@ -343,7 +343,7 @@ def handle_offchain_secretreveal(
     the mediated transfer.
 
     This will validate the secret, and if valid a new balance proof is sent to
-    the next hop with the current lock removed from the merkle tree and the
+    the next hop with the current lock removed from the pending locks and the
     transferred amount updated.
     """
     iteration: TransitionResult[Optional[InitiatorTransferState]]
@@ -380,7 +380,7 @@ def handle_onchain_secretreveal(
 
     This check the on-chain secret corresponds to the one used by the
     initiator, and if valid a new balance proof is sent to the next hop with
-    the current lock removed from the merkle tree and the transferred amount
+    the current lock removed from the pending locks and the transferred amount
     updated.
     """
     iteration: TransitionResult[Optional[InitiatorTransferState]]
