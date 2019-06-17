@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """ Utility to compare to report the number of increased errors in the same
 code.
 
@@ -58,13 +58,6 @@ def compare_errors(error_old: Error, error_new: Error) -> int:
 
     # Do not compare line numbers. If the error moved around it does not
     # matter, only new and fixed bugs.
-    #
-    # Input has to be sorted. Because the character `:` is larger then numbers,
-    # lines without number will always be last.
-    # linenum_old = error_old["linenum"] or float("inf")
-    # linenum_new = error_new["linenum"] or float("inf")
-    # if linenum_old < linenum_new:
-    #     return -1
 
     return 1
 
@@ -91,7 +84,7 @@ def get_errors(previous_report: str) -> Iterator[Error]:
             yield error
 
 
-def sort_by_filename_level_error(error):
+def sort_by_filename_level_error(error: Error) -> Tuple:
     return error.filename, error.level, error.message
 
 
@@ -151,7 +144,7 @@ def print_changes(report: NewErrorCountPerFile) -> None:
         print()
 
 
-def main():
+def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
