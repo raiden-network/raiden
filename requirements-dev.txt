@@ -16,6 +16,7 @@ pytest-select==0.1.2
 pytest-xdist==1.27.0
 grequests==0.3.0
 pexpect==4.6.0
+eth-tester[py-evm]==0.1.0b33
 
 hypothesis==3.88.3
 
