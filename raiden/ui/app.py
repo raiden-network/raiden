@@ -19,7 +19,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.messages import FeeSchedule
+from raiden.messages import FeeScheduleState
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -174,7 +174,7 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
-    config["default_fee_schedule"] = FeeSchedule(flat=flat_fee, proportional=proportional_fee)
+    config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
 
     setup_environment(config, environment_type)
 

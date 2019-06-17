@@ -3,6 +3,7 @@ from dataclasses import dataclass, field, replace
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
+from raiden.transfer.architecture import State
 from raiden.utils.typing import FeeAmount, TokenAmount
 
 
@@ -29,11 +30,11 @@ class Interpolate:  # pylint: disable=too-few-public-methods
         return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
 
 
-T = TypeVar("T", bound="FeeSchedule")
+T = TypeVar("T", bound="FeeScheduleState")
 
 
 @dataclass
-class FeeSchedule:
+class FeeScheduleState(State):
     # pylint: disable=not-an-iterable
     flat: FeeAmount = FeeAmount(0)
     proportional: int = 0  # as micros, e.g. 1% = 0.01e6

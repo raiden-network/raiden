@@ -26,7 +26,7 @@ from raiden.transfer.architecture import (
     TransferTask,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.mediation_fee import FeeSchedule
+from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.utils import lpex, sha3
 from raiden.utils.typing import (
     Address,
@@ -341,7 +341,7 @@ class NettingChannelState(State):
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     mediation_fee: FeeAmount = field(repr=False)
-    fee_schedule: FeeSchedule = field(repr=False)
+    fee_schedule: FeeScheduleState = field(repr=False)
     our_state: NettingChannelEndState = field(repr=False)
     partner_state: NettingChannelEndState = field(repr=False)
     open_transaction: TransactionExecutionStatus
