@@ -270,11 +270,11 @@ class TransactionExecutionStatus(State):
 
 @dataclass
 class PendingLocksState(State):
-    locks: Dict[LockHash, EncodedData]
+    locks: List[EncodedData]
 
 
 def make_empty_pending_locks_state() -> PendingLocksState:
-    return PendingLocksState(dict())
+    return PendingLocksState(list())
 
 
 @dataclass(order=True)
