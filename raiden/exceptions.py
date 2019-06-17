@@ -18,14 +18,6 @@ class RaidenUnrecoverableError(RaidenError):
 # Exceptions raised due to programming errors
 
 
-class HashLengthNot32(RaidenError):
-    """ Raised if the length of the provided element is not 32 bytes in length,
-    a keccak hash is required to include the element in the merkle tree.
-    """
-
-    pass
-
-
 class UnknownEventType(RaidenError):
     """Raised if decoding of an event failed."""
 
