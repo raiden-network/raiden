@@ -17,6 +17,7 @@ from raiden.constants import (
     EMPTY_HASH,
     EMPTY_SIGNATURE,
     GENESIS_BLOCK_NUMBER,
+    LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
     UINT256_MAX,
     UNLOCK_TX_GAS_LIMIT,
@@ -78,7 +79,6 @@ from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 log = structlog.get_logger(__name__)
 

@@ -4,6 +4,7 @@ from hashlib import sha256
 
 import pytest
 
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
@@ -28,7 +29,6 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
 )
 from raiden.utils import sha3
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 @pytest.fixture

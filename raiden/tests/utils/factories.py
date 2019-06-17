@@ -6,7 +6,7 @@ from hashlib import sha256
 
 from eth_utils import to_checksum_address
 
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -85,7 +85,6 @@ from raiden.utils.typing import (
     Type,
     TypeVar,
 )
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 EMPTY = "empty"
 GENERATE = "generate"

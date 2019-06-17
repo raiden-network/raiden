@@ -8,7 +8,7 @@ from typing import List
 
 import pytest
 
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.messages import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
@@ -78,7 +78,6 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",

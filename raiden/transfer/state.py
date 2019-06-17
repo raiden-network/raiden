@@ -8,7 +8,13 @@ from typing import TYPE_CHECKING, Tuple
 import networkx
 from eth_utils import to_hex
 
-from raiden.constants import EMPTY_LOCK_HASH, EMPTY_SECRETHASH, UINT64_MAX, UINT256_MAX
+from raiden.constants import (
+    EMPTY_LOCK_HASH,
+    EMPTY_SECRETHASH,
+    LOCKSROOT_OF_NO_LOCKS,
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import (
@@ -60,7 +66,6 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import

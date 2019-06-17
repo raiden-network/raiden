@@ -3,7 +3,7 @@ import copy
 import pytest
 
 import raiden.transfer.node
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import GAS_LIMIT
 from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
 from raiden.tests.utils import factories
@@ -66,7 +66,6 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
 )
 from raiden.transfer.views import get_networks
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 
 def test_is_transaction_effect_satisfied(

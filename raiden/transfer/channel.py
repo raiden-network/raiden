@@ -7,6 +7,7 @@ from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import (
     CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    LOCKSROOT_OF_NO_LOCKS,
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
@@ -117,7 +118,6 @@ from raiden.utils.typing import (
     Union,
     WithdrawAmount,
 )
-from raiden_contracts.tests.utils.constants import LOCKSROOT_OF_NO_LOCKS
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
