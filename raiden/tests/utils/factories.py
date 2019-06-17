@@ -26,7 +26,7 @@ from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
+from raiden.transfer.mediated_transfer.state_change import ActionInitInitiator, ActionInitMediator
 from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -1114,6 +1114,26 @@ def mediator_make_init_action(
     )
 
 
+def initiator_make_init_action(
+    channels: ChannelSet, routes: List[List[Address]], transfer: TransferDescriptionWithSecretState
+) -> ActionInitInitiator:
+    def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
+        for channel_state in channels.channels:
+            if route[1] == channel_state.partner_state.address:
+                return channel_state.identifier
+        return None
+
+    forwards = [get_forward_channel(route) for route in routes]
+    assert len(forwards) == len(routes)
+
+    route_states = [
+        RouteState(route=route, forward_channel_id=forwards[idx])
+        for idx, route in enumerate(routes)
+    ]
+
+    return ActionInitInitiator(transfer=transfer, routes=route_states)
+
+
 class MediatorTransfersPair(NamedTuple):
     channels: ChannelSet
     transfers_pair: List[MediationPairState]
@@ -1290,6 +1310,9 @@ def make_chain_state(
     chain_state.identifiers_to_paymentnetworks[payment_network_address] = PaymentNetworkState(
         address=payment_network_address, token_network_list=[token_network]
     )
+    chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+        token_network_address
+    ] = payment_network_address
     return ContainerForChainStateTests(
         chain_state=chain_state,
         our_address=our_address,
