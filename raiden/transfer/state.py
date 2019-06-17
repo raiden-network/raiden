@@ -35,7 +35,6 @@ from raiden.utils.typing import (
     Dict,
     EncodedData,
     FeeAmount,
-    Keccak256,
     List,
     LockHash,
     Locksroot,
@@ -262,11 +261,6 @@ class TransactionExecutionStatus(State):
 
         if not is_valid_result:
             raise ValueError(f"result must be one of '{self.SUCCESS}', '{self.FAILURE}' or 'None'")
-
-
-@dataclass
-class MerkleTreeState(State):
-    layers: List[List[Keccak256]]
 
 
 @dataclass

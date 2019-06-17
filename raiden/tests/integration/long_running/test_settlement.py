@@ -533,7 +533,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
 
     secret_available.wait()  # wait for the messages to be exchanged
 
-    # Save the merkle tree leaves from the pending transfer, used to test the unlock
+    # Save the pending locks from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
     batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
     assert batch_unlock
@@ -705,11 +705,6 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     hub_contract = get_channelstate(
         app1, app0, token_network_address
     ).external_state.netting_channel.address
-
-    # the attacker can create a merkle proof of the locked transfer
-    # <the commented code below is left for documentation purposes>
-    # lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
-    # unlock_proof = attack_channel.partner_state.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
     attack_balance_proof = attack_transfer.to_balanceproof()
