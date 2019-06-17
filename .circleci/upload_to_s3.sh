@@ -21,5 +21,19 @@ s3cmd \
     --guess-mime-type \
     --acl-public \
     put \
-    ${dir}/* \
+    ${dir}/_LATEST*.txt \
     s3://${bucket}/
+
+s3cmd \
+    --access_key ${access_key} \
+    --secret_key ${secret_key} \
+    --host ${endpoint} \
+    --host-bucket "%(bucket)s.${endpoint}" \
+    --no-progress \
+    --stats \
+    --no-delete-removed \
+    --guess-mime-type \
+    --acl-public \
+    put \
+    ${dir}/raiden* \
+    s3://${bucket}/${RELEASE_TYPE}/
