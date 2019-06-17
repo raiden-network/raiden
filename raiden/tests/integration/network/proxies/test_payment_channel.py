@@ -1,11 +1,7 @@
 import pytest
 
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
-from raiden.exceptions import (
-    ChannelOutdatedError,
-    RaidenRecoverableError,
-    RaidenUnrecoverableError,
-)
+from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -120,6 +116,9 @@ def test_payment_channel_proxy_basics(
             block_identifier="latest",
         )
 
-    msg = "The channel was not opened at the provided block (latest). This call should never have been attempted."
+    msg = (
+        "The channel was not opened at the provided block (latest). "
+        "This call should never have been attempted."
+    )
     with pytest.raises(RaidenUnrecoverableError, message=msg):
         channel_proxy_1.set_total_deposit(total_deposit=20, block_identifier="latest")

@@ -7,6 +7,7 @@ from raiden.constants import (
     UINT256_MAX,
     Environment,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork
@@ -207,10 +208,14 @@ def register_token_and_return_the_network_proxy(
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     )
 
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
     return TokenNetwork(
         jsonrpc_client=deploy_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
 
 
