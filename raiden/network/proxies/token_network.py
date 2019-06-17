@@ -727,7 +727,7 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 total_channel_deposit = total_deposit + partner_details.deposit
-                if total_channel_deposit >= our_details.deposit:
+                if total_channel_deposit >= UINT256_MAX:
                     raise RaidenUnrecoverableError("Deposit overflow")
 
                 channel_participant_deposit_limit = self.channel_participant_deposit_limit
@@ -891,7 +891,7 @@ class TokenNetwork:
                 deposit_amount = total_deposit - our_details.deposit
 
                 total_channel_deposit = total_deposit + partner_details.deposit
-                if total_channel_deposit >= our_details.deposit:
+                if total_channel_deposit >= UINT256_MAX:
                     raise RaidenUnrecoverableError("Deposit overflow")
 
                 total_deposit_done = our_details.deposit >= total_deposit
