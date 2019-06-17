@@ -111,9 +111,14 @@ def maybe_try_new_route_or_cancel(
         if not is_reroute_allowed:
             return TransitionResult(payment_state, events)
 
+        filtered_route_states = [
+            route
+            for route in candidate_route_states
+            if route.forward_channel_id not in payment_state.cancelled_channels
+        ]
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            candidate_route_states=candidate_route_states,
+            candidate_route_states=filtered_route_states,
             transfer_description=transfer_description,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,

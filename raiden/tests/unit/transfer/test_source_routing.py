@@ -4,9 +4,15 @@ from raiden.messages import LockedTransfer, Metadata, RefundTransfer, RouteMetad
 from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
+from raiden.tests.utils.events import search_for_item
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
-from raiden.transfer.mediated_transfer.state_change import ReceiveTransferRefund
+from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveTransferRefund,
+    ReceiveTransferRefundCancelRoute,
+)
+from raiden.transfer.node import handle_init_initiator, state_transition
 from raiden.utils.signer import LocalSigner, recover
 
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
@@ -142,6 +148,92 @@ def test_resolve_routes(netting_channel_state, chain_state, token_network_state)
     msg = "route resolved with wrong channel id"
     channel_id = netting_channel_state.canonical_identifier.channel_identifier
     assert route_states[0].forward_channel_id == channel_id, msg
+
+
+def test_initiator_skips_used_routes():
+    defaults = factories.NettingChannelStateProperties(
+        our_state=factories.NettingChannelEndStateProperties.OUR_STATE,
+        partner_state=factories.NettingChannelEndStateProperties(balance=10),
+        open_transaction=factories.TransactionExecutionStatusProperties(
+            started_block_number=1, finished_block_number=2, result="success"
+        ),
+    )
+    properties = [
+        factories.NettingChannelStateProperties(
+            partner_state=factories.NettingChannelEndStateProperties(
+                privatekey=factories.HOP1_KEY, address=factories.HOP1
+            )
+        )
+    ]
+    test_chain_state = factories.make_chain_state(
+        number_of_channels=1, properties=properties, defaults=defaults
+    )
+    channels = test_chain_state.channel_set
+
+    bob = channels.channels[0].partner_state.address
+
+    routes = [[factories.UNIT_OUR_ADDRESS, bob, factories.UNIT_TRANSFER_TARGET]]
+
+    transfer = factories.create(
+        factories.TransferDescriptionProperties(
+            initiator=factories.UNIT_OUR_ADDRESS, target=factories.UNIT_TRANSFER_TARGET
+        )
+    )
+    init_action = factories.initiator_make_init_action(
+        channels=channels, routes=routes, transfer=transfer
+    )
+    transition_result = handle_init_initiator(
+        chain_state=test_chain_state.chain_state, state_change=init_action
+    )
+
+    chain_state = transition_result.new_state
+
+    assert transfer.secrethash in chain_state.payment_mapping.secrethashes_to_task
+
+    initiator_task = chain_state.payment_mapping.secrethashes_to_task[transfer.secrethash]
+    initiator_state = initiator_task.manager_state
+
+    assert len(initiator_state.routes) == 1, "Should have one route"
+    assert len(initiator_state.routes[0].route) == 3, "Route should not be pruned"
+    assert initiator_state.routes[0].route == routes[0], "Should have test route"
+
+    events = transition_result.events
+
+    assert isinstance(events[-1], SendLockedTransfer)
+
+    locked_transfer = initiator_state.initiator_transfers[transfer.secrethash].transfer
+
+    received_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            expiration=locked_transfer.lock.expiration,
+            payment_identifier=locked_transfer.payment_identifier,
+            canonical_identifier=locked_transfer.balance_proof.canonical_identifier,
+            initiator=factories.UNIT_OUR_ADDRESS,
+            sender=bob,
+            pkey=factories.HOP1_KEY,
+            message_identifier=factories.make_message_identifier(),
+            routes=[],
+            secret=transfer.secret,
+        )
+    )
+
+    role = views.get_transfer_role(
+        chain_state=chain_state, secrethash=locked_transfer.lock.secrethash
+    )
+
+    assert role == "initiator", "Should keep initiator role"
+
+    refund_state_change = ReceiveTransferRefundCancelRoute(
+        transfer=received_transfer,
+        balance_proof=received_transfer.balance_proof,
+        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
+        secret=factories.make_secret(),
+        is_reroute_allowed=True,
+    )
+
+    iteration = state_transition(chain_state=chain_state, state_change=refund_state_change)
+
+    assert search_for_item(iteration.events, SendLockedTransfer, {}) is None
 
 
 def test_mediator_skips_used_routes():
