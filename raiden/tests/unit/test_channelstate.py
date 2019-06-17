@@ -168,7 +168,6 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 nonce=partner_nonce,
                 transferred_amount=0,
                 locked_amount=len(partner_model.pending_locks),
-                # pylint: disable=no-member
                 locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
