@@ -164,6 +164,7 @@ class BlockChainService:
                     jsonrpc_client=self.client,
                     token_network_address=address,
                     contract_manager=self.contract_manager,
+                    blockchain_service=self,
                 )
 
         return self.address_to_token_network[address]

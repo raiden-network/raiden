@@ -46,6 +46,7 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     AdditionalHash,
     Address,
     Any,
@@ -77,6 +78,11 @@ from raiden_contracts.constants import (
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.network.blockchain_service import BlockChainService
+
 
 log = structlog.get_logger(__name__)
 
@@ -142,6 +148,7 @@ class TokenNetwork:
         jsonrpc_client,
         token_network_address: TokenNetworkAddress,
         contract_manager: ContractManager,
+        blockchain_service: BlockChainService,
     ):
         if not is_binary_address(token_network_address):
             raise InvalidAddress("Expected binary address format for token nework")
@@ -164,6 +171,12 @@ class TokenNetwork:
         )
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
+
+        self.token: Token = Token(
+            jsonrpc_client=jsonrpc_client,
+            token_address=self.token_address(),
+            contract_manager=contract_manager,
+        )
 
         self.address = token_network_address
         self.proxy = proxy
@@ -666,14 +679,8 @@ class TokenNetwork:
         """
         typecheck(total_deposit, int)
 
-        token_address = self.token_address()
-        token = Token(
-            jsonrpc_client=self.client,
-            token_address=token_address,
-            contract_manager=self.contract_manager,
-        )
         if total_deposit > 0 and total_deposit < UINT256_MAX:
-            msg = f'Total deposit is not in range [1, {UINT256_MAX}]'
+            msg = f"Total deposit is not in range [1, {UINT256_MAX}]"
             raise RaidenUnrecoverableError(msg)
 
         with self.channel_operations_lock[partner], self.deposit_lock:
