@@ -322,7 +322,7 @@ def clear_if_finalized(
 ) -> TransitionResult[Optional[MediatorTransferState]]:
     """Clear the mediator task if all the locks have been finalized.
 
-    A lock is considered finalized if it has been removed from the merkle tree
+    A lock is considered finalized if it has been removed from the pending locks
     offchain, either because the transfer was unlocked or expired, or because the
     channel was settled on chain and therefore the channel is removed."""
     state = cast(MediatorTransferState, iteration.new_state)
