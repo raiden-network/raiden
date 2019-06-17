@@ -95,9 +95,9 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    EncodedData,
     InitiatorAddress,
     List,
-    LockHash,
     Locksroot,
     LockType,
     MessageID,
@@ -538,7 +538,7 @@ def is_valid_lock_expired(
     )
 
     if lock:
-        pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
+        pending_locks = compute_locks_without(sender_state.pending_locks, lock.encoded)
         expected_locked_amount = current_locked_amount - lock.amount
 
     result: PendingLocksStateOrError = (False, None, None)
@@ -764,7 +764,7 @@ def is_valid_unlock(
         )
         return (False, msg, None)
 
-    pending_locks = compute_locks_without(sender_state.pending_locks, lock.lockhash)
+    pending_locks = compute_locks_without(sender_state.pending_locks, lock.encoded)
 
     if pending_locks is None:
         msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
@@ -1185,20 +1185,20 @@ def compute_locks_with(
     """Register the given lock with as a pending locks."""
     lockhash = lock.lockhash
     if lockhash not in locks.locks:
-        locks = PendingLocksState(dict(locks.locks))
-        locks.locks.update({lockhash: lock.encoded})  # pylint: disable=E1101
+        locks = PendingLocksState(list(locks.locks))
+        locks.locks.append(lock.encoded)  # pylint: disable=E1101
         return locks
     else:
         return None
 
 
 def compute_locks_without(
-    locks: PendingLocksState, lockhash: LockHash
+    locks: PendingLocksState, lock_encoded: EncodedData
 ) -> Optional[PendingLocksState]:
     # Use None to inform the caller the lockhash is unknown
-    if lockhash in locks.locks:
-        locks = PendingLocksState(dict(locks.locks))
-        del locks.locks[lockhash]
+    if lock_encoded in locks.locks:
+        locks = PendingLocksState(list(locks.locks))
+        locks.locks.remove(lock_encoded)
         return locks
     else:
         return None
@@ -1208,7 +1208,7 @@ def compute_locksroot(locks: PendingLocksState) -> Locksroot:
     """ Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
-    return Locksroot(keccak(b"".join(locks.locks.values())))
+    return Locksroot(keccak(b"".join(locks.locks)))
 
 
 def create_sendlockedtransfer(
@@ -1296,7 +1296,7 @@ def create_unlock(
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
-    pending_locks = compute_locks_without(our_state.pending_locks, lock.lockhash)
+    pending_locks = compute_locks_without(our_state.pending_locks, lock.encoded)
     msg = "the lock is pending, it must be in the pending locks"
     assert pending_locks is not None, msg
 
@@ -1492,7 +1492,7 @@ def create_sendexpiredlock(
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
 
-    pending_locks = compute_locks_without(sender_end_state.pending_locks, locked_lock.lockhash)
+    pending_locks = compute_locks_without(sender_end_state.pending_locks, locked_lock.encoded)
 
     if not pending_locks:
         return None, None
