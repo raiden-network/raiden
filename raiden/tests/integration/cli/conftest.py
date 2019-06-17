@@ -29,7 +29,7 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
     base_datadir = str(tmpdir)
 
     # Save the Ethereum node's logs, if needed for debugging
-    base_logdir = os.path.join(get_artifacts_storage(str(tmpdir)), blockchain_type)
+    base_logdir = os.path.join(get_artifacts_storage() or str(tmpdir), blockchain_type)
     os.makedirs(base_logdir, exist_ok=True)
 
     with setup_testchain(
@@ -84,7 +84,7 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
 
     # This assumes that there is only one Raiden instance per CLI test
     base_logfile = os.path.join(
-        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes", "cli_test.log"
+        get_artifacts_storage(request.node.name) or str(tmpdir), "raiden_nodes", "cli_test.log"
     )
     os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
 
