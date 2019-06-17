@@ -4,5 +4,5 @@ from raiden.transfer.state import PendingLocksState
 
 
 def test_empty():
-    locks = PendingLocksState(dict())
+    locks = PendingLocksState(list())
     assert compute_locksroot(locks) == LOCKSROOT_OF_NO_LOCKS

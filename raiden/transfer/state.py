@@ -8,13 +8,7 @@ from typing import TYPE_CHECKING, Tuple
 import networkx
 from eth_utils import to_hex
 
-from raiden.constants import (
-    EMPTY_LOCK_HASH,
-    EMPTY_SECRETHASH,
-    LOCKSROOT_OF_NO_LOCKS,
-    UINT64_MAX,
-    UINT256_MAX,
-)
+from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import (
@@ -27,7 +21,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.utils import lpex, sha3
+from raiden.utils import lpex
 from raiden.utils.typing import (
     Address,
     Any,
@@ -42,7 +36,6 @@ from raiden.utils.typing import (
     EncodedData,
     FeeAmount,
     List,
-    LockHash,
     Locksroot,
     MessageID,
     Nonce,
@@ -195,7 +188,6 @@ class HashTimeLockState(State):
     expiration: BlockExpiration
     secrethash: SecretHash
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         typecheck(self.amount, T_PaymentWithFeeAmount)
@@ -210,8 +202,6 @@ class HashTimeLockState(State):
 
         self.encoded = EncodedData(packed.data)
 
-        self.lockhash = LockHash(sha3(self.encoded))
-
 
 @dataclass
 class UnlockPartialProofState(State):
@@ -223,7 +213,6 @@ class UnlockPartialProofState(State):
     expiration: BlockExpiration = field(repr=False, default=BlockExpiration(0))
     secrethash: SecretHash = field(repr=False, default=EMPTY_SECRETHASH)
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)
@@ -233,7 +222,6 @@ class UnlockPartialProofState(State):
         self.expiration = self.lock.expiration
         self.secrethash = self.lock.secrethash
         self.encoded = self.lock.encoded
-        self.lockhash = self.lock.lockhash
 
 
 @dataclass

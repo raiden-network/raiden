@@ -71,9 +71,6 @@ InitiatorAddress = NewType("InitiatorAddress", T_InitiatorAddress)
 T_Locksroot = bytes
 Locksroot = NewType("Locksroot", T_Locksroot)
 
-T_LockHash = bytes
-LockHash = NewType("LockHash", T_LockHash)
-
 T_MessageID = int
 MessageID = NewType("MessageID", T_MessageID)
 
