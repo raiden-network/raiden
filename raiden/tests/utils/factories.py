@@ -25,7 +25,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
-from raiden.transfer.mediation_fee import FeeSchedule
+from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -412,7 +412,7 @@ class NettingChannelStateProperties(Properties):
     reveal_timeout: BlockTimeout = EMPTY
     settle_timeout: BlockTimeout = EMPTY
     mediation_fee: FeeAmount = EMPTY
-    fee_schedule: FeeSchedule = EMPTY
+    fee_schedule: FeeScheduleState = EMPTY
 
     our_state: NettingChannelEndStateProperties = EMPTY
     partner_state: NettingChannelEndStateProperties = EMPTY

@@ -16,7 +16,7 @@ from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediation_fee import FeeSchedule
+from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import Address, Optional
@@ -300,7 +300,7 @@ def create_apps(
             "transport": {},
             "rpc": True,
             "console": False,
-            "default_fee_schedule": FeeSchedule(),
+            "default_fee_schedule": FeeScheduleState(),
         }
 
         use_matrix = local_matrix_url is not None
