@@ -876,6 +876,7 @@ def test_interwoven_transfers():
             nonce += 1
             transferred_amount += lock_amount
             locked_amount -= lock_amount
+
             pending_locks = dict(partner_model_current.pending_locks)
             del pending_locks[lock.lockhash]
             locksroot = compute_locksroot(PendingLocksState(pending_locks))
