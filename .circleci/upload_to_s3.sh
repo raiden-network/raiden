@@ -20,4 +20,4 @@ s3cmd \
     --acl-public \
     sync \
     ${dir} \
-    s3://${bucket}/
+    s3://${bucket}/${RELEASE_TYPE}
