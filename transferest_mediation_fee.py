@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.transfer.mediation_fee import FeeSchedule, Interpolate
+from raiden.transfer.mediation_fee import FeeScheduleState, Interpolate
 from raiden.utils.typing import FeeAmount as FA, TokenAmount as TA
 
 
@@ -26,20 +26,20 @@ def test_interpolation():
 
 
 def test_basic_fee():
-    flat_schedule = FeeSchedule(flat=FA(2))
+    flat_schedule = FeeScheduleState(flat=FA(2))
     assert flat_schedule.fee(TA(10), capacity=TA(0)) == FA(2)
 
-    prop_schedule = FeeSchedule(proportional=0.01)
+    prop_schedule = FeeScheduleState(proportional=0.01)
     assert prop_schedule.fee(TA(40), capacity=TA(0)) == FA(0)
     assert prop_schedule.fee(TA(60), capacity=TA(0)) == FA(1)
     assert prop_schedule.fee(TA(1000), capacity=TA(0)) == FA(10)
 
-    combined_schedule = FeeSchedule(flat=FA(2), proportional=0.01)
+    combined_schedule = FeeScheduleState(flat=FA(2), proportional=0.01)
     assert combined_schedule.fee(TA(60), capacity=TA(0)) == FA(3)
 
 
 def test_imbalance_penalty():
-    v_schedule = FeeSchedule(
+    v_schedule = FeeScheduleState(
         imbalance_penalty=[(TA(0), FA(10)), (TA(50), FA(0)), (TA(100), FA(10))]
     )
     assert v_schedule.fee(capacity=TA(100 - 0), amount=TA(50)) == FA(-10)

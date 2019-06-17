@@ -25,7 +25,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
-from raiden.transfer.mediation_fee import FeeSchedule
+from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     BalanceProofSignedState,
     HashTimeLockState,
@@ -1173,7 +1173,7 @@ class FeeUpdate(SignedMessage):
 
     canonical_identifier: CanonicalIdentifier
     updating_participant: Address
-    fee_schedule: FeeSchedule
+    fee_schedule: FeeScheduleState
     timestamp: datetime
 
     def __post_init__(self):
@@ -1209,7 +1209,7 @@ class FeeUpdate(SignedMessage):
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
-            fee_schedule=FeeSchedule(flat=channel_state.mediation_fee),
+            fee_schedule=FeeScheduleState(flat=channel_state.mediation_fee),
             timestamp=datetime.now(timezone.utc),
             signature=EMPTY_SIGNATURE,
         )
