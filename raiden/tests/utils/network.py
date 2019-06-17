@@ -1,8 +1,10 @@
 """ Utilities to set-up a Raiden network. """
 from collections import namedtuple
 from copy import deepcopy
+from itertools import product
 
 import gevent
+import structlog
 from eth_utils import to_checksum_address
 
 from raiden import waiting
@@ -21,6 +23,8 @@ from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import Address, Optional
 from raiden.waiting import wait_for_payment_network
+
+log = structlog.get_logger(__name__)
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 BlockchainServices = namedtuple(
@@ -144,6 +148,17 @@ def create_all_channels_for_network(
                 )
             )
     gevent.joinall(greenlets, raise_error=True)
+
+    channels = [
+        {
+            "app0": to_checksum_address(app0.raiden.address),
+            "app1": to_checksum_address(app1.raiden.address),
+            "deposit": channel_individual_deposit,
+            "token_address": to_checksum_address(token_address),
+        }
+        for (app0, app1), token_address in product(app_channels, token_addresses)
+    ]
+    log.info("Test channels", channels=channels)
 
 
 def network_with_minimum_channels(apps, channels_per_node):
@@ -372,6 +387,11 @@ def parallel_start_apps(raiden_apps):
         start_tasks.add(greenlet)
 
     gevent.joinall(start_tasks, raise_error=True)
+
+    addresses_in_order = {
+        pos: to_checksum_address(app.raiden.address) for pos, app in enumerate(raiden_apps)
+    }
+    log.info("Raiden Apps started", addresses_in_order=addresses_in_order)
 
 
 def jsonrpc_services(
