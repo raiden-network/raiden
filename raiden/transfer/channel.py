@@ -1806,6 +1806,7 @@ def handle_receive_lock_expired(
     if is_valid:
         assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
+        channel_state.partner_state.nonce = state_change.balance_proof.nonce
         channel_state.partner_state.pending_locks = pending_locks
 
         _del_unclaimed_lock(channel_state.partner_state, state_change.secrethash)
