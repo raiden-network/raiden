@@ -675,8 +675,8 @@ class TokenNetwork:
         """
         typecheck(total_deposit, int)
 
-        if total_deposit > 0 and total_deposit < UINT256_MAX:
-            msg = f"Total deposit is not in range [1, {UINT256_MAX}]"
+        if total_deposit <= 0 and total_deposit >= UINT256_MAX:
+            msg = f"Total deposit {total_deposit} is not in range [1, {UINT256_MAX}]"
             raise RaidenUnrecoverableError(msg)
 
         with self.channel_operations_lock[partner], self.deposit_lock:
