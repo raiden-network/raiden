@@ -538,7 +538,9 @@ def is_valid_lock_expired(
     )
 
     if lock:
-        pending_locks = compute_locks_without(sender_state.pending_locks, lock.encoded)
+        pending_locks = compute_locks_without(
+            sender_state.pending_locks, EncodedData(bytes(lock.encoded))
+        )
         expected_locked_amount = current_locked_amount - lock.amount
 
     result: PendingLocksStateOrError = (False, None, None)
@@ -764,7 +766,9 @@ def is_valid_unlock(
         )
         return (False, msg, None)
 
-    pending_locks = compute_locks_without(sender_state.pending_locks, lock.encoded)
+    pending_locks = compute_locks_without(
+        sender_state.pending_locks, EncodedData(bytes(lock.encoded))
+    )
 
     if pending_locks is None:
         msg = f"Invalid unlock message. The lock is unknown {encode_hex(lock.encoded)}"
@@ -1185,7 +1189,7 @@ def compute_locks_with(
     """Register the given lock with as a pending locks."""
     if bytes(lock.encoded) not in locks.locks:
         locks = PendingLocksState(list(locks.locks))
-        locks.locks.append(bytes(lock.encoded))  # pylint: disable=E1101
+        locks.locks.append(EncodedData(bytes(lock.encoded)))  # pylint: disable=E1101
         return locks
     else:
         return None
@@ -1195,9 +1199,9 @@ def compute_locks_without(
     locks: PendingLocksState, lock_encoded: EncodedData
 ) -> Optional[PendingLocksState]:
     # Use None to inform the caller the lock is unknown
-    if bytes(lock_encoded) in locks.locks:
+    if lock_encoded in locks.locks:
         locks = PendingLocksState(list(locks.locks))
-        locks.locks.remove(bytes(lock_encoded))
+        locks.locks.remove(lock_encoded)
         return locks
     else:
         return None
@@ -1295,7 +1299,9 @@ def create_unlock(
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
-    pending_locks = compute_locks_without(our_state.pending_locks, lock.encoded)
+    pending_locks = compute_locks_without(
+        our_state.pending_locks, EncodedData(bytes(lock.encoded))
+    )
     msg = "the lock is pending, it must be in the pending locks"
     assert pending_locks is not None, msg
 
@@ -1491,7 +1497,9 @@ def create_sendexpiredlock(
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
 
-    pending_locks = compute_locks_without(sender_end_state.pending_locks, locked_lock.encoded)
+    pending_locks = compute_locks_without(
+        sender_end_state.pending_locks, EncodedData(bytes(locked_lock.encoded))
+    )
 
     if not pending_locks:
         return None, None
