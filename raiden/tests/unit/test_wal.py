@@ -97,13 +97,13 @@ def test_write_read_log():
     state_changes1 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count1 = len(state_changes1)
 
-    wal.log_and_dispatch(block)
+    wal.log_and_dispatch([block])
 
     state_changes2 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count2 = len(state_changes2)
     assert count1 + 1 == count2
 
-    wal.log_and_dispatch(contract_receive_unlock)
+    wal.log_and_dispatch([contract_receive_unlock])
 
     state_changes3 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count3 = len(state_changes3)
@@ -173,13 +173,31 @@ def test_restore_without_snapshot():
     wal = new_wal(state_transition_noop)
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block1)
+    wal.log_and_dispatch([block1])
 
     block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block2)
+    wal.log_and_dispatch([block2])
 
     block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block3)
+    wal.log_and_dispatch([block3])
+
+    newwal = restore_to_state_change(
+        transition_function=state_transtion_acc,
+        storage=wal.storage,
+        state_change_identifier=LAST_STATECHANGE_ULID,
+    )
+
+    aggregate = newwal.state_manager.current_state
+    assert aggregate.state_changes == [block1, block2, block3]
+
+
+def test_restore_without_snapshot_in_batches():
+    wal = new_wal(state_transition_noop)
+
+    block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
+    wal.log_and_dispatch([block1, block2, block3])
 
     newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
@@ -195,15 +213,15 @@ def test_get_snapshot_before_state_change():
     wal = new_wal(state_transtion_acc)
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block1)
+    wal.log_and_dispatch([block1])
     wal.snapshot()
 
     block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block2)
+    wal.log_and_dispatch([block2])
     wal.snapshot()
 
     block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
-    wal.log_and_dispatch(block3)
+    wal.log_and_dispatch([block3])
     wal.snapshot()
 
     snapshot = wal.storage.get_snapshot_before_state_change(HIGH_STATECHANGE_ULID)

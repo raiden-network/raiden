@@ -264,7 +264,7 @@ def test_matrix_message_sync(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler)
     raiden_service1 = MockRaidenService(message_handler)
 
-    raiden_service1.handle_and_track_state_change = MagicMock()
+    raiden_service1.handle_and_track_state_changes = MagicMock()
 
     transport0.start(raiden_service0, message_handler, None)
     transport1.start(raiden_service1, message_handler, None)
@@ -273,7 +273,7 @@ def test_matrix_message_sync(matrix_transports):
 
     latest_auth_data = f"{transport1._user_id}/{transport1._client.api.token}"
     update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
-    raiden_service1.handle_and_track_state_change.assert_called_with(update_transport_auth_data)
+    raiden_service1.handle_and_track_state_changes.assert_called_with([update_transport_auth_data])
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
@@ -337,7 +337,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
     def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
         close_channel = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
-        app0.raiden.handle_and_track_state_change(close_channel)
+        app0.raiden.handle_and_track_state_changes([close_channel])
 
     app0.raiden.transport._client.add_presence_listener(make_tx)
 

@@ -147,16 +147,16 @@ class MockRaidenService:
             chain_id=self.chain.network_id,
         )
 
-        self.wal.log_and_dispatch(state_change)
+        self.wal.log_and_dispatch([state_change])
 
     def on_message(self, message):
         if self.message_handler:
             self.message_handler.on_message(self, message)
 
-    def handle_and_track_state_change(self, state_change):
+    def handle_and_track_state_changes(self, state_changes):
         pass
 
-    def handle_state_change(self, state_change):
+    def handle_state_changes(self, state_changes):
         pass
 
     def sign(self, message):

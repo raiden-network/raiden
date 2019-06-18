@@ -477,7 +477,7 @@ def run_test_mediated_transfer_with_allocated_fee(
         use_imbalance_penalty=False,
     )
 
-    app1.raiden.handle_state_change(state_change=action_set_fee)
+    app1.raiden.handle_state_changes(state_changes=[action_set_fee])
 
     transfer(
         initiator_app=app0,
@@ -574,7 +574,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         use_imbalance_penalty=False,
     )
 
-    app1.raiden.handle_state_change(state_change=action_set_fee)
+    app1.raiden.handle_state_change(state_changes=[action_set_fee])
 
     secret = factories.make_secret(0)
     secrethash = sha256(secret).digest()

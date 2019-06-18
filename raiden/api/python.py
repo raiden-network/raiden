@@ -1,7 +1,6 @@
 import gevent
 import structlog
 from eth_utils import is_binary_address, to_checksum_address
-from gevent import Greenlet
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
@@ -58,7 +57,6 @@ from raiden.utils.typing import (
     PaymentNetworkAddress,
     Secret,
     SecretHash,
-    Set,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -672,14 +670,12 @@ class RaidenAPI:  # pragma: no unittest
             partner_addresses=partner_addresses,
         )
 
-        greenlets: Set[Greenlet] = set()
-        for channel_state in channels_to_close:
-            channel_close = ActionChannelClose(
-                canonical_identifier=channel_state.canonical_identifier
-            )
+        close_state_changes = [
+            ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
+            for channel_state in channels_to_close
+        ]
 
-            greenlets.update(self.raiden.handle_state_change(channel_close))
-
+        greenlets = set(self.raiden.handle_state_changes(close_state_changes))
         gevent.joinall(greenlets, raise_error=True)
 
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]

@@ -101,7 +101,7 @@ class MessageHandler:
             nonce=message.nonce,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_change(withdraw_request)
+        raiden.handle_and_track_state_changes([withdraw_request])
 
     @staticmethod
     def handle_message_withdraw(raiden: RaidenService, message: Withdraw):
@@ -117,7 +117,7 @@ class MessageHandler:
             nonce=message.nonce,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_change(withdraw)
+        raiden.handle_and_track_state_changes([withdraw])
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
@@ -128,12 +128,12 @@ class MessageHandler:
             secrethash=message.secrethash,
             sender=message.sender,
         )
-        raiden.handle_and_track_state_change(secret_request)
+        raiden.handle_and_track_state_changes([secret_request])
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
         state_change = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
-        raiden.handle_and_track_state_change(state_change)
+        raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
     def handle_message_unlock(raiden: RaidenService, message: Unlock) -> None:
@@ -144,7 +144,7 @@ class MessageHandler:
             balance_proof=balance_proof,
             sender=balance_proof.sender,
         )
-        raiden.handle_and_track_state_change(state_change)
+        raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
     def handle_message_lockexpired(raiden: RaidenService, message: LockExpired) -> None:
@@ -155,7 +155,7 @@ class MessageHandler:
             secrethash=message.secrethash,
             message_identifier=message.message_identifier,
         )
-        raiden.handle_and_track_state_change(state_change)
+        raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
@@ -184,7 +184,7 @@ class MessageHandler:
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
             )
 
-        raiden.handle_and_track_state_change(state_change)
+        raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
     def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer) -> None:
@@ -216,9 +216,9 @@ class MessageHandler:
     @staticmethod
     def handle_message_processed(raiden: RaidenService, message: Processed) -> None:
         processed = ReceiveProcessed(message.sender, message.message_identifier)
-        raiden.handle_and_track_state_change(processed)
+        raiden.handle_and_track_state_changes([processed])
 
     @staticmethod
     def handle_message_delivered(raiden: RaidenService, message: Delivered) -> None:
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
-        raiden.handle_and_track_state_change(delivered)
+        raiden.handle_and_track_state_changes([delivered])

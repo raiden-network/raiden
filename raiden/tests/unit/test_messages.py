@@ -358,7 +358,7 @@ def test_message_handler():
     secret_request.sign(signer)
     receive = ReceiveSecretRequest(sender=sender, **params)
     message_handler.on_message(mock_raiden, secret_request)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
 
     secret = factories.make_secret()
     reveal_secret = RevealSecret(
@@ -367,7 +367,7 @@ def test_message_handler():
     reveal_secret.sign(signer)
     receive = ReceiveSecretReveal(sender=sender, secret=secret)
     message_handler.on_message(mock_raiden, reveal_secret)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
 
     properties: factories.UnlockProperties = factories.create_properties(
         factories.UnlockProperties()
@@ -384,7 +384,7 @@ def test_message_handler():
         sender=sender,
     )
     message_handler.on_message(mock_raiden, unlock)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
 
     properties: factories.LockExpiredProperties = factories.create_properties(
         factories.LockExpiredProperties()
@@ -401,16 +401,16 @@ def test_message_handler():
         sender=sender,
     )
     message_handler.on_message(mock_raiden, lock_expired)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
 
     delivered = Delivered(delivered_message_identifier=1, signature=factories.EMPTY_SIGNATURE)
     delivered.sign(signer)
     receive = ReceiveDelivered(message_identifier=1, sender=sender)
     message_handler.on_message(mock_raiden, delivered)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
 
     processed = Processed(message_identifier=42, signature=factories.EMPTY_SIGNATURE)
     processed.sign(signer)
     receive = ReceiveProcessed(message_identifier=42, sender=sender)
     message_handler.on_message(mock_raiden, processed)
-    assert_method_call(mock_raiden, "handle_and_track_state_change", receive)
+    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
