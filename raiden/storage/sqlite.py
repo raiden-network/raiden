@@ -324,12 +324,12 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
-    def write_state_change(self, state_change: str, timestamp: datetime) -> StateChangeID:
+    def write_state_change(self, state_change: str) -> StateChangeID:
         state_change_id = self._ulid_factory(StateChangeID).new()
 
         self.conn.execute(
-            "INSERT INTO state_changes(identifier, data, timestamp) VALUES(?, ?, ?)",
-            (state_change_id, state_change, timestamp),
+            "INSERT INTO state_changes(identifier, data) VALUES(?, ?)",
+            (state_change_id, state_change),
         )
         self.maybe_commit()
 
@@ -750,9 +750,9 @@ class SerializedSQLiteStorage:
     def log_run(self) -> None:
         self.database.log_run()
 
-    def write_state_change(self, state_change: StateChange, timestamp: datetime) -> StateChangeID:
+    def write_state_change(self, state_change: StateChange) -> StateChangeID:
         serialized_data = self.serializer.serialize(state_change)
-        return self.database.write_state_change(serialized_data, timestamp)
+        return self.database.write_state_change(serialized_data)
 
     def write_state_snapshot(
         self, snapshot: State, statechange_id: StateChangeID, timestamp: datetime
