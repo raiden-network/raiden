@@ -7,6 +7,7 @@ import pytest
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret, SecretRequest
+from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
@@ -19,7 +20,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelSetFee
 from raiden.utils import sha3
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import BlockNumber, TokenAmount
 from raiden.waiting import wait_for_block
 
 
@@ -343,38 +344,50 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         )
         assert not patched.called
 
-        config_patch = dict(
-            pathfinding_service_address="mock-address",
-            pathfinding_eth_address=factories.make_checksum_address(),
+        # Setup PFS config
+        app0.raiden.config["pfs_config"] = PFSConfig(
+            info=PFSInfo(
+                url="mock-address",
+                chain_id=app0.raiden.chain.network_id,
+                token_network_registry_address=payment_network_address,
+                payment_address=factories.make_address(),
+                message="",
+                operator="",
+                version="",
+                settings="",
+                price=TokenAmount(0),
+            ),
+            maximum_fee=TokenAmount(100),
+            iou_timeout=BlockNumber(100),
+            max_paths=5,
         )
 
-        with patch.dict(app0.raiden.config["services"], config_patch):
-            app0.raiden.start_mediated_transfer_with_secret(
-                token_network_address=token_network_address,
-                amount=11,
-                fee=0,
-                target=factories.HOP2,
-                identifier=2,
-                secret=b"2" * 32,
-            )
-            assert patched.call_count == 1
+        app0.raiden.start_mediated_transfer_with_secret(
+            token_network_address=token_network_address,
+            amount=11,
+            fee=0,
+            target=factories.HOP2,
+            identifier=2,
+            secret=b"2" * 32,
+        )
+        assert patched.call_count == 1
 
-            # Mediator should not re-query PFS
-            locked_transfer = factories.create(
-                factories.LockedTransferProperties(
-                    amount=TokenAmount(5),
-                    initiator=factories.HOP1,
-                    target=factories.HOP2,
-                    sender=factories.HOP1,
-                    pkey=factories.HOP1_KEY,
-                    token=token_address,
-                    canonical_identifier=factories.make_canonical_identifier(
-                        token_network_address=token_network_address
-                    ),
-                )
+        # Mediator should not re-query PFS
+        locked_transfer = factories.create(
+            factories.LockedTransferProperties(
+                amount=TokenAmount(5),
+                initiator=factories.HOP1,
+                target=factories.HOP2,
+                sender=factories.HOP1,
+                pkey=factories.HOP1_KEY,
+                token=token_address,
+                canonical_identifier=factories.make_canonical_identifier(
+                    token_network_address=token_network_address
+                ),
             )
-            app0.raiden.mediate_mediated_transfer(locked_transfer)
-            assert patched.call_count == 1
+        )
+        app0.raiden.mediate_mediated_transfer(locked_transfer)
+        assert patched.call_count == 1
 
 
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
