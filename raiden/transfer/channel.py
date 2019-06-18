@@ -1725,7 +1725,7 @@ def handle_action_withdraw(
 
 def handle_receive_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
     is_valid, msg = is_valid_withdraw_request(
@@ -1758,7 +1758,7 @@ def handle_receive_withdraw_request(
 
 def handle_receive_withdraw(
     channel_state: NettingChannelState, withdraw: ReceiveWithdraw, block_hash: BlockHash
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
     is_valid, msg = is_valid_withdraw_confirmation(channel_state=channel_state, withdraw=withdraw)
@@ -2028,7 +2028,7 @@ def handle_channel_updated_transfer(
 
 def handle_channel_settled(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelSettled
-) -> TransitionResult[NettingChannelState]:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
     if state_change.channel_identifier == channel_state.identifier:
@@ -2102,7 +2102,7 @@ def handle_channel_withdraw(
 
 def handle_channel_batch_unlock(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
-) -> TransitionResult[NettingChannelState]:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
     new_channel_state: Optional[NettingChannelState] = channel_state
@@ -2136,11 +2136,13 @@ def state_transition(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[NettingChannelState]:
+) -> TransitionResult[Optional[NettingChannelState]]:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events: List[Event] = list()
-    iteration: TransitionResult[NettingChannelState] = TransitionResult(channel_state, events)
+    iteration: TransitionResult[Optional[NettingChannelState]] = TransitionResult(
+        channel_state, events
+    )
 
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION

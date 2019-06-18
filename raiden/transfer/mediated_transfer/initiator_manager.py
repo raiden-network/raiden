@@ -35,7 +35,9 @@ from raiden.utils.typing import (
 )
 
 
-def clear_if_finalized(iteration: TransitionResult,) -> TransitionResult[InitiatorPaymentState]:
+def clear_if_finalized(
+    iteration: TransitionResult
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     """ Clear the initiator payment task if all transfers have been finalized
     or expired. """
     state = cast(InitiatorPaymentState, iteration.new_state)
@@ -134,7 +136,7 @@ def subdispatch_to_initiatortransfer(
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     channel_identifier = initiator_state.channel_identifier
     channel_state = channelidentifiers_to_channels.get(channel_identifier)
     if not channel_state:
@@ -197,7 +199,7 @@ def handle_init(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[InitiatorPaymentState]:
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     events: List[Event] = list()
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
@@ -465,8 +467,10 @@ def state_transition(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[InitiatorPaymentState]:
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     # pylint: disable=unidiomatic-typecheck
+    iteration: TransitionResult[Optional[InitiatorPaymentState]]
+
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         assert payment_state, "Block state changes should be accompanied by a valid payment state"

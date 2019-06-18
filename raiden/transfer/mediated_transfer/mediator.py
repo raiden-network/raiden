@@ -319,7 +319,7 @@ def sanity_check(
 def clear_if_finalized(
     iteration: TransitionResult,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-) -> TransitionResult[MediatorTransferState]:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """Clear the mediator task if all the locks have been finalized.
 
     A lock is considered finalized if it has been removed from the merkle tree
@@ -1045,7 +1045,7 @@ def handle_init(
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[MediatorTransferState]:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     routes = state_change.routes
 
     from_hop = state_change.from_hop
@@ -1410,7 +1410,7 @@ def state_transition(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
-) -> TransitionResult[MediatorTransferState]:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches
     # Notes:
