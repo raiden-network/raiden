@@ -82,12 +82,13 @@ class WriteAheadLog(Generic[ST]):
         """
 
         with self._lock:
-            state_change_id = self.storage.write_state_change(state_change)
-            self.state_change_id = state_change_id
+            state_change_ids = self.storage.write_state_changes([state_change])
+            assert len(state_change_ids) == 1
+            self.state_change_id = state_change_ids[0]
 
             state, events = self.state_manager.dispatch(state_change)
 
-            self.storage.write_events(state_change_id, events)
+            self.storage.write_events(state_change_ids[0], events)
 
         return state, events
 
