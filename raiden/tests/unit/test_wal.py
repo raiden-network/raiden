@@ -122,7 +122,7 @@ def test_write_read_log():
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
-        wal.storage.write_state_snapshot(34, "AAAA", datetime.now())
+        wal.storage.write_state_snapshot(34, "AAAA")
 
 
 def test_timestamped_event():
