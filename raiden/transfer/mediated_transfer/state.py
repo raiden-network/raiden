@@ -214,10 +214,13 @@ class MediatorTransferState(State):
     channels will be used for the same transfer (not for different payments).
     Args:
         secrethash: The secrethash used for this transfer.
+        routes: list of all routes given for this transfer
+        refunded_channels: list of channel identifiers that sent refunds
     """
 
     secrethash: SecretHash
     routes: List[RouteState]
+    refunded_channels: List[ChannelID] = field(repr=False, default_factory=list)
     secret: Optional[Secret] = field(default=None)
     transfers_pair: List[MediationPairState] = field(default_factory=list)
     waiting_transfer: Optional[WaitingTransferState] = field(default=None)

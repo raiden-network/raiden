@@ -1318,6 +1318,10 @@ def make_chain_state(
     chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
         token_network_address
     ] = payment_network_address
+
+    chain_state.nodeaddresses_to_networkstates = make_node_availability_map(
+        [channel.partner_state.address for channel in channel_set.channels]
+    )
     return ContainerForChainStateTests(
         chain_state=chain_state,
         our_address=our_address,

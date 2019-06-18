@@ -342,8 +342,7 @@ def test_mediator_skips_used_routes():
     events = transition_result.events
     assert mediator_state is not None
     assert events
-    assert len(mediator_state.routes) == 1
-    assert mediator_state.routes[0].route[1] == charlie
+    assert mediator_state.transfers_pair[-1].payee_address == charlie
 
     # now we should have a forward transfer to HOP3
     assert isinstance(events[-1], SendLockedTransfer)
@@ -387,8 +386,6 @@ def test_mediator_skips_used_routes():
     assert mediator_state is not None
     assert events
 
-    assert len(mediator_state.routes) == 0
     # no other routes available, so refund HOP1
-
     assert isinstance(events[-1], SendRefundTransfer)
     assert events[-1].recipient == factories.HOP1

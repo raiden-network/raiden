@@ -145,20 +145,6 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
     return BlockNumber(lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
 
-def prune_route_table(
-    route_state_table: List[RouteState], selected_route: RouteState
-) -> List[RouteState]:
-    """ Given a selected route, returns a filtered route table that
-    contains only routes using the same forward channel and removes our own
-    address in the process.
-    """
-    return [
-        RouteState(route=rs.route[1:], forward_channel_id=selected_route.forward_channel_id)
-        for rs in route_state_table
-        if rs.forward_channel_id == selected_route.forward_channel_id
-    ]
-
-
 def is_channel_usable(
     candidate_channel_state: NettingChannelState,
     transfer_amount: PaymentWithFeeAmount,

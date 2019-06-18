@@ -1,7 +1,7 @@
 import itertools
 import random
 
-from raiden.transfer import channel, secret_registry
+from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
@@ -159,18 +159,6 @@ def has_secret_registration_started(
         pair.payer_state == "payer_waiting_secret_reveal" for pair in transfers_pair
     )
     return is_secret_registered_onchain or has_pending_transaction
-
-
-def filter_reachable_routes(
-    route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
-) -> List[RouteState]:
-    """ This function makes sure we use reachable routes only. """
-
-    return [
-        route
-        for route in route_states
-        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NODE_NETWORK_REACHABLE
-    ]
 
 
 def filter_used_routes(
@@ -390,9 +378,8 @@ def forward_transfer_pair(
     assert payee_channel.settle_timeout >= lock_timeout
     assert payee_channel.token_address == payer_transfer.token
 
-    # create events
-    route_states = channel.prune_route_table(
-        route_state_table=route_state_table, selected_route=route_state
+    route_states = routes.prune_route_table(
+        route_states=route_state_table, selected_route=route_state
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     lockedtransfer_event = channel.send_lockedtransfer(
@@ -1013,11 +1000,16 @@ def mediate_transfer(
     transfer_pair: Optional[MediationPairState] = None
     mediated_events: List[Event] = list()
 
-    reachable_route_states = filter_reachable_routes(
-        candidate_route_states, nodeaddresses_to_networkstates
+    candidate_route_states = routes.filter_reachable_routes(
+        route_states=candidate_route_states,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
     )
 
-    for route_state in reachable_route_states:
+    candidate_route_states = routes.exclude_routes_from_channels(
+        route_states=candidate_route_states, channel_ids=state.refunded_channels
+    )
+
+    for route_state in candidate_route_states:
         transfer_pair, mediated_events = forward_transfer_pair(
             payer_transfer=payer_transfer,
             route_state=route_state,
@@ -1086,14 +1078,14 @@ def handle_init(
         return TransitionResult(None, events)
 
     iteration = mediate_transfer(
-        mediator_state,
-        routes,
-        payer_channel,
-        channelidentifiers_to_channels,
-        nodeaddresses_to_networkstates,
-        pseudo_random_generator,
-        from_transfer,
-        block_number,
+        state=mediator_state,
+        candidate_route_states=routes,
+        payer_channel=payer_channel,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        pseudo_random_generator=pseudo_random_generator,
+        payer_transfer=from_transfer,
+        block_number=block_number,
     )
 
     events.extend(iteration.events)
@@ -1185,20 +1177,12 @@ def handle_refundtransfer(
         if not is_valid:
             return TransitionResult(mediator_state, channel_events)
 
-        # We remove all routes where the sender of the refund is our forward hop
-        candidate_route_states = [
-            route
-            for route in mediator_state.routes
-            if route.forward_channel_id != payer_channel.canonical_identifier.channel_identifier
-        ]
-
-        # To avoid duplicated attempts at an already-tried route, we
-        # remove the unusable routes from the state.routes
-        mediator_state.routes = candidate_route_states
-
+        mediator_state.refunded_channels.append(
+            payer_channel.canonical_identifier.channel_identifier
+        )
         iteration = mediate_transfer(
             state=mediator_state,
-            candidate_route_states=candidate_route_states,
+            candidate_route_states=mediator_state.routes,
             payer_channel=payer_channel,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
@@ -1423,7 +1407,7 @@ def handle_node_change_network_state(
 
     return mediate_transfer(
         state=mediator_state,
-        candidate_route_states=[route],
+        candidate_route_states=mediator_state.routes,
         payer_channel=payer_channel,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         nodeaddresses_to_networkstates={state_change.node_address: state_change.network_state},
