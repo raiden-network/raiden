@@ -162,7 +162,6 @@ def initiator_init(
 
 def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
-    # Feedback token not used here, will be removed with source routing
     from_hop = HopState(
         transfer.sender,
         # pylint: disable=E1101
