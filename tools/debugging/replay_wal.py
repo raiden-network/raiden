@@ -14,7 +14,7 @@ import click
 from eth_utils import encode_hex, to_canonical_address
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
@@ -127,9 +127,7 @@ class Translator(dict):
 
 
 def replay_wal(storage, token_network_address, partner_address, translator=None):
-    all_state_changes = storage.get_statechanges_by_range(
-        from_identifier="earliest", to_identifier="latest"
-    )
+    all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     state_manager = StateManager(state_transition=node.state_transition, current_state=None)
     wal = WriteAheadLog(state_manager, storage)
