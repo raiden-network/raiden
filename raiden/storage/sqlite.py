@@ -335,29 +335,25 @@ class SQLiteStorage:
 
         return state_change_id
 
-    def write_state_snapshot(
-        self, snapshot: str, statechange_id: StateChangeID
-    ) -> SnapshotID:
+    def write_state_snapshot(self, snapshot: str, statechange_id: StateChangeID) -> SnapshotID:
         snapshot_id = self._ulid_factory(SnapshotID).new()
 
         query = (
-            "INSERT INTO state_snapshot ("
-            " identifier, statechange_id, data, timestamp"
-            ") VALUES(?, ?, ?)"
+            "INSERT INTO state_snapshot (" " identifier, statechange_id, data" ") VALUES(?, ?, ?)"
         )
         self.conn.execute(query, (snapshot_id, statechange_id, snapshot))
         self.maybe_commit()
 
         return snapshot_id
 
-    def write_events(self, events: List[Tuple[StateChangeID, datetime, str]]) -> List[EventID]:
+    def write_events(self, events: List[Tuple[StateChangeID, str]]) -> List[EventID]:
         ulid_factory = self._ulid_factory(EventID)
         events_ids: List[EventID] = list()
 
         query = (
             "INSERT INTO state_events("
-            "   identifier, source_statechange_id, timestamp, data"
-            ") VALUES(?, ?, ?, ?)"
+            "   identifier, source_statechange_id, data"
+            ") VALUES(?, ?, ?)"
         )
         self.conn.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
         self.maybe_commit()
@@ -754,14 +750,12 @@ class SerializedSQLiteStorage:
         serialized_data = self.serializer.serialize(state_change)
         return self.database.write_state_change(serialized_data)
 
-    def write_state_snapshot(
-        self, snapshot: State, statechange_id: StateChangeID
-    ) -> SnapshotID:
+    def write_state_snapshot(self, snapshot: State, statechange_id: StateChangeID) -> SnapshotID:
         serialized_data = self.serializer.serialize(snapshot)
         return self.database.write_state_snapshot(serialized_data, statechange_id)
 
     def write_events(
-        self, state_change_identifier: StateChangeID, events: List[Event], timestamp: datetime
+        self, state_change_identifier: StateChangeID, events: List[Event]
     ) -> List[EventID]:
         """ Save events.
 
@@ -770,8 +764,7 @@ class SerializedSQLiteStorage:
             events: List of Event objects.
         """
         events_data = [
-            (state_change_identifier, timestamp, self.serializer.serialize(event))
-            for event in events
+            (state_change_identifier, self.serializer.serialize(event)) for event in events
         ]
         return self.database.write_events(events_data)
 

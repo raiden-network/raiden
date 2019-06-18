@@ -324,13 +324,10 @@ def test_get_event_with_balance_proof():
         (refund_transfer, refund_transfer.transfer.balance_proof),
     ]
 
-    timestamp = datetime.utcnow()
     state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())
     for event, _ in events_balanceproofs:
         state_change_identifier = storage.write_state_change(state_change)
-        storage.write_events(
-            state_change_identifier=state_change_identifier, events=[event], timestamp=timestamp
-        )
+        storage.write_events(state_change_identifier=state_change_identifier, events=[event])
 
     for event, balance_proof in events_balanceproofs:
         event_record = get_event_with_balance_proof_by_balance_hash(
@@ -457,7 +454,7 @@ def test_batch_query_event_records():
     for event in events_data:
         state_change_id = state_change_identifiers[event[1]]
         event_data = json.dumps(event[2])
-        event_tuple = (state_change_id, datetime.utcnow(), event_data)
+        event_tuple = (state_change_id, event_data)
         storage.write_events([event_tuple])
 
     # Test that querying the events in batches of 1 works
@@ -499,9 +496,7 @@ def test_update_event_get_event():
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
-        storage.write_state_change(
-            state_change=json.dumps(state_change_record[1])
-        )
+        storage.write_state_change(state_change=json.dumps(state_change_record[1]))
 
 
 def test_storage_get_and_update(storage):

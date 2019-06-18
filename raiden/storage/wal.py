@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import gevent.lock
 import structlog
 
@@ -89,8 +87,7 @@ class WriteAheadLog(Generic[ST]):
 
             state, events = self.state_manager.dispatch(state_change)
 
-            timestamp = datetime.utcnow()
-            self.storage.write_events(state_change_id, events, timestamp)
+            self.storage.write_events(state_change_id, events)
 
         return state, events
 
