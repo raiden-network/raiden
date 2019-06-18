@@ -326,7 +326,7 @@ def test_get_event_with_balance_proof():
     state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())
     for event, _ in events_balanceproofs:
         state_change_identifiers = storage.write_state_changes([state_change])
-        storage.write_events(state_change_identifier=state_change_identifiers[0], events=[event])
+        storage.write_events(events=[(state_change_identifiers[0], event)])
 
     for event, balance_proof in events_balanceproofs:
         event_record = get_event_with_balance_proof_by_balance_hash(
