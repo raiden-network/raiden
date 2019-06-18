@@ -44,8 +44,9 @@ class Range(Generic[ID]):
     last: ID
 
     def __post_init__(self) -> None:
+        # Because the range is inclusive, the values can be equal
         if self.first > self.last:
-            raise ValueError("last must be larger then first")
+            raise ValueError("last must be larger or equal to first")
 
 
 FIRST_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
