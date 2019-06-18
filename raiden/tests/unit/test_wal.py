@@ -1,4 +1,5 @@
 import os
+import random
 import sqlite3
 from dataclasses import dataclass, field
 
@@ -150,16 +151,15 @@ def test_write_read_events():
         factories.make_address(),
         "whatever",
     )
-    event_list = [event]
 
     with pytest.raises(sqlite3.IntegrityError):
-        unexisting_state_change_id = 1
-        wal.storage.write_events(unexisting_state_change_id, event_list)
+        unexisting_state_change_id = random.getrandbits(16 * 8).to_bytes(16, "big")
+        wal.storage.write_events([(unexisting_state_change_id, event)])
 
     previous_events = wal.storage.get_events_with_timestamps()
 
     state_change_ids = wal.storage.write_state_changes(["statechangedata"])
-    wal.storage.write_events(state_change_ids[0], event_list)
+    wal.storage.write_events([(state_change_ids[0], event)])
 
     new_events = wal.storage.get_events_with_timestamps()
     assert len(previous_events) + 1 == len(new_events)
