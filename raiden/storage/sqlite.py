@@ -324,16 +324,22 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
-    def write_state_change(self, state_change: str) -> StateChangeID:
-        state_change_id = self._ulid_factory(StateChangeID).new()
+    def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
+        """Write `state_changes` to the database and returns the correspoding IDs."""
+        ulid_factory = self._ulid_factory(StateChangeID)
 
-        self.conn.execute(
-            "INSERT INTO state_changes(identifier, data) VALUES(?, ?)",
-            (state_change_id, state_change),
-        )
+        state_change_data = list()
+        state_change_ids = list()
+        for state_change in state_changes:
+            new_id = ulid_factory.new()
+            state_change_ids.append(new_id)
+            state_change_data.append((new_id, state_change))
+
+        query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
+        self.conn.executemany(query, state_change_data)
         self.maybe_commit()
 
-        return state_change_id
+        return state_change_ids
 
     def write_state_snapshot(self, snapshot: str, statechange_id: StateChangeID) -> SnapshotID:
         snapshot_id = self._ulid_factory(SnapshotID).new()
@@ -746,9 +752,11 @@ class SerializedSQLiteStorage:
     def log_run(self) -> None:
         self.database.log_run()
 
-    def write_state_change(self, state_change: StateChange) -> StateChangeID:
-        serialized_data = self.serializer.serialize(state_change)
-        return self.database.write_state_change(serialized_data)
+    def write_state_changes(self, state_changes: List[StateChange]) -> List[StateChangeID]:
+        serialized_data = [
+            self.serializer.serialize(state_change) for state_change in state_changes
+        ]
+        return self.database.write_state_changes(serialized_data)
 
     def write_state_snapshot(self, snapshot: State, statechange_id: StateChangeID) -> SnapshotID:
         serialized_data = self.serializer.serialize(snapshot)
