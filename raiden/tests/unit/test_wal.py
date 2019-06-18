@@ -160,7 +160,7 @@ def test_write_read_events():
     previous_events = wal.storage.get_events_with_timestamps()
 
     log_time = datetime(year=2018, month=9, day=7, hour=20, minute=2, second=35, microsecond=0)
-    state_change_id = wal.storage.write_state_change("statechangedata", log_time)
+    state_change_id = wal.storage.write_state_change("statechangedata")
     wal.storage.write_events(state_change_id, event_list, log_time)
 
     new_events = wal.storage.get_events_with_timestamps()

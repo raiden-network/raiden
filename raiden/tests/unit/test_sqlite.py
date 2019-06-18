@@ -224,12 +224,10 @@ def test_get_state_change_with_balance_proof():
         (action_init_target, action_init_target.transfer.balance_proof),
     ]
 
-    timestamp = datetime.utcnow()
-
     assert storage.count_state_changes() == 0
 
     for state_change, _ in statechanges_balanceproofs:
-        storage.write_state_change(state_change, timestamp)
+        storage.write_state_change(state_change)
 
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
@@ -329,7 +327,7 @@ def test_get_event_with_balance_proof():
     timestamp = datetime.utcnow()
     state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())
     for event, _ in events_balanceproofs:
-        state_change_identifier = storage.write_state_change(state_change, timestamp)
+        state_change_identifier = storage.write_state_change(state_change)
         storage.write_events(
             state_change_identifier=state_change_identifier, events=[event], timestamp=timestamp
         )
@@ -385,7 +383,7 @@ def storage():
         state_change_identifiers = list()
         for state_change_record in state_changes_data:
             state_change_id = storage.write_state_change(
-                state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+                state_change=json.dumps(state_change_record[1])
             )
             state_change_identifiers.append(state_change_id)
 
@@ -400,7 +398,7 @@ def test_batch_query_state_changes():
     state_change_identifiers = list()
     for state_change_record in state_changes_data:
         state_change_id = storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+            state_change=json.dumps(state_change_record[1])
         )
         state_change_identifiers.append(state_change_id)
 
@@ -450,7 +448,7 @@ def test_batch_query_event_records():
     state_change_identifiers = list()
     for state_change_record in state_changes_data:
         state_change_id = storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+            state_change=json.dumps(state_change_record[1])
         )
         state_change_identifiers.append(state_change_id)
 
@@ -502,7 +500,7 @@ def test_update_event_get_event():
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
-            state_change=json.dumps(state_change_record[1]), timestamp=datetime.utcnow()
+            state_change=json.dumps(state_change_record[1])
         )
 
 
