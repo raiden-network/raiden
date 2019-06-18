@@ -17,7 +17,7 @@ The primary key is *not* auto-increment because the IDs are populated with
 ULIDs [7]. ULIDs are necessary because the application must know the ID of
 elements inserted in bulk, and this cannot be know reliably if auto increment
 is used, even with synchronizaiton over `lastrowid`. Additionally random IDs
-are less likely to collide with is useful to detect programming errors. Typos
+are less likely to collide, which is useful to detect programming errors. Typos
 are a good example that can have catastrophic results, where REPLACE/DELETE
 queries can operate on the wrong table or column and with the possibility of
 collision change the wrong data.
@@ -29,7 +29,7 @@ based on rowid will prevent large rewrites of the DB's tables, using ULIDs
 prevent rewrites of the PK Index.
 
 Manifest typing [4] is used for the ULIDs instead PARSE_COLNAMES [5] because
-of the easy of convertion.
+of the easy of conversion.
 
 1- https://www.sqlite.org/lang_createtable.html#constraints
 2- https://www.sqlite.org/withoutrowid.html

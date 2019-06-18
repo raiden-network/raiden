@@ -4,7 +4,7 @@ import gevent.lock
 import structlog
 
 from raiden.storage.sqlite import (
-    FIRST_STATECHANGE_ULID,
+    LOW_STATECHANGE_ULID,
     Range,
     SerializedSQLiteStorage,
     StateChangeID,
@@ -40,7 +40,7 @@ def restore_to_state_change(
             "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
         )
-        from_identifier = FIRST_STATECHANGE_ULID
+        from_identifier = LOW_STATECHANGE_ULID
         chain_state = None
 
     unapplied_state_changes = storage.get_statechanges_by_range(
