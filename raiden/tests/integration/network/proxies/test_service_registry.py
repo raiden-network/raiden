@@ -74,6 +74,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             pfs_url="",
             routing_mode=RoutingMode.LOCAL,
             service_registry=service_proxy,
+            node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
         )
 
