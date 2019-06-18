@@ -336,16 +336,16 @@ class SQLiteStorage:
         return state_change_id
 
     def write_state_snapshot(
-        self, snapshot: str, statechange_id: StateChangeID, timestamp: datetime
+        self, snapshot: str, statechange_id: StateChangeID
     ) -> SnapshotID:
         snapshot_id = self._ulid_factory(SnapshotID).new()
 
         query = (
             "INSERT INTO state_snapshot ("
             " identifier, statechange_id, data, timestamp"
-            ") VALUES(?, ?, ?, ?)"
+            ") VALUES(?, ?, ?)"
         )
-        self.conn.execute(query, (snapshot_id, statechange_id, snapshot, timestamp))
+        self.conn.execute(query, (snapshot_id, statechange_id, snapshot))
         self.maybe_commit()
 
         return snapshot_id
@@ -755,10 +755,10 @@ class SerializedSQLiteStorage:
         return self.database.write_state_change(serialized_data)
 
     def write_state_snapshot(
-        self, snapshot: State, statechange_id: StateChangeID, timestamp: datetime
+        self, snapshot: State, statechange_id: StateChangeID
     ) -> SnapshotID:
         serialized_data = self.serializer.serialize(snapshot)
-        return self.database.write_state_snapshot(serialized_data, statechange_id, timestamp)
+        return self.database.write_state_snapshot(serialized_data, statechange_id)
 
     def write_events(
         self, state_change_identifier: StateChangeID, events: List[Event], timestamp: datetime

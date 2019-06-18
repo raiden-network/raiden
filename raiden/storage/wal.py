@@ -103,11 +103,10 @@ class WriteAheadLog(Generic[ST]):
         with self._lock:
             current_state = self.state_manager.current_state
             state_change_id = self.state_change_id
-            timestamp = datetime.utcnow()
 
             # otherwise no state change was dispatched
             if state_change_id and current_state is not None:
-                self.storage.write_state_snapshot(current_state, state_change_id, timestamp)
+                self.storage.write_state_snapshot(current_state, state_change_id)
 
     @property
     def version(self) -> RaidenDBVersion:
