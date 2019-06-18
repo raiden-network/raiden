@@ -158,8 +158,8 @@ def test_write_read_events():
 
     previous_events = wal.storage.get_events_with_timestamps()
 
-    state_change_id = wal.storage.write_state_change("statechangedata")
-    wal.storage.write_events(state_change_id, event_list)
+    state_change_ids = wal.storage.write_state_changes(["statechangedata"])
+    wal.storage.write_events(state_change_ids[0], event_list)
 
     new_events = wal.storage.get_events_with_timestamps()
     assert len(previous_events) + 1 == len(new_events)

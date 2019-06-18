@@ -226,22 +226,21 @@ def test_get_state_change_with_balance_proof():
 
     assert storage.count_state_changes() == 0
 
-    for state_change, _ in statechanges_balanceproofs:
-        storage.write_state_change(state_change)
-
+    state_change_ids = storage.write_state_changes(
+        [state_change for state_change, _ in statechanges_balanceproofs]
+    )
     assert storage.count_state_changes() == len(statechanges_balanceproofs)
 
-    # Make sure state changes are returned in the correct order in which they were stored
+    msg_in_order = "Querying must return state changes in order"
     stored_statechanges_records = storage.get_statechanges_records_by_range(
         RANGE_ALL_STATE_CHANGES
     )
-    assert len(stored_statechanges_records) == 6
-    assert isinstance(stored_statechanges_records[0].data, ReceiveLockExpired)
-    assert isinstance(stored_statechanges_records[1].data, ReceiveUnlock)
-    assert isinstance(stored_statechanges_records[2].data, ReceiveTransferRefund)
-    assert isinstance(stored_statechanges_records[3].data, ReceiveTransferRefundCancelRoute)
-    assert isinstance(stored_statechanges_records[4].data, ActionInitMediator)
-    assert isinstance(stored_statechanges_records[5].data, ActionInitTarget)
+    assert len(stored_statechanges_records) == 6, msg_in_order
+
+    pair_elements = zip(statechanges_balanceproofs, state_change_ids, stored_statechanges_records)
+    for statechange_balanceproof, statechange_id, record in pair_elements:
+        assert record.data == statechange_balanceproof[0], msg_in_order
+        assert record.state_change_identifier == statechange_id, msg_in_order
 
     # Make sure state changes are returned in the correct order in which they were stored
     stored_statechanges = storage.get_statechanges_by_range(
@@ -326,8 +325,8 @@ def test_get_event_with_balance_proof():
 
     state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())
     for event, _ in events_balanceproofs:
-        state_change_identifier = storage.write_state_change(state_change)
-        storage.write_events(state_change_identifier=state_change_identifier, events=[event])
+        state_change_identifiers = storage.write_state_changes([state_change])
+        storage.write_events(state_change_identifier=state_change_identifiers[0], events=[event])
 
     for event, balance_proof in events_balanceproofs:
         event_record = get_event_with_balance_proof_by_balance_hash(
@@ -377,12 +376,11 @@ def storage():
     state_changes_data = json.loads(state_changes_file.read_text())
 
     with SQLiteStorage(":memory:") as storage:
-        state_change_identifiers = list()
-        for state_change_record in state_changes_data:
-            state_change_id = storage.write_state_change(
-                state_change=json.dumps(state_change_record[1])
-            )
-            state_change_identifiers.append(state_change_id)
+        storage.write_state_changes(
+            state_changes=[
+                json.dumps(state_change_record[1]) for state_change_record in state_changes_data
+            ]
+        )
 
         yield storage
 
@@ -392,12 +390,11 @@ def test_batch_query_state_changes():
     state_changes_data = json.loads(state_changes_file.read_text())
 
     storage = SQLiteStorage(":memory:")
-    state_change_identifiers = list()
-    for state_change_record in state_changes_data:
-        state_change_id = storage.write_state_change(
-            state_change=json.dumps(state_change_record[1])
-        )
-        state_change_identifiers.append(state_change_id)
+    state_change_identifiers = storage.write_state_changes(
+        state_changes=[
+            json.dumps(state_change_record[1]) for state_change_record in state_changes_data
+        ]
+    )
 
     # Test that querying the state changes in batches of 10 works
     state_changes_num = 87
@@ -442,12 +439,11 @@ def test_batch_query_event_records():
 
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
-    state_change_identifiers = list()
-    for state_change_record in state_changes_data:
-        state_change_id = storage.write_state_change(
-            state_change=json.dumps(state_change_record[1])
-        )
-        state_change_identifiers.append(state_change_id)
+    state_change_identifiers = storage.write_state_changes(
+        state_changes=[
+            json.dumps(state_change_record[1]) for state_change_record in state_changes_data
+        ]
+    )
 
     events_file = Path(__file__).parent / "test_data" / "db_events.json"
     events_data = json.loads(events_file.read_text())
@@ -489,14 +485,6 @@ def test_batch_query_event_records():
     assert len(events) == 2
 
     storage.close()
-
-
-def test_update_event_get_event():
-    storage = SQLiteStorage(":memory:")
-    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
-    state_changes_data = json.loads(state_changes_file.read_text())
-    for state_change_record in state_changes_data:
-        storage.write_state_change(state_change=json.dumps(state_change_record[1]))
 
 
 def test_storage_get_and_update(storage):

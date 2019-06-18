@@ -88,7 +88,7 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
             pseudo_random_generator=random.Random(),
         )
         action_init_chain_data = JSONSerializer.serialize(state_change)
-        storage.write_state_change(state_change=action_init_chain_data)
+        storage.write_state_changes(state_changes=[action_init_chain_data])
         storage.update_version()
 
     upgrade_functions = [UpgradeRecord(from_version=16, function=Mock())]
