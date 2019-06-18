@@ -1370,7 +1370,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 transferred_amount=0,
                 message_identifier=index,
             ),
-            compute_locksroot=True,
+            calculate_locksroot=True,
             allow_invalid=True,
             only_transfer=False,
         )
@@ -2081,7 +2081,7 @@ def test_receive_unlock():
     sender_state = channels[0].partner_state
     lock = HashTimeLockState(amount=10, expiration=10, secrethash=UNIT_SECRETHASH)
     sender_state.secrethashes_to_lockedlocks[factories.UNIT_SECRETHASH] = lock
-    sender_state.merkletree = factories.make_merkletree([lock.lockhash])
+    sender_state.pending_locks = factories.make_pending_locks([lock])
     sender_state.balance_proof = factories.create(
         factories.BalanceProofProperties(transferred_amount=0, locked_amount=10)
     )

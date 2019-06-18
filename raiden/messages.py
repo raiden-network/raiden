@@ -466,7 +466,7 @@ class Unlock(EnvelopeMessage):
 
     For this message to be valid the balance proof has to be updated to:
 
-    - Remove the succesfull lock from the merkle tree and decrement the
+    - Remove the succesfull lock from the pending locks and decrement the
       locked_amount by the lock's amount, otherwise the sender will pay twice.
     - Increase the transferred_amount, otherwise the recepient will reject it
       because it is not being paid.
@@ -485,7 +485,7 @@ class Unlock(EnvelopeMessage):
     3. Node A sends a second LockedTransfer to B.
 
     At point 3, node A had no knowledge about the first payment having its
-    secret revealed, therefore the merkletree from message at step 3 will
+    secret revealed, therefore the pending locks from message at step 3 will
     include both locks. If B were to preemptively remove the lock it would
     reject the message.
     """
@@ -734,7 +734,7 @@ class LockedTransfer(LockedTransferBase):
     - Use a lock.amount smaller then its current capacity. If the amount is
       higher, then the recipient will reject it, as it means spending money it
       does not own.
-    - Have the new lock represented in merkleroot.
+    - Have the new lock represented in locksroot.
     - Increase the locked_amount by exactly `lock.amount` otherwise the message
       would be rejected by the recipient. If the locked_amount is increased by
       more, then funds may get locked in the channel. If the locked_amount is
@@ -876,8 +876,8 @@ class LockExpired(EnvelopeMessage):
 
     For this message to be valid the balance proof has to be updated to:
 
-    - Remove the expired lock from the merkletree and reflect it in the
-      merkleroot.
+    - Remove the expired lock from the pending locks and reflect it in the
+      locksroot.
     - Decrease the locked_amount by exactly by lock.amount. If less tokens are
       decreased the sender may get tokens locked. If more tokens are decreased
       the recipient will reject the message as on-chain unlocks may fail.

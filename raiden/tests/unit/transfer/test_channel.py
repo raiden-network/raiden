@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 
-from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
@@ -12,9 +12,12 @@ from raiden.tests.unit.test_channelstate import (
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_block_hash, make_transaction_hash
 from raiden.transfer import channel
-from raiden.transfer.channel import handle_receive_lockedtransfer, is_balance_proof_usable_onchain
-from raiden.transfer.merkle_tree import merkleroot
-from raiden.transfer.state import HashTimeLockState
+from raiden.transfer.channel import (
+    compute_locksroot,
+    handle_receive_lockedtransfer,
+    is_balance_proof_usable_onchain,
+)
+from raiden.transfer.state import HashTimeLockState, PendingLocksState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
@@ -22,9 +25,9 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 
 
-def _channel_and_transfer(merkletree_width):
+def _channel_and_transfer(num_pending_locks):
     our_model, _ = create_model(700)
-    partner_model, privkey = create_model(700, merkletree_width)
+    partner_model, privkey = create_model(700, num_pending_locks)
     reverse_channel_state = create_channel_from_models(partner_model, our_model, privkey)
 
     lock_secret = sha3(b"some secret seed")
@@ -36,7 +39,7 @@ def _channel_and_transfer(merkletree_width):
         nonce=partner_model.next_nonce,
         transferred_amount=0,
         lock=lock,
-        merkletree_leaves=partner_model.merkletree_leaves + [lock.lockhash],
+        pending_locks=PendingLocksState(partner_model.pending_locks + [bytes(lock.encoded)]),
         locked_amount=lock.amount,
     )
 
@@ -49,18 +52,18 @@ def _channel_and_transfer(merkletree_width):
 
 def test_handle_receive_lockedtransfer_enforces_transfer_limit():
 
-    state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS - 1)
+    state, transfer = _channel_and_transfer(num_pending_locks=MAXIMUM_PENDING_TRANSFERS - 1)
     is_valid, _, msg = channel.handle_receive_lockedtransfer(state, transfer)
     assert is_valid, msg
 
-    state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS)
+    state, transfer = _channel_and_transfer(num_pending_locks=MAXIMUM_PENDING_TRANSFERS)
     is_valid, _, _ = handle_receive_lockedtransfer(state, transfer)
     assert not is_valid
 
 
 def test_channel_cleared_after_two_unlocks():
-    our_model, _ = create_model(balance=700, merkletree_width=1)
-    partner_model, partner_key1 = create_model(balance=700, merkletree_width=1)
+    our_model, _ = create_model(balance=700, num_pending_locks=1)
+    partner_model, partner_key1 = create_model(balance=700, num_pending_locks=1)
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()
@@ -83,8 +86,8 @@ def test_channel_cleared_after_two_unlocks():
     settle_channel = ContractReceiveChannelSettled(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        our_onchain_locksroot=merkleroot(channel_state.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
         block_number=1,
         block_hash=make_block_hash(),
     )
@@ -96,9 +99,9 @@ def test_channel_cleared_after_two_unlocks():
         pseudo_random_generator=pseudo_random_generator,
     )
 
-    msg = "both participants have pending locks, merkleroot must not be empty"
-    assert iteration.new_state.our_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    msg = "both participants have pending locks, locksroot must not represent the empty list"
+    assert iteration.new_state.our_state.onchain_locksroot != LOCKSROOT_OF_NO_LOCKS, msg
+    assert iteration.new_state.partner_state.onchain_locksroot != LOCKSROOT_OF_NO_LOCKS, msg
 
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
@@ -109,9 +112,9 @@ def test_channel_cleared_after_two_unlocks():
         pseudo_random_generator=pseudo_random_generator,
     )
     msg = "all of our locks has been unlocked, onchain state must be updated"
-    assert iteration.new_state.our_state.onchain_locksroot is EMPTY_MERKLE_ROOT, msg
-    msg = "partner has pending locks, the merkleroot must not be cleared"
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.our_state.onchain_locksroot is LOCKSROOT_OF_NO_LOCKS, msg
+    msg = "partner has pending locks, the locksroot must not represent the empty list"
+    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -123,8 +126,8 @@ def test_channel_cleared_after_two_unlocks():
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
     )
-    msg = "partner has pending locks, the merkleroot must not be cleared"
-    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    msg = "partner has pending locks, the locksroot must not represent the empty list"
+    assert iteration.new_state.partner_state.onchain_locksroot is not LOCKSROOT_OF_NO_LOCKS, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -141,8 +144,8 @@ def test_channel_cleared_after_two_unlocks():
 
 def test_channel_cleared_after_our_unlock():
     pseudo_random_generator = random.Random()
-    our_model, _ = create_model(balance=700, merkletree_width=1)
-    partner_model, partner_key1 = create_model(balance=700, merkletree_width=0)
+    our_model, _ = create_model(balance=700, num_pending_locks=1)
+    partner_model, partner_key1 = create_model(balance=700, num_pending_locks=0)
     channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()
@@ -164,14 +167,14 @@ def test_channel_cleared_after_our_unlock():
     settle_channel = ContractReceiveChannelSettled(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
-        our_onchain_locksroot=merkleroot(channel_state.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
         block_number=1,
         block_hash=make_block_hash(),
     )
 
-    assert settle_channel.our_onchain_locksroot is not EMPTY_MERKLE_ROOT
-    assert settle_channel.partner_onchain_locksroot is EMPTY_MERKLE_ROOT
+    assert settle_channel.our_onchain_locksroot != LOCKSROOT_OF_NO_LOCKS
+    assert settle_channel.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
 
     iteration = channel.state_transition(
         channel_state=channel_state,
@@ -189,7 +192,7 @@ def test_channel_cleared_after_our_unlock():
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
     )
-    msg = "partner did not have any locks in the merkletree, channel should have been cleaned"
+    msg = "partner did not have any locks in the pending locks, channel should have been cleaned"
     assert iteration.new_state is None, msg
 
 

@@ -1,10 +1,12 @@
 from eth_utils import decode_hex, encode_hex
 from web3 import Web3
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import Address, ChannelID
 from raiden_contracts.constants import MessageTypeId
+
+LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
 
 
 class BalanceProof:
@@ -28,7 +30,7 @@ class BalanceProof:
         signature: str = None,
         transferred_amount: int = None,
         locked_amount: int = 0,
-        locksroot: str = "0x%064x" % 0,
+        locksroot: str = LOCKSROOT_OF_NO_LOCKS_AS_STRING,
     ):
         self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address

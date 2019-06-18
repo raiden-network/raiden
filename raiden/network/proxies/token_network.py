@@ -15,9 +15,9 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
     EMPTY_HASH,
-    EMPTY_MERKLE_ROOT,
     EMPTY_SIGNATURE,
     GENESIS_BLOCK_NUMBER,
+    LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
     UINT256_MAX,
     UNLOCK_TX_GAS_LIMIT,
@@ -39,9 +39,9 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.merkle_tree import compute_layers, merkleroot
-from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.state import PendingLocksState
 from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
 from raiden.utils.signer import recover
@@ -56,10 +56,8 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     ErrorType,
-    Keccak256,
     List,
     Locksroot,
-    MerkleTreeLeaves,
     NamedTuple,
     Nonce,
     NoReturn,
@@ -72,7 +70,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     Tuple,
     WithdrawAmount,
-    cast,
     typecheck,
 )
 from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
@@ -1684,11 +1681,11 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        merkle_tree_locks: MerkleTreeLeaves,
+        pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
     ) -> None:
-        if not merkle_tree_locks:
-            raise ValueError("unlock cannot be done without merkle_tree_leaves")
+        if not pending_locks:
+            raise ValueError("unlock cannot be done without pending locks")
 
         # Check the preconditions for calling unlock at the time the event was
         # emitted.
@@ -1720,12 +1717,10 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            leaves = cast(List[Keccak256], [lock.lockhash for lock in merkle_tree_locks])
-            merkle_tree = MerkleTreeState(compute_layers(leaves))
-            local_merkleroot = merkleroot(merkle_tree)
-            if sender_details.locksroot != local_merkleroot:
+            local_locksroot = compute_locksroot(pending_locks)
+            if sender_details.locksroot != local_locksroot:
                 msg = (
-                    f"The provided merkle tree ({to_hex(local_merkleroot)}) "
+                    f"The provided locksroot ({to_hex(local_locksroot)}) "
                     f"does correspond to the on-chain locksroot "
                     f"{to_hex(sender_details.locksroot)} for sender "
                     f"{to_checksum_address(sender)}."
@@ -1746,7 +1741,7 @@ class TokenNetwork:
             "contract": to_checksum_address(self.address),
             "sender": to_checksum_address(sender),
             "receiver": to_checksum_address(receiver),
-            "merkle_tree_locks": merkle_tree_locks,
+            "pending_locks": pending_locks,
         }
 
         with log_transaction(log, "unlock", log_details):
@@ -1754,7 +1749,7 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 sender=sender,
                 receiver=receiver,
-                merkle_tree_locks=merkle_tree_locks,
+                pending_locks=pending_locks,
                 given_block_identifier=given_block_identifier,
                 log_details=log_details,
             )
@@ -1764,19 +1759,19 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         sender: Address,
         receiver: Address,
-        merkle_tree_locks: MerkleTreeLeaves,
+        pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        leaves_packed = b"".join(lock.encoded for lock in merkle_tree_locks)
+        leaves_packed = b"".join(pending_locks.locks)
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             "unlock",
             channel_identifier=channel_identifier,
             receiver=receiver,
             sender=sender,
-            merkle_tree_leaves=leaves_packed,
+            locks=leaves_packed,
         )
 
         if gas_limit:
@@ -1789,7 +1784,7 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 receiver=receiver,
                 sender=sender,
-                merkle_tree_leaves=leaves_packed,
+                locks=leaves_packed,
             )
 
             self.client.poll(transaction_hash)
@@ -1820,9 +1815,9 @@ class TokenNetwork:
                     block_identifier=given_block_identifier,
                 )
 
-                is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
+                is_unlock_done = sender_details.locksroot == LOCKSROOT_OF_NO_LOCKS
                 if is_unlock_done:
-                    raise RaidenRecoverableError("The merkle tree is already unlocked")
+                    raise RaidenRecoverableError("The locks are already unlocked")
 
                 raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
         else:
@@ -1860,9 +1855,9 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            is_unlock_done = sender_details.locksroot == EMPTY_MERKLE_ROOT
+            is_unlock_done = sender_details.locksroot == LOCKSROOT_OF_NO_LOCKS
             if is_unlock_done:
-                raise RaidenRecoverableError("The merkle tree is already unlocked ")
+                raise RaidenRecoverableError("The locks are already unlocked ")
 
             raise RaidenUnrecoverableError("unlock failed for an unknown reason")
 

@@ -8,7 +8,12 @@ from eth_utils import to_canonical_address, to_checksum_address, to_hex
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import PATH_FINDING_BROADCASTING_ROOM, RoutingMode
+from raiden.constants import (
+    EMPTY_HASH,
+    LOCKSROOT_OF_NO_LOCKS,
+    PATH_FINDING_BROADCASTING_ROOM,
+    RoutingMode,
+)
 from raiden.messages import FeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.services import update_path_finding_service_from_channel_state
@@ -391,6 +396,12 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):
             participant2=channel_state.partner_state.address,
             block_identifier="latest",
         )
+
+    # For saving gas, LOCKSROOT_OF_NO_LOCKS is stored as EMPTY_HASH onchain
+    if our_locksroot == EMPTY_HASH:
+        our_locksroot = LOCKSROOT_OF_NO_LOCKS
+    if partner_locksroot == EMPTY_HASH:
+        partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=transaction_hash,

@@ -132,7 +132,7 @@ def run_test_refund_transfer(
 
     TODO:
         - Unlock the token on refund #1091
-        - Clear the merkletree and update the locked amount #193
+        - Clear the pending locks and update the locked amount #193
         - Remove the refund message type #490"""
     # Topology:
     #

@@ -4,9 +4,9 @@ from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from hashlib import sha256
 
-from eth_utils import to_checksum_address
+from eth_utils import keccak, to_checksum_address
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.messages import (
     Lock,
     LockedTransfer,
@@ -16,6 +16,7 @@ from raiden.messages import (
     lockedtransfersigned_from_message,
 )
 from raiden.transfer import channel, token_network, views
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -26,17 +27,16 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
     HopState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     PaymentNetworkState,
+    PendingLocksState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -66,7 +66,6 @@ from raiden.utils.typing import (
     Keccak256,
     List,
     Locksroot,
-    MerkleTreeLeaves,
     MessageID,
     NamedTuple,
     NodeNetworkStateMap,
@@ -237,6 +236,14 @@ def make_secret_hash(i: int = EMPTY) -> SecretHash:
         return make_32bytes()
 
 
+def make_lock() -> HashTimeLockState:
+    return HashTimeLockState(
+        amount=random.randint(0, UINT256_MAX),
+        expiration=random.randint(0, UINT64_MAX),
+        secrethash=random_secret(),
+    )
+
+
 def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
@@ -311,12 +318,11 @@ HOP2 = privatekey_to_address(HOP2_KEY)
 ADDR = b"addraddraddraddraddr"
 
 
-def make_merkletree_leaves(width: int) -> List[Keccak256]:
-    return [make_secret() for _ in range(width)]
-
-
-def make_merkletree(leaves: List[SecretHash]) -> MerkleTreeState:
-    return MerkleTreeState(compute_layers(leaves))
+def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
+    ret = PendingLocksState(list())
+    for lock in locks:
+        ret.locks.append(bytes(lock.encoded))
+    return ret
 
 
 @singledispatch
@@ -393,22 +399,17 @@ class NettingChannelEndStateProperties(Properties):
     address: Address = EMPTY
     privatekey: bytes = EMPTY
     balance: TokenAmount = EMPTY
-    merkletree_leaves: MerkleTreeLeaves = EMPTY
-    merkletree_width: int = EMPTY
+    pending_locks: PendingLocksState = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
 
 NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
-    address=None, privatekey=None, balance=100, merkletree_leaves=None, merkletree_width=0
+    address=None, privatekey=None, balance=100, pending_locks=None
 )
 
 
 NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
-    address=UNIT_OUR_ADDRESS,
-    privatekey=UNIT_OUR_KEY,
-    balance=100,
-    merkletree_leaves=None,
-    merkletree_width=0,
+    address=UNIT_OUR_ADDRESS, privatekey=UNIT_OUR_KEY, balance=100, pending_locks=None
 )
 
 
@@ -417,11 +418,9 @@ def _(properties, defaults=None) -> NettingChannelEndState:
     args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
     state = NettingChannelEndState(args["address"] or make_address(), args["balance"])
 
-    merkletree_leaves = (
-        args["merkletree_leaves"] or make_merkletree_leaves(args["merkletree_width"]) or None
-    )
-    if merkletree_leaves:
-        state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+    pending_locks = args["pending_locks"] or None
+    if pending_locks:
+        state.pending_locks = pending_locks
 
     return state
 
@@ -518,7 +517,7 @@ BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     nonce=1,
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
-    locksroot=EMPTY_MERKLE_ROOT,
+    locksroot=LOCKSROOT_OF_NO_LOCKS,
     canonical_identifier=UNIT_CANONICAL_ID,
 )
 
@@ -689,8 +688,8 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         expiration=transfer.expiration,
         secrethash=sha256(transfer.secret).digest(),
     )
-    if transfer.locksroot == EMPTY_MERKLE_ROOT:
-        transfer = replace(transfer, locksroot=lock.lockhash)
+    if transfer.locksroot == LOCKSROOT_OF_NO_LOCKS:
+        transfer = replace(transfer, locksroot=keccak(lock.encoded))
 
     return LockedTransferUnsignedState(
         balance_proof=create(transfer.extract(BalanceProofProperties)),
@@ -731,8 +730,8 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     pkey = params.pop("pkey")
     signer = LocalSigner(pkey)
     sender = params.pop("sender")
-    if params["locksroot"] == EMPTY_MERKLE_ROOT:
-        params["locksroot"] = lock.lockhash
+    if params["locksroot"] == LOCKSROOT_OF_NO_LOCKS:
+        params["locksroot"] = keccak(lock.as_bytes)
     params["fee"] = 0
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     locked_transfer.sign(signer)
@@ -805,7 +804,7 @@ def make_signed_transfer_for(
     channel_state: NettingChannelState = EMPTY,
     properties: LockedTransferSignedStateProperties = None,
     defaults: LockedTransferSignedStateProperties = None,
-    compute_locksroot: bool = False,
+    calculate_locksroot: bool = False,
     allow_invalid: bool = False,
     only_transfer: bool = True,
 ) -> LockedTransferSignedState:
@@ -829,16 +828,14 @@ def make_signed_transfer_for(
     else:
         raise RuntimeError("Given sender does not participate in given channel.")
 
-    if compute_locksroot:
-        lock = Lock(
+    if calculate_locksroot:
+        lock = HashTimeLockState(
             amount=properties.amount,
             expiration=properties.expiration,
             secrethash=sha256(properties.secret).digest(),
         )
-        locksroot = merkleroot(
-            channel.compute_merkletree_with(
-                merkletree=channel_state.partner_state.merkletree, lockhash=sha3(lock.as_bytes)
-            )
+        locksroot = compute_locksroot(
+            channel.compute_locks_with(locks=channel_state.partner_state.pending_locks, lock=lock)
         )
     else:
         locksroot = properties.locksroot

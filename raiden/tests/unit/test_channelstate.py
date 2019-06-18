@@ -4,11 +4,12 @@ from collections import namedtuple
 from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
+from typing import List
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
-from raiden.messages import Unlock
+from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
+from raiden.messages import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -26,6 +27,7 @@ from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
     make_canonical_identifier,
+    make_lock,
     make_payment_network_address,
     make_privkey_address,
     make_secret,
@@ -35,6 +37,7 @@ from raiden.tests.utils.factories import (
 )
 from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated
 from raiden.transfer import channel
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
@@ -47,24 +50,17 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.merkle_tree import (
-    LEAVES,
-    MERKLEROOT,
-    compute_layers,
-    merkle_leaves_from_packed_data,
-    merkleroot,
-)
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
+    PendingLocksState,
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
-    make_empty_merkle_tree,
+    make_empty_pending_locks_state,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -79,7 +75,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import random_secret, sha3
+from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
 
@@ -91,7 +87,7 @@ PartnerStateModel = namedtuple(
         "balance",
         "distributable",
         "next_nonce",
-        "merkletree_leaves",
+        "pending_locks",
         "contract_balance",
     ),
 )
@@ -104,22 +100,23 @@ def assert_partner_state(end_state, partner_state, model):
     assert channel.get_balance(end_state, partner_state) == model.balance
     assert channel.get_distributable(end_state, partner_state) == model.distributable
     assert channel.get_next_nonce(end_state) == model.next_nonce
-    assert set(end_state.merkletree.layers[LEAVES]) == set(model.merkletree_leaves)
+    assert set(end_state.pending_locks.locks) == set(model.pending_locks)
     assert end_state.contract_balance == model.contract_balance
 
 
-def create_model(balance, merkletree_width=0):
+def create_model(balance, num_pending_locks=0):
     privkey, address = make_privkey_address()
 
-    merkletree_leaves = [random_secret() for _ in range(merkletree_width)]
+    locks = [make_lock() for _ in range(num_pending_locks)]
+    pending_locks = list(bytes(lock.encoded) for lock in locks)
 
     our_model = PartnerStateModel(
         participant_address=address,
         amount_locked=0,
         balance=balance,
         distributable=balance,
-        next_nonce=len(merkletree_leaves) + 1,
-        merkletree_leaves=merkletree_leaves,
+        next_nonce=len(pending_locks) + 1,
+        pending_locks=pending_locks,
         contract_balance=balance,
     )
 
@@ -135,12 +132,12 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             our_state=NettingChannelEndStateProperties(
                 address=our_model.participant_address,
                 balance=our_model.balance,
-                merkletree_leaves=our_model.merkletree_leaves,
+                pending_locks=PendingLocksState(our_model.pending_locks),
             ),
             partner_state=NettingChannelEndStateProperties(
                 address=partner_model.participant_address,
                 balance=partner_model.balance,
-                merkletree_leaves=partner_model.merkletree_leaves,
+                pending_locks=PendingLocksState(partner_model.pending_locks),
             ),
             open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
         )
@@ -153,9 +150,8 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             BalanceProofProperties(
                 nonce=our_nonce,
                 transferred_amount=0,
-                locked_amount=len(our_model.merkletree_leaves),
-                # pylint: disable=no-member
-                locksroot=merkleroot(channel_state.our_state.merkletree),
+                locked_amount=len(our_model.pending_locks),
+                locksroot=compute_locksroot(channel_state.our_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
         )
@@ -170,9 +166,8 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
             BalanceProofProperties(
                 nonce=partner_nonce,
                 transferred_amount=0,
-                locked_amount=len(partner_model.merkletree_leaves),
-                # pylint: disable=no-member
-                locksroot=merkleroot(channel_state.partner_state.merkletree),
+                locked_amount=len(partner_model.pending_locks),
+                locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
                 canonical_identifier=channel_state.canonical_identifier,
             )
         )
@@ -210,7 +205,7 @@ def test_new_end_state():
     assert channel.is_lock_locked(end_state, lock_secrethash) is False
     assert channel.get_next_nonce(end_state) == 1
     assert channel.get_amount_locked(end_state) == 0
-    assert merkleroot(end_state.merkletree) == EMPTY_MERKLE_ROOT
+    assert compute_locksroot(end_state.pending_locks) == LOCKSROOT_OF_NO_LOCKS
 
     assert not end_state.secrethashes_to_lockedlocks
     assert not end_state.secrethashes_to_unlockedlocks
@@ -474,7 +469,7 @@ def test_channelstate_send_lockedtransfer():
         distributable=our_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks=[bytes(lock.encoded)],
     )
     partner_model2 = partner_model1
 
@@ -518,7 +513,7 @@ def test_channelstate_receive_lockedtransfer():
         distributable=partner_model1.distributable - lock_amount,
         amount_locked=lock_amount,
         next_nonce=2,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks=[bytes(lock.encoded)],
     )
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -544,7 +539,7 @@ def test_channelstate_receive_lockedtransfer():
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
-        locksroot=EMPTY_MERKLE_ROOT,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=lock_secret,
         signature=EMPTY_SIGNATURE,
     )
@@ -559,7 +554,7 @@ def test_channelstate_receive_lockedtransfer():
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
-        locksroot=EMPTY_MERKLE_ROOT,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=lock_secret,
         signature=EMPTY_SIGNATURE,
     )
@@ -594,7 +589,7 @@ def test_channelstate_receive_lockedtransfer():
         balance=partner_model2.balance - lock_amount,
         amount_locked=0,
         next_nonce=3,
-        merkletree_leaves=[],
+        pending_locks=list(),
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
@@ -690,7 +685,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         distributable=partner_model1.distributable - lock1.amount,
         amount_locked=lock1.amount,
         next_nonce=2,
-        merkletree_leaves=[lock1.lockhash],
+        pending_locks=[bytes(lock1.encoded)],
     )
 
     # The valid transfer is handled normally
@@ -706,11 +701,11 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
         b"test_receive_cannot_overspend_with_multiple_pending_transfers2"
     ).digest()
     lock2 = HashTimeLockState(lock2_amount, lock2_expiration, lock2_secrethash)
-    leaves = [lock1.lockhash, lock2.lockhash]
+    locks = PendingLocksState([bytes(lock1.encoded), bytes(lock2.encoded)])
 
     nonce2 = 2
     receive_lockedtransfer2 = make_receive_transfer_mediated(
-        channel_state, privkey2, nonce2, transferred_amount, lock2, merkletree_leaves=leaves
+        channel_state, privkey2, nonce2, transferred_amount, lock2, pending_locks=locks
     )
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(
@@ -834,14 +829,14 @@ def test_interwoven_transfers():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        merkletree_leaves = list(partner_model_current.merkletree_leaves)
-        merkletree_leaves.append(lock.lockhash)
+        pending_locks = PendingLocksState(list(partner_model_current.pending_locks))
+        pending_locks.locks.append(bytes(lock.encoded))
 
         partner_model_current = partner_model_current._replace(
             distributable=partner_model_current.distributable - lock_amount,
             amount_locked=partner_model_current.amount_locked + lock_amount,
             next_nonce=partner_model_current.next_nonce + 1,
-            merkletree_leaves=merkletree_leaves,
+            pending_locks=pending_locks.locks,
         )
 
         receive_lockedtransfer = make_receive_transfer_mediated(
@@ -850,7 +845,7 @@ def test_interwoven_transfers():
             nonce,
             transferred_amount,
             lock,
-            merkletree_leaves=merkletree_leaves,
+            pending_locks=pending_locks,
             locked_amount=locked_amount,
         )
 
@@ -871,7 +866,7 @@ def test_interwoven_transfers():
         if i % 2:
             # Update our model:
             # - Increase nonce because the secret is a new balance proof
-            # - The lock is removed from the merkle tree, the balance proof must be updated
+            # - The lock is removed from the pending locks, the balance proof must be updated
             #   - The locksroot must have unlocked lock removed
             #   - The transferred amount must be increased by the lock amount
             # - This changes the balance for both participants:
@@ -881,16 +876,15 @@ def test_interwoven_transfers():
             transferred_amount += lock_amount
             locked_amount -= lock_amount
 
-            merkletree_leaves = list(partner_model_current.merkletree_leaves)
-            merkletree_leaves.remove(lock.lockhash)
-            tree = compute_layers(merkletree_leaves)
-            locksroot = tree[MERKLEROOT][0]
+            pending_locks = list(partner_model_current.pending_locks)
+            pending_locks.remove(bytes(lock.encoded))
+            locksroot = compute_locksroot(PendingLocksState(pending_locks))
 
             partner_model_current = partner_model_current._replace(
                 amount_locked=partner_model_current.amount_locked - lock_amount,
                 balance=partner_model_current.balance - lock_amount,
                 next_nonce=partner_model_current.next_nonce + 1,
-                merkletree_leaves=merkletree_leaves,
+                pending_locks=pending_locks,
             )
 
             our_model_current = our_model_current._replace(
@@ -985,7 +979,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
 def test_regression_must_update_balanceproof_remove_expired_lock():
     """ A remove expire lock message contains a balance proof and changes the
-    merkle tree, the receiver must update the channel state.
+    pending locks, the receiver must update the channel state.
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
@@ -1046,7 +1040,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
     msg = "the balance proof must be updated"
     assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
-    assert new_channel_state.partner_state.merkletree == make_empty_merkle_tree()
+    assert new_channel_state.partner_state.pending_locks == make_empty_pending_locks_state()
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
@@ -1163,7 +1157,7 @@ def test_channel_must_accept_expired_locks():
         amount_locked=lock_amount,
         distributable=partner_model1.distributable - lock_amount,
         next_nonce=partner_model1.next_nonce + 1,
-        merkletree_leaves=[lock.lockhash],
+        pending_locks=[bytes(lock.encoded)],
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
@@ -1279,6 +1273,15 @@ def test_channelstate_unlock_without_locks():
     assert not iteration.events
 
 
+def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
+    number_of_bytes = len(packed)
+    locks = make_empty_pending_locks_state()
+    for i in range(0, number_of_bytes, 96):
+        lock = Lock.from_bytes(packed[i : i + 96])
+        locks.locks.append(lock.as_bytes)  # pylint: disable=E1101
+    return locks
+
+
 def test_channelstate_get_unlock_proof():
     number_of_transfers = 100
     lock_amounts = cycle([1, 3, 5, 7, 11])
@@ -1287,7 +1290,7 @@ def test_channelstate_get_unlock_proof():
     block_number = 1000
     locked_amount = 0
     settle_timeout = 8
-    merkletree_leaves = []
+    pending_locks = make_empty_pending_locks_state()
     locked_locks = {}
     unlocked_locks = {}
 
@@ -1299,7 +1302,7 @@ def test_channelstate_get_unlock_proof():
         lock_secrethash = sha256(lock_secret).digest()
         lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
-        merkletree_leaves.append(lock.lockhash)
+        pending_locks.locks.append(bytes(lock.encoded))  # pylint: disable=E1101
         if random.randint(0, 1) == 0:
             locked_locks[lock_secrethash] = lock
         else:
@@ -1308,19 +1311,17 @@ def test_channelstate_get_unlock_proof():
     end_state = NettingChannelEndState(HOP1, 300)
     end_state.secrethashes_to_lockedlocks = locked_locks
     end_state.secrethashes_to_unlockedlocks = unlocked_locks
-    end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+    end_state.pending_locks = pending_locks
 
     unlock_proof = channel.get_batch_unlock(end_state)
-    assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES])
-    leaves_packed = b"".join(lock.encoded for lock in unlock_proof)
+    assert len(unlock_proof.locks) == len(end_state.pending_locks.locks)
+    leaves_packed = b"".join(unlock_proof.locks)
 
-    recomputed_merkle_tree = MerkleTreeState(
-        compute_layers(merkle_leaves_from_packed_data(leaves_packed))
-    )
-    assert len(recomputed_merkle_tree.layers[LEAVES]) == len(end_state.merkletree.layers[LEAVES])
+    recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
+    assert len(recomputed_pending_locks.locks) == len(end_state.pending_locks.locks)
 
-    computed_merkleroot = merkleroot(recomputed_merkle_tree)
-    assert merkleroot(end_state.merkletree) == computed_merkleroot
+    computed_locksroot = compute_locksroot(recomputed_pending_locks)
+    assert compute_locksroot(end_state.pending_locks) == computed_locksroot
 
 
 def test_channelstate_unlock_unlocked_onchain():
@@ -1373,7 +1374,7 @@ def test_channelstate_unlock_unlocked_onchain():
         block_number=settle_block_number,
         block_hash=make_block_hash(),
         partner_onchain_locksroot=make_32bytes(),  # non empty
-        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     iteration = channel.handle_channel_settled(channel_state, settle_state_change)

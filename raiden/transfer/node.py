@@ -884,7 +884,7 @@ def is_transaction_effect_satisfied(
     On restarts: The state of the on-chain channel could have changed while the
     node was offline. Once the node learns about the change (e.g. the channel
     was settled), new transactions can be dispatched by Raiden as a side effect for the
-    on-chain *event* (e.g. do the batch unlock with the latest merkle tree),
+    on-chain *event* (e.g. do the batch unlock with the latest pending locks),
     but the dispatched transaction could have been completed by another agent (e.g.
     the partner node). For these cases, the transaction from a different
     address which achieves the same side-effect is sufficient, otherwise

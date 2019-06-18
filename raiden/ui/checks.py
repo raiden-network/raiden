@@ -116,13 +116,11 @@ def check_smart_contract_addresses(
     node_network_id: ChainID,
     tokennetwork_registry_contract_address: Address,
     secret_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     contracts: Dict[str, Address],
 ) -> None:
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None
         and secret_registry_contract_address is not None
-        and endpoint_registry_contract_address is not None
     )
 
     if not contract_addresses_given and not bool(contracts):

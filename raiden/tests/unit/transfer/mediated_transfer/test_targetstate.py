@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRET, EMPTY_SECRET_SHA256, UINT64_MAX
+from raiden.constants import EMPTY_SECRET, EMPTY_SECRET_SHA256, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -510,7 +510,7 @@ def test_state_transition():
                 token_network_address=channels[0].token_network_address,
                 channel_identifier=channels.get_hop(0).channel_identifier,
             ),
-            locksroot=EMPTY_MERKLE_ROOT,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             message_hash=b"\x00" * 32,  # invalid
         )
     )

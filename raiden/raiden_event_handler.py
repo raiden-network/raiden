@@ -4,7 +4,13 @@ from typing import TYPE_CHECKING
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
+from raiden.constants import (
+    EMPTY_BALANCE_HASH,
+    EMPTY_HASH,
+    EMPTY_MESSAGE_HASH,
+    EMPTY_SIGNATURE,
+    LOCKSROOT_OF_NO_LOCKS,
+)
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
@@ -87,13 +93,13 @@ def unlock(
     receiver: Address,
     given_block_identifier: BlockSpecification,
 ) -> None:  # pragma: no unittest
-    merkle_tree_locks = get_batch_unlock(end_state)
-    assert merkle_tree_locks, "merkle tree is missing"
+    pending_locks = get_batch_unlock(end_state)
+    assert pending_locks, "pending lock set is missing"
 
     payment_channel.unlock(
         sender=sender,
         receiver=receiver,
-        merkle_tree_locks=merkle_tree_locks,
+        pending_locks=pending_locks,
         given_block_identifier=given_block_identifier,
     )
 
@@ -421,9 +427,9 @@ class RaidenEventHandler(EventHandler):
         partner_locksroot = channel_state.partner_state.onchain_locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        search_events = our_locksroot != EMPTY_HASH
+        search_events = our_locksroot != LOCKSROOT_OF_NO_LOCKS
         # we want to unlock, because there are unlocked/unclaimed locks
-        search_state_changes = partner_locksroot != EMPTY_HASH
+        search_state_changes = partner_locksroot != LOCKSROOT_OF_NO_LOCKS
 
         if not search_events and not search_state_changes:
             # In the case that someone else sent the unlock we do nothing
@@ -601,7 +607,7 @@ class RaidenEventHandler(EventHandler):
         else:
             our_transferred_amount = 0
             our_locked_amount = 0
-            our_locksroot = EMPTY_HASH
+            our_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
@@ -623,7 +629,7 @@ class RaidenEventHandler(EventHandler):
         else:
             partner_transferred_amount = 0
             partner_locked_amount = 0
-            partner_locksroot = EMPTY_HASH
+            partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         payment_channel.settle(
             transferred_amount=our_transferred_amount,

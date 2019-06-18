@@ -5,6 +5,7 @@ from web3.utils.filters import Filter
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
+from raiden.transfer.state import PendingLocksState
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
     AdditionalHash,
@@ -15,7 +16,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Locksroot,
-    MerkleTreeLeaves,
     Nonce,
     Signature,
     TokenAddress,
@@ -235,14 +235,14 @@ class PaymentChannel:
         self,
         sender: Address,
         receiver: Address,
-        merkle_tree_locks: MerkleTreeLeaves,
+        pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
     ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
             sender=sender,
             receiver=receiver,
-            merkle_tree_locks=merkle_tree_locks,
+            pending_locks=pending_locks,
             given_block_identifier=given_block_identifier,
         )
 

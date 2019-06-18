@@ -26,7 +26,7 @@ def participant_details(address):
         is_closer=False,
         balance_hash=None,
         nonce=1,
-        locksroot=factories.EMPTY_MERKLE_ROOT,
+        locksroot=factories.LOCKSROOT_OF_NO_LOCKS,
         locked_amount=0,
     )
 

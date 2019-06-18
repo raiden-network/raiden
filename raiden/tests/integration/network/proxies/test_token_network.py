@@ -3,7 +3,12 @@ import random
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, STATE_PRUNING_AFTER_BLOCKS
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SIGNATURE,
+    LOCKSROOT_OF_NO_LOCKS,
+    STATE_PRUNING_AFTER_BLOCKS,
+)
 from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
@@ -380,11 +385,11 @@ def test_token_network_proxy(
             channel_identifier=channel_identifier,
             transferred_amount=invalid_transferred_amount,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c1_client.address,
             partner_transferred_amount=transferred_amount,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -392,11 +397,11 @@ def test_token_network_proxy(
         channel_identifier=channel_identifier,
         transferred_amount=0,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c1_client.address,
         partner_transferred_amount=transferred_amount,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier="latest",
     )
     assert (
@@ -570,11 +575,11 @@ def test_token_network_proxy_update_transfer(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=transferred_amount_c2,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -588,11 +593,11 @@ def test_token_network_proxy_update_transfer(
             channel_identifier=channel_identifier,
             transferred_amount=2,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=2,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -601,11 +606,11 @@ def test_token_network_proxy_update_transfer(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=transferred_amount_c2,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier="latest",
     )
     assert token_proxy.balance_of(c2_client.address) == (
@@ -782,11 +787,11 @@ def test_token_network_actions_at_pruned_blocks(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=0,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=close_pruned_number,
     )
     assert token_proxy.balance_of(c2_client.address) == (

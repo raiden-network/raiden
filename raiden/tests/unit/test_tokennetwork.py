@@ -4,17 +4,18 @@ from hashlib import sha256
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import node, token_network, views
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
+    PendingLocksState,
     TokenNetworkGraphState,
     TokenNetworkState,
 )
@@ -157,8 +158,8 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -248,8 +249,12 @@ def test_channel_data_removed_after_unlock(
         canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        our_onchain_locksroot=merkleroot(channel_state_after_closed.our_state.merkletree),
-        partner_onchain_locksroot=merkleroot(channel_state_after_closed.partner_state.merkletree),
+        our_onchain_locksroot=compute_locksroot(
+            channel_state_after_closed.our_state.pending_locks
+        ),
+        partner_onchain_locksroot=compute_locksroot(
+            channel_state_after_closed.partner_state.pending_locks
+        ),
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -271,7 +276,7 @@ def test_channel_data_removed_after_unlock(
         canonical_identifier=channel_state.canonical_identifier,
         receiver=our_address,
         sender=address,
-        locksroot=lock_secrethash,
+        locksroot=compute_locksroot(PendingLocksState([bytes(lock.encoded)])),
         unlocked_amount=lock_amount,
         returned_tokens=0,
         block_number=closed_block_number + 1,
@@ -368,7 +373,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -390,7 +395,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         canonical_identifier=channel_state.canonical_identifier,
         receiver=address,
         sender=our_address,
-        locksroot=lock_secrethash,
+        locksroot=compute_locksroot(PendingLocksState([bytes(lock.encoded)])),
         unlocked_amount=lock_amount,
         returned_tokens=0,
         block_number=block_number,
@@ -488,7 +493,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
     channel_settled_iteration = token_network.state_transition(
