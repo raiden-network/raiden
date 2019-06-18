@@ -14,19 +14,19 @@ are too few to fit a well ordered ID with nanosecond precision and a random
 tag.
 
 The primary key is *not* auto-increment because the IDs are populated with
-ULIDs [7]. ULIDs are used mainly to avoid collisions and contain programming
-errors. Typos are a good example that can have catastrophic results, where
-REPLACE/DELETE queries can operate on the wrong table or column and with the
-possibility of collision change the wrong data.
+ULIDs [7]. ULIDs are necessary because the application must know the ID of
+elements inserted in bulk, and this cannot be know reliably if auto increment
+is used, even with synchronizaiton over `lastrowid`. Additionally random IDs
+are less likely to collide with is useful to detect programming errors. Typos
+are a good example that can have catastrophic results, where REPLACE/DELETE
+queries can operate on the wrong table or column and with the possibility of
+collision change the wrong data.
 
-ULIDs and are prefered over UUIDs because they are lexicographically sortable
-by design. Even though the implicit clustered index based on rowid will
-prevent large rewrites of the DB's tables, using ULIDs prevent rewrites of
-the PK Index.
-
-Using ULIDs has the additional benefit of removing the need for
-synchronization around the connection `lastrowid`, because IDs are now
-application controlled.
+ULIDs are necessary over UUIDs because they are lexicographically sortable by
+design, and state changes must be saved in order. This has the additional
+benefit of being a good write pattren, even though the implicit clustered index
+based on rowid will prevent large rewrites of the DB's tables, using ULIDs
+prevent rewrites of the PK Index.
 
 Manifest typing [4] is used for the ULIDs instead PARSE_COLNAMES [5] because
 of the easy of convertion.
