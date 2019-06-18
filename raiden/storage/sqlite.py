@@ -762,9 +762,7 @@ class SerializedSQLiteStorage:
         serialized_data = self.serializer.serialize(snapshot)
         return self.database.write_state_snapshot(serialized_data, statechange_id)
 
-    def write_events(
-        self, state_change_identifier: StateChangeID, events: List[Event]
-    ) -> List[EventID]:
+    def write_events(self, events: List[Tuple[StateChangeID, Event]]) -> List[EventID]:
         """ Save events.
 
         Args:
@@ -772,7 +770,8 @@ class SerializedSQLiteStorage:
             events: List of Event objects.
         """
         events_data = [
-            (state_change_identifier, self.serializer.serialize(event)) for event in events
+            (state_change_id, self.serializer.serialize(event))
+            for state_change_id, event in events
         ]
         return self.database.write_events(events_data)
 

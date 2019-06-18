@@ -88,7 +88,7 @@ class WriteAheadLog(Generic[ST]):
 
             state, events = self.state_manager.dispatch(state_change)
 
-            self.storage.write_events(state_change_ids[0], events)
+            self.storage.write_events([(state_change_ids[0], event) for event in events])
 
         return state, events
 
