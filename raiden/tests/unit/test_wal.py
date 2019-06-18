@@ -1,7 +1,6 @@
 import os
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
 
 import pytest
 
@@ -155,13 +154,12 @@ def test_write_read_events():
 
     with pytest.raises(sqlite3.IntegrityError):
         unexisting_state_change_id = 1
-        wal.storage.write_events(unexisting_state_change_id, event_list, "2018-08-31T17:38:00.000")
+        wal.storage.write_events(unexisting_state_change_id, event_list)
 
     previous_events = wal.storage.get_events_with_timestamps()
 
-    log_time = datetime(year=2018, month=9, day=7, hour=20, minute=2, second=35, microsecond=0)
     state_change_id = wal.storage.write_state_change("statechangedata")
-    wal.storage.write_events(state_change_id, event_list, log_time)
+    wal.storage.write_events(state_change_id, event_list)
 
     new_events = wal.storage.get_events_with_timestamps()
     assert len(previous_events) + 1 == len(new_events)
@@ -169,7 +167,6 @@ def test_write_read_events():
     latest_event = new_events[-1]
     assert isinstance(latest_event, TimestampedEvent)
     assert isinstance(latest_event.wrapped_event, EventPaymentSentFailed)
-    assert latest_event.log_time == log_time
 
 
 def test_restore_without_snapshot():
