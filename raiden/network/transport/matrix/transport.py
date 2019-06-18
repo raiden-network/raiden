@@ -417,7 +417,7 @@ class MatrixTransport(Runnable):
         self.greenlet.name = (
             f"MatrixTransport._run node:{to_checksum_address(self._raiden_service.address)}"
         )
-        self._raiden_service.handle_and_track_state_change(state_change)
+        self._raiden_service.handle_and_track_state_changes([state_change])
         try:
             # waits on _stop_event.ready()
             self._global_send_worker()
@@ -1096,7 +1096,7 @@ class MatrixTransport(Runnable):
 
         assert self._raiden_service is not None  # make mypy happy
         state_change = ActionChangeNodeNetworkState(address, node_reachability)
-        self._raiden_service.handle_and_track_state_change(state_change)
+        self._raiden_service.handle_and_track_state_changes([state_change])
 
     def _maybe_invite_user(self, user: User):
         peer_address = validate_userid_signature(user)

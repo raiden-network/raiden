@@ -22,7 +22,6 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer import views
-from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     TokenNetworkGraphState,
@@ -109,7 +108,8 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):  # pragma: n
         from_block=block_number,
     )
 
-    raiden.handle_and_track_state_change(create_new_tokennetwork_state_change(event))
+    new_token_network = create_new_tokennetwork_state_change(event)
+    raiden.handle_and_track_state_changes([new_token_network])
 
 
 def create_channel_new_state_change(
@@ -120,7 +120,13 @@ def create_channel_new_state_change(
     reveal_timeout: BlockTimeout,
     fee_schedule: "FeeScheduleState",
     event: Event,
-) -> Tuple[StateChange, Optional[Address], Optional[PFSFeeUpdate]]:
+) -> Tuple[
+    Union[ContractReceiveChannelNew, ContractReceiveRouteNew],
+    Optional[Address],
+    Optional[PFSFeeUpdate],
+]:
+    state_change: Union[ContractReceiveChannelNew, ContractReceiveRouteNew]
+
     data = event.event_data
     block_number = data["block_number"]
     block_hash = data["block_hash"]
@@ -155,7 +161,7 @@ def create_channel_new_state_change(
             fee_schedule=fee_schedule,
         )
 
-        state_change: StateChange = ContractReceiveChannelNew(
+        state_change = ContractReceiveChannelNew(
             transaction_hash=transaction_hash,
             channel_state=channel_state,
             block_number=block_number,
@@ -190,7 +196,7 @@ def create_channel_new_state_change(
 
 
 def handle_channel_new(raiden: "RaidenService", event: Event):  # pragma: no unittest
-    state_change, to_health_check, fee_update = create_channel_new_state_change(
+    new_channel_or_route, to_health_check, fee_update = create_channel_new_state_change(
         chain=raiden.chain,
         chain_id=(views.state_from_raiden(raiden).chain_id),
         our_address=raiden.address,
@@ -200,7 +206,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):  # pragma: no uni
         event=event,
     )
 
-    raiden.handle_and_track_state_change(state_change)
+    raiden.handle_and_track_state_changes([new_channel_or_route])
 
     if to_health_check:
         raiden.start_health_check_for(to_health_check)
@@ -263,12 +269,12 @@ def create_new_balance_state_change(
 
 
 def handle_channel_new_balance(raiden: "RaidenService", event: Event):  # pragma: no unittest
-    state_change, balance_was_zero = create_new_balance_state_change(
+    channel_new_balance, balance_was_zero = create_new_balance_state_change(
         chain_state=views.state_from_raiden(raiden), event=event
     )
 
-    if state_change:
-        raiden.handle_and_track_state_change(state_change)
+    if channel_new_balance:
+        raiden.handle_and_track_state_changes([channel_new_balance])
 
         args = event.event_data["args"]
         token_network_address = event.originating_contract
@@ -308,7 +314,7 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
 
     # Channels will only be registered if this node is a participant
     if previous_channel_state is not None:
-        withdraw_statechange = ContractReceiveChannelWithdraw(
+        channel_withdraw = ContractReceiveChannelWithdraw(
             transaction_hash=transaction_hash,
             canonical_identifier=canonical_identifier,
             total_withdraw=total_withdraw,
@@ -316,7 +322,7 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_and_track_state_change(withdraw_statechange)
+        raiden.handle_and_track_state_changes([channel_withdraw])
 
         chain_state = views.state_from_raiden(raiden)
         channel_state = views.get_channelstate_by_canonical_identifier(
@@ -371,11 +377,10 @@ def create_channel_closed_state_change(
 
 
 def handle_channel_closed(raiden: "RaidenService", event: Event):  # pragma: no unittest
-    raiden.handle_and_track_state_change(
-        create_channel_closed_state_change(
-            chain_state=views.state_from_raiden(raiden), event=event
-        )
+    channel_or_route_closed = create_channel_closed_state_change(
+        chain_state=views.state_from_raiden(raiden), event=event
     )
+    raiden.handle_and_track_state_changes([channel_or_route_closed])
 
 
 def create_update_transfer_state_change(
@@ -416,7 +421,7 @@ def handle_channel_update_transfer(raiden: "RaidenService", event: Event):  # pr
     )
 
     if update_transfer:
-        raiden.handle_and_track_state_change(update_transfer)
+        raiden.handle_and_track_state_changes([update_transfer])
 
 
 def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no unittest
@@ -495,7 +500,7 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no
         block_number=block_number,
         block_hash=block_hash,
     )
-    raiden.handle_and_track_state_change(channel_settled)
+    raiden.handle_and_track_state_changes([channel_settled])
 
 
 def create_batch_unlock_state_change(
@@ -596,7 +601,7 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):  # pragm
     )
 
     if state_change:
-        raiden.handle_and_track_state_change(state_change)
+        raiden.handle_and_track_state_changes([state_change])
 
 
 def handle_secret_revealed(raiden: "RaidenService", event: Event):  # pragma: no unittest
@@ -615,7 +620,7 @@ def handle_secret_revealed(raiden: "RaidenService", event: Event):  # pragma: no
         block_hash=block_hash,
     )
 
-    raiden.handle_and_track_state_change(registeredsecret_state_change)
+    raiden.handle_and_track_state_changes([registeredsecret_state_change])
 
 
 def on_blockchain_event(raiden: "RaidenService", event: Event):  # pragma: no unittest

@@ -235,7 +235,7 @@ class StateManager(Generic[ST]):
         self.state_transition = state_transition
         self.current_state = current_state
 
-    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
+    def dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[List[Event]]]:
         """ Apply the `state_change` in the current machine and return the
         resulting events.
 
@@ -248,22 +248,28 @@ class StateManager(Generic[ST]):
             It's the upper layer's responsibility to decided how to handle
             these events.
         """
-        assert isinstance(state_change, StateChange)
+        if not state_changes:
+            raise ValueError("dispatch called with an empty state_changes list")
 
-        # the state objects must be treated as immutable, so make a copy of the
+        # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
         next_state = deepcopy(self.current_state)
 
-        # update the current state by applying the change
-        iteration = self.state_transition(next_state, state_change)
+        # Update the current state by applying the state changes
+        events: List[List[Event]] = list()
+        for state_change in state_changes:
+            iteration = self.state_transition(next_state, state_change)
 
-        assert isinstance(iteration, TransitionResult)
+            assert isinstance(iteration, TransitionResult)
+            assert all(isinstance(e, Event) for e in iteration.events)
+            assert isinstance(iteration.new_state, State)
 
-        self.current_state = iteration.new_state
-        events = iteration.events
+            # Skipping the copy because this value is internal
+            events.append(iteration.events)
+            next_state = iteration.new_state
 
-        assert isinstance(self.current_state, State)
-        assert all(isinstance(e, Event) for e in events)
+        self.current_state = next_state
+        assert next_state is not None
 
         return iteration.new_state, events
 

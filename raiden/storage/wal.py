@@ -49,8 +49,7 @@ def restore_to_state_change(
     wal = WriteAheadLog(state_manager, storage)
 
     log.debug("Replaying state changes", num_state_changes=len(unapplied_state_changes))
-    for state_change in unapplied_state_changes:
-        wal.state_manager.dispatch(state_change)
+    wal.state_manager.dispatch(unapplied_state_changes)
 
     return wal
 
@@ -71,7 +70,7 @@ class WriteAheadLog(Generic[ST]):
         # execution order.
         self._lock = gevent.lock.Semaphore()
 
-    def log_and_dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
+    def log_and_dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[Event]]:
         """ Log and apply a state change.
 
         This function will first write the state change to the write-ahead-log,
@@ -82,15 +81,21 @@ class WriteAheadLog(Generic[ST]):
         """
 
         with self._lock:
-            state_change_ids = self.storage.write_state_changes([state_change])
-            assert len(state_change_ids) == 1
-            self.state_change_id = state_change_ids[0]
+            all_state_change_ids = self.storage.write_state_changes(state_changes)
+            self.state_change_id = all_state_change_ids[-1]
 
-            state, events = self.state_manager.dispatch(state_change)
+            latest_state, all_events = self.state_manager.dispatch(state_changes)
 
-            self.storage.write_events([(state_change_ids[0], event) for event in events])
+            event_data = list()
+            flattened_events = list()
+            for state_change_id, events in zip(all_state_change_ids, all_events):
+                flattened_events.extend(events)
+                for event in events:
+                    event_data.append((state_change_id, event))
 
-        return state, events
+            self.storage.write_events(event_data)
+
+        return latest_state, flattened_events
 
     def snapshot(self) -> None:
         """ Snapshot the application state.

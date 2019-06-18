@@ -366,8 +366,6 @@ class RaidenService(Runnable):
                 our_address=self.chain.node_address,
                 chain_id=self.chain.network_id,
             )
-            self.handle_and_track_state_change(init_state_change)
-
             payment_network = PaymentNetworkState(
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
@@ -378,7 +376,8 @@ class RaidenService(Runnable):
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
             )
-            self.handle_and_track_state_change(new_network_state_change)
+
+            self.handle_and_track_state_changes([init_state_change, new_network_state_change])
         else:
             # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
@@ -559,16 +558,16 @@ class RaidenService(Runnable):
     def on_message(self, message: Message) -> None:
         self.message_handler.on_message(self, message)
 
-    def handle_and_track_state_change(self, state_change: StateChange) -> None:
+    def handle_and_track_state_changes(self, state_changes: List[StateChange]) -> None:
         """ Dispatch the state change and does not handle the exceptions.
 
         When the method is used the exceptions are tracked and re-raised in the
         raiden service thread.
         """
-        for greenlet in self.handle_state_change(state_change):
+        for greenlet in self.handle_state_changes(state_changes):
             self.add_pending_greenlet(greenlet)
 
-    def handle_state_change(self, state_change: StateChange) -> List[Greenlet]:
+    def handle_state_changes(self, state_changes: List[StateChange]) -> List[Greenlet]:
         """ Dispatch the state change and return the processing threads.
 
         Use this for error reporting, failures in the returned greenlets,
@@ -576,13 +575,16 @@ class RaidenService(Runnable):
         """
         assert self.wal, f"WAL not restored. node:{self!r}"
         log.debug(
-            "State change",
+            "State changes",
             node=to_checksum_address(self.address),
-            state_change=_redact_secret(JSONSerializer.serialize(state_change)),
+            state_changes=[
+                _redact_secret(JSONSerializer.serialize(state_change))
+                for state_change in state_changes
+            ],
         )
 
         old_state = views.state_from_raiden(self)
-        new_state, raiden_event_list = self.wal.log_and_dispatch(state_change)
+        new_state, raiden_event_list = self.wal.log_and_dispatch(state_changes)
 
         for changed_balance_proof in views.detect_balance_proof_change(old_state, new_state):
             update_services_from_balance_proof(self, new_state, changed_balance_proof)
@@ -655,7 +657,7 @@ class RaidenService(Runnable):
 
     def set_node_network_state(self, node_address: Address, network_state: str) -> None:
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.handle_and_track_state_change(state_change)
+        self.handle_and_track_state_changes([state_change])
 
     def start_health_check_for(self, node_address: Address) -> None:
         """Start health checking `node_address`.
@@ -721,7 +723,7 @@ class RaidenService(Runnable):
             # Note: It's important to /not/ block here, because this function
             # can be called from the alarm task greenlet, which should not
             # starve.
-            self.handle_and_track_state_change(state_change)
+            self.handle_and_track_state_changes([state_change])
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.
@@ -915,7 +917,7 @@ class RaidenService(Runnable):
                     use_imbalance_penalty=use_imbalance_penalty,
                 )
 
-                self.handle_and_track_state_change(state_change)
+                self.handle_and_track_state_changes([state_change])
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
@@ -1086,26 +1088,25 @@ class RaidenService(Runnable):
 
         # Dispatch the state change even if there are no routes to create the
         # wal entry.
-        self.handle_and_track_state_change(init_initiator_statechange)
+        self.handle_and_track_state_changes([init_initiator_statechange])
 
         return payment_status
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer) -> None:
         init_mediator_statechange = mediator_init(self, transfer)
-
-        self.handle_and_track_state_change(init_mediator_statechange)
+        self.handle_and_track_state_changes([init_mediator_statechange])
 
     def target_mediated_transfer(self, transfer: LockedTransfer) -> None:
         self.start_health_check_for(Address(transfer.initiator))
         init_target_statechange = target_init(transfer)
-        self.handle_and_track_state_change(init_target_statechange)
+        self.handle_and_track_state_changes([init_target_statechange])
 
     def withdraw(self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount):
         init_withdraw = ActionChannelWithdraw(
             canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
         )
 
-        self.handle_and_track_state_change(init_withdraw)
+        self.handle_and_track_state_changes([init_withdraw])
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(
