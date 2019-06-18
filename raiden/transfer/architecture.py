@@ -185,7 +185,30 @@ class ContractReceiveStateChange(StateChange):
         typecheck(self.block_hash, T_BlockHash)
 
 
+T = TypeVar("T", covariant=True)
 ST = TypeVar("ST", bound=State)
+
+
+class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
+    """ Representes the result of applying a single state change.
+
+    When a task is completed the new_state is set to None, allowing the parent
+    task to cleanup after the child.
+    """
+
+    def __init__(self, new_state: T, events: List[Event]) -> None:
+        self.new_state = new_state
+        self.events = events
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, TransitionResult)
+            and self.new_state == other.new_state
+            and self.events == other.events
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
 
 
 class StateManager(Generic[ST]):
@@ -197,7 +220,7 @@ class StateManager(Generic[ST]):
 
     def __init__(
         self,
-        state_transition: Callable[[Optional[ST], StateChange], State],
+        state_transition: Callable[[Optional[ST], StateChange], TransitionResult[ST]],
         current_state: Optional[ST],
     ) -> None:
         """ Initialize the state manager.
@@ -242,35 +265,13 @@ class StateManager(Generic[ST]):
         assert isinstance(self.current_state, State)
         assert all(isinstance(e, Event) for e in events)
 
-        return next_state, events
+        return iteration.new_state, events
 
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, StateManager)
             and self.state_transition == other.state_transition
             and self.current_state == other.current_state
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-
-class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
-    """ Representes the result of applying a single state change.
-
-    When a task is completed the new_state is set to None, allowing the parent
-    task to cleanup after the child.
-    """
-
-    def __init__(self, new_state: Optional[ST], events: List[Event]) -> None:
-        self.new_state = new_state
-        self.events = events
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TransitionResult)
-            and self.new_state == other.new_state
-            and self.events == other.events
         )
 
     def __ne__(self, other: Any) -> bool:

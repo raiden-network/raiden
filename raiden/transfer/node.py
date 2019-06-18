@@ -181,9 +181,9 @@ def subdispatch_to_paymenttask(
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
         sub_iteration: Union[
-            TransitionResult[InitiatorPaymentState],
-            TransitionResult[MediatorTransferState],
-            TransitionResult[TargetTransferState],
+            TransitionResult[Optional[InitiatorPaymentState]],
+            TransitionResult[Optional[MediatorTransferState]],
+            TransitionResult[Optional[TargetTransferState]],
         ]
 
         if isinstance(sub_task, InitiatorTask):
