@@ -54,5 +54,5 @@ def reveal_secret_with_resolver(
         sender=secret_request_event.recipient,
         secret=Secret(to_bytes(hexstr=response.json()["secret"])),
     )
-    raiden.handle_and_track_state_change(state_change)
+    raiden.handle_and_track_state_changes([state_change])
     return True
