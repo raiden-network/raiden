@@ -42,7 +42,7 @@ from raiden.tests.utils.factories import (
     mediator_make_init_action,
 )
 from raiden.tests.utils.transfer import assert_dropped
-from raiden.transfer import channel
+from raiden.transfer import channel, routes
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendSecretReveal,
@@ -1782,7 +1782,7 @@ def test_filter_reachable_routes():
     # Both nodes are online
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP1, HOP2])
 
-    filtered_routes = mediator.filter_reachable_routes(
+    filtered_routes = routes.filter_reachable_routes(
         route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 
@@ -1792,7 +1792,7 @@ def test_filter_reachable_routes():
     # Only HOP2 is online
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP2])
 
-    filtered_routes = mediator.filter_reachable_routes(
+    filtered_routes = routes.filter_reachable_routes(
         route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 
@@ -1802,7 +1802,7 @@ def test_filter_reachable_routes():
     # None of the route nodes are available
     nodeaddresses_to_networkstates = factories.make_node_availability_map([])
 
-    filtered_routes = mediator.filter_reachable_routes(
+    filtered_routes = routes.filter_reachable_routes(
         route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 

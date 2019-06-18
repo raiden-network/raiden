@@ -192,13 +192,16 @@ def subdispatch_to_paymenttask(
         if isinstance(sub_task, InitiatorTask):
             token_network_address = sub_task.token_network_address
             token_network_state = get_token_network_by_address(chain_state, token_network_address)
+
             if token_network_state:
+                channel_identifier_map = token_network_state.channelidentifiers_to_channels
                 sub_iteration = initiator_manager.state_transition(
-                    sub_task.manager_state,
-                    state_change,
-                    token_network_state.channelidentifiers_to_channels,
-                    pseudo_random_generator,
-                    block_number,
+                    payment_state=sub_task.manager_state,
+                    state_change=state_change,
+                    channelidentifiers_to_channels=channel_identifier_map,
+                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                    pseudo_random_generator=pseudo_random_generator,
+                    block_number=block_number,
                 )
                 events = sub_iteration.events
 
@@ -285,6 +288,7 @@ def subdispatch_initiatortask(
                 payment_state=manager_state,
                 state_change=state_change,
                 channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,
             )

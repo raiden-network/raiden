@@ -2,7 +2,7 @@ import random
 
 from raiden.constants import ABSENT_SECRET
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
-from raiden.transfer import channel
+from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
@@ -39,6 +39,7 @@ from raiden.utils.typing import (
     Dict,
     List,
     MessageID,
+    NodeNetworkStateMap,
     Optional,
     PaymentWithFeeAmount,
     Secret,
@@ -181,6 +182,7 @@ def get_initial_lock_expiration(
 
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
@@ -196,8 +198,12 @@ def try_new_route(
     channel_state = None
     route_state = None
 
-    for candidate_route_state in candidate_route_states:
-        forward_channel_id = candidate_route_state.forward_channel_id
+    reachable_route_states = routes.filter_reachable_routes(
+        candidate_route_states, nodeaddresses_to_networkstates
+    )
+
+    for reachable_route_state in reachable_route_states:
+        forward_channel_id = reachable_route_state.forward_channel_id
 
         candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
             forward_channel_id
@@ -210,11 +216,11 @@ def try_new_route(
         )
         if is_usable_route:
             channel_state = candidate_channel_state
-            route_state = candidate_route_state
+            route_state = reachable_route_state
             break
 
     if route_state is None:
-        if not candidate_route_states:
+        if not reachable_route_states:
             reason = "there is no route available"
         else:
             reason = "none of the available routes could be used"
@@ -240,7 +246,7 @@ def try_new_route(
             message_identifier=message_identifier,
             block_number=block_number,
             route_state=route_state,
-            route_states=candidate_route_states,
+            route_states=reachable_route_states,
         )
         assert lockedtransfer_event
 
@@ -284,8 +290,8 @@ def send_lockedtransfer(
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
-        route_states=channel.prune_route_table(
-            route_state_table=route_states, selected_route=route_state
+        route_states=routes.prune_route_table(
+            route_states=route_states, selected_route=route_state
         ),
     )
     return lockedtransfer_event

@@ -1,6 +1,6 @@
 import random
 
-from raiden.transfer import channel
+from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator
@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     List,
+    NodeNetworkStateMap,
     Optional,
     SecretHash,
     cast,
@@ -98,6 +99,7 @@ def maybe_try_new_route_or_cancel(
     transfer_description: TransferDescriptionWithSecretState,
     candidate_route_states: List[RouteState],
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     is_reroute_allowed: bool = True,
@@ -111,13 +113,12 @@ def maybe_try_new_route_or_cancel(
         if not is_reroute_allowed:
             return TransitionResult(payment_state, events)
 
-        filtered_route_states = [
-            route
-            for route in candidate_route_states
-            if route.forward_channel_id not in payment_state.cancelled_channels
-        ]
+        filtered_route_states = routes.exclude_routes_from_channels(
+            route_states=candidate_route_states, channel_ids=payment_state.cancelled_channels
+        )
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             candidate_route_states=filtered_route_states,
             transfer_description=transfer_description,
             pseudo_random_generator=pseudo_random_generator,
@@ -207,6 +208,7 @@ def handle_init(
     payment_state: Optional[InitiatorPaymentState],
     state_change: ActionInitInitiator,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
@@ -214,6 +216,7 @@ def handle_init(
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             candidate_route_states=state_change.routes,
             transfer_description=state_change.transfer,
             pseudo_random_generator=pseudo_random_generator,
@@ -270,6 +273,7 @@ def handle_transferrefundcancelroute(
     payment_state: InitiatorPaymentState,
     state_change: ReceiveTransferRefundCancelRoute,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
@@ -335,6 +339,7 @@ def handle_transferrefundcancelroute(
         transfer_description=transfer_description,
         candidate_route_states=payment_state.routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         is_reroute_allowed=state_change.is_reroute_allowed,
@@ -476,6 +481,7 @@ def state_transition(
     payment_state: Optional[InitiatorPaymentState],
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
@@ -497,6 +503,7 @@ def state_transition(
             payment_state=payment_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
@@ -517,6 +524,7 @@ def state_transition(
             payment_state=payment_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
