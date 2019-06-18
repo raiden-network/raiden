@@ -36,7 +36,7 @@ ID = TypeVar("ID", bound=ULID)
 
 
 class ULIDMonotonicFactory(Generic[ID]):
-    """Monotonic ULID factory that guarantees new ULIDs will not be decrease.
+    """Monotonic ULID factory that guarantees new ULIDs will not decrease.
 
     This factory does not follow the SPEC. The timestamp is not walltime and
     the precision was increased from ms to ns to guarantee total order.

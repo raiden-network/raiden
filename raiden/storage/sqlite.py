@@ -49,9 +49,9 @@ class Range(Generic[ID]):
             raise ValueError("last must be larger or equal to first")
 
 
-FIRST_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
-LAST_STATECHANGE_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
-RANGE_ALL_STATE_CHANGES = Range(FIRST_STATECHANGE_ULID, LAST_STATECHANGE_ULID)
+LOW_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
+HIGH_STATECHANGE_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
+RANGE_ALL_STATE_CHANGES = Range(LOW_STATECHANGE_ULID, HIGH_STATECHANGE_ULID)
 
 
 class Operator(Enum):
@@ -811,13 +811,13 @@ class SerializedSQLiteStorage:
     ) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
 
-        state_change_encoded = self.database.get_latest_state_change_by_data_field(query)
+        encoded_state_change = self.database.get_latest_state_change_by_data_field(query)
 
         state_change = None
-        if state_change_encoded is not None:
+        if encoded_state_change is not None:
             state_change = StateChangeRecord(
-                state_change_identifier=state_change_encoded.state_change_identifier,
-                data=self.serializer.deserialize(state_change_encoded.data),
+                state_change_identifier=encoded_state_change.state_change_identifier,
+                data=self.serializer.deserialize(encoded_state_change.data),
             )
 
         return state_change

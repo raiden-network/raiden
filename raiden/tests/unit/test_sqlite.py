@@ -157,7 +157,7 @@ def make_from_route_from_counter(counter):
 
 
 def test_get_state_change_with_balance_proof():
-    """ All state changes which contain a balance proof must be found by when
+    """ All state changes which contain a balance proof must be found when
     querying the database.
     """
     serializer = JSONSerializer()
