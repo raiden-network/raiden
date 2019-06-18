@@ -371,6 +371,11 @@ def forward_transfer_pair(
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
     payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
+
+    route_states = channel.prune_route_table(
+        route_state_table=route_state_table, selected_route=route_state
+    )
+
     is_payee_channel_usable = payee_channel is not None and channel.is_channel_usable(
         candidate_channel_state=payee_channel,
         transfer_amount=payer_transfer.lock.amount,
@@ -392,9 +397,7 @@ def forward_transfer_pair(
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
             secrethash=lock.secrethash,
-            route_states=channel.prune_route_table(
-                route_state_table=route_state_table, selected_route=route_state
-            ),
+            route_states=route_states,
         )
         assert lockedtransfer_event
 

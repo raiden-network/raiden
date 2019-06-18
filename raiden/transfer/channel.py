@@ -147,22 +147,15 @@ def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
 def prune_route_table(
     route_state_table: List[RouteState], selected_route: RouteState
 ) -> List[RouteState]:
-    """ Takes a selected route and places it on top of the route table,
-    with the current node address removed.
-
-    The idea is that the current node is the first address on the route
-    state entry, so this address needs to be removed from the table when
-    passing it to the next hop.
+    """ Given a selected route, returns a filtered route table that
+    contains only routes using the same forward channel and removes our own
+    address in the process.
     """
-    pruned_route_table = [rs for rs in route_state_table if rs.route != selected_route.route]
-
-    pruned_route_table.insert(
-        0,
-        RouteState(
-            route=selected_route.route[1:], forward_channel_id=selected_route.forward_channel_id
-        ),
-    )
-    return pruned_route_table
+    return [
+        RouteState(route=rs.route[1:], forward_channel_id=selected_route.forward_channel_id)
+        for rs in route_state_table
+        if rs.forward_channel_id == selected_route.forward_channel_id
+    ]
 
 
 def is_channel_usable(

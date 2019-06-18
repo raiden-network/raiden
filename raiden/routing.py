@@ -292,8 +292,6 @@ def resolve_routes(
     """ resolve the forward_channel_id for a given route """
 
     resolvable = []
-    unresolvable = []
-
     for route_metadata in routes:
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
@@ -308,6 +306,4 @@ def resolve_routes(
                     forward_channel_id=channel_state.canonical_identifier.channel_identifier,
                 )
             )
-        else:
-            unresolvable.append(RouteState(route=route_metadata.route))
-    return resolvable + unresolvable
+    return resolvable
