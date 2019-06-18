@@ -9,7 +9,7 @@ from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
-    LAST_STATECHANGE_ULID,
+    HIGH_STATECHANGE_ULID,
     RANGE_ALL_STATE_CHANGES,
     SerializedSQLiteStorage,
 )
@@ -187,7 +187,7 @@ def test_restore_without_snapshot():
     newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
         storage=wal.storage,
-        state_change_identifier=LAST_STATECHANGE_ULID,
+        state_change_identifier=HIGH_STATECHANGE_ULID,
     )
 
     aggregate = newwal.state_manager.current_state
@@ -209,5 +209,5 @@ def test_get_snapshot_before_state_change():
     wal.log_and_dispatch(block3)
     wal.snapshot()
 
-    snapshot = wal.storage.get_snapshot_before_state_change(LAST_STATECHANGE_ULID)
+    snapshot = wal.storage.get_snapshot_before_state_change(HIGH_STATECHANGE_ULID)
     assert snapshot.data == AccState([block1, block2, block3])
