@@ -899,12 +899,18 @@ class RaidenService(Runnable):
             )
 
             for channel in channels:
-                log.info("Updating channel fees", channel=channel.canonical_identifier)
+                log.info(
+                    "Updating channel fees",
+                    channel=channel.canonical_identifier,
+                    flat_fee=default_fee_schedule.flat,
+                    proportional_fee=default_fee_schedule.proportional,
+                )
 
                 # FIXME: this should trigger an update of rebalancing fees
                 state_change = ActionChannelSetFee(
                     canonical_identifier=channel.canonical_identifier,
-                    mediation_fee=default_fee_schedule.flat,  # FIXME: add other fees
+                    flat_fee=default_fee_schedule.flat,
+                    proportional_fee=default_fee_schedule.proportional,
                 )
 
                 self.handle_and_track_state_change(state_change)

@@ -441,6 +441,16 @@ MetadataProperties.DEFAULTS = MetadataProperties(routes=[RouteMetadata(route=[HO
 
 
 @dataclass(frozen=True)
+class FeeScheduleStateProperties(Properties):
+    flat: TokenAmount = EMPTY
+    proportional: int = EMPTY
+    TARGET_TYPE = FeeScheduleState
+
+
+FeeScheduleStateProperties.DEFAULTS = FeeScheduleStateProperties(flat=0, proportional=0)
+
+
+@dataclass(frozen=True)
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: TokenAddress = EMPTY
@@ -448,7 +458,6 @@ class NettingChannelStateProperties(Properties):
 
     reveal_timeout: BlockTimeout = EMPTY
     settle_timeout: BlockTimeout = EMPTY
-    mediation_fee: FeeAmount = EMPTY
     fee_schedule: FeeScheduleState = EMPTY
 
     our_state: NettingChannelEndStateProperties = EMPTY
@@ -467,7 +476,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     payment_network_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
-    mediation_fee=0,
+    fee_schedule=FeeScheduleStateProperties.DEFAULTS,
     our_state=NettingChannelEndStateProperties.OUR_STATE,
     partner_state=NettingChannelEndStateProperties.DEFAULTS,
     open_transaction=TransactionExecutionStatusProperties.DEFAULTS,

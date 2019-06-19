@@ -30,6 +30,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
     BalanceProofSignedStateProperties,
+    FeeScheduleStateProperties,
     LockedTransferSignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
@@ -78,6 +79,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
     HopState,
+    NettingChannelState,
     RouteState,
     message_identifier_from_prng,
 )
@@ -89,6 +91,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils import random_secret
+from raiden.utils.typing import FeeAmount
 
 
 def make_route_from_channelstate(channel_state):
@@ -1920,15 +1923,15 @@ def test_next_transfer_pair_with_fees_deducted():
 
 def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
-    fee = 5
+    fee = FeeAmount(5)
 
     end_state = factories.NettingChannelEndStateProperties(balance=amount + fee)
     partner_state = replace(end_state, address=UNIT_TRANSFER_SENDER)
-    refund_channel = factories.create(
+    refund_channel: NettingChannelState = factories.create(
         factories.NettingChannelStateProperties(our_state=end_state, partner_state=partner_state)
     )
 
-    refund_channel.mediation_fee = fee
+    refund_channel.fee_schedule.flat = fee
 
     transfer_data = LockedTransferSignedStateProperties(
         amount=amount + fee,
@@ -1970,7 +1973,7 @@ def test_sanity_check_for_refund_transfer_with_fees():
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                mediation_fee=UNIT_TRANSFER_FEE,
+                fee_schedule=FeeScheduleStateProperties(flat=UNIT_TRANSFER_FEE, proportional=0),
                 canonical_identifier=make_canonical_identifier(channel_identifier=1),
                 our_state=NettingChannelEndStateProperties.OUR_STATE,
                 partner_state=NettingChannelEndStateProperties(
