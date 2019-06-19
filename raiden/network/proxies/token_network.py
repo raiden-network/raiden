@@ -698,7 +698,7 @@ class TokenNetwork:
         # transactions on-chain (account without balance). The lock
         # channel_operations_lock is not sufficient, as it allows two
         # concurrent deposits for different channels.
-        with self.channel_operations_lock[partner], self.deposit_lock:
+        with self.channel_operations_lock[partner], self.deposit_lock, self.token.token_lock:
             try:
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,

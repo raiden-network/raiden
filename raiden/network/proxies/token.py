@@ -67,7 +67,7 @@ class Token:
             "allowance": allowance,
         }
 
-        with self.token_lock, log_transaction(log, "approve", log_details):
+        with log_transaction(log, "approve", log_details):
             checking_block = self.client.get_checking_block()
             error_prefix = "Call to approve will fail"
             gas_limit = self.proxy.estimate_gas(
@@ -147,10 +147,9 @@ class Token:
         self, address: Address, block_identifier: BlockSpecification = "latest"
     ) -> Balance:
         """ Return the balance of `address`. """
-        with self.token_lock:
-            return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
-                block_identifier=block_identifier
-            )
+        return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
+            block_identifier=block_identifier
+        )
 
     def total_supply(self, block_identifier: BlockSpecification = "latest"):
         """ Return the total supply of the token at the given block identifier. """
