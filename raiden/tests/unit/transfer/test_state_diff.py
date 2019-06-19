@@ -56,7 +56,6 @@ def test_detect_balance_proof_change():
         payment_network_address=1,
         reveal_timeout=1,
         settle_timeout=2,
-        mediation_fee=0,
         our_state=None,
         partner_state=None,
         open_transaction=TransactionExecutionStatus(result="success"),

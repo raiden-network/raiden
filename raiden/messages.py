@@ -1254,7 +1254,7 @@ class FeeUpdate(SignedMessage):
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
-            fee_schedule=FeeScheduleState(flat=channel_state.mediation_fee),
+            fee_schedule=channel_state.fee_schedule,
             timestamp=datetime.now(timezone.utc),
             signature=EMPTY_SIGNATURE,
         )
