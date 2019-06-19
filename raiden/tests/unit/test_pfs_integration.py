@@ -112,17 +112,7 @@ PFS_CONFIG = PFSConfig(
     iou_timeout=BlockNumber(100),
     max_paths=5,
 )
-CONFIG = {
-    "services": {
-        "pathfinding_service_address": "my-pfs",
-        "pathfinding_eth_address": factories.make_checksum_address(),
-        "pathfinding_max_paths": 3,
-        "pathfinding_iou_timeout": 10,
-        "pathfinding_max_fee": 50,
-        "pathfinding_fee": 5,
-    },
-    "pfs_config": PFS_CONFIG,
-}
+CONFIG = {"pfs_config": PFS_CONFIG}
 
 PRIVKEY = b"privkeyprivkeyprivkeyprivkeypriv"
 
