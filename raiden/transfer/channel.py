@@ -807,6 +807,10 @@ def is_valid_action_withdraw(
 
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
+    # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
+    total_channel_withdraw = withdraw.total_withdraw + channel_state.partner_state.total_withdraw
+    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
+
     withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
     if withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
@@ -815,6 +819,9 @@ def is_valid_action_withdraw(
         msg = "Insufficient balance: {}. Requested {} for withdraw".format(
             balance, withdraw_amount
         )
+        result = (False, msg)
+    elif withdraw_overflow:
+        msg = f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
         result = (False, msg)
     else:
         result = (True, None)
@@ -844,7 +851,16 @@ def is_valid_withdraw_request(
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
 
-    if withdraw_amount <= 0:
+    # Does the new partner total_withdraw with our total_withdraw cause an overflow?
+    total_channel_withdraw = (
+        withdraw_request.total_withdraw + channel_state.our_state.total_withdraw
+    )
+    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
+
+    if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
+        msg = f"Invalid canonical identifier provided in withdraw request"
+        result = (False, msg)
+    elif withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw_request.total_withdraw} did not increase"
         result = (False, msg)
     elif balance < withdraw_amount:
@@ -861,6 +877,9 @@ def is_valid_withdraw_request(
         )
 
         result = (False, msg)
+    elif withdraw_overflow:
+        msg = f"The new total_withdraw {withdraw_request.total_withdraw} will cause an overflow"
+        result = (False, msg)
     else:
         result = (True, None)
 
@@ -868,7 +887,7 @@ def is_valid_withdraw_request(
 
 
 def is_valid_withdraw_confirmation(
-    withdraw: ReceiveWithdraw, channel_state: NettingChannelState
+    channel_state: NettingChannelState, withdraw: ReceiveWithdraw
 ) -> SuccessOrError:
 
     result: SuccessOrError
@@ -887,7 +906,14 @@ def is_valid_withdraw_confirmation(
         sender_address=channel_state.partner_state.address,
     )
 
-    if withdraw.total_withdraw != channel_state.our_state.total_withdraw:
+    # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
+    total_channel_withdraw = withdraw.total_withdraw + channel_state.partner_state.total_withdraw
+    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
+
+    if channel_state.canonical_identifier != withdraw.canonical_identifier:
+        msg = f"Invalid canonical identifier provided in withdraw request"
+        result = (False, msg)
+    elif withdraw.total_withdraw != channel_state.our_state.total_withdraw:
         msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
             withdraw.total_withdraw, channel_state.our_state.total_withdraw
         )
@@ -901,6 +927,9 @@ def is_valid_withdraw_confirmation(
             f"got: {withdraw.nonce}."
         )
 
+        result = (False, msg)
+    elif withdraw_overflow:
+        msg = f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
         result = (False, msg)
     else:
         result = (True, None)
@@ -1065,6 +1094,7 @@ def lock_exists_in_either_channel_side(
 
 
 def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
+    # 0 must not be used since in the netting contract it represents null.
     return Nonce(end_state.nonce + 1)
 
 
@@ -2050,13 +2080,10 @@ def apply_channel_newbalance(
 def handle_channel_withdraw(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
 ) -> TransitionResult[NettingChannelState]:
-    if state_change.participant == channel_state.our_state.address:
-        end_state = channel_state.our_state
-    else:
-        end_state = channel_state.partner_state
+    # pylint: disable=unused-argument
 
-    end_state.total_withdraw = state_change.total_withdraw
-
+    # Currently, the state machine doesn't need to process this event.
+    # NOTE: Keep until withdraw expiration is implemented
     events: List[Event] = list()
     return TransitionResult(channel_state, events)
 

@@ -1855,7 +1855,7 @@ def test_receive_withdraw_confirmation():
         nonce=1,
     )
 
-    iteration = channel.handle_receive_withdraw(
+    iteration = channel.handle_receive_withdraw_confirmation(
         channel_state=channel_state, withdraw=receive_withdraw, block_hash=block_hash
     )
 
@@ -1883,7 +1883,7 @@ def test_receive_withdraw_confirmation():
         nonce=1,
     )
 
-    iteration = channel.handle_receive_withdraw(
+    iteration = channel.handle_receive_withdraw_confirmation(
         channel_state=iteration.new_state, withdraw=receive_withdraw, block_hash=block_hash
     )
 
@@ -1905,7 +1905,7 @@ def test_receive_withdraw_confirmation():
         nonce=1,
     )
 
-    iteration = channel.handle_receive_withdraw(
+    iteration = channel.handle_receive_withdraw_confirmation(
         channel_state=iteration.new_state, withdraw=receive_withdraw, block_hash=block_hash
     )
 
