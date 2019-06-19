@@ -330,7 +330,7 @@ def eth_node_to_logpath(node_config: Dict[str, Any], base_logdir: str) -> str:
 def geth_prepare_datadir(datadir: str, genesis_file: str) -> None:
     node_genesis_path = os.path.join(datadir, "custom_genesis.json")
     ipc_path = datadir + "/geth.ipc"
-    assert len(ipc_path) <= 104, f'geth data path "{ipc_path}" is too large'
+    assert len(ipc_path) < 104, f'geth data path "{ipc_path}" is too large'
 
     os.makedirs(datadir, exist_ok=True)
     shutil.copy(genesis_file, node_genesis_path)
