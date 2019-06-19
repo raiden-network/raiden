@@ -4,14 +4,11 @@ from hashlib import sha256
 
 from eth_utils import keccak, to_checksum_address
 
-from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
     BalanceHash,
     BlockHash,
     BlockNumber,
-    ChainID,
-    ChannelID,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -19,7 +16,6 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
-    TokenNetworkAddress,
     TransactionHash,
 )
 
@@ -124,6 +120,3 @@ PATH_FINDING_BROADCASTING_ROOM = "path_finding"
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
-CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
-    ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
-)
