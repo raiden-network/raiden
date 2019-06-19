@@ -6,7 +6,7 @@ from random import Random
 from typing import TYPE_CHECKING, Tuple
 
 import networkx
-from eth_utils import to_hex
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -21,7 +21,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediation_fee import FeeScheduleState
-from raiden.utils import lpex, pex
+from raiden.utils import lpex
 from raiden.utils.typing import (
     Address,
     Any,
@@ -172,7 +172,7 @@ class RouteState(State):
 
     # TODO: Add timestamp
     route: List[Address]
-    forward_channel_id: Optional[ChannelID] = None
+    forward_channel_id: ChannelID
 
     @property
     def next_hop_address(self) -> Address:
@@ -181,7 +181,7 @@ class RouteState(State):
 
     def __repr__(self):
         return "RouteState ({}), channel_id: {}".format(
-            " -> ".join([pex(a) for a in self.route]), self.forward_channel_id
+            " -> ".join(to_checksum_address(addr) for addr in self.route), self.forward_channel_id
         )
 
 

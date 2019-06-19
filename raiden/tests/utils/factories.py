@@ -401,11 +401,7 @@ NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
 )
 
 NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
-    address=UNIT_OUR_ADDRESS,
-    privatekey=UNIT_OUR_KEY,
-    balance=100,
-    merkletree_leaves=None,
-    merkletree_width=0,
+    address=UNIT_OUR_ADDRESS, privatekey=UNIT_OUR_KEY, balance=100
 )
 
 
