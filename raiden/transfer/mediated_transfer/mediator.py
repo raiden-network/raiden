@@ -927,7 +927,7 @@ def events_to_remove_expired_locks(
 
             if has_lock_expired and is_channel_open:
                 transfer_pair.payee_state = "payee_expired"
-                expired_lock_events = channel.events_for_expired_lock(
+                expired_lock_events = channel.send_lock_expired(
                     channel_state=channel_state,
                     locked_lock=lock,
                     pseudo_random_generator=pseudo_random_generator,

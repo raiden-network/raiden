@@ -119,7 +119,7 @@ def handle_block(
     if lock_has_expired and initiator_state.transfer_state != "transfer_expired":
         is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
         if is_channel_open:
-            expired_lock_events = channel.events_for_expired_lock(
+            expired_lock_events = channel.send_lock_expired(
                 channel_state=channel_state,
                 locked_lock=locked_lock,
                 pseudo_random_generator=pseudo_random_generator,

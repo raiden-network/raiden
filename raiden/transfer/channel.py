@@ -1513,7 +1513,7 @@ def create_sendexpiredlock(
     return send_lock_expired, pending_locks
 
 
-def events_for_expired_lock(
+def send_lock_expired(
     channel_state: NettingChannelState,
     locked_lock: LockType,
     pseudo_random_generator: random.Random,
