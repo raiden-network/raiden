@@ -188,6 +188,7 @@ class PaymentChannel:
             total_withdraw=total_withdraw,
             participant_signature=participant_signature,
             partner_signature=partner_signature,
+            participant=self.participant1,
             partner=self.participant2,
         )
 

@@ -43,7 +43,7 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
 from raiden.utils import safe_gas_limit
-from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update
+from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -1105,35 +1105,38 @@ class TokenNetwork:
         total_withdraw: WithdrawAmount,
         participant_signature: Signature,
         partner_signature: Signature,
+        participant: Address,
         partner: Address,
     ):
         """ Set total token withdraw in the channel to total_withdraw.
 
         Raises:
-            ChannelBusyError: If the channel is busy with another operation
             ValueError: If provided total_withdraw is not an integer value.
         """
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
 
+        if total_withdraw <= 0:
+            raise ValueError("total_withdraw should be larger than zero.")
+
         with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
-                    participant1=self.node_address,
+                    participant1=participant,
                     participant2=partner,
                     block_identifier=given_block_identifier,
                     channel_identifier=channel_identifier,
                 )
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
+                    detail_for=participant,
                     partner=partner,
                     block_identifier=given_block_identifier,
                 )
                 partner_details = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=partner,
-                    partner=self.node_address,
+                    partner=participant,
                     block_identifier=given_block_identifier,
                 )
             except ValueError:
@@ -1169,10 +1172,57 @@ class TokenNetwork:
                     )
                     raise WithdrawMismatch(msg)
 
+                if participant_signature == EMPTY_SIGNATURE:
+                    msg = "set_total_withdraw requires a valid participant signature"
+                    raise RaidenUnrecoverableError(msg)
+
+                if partner_signature == EMPTY_SIGNATURE:
+                    msg = "set_total_withdraw requires a valid partner signature"
+                    raise RaidenUnrecoverableError(msg)
+
+                canonical_identifier = CanonicalIdentifier(
+                    chain_identifier=self.proxy.contract.functions.chain_id().call(),
+                    token_network_address=self.address,
+                    channel_identifier=channel_identifier,
+                )
+                participant_signed_data = pack_withdraw(
+                    participant=participant,
+                    total_withdraw=total_withdraw,
+                    canonical_identifier=canonical_identifier,
+                )
+                try:
+                    participant_recovered_address = recover(
+                        data=participant_signed_data, signature=participant_signature
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    raise RaidenUnrecoverableError(
+                        "Couldn't verify the participant withdraw signature"
+                    )
+                else:
+                    if participant_recovered_address != partner:
+                        raise RaidenUnrecoverableError("Invalid withdraw participant signature")
+
+                partner_signed_data = pack_withdraw(
+                    participant=participant,
+                    total_withdraw=total_withdraw,
+                    canonical_identifier=canonical_identifier,
+                )
+                try:
+                    partner_recovered_address = recover(
+                        data=partner_signed_data, signature=partner_signature
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    raise RaidenUnrecoverableError(
+                        "Couldn't verify the partner withdraw signature"
+                    )
+                else:
+                    if partner_recovered_address != partner:
+                        raise RaidenUnrecoverableError("Invalid withdraw partner signature")
+
             log_details = {
-                "node": to_checksum_address(self.node_address),
+                "node": to_checksum_address(participant),
                 "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(self.node_address),
+                "participant": to_checksum_address(participant),
                 "partner": to_checksum_address(partner),
                 "total_withdraw": total_withdraw,
             }
@@ -1181,6 +1231,7 @@ class TokenNetwork:
                 self._set_total_withdraw(
                     channel_identifier=channel_identifier,
                     total_withdraw=total_withdraw,
+                    participant=participant,
                     partner=partner,
                     partner_signature=partner_signature,
                     participant_signature=participant_signature,
@@ -1192,6 +1243,7 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
+        participant: Address,
         partner: Address,
         partner_signature: Signature,
         participant_signature: Signature,
@@ -1204,7 +1256,7 @@ class TokenNetwork:
             checking_block,
             "setTotalWithdraw",
             channel_identifier=channel_identifier,
-            participant=self.node_address,
+            participant=participant,
             total_withdraw=total_withdraw,
             partner_signature=partner_signature,
             participant_signature=participant_signature,
@@ -1220,22 +1272,24 @@ class TokenNetwork:
                 function_name="setTotalWithdraw",
                 startgas=gas_limit,
                 channel_identifier=channel_identifier,
-                participant=self.node_address,
+                participant=participant,
                 total_withdraw=total_withdraw,
                 partner_signature=partner_signature,
                 participant_signature=participant_signature,
             )
             self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt_or_none:
+            if receipt:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
                 # - The total withdraw amount increased.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+
+                if receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"update transfer failed and all gas was used "
                         f"({gas_limit}). Estimate gas may have underestimated "
@@ -1248,15 +1302,15 @@ class TokenNetwork:
                 # Query the current state to check for transaction races
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
+                    detail_for=participant,
                     partner=partner,
-                    block_identifier=given_block_identifier,
+                    block_identifier=failed_at_blockhash,
                 )
                 partner_details = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=partner,
-                    partner=self.node_address,
-                    block_identifier=given_block_identifier,
+                    partner=participant,
+                    block_identifier=failed_at_blockhash,
                 )
 
                 total_withdraw_done = our_details.withdrawn >= total_withdraw
@@ -1290,14 +1344,14 @@ class TokenNetwork:
                 block_identifier=failed_at_blocknumber,
             )
             detail = self._detail_channel(
-                participant1=self.node_address,
+                participant1=participant,
                 participant2=partner,
                 block_identifier=failed_at_blockhash,
                 channel_identifier=channel_identifier,
             )
             our_details = self._detail_participant(
                 channel_identifier=channel_identifier,
-                detail_for=self.node_address,
+                detail_for=participant,
                 partner=partner,
                 block_identifier=failed_at_blockhash,
             )
