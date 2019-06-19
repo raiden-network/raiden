@@ -73,7 +73,15 @@ def changed_args():
 
 
 @pytest.fixture()
-def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(
+    logs_storage,
+    raiden_testchain,
+    removed_args,
+    changed_args,
+    environment_type,
+    cleanup_tasks,  # pylint: disable=unused-argument
+):
+
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -116,7 +124,7 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
 
 
 @pytest.fixture
-def raiden_spawner(tmp_path, request):
+def raiden_spawner(tmp_path, request, cleanup_tasks):  # pylint: disable=unused-argument
     def spawn_raiden(args):
         # Remove any possibly defined `RAIDEN_*` environment variables from outer scope
         new_env = {k: copy(v) for k, v in os.environ.items() if not k.startswith("RAIDEN")}

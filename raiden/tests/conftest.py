@@ -40,6 +40,7 @@ from raiden.constants import (
 )
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
+from raiden.tests.fixtures.cleanup import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType

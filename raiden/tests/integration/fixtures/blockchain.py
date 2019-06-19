@@ -13,7 +13,6 @@ from raiden.tests.utils.eth_node import (
     run_private_blockchain,
 )
 from raiden.tests.utils.network import jsonrpc_services
-from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
@@ -34,6 +33,7 @@ def web3(
     tmpdir,
     chain_id,
     logs_storage,
+    cleanup_tasks,  # pylint: disable=unused-argument
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
@@ -90,8 +90,6 @@ def web3(
     )
     with eth_node_runner:
         yield web3
-
-    cleanup_tasks()
 
 
 @pytest.fixture

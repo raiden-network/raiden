@@ -37,6 +37,7 @@ enable=
     no-self-use,
     import-self,
     gevent-joinall,
+    gevent-killall,
     useless-object-inheritance,
     unused-argument,
     unexpected-keyword-arg,

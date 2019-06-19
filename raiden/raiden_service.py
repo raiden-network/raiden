@@ -455,7 +455,7 @@ class RaidenService(Runnable):
             self.stop_event.wait()
         except gevent.GreenletExit:  # killed without exception
             self.stop_event.set()
-            gevent.killall([self.alarm, self.transport])  # kill children
+            gevent.killall([self.alarm, self.transport], timeout=10)  # kill children
             raise  # re-raise to keep killed status
         except Exception:
             self.stop()

@@ -15,7 +15,6 @@ from raiden.tests.utils.network import (
     wait_for_channels,
     wait_for_token_networks,
 )
-from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 
 
 def timeout(blockchain_type: str):
@@ -120,7 +119,8 @@ def raiden_chain(
 
     yield raiden_apps
 
-    shutdown_apps_and_cleanup_tasks(raiden_apps)
+    for app in raiden_apps:
+        app.stop()
 
 
 @pytest.fixture
@@ -216,4 +216,5 @@ def raiden_network(
 
     yield raiden_apps
 
-    shutdown_apps_and_cleanup_tasks(raiden_apps)
+    for app in raiden_apps:
+        app.stop()

@@ -1,8 +1,5 @@
-import gc
 import os
 from itertools import chain, combinations, count, product
-
-import gevent
 
 
 def unique_path(initial_path: str) -> str:
@@ -36,27 +33,6 @@ def unique_path(initial_path: str) -> str:
         pass
 
     return proposed_path
-
-
-def cleanup_tasks():
-    tasks = [
-        running_task
-        for running_task in gc.get_objects()
-        if isinstance(running_task, gevent.Greenlet)
-    ]
-    gevent.killall(tasks)
-    gevent.hub.reinit()
-
-
-def shutdown_apps_and_cleanup_tasks(raiden_apps):
-    for app in raiden_apps:
-        app.stop()
-
-    # Two tests in sequence could run a server on the same port, a hanging
-    # greenlet from the previous tests could send packet to the new server and
-    # mess things up. Kill all greenlets to make sure that no left-over state
-    # from a previous test interferes with a new one.
-    cleanup_tasks()
 
 
 def all_combinations(values):

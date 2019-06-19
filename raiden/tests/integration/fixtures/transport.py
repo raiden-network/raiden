@@ -28,7 +28,12 @@ def matrix_server_count():
 
 @pytest.fixture
 def local_matrix_servers(
-    request, transport_protocol, matrix_server_count, synapse_config_generator, port_generator
+    request,
+    transport_protocol,
+    matrix_server_count,
+    synapse_config_generator,
+    port_generator,
+    cleanup_tasks,  # pylint: disable=unused-argument
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]

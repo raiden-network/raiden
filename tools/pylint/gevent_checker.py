@@ -2,6 +2,8 @@ from astroid.exceptions import InferenceError
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
+KILLALL_ID = "gevent-killall"
+KILLALL_MSG = "killall must have a timeout, otherwise hanging is possible."
 JOINALL_ID = "gevent-joinall"
 JOINALL_MSG = (
     "First argument of joinall must have type set to avoid deadlocks. NOTE: set "
@@ -17,20 +19,31 @@ def is_joinall(inferred_func):
     )
 
 
+def is_killall(inferred_func):
+    return (
+        inferred_func.name == "killall"
+        and inferred_func.callable()
+        and inferred_func.root().name.startswith("gevent")
+    )
+
+
 def is_of_type(inferred_value, type_):
     return inferred_value is type_
 
 
 def register(linter):
-    linter.register_checker(GeventWaitall(linter))
+    linter.register_checker(GeventTimeouts(linter))
 
 
-class GeventWaitall(BaseChecker):
+class GeventTimeouts(BaseChecker):
     __implements__ = IAstroidChecker
 
     name = "gevent"
     priority = -1
-    msgs = {"E6491": (JOINALL_MSG, JOINALL_ID, "Waiting with joinall on a non set is an error.")}
+    msgs = {
+        "E6491": (JOINALL_MSG, JOINALL_ID, "Waiting with joinall on a non set is an error."),
+        "E6499": (KILLALL_MSG, KILLALL_ID, "Calling killall without a timeout."),
+    }
 
     def visit_call(self, node):
         """Called on expressions of the form `expr()`, where `expr` is a simple
@@ -38,6 +51,11 @@ class GeventWaitall(BaseChecker):
         """
         try:
             self._force_joinall_to_use_set(node)
+        except InferenceError:
+            pass
+
+        try:
+            self._force_killall_to_have_a_timeout(node)
         except InferenceError:
             pass
 
@@ -61,3 +79,16 @@ class GeventWaitall(BaseChecker):
                 )
                 if not is_every_value_a_set:
                     self.add_message(JOINALL_ID, node=node)
+
+    def _force_killall_to_have_a_timeout(self, node):
+        # assuming signature:
+        # killall(List[Greenlet], exception: type, block: bool, timeout:Optional[float])
+        for inferred_func in node.func.infer():
+            if is_killall(inferred_func):
+                is_position = len(node.args) == 4
+                is_keyword = node.keywords is not None and any(
+                    keyword.arg == "timeout" for keyword in node.keywords
+                )
+
+                if not is_position and not is_keyword:
+                    self.add_message(KILLALL_ID, node=node)

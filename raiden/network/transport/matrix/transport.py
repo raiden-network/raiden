@@ -423,7 +423,7 @@ class MatrixTransport(Runnable):
             # children crashes should throw an exception here
         except gevent.GreenletExit:  # killed without exception
             self._stop_event.set()
-            gevent.killall(self.greenlets)  # kill children
+            gevent.killall(self.greenlets, timeout=10)  # kill children
             raise  # re-raise to keep killed status
         except Exception:
             self.stop()  # ensure cleanup and wait on subtasks
