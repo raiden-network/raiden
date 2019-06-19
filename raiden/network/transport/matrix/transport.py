@@ -934,7 +934,7 @@ class MatrixTransport(Runnable):
                 room_id = room_ids.pop(0)
                 room = self._client.rooms[room_id]
                 if not self._is_room_global(room):
-                    self.log.warning("Existing room", room=room, members=room.get_joined_members())
+                    self.log.debug("Existing room", room=room, members=room.get_joined_members())
                     return room
                 self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
 
