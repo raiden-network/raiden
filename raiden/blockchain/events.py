@@ -180,6 +180,9 @@ def decode_event_to_internal(abi, log_event):
     elif event == ChannelEvent.DEPOSIT:
         args["participant"] = to_canonical_address(args["participant"])
 
+    elif event == ChannelEvent.WITHDRAW:
+        args["participant"] = to_canonical_address(args["participant"])
+
     elif event == ChannelEvent.BALANCE_PROOF_UPDATED:
         args["closing_participant"] = to_canonical_address(args["closing_participant"])
 
