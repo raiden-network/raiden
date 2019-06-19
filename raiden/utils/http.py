@@ -192,3 +192,8 @@ class JSONRPCExecutor(HTTPExecutor):
             log.warning("Executor process: invalid response", command=self.command, error=ex)
             return False
         return True
+
+    def stop(self):
+        log.debug("Executor process: stopping process", command=self.command)
+        super().stop()
+        log.debug("Executor process: process stopped", command=self.command)
