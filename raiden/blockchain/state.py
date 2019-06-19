@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-from raiden.settings import MEDIATION_FEE
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
@@ -63,7 +62,6 @@ def create_channel_state_from_blockchain_data(
         payment_network_address=payment_network_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        mediation_fee=MEDIATION_FEE,
         fee_schedule=fee_schedule,
         our_state=our_state,
         partner_state=partner_state,

@@ -1645,8 +1645,12 @@ def handle_action_set_fee(
     channel_state: NettingChannelState, set_fee: ActionChannelSetFee
 ) -> TransitionResult[NettingChannelState]:
     msg = "caller must make sure the ids match"
-    assert channel_state.identifier == set_fee.channel_identifier, msg
-    channel_state.mediation_fee = set_fee.mediation_fee
+    assert channel_state.canonical_identifier == set_fee.canonical_identifier, msg
+
+    channel_state.fee_schedule.flat = set_fee.flat_fee
+    channel_state.fee_schedule.proportional = set_fee.proportional_fee
+    # TODO: channel_state.fee_schedule.imbalance_penalty = 1
+
     return TransitionResult(channel_state, list())
 
 
@@ -1655,12 +1659,11 @@ def handle_action_withdraw(
     withdraw: ActionChannelWithdraw,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
     is_valid, msg = is_valid_action_withdraw(channel_state, withdraw)
 
     if is_valid:
         channel_state.our_state.total_withdraw = withdraw.total_withdraw
-        events = events_for_withdraw(
+        events: List[Event] = events_for_withdraw(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
             pseudo_random_generator=pseudo_random_generator,
@@ -1677,8 +1680,6 @@ def handle_action_withdraw(
 def handle_receive_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
-
     is_valid, msg = is_valid_withdraw_request(
         channel_state=channel_state, withdraw_request=withdraw_request
     )
@@ -1696,7 +1697,7 @@ def handle_receive_withdraw_request(
             nonce=channel_state.our_state.nonce,
         )
 
-        events = [send_withdraw]
+        events: List[Event] = [send_withdraw]
     else:
         assert msg, "is_valid_withdraw_request should return error msg if not valid"
         invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(

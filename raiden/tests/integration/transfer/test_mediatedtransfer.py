@@ -20,7 +20,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelSetFee
 from raiden.utils import sha3
-from raiden.utils.typing import BlockNumber, TokenAmount
+from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, TokenAmount
 from raiden.waiting import wait_for_block
 
 
@@ -427,8 +427,8 @@ def run_test_mediated_transfer_with_allocated_fee(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
-    fee = 5
-    amount = 10
+    fee = FeeAmount(5)
+    amount = PaymentAmount(10)
 
     transfer(
         initiator_app=app0,
@@ -471,7 +471,9 @@ def run_test_mediated_transfer_with_allocated_fee(
 
     # Let app1 consume all of the allocated mediation fee
     action_set_fee = ActionChannelSetFee(
-        canonical_identifier=app1_app2_channel_state.canonical_identifier, mediation_fee=fee
+        canonical_identifier=app1_app2_channel_state.canonical_identifier,
+        flat_fee=fee,
+        proportional_fee=0,
     )
 
     app1.raiden.handle_state_change(state_change=action_set_fee)
@@ -554,8 +556,8 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
-    fee = 5
-    amount = 10
+    fee = FeeAmount(5)
+    amount = PaymentAmount(10)
 
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
@@ -565,7 +567,9 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     # Let app1 consume all of the allocated mediation fee
     action_set_fee = ActionChannelSetFee(
-        canonical_identifier=app1_app2_channel_state.canonical_identifier, mediation_fee=fee * 2
+        canonical_identifier=app1_app2_channel_state.canonical_identifier,
+        flat_fee=FeeAmount(fee * 2),
+        proportional_fee=0,
     )
 
     app1.raiden.handle_state_change(state_change=action_set_fee)
@@ -608,4 +612,4 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     msg = "App0 should have never revealed the secret"
     transfer_state = initiator_task.manager_state.initiator_transfers[secrethash].transfer_state
-    assert transfer_state != "transfer_secret_revealed"
+    assert transfer_state != "transfer_secret_revealed", msg

@@ -34,7 +34,6 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     EncodedData,
-    FeeAmount,
     List,
     Locksroot,
     MessageID,
@@ -334,7 +333,6 @@ class NettingChannelState(State):
     payment_network_address: PaymentNetworkAddress = field(repr=False)
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
-    mediation_fee: FeeAmount = field(repr=False)
     fee_schedule: FeeScheduleState = field(repr=False)
     our_state: NettingChannelEndState = field(repr=False)
     partner_state: NettingChannelEndState = field(repr=False)

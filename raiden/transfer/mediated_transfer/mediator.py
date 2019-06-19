@@ -127,7 +127,8 @@ def is_send_transfer_almost_equal(
         and isinstance(received, LockedTransferSignedState)
         and send.payment_identifier == received.payment_identifier
         and send.token == received.token
-        and send.lock.amount == received.lock.amount - send_channel.mediation_fee
+        # FIXME: user proper fee calculation
+        and send.lock.amount == received.lock.amount - send_channel.fee_schedule.flat
         and send.lock.expiration == received.lock.expiration
         and send.lock.secrethash == received.lock.secrethash
         and send.initiator == received.initiator
@@ -240,7 +241,8 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    return PaymentWithFeeAmount(lock.amount - payee_channel.mediation_fee)
+    # FIXME: user proper fee calculation
+    return PaymentWithFeeAmount(lock.amount - payee_channel.fee_schedule.flat)
 
 
 def sanity_check(
