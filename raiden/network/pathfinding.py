@@ -223,44 +223,42 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
 
-    price = pathfinding_service_info.price
-    message = pathfinding_service_info.message
-    operator = pathfinding_service_info.operator
-    version = pathfinding_service_info.version
-    pfs_chain_id = pathfinding_service_info.chain_id
-    pfs_payment_address = pathfinding_service_info.payment_address
-    pfs_token_network_address = pathfinding_service_info.token_network_registry_address
-
-    if price > 0 and not pfs_payment_address:
+    if pathfinding_service_info.price > 0 and not pathfinding_service_info.payment_address:
         click.secho(
             f"The pathfinding service at {pfs_url} did not provide an eth address "
             f"to pay it. Raiden will shut down. Please try a different PFS."
         )
         sys.exit(1)
 
-    if not node_network_id == pfs_chain_id:
+    if not node_network_id == pathfinding_service_info.chain_id:
         click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
         click.secho(
             f"PFS is not operating on the same network "
-            f"({pfs_chain_id}) as your node is ({node_network_id}).\n"
+            f"({pathfinding_service_info.chain_id}) as your node is ({node_network_id}).\n"
             f"Raiden will shut down. Please choose a different PFS."
         )
         sys.exit(1)
 
-    if not is_same_address(pfs_token_network_address, token_network_registry_address):
+    if not is_same_address(
+        pathfinding_service_info.token_network_registry_address, token_network_registry_address
+    ):
         click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
         click.secho(
             f"PFS is not operating on the same Token Network Registry "
-            f"({to_checksum_address(pfs_token_network_address)}) as your node is "
-            f"({to_checksum_address(token_network_registry_address)}).\n"
+            f"({to_checksum_address(pathfinding_service_info.token_network_registry_address)})"
+            f" as your node is ({to_checksum_address(token_network_registry_address)}).\n"
             f"Raiden will shut down. Please choose a different PFS."
         )
         sys.exit(1)
 
     click.secho(
-        f"{message} - You have chosen the pathfinding service at {pfs_url}. "
-        f"Operator: {operator}, running version: {version}, chain_id: {pfs_chain_id}. "
-        f"Fees will be paid to {pfs_payment_address}. For each request we will pay {price}."
+        f"You have chosen the pathfinding service at {pfs_url}.\n"
+        f"Operator: {pathfinding_service_info.operator}, "
+        f"running version: {pathfinding_service_info.version}, "
+        f"chain_id: {pathfinding_service_info.chain_id}.\n"
+        f"Fees will be paid to {pathfinding_service_info.payment_address}. "
+        f"For each request costs {pathfinding_service_info.price}.\n"
+        f"Message from the PFS:\n{pathfinding_service_info.message}"
     )
 
     log.info("Using PFS", pfs_info=pathfinding_service_info)
