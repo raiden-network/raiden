@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from raiden import constants
+from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.utils.typing import (
     Address,
     ChainID,
@@ -24,7 +24,7 @@ class CanonicalIdentifier:
         typecheck(self.token_network_address, T_Address)
         typecheck(self.channel_identifier, T_ChannelID)
 
-        if self.channel_identifier < 0 or self.channel_identifier > constants.UINT256_MAX:
+        if self.channel_identifier < 0 or self.channel_identifier > UINT256_MAX:
             raise ValueError("channel id is invalid")
 
 
@@ -32,3 +32,8 @@ class CanonicalIdentifier:
 class QueueIdentifier:
     recipient: Address
     canonical_identifier: CanonicalIdentifier
+
+
+CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
+    ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
+)
