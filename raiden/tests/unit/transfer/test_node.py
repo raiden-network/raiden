@@ -3,7 +3,7 @@ import copy
 import pytest
 
 import raiden.transfer.node
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import GAS_LIMIT
 from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
 from raiden.tests.utils import factories
@@ -22,7 +22,11 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask

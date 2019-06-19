@@ -11,11 +11,7 @@ from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
-from raiden.constants import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
-    DISCOVERY_DEFAULT_ROOM,
-    EMPTY_SIGNATURE,
-)
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
 from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
@@ -46,7 +42,7 @@ from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
