@@ -26,6 +26,8 @@ def print_tracebacks(tasks: List[Greenlet]) -> None:
 
 @pytest.fixture(autouse=True)
 def cleanup_tasks() -> None:
+    yield
+
     log.debug("cleanup_tasks started")
 
     tasks = [
