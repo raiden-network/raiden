@@ -1433,7 +1433,7 @@ def events_for_close(
     return events
 
 
-def events_for_withdraw(
+def send_withdraw_request(
     channel_state: NettingChannelState,
     total_withdraw: WithdrawAmount,
     pseudo_random_generator: random.Random,
@@ -1670,7 +1670,7 @@ def handle_action_withdraw(
 
     if is_valid:
         channel_state.our_state.total_withdraw = withdraw.total_withdraw
-        events: List[Event] = events_for_withdraw(
+        events: List[Event] = send_withdraw_request(
             channel_state=channel_state,
             total_withdraw=withdraw.total_withdraw,
             pseudo_random_generator=pseudo_random_generator,
@@ -1715,7 +1715,7 @@ def handle_receive_withdraw_request(
     return TransitionResult(channel_state, events)
 
 
-def handle_receive_withdraw(
+def handle_receive_withdraw_confirmation(
     channel_state: NettingChannelState, withdraw: ReceiveWithdraw, block_hash: BlockHash
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
@@ -2151,7 +2151,7 @@ def state_transition(
         )
     elif type(state_change) == ReceiveWithdraw:
         assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw(
+        iteration = handle_receive_withdraw_confirmation(
             channel_state=channel_state, withdraw=state_change, block_hash=block_hash
         )
 
