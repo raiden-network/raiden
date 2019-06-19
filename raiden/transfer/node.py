@@ -1,4 +1,3 @@
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -16,7 +15,11 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,

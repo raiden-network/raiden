@@ -1,10 +1,14 @@
 import random
 
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, EMPTY_HASH
+from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
 from raiden.transfer.events import SendWithdrawRequest
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state_change import ReceiveWithdraw
 
