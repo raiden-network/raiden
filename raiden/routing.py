@@ -293,6 +293,9 @@ def resolve_routes(
 
     resolvable = []
     for route_metadata in routes:
+        if len(route_metadata.route) < 2:
+            continue
+
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
             token_network_address=token_network_address,

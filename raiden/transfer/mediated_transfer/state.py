@@ -89,6 +89,7 @@ class LockedTransferSignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
+        # pylint: disable=E1101
         if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
