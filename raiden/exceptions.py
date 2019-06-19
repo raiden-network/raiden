@@ -63,16 +63,6 @@ class DepositOverLimit(RaidenError):
     pass
 
 
-class DepositMismatch(RaidenRecoverableError):
-    """ Raised when the requested deposit is lower than actual channel deposit
-
-    Used when a *user* tries to deposit a given amount of tokens in a channel,
-    but the on-chain amount is already higher.
-    """
-
-    pass
-
-
 class InvalidChannelID(RaidenError):
     """ Raised when the user provided value is not a channel id. """
 
@@ -265,6 +255,20 @@ class ChannelOutdatedError(RaidenError):
 class InsufficientGasReserve(RaidenError):
     """ Raised when an action cannot be done because the available balance
     is not sufficient for the lifecycles of all active channels.
+    """
+
+
+class BrokenPreconditionError(RaidenError):
+    """ Raised while checking transaction preconditions
+    which should be satisfied before sending the transaction.
+    """
+
+
+class DepositMismatch(BrokenPreconditionError):
+    """ Raised when the requested deposit is lower than actual channel deposit
+
+    Used when a *user* tries to deposit a given amount of tokens in a channel,
+    but the on-chain amount is already higher.
     """
 
 
