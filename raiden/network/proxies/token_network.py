@@ -193,17 +193,28 @@ class TokenNetwork:
         """ Return the token of this manager. """
         return to_canonical_address(self.proxy.contract.functions.token().call())
 
-    @property
-    def channel_participant_deposit_limit(self) -> TokenAmount:
-        """ Return the token of this manager. """
+    def channel_participant_deposit_limit(
+        self, block_identifier: BlockSpecification
+    ) -> TokenAmount:
+        """ Return the deposit limit of a channel participant. """
         return TokenAmount(
-            self.proxy.contract.functions.channel_participant_deposit_limit().call()
+            self.proxy.contract.functions.channel_participant_deposit_limit().call(
+                block_identifier=block_identifier
+            )
         )
 
-    @property
-    def token_network_deposit_limit(self) -> TokenAmount:
+    def token_network_deposit_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
         """ Return the token of this manager. """
-        return TokenAmount(self.proxy.contract.functions.token_network_deposit_limit().call())
+        return TokenAmount(
+            self.proxy.contract.functions.token_network_deposit_limit().call(
+                block_identifier=block_identifier
+            )
+        )
+
+    def safety_deprecation_switch(self, block_identifier: BlockSpecification) -> bool:
+        return self.proxy.contract.functions.safety_deprecation_switch().call(
+            block_identifier=block_identifier
+        )
 
     def _new_channel_postconditions(self, partner: Address, block: BlockSpecification):
         channel_created = self._channel_exists_and_not_settled(
@@ -679,6 +690,14 @@ class TokenNetwork:
             msg = f"Total deposit {total_deposit} is not in range [1, {UINT256_MAX}]"
             raise RaidenUnrecoverableError(msg)
 
+        # A node may be setting up multiple channels for the same token
+        # concurrently. Because each deposit changes the user balance this
+        # check must be serialized with the operation locks.
+        #
+        # The checks below are serialized with the deposit_lock to avoid sending invalid
+        # transactions on-chain (account without balance). The lock
+        # channel_operations_lock is not sufficient, as it allows two
+        # concurrent deposits for different channels.
         with self.channel_operations_lock[partner], self.deposit_lock:
             try:
                 channel_onchain_detail = self._detail_channel(
@@ -702,6 +721,15 @@ class TokenNetwork:
                 current_balance = self.token.balance_of(
                     address=self.node_address, block_identifier=given_block_identifier
                 )
+                safety_deprecation_switch = self.safety_deprecation_switch(
+                    block_identifier=given_block_identifier
+                )
+                token_network_deposit_limit = self.token_network_deposit_limit(
+                    block_identifier=given_block_identifier
+                )
+                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
+                    block_identifier=given_block_identifier
+                )
             except ValueError:
                 # If `given_block_identifier` has been pruned the checks cannot be
                 # performed.
@@ -709,6 +737,10 @@ class TokenNetwork:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
+                if safety_deprecation_switch:
+                    msg = "This token_network has been deprecated."
+                    raise RaidenUnrecoverableError(msg)
+
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
@@ -724,13 +756,12 @@ class TokenNetwork:
                         f"Current total deposit ({our_details.deposit}) is already larger "
                         f"than the requested total deposit amount ({total_deposit})"
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise DepositMismatch(msg)
 
                 total_channel_deposit = total_deposit + partner_details.deposit
                 if total_channel_deposit >= UINT256_MAX:
                     raise RaidenUnrecoverableError("Deposit overflow")
 
-                channel_participant_deposit_limit = self.channel_participant_deposit_limit
                 if total_deposit > channel_participant_deposit_limit:
                     msg = (
                         f"Deposit of {total_deposit} is larger than the "
@@ -738,7 +769,6 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
-                token_network_deposit_limit = self.token_network_deposit_limit
                 network_balance = self.token.balance_of(
                     Address(self.address), given_block_identifier
                 )
@@ -750,25 +780,13 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
-                # A node may be setting up multiple channels for the same token
-                # concurrently. Because each deposit changes the user balance this
-                # check must be serialized with the operation locks.
-                #
-                # This check is merely informational, used to avoid sending
-                # transactions which are known to fail.
-                #
-                # It is serialized with the deposit_lock to avoid sending invalid
-                # transactions on-chain (account without balance). The lock
-                # channel_operations_lock is not sufficient, as it allows two
-                # concurrent deposits for different channels.
-                #
                 if current_balance < amount_to_deposit:
                     msg = (
                         f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can "
                         f"not be larger than the available balance {current_balance}, "
                         f"for token at address {to_checksum_address(self.token.address)}"
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise DepositMismatch(msg)
 
                 log_details = {
                     "node": to_checksum_address(self.node_address),
@@ -863,7 +881,8 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
-                # Query the current state to check for transaction races
+                # Query the channel state when the transaction was mind
+                # to check for transaction races
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
@@ -884,37 +903,45 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                 )
                 # Check if deposit is being made on a nonexistent channel
-                if channel_state != ChannelState.OPENED:
+                if channel_state > ChannelState.OPENED:
                     msg = "Deposit failed as the channel was not open"
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
 
                 deposit_amount = total_deposit - our_details.deposit
 
+                # If an overflow is possible then we are interacting with a bad token.
+                # This must not crash the client, because it is not a Raiden bug,
+                # and otherwise this could be an attack vector.
                 total_channel_deposit = total_deposit + partner_details.deposit
                 if total_channel_deposit >= UINT256_MAX:
-                    raise RaidenUnrecoverableError("Deposit overflow")
+                    raise RaidenRecoverableError("Deposit overflow")
 
                 total_deposit_done = our_details.deposit >= total_deposit
                 if total_deposit_done:
                     raise DepositMismatch("Requested total deposit was already performed")
 
-                channel_participant_deposit_limit = self.channel_participant_deposit_limit
-                if total_deposit > channel_participant_deposit_limit:
-                    msg = (
-                        f"Deposit of {total_deposit} is larger than the "
-                        f"channel participant deposit limit"
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                token_network_deposit_limit = self.token_network_deposit_limit(
+                    block_identifier=receipt["blockHash"]
+                )
 
-                token_network_deposit_limit = self.token_network_deposit_limit
                 network_balance = self.token.balance_of(
                     address=Address(self.address), block_identifier=receipt["blockHash"]
                 )
 
                 if network_balance + deposit_amount > token_network_deposit_limit:
                     msg = (
-                        f"Deposit of {deposit_amount} will have "
+                        f"Deposit of {deposit_amount} would have "
                         f"exceeded the token network deposit limit."
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
+                    block_identifier=receipt["blockHash"]
+                )
+                if total_deposit > channel_participant_deposit_limit:
+                    msg = (
+                        f"Deposit of {total_deposit} is larger than the "
+                        f"channel participant deposit limit"
                     )
                     raise RaidenUnrecoverableError(msg)
 
@@ -933,6 +960,7 @@ class TokenNetwork:
                         f"Check concurrent deposits "
                         f"for the same token network but different proxies."
                     )
+                    raise RaidenUnrecoverableError(msg)
 
                 latest_deposit = self._detail_participant(
                     channel_identifier=channel_identifier,
