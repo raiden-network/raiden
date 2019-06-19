@@ -64,9 +64,11 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
+from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelSetFee,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
@@ -425,6 +427,7 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
+        self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -876,6 +879,35 @@ class RaidenService(Runnable):
                     transfer = event.transfer
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
+
+    def _initialize_channel_fees(self) -> None:
+        """ Initializes the fees of all open channels to the latest set values.
+
+        This includes a recalculation of the dynamic rebalancing fees.
+        """
+        chain_state = views.state_from_raiden(self)
+        default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
+        token_addresses = views.get_token_identifiers(
+            chain_state=chain_state, payment_network_address=self.default_registry.address
+        )
+
+        for token_address in token_addresses:
+            channels = views.get_channelstate_open(
+                chain_state=chain_state,
+                payment_network_address=self.default_registry.address,
+                token_address=token_address,
+            )
+
+            for channel in channels:
+                log.info("Updating channel fees", channel=channel.canonical_identifier)
+
+                # FIXME: this should trigger an update of rebalancing fees
+                state_change = ActionChannelSetFee(
+                    canonical_identifier=channel.canonical_identifier,
+                    mediation_fee=default_fee_schedule.flat,  # FIXME: add other fees
+                )
+
+                self.handle_and_track_state_change(state_change)
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
