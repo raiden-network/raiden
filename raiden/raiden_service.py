@@ -1052,8 +1052,8 @@ class RaidenService(Runnable):
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer) -> None:
         init_mediator_statechange = mediator_init(self, transfer)
-        if init_mediator_statechange is not None:
-            self.handle_and_track_state_change(init_mediator_statechange)
+
+        self.handle_and_track_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer) -> None:
         self.start_health_check_for(Address(transfer.initiator))

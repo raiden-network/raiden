@@ -1402,8 +1402,6 @@ def handle_node_change_network_state(
     if mediator_state.waiting_transfer is None:
         return TransitionResult(mediator_state, list())
 
-    assert route.forward_channel_id
-
     transfer = mediator_state.waiting_transfer.transfer
     payer_channel_identifier = transfer.balance_proof.channel_identifier
     payer_channel = channelidentifiers_to_channels.get(payer_channel_identifier)
