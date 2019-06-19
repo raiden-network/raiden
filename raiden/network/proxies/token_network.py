@@ -1199,7 +1199,7 @@ class TokenNetwork:
                         "Couldn't verify the participant withdraw signature"
                     )
                 else:
-                    if participant_recovered_address != partner:
+                    if participant_recovered_address != participant:
                         raise RaidenUnrecoverableError("Invalid withdraw participant signature")
 
                 partner_signed_data = pack_withdraw(
@@ -1235,7 +1235,6 @@ class TokenNetwork:
                     partner=partner,
                     partner_signature=partner_signature,
                     participant_signature=participant_signature,
-                    given_block_identifier=given_block_identifier,
                     log_details=log_details,
                 )
 
@@ -1247,7 +1246,6 @@ class TokenNetwork:
         partner: Address,
         partner_signature: Signature,
         participant_signature: Signature,
-        given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
