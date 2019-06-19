@@ -122,7 +122,7 @@ Navigate to the directory::
 
     cd raiden
 
-It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for Raiden (requires python3.7) and install all python dependencies there.
+It's strongly advised to create a virtualenv_ for Raiden (requires python3.7) and install all python dependencies there.
 
 After you have done that you can proceed to install the dependencies::
 
@@ -130,6 +130,7 @@ After you have done that you can proceed to install the dependencies::
 
 You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
+.. _virtualenv: https://docs.python.org/3/library/venv.html
 
 macOS
 *****
