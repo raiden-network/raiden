@@ -1,5 +1,6 @@
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
+from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
@@ -41,6 +42,8 @@ class Token:
         self.node_address = jsonrpc_client.address
         self.proxy = proxy
 
+        self.token_lock: RLock = RLock()
+
     def allowance(self, owner: Address, spender: Address, block_identifier: BlockSpecification):
         return self.proxy.contract.functions.allowance(
             to_checksum_address(owner), to_checksum_address(spender)
@@ -64,7 +67,7 @@ class Token:
             "allowance": allowance,
         }
 
-        with log_transaction(log, "approve", log_details):
+        with self.token_lock, log_transaction(log, "approve", log_details):
             checking_block = self.client.get_checking_block()
             error_prefix = "Call to approve will fail"
             gas_limit = self.proxy.estimate_gas(
@@ -144,9 +147,10 @@ class Token:
         self, address: Address, block_identifier: BlockSpecification = "latest"
     ) -> Balance:
         """ Return the balance of `address`. """
-        return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
-            block_identifier=block_identifier
-        )
+        with self.token_lock:
+            return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
+                block_identifier=block_identifier
+            )
 
     def total_supply(self, block_identifier: BlockSpecification = "latest"):
         """ Return the total supply of the token at the given block identifier. """
