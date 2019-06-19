@@ -9,7 +9,7 @@ from copy import deepcopy
 from io import StringIO
 from subprocess import TimeoutExpired
 from tempfile import mkdtemp, mktemp
-from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
+from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
@@ -42,7 +42,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
-from raiden.utils.typing import FeeAmount
+from raiden.utils.typing import FeeAmount, TokenAddress
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -59,7 +59,7 @@ OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
 }
 
 
-def options(func):
+def options(func: Callable) -> Callable:
     """Having the common app options as a decorator facilitates reuse."""
 
     # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
@@ -421,7 +421,7 @@ def options(func):
 @group(invoke_without_command=True, context_settings={"max_content_width": 120})
 @options
 @click.pass_context
-def run(ctx, **kwargs):
+def run(ctx: click.Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     if kwargs.pop("version", False):
@@ -510,7 +510,7 @@ def run(ctx, **kwargs):
 
 @run.command()
 @option("--short", is_flag=True, help="Only display Raiden version")
-def version(short):
+def version(short: bool) -> None:
     """Print version information and exit. """
     if short:
         print(get_system_spec()["raiden"])
@@ -533,7 +533,9 @@ def version(short):
     help="Which Ethereum client to run for the smoketests",
 )
 @click.pass_context
-def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
+def smoketest(
+    ctx: click.Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
+) -> None:
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import (
         setup_raiden,
@@ -713,6 +715,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 )
 @click.option("--token-address", type=ADDRESS_TYPE, required=True)
 @click.pass_context
-def echonode(ctx, token_address):
+def echonode(ctx: click.Context, token_address: TokenAddress) -> None:
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
     EchoNodeRunner(ctx.obj, ctx, token_address).run()

@@ -1,7 +1,7 @@
 # make it possible to run raiden with 'python -m raiden'
 
 
-def main():
+def main() -> None:
     import gevent.monkey
 
     gevent.monkey.patch_all()

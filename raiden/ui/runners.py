@@ -42,24 +42,24 @@ ETHEREUM_NODE_COMMUNICATION_ERROR = (
 
 
 class NodeRunner:
-    def __init__(self, options: Dict[str, Any], ctx):
+    def __init__(self, options: Dict[str, Any], ctx: click.Context) -> None:
         self._options = options
         self._ctx = ctx
         self._raiden_api = None
 
     @property
-    def welcome_string(self):
+    def welcome_string(self) -> str:
         return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
 
-    def _startup_hook(self):
+    def _startup_hook(self) -> None:
         """ Hook that is called after startup is finished. Intended for subclass usage. """
         pass
 
-    def _shutdown_hook(self):
+    def _shutdown_hook(self) -> None:
         """ Hook that is called just before shutdown. Intended for subclass usage. """
         pass
 
-    def run(self):
+    def run(self) -> None:
         configure_logging(
             self._options["log_config"],
             log_json=self._options["log_json"],
@@ -73,7 +73,7 @@ class NodeRunner:
         if self._options["config_file"]:
             log.debug("Using config file", config_file=self._options["config_file"])
 
-    def _start_services(self):
+    def _start_services(self) -> None:
         from raiden.api.python import RaidenAPI
 
         config = deepcopy(App.DEFAULT_CONFIG)
@@ -178,7 +178,7 @@ class NodeRunner:
         # wait for interrupt
         event = AsyncResult()
 
-        def sig_set(sig=None, _frame=None):
+        def sig_set(sig: Any = None, _frame: Any = None) -> None:
             event.set(sig)
 
         gevent.signal(signal.SIGQUIT, sig_set)
@@ -215,7 +215,7 @@ class NodeRunner:
         finally:
             self._shutdown_hook()
 
-            def stop_task(task):
+            def stop_task(task: Any) -> None:
                 try:
                     if isinstance(task, Runnable):
                         task.stop()
@@ -234,23 +234,25 @@ class NodeRunner:
 
 
 class MatrixRunner(NodeRunner):
-    def run(self):
+    def run(self) -> None:
         super().run()
         return self._start_services()
 
 
 class EchoNodeRunner(NodeRunner):
-    def __init__(self, options: Dict[str, Any], ctx, token_address: typing.TokenAddress):
+    def __init__(
+        self, options: Dict[str, Any], ctx: click.Context, token_address: typing.TokenAddress
+    ) -> None:
         super().__init__(options, ctx)
         self._token_address = token_address
         self._echo_node = None
 
     @property
-    def welcome_string(self):
+    def welcome_string(self) -> str:
         return "{} [ECHO NODE]".format(super().welcome_string)
 
-    def _startup_hook(self):
+    def _startup_hook(self) -> None:
         self._echo_node = EchoNode(self._raiden_api, self._token_address)
 
-    def _shutdown_hook(self):
+    def _shutdown_hook(self) -> None:
         self._echo_node.stop()
