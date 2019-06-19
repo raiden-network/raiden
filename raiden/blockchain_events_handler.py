@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 import gevent
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address, to_hex
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
@@ -224,7 +224,7 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
     block_hash = data["block_hash"]
     channel_identifier = args["channel_identifier"]
     token_network_address = event.originating_contract
-    participant = to_canonical_address(args["participant"])
+    participant = args["participant"]
     total_withdraw = args["total_withdraw"]
     transaction_hash = data["transaction_hash"]
 
