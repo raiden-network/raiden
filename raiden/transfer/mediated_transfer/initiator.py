@@ -1,10 +1,11 @@
 import random
 
-from raiden.constants import ABSENT_SECRET, CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.constants import ABSENT_SECRET
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockFailed,
