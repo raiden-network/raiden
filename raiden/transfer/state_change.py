@@ -129,7 +129,7 @@ class ActionChannelSetFee(StateChange):
     canonical_identifier: CanonicalIdentifier
     flat_fee: FeeAmount
     proportional_fee: int  # as micros, e.g. 1% = 0.01e6
-    # TODO: add imbalance_fee_function
+    use_imbalance_penalty: bool
 
     @property
     def channel_identifier(self) -> ChannelID:
