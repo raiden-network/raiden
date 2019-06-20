@@ -24,8 +24,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
-from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     BalanceProofSignedState,
     HashTimeLockState,

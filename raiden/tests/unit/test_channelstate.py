@@ -48,8 +48,8 @@ from raiden.transfer.events import (
     SendWithdraw,
     SendWithdrawRequest,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
-from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     HashTimeLockState,

@@ -61,6 +61,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.mediator import get_payee_channel, set_offchain_secret
 from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
@@ -1897,7 +1898,8 @@ def test_next_transfer_pair_with_fees_deducted():
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance + fee)
+                our_state=NettingChannelEndStateProperties(balance=balance),
+                fee_schedule=FeeScheduleState(flat=fee),
             )
         ]
     )
@@ -1910,15 +1912,10 @@ def test_next_transfer_pair_with_fees_deducted():
         pseudo_random_generator=random.Random(),
         block_number=2,
     )
+    assert pair
 
-    assert search_for_item(
-        events,
-        SendLockedTransfer,
-        {
-            "recipient": pair.payee_address,
-            "transfer": {"lock": {"amount": payer_transfer.lock.amount}},
-        },
-    )
+    event = search_for_item(events, SendLockedTransfer, {"recipient": pair.payee_address})
+    assert event.transfer.lock.amount == balance
 
 
 def test_backward_transfer_pair_with_fees_deducted():
