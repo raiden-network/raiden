@@ -32,6 +32,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     refund_from_sendmediated,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import calculate_rebalancing_fees
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     LockedTransferUnsignedState,
@@ -1649,7 +1650,13 @@ def handle_action_set_fee(
 
     channel_state.fee_schedule.flat = set_fee.flat_fee
     channel_state.fee_schedule.proportional = set_fee.proportional_fee
-    # TODO: channel_state.fee_schedule.imbalance_penalty = 1
+
+    if set_fee.use_imbalance_penalty:
+        our_balance = get_balance(channel_state.our_state, channel_state.partner_state)
+        partner_balance = get_balance(channel_state.partner_state, channel_state.our_state)
+        channel_state.fee_schedule.imbalance_penalty = calculate_rebalancing_fees(
+            our_balance=our_balance, partner_balance=partner_balance
+        )
 
     return TransitionResult(channel_state, list())
 

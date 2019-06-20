@@ -137,6 +137,7 @@ def run_app(
     config: Dict[str, Any],
     flat_fee: FeeAmount,
     proportional_fee: int,
+    rebalancing_fee: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -171,6 +172,7 @@ def run_app(
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
     config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
+    config["use_imbalance_penalty"] = True
 
     setup_environment(config, environment_type)
 

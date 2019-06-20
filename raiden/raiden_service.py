@@ -427,7 +427,7 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
-        self._initialize_channel_fees()
+        self._initialize_channel_fees(self.config.get("use_imbalance_penalty", False))
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -880,7 +880,7 @@ class RaidenService(Runnable):
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
 
-    def _initialize_channel_fees(self) -> None:
+    def _initialize_channel_fees(self, use_imbalance_penalty: bool) -> None:
         """ Initializes the fees of all open channels to the latest set values.
 
         This includes a recalculation of the dynamic rebalancing fees.
@@ -911,6 +911,7 @@ class RaidenService(Runnable):
                     canonical_identifier=channel.canonical_identifier,
                     flat_fee=default_fee_schedule.flat,
                     proportional_fee=default_fee_schedule.proportional,
+                    use_imbalance_penalty=use_imbalance_penalty,
                 )
 
                 self.handle_and_track_state_change(state_change)
