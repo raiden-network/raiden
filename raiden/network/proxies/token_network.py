@@ -793,6 +793,9 @@ class TokenNetwork:
                     "contract": to_checksum_address(self.address),
                     "participant": to_checksum_address(self.node_address),
                     "receiver": to_checksum_address(partner),
+                    "channel_identifier": channel_identifier,
+                    "total_deposit": total_deposit,
+                    "previous_total_deposit": our_details.deposit,
                 }
 
                 with log_transaction(log, "set_total_deposit", log_details):
