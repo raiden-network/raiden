@@ -73,6 +73,7 @@ from raiden.exceptions import (
     InvalidToken,
     PaymentConflict,
     SamePeerAddress,
+    TokenNetworkDeprecated,
     TokenNotRegistered,
     TransactionThrew,
     UnknownTokenAddress,
@@ -1039,6 +1040,8 @@ class RestAPI:  # pragma: no unittest
         except DepositOverLimit as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except DepositMismatch as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except TokenNetworkDeprecated as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(
