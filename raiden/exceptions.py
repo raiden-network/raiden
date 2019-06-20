@@ -289,3 +289,9 @@ class UndefinedMediationFee(RaidenError):
 
     Either the raiden node is not capable of mediating this payment, or the
     FeeSchedule is outdated/inconsistent."""
+
+
+class TokenNetworkDeprecated(RaidenError):
+    """ Raised when the token network proxy safety switch
+    is turned on (i.e deprecated).
+    """
