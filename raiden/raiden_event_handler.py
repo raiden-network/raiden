@@ -83,6 +83,7 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedUnlock,
     EventInvalidReceivedWithdrawRequest,
     EventInvalidReceivedWithdraw,
+    EventRouteFailed,
 )
 
 
