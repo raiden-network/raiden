@@ -405,9 +405,15 @@ def options(func):
             ),
             option(
                 "--proportional-fee",
-                help=("Mediation for as ratio of mediated amount in parts-per-million (10^-6)"),
+                help=("Mediation fee as ratio of mediated amount in parts-per-million (10^-6)."),
                 default=0,
                 type=int,
+                show_default=True,
+            ),
+            option(
+                "--rebalancing-fee/--no-rebalancing-fee",
+                help="Enables the rebalancing fee (Preview).",
+                default=False,
                 show_default=True,
             ),
         ),

@@ -6,6 +6,9 @@ from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
 from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, TokenAmount
 
+MAX_IMBALANCE_FEE = 10 ** 18
+NUM_DISCRETISATION_POINTS = 21
+
 
 class Interpolate:  # pylint: disable=too-few-public-methods
     """ Linear interpolation of a function with given points
@@ -50,10 +53,10 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def fee(self, amount: PaymentAmount, capacity: Balance) -> FeeAmount:
+    def fee(self, amount: PaymentAmount, channel_balance: Balance) -> FeeAmount:
         if self._penalty_func:
-            # Total channel capacity - node capacity = balance (used as x-axis for the penalty)
-            balance = self._penalty_func.x_list[-1] - capacity
+            # Total channel balance - node balance = balance (used as x-axis for the penalty)
+            balance = self._penalty_func.x_list[-1] - channel_balance
             try:
                 imbalance_fee = self._penalty_func(balance + amount) - self._penalty_func(balance)
             except ValueError:
@@ -74,3 +77,40 @@ class FeeScheduleState(State):
         )
         self._update_penalty_func()
         return reversed_instance
+
+
+def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:
+    """ Returns a list of num numbers from start to stop (inclusive). """
+    assert num > 1
+    assert start <= stop
+
+    step = (stop - start) / (num - 1)
+
+    result = []
+    for i in range(num):
+        result.append(TokenAmount(start + round(i * step)))
+
+    return result
+
+
+def calculate_rebalancing_fees(
+    our_balance: Balance, partner_balance: Balance
+) -> List[Tuple[TokenAmount, FeeAmount]]:
+    """ Calculates a quadratic rebalancing curve.
+
+    The penalty term takes the value `UINT256_MAX` at the extrema.
+    """
+    total_balance = TokenAmount(our_balance + partner_balance)
+
+    def f(balance: TokenAmount) -> FeeAmount:
+        constant = 4 * MAX_IMBALANCE_FEE / total_balance ** 2
+        inner = balance - (total_balance // 2)
+
+        return FeeAmount(constant * inner ** 2)
+
+    # Do not duplicate base points when not enough token are available
+    num_base_points = min(NUM_DISCRETISATION_POINTS, total_balance)
+    x_values = linspace(TokenAmount(0), total_balance, num_base_points)
+    y_values = [f(x) for x in x_values]
+
+    return list(zip(x_values, y_values))

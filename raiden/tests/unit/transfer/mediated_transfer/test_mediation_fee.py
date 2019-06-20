@@ -1,6 +1,12 @@
 import pytest
 
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState, Interpolate
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    NUM_DISCRETISATION_POINTS,
+    FeeScheduleState,
+    Interpolate,
+    calculate_rebalancing_fees,
+    linspace,
+)
 from raiden.utils.typing import Balance, FeeAmount as FA, PaymentAmount, TokenAmount as TA
 
 
@@ -27,24 +33,50 @@ def test_interpolation():
 
 def test_basic_fee():
     flat_schedule = FeeScheduleState(flat=FA(2))
-    assert flat_schedule.fee(PaymentAmount(10), capacity=Balance(0)) == FA(2)
+    assert flat_schedule.fee(PaymentAmount(10), channel_balance=Balance(0)) == FA(2)
 
     prop_schedule = FeeScheduleState(proportional=int(0.01e6))
-    assert prop_schedule.fee(PaymentAmount(40), capacity=Balance(0)) == FA(0)
-    assert prop_schedule.fee(PaymentAmount(60), capacity=Balance(0)) == FA(1)
-    assert prop_schedule.fee(PaymentAmount(1000), capacity=Balance(0)) == FA(10)
+    assert prop_schedule.fee(PaymentAmount(40), channel_balance=Balance(0)) == FA(0)
+    assert prop_schedule.fee(PaymentAmount(60), channel_balance=Balance(0)) == FA(1)
+    assert prop_schedule.fee(PaymentAmount(1000), channel_balance=Balance(0)) == FA(10)
 
     combined_schedule = FeeScheduleState(flat=FA(2), proportional=int(0.01e6))
-    assert combined_schedule.fee(PaymentAmount(60), capacity=Balance(0)) == FA(3)
+    assert combined_schedule.fee(PaymentAmount(60), channel_balance=Balance(0)) == FA(3)
 
 
 def test_imbalance_penalty():
     v_schedule = FeeScheduleState(
         imbalance_penalty=[(TA(0), FA(10)), (TA(50), FA(0)), (TA(100), FA(10))]
     )
-    assert v_schedule.fee(capacity=Balance(100 - 0), amount=PaymentAmount(50)) == FA(-10)
-    assert v_schedule.fee(capacity=Balance(100 - 50), amount=PaymentAmount(50)) == FA(10)
-    assert v_schedule.fee(capacity=Balance(100 - 0), amount=PaymentAmount(10)) == FA(-2)
-    assert v_schedule.fee(capacity=Balance(100 - 10), amount=PaymentAmount(10)) == FA(-2)
-    assert v_schedule.fee(capacity=Balance(100 - 0), amount=PaymentAmount(20)) == FA(-4)
-    assert v_schedule.fee(capacity=Balance(100 - 40), amount=PaymentAmount(20)) == FA(0)
+    assert v_schedule.fee(channel_balance=Balance(100 - 0), amount=PaymentAmount(50)) == FA(-10)
+    assert v_schedule.fee(channel_balance=Balance(100 - 50), amount=PaymentAmount(50)) == FA(10)
+    assert v_schedule.fee(channel_balance=Balance(100 - 0), amount=PaymentAmount(10)) == FA(-2)
+    assert v_schedule.fee(channel_balance=Balance(100 - 10), amount=PaymentAmount(10)) == FA(-2)
+    assert v_schedule.fee(channel_balance=Balance(100 - 0), amount=PaymentAmount(20)) == FA(-4)
+    assert v_schedule.fee(channel_balance=Balance(100 - 40), amount=PaymentAmount(20)) == FA(0)
+
+
+def test_linspace():
+    assert linspace(TA(0), TA(4), 5) == [0, 1, 2, 3, 4]
+    assert linspace(TA(0), TA(4), 4) == [0, 1, 3, 4]
+    assert linspace(TA(0), TA(4), 3) == [0, 2, 4]
+    assert linspace(TA(0), TA(4), 2) == [0, 4]
+    assert linspace(TA(0), TA(0), 3) == [0, 0, 0]
+
+    with pytest.raises(AssertionError):
+        assert linspace(TA(0), TA(4), 1)
+
+    with pytest.raises(AssertionError):
+        assert linspace(TA(4), TA(0), 2)
+
+
+def test_rebalancing_fee_calculation():
+    sample = calculate_rebalancing_fees(Balance(100), Balance(100))
+    assert len(sample) == NUM_DISCRETISATION_POINTS
+    assert max(x for x, _ in sample) == 200
+    assert max(y for _, y in sample) == 10 ** 18
+
+    sample = calculate_rebalancing_fees(Balance(0), Balance(10))
+    assert len(sample) == 10
+    assert max(x for x, _ in sample) == 10
+    assert max(y for _, y in sample) == 10 ** 18

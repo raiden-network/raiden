@@ -474,6 +474,7 @@ def run_test_mediated_transfer_with_allocated_fee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
         flat_fee=fee,
         proportional_fee=0,
+        use_imbalance_penalty=False,
     )
 
     app1.raiden.handle_state_change(state_change=action_set_fee)
@@ -570,6 +571,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
         flat_fee=FeeAmount(fee * 2),
         proportional_fee=0,
+        use_imbalance_penalty=False,
     )
 
     app1.raiden.handle_state_change(state_change=action_set_fee)
