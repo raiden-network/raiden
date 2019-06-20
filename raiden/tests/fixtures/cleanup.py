@@ -1,27 +1,10 @@
 import gc
-import traceback
 
 import gevent
 import pytest
 import structlog
-from gevent import Greenlet
-
-from raiden.utils.typing import List
 
 log = structlog.get_logger(__name__)
-
-
-def print_tracebacks(tasks: List[Greenlet]) -> None:
-    header = (
-        "--------------------------------------------------\n"
-        "--------------- Pending Greenlets ----------------\n"
-        "--------------------------------------------------\n"
-    )
-
-    print(header)
-    for task in tasks:
-        formated_traceback = "".join(traceback.format_stack(task.gr_frame))
-        print(f"\n{task.name}\n\nTraceback:\n{formated_traceback}")
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +20,7 @@ def cleanup_tasks() -> None:
     ]
 
     if tasks:
-        print_tracebacks(tasks)
+        gevent.util.print_run_info()
 
         # Kill the pending greenlets hoping that the next tests will run
         # without interference
