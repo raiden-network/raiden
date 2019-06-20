@@ -8,6 +8,7 @@ from eth_utils import remove_0x_prefix
 from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
@@ -155,6 +156,11 @@ def privatekey_seed(request):
     avoid collisions.
     """
     return escape_for_format(request.node.name) + ":{}"
+
+
+@pytest.fixture
+def account_genesis_eth_balance():
+    return DEFAULT_BALANCE
 
 
 @pytest.fixture

@@ -8,6 +8,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.eth_node import (
+    AccountDescription,
     EthNodeDescription,
     GenesisDescription,
     run_private_blockchain,
@@ -28,6 +29,7 @@ def web3(
     blockchain_extra_config,
     deploy_key,
     private_keys,
+    account_genesis_eth_balance,
     random_marker,
     request,
     tmpdir,
@@ -64,7 +66,10 @@ def web3(
         )
     ]
 
-    accounts_to_fund = [privatekey_to_address(key) for key in keys_to_fund]
+    accounts_to_fund = [
+        AccountDescription(privatekey_to_address(key), account_genesis_eth_balance)
+        for key in keys_to_fund
+    ]
 
     # The private chain data is always discarded on the CI
     base_datadir = str(tmpdir)

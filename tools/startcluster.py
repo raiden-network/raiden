@@ -8,7 +8,9 @@ from typing import ContextManager
 from eth_utils import keccak, remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
+from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.eth_node import (
+    AccountDescription,
     EthNodeDescription,
     GenesisDescription,
     run_private_blockchain,
@@ -28,7 +30,10 @@ DEFAULT_ACCOUNTS_SEEDS = [
     "127.0.0.1:{}".format(START_PORT + i).encode() for i in range(NUM_RAIDEN_ACCOUNTS)
 ]
 DEFAULT_ACCOUNTS_KEYS: List[PrivateKey] = [keccak(seed) for seed in DEFAULT_ACCOUNTS_SEEDS]
-DEFAULT_ACCOUNTS = [privatekey_to_address(key) for key in DEFAULT_ACCOUNTS_KEYS]
+DEFAULT_ACCOUNTS = [
+    AccountDescription(privatekey_to_address(key), DEFAULT_BALANCE)
+    for key in DEFAULT_ACCOUNTS_KEYS
+]
 
 
 def main() -> None:
