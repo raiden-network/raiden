@@ -912,7 +912,7 @@ class TokenNetwork:
                     block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
-                # Check if deposit is being made on a nonexistent channel
+                # Check if deposit is being made on a non-open channel
                 if channel_state > ChannelState.OPENED:
                     msg = "Deposit failed as the channel was not open"
                     raise RaidenRecoverableError(msg)
@@ -953,16 +953,21 @@ class TokenNetwork:
                         f"Deposit of {total_deposit} is larger than the "
                         f"channel participant deposit limit"
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
+
+                has_sufficient_balance = (
+                    self.token.balance_of(self.node_address, given_block_identifier)
+                    < amount_to_deposit
+                )
+                if not has_sufficient_balance:
+                    raise RaidenRecoverableError(
+                        "The account does not have enough balance to complete the deposit"
+                    )
 
                 allowance = self.token.allowance(
                     owner=self.node_address,
                     spender=Address(self.address),
                     block_identifier=failed_at_blockhash,
-                )
-                has_sufficient_balance = (
-                    self.token.balance_of(self.node_address, given_block_identifier)
-                    < amount_to_deposit
                 )
                 if allowance < amount_to_deposit:
                     msg = (
@@ -1022,34 +1027,78 @@ class TokenNetwork:
             elif has_sufficient_balance:
                 msg = "The address doesnt have enough tokens"
             else:
-                participant_details = self.detail_participants(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=failed_at_blockhash,
+                our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier=failed_at_blockhash,
                 )
+                partner_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier=failed_at_blockhash,
+                )
+
                 channel_state = self._get_channel_state(
                     participant1=self.node_address,
                     participant2=partner,
                     block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
-                # Check if deposit is being made on a nonexistent channel
-                if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-                    msg = (
-                        f"Channel between participant {to_checksum_address(self.node_address)} "
-                        f"and {to_checksum_address(partner)} does not exist"
-                    )
+                token_network_deposit_limit = self.token_network_deposit_limit(
+                    block_identifier=failed_at_blockhash
+                )
+                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
+                    block_identifier=failed_at_blockhash
+                )
+
+                total_channel_deposit = total_deposit + partner_details.deposit
+
+                network_balance = self.token.balance_of(
+                    Address(self.address), given_block_identifier
+                )
+
                 # Deposit was prohibited because the channel is settled
-                elif channel_state == ChannelState.SETTLED:
+                if channel_state == ChannelState.SETTLED:
                     msg = "Deposit is not possible due to channel being settled"
+                    raise RaidenRecoverableError(msg)
                 # Deposit was prohibited because the channel is closed
                 elif channel_state == ChannelState.CLOSED:
                     msg = "Channel is already closed"
                     raise RaidenRecoverableError(msg)
-                elif participant_details.our_details.deposit < total_deposit:
-                    msg = "Deposit amount did not increase after deposit transaction"
-            raise RaidenUnrecoverableError(msg)
+                elif channel_state == ChannelState.REMOVED:
+                    msg = "Channel was settled and unlocked"
+                    raise RaidenRecoverableError(msg)
+                elif our_details.deposit >= total_deposit:
+                    msg = "Attempted deposit has already been done"
+                    raise RaidenRecoverableError(msg)
+                # Check if deposit is being made on a nonexistent channel
+                elif channel_state == ChannelState.NONEXISTENT:
+                    msg = (
+                        f"Channel between participant {to_checksum_address(self.node_address)} "
+                        f"and {to_checksum_address(partner)} does not exist"
+                    )
+                    raise RaidenUnrecoverableError(msg)
+                elif total_channel_deposit >= UINT256_MAX:
+                    raise RaidenUnrecoverableError("Deposit overflow")
+
+                elif total_deposit > channel_participant_deposit_limit:
+                    msg = (
+                        f"Deposit of {total_deposit} exceeded the "
+                        f"channel participant deposit limit"
+                    )
+                    raise RaidenRecoverableError(msg)
+                elif network_balance + amount_to_deposit > token_network_deposit_limit:
+                    msg = (
+                        f"Deposit of {amount_to_deposit} exceeded "
+                        f"the token network deposit limit."
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                raise RaidenUnrecoverableError(
+                    "Deposit gas estimatation failed for unknown reasons"
+                )
 
     def set_total_withdraw(
         self,
