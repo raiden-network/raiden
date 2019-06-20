@@ -59,48 +59,48 @@ class Token:
         """
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
+        with self.token_lock:
+            log_details = {
+                "node": to_checksum_address(self.node_address),
+                "contract": to_checksum_address(self.address),
+                "allowed_address": to_checksum_address(allowed_address),
+                "allowance": allowance,
+            }
 
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "allowed_address": to_checksum_address(allowed_address),
-            "allowance": allowance,
-        }
-
-        with log_transaction(log, "approve", log_details):
-            checking_block = self.client.get_checking_block()
-            error_prefix = "Call to approve will fail"
-            gas_limit = self.proxy.estimate_gas(
-                checking_block, "approve", to_checksum_address(allowed_address), allowance
-            )
-
-            if gas_limit:
-                error_prefix = "Call to approve failed"
-                gas_limit = safe_gas_limit(gas_limit)
-                log_details["gas_limit"] = gas_limit
-                transaction_hash = self.proxy.transact(
-                    "approve", gas_limit, to_checksum_address(allowed_address), allowance
+            with log_transaction(log, "approve", log_details):
+                checking_block = self.client.get_checking_block()
+                error_prefix = "Call to approve will fail"
+                gas_limit = self.proxy.estimate_gas(
+                    checking_block, "approve", to_checksum_address(allowed_address), allowance
                 )
 
-                self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                if gas_limit:
+                    error_prefix = "Call to approve failed"
+                    gas_limit = safe_gas_limit(gas_limit)
+                    log_details["gas_limit"] = gas_limit
+                    transaction_hash = self.proxy.transact(
+                        "approve", gas_limit, to_checksum_address(allowed_address), allowance
+                    )
 
-            transaction_executed = gas_limit is not None
-            if not transaction_executed or receipt_or_none:
-                if transaction_executed:
-                    block = receipt_or_none["blockNumber"]
-                else:
-                    block = checking_block
+                    self.client.poll(transaction_hash)
+                    receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                    transaction_name="approve",
-                    transaction_executed=transaction_executed,
-                    required_gas=GAS_REQUIRED_FOR_APPROVE,
-                    block_identifier=block,
-                )
+                transaction_executed = gas_limit is not None
+                if not transaction_executed or receipt_or_none:
+                    if transaction_executed:
+                        block = receipt_or_none["blockNumber"]
+                    else:
+                        block = checking_block
 
-                msg = self._check_why_approved_failed(allowance, block)
-                raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
+                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                        transaction_name="approve",
+                        transaction_executed=transaction_executed,
+                        required_gas=GAS_REQUIRED_FOR_APPROVE,
+                        block_identifier=block,
+                    )
+
+                    msg = self._check_why_approved_failed(allowance, block)
+                    raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
 
     def _check_why_approved_failed(
         self, allowance: TokenAmount, block_identifier: BlockSpecification
@@ -158,25 +158,26 @@ class Token:
     def transfer(self, to_address: Address, amount: TokenAmount) -> None:
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "to_address": to_checksum_address(to_address),
-            "amount": amount,
-        }
+        with self.token_lock:
+            log_details = {
+                "node": to_checksum_address(self.node_address),
+                "contract": to_checksum_address(self.address),
+                "to_address": to_checksum_address(to_address),
+                "amount": amount,
+            }
 
-        with log_transaction(log, "transfer", log_details):
-            gas_limit = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-            gas_limit = safe_gas_limit(gas_limit)
-            log_details["gas_limit"] = gas_limit
+            with log_transaction(log, "transfer", log_details):
+                gas_limit = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
+                gas_limit = safe_gas_limit(gas_limit)
+                log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
-                "transfer", gas_limit, to_checksum_address(to_address), amount
-            )
+                transaction_hash = self.proxy.transact(
+                    "transfer", gas_limit, to_checksum_address(to_address), amount
+                )
 
-            self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            if receipt_or_none:
-                raise TransactionThrew("Transfer", receipt_or_none)
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                if receipt_or_none:
+                    raise TransactionThrew("Transfer", receipt_or_none)
 
-            # TODO: check Transfer event (issue: #2598)
+                # TODO: check Transfer event (issue: #2598)
