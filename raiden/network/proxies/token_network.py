@@ -72,7 +72,7 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
-from raiden_contracts.constants import (  # GAS_REQUIRED_FOR_SET_TOTAL_WITHDRAW,
+from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     ChannelInfoIndex,
     ChannelState,
