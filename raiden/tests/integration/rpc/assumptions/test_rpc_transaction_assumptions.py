@@ -1,5 +1,7 @@
+import pytest
 from eth_utils import to_checksum_address
 
+from raiden.exceptions import InsufficientFunds
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
@@ -52,3 +54,26 @@ def test_transact_opcode_oog(deploy_client):
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction), "must not be empty"
+
+
+GAS_PRICE = 1_000_000_000
+GAS_DEPLOY = 213105 * GAS_PRICE
+GAS_LOOP = 93864 * GAS_PRICE
+GAS_ACCOUNT_FAIL = GAS_DEPLOY + GAS_LOOP // 2
+
+
+@pytest.mark.parametrize("account_genesis_eth_balance", [GAS_ACCOUNT_FAIL])
+def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
+    """ The gas estimation does not fail if the transaction execution requires
+    more gas then the account's eth balance. However sending the transaction
+    will.
+    """
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    check_block = deploy_client.get_checking_block()
+
+    startgas = contract_proxy.estimate_gas(check_block, "loop", 1000)
+    assert startgas, "The gas estimation should not have failed."
+
+    with pytest.raises(InsufficientFunds):
+        contract_proxy.transact("loop", startgas, 1000)
