@@ -24,7 +24,7 @@ from raiden.utils.typing import (
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 log = structlog.get_logger(__name__)
 
@@ -45,11 +45,10 @@ class UserDeposit:
 
         self.client = jsonrpc_client
 
-        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
-
         self.address = user_deposit_address
         self.node_address = self.client.address
         self.contract_manager = contract_manager
+        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
