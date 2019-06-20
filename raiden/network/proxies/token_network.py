@@ -993,7 +993,7 @@ class TokenNetwork:
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
-                transaction_executed=True,
+                transaction_executed=False,
                 required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
                 block_identifier=failed_at_blocknumber,
             )

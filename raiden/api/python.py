@@ -25,6 +25,7 @@ from raiden.exceptions import (
     InvalidSecretHash,
     InvalidSettleTimeout,
     RaidenRecoverableError,
+    TokenNetworkDeprecated,
     TokenNotRegistered,
     UnknownTokenAddress,
     WithdrawMismatch,
@@ -578,12 +579,45 @@ class RaidenAPI:  # pragma: no unittest
             )
             raise InsufficientFunds(msg)
 
+        blockhash = views.state_from_raiden(self.raiden).block_hash
+        token_network_proxy = channel_proxy.token_network
+        safety_deprecation_switch = token_network_proxy.safety_deprecation_switch(
+            block_identifier=blockhash
+        )
+        if safety_deprecation_switch:
+            msg = (
+                "This token_network has been deprecated. "
+                "All channels in this network should be closed and "
+                "the usage of the newly deployed token network contract "
+                "is highly encouraged."
+            )
+            raise TokenNetworkDeprecated(msg)
+
+        network_balance = token_network_proxy.token.balance_of(
+            address=Address(self.address), block_identifier=blockhash
+        )
+
+        token_network_deposit_limit = token_network_proxy.token_network_deposit_limit(
+            block_identifier=blockhash
+        )
+
+        if network_balance + addendum > token_network_deposit_limit:
+            msg = f"Deposit of {addendum} would have " f"exceeded the token network deposit limit."
+            raise DepositOverLimit(msg)
+
+        channel_participant_deposit_limit = token_network_proxy.channel_participant_deposit_limit(
+            block_identifier=blockhash
+        )
+        if total_deposit > channel_participant_deposit_limit:
+            msg = (
+                f"Deposit of {total_deposit} is larger than the "
+                f"channel participant deposit limit"
+            )
+            raise DepositOverLimit(msg)
+
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum)
-        channel_proxy.set_total_deposit(
-            total_deposit=total_deposit,
-            block_identifier=views.state_from_raiden(self.raiden).block_hash,
-        )
+        channel_proxy.set_total_deposit(total_deposit=total_deposit, block_identifier=blockhash)
 
         target_address = self.raiden.address
         waiting.wait_for_participant_newbalance(
