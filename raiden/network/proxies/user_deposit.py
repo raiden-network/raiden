@@ -23,7 +23,7 @@ from raiden.utils.typing import (
     Tuple,
     typecheck,
 )
-from raiden_contracts.constants import CONTRACT_USER_DEPOSIT, GAS_REQUIRED_FOR_UDC_DEPOSIT
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -44,6 +44,8 @@ class UserDeposit:
         )
 
         self.client = jsonrpc_client
+
+        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = user_deposit_address
         self.node_address = self.client.address
@@ -129,7 +131,7 @@ class UserDeposit:
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="deposit",
                         transaction_executed=transaction_executed,
-                        required_gas=GAS_REQUIRED_FOR_UDC_DEPOSIT,
+                        required_gas=self.gas_measurements["UserDeposit.deposit"],
                         block_identifier=block,
                     )
 
