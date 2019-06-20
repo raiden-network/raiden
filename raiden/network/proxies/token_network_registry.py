@@ -11,11 +11,7 @@ from eth_utils import (
     to_normalized_address,
 )
 
-from raiden.constants import (
-    GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK,
-    GENESIS_BLOCK_NUMBER,
-    NULL_ADDRESS,
-)
+from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
 from raiden.exceptions import (
     InvalidAddress,
     InvalidToken,
@@ -38,7 +34,7 @@ from raiden.utils.typing import (
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 log = structlog.get_logger(__name__)
 
@@ -71,6 +67,8 @@ class TokenNetworkRegistry:
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
             address=Address(registry_address),
         )
+
+        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = registry_address
         self.proxy = proxy
@@ -155,7 +153,10 @@ class TokenNetworkRegistry:
 
             if gas_limit:
                 error_prefix = "Call to createERC20TokenNetwork failed"
-                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK)
+                gas_limit = safe_gas_limit(
+                    gas_limit,
+                    self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"],
+                )
                 log_details["gas_limit"] = gas_limit
                 transaction_hash = self.proxy.transact(
                     "createERC20TokenNetwork", gas_limit, **kwarguments
@@ -172,7 +173,9 @@ class TokenNetworkRegistry:
                     block = checking_block
 
                 required_gas = (
-                    gas_limit if gas_limit else GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK
+                    gas_limit
+                    if gas_limit
+                    else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
                 )
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="createERC20TokenNetwork",
