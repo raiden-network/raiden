@@ -368,48 +368,48 @@ def forward_transfer_pair(
         pseudo_random_generator: Number generator to generate a message id.
         block_number: The current block number.
     """
-    transfer_pair = None
-    mediated_events: List[Event] = list()
-    lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
-
+    # check channel
     payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
+    if not payee_channel:
+        return None, []
 
+    amount_after_fees = get_lock_amount_after_fees(payer_transfer.lock, payee_channel)
+    lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
+    if not channel.is_channel_usable(
+        candidate_channel_state=payee_channel,
+        transfer_amount=amount_after_fees,
+        lock_timeout=lock_timeout,
+    ):
+        return None, []
+
+    assert payee_channel.settle_timeout >= lock_timeout
+    assert payee_channel.token_address == payer_transfer.token
+
+    # create events
     route_states = channel.prune_route_table(
         route_state_table=route_state_table, selected_route=route_state
     )
-
-    is_payee_channel_usable = payee_channel is not None and channel.is_channel_usable(
-        candidate_channel_state=payee_channel,
-        transfer_amount=payer_transfer.lock.amount,
-        lock_timeout=lock_timeout,
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    lockedtransfer_event = channel.send_lockedtransfer(
+        channel_state=payee_channel,
+        initiator=payer_transfer.initiator,
+        target=payer_transfer.target,
+        amount=amount_after_fees,
+        message_identifier=message_identifier,
+        payment_identifier=payer_transfer.payment_identifier,
+        expiration=payer_transfer.lock.expiration,
+        secrethash=payer_transfer.lock.secrethash,
+        route_states=route_states,
     )
+    assert lockedtransfer_event
+    mediated_events: List[Event] = [lockedtransfer_event]
 
-    if payee_channel is not None and is_payee_channel_usable:
-        assert payee_channel.settle_timeout >= lock_timeout
-        assert payee_channel.token_address == payer_transfer.token
-
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        lock = payer_transfer.lock
-        lockedtransfer_event = channel.send_lockedtransfer(
-            channel_state=payee_channel,
-            initiator=payer_transfer.initiator,
-            target=payer_transfer.target,
-            amount=get_lock_amount_after_fees(lock, payee_channel),
-            message_identifier=message_identifier,
-            payment_identifier=payer_transfer.payment_identifier,
-            expiration=lock.expiration,
-            secrethash=lock.secrethash,
-            route_states=route_states,
-        )
-        assert lockedtransfer_event
-
-        transfer_pair = MediationPairState(
-            payer_transfer=payer_transfer,
-            payee_address=payee_channel.partner_state.address,
-            payee_transfer=lockedtransfer_event.transfer,
-        )
-
-        mediated_events = [lockedtransfer_event]
+    # create transfer pair
+    transfer_pair = MediationPairState(
+        payer_transfer=payer_transfer,
+        payee_address=payee_channel.partner_state.address,
+        payee_transfer=lockedtransfer_event.transfer,
+    )
 
     return transfer_pair, mediated_events
 
