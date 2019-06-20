@@ -33,8 +33,9 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_CONTRACT_VERSION
-from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
+from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
+    AccountDescription,
     EthNodeDescription,
     GenesisDescription,
     eth_node_to_datadir,
@@ -173,7 +174,10 @@ def setup_testchain(
 
     random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
     genesis_description = GenesisDescription(
-        prefunded_accounts=[TEST_ACCOUNT_ADDRESS, TEST_PARTNER_ADDRESS],
+        prefunded_accounts=[
+            AccountDescription(TEST_ACCOUNT_ADDRESS, DEFAULT_BALANCE),
+            AccountDescription(TEST_PARTNER_ADDRESS, DEFAULT_BALANCE),
+        ],
         random_marker=random_marker,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
     )

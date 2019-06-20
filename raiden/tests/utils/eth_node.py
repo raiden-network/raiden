@@ -12,11 +12,21 @@ from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
 from web3 import Web3
 
-from raiden.tests.fixtures.constants import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
+from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.http import JSONRPCExecutor
-from raiden.utils.typing import Address, Any, ChainID, Dict, List, NamedTuple, Port, PrivateKey
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChainID,
+    Dict,
+    List,
+    NamedTuple,
+    Port,
+    PrivateKey,
+    TokenAmount,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -34,6 +44,11 @@ class EthNodeDescription(NamedTuple):
     blockchain_type: str = "geth"
 
 
+class AccountDescription(NamedTuple):
+    address: Address
+    balance: TokenAmount
+
+
 class GenesisDescription(NamedTuple):
     """Genesis configuration for a geth PoA private chain.
 
@@ -47,7 +62,7 @@ class GenesisDescription(NamedTuple):
         chain_id: The id of the private chain.
     """
 
-    prefunded_accounts: List[Address]
+    prefunded_accounts: List[AccountDescription]
     random_marker: str
     chain_id: ChainID
 
@@ -199,8 +214,8 @@ def parity_generate_chain_spec(
     genesis_path: str, genesis_description: GenesisDescription, seal_account: Address
 ) -> None:
     alloc = {
-        to_checksum_address(address): {"balance": 1_000_000_000_000_000_000}
-        for address in genesis_description.prefunded_accounts
+        to_checksum_address(account.address): {"balance": str(account.balance)}
+        for account in genesis_description.prefunded_accounts
     }
     validators = {"list": [to_checksum_address(seal_account)]}
     extra_data = parity_extradata(genesis_description.random_marker)
@@ -220,8 +235,8 @@ def geth_generate_poa_genesis(
     """Writes a bare genesis to `genesis_path`."""
 
     alloc = {
-        to_normalized_address(address): {"balance": DEFAULT_BALANCE_BIN}
-        for address in genesis_description.prefunded_accounts
+        to_normalized_address(account.address): {"balance": str(account.balance)}
+        for account in genesis_description.prefunded_accounts
     }
     seal_address_normalized = remove_0x_prefix(to_normalized_address(seal_account))
     extra_data = geth_clique_extradata(genesis_description.random_marker, seal_address_normalized)
@@ -506,5 +521,7 @@ def run_private_blockchain(
         logdir=log_dir,
     )
     with runner as executors:
-        eth_check_balance(web3, genesis_description.prefunded_accounts)
+        eth_check_balance(
+            web3, [account.address for account in genesis_description.prefunded_accounts]
+        )
         yield executors
