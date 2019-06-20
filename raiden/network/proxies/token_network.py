@@ -884,6 +884,13 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
+                safety_deprecation_switch = self.safety_deprecation_switch(
+                    block_identifier=failed_at_blockhash
+                )
+                if safety_deprecation_switch:
+                    msg = "This token_network has been deprecated."
+                    raise RaidenRecoverableError(msg)
+
                 # Query the channel state when the transaction was mind
                 # to check for transaction races
                 our_details = self._detail_participant(
@@ -921,7 +928,7 @@ class TokenNetwork:
 
                 total_deposit_done = our_details.deposit >= total_deposit
                 if total_deposit_done:
-                    raise DepositMismatch("Requested total deposit was already performed")
+                    raise RaidenRecoverableError("Requested total deposit was already performed")
 
                 token_network_deposit_limit = self.token_network_deposit_limit(
                     block_identifier=receipt["blockHash"]
@@ -990,6 +997,13 @@ class TokenNetwork:
                 required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
                 block_identifier=failed_at_blocknumber,
             )
+
+            safety_deprecation_switch = self.safety_deprecation_switch(
+                block_identifier=failed_at_blockhash
+            )
+            if safety_deprecation_switch:
+                msg = "This token_network has been deprecated."
+                raise RaidenRecoverableError(msg)
 
             allowance = self.token.allowance(
                 owner=self.node_address,
