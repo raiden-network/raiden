@@ -268,6 +268,17 @@ class InsufficientGasReserve(RaidenError):
     """
 
 
+class BrokenPreconditionError(RaidenError):
+    """ Raised while checking transaction preconditions
+    which should be satisfied before sending the transaction.
+    This exception when:
+    1. An assert or a revert in the smart contract would be hit for
+    triggering block.
+
+    2. If provided values are invalid (i.e ValueError)
+    """
+
+
 class ServiceRequestFailed(RaidenError):
     """ Raised when a request to one of the raiden services fails. """
 
