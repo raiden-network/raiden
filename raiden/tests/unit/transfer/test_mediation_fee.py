@@ -29,12 +29,12 @@ def test_basic_fee():
     flat_schedule = FeeScheduleState(flat=FA(2))
     assert flat_schedule.fee(TA(10), capacity=TA(0)) == FA(2)
 
-    prop_schedule = FeeScheduleState(proportional=0.01)
+    prop_schedule = FeeScheduleState(proportional=0.01e6)
     assert prop_schedule.fee(TA(40), capacity=TA(0)) == FA(0)
     assert prop_schedule.fee(TA(60), capacity=TA(0)) == FA(1)
     assert prop_schedule.fee(TA(1000), capacity=TA(0)) == FA(10)
 
-    combined_schedule = FeeScheduleState(flat=FA(2), proportional=0.01)
+    combined_schedule = FeeScheduleState(flat=FA(2), proportional=0.01e6)
     assert combined_schedule.fee(TA(60), capacity=TA(0)) == FA(3)
 
 
