@@ -19,7 +19,7 @@ from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import Address, Optional

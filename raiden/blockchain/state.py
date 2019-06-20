@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,

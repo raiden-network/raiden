@@ -4,7 +4,7 @@ from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
-from raiden.utils.typing import FeeAmount, TokenAmount
+from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, TokenAmount
 
 
 class Interpolate:  # pylint: disable=too-few-public-methods
@@ -50,7 +50,7 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def fee(self, amount: TokenAmount, capacity: TokenAmount) -> FeeAmount:
+    def fee(self, amount: PaymentAmount, capacity: Balance) -> FeeAmount:
         if self._penalty_func:
             # Total channel capacity - node capacity = balance (used as x-axis for the penalty)
             balance = self._penalty_func.x_list[-1] - capacity

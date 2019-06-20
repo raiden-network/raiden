@@ -3,6 +3,7 @@ import random
 
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
@@ -55,6 +56,7 @@ from raiden.utils.typing import (
     LockType,
     NodeNetworkStateMap,
     Optional,
+    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -241,8 +243,11 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    # FIXME: user proper fee calculation
-    return PaymentWithFeeAmount(lock.amount - payee_channel.fee_schedule.flat)
+    balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
+    # The fee should be calculated on the payment amount without fees. But we
+    # only have the amount including fees, so we use that as an approximation.
+    fee = payee_channel.fee_schedule.fee(PaymentAmount(lock.amount), balance)
+    return PaymentWithFeeAmount(lock.amount - fee)
 
 
 def sanity_check(

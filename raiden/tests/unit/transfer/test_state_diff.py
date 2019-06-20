@@ -2,7 +2,7 @@ import random
 from copy import deepcopy
 
 from raiden.tests.utils import factories
-from raiden.transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     ChainState,
     NettingChannelEndState,

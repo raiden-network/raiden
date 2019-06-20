@@ -57,6 +57,7 @@ from raiden.transfer import node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -64,7 +65,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
