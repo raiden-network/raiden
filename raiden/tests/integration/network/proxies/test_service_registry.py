@@ -5,6 +5,7 @@ import requests
 from eth_utils import is_canonical_address, is_same_address, to_checksum_address
 
 from raiden.constants import RoutingMode
+from raiden.exceptions import BrokenPreconditionError
 from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
@@ -12,6 +13,20 @@ from raiden.utils import privatekey_to_address
 from raiden.utils.typing import ChainID
 
 token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+
+
+def test_service_registry_set_url(service_registry_address, private_keys, web3, contract_manager):
+    c1_service_proxy, _ = deploy_service_registry_and_set_urls(
+        private_keys=private_keys,
+        web3=web3,
+        contract_manager=contract_manager,
+        service_registry_address=service_registry_address,
+    )
+    with pytest.raises(BrokenPreconditionError):
+        c1_service_proxy.set_url("")
+
+    with pytest.raises(BrokenPreconditionError):
+        c1_service_proxy.set_url("raiden-network.com")
 
 
 def test_service_registry_random_pfs(

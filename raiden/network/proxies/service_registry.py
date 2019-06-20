@@ -4,7 +4,7 @@ import structlog
 import web3
 from eth_utils import is_binary_address, to_canonical_address, to_checksum_address
 
-from raiden.exceptions import InvalidAddress, InvalidServiceRegistryURL, RaidenUnrecoverableError
+from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -83,14 +83,14 @@ class ServiceRegistry:
             "url": url,
         }
 
-        if len(url.trim()) == "":
+        if len(url.strip()) == "":
             msg = "Invalid empty URL"
-            raise InvalidServiceRegistryURL(msg)
+            raise BrokenPreconditionError(msg)
 
         parsed_url = urlparse(url)
         if parsed_url.scheme not in ("http", "https"):
             msg = "URL provided to service registry must be a valid HTTP(S) endpoint."
-            raise InvalidServiceRegistryURL(msg)
+            raise BrokenPreconditionError(msg)
 
         with log_transaction(log, "set_url", log_details):
             gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
