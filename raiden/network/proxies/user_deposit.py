@@ -1,6 +1,7 @@
 import structlog
 from eth_utils import (
     is_binary_address,
+    to_bytes,
     to_canonical_address,
     to_checksum_address,
     to_normalized_address,
@@ -50,7 +51,9 @@ class UserDeposit:
             jsonrpc_client,
             Address(user_deposit_address),
             CONTRACT_USER_DEPOSIT,
-            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT),
+            expected_code=to_bytes(
+                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT)
+            ),
         )
 
         self.client = jsonrpc_client

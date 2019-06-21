@@ -4,6 +4,7 @@ import structlog
 from eth_utils import (
     encode_hex,
     is_binary_address,
+    to_bytes,
     to_canonical_address,
     to_checksum_address,
     to_hex,
@@ -158,7 +159,9 @@ class TokenNetwork:
             jsonrpc_client,
             Address(token_network_address),
             CONTRACT_TOKEN_NETWORK,
-            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK),
+            expected_code=to_bytes(
+                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
+            ),
         )
 
         self.contract_manager = contract_manager

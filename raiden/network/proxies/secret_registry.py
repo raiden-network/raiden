@@ -7,6 +7,7 @@ from eth_utils import (
     encode_hex,
     event_abi_to_log_topic,
     is_binary_address,
+    to_bytes,
     to_checksum_address,
     to_normalized_address,
 )
@@ -53,7 +54,9 @@ class SecretRegistry:
             jsonrpc_client,
             secret_registry_address,
             CONTRACT_SECRET_REGISTRY,
-            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY),
+            expected_code=to_bytes(
+                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
+            ),
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
