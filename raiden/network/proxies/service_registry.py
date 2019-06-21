@@ -5,7 +5,7 @@ import web3
 from eth_utils import is_binary_address, to_canonical_address, to_checksum_address
 
 from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
-from raiden.network.proxies.utils import compare_contract_versions, log_transaction
+from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional
@@ -33,12 +33,7 @@ class ServiceRegistry:
             to_canonical_address(service_registry_address),
         )
 
-        compare_contract_versions(
-            proxy=proxy,
-            expected_version=contract_manager.contracts_version,
-            contract_name=CONTRACT_SERVICE_REGISTRY,
-            address=service_registry_address,
-        )
+        # TODO: check what's onchain
 
         self.address = service_registry_address
         self.proxy = proxy

@@ -5,7 +5,7 @@ import click
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import Environment, RoutingMode
-from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
+from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import PFSConfig, configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
@@ -80,7 +80,7 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict
     return contracts
 
 
-def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
+def handle_contract_code_mismatch(mismatch_exception: ContractCodeMismatch) -> None:
     click.secho(f"{str(mismatch_exception)}. Please update your Raiden installation.", fg="red")
     sys.exit(1)
 
@@ -147,8 +147,8 @@ def setup_proxies_or_exit(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
             )
         token_network_registry = blockchain_service.token_network_registry(registered_address)
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
+    except ContractCodeMismatch as e:
+        handle_contract_code_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code("token network registry", tokennetwork_registry_contract_address)
     except AddressWrongContract:
@@ -161,8 +161,8 @@ def setup_proxies_or_exit(
             secret_registry_contract_address
             or to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
         )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
+    except ContractCodeMismatch as e:
+        handle_contract_code_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code("secret registry", secret_registry_contract_address)
     except AddressWrongContract:
@@ -186,8 +186,8 @@ def setup_proxies_or_exit(
                 user_deposit_contract_address
                 or to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
             )
-        except ContractVersionMismatch as e:
-            handle_contract_version_mismatch(e)
+        except ContractCodeMismatch as e:
+            handle_contract_code_mismatch(e)
         except AddressWithoutCode:
             handle_contract_no_code("user deposit", user_deposit_contract_address)
         except AddressWrongContract:
@@ -200,8 +200,8 @@ def setup_proxies_or_exit(
                 service_registry_contract_address
                 or to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
             )
-        except ContractVersionMismatch as e:
-            handle_contract_version_mismatch(e)
+        except ContractCodeMismatch as e:
+            handle_contract_code_mismatch(e)
         except AddressWithoutCode:
             handle_contract_no_code("service registry", service_registry_contract_address)
         except AddressWrongContract:
