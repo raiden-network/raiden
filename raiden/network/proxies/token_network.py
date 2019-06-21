@@ -155,7 +155,10 @@ class TokenNetwork:
             raise InvalidAddress("Expected binary address format for token nework")
 
         check_address_has_code(
-            jsonrpc_client, Address(token_network_address), CONTRACT_TOKEN_NETWORK
+            jsonrpc_client,
+            Address(token_network_address),
+            CONTRACT_TOKEN_NETWORK,
+            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK),
         )
 
         self.contract_manager = contract_manager
@@ -164,12 +167,9 @@ class TokenNetwork:
             to_normalized_address(token_network_address),
         )
 
-        # TODO: check what's onchain
-
         # These are constants
         self._chain_id = proxy.contract.functions.chain_id().call()
         self._token_address = to_canonical_address(proxy.contract.functions.token().call())
-
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = token_network_address

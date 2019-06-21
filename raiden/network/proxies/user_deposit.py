@@ -47,7 +47,10 @@ class UserDeposit:
             raise InvalidAddress("Expected binary address format for token nework")
 
         check_address_has_code(
-            jsonrpc_client, Address(user_deposit_address), CONTRACT_USER_DEPOSIT
+            jsonrpc_client,
+            Address(user_deposit_address),
+            CONTRACT_USER_DEPOSIT,
+            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT),
         )
 
         self.client = jsonrpc_client
