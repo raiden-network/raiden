@@ -205,13 +205,17 @@ def test_next_transfer_pair():
         [
             NettingChannelStateProperties(
                 our_state=NettingChannelEndStateProperties(balance=balance)
-            )
+            ),
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=balance)
+            ),
         ]
     )
 
-    route_state_table = channels.get_routes()
+    route_state_table = channels.get_routes(1)
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
+        payer_channel=channels[0],
         route_state=route_state_table[0],
         route_state_table=route_state_table,
         channelidentifiers_to_channels=channels.channel_map,
@@ -220,7 +224,7 @@ def test_next_transfer_pair():
     )
 
     assert pair.payer_transfer == payer_transfer
-    assert pair.payee_address == channels[0].partner_state.address
+    assert pair.payee_address == channels[1].partner_state.address
     assert pair.payee_transfer.lock.expiration == pair.payer_transfer.lock.expiration
 
     assert search_for_item(
@@ -1897,15 +1901,19 @@ def test_next_transfer_pair_with_fees_deducted():
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=balance)
+            ),
+            NettingChannelStateProperties(
                 our_state=NettingChannelEndStateProperties(balance=balance),
                 fee_schedule=FeeScheduleState(flat=fee),
-            )
+            ),
         ]
     )
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
-        route_state=channels.get_route(0),
+        payer_channel=channels[0],
+        route_state=channels.get_route(1),
         route_state_table=channels.get_routes(),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=random.Random(),

@@ -223,7 +223,7 @@ def get_pending_transfer_pairs(
 
 
 def get_lock_amount_after_fees(
-    lock: HashTimeLockState, payee_channel: NettingChannelState
+    lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
 ) -> PaymentWithFeeAmount:
     """
     Return the lock.amount after fees are taken.
@@ -343,6 +343,7 @@ def clear_if_finalized(
 
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
+    payer_channel: NettingChannelState,
     route_state: RouteState,
     route_state_table: List[RouteState],
     channelidentifiers_to_channels: Dict,
@@ -366,7 +367,9 @@ def forward_transfer_pair(
     if not payee_channel:
         return None, []
 
-    amount_after_fees = get_lock_amount_after_fees(payer_transfer.lock, payee_channel)
+    amount_after_fees = get_lock_amount_after_fees(
+        payer_transfer.lock, payer_channel, payee_channel
+    )
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
     if not channel.is_channel_usable(
         candidate_channel_state=payee_channel,
@@ -1015,6 +1018,7 @@ def mediate_transfer(
     for route_state in candidate_route_states:
         transfer_pair, mediated_events = forward_transfer_pair(
             payer_transfer=payer_transfer,
+            payer_channel=payer_channel,
             route_state=route_state,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             pseudo_random_generator=pseudo_random_generator,
