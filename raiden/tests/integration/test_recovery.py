@@ -240,3 +240,5 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
         RANGE_ALL_STATE_CHANGES
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
+
+    app0_restart.stop()
