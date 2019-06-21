@@ -2188,14 +2188,14 @@ class TokenNetwork:
                         f"does not match onchain channel_identifier "
                         f"{channel_onchain_detail.channel_identifier}."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if channel_onchain_detail.settle_block_number > given_block_number:
                     msg = (
                         "settle cannot be called after the settlement "
                         "period, this call should never have been attempted."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if channel_onchain_detail.state != ChannelState.CLOSED:
                     msg = (
@@ -2203,7 +2203,7 @@ class TokenNetwork:
                         f"({given_block_identifier}). This call should never have "
                         f"been attempted."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 our_balance_hash = hash_balance_data(
                     transferred_amount=transferred_amount,
@@ -2218,11 +2218,11 @@ class TokenNetwork:
 
                 if our_details.balance_hash != our_balance_hash:
                     msg = "Our balance hash does not match the on-chain value"
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if partner_details.balance_hash != partner_balance_hash:
                     msg = "Partner balance hash does not match the on-chain value"
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 log_details = {
                     "channel_identifier": channel_identifier,
