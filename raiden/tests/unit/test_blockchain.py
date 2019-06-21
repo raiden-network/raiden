@@ -10,7 +10,7 @@ from raiden.network.proxies.token_network import (
 )
 from raiden.tests.utils import factories
 from raiden.transfer import channel
-from raiden.transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,

@@ -19,6 +19,7 @@ from raiden.messages import (
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferSignedState,
@@ -27,7 +28,6 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitInitiator, ActionInitMediator
-from raiden.transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
