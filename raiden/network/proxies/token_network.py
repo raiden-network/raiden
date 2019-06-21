@@ -36,7 +36,7 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import compare_contract_versions, log_transaction
+from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
@@ -164,12 +164,7 @@ class TokenNetwork:
             to_normalized_address(token_network_address),
         )
 
-        compare_contract_versions(
-            proxy=proxy,
-            expected_version=contract_manager.contracts_version,
-            contract_name=CONTRACT_TOKEN_NETWORK,
-            address=Address(token_network_address),
-        )
+        # TODO: check what's onchain
 
         # These are constants
         self._chain_id = proxy.contract.functions.chain_id().call()
