@@ -2,6 +2,7 @@ import os
 
 import gevent
 import pytest
+import structlog
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.tests.utils.network import (
@@ -15,6 +16,18 @@ from raiden.tests.utils.network import (
     wait_for_channels,
     wait_for_token_networks,
 )
+
+log = structlog.get_logger(__name__)
+
+
+def _stop_apps(raiden_apps):
+    log.debug("Stopping apps")
+
+    for app in raiden_apps:
+        app.stop()
+
+    for app in raiden_apps:
+        app.raiden.get()
 
 
 def timeout(blockchain_type: str):
@@ -119,8 +132,7 @@ def raiden_chain(
 
     yield raiden_apps
 
-    for app in raiden_apps:
-        app.stop()
+    _stop_apps(raiden_apps)
 
 
 @pytest.fixture
@@ -216,5 +228,4 @@ def raiden_network(
 
     yield raiden_apps
 
-    for app in raiden_apps:
-        app.stop()
+    _stop_apps(raiden_apps)
