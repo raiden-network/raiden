@@ -21,6 +21,7 @@ from web3.utils.toolz import assoc
 from raiden import constants
 from raiden.exceptions import (
     AddressWithoutCode,
+    ContractCodeMismatch,
     EthNodeCommunicationError,
     EthNodeInterfaceError,
     InsufficientFunds,
@@ -166,7 +167,9 @@ def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce
     return web3.eth.getTransactionCount(address, "latest")
 
 
-def check_address_has_code(client: "JSONRPCClient", address: Address, contract_name: str = ""):
+def check_address_has_code(
+    client: "JSONRPCClient", address: Address, contract_name: str = "", expected_code: str = None
+):
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), "latest")
 
@@ -180,6 +183,11 @@ def check_address_has_code(client: "JSONRPCClient", address: Address, contract_n
             "{}Address {} does not contain code".format(
                 formated_contract_name, to_checksum_address(address)
             )
+        )
+
+    if expected_code is not None and result != expected_code:
+        raise ContractCodeMismatch(
+            f"{formated_contract_name}Address {to_checksum_address(address)} has wrong code."
         )
 
 

@@ -26,14 +26,17 @@ class ServiceRegistry:
             raise InvalidAddress("Expected binary address for service registry")
 
         self.contract_manager = contract_manager
-        check_address_has_code(jsonrpc_client, service_registry_address, CONTRACT_SERVICE_REGISTRY)
+        check_address_has_code(
+            jsonrpc_client,
+            service_registry_address,
+            CONTRACT_SERVICE_REGISTRY,
+            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY),
+        )
 
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY),
             to_canonical_address(service_registry_address),
         )
-
-        # TODO: check what's onchain
 
         self.address = service_registry_address
         self.proxy = proxy

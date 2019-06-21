@@ -35,7 +35,7 @@ class Token:
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 
-        check_address_has_code(jsonrpc_client, Address(token_address), "Token")
+        check_address_has_code(jsonrpc_client, Address(token_address), "Token", expected_code=None)
 
         self.address = token_address
         self.client = jsonrpc_client

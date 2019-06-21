@@ -60,6 +60,7 @@ class TokenNetworkRegistry:
             client=jsonrpc_client,
             address=Address(registry_address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
+            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY),
         )
 
         self.contract_manager = contract_manager
@@ -67,8 +68,6 @@ class TokenNetworkRegistry:
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
             to_normalized_address(registry_address),
         )
-
-        # TODO: check what's onchain
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 

@@ -49,7 +49,12 @@ class SecretRegistry:
             raise InvalidAddress("Expected binary address format for secret registry")
 
         self.contract_manager = contract_manager
-        check_address_has_code(jsonrpc_client, secret_registry_address, CONTRACT_SECRET_REGISTRY)
+        check_address_has_code(
+            jsonrpc_client,
+            secret_registry_address,
+            CONTRACT_SECRET_REGISTRY,
+            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY),
+        )
 
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
@@ -58,8 +63,6 @@ class SecretRegistry:
 
         # There should be only one smart contract deployed, to avoid race
         # conditions for on-chain unlocks.
-
-        # TODO: check what's onchain
 
         self.address = secret_registry_address
         self.proxy = proxy
