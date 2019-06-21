@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 import structlog
 import web3
-from eth_utils import is_binary_address, to_canonical_address, to_checksum_address
+from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
 
 from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
@@ -30,7 +30,9 @@ class ServiceRegistry:
             jsonrpc_client,
             service_registry_address,
             CONTRACT_SERVICE_REGISTRY,
-            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY),
+            expected_code=to_bytes(
+                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY)
+            ),
         )
 
         proxy = jsonrpc_client.new_contract_proxy(

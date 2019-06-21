@@ -6,6 +6,7 @@ from eth_utils import (
     event_abi_to_log_topic,
     is_binary_address,
     is_same_address,
+    to_bytes,
     to_canonical_address,
     to_checksum_address,
     to_normalized_address,
@@ -60,7 +61,9 @@ class TokenNetworkRegistry:
             client=jsonrpc_client,
             address=Address(registry_address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            expected_code=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            expected_code=to_bytes(
+                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY)
+            ),
         )
 
         self.contract_manager = contract_manager

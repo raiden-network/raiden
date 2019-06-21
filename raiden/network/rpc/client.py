@@ -168,26 +168,27 @@ def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce
 
 
 def check_address_has_code(
-    client: "JSONRPCClient", address: Address, contract_name: str = "", expected_code: str = None
+    client: "JSONRPCClient", address: Address, contract_name: str = "", expected_code: bytes = None
 ):
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), "latest")
 
-    if not result:
+    def formatted_contract_name():
         if contract_name:
-            formated_contract_name = f"[{contract_name}]: "
+            return f"[{contract_name}]: "
         else:
-            formated_contract_name = ""
+            return ""
 
+    if not result:
         raise AddressWithoutCode(
             "{}Address {} does not contain code".format(
-                formated_contract_name, to_checksum_address(address)
+                formatted_contract_name(), to_checksum_address(address)
             )
         )
 
     if expected_code is not None and result != expected_code:
         raise ContractCodeMismatch(
-            f"{formated_contract_name}Address {to_checksum_address(address)} has wrong code."
+            f"{formatted_contract_name()}Address {to_checksum_address(address)} has wrong code."
         )
 
 
