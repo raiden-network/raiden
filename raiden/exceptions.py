@@ -279,6 +279,12 @@ class BrokenPreconditionError(RaidenError):
     """
 
 
+class BrokenPreconditionError(RaidenError):
+    """ Raised while checking transaction preconditions
+    which should be satisfied before sending the transaction.
+    """
+
+
 class ServiceRequestFailed(RaidenError):
     """ Raised when a request to one of the raiden services fails. """
 
