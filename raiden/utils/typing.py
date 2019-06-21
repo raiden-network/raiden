@@ -2,6 +2,10 @@ from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-impo
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
+from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
+    ChainID,
+    T_ChainID,
+)
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -114,9 +118,6 @@ RaidenProtocolVersion = NewType("RaidenProtocolVersion", T_RaidenProtocolVersion
 
 T_RaidenDBVersion = int
 RaidenDBVersion = NewType("RaidenDBVersion", T_RaidenDBVersion)
-
-T_ChainID = int
-ChainID = NewType("ChainID", T_ChainID)
 
 T_Keccak256 = bytes
 Keccak256 = NewType("Keccak256", T_Keccak256)
