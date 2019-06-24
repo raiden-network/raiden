@@ -209,7 +209,7 @@ RequestMonitoring = namedbuffer(
 )
 
 
-UpdatePFS = namedbuffer(
+PFSCapacityUpdate = namedbuffer(
     "update_pfs",
     [
         chain_id,

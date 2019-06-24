@@ -91,7 +91,8 @@ __all__ = (
     "SignedMessage",
     "Unlock",
     "ToDevice",
-    "UpdatePFS",
+    "PFSCapacityUpdate",
+    "PFSFeeUpdate",
     "Withdraw",
     "WithdrawRequest",
     "from_dict",
@@ -1156,7 +1157,7 @@ class RequestMonitoring(SignedMessage):
 
 
 @dataclass(repr=False, eq=False)
-class UpdatePFS(SignedMessage):
+class PFSCapacityUpdate(SignedMessage):
     """ Message to inform a pathfinding service about a capacity change. """
 
     canonical_identifier: CanonicalIdentifier
@@ -1173,7 +1174,7 @@ class UpdatePFS(SignedMessage):
             self.signature = EMPTY_SIGNATURE
 
     @classmethod
-    def from_channel_state(cls, channel_state: NettingChannelState) -> "UpdatePFS":
+    def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
         # pylint: disable=unexpected-keyword-arg
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
@@ -1192,7 +1193,7 @@ class UpdatePFS(SignedMessage):
         )
 
     def packed(self) -> bytes:
-        klass = messages.UpdatePFS
+        klass = messages.PFSCapacityUpdate
         data = buffer_for(klass)
         packed = klass(data)
         self.pack(packed)
@@ -1213,7 +1214,7 @@ class UpdatePFS(SignedMessage):
 
 
 @dataclass
-class FeeUpdate(SignedMessage):
+class PFSFeeUpdate(SignedMessage):
     """Informs the PFS of mediation fees demanded by the client"""
 
     canonical_identifier: CanonicalIdentifier

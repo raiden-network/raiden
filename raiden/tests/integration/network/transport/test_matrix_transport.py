@@ -17,7 +17,7 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Delivered, FeeUpdate, Processed, SecretRequest, ToDevice
+from raiden.messages import Delivered, PFSFeeUpdate, Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -641,7 +641,7 @@ def test_pfs_global_messages(
     route_mode,
 ):
     """
-    Test that RaidenService sends UpdatePFS messages to global
+    Test that RaidenService sends PFSCapacityUpdate messages to global
     PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
@@ -671,7 +671,7 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    # send UpdatePFS
+    # send PFSCapacityUpdate
     balance_proof = factories.create(HOP1_BALANCE_PROOF)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
@@ -690,9 +690,9 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 1
 
-    # send FeeUpdate
+    # send PFSFeeUpdate
     channel_state = factories.create(factories.NettingChannelStateProperties())
-    fee_update = FeeUpdate.from_channel_state(channel_state)
+    fee_update = PFSFeeUpdate.from_channel_state(channel_state)
     fee_update.sign(raiden_service.signer)
     raiden_service.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
     with gevent.Timeout(2):
@@ -700,7 +700,7 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 2
     msg_data = json.loads(pfs_room.send_text.call_args[0][0])
-    assert msg_data["_type"] == "raiden.messages.FeeUpdate"
+    assert msg_data["_type"] == "raiden.messages.PFSFeeUpdate"
 
     transport.stop()
     transport.get()

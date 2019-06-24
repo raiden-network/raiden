@@ -14,7 +14,7 @@ from raiden.constants import (
     PATH_FINDING_BROADCASTING_ROOM,
     RoutingMode,
 )
-from raiden.messages import FeeUpdate
+from raiden.messages import PFSFeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.services import update_path_finding_service_from_channel_state
 from raiden.storage.restore import (
@@ -140,7 +140,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
 
         # Tell PFS about fees for this channel, when not in private mode
         if raiden.routing_mode != RoutingMode.PRIVATE:
-            fee_update = FeeUpdate.from_channel_state(channel_state)
+            fee_update = PFSFeeUpdate.from_channel_state(channel_state)
             fee_update.sign(raiden.signer)
             # Appends message to queue, so it's not blocking
             raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
