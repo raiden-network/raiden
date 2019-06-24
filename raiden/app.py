@@ -4,11 +4,8 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.network.proxies.service_registry import ServiceRegistry
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.raiden_service import RaidenService
+from raiden.raiden_service import RaidenService, SmartContractsProxiesBundle
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
@@ -21,8 +18,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     PRODUCTION_CONTRACT_VERSION,
 )
-from raiden.utils import typing
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, BlockNumber, Dict
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
@@ -63,15 +59,13 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
-        config: typing.Dict,
+        config: Dict,
         chain: BlockChainService,
-        query_start_block: typing.BlockNumber,
-        default_registry: TokenNetworkRegistry,
-        default_secret_registry: SecretRegistry,
-        default_service_registry: typing.Optional[ServiceRegistry],
-        default_one_to_n_address: typing.Optional[Address],
-        default_msc_address: Address,
+        query_start_block: BlockNumber,
         transport,
+        smart_contract_bundle: SmartContractsProxiesBundle,
+        default_one_to_n_address: Address,
+        default_msc_address: Address,
         raiden_event_handler,
         message_handler,
         routing_mode: RoutingMode,
@@ -80,10 +74,8 @@ class App:  # pylint: disable=too-few-public-methods
         raiden = RaidenService(
             chain=chain,
             query_start_block=query_start_block,
-            default_registry=default_registry,
+            smart_contract_bundle=smart_contract_bundle,
             default_one_to_n_address=default_one_to_n_address,
-            default_secret_registry=default_secret_registry,
-            default_service_registry=default_service_registry,
             default_msc_address=default_msc_address,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
@@ -94,9 +86,10 @@ class App:  # pylint: disable=too-few-public-methods
         )
 
         # check that the settlement timeout fits the limits of the contract
+        registry_proxy = smart_contract_bundle.token_network_registry
         invalid_settle_timeout = (
-            config["settle_timeout"] < default_registry.settlement_timeout_min()
-            or config["settle_timeout"] > default_registry.settlement_timeout_max()
+            config["settle_timeout"] < registry_proxy.settlement_timeout_min()
+            or config["settle_timeout"] > registry_proxy.settlement_timeout_max()
             or config["settle_timeout"] < config["reveal_timeout"] * 2
         )
         if invalid_settle_timeout:
@@ -105,9 +98,9 @@ class App:  # pylint: disable=too-few-public-methods
                     "Settlement timeout for Registry contract {} must "
                     "be in range [{}, {}], is {}"
                 ).format(
-                    to_checksum_address(default_registry.address),
-                    default_registry.settlement_timeout_min(),
-                    default_registry.settlement_timeout_max(),
+                    to_checksum_address(registry_proxy.address),
+                    registry_proxy.settlement_timeout_min(),
+                    registry_proxy.settlement_timeout_max(),
                     config["settle_timeout"],
                 )
             )

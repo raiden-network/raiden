@@ -14,6 +14,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import SmartContractsProxiesBundle
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
@@ -359,14 +360,17 @@ def create_apps(
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)
         message_handler = WaitForMessage()
 
+        smart_contract_bundle = SmartContractsProxiesBundle(
+            default_registry=registry,
+            default_secret_registry=secret_registry,
+            default_service_registry=service_registry,
+        )
         app = App(
             config=config_copy,
             chain=blockchain,
             query_start_block=BlockNumber(0),
-            default_registry=registry,
+            smart_contract_bundle=smart_contract_bundle,
             default_one_to_n_address=one_to_n_address,
-            default_secret_registry=secret_registry,
-            default_service_registry=service_registry,
             default_msc_address=monitoring_service_contract_address,
             transport=transport,
             raiden_event_handler=hold_handler,

@@ -8,6 +8,7 @@ from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import SmartContractsProxiesBundle
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -154,14 +155,17 @@ def test_recovery_unhappy_case(
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
 
+    smart_contract_bundle = SmartContractsProxiesBundle(
+        registry=app0.raiden.default_registry,
+        secret_registry=app0.raiden.default_secret_registry,
+        service_registry=app0.raiden.default_service_registry,
+    )
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
+        smart_contract_bundle=smart_contract_bundle,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        default_service_registry=app0.raiden.default_service_registry,
         default_msc_address=app0.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
@@ -214,14 +218,18 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
 
+    smart_contract_bundle = SmartContractsProxiesBundle(
+        registry=app0.raiden.default_registry,
+        secret_registry=app0.raiden.default_secret_registry,
+        service_registry=app0.raiden.default_service_registry,
+    )
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
+        smart_contract_bundle=smart_contract_bundle,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        default_service_registry=app0.raiden.default_service_registry,
         default_msc_address=app0.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,

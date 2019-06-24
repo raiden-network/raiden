@@ -219,6 +219,14 @@ class PaymentStatus(NamedTuple):
         return token_network_address == self.token_network_address and amount == self.amount
 
 
+class SmartContractsProxiesBundle(NamedTuple):
+    """A set of smart contract proxies that work together."""
+
+    token_network_registry: TokenNetworkRegistry
+    secret_registry: SecretRegistry
+    service_registry: Optional[ServiceRegistry]
+
+
 class RaidenService(Runnable):
     """ A Raiden node. """
 
@@ -226,10 +234,8 @@ class RaidenService(Runnable):
         self,
         chain: BlockChainService,
         query_start_block: BlockNumber,
-        default_registry: TokenNetworkRegistry,
-        default_secret_registry: SecretRegistry,
-        default_service_registry: Optional[ServiceRegistry],
-        default_one_to_n_address: Optional[Address],
+        smart_contract_bundle: SmartContractsProxiesBundle,
+        default_one_to_n_address: Address,
         default_msc_address: Address,
         transport,
         raiden_event_handler: EventHandler,
@@ -243,14 +249,16 @@ class RaidenService(Runnable):
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
         self.chain: BlockChainService = chain
-        self.default_registry = default_registry
         self.query_start_block = query_start_block
-        self.default_one_to_n_address = default_one_to_n_address
-        self.default_secret_registry = default_secret_registry
-        self.default_service_registry = default_service_registry
         self.default_msc_address = default_msc_address
+        self.default_one_to_n_address = default_one_to_n_address
         self.routing_mode = routing_mode
         self.config = config
+
+        self.smart_contract_bundle = smart_contract_bundle
+        self.default_registry = smart_contract_bundle.token_network_registry
+        self.default_secret_registry = smart_contract_bundle.secret_registry
+        self.default_service_registry = smart_contract_bundle.service_registry
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
         self.address = self.signer.address

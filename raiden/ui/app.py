@@ -24,6 +24,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
+from raiden.raiden_service import SmartContractsProxiesBundle
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
@@ -233,25 +234,29 @@ def run_app(
 
     message_handler = MessageHandler()
 
+    smart_contract_bundle = SmartContractsProxiesBundle(
+        token_network_registry=proxies.token_network_registry,
+        secret_registry=proxies.secret_registry,
+        service_registry=proxies.service_registry,
+    )
+    default_one_to_n_address = one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
+    default_msc_address = (
+        monitoring_service_contract_address or contracts[CONTRACT_MONITORING_SERVICE]["address"]
+    )
+    start_block = 0
+
+    if "TokenNetworkRegistry" in contracts:
+        start_block = contracts["TokenNetworkRegistry"]["block_number"]
+
     try:
-        start_block = 0
-        if "TokenNetworkRegistry" in contracts:
-            start_block = contracts["TokenNetworkRegistry"]["block_number"]
 
         raiden_app = App(
             config=config,
             chain=blockchain_service,
             query_start_block=BlockNumber(start_block),
-            default_one_to_n_address=(
-                one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
-            ),
-            default_registry=proxies.token_network_registry,
-            default_secret_registry=proxies.secret_registry,
-            default_service_registry=proxies.service_registry,
-            default_msc_address=(
-                monitoring_service_contract_address
-                or contracts[CONTRACT_MONITORING_SERVICE]["address"]
-            ),
+            smart_contract_bundle=smart_contract_bundle,
+            default_one_to_n_address=default_one_to_n_address,
+            default_msc_address=default_msc_address,
             transport=transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,

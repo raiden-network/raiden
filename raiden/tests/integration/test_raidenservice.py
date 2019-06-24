@@ -12,6 +12,7 @@ from raiden.constants import (
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import SmartContractsProxiesBundle
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -130,14 +131,17 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
 
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
+    smart_contract_bundle = SmartContractsProxiesBundle(
+        registry=app0.raiden.default_registry,
+        secret_registry=app0.raiden.default_secret_registry,
+        service_registry=app0.raiden.default_service_registry,
+    )
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
+        smart_contract_bundle=smart_contract_bundle,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        default_service_registry=app0.raiden.default_service_registry,
         default_msc_address=app0.raiden.default_msc_address,
         transport=transport,
         raiden_event_handler=raiden_event_handler,
