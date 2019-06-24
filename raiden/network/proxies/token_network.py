@@ -23,8 +23,8 @@ from raiden.constants import (
     UNLOCK_TX_GAS_LIMIT,
 )
 from raiden.exceptions import (
+    BrokenPreconditionError,
     ChannelOutdatedError,
-    DepositMismatch,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidChannelID,
@@ -682,7 +682,7 @@ class TokenNetwork:
 
         if total_deposit <= 0 and total_deposit >= UINT256_MAX:
             msg = f"Total deposit {total_deposit} is not in range [1, {UINT256_MAX}]"
-            raise RaidenUnrecoverableError(msg)
+            raise BrokenPreconditionError(msg)
 
         # A node may be setting up multiple channels for the same token
         # concurrently. Because each deposit changes the user balance this
@@ -733,7 +733,7 @@ class TokenNetwork:
             else:
                 if safety_deprecation_switch:
                     msg = "This token_network has been deprecated."
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
@@ -741,7 +741,7 @@ class TokenNetwork:
                         f"({given_block_identifier}). This call should never have "
                         f"been attempted."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 amount_to_deposit = total_deposit - our_details.deposit
 
@@ -750,18 +750,18 @@ class TokenNetwork:
                         f"Current total deposit ({our_details.deposit}) is already larger "
                         f"than the requested total deposit amount ({total_deposit})"
                     )
-                    raise DepositMismatch(msg)
+                    raise BrokenPreconditionError(msg)
 
                 total_channel_deposit = total_deposit + partner_details.deposit
                 if total_channel_deposit >= UINT256_MAX:
-                    raise RaidenUnrecoverableError("Deposit overflow")
+                    raise BrokenPreconditionError("Deposit overflow")
 
                 if total_deposit > channel_participant_deposit_limit:
                     msg = (
                         f"Deposit of {total_deposit} is larger than the "
                         f"channel participant deposit limit"
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 network_balance = self.token.balance_of(
                     Address(self.address), given_block_identifier
@@ -772,7 +772,7 @@ class TokenNetwork:
                         f"Deposit of {amount_to_deposit} will have "
                         f"exceeded the token network deposit limit."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if current_balance < amount_to_deposit:
                     msg = (
@@ -780,7 +780,7 @@ class TokenNetwork:
                         f"not be larger than the available balance {current_balance}, "
                         f"for token at address {to_checksum_address(self.token.address)}"
                     )
-                    raise DepositMismatch(msg)
+                    raise BrokenPreconditionError(msg)
 
                 log_details = {
                     "node": to_checksum_address(self.node_address),
@@ -876,7 +876,7 @@ class TokenNetwork:
                         f"triggered, or the smart contract code has an "
                         f"conditional assert."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
 
                 safety_deprecation_switch = self.safety_deprecation_switch(
                     block_identifier=failed_at_blockhash
@@ -885,7 +885,7 @@ class TokenNetwork:
                     msg = "This token_network has been deprecated."
                     raise RaidenRecoverableError(msg)
 
-                # Query the channel state when the transaction was mind
+                # Query the channel state when the transaction was mined
                 # to check for transaction races
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
@@ -969,7 +969,7 @@ class TokenNetwork:
                         f"Check concurrent deposits "
                         f"for the same token network but different proxies."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
 
                 latest_deposit = self._detail_participant(
                     channel_identifier=channel_identifier,
@@ -978,9 +978,9 @@ class TokenNetwork:
                     block_identifier=failed_at_blockhash,
                 ).deposit
                 if latest_deposit < total_deposit:
-                    raise RaidenUnrecoverableError("The tokens were not transferred")
+                    raise RaidenRecoverableError("The tokens were not transferred")
 
-                raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
+                raise RaidenRecoverableError("Unlocked failed for an unknown reason")
         else:
             # The transaction has failed, figure out why.
 
@@ -1018,81 +1018,85 @@ class TokenNetwork:
                     "The allowance is insufficient. Check concurrent deposits "
                     "for the same token network but different proxies."
                 )
-            elif has_sufficient_balance:
+                raise RaidenRecoverableError(msg)
+
+            if has_sufficient_balance:
                 msg = "The address doesnt have enough tokens"
-            else:
-                our_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
-                    partner=partner,
-                    block_identifier=failed_at_blockhash,
-                )
-                partner_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
-                    partner=partner,
-                    block_identifier=failed_at_blockhash,
-                )
+                raise RaidenRecoverableError(msg)
 
-                channel_state = self._get_channel_state(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=failed_at_blockhash,
-                    channel_identifier=channel_identifier,
-                )
-                token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=failed_at_blockhash
-                )
-                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=failed_at_blockhash
-                )
+            our_details = self._detail_participant(
+                channel_identifier=channel_identifier,
+                detail_for=self.node_address,
+                partner=partner,
+                block_identifier=failed_at_blockhash,
+            )
+            partner_details = self._detail_participant(
+                channel_identifier=channel_identifier,
+                detail_for=self.node_address,
+                partner=partner,
+                block_identifier=failed_at_blockhash,
+            )
 
-                total_channel_deposit = total_deposit + partner_details.deposit
+            channel_state = self._get_channel_state(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=failed_at_blockhash,
+                channel_identifier=channel_identifier,
+            )
+            token_network_deposit_limit = self.token_network_deposit_limit(
+                block_identifier=failed_at_blockhash
+            )
+            channel_participant_deposit_limit = self.channel_participant_deposit_limit(
+                block_identifier=failed_at_blockhash
+            )
 
-                network_balance = self.token.balance_of(
-                    Address(self.address), given_block_identifier
+            total_channel_deposit = total_deposit + partner_details.deposit
+
+            network_balance = self.token.balance_of(Address(self.address), given_block_identifier)
+
+            # Deposit was prohibited because the channel is settled
+            if channel_state == ChannelState.SETTLED:
+                msg = "Deposit is not possible due to channel being settled"
+                raise RaidenRecoverableError(msg)
+
+            # Deposit was prohibited because the channel is closed
+            if channel_state == ChannelState.CLOSED:
+                msg = "Channel is already closed"
+                raise RaidenRecoverableError(msg)
+
+            if channel_state == ChannelState.REMOVED:
+                msg = "Channel was settled and unlocked"
+                raise RaidenRecoverableError(msg)
+
+            if our_details.deposit >= total_deposit:
+                msg = "Attempted deposit has already been done"
+                raise RaidenRecoverableError(msg)
+
+            # Check if deposit is being made on a nonexistent channel
+            if channel_state == ChannelState.NONEXISTENT:
+                msg = (
+                    f"Channel between participant {to_checksum_address(self.node_address)} "
+                    f"and {to_checksum_address(partner)} does not exist"
                 )
+                raise RaidenUnrecoverableError(msg)
 
-                # Deposit was prohibited because the channel is settled
-                if channel_state == ChannelState.SETTLED:
-                    msg = "Deposit is not possible due to channel being settled"
-                    raise RaidenRecoverableError(msg)
-                # Deposit was prohibited because the channel is closed
-                elif channel_state == ChannelState.CLOSED:
-                    msg = "Channel is already closed"
-                    raise RaidenRecoverableError(msg)
-                elif channel_state == ChannelState.REMOVED:
-                    msg = "Channel was settled and unlocked"
-                    raise RaidenRecoverableError(msg)
-                elif our_details.deposit >= total_deposit:
-                    msg = "Attempted deposit has already been done"
-                    raise RaidenRecoverableError(msg)
-                # Check if deposit is being made on a nonexistent channel
-                elif channel_state == ChannelState.NONEXISTENT:
-                    msg = (
-                        f"Channel between participant {to_checksum_address(self.node_address)} "
-                        f"and {to_checksum_address(partner)} does not exist"
-                    )
-                    raise RaidenUnrecoverableError(msg)
-                elif total_channel_deposit >= UINT256_MAX:
-                    raise RaidenUnrecoverableError("Deposit overflow")
+            if total_channel_deposit >= UINT256_MAX:
+                raise RaidenRecoverableError("Deposit overflow")
 
-                elif total_deposit > channel_participant_deposit_limit:
-                    msg = (
-                        f"Deposit of {total_deposit} exceeded the "
-                        f"channel participant deposit limit"
-                    )
-                    raise RaidenRecoverableError(msg)
-                elif network_balance + amount_to_deposit > token_network_deposit_limit:
-                    msg = (
-                        f"Deposit of {amount_to_deposit} exceeded "
-                        f"the token network deposit limit."
-                    )
-                    raise RaidenRecoverableError(msg)
-
-                raise RaidenUnrecoverableError(
-                    "Deposit gas estimatation failed for unknown reasons"
+            if total_deposit > channel_participant_deposit_limit:
+                msg = (
+                    f"Deposit of {total_deposit} exceeded the "
+                    f"channel participant deposit limit"
                 )
+                raise RaidenRecoverableError(msg)
+
+            if network_balance + amount_to_deposit > token_network_deposit_limit:
+                msg = (
+                    f"Deposit of {amount_to_deposit} exceeded " f"the token network deposit limit."
+                )
+                raise RaidenRecoverableError(msg)
+
+            raise RaidenRecoverableError("Deposit gas estimatation failed for unknown reasons")
 
     def set_total_withdraw(
         self,
@@ -2013,7 +2017,7 @@ class TokenNetwork:
                 if is_unlock_done:
                     raise RaidenRecoverableError("The locks are already unlocked")
 
-                raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
+                raise RaidenRecoverableError("Unlocked failed for an unknown reason")
         else:
             # The transaction has failed, figure out why.
 
@@ -2276,7 +2280,7 @@ class TokenNetwork:
         )
         if channel_data.state == ChannelState.SETTLED:
             raise RaidenRecoverableError("Channel is already settled")
-        elif channel_data.state == ChannelState.REMOVED:
+        if channel_data.state == ChannelState.REMOVED:
             raise RaidenRecoverableError("Channel is already unlocked. It cannot be settled")
         elif channel_data.state == ChannelState.OPENED:
             raise RaidenUnrecoverableError("Channel is still open. It cannot be settled")
