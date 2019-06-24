@@ -528,6 +528,17 @@ class SecretRequest(SignedRetrieableMessage):
             signature=EMPTY_SIGNATURE,
         )
 
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"0" * 3, "bytes"),  # padding
+            (self.message_identifier, "uint64"),
+            (self.payment_identifier, "uint64"),
+            (self.secrethash, "bytes32"),
+            (self.amount, "uint256"),
+            (self.expiration, "uint256"),
+        )
+
 
 @dataclass(repr=False, eq=False)
 class Unlock(EnvelopeMessage):
