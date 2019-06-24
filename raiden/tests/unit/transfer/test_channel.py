@@ -336,7 +336,7 @@ def test_handle_action_set_fee():
     assert not result.events
 
 
-def make_hash_time_lock_state(amount):
+def make_hash_time_lock_state(amount) -> HashTimeLockState:
     return HashTimeLockState(amount=amount, expiration=5, secrethash=factories.UNIT_SECRETHASH)
 
 

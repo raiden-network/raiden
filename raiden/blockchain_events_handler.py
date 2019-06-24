@@ -42,7 +42,16 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import typing
+from raiden.utils.typing import (
+    Address,
+    BlockTimeout,
+    ChainID,
+    Optional,
+    PaymentNetworkAddress,
+    TokenAddress,
+    Tuple,
+    Union,
+)
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -65,7 +74,7 @@ def create_new_tokennetwork_state_change(event: Event) -> ContractReceiveNewToke
     args = data["args"]
     block_number = data["block_number"]
     token_network_address = args["token_network_address"]
-    token_address = typing.TokenAddress(args["token_address"])
+    token_address = TokenAddress(args["token_address"])
     block_hash = data["block_hash"]
 
     token_network_graph_state = TokenNetworkGraphState(token_network_address)
@@ -104,12 +113,12 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):  # pragma: n
 
 def create_channel_new_state_change(
     chain: "BlockChainService",
-    chain_id: typing.ChainID,
-    our_address: typing.Address,
-    payment_network_address: typing.PaymentNetworkAddress,
-    reveal_timeout: typing.BlockTimeout,
+    chain_id: ChainID,
+    our_address: Address,
+    payment_network_address: PaymentNetworkAddress,
+    reveal_timeout: BlockTimeout,
     event: Event,
-) -> typing.Tuple[StateChange, typing.Optional[typing.Address], typing.Optional[FeeUpdate]]:
+) -> Tuple[StateChange, Optional[Address], Optional[FeeUpdate]]:
     data = event.event_data
     block_number = data["block_number"]
     block_hash = data["block_hash"]
@@ -135,7 +144,7 @@ def create_channel_new_state_change(
         )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
-            token_address=typing.TokenAddress(token_address),
+            token_address=TokenAddress(token_address),
             payment_network_address=payment_network_address,
             token_network_address=token_network_address,
             reveal_timeout=reveal_timeout,
@@ -208,7 +217,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):  # pragma: no uni
 
 def create_new_balance_state_change(
     chain_state: "ChainState", event: Event
-) -> typing.Tuple[typing.Optional[ContractReceiveChannelNewBalance], bool]:
+) -> Tuple[Optional[ContractReceiveChannelNewBalance], bool]:
     data = event.event_data
     args = data["args"]
     block_number = data["block_number"]
@@ -315,7 +324,9 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
         update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
 
-def create_channel_closed_state_change(chain_state: "ChainState", event: Event):
+def create_channel_closed_state_change(
+    chain_state: "ChainState", event: Event
+) -> Union[ContractReceiveChannelClosed, ContractReceiveRouteClosed]:
     token_network_address = event.originating_contract
     data = event.event_data
     block_number = data["block_number"]
@@ -366,7 +377,7 @@ def handle_channel_closed(raiden: "RaidenService", event: Event):  # pragma: no 
 
 def create_update_transfer_state_change(
     chain_state: "ChainState", event: Event
-) -> typing.Optional[ContractReceiveUpdateTransfer]:
+) -> Optional[ContractReceiveUpdateTransfer]:
     token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
@@ -486,10 +497,10 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):  # pragma: no
 
 def create_batch_unlock_state_change(
     chain_state: "ChainState",
-    our_address: typing.Address,
+    our_address: Address,
     storage: "SerializedSQLiteStorage",
     event: Event,
-) -> typing.Optional[ContractReceiveChannelBatchUnlock]:
+) -> Optional[ContractReceiveChannelBatchUnlock]:
     token_network_address = event.originating_contract
     data = event.event_data
     args = data["args"]
