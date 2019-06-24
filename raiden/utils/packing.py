@@ -25,16 +25,13 @@ def pack_balance_proof(
     contracts expect the signed data to have.
     """
     return pack_data(
-        ["address", "uint256", "uint256", "uint256", "bytes32", "uint256", "bytes32"],
-        [
-            canonical_identifier.token_network_address,
-            canonical_identifier.chain_identifier,
-            msg_type,
-            canonical_identifier.channel_identifier,
-            balance_hash,
-            nonce,
-            additional_hash,
-        ],
+        (canonical_identifier.token_network_address, "address"),
+        (canonical_identifier.chain_identifier, "uint256"),
+        (msg_type, "uint256"),
+        (canonical_identifier.channel_identifier, "uint256"),
+        (balance_hash, "bytes32"),
+        (nonce, "uint256"),
+        (additional_hash, "bytes32"),
     )
 
 
@@ -72,16 +69,13 @@ def pack_reward_proof(
     token_network_address = canonical_identifier.token_network_address
     chain_id = canonical_identifier.chain_identifier
     return pack_data(
-        ["address", "uint256", "uint256", "uint256", "uint256", "address", "uint256"],
-        [
-            monitoring_service_contract_address,
-            chain_id,
-            MessageTypeId.MSReward,
-            channel_identifier,
-            reward_amount,
-            token_network_address,
-            nonce,
-        ],
+        (monitoring_service_contract_address, "address"),
+        (chain_id, "uint256"),
+        (MessageTypeId.MSReward, "uint256"),
+        (channel_identifier, "uint256"),
+        (reward_amount, "uint256"),
+        (token_network_address, "address"),
+        (nonce, "uint256"),
     )
 
 
@@ -100,13 +94,10 @@ def pack_withdraw(
     total_withdraw
     """
     return pack_data(
-        ["address", "uint256", "uint256", "uint256", "address", "uint256"],
-        [
-            canonical_identifier.token_network_address,
-            canonical_identifier.chain_identifier,
-            MessageTypeId.WITHDRAW,
-            canonical_identifier.channel_identifier,
-            participant,
-            total_withdraw,
-        ],
+        (canonical_identifier.token_network_address, "address"),
+        (canonical_identifier.chain_identifier, "uint256"),
+        (MessageTypeId.WITHDRAW, "uint256"),
+        (canonical_identifier.channel_identifier, "uint256"),
+        (participant, "address"),
+        (total_withdraw, "uint256"),
     )
