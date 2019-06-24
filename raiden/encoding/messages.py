@@ -209,23 +209,6 @@ RequestMonitoring = namedbuffer(
 )
 
 
-PFSCapacityUpdate = namedbuffer(
-    "update_pfs",
-    [
-        chain_id,
-        token_network_address,
-        channel_identifier,
-        updating_participant,
-        other_participant,
-        updating_nonce,
-        other_nonce,
-        updating_capacity,
-        other_capacity,
-        reveal_timeout,
-        signature,
-    ],
-)
-
 ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier, signature])
 
 WithdrawRequest = namedbuffer(

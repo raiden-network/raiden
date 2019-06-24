@@ -1160,6 +1160,14 @@ class PFSCapacityUpdate(SignedMessage):
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
         # pylint: disable=unexpected-keyword-arg
@@ -1179,25 +1187,19 @@ class PFSCapacityUpdate(SignedMessage):
             signature=EMPTY_SIGNATURE,
         )
 
-    def packed(self) -> bytes:
-        klass = messages.PFSCapacityUpdate
-        data = buffer_for(klass)
-        packed = klass(data)
-        self.pack(packed)
-        return packed
-
-    def pack(self, packed) -> None:
-        packed.chain_id = self.canonical_identifier.chain_identifier
-        packed.token_network_address = self.canonical_identifier.token_network_address
-        packed.channel_identifier = self.canonical_identifier.channel_identifier
-        packed.updating_participant = self.updating_participant
-        packed.other_participant = self.other_participant
-        packed.updating_nonce = self.updating_nonce
-        packed.other_nonce = self.other_nonce
-        packed.updating_capacity = self.updating_capacity
-        packed.other_capacity = self.other_capacity
-        packed.reveal_timeout = self.reveal_timeout
-        packed.signature = self.signature
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.canonical_identifier.chain_identifier, "uint256"),
+            (self.canonical_identifier.token_network_address, "address"),
+            (self.canonical_identifier.channel_identifier, "uint256"),
+            (self.updating_participant, "address"),
+            (self.other_participant, "address"),
+            (self.updating_nonce, "uint64"),
+            (self.other_nonce, "uint64"),
+            (self.updating_capacity, "uint256"),
+            (self.other_capacity, "uint256"),
+            (self.reveal_timeout, "uint256"),
+        )
 
 
 @dataclass
