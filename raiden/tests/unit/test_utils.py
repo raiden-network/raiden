@@ -96,10 +96,10 @@ def test_get_http_rtt():
 
 
 def test_pack_data():
-    assert pack_data(["string", "uint32"], ["Test", 49]) == b"Test\x00\x00\x001"
+    assert pack_data(("Test", "string"), (49, "uint32")) == b"Test\x00\x00\x001"
 
     with pytest.raises(ValueError):
-        pack_data(["uint256", "address"], [13])
+        pack_data((13, "uint256"), ("address"))
 
     with pytest.raises(TypeError):
-        pack_data(["uint256", "uint256"], [256, "This is not a uint256"])
+        pack_data((256, "uint256"), ("This is not a uint256", "uint256"))
