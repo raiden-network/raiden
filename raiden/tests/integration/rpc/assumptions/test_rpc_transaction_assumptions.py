@@ -56,18 +56,36 @@ def test_transact_opcode_oog(deploy_client):
     assert check_transaction_threw(deploy_client, transaction), "must not be empty"
 
 
-GAS_PRICE = 1_000_000_000
-GAS_DEPLOY = 213105 * GAS_PRICE
-GAS_LOOP = 93864 * GAS_PRICE
-GAS_ACCOUNT_FAIL = GAS_DEPLOY + GAS_LOOP // 2
+GETH_GAS_PRICE = 1_000_000_000
+GETH_GAS_DEPLOY = 213105 * GETH_GAS_PRICE
+GETH_GAS_LOOP = 93864 * GETH_GAS_PRICE
+GETH_GAS_ACCOUNT_FAIL = GETH_GAS_DEPLOY + GETH_GAS_LOOP // 2
+PARITY_GAS_ACCOUNT_FAIL = GETH_GAS_ACCOUNT_FAIL * 4
 
 
-@pytest.mark.parametrize("account_genesis_eth_balance", [GAS_ACCOUNT_FAIL])
-def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
+@pytest.mark.parametrize("account_genesis_eth_balance", [GETH_GAS_ACCOUNT_FAIL])
+def test_geth_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(
+    deploy_client, skip_if_not_geth  # pylint: disable=unused-argument
+):
     """ The gas estimation does not fail if the transaction execution requires
     more gas then the account's eth balance. However sending the transaction
     will.
     """
+    run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client)
+
+
+@pytest.mark.parametrize("account_genesis_eth_balance", [PARITY_GAS_ACCOUNT_FAIL])
+def test_parity_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(
+    deploy_client, skip_if_not_parity  # pylint: disable=unused-argument
+):
+    """ The gas estimation does not fail if the transaction execution requires
+    more gas then the account's eth balance. However sending the transaction
+    will.
+    """
+    run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client)
+
+
+def run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     check_block = deploy_client.get_checking_block()
