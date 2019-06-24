@@ -18,12 +18,12 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions, log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     BlockSpecification,
     Dict,
@@ -36,6 +36,11 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.network.blockchain_service import BlockChainService
+
+
 log = structlog.get_logger(__name__)
 
 
@@ -45,6 +50,7 @@ class TokenNetworkRegistry:
         jsonrpc_client,
         registry_address: PaymentNetworkAddress,
         contract_manager: ContractManager,
+        blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress("Expected binary address format for token network registry")
@@ -69,6 +75,8 @@ class TokenNetworkRegistry:
         )
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
+
+        self.blockchain_service = blockchain_service
 
         self.address = registry_address
         self.proxy = proxy
@@ -124,11 +132,7 @@ class TokenNetworkRegistry:
         if not is_binary_address(token_address):
             raise InvalidAddress("Expected binary address format for token")
 
-        token_proxy = Token(
-            jsonrpc_client=self.client,
-            token_address=token_address,
-            contract_manager=self.contract_manager,
-        )
+        token_proxy = self.blockchain_service.token(token_address)
 
         if token_proxy.total_supply() == "":
             raise InvalidToken(
