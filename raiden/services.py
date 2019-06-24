@@ -5,7 +5,7 @@ from eth_utils import to_checksum_address
 
 from raiden import constants
 from raiden.constants import RoutingMode
-from raiden.messages import RequestMonitoring, UpdatePFS
+from raiden.messages import PFSCapacityUpdate, RequestMonitoring
 from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
@@ -43,7 +43,7 @@ def update_path_finding_service_from_channel_state(
     if raiden.routing_mode == RoutingMode.PRIVATE:
         return
 
-    msg = UpdatePFS.from_channel_state(channel_state)
+    msg = PFSCapacityUpdate.from_channel_state(channel_state)
     msg.sign(raiden.signer)
     raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
     log.debug("Sent a PFS Update", message=msg, channel_state=channel_state)

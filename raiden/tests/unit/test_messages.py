@@ -6,14 +6,14 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
     Delivered,
-    FeeUpdate,
+    PFSCapacityUpdate,
+    PFSFeeUpdate,
     Ping,
     Processed,
     RequestMonitoring,
     RevealSecret,
     SecretRequest,
     SignedBlindedBalanceProof,
-    UpdatePFS,
 )
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
@@ -125,7 +125,7 @@ def test_update_pfs():
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
-    message = UpdatePFS.from_channel_state(channel_state=channel_state)
+    message = PFSCapacityUpdate.from_channel_state(channel_state=channel_state)
 
     assert message.signature == EMPTY_SIGNATURE
     privkey2, address2 = factories.make_privkey_address()
@@ -138,7 +138,7 @@ def test_update_pfs():
 
 def test_fee_update():
     channel_state = factories.create(factories.NettingChannelStateProperties())
-    message = FeeUpdate.from_channel_state(channel_state)
+    message = PFSFeeUpdate.from_channel_state(channel_state)
     message.sign(signer)
 
     assert message == DictSerializer.deserialize(DictSerializer.serialize(message))
