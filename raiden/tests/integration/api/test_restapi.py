@@ -1449,6 +1449,8 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
         "total_deposit": balance_working,
     }
 
+    gevent.sleep(2)
+
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
@@ -1487,8 +1489,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     response = response.json()
     assert (
         response["errors"]
-        == "The additional deposit of 75000000000000001 will exceed the channel "
-        "participant limit of 75000000000000000"
+        == "Deposit of 75000000000000001 is larger than the channel participant deposit limit"
     )
 
 
