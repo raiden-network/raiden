@@ -5,12 +5,7 @@ from gevent import Greenlet
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.constants import (
-    GENESIS_BLOCK_NUMBER,
-    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    UINT256_MAX,
-    Environment,
-)
+from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -40,7 +35,11 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    BalanceProofSignedState,
+    NettingChannelState,
+)
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -533,11 +532,6 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise InvalidAddress("No channel with partner_address for the given token")
 
-        if self.raiden.config["environment_type"] == Environment.PRODUCTION:
-            per_token_network_deposit_limit = RED_EYES_PER_TOKEN_NETWORK_LIMIT
-        else:
-            per_token_network_deposit_limit = UINT256_MAX
-
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(token_address)
@@ -546,44 +540,35 @@ class RaidenAPI:  # pragma: no unittest
             canonical_identifier=channel_state.canonical_identifier
         )
 
-        if total_deposit == 0:
-            raise DepositMismatch("Attempted to deposit with total deposit being 0")
-
-        addendum = total_deposit - channel_state.our_state.contract_balance
-
-        total_network_balance = token.balance_of(registry_address)
-
-        if total_network_balance + addendum > per_token_network_deposit_limit:
-            raise DepositOverLimit(
-                f"The deposit of {addendum} will exceed the "
-                f"token network limit of {per_token_network_deposit_limit}"
-            )
-
-        balance = token.balance_of(self.raiden.address)
-
-        functions = token_network_proxy.proxy.contract.functions
-        deposit_limit = functions.channel_participant_deposit_limit().call()
-
-        if total_deposit > deposit_limit:
-            raise DepositOverLimit(
-                f"The additional deposit of {addendum} will exceed the "
-                f"channel participant limit of {deposit_limit}"
-            )
-
-        # If this check succeeds it does not imply the the `deposit` will
-        # succeed, since the `deposit` transaction may race with another
-        # transaction.
-        if not balance >= addendum:
-            msg = "Not enough balance to deposit. {} Available={} Needed={}".format(
-                to_checksum_address(token_address), balance, addendum
-            )
-            raise InsufficientFunds(msg)
-
-        blockhash = views.state_from_raiden(self.raiden).block_hash
+        blockhash = chain_state.block_hash
         token_network_proxy = channel_proxy.token_network
+
         safety_deprecation_switch = token_network_proxy.safety_deprecation_switch(
             block_identifier=blockhash
         )
+
+        balance = token.balance_of(self.raiden.address, block_identifier=blockhash)
+
+        network_balance = token.balance_of(
+            address=Address(token_network_address), block_identifier=blockhash
+        )
+        token_network_deposit_limit = token_network_proxy.token_network_deposit_limit(
+            block_identifier=blockhash
+        )
+
+        addendum = total_deposit - channel_state.our_state.contract_balance
+
+        channel_participant_deposit_limit = token_network_proxy.channel_participant_deposit_limit(
+            block_identifier=blockhash
+        )
+        total_channel_deposit = total_deposit + channel_state.partner_state.contract_balance
+
+        is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+
+        if not is_channel_open:
+            msg = "Channel is not in an open state."
+            raise ValueError(msg)
+
         if safety_deprecation_switch:
             msg = (
                 "This token_network has been deprecated. "
@@ -593,27 +578,31 @@ class RaidenAPI:  # pragma: no unittest
             )
             raise TokenNetworkDeprecated(msg)
 
-        network_balance = token_network_proxy.token.balance_of(
-            address=Address(self.address), block_identifier=blockhash
-        )
+        if total_deposit <= channel_state.our_state.contract_balance:
+            raise DepositMismatch("Total deposit did not increase.")
 
-        token_network_deposit_limit = token_network_proxy.token_network_deposit_limit(
-            block_identifier=blockhash
-        )
+        # If this check succeeds it does not imply the the `deposit` will
+        # succeed, since the `deposit` transaction may race with another
+        # transaction.
+        if not (balance >= addendum):
+            msg = "Not enough balance to deposit. {} Available={} Needed={}".format(
+                to_checksum_address(token_address), balance, addendum
+            )
+            raise InsufficientFunds(msg)
 
         if network_balance + addendum > token_network_deposit_limit:
-            msg = f"Deposit of {addendum} would have " f"exceeded the token network deposit limit."
+            msg = f"Deposit of {addendum} would have exceeded the token network deposit limit."
             raise DepositOverLimit(msg)
 
-        channel_participant_deposit_limit = token_network_proxy.channel_participant_deposit_limit(
-            block_identifier=blockhash
-        )
         if total_deposit > channel_participant_deposit_limit:
             msg = (
                 f"Deposit of {total_deposit} is larger than the "
                 f"channel participant deposit limit"
             )
             raise DepositOverLimit(msg)
+
+        if total_channel_deposit >= UINT256_MAX:
+            raise DepositOverLimit("Deposit overflow")
 
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum)
