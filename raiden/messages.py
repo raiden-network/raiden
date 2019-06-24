@@ -609,6 +609,25 @@ class Unlock(EnvelopeMessage):
             signature=EMPTY_SIGNATURE,
         )
 
+    @property
+    def message_hash(self) -> bytes:
+        return sha3(
+            pack_data(
+                (self.cmdid, "uint8"),
+                (b"\x00" * 3, "bytes"),  # padding
+                (self.chain_id, "uint256"),
+                (self.message_identifier, "uint64"),
+                (self.payment_identifier, "uint64"),
+                (self.token_network_address, "address"),
+                (self.secret, "bytes32"),
+                (self.nonce, "uint64"),
+                (self.channel_identifier, "uint256"),
+                (self.transferred_amount, "uint256"),
+                (self.locked_amount, "uint256"),
+                (self.locksroot, "bytes32"),
+            )
+        )
+
 
 @dataclass(repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
