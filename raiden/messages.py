@@ -377,9 +377,24 @@ class Processed(SignedRetrieableMessage):
 
     message_identifier: MessageID
 
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
     @classmethod
     def from_event(cls, event):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"0" * 3, "bytes"),  # padding
+            (self.message_identifier, "uint64"),
+        )
 
 
 @dataclass(repr=False, eq=False)

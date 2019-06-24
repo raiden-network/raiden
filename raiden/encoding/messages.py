@@ -70,8 +70,6 @@ signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-Processed = namedbuffer("processed", [cmdid(PROCESSED), pad(3), message_identifier, signature])
-
 Delivered = namedbuffer(
     "delivered", [cmdid(DELIVERED), pad(3), delivered_message_identifier, signature]
 )
@@ -240,7 +238,6 @@ Withdraw = namedbuffer(
 
 
 CMDID_MESSAGE = {
-    PROCESSED: Processed,
     PING: Ping,
     PONG: Pong,
     SECRETREQUEST: SecretRequest,
