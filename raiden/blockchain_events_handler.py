@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # noqa: F401
     from raiden.storage.sqlite import SerializedSQLiteStorage  # noqa: F401
     from raiden.transfer.state import ChainState  # noqa: F401
+    from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState  # noqa: F401
 
 
 log = structlog.get_logger(__name__)
@@ -117,8 +118,9 @@ def create_channel_new_state_change(
     our_address: Address,
     payment_network_address: PaymentNetworkAddress,
     reveal_timeout: BlockTimeout,
+    fee_schedule: "FeeScheduleState",
     event: Event,
-) -> Tuple[StateChange, Optional[Address], Optional[FeeUpdate]]:
+) -> Tuple[StateChange, Optional[Address], Optional[PFSFeeUpdate]]:
     data = event.event_data
     block_number = data["block_number"]
     block_hash = data["block_hash"]
@@ -150,7 +152,7 @@ def create_channel_new_state_change(
             reveal_timeout=reveal_timeout,
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
-            fee_schedule=replace(raiden.config["default_fee_schedule"]),
+            fee_schedule=fee_schedule,
         )
 
         state_change: StateChange = ContractReceiveChannelNew(
@@ -167,7 +169,7 @@ def create_channel_new_state_change(
             to_health_check = partner_address
 
         # Tell PFS about fees for this channel, when not in private mode
-        fee_update = FeeUpdate.from_channel_state(channel_state)
+        fee_update = PFSFeeUpdate.from_channel_state(channel_state)
 
     # Raiden node is not participant of channel
     else:
@@ -194,6 +196,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):  # pragma: no uni
         our_address=raiden.address,
         payment_network_address=raiden.default_registry.address,
         reveal_timeout=raiden.config["reveal_timeout"],
+        fee_schedule=replace(raiden.config["default_fee_schedule"]),
         event=event,
     )
 

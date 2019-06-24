@@ -24,13 +24,13 @@ from raiden.transfer.channel import (
     is_valid_balanceproof_signature,
     set_settled,
 )
-from raiden.transfer.state import PendingLocksState
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_UNUSABLE,
     HashTimeLockState,
+    PendingLocksState,
     TransactionExecutionStatus,
     UnlockPartialProofState,
 )
@@ -327,12 +327,18 @@ def test_set_settled():
 
 def test_handle_action_set_fee():
     state = factories.create(factories.NettingChannelStateProperties())
-    mediation_fee = 130
+    flat_fee = 130
+    proportional_fee = 1000
     action = ActionChannelSetFee(
-        canonical_identifier=state.canonical_identifier, mediation_fee=mediation_fee
+        canonical_identifier=state.canonical_identifier,
+        flat_fee=flat_fee,
+        proportional_fee=proportional_fee,
+        use_imbalance_penalty=False,
     )
     result = handle_action_set_fee(state, action)
-    assert result.new_state.mediation_fee == mediation_fee
+    assert result.new_state.fee_schedule.flat == flat_fee
+    assert result.new_state.fee_schedule.proportional == proportional_fee
+    assert not result.new_state.fee_schedule.imbalance_penalty
     assert not result.events
 
 
