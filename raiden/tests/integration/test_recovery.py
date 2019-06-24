@@ -128,7 +128,7 @@ def test_recovery_unhappy_case(
 
     app0.raiden.stop()
 
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(app0.raiden.transport.config)
 
     app0.stop()
 
@@ -198,7 +198,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 
     app0.raiden.stop()
 
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(app0.raiden.transport.config)
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(

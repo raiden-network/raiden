@@ -2,7 +2,7 @@ import structlog
 from eth_utils import to_checksum_address
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
-from raiden.exceptions import InvalidSettleTimeout
+from raiden.exceptions import InvalidSettleTimeout, TransportError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -21,11 +21,34 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     PRODUCTION_CONTRACT_VERSION,
 )
-from raiden.utils import typing
-from raiden.utils.typing import Address
+from raiden.utils.typing import (
+    Address,
+    BlockNumber,
+    Dict,
+    List,
+    MatrixRoomID,
+    MatrixURL,
+    NamedTuple,
+    Optional,
+)
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
+
+
+class MatrixConfiguration(NamedTuple):
+    available_servers: List[MatrixURL]
+    # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
+    #       and fix the conditional in `raiden.ui.app:_setup_matrix`
+    #       as well as the tests
+    global_rooms: List[MatrixRoomID]
+    retries_before_backoff: int
+    retry_interval: float
+    use_private_rooms: bool
+
+    def __post__init__(self):
+        if not self.available_servers:
+            raise TransportError("A matrix URL must be specified")
 
 
 class App:  # pylint: disable=too-few-public-methods
@@ -63,13 +86,13 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
-        config: typing.Dict,
+        config: Dict,
         chain: BlockChainService,
-        query_start_block: typing.BlockNumber,
+        query_start_block: BlockNumber,
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
-        default_service_registry: typing.Optional[ServiceRegistry],
-        default_one_to_n_address: typing.Optional[Address],
+        default_service_registry: Optional[ServiceRegistry],
+        default_one_to_n_address: Optional[Address],
         default_msc_address: Address,
         transport,
         raiden_event_handler,

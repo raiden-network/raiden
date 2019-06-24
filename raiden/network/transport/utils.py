@@ -1,7 +1,7 @@
 from raiden.utils.typing import Iterator
 
 
-def timeout_exponential_backoff(retries: int, timeout: int, maximum: int) -> Iterator[int]:
+def timeout_exponential_backoff(retries: int, timeout: float, maximum: float) -> Iterator[float]:
     """ Timeouts generator with an exponential backoff strategy.
     Timeouts start spaced by `timeout`, after `retries` exponentially increase
     the retry delays until `maximum`, then maximum is returned indefinitely.

@@ -301,14 +301,14 @@ def unrecoverable_error_should_crash():
 
 
 @pytest.fixture
-def transport(request):
-    """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
-    return request.config.getoption("transport")
+def transport_protocol(transport):
+    """The transport type used to run the tests."""
+    return TransportProtocol(transport)
 
 
 @pytest.fixture
-def transport_protocol(transport):
-    return TransportProtocol(transport)
+def number_of_transports():
+    return 1
 
 
 @pytest.fixture

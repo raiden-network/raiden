@@ -97,7 +97,7 @@ def start_apiserver_for_network(raiden_network, port_generator):
 
 
 def restart_app(app):
-    new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(app.raiden.transport.config)
     app = App(
         config=app.config,
         chain=app.raiden.chain,

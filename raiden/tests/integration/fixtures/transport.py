@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 
+from raiden.app import MatrixConfiguration
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.network.transport import MatrixTransport
 from raiden.tests.fixtures.variables import TransportProtocol
@@ -64,15 +65,13 @@ def matrix_transports(
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
             MatrixTransport(
-                {
-                    "global_rooms": global_rooms,
-                    "retries_before_backoff": retries_before_backoff,
-                    "retry_interval": retry_interval,
-                    "server": server,
-                    "server_name": server.netloc,
-                    "available_servers": local_matrix_servers,
-                    "private_rooms": private_rooms[transport_index],
-                }
+                MatrixConfiguration(
+                    available_servers=[server],
+                    global_rooms=global_rooms,
+                    retries_before_backoff=retries_before_backoff,
+                    retry_interval=retry_interval,
+                    use_private_rooms=private_rooms,
+                )
             )
         )
 

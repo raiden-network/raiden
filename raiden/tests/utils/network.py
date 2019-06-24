@@ -8,7 +8,7 @@ import structlog
 from eth_utils import to_checksum_address
 
 from raiden import waiting
-from raiden.app import App
+from raiden.app import App, MatrixConfiguration
 from raiden.constants import RoutingMode
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -21,9 +21,9 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
-from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     BlockTimeout,
     ChannelID,
     Iterable,
@@ -324,7 +324,7 @@ def create_apps(
     retries_before_backoff,
     environment_type,
     unrecoverable_error_should_crash,
-    local_matrix_url=None,
+    local_matrix_url,
     private_rooms=None,
     global_rooms=None,
 ):
@@ -351,26 +351,6 @@ def create_apps(
             "default_fee_schedule": FeeScheduleState(),
         }
 
-        use_matrix = local_matrix_url is not None
-        if use_matrix:
-            merge_dict(
-                config,
-                {
-                    "transport_type": "matrix",
-                    "transport": {
-                        "matrix": {
-                            "global_rooms": global_rooms,
-                            "retries_before_backoff": retries_before_backoff,
-                            "retry_interval": retry_interval,
-                            "server": local_matrix_url,
-                            "server_name": local_matrix_url.netloc,
-                            "available_servers": [],
-                            "private_rooms": private_rooms,
-                        }
-                    },
-                },
-            )
-
         config_copy = deepcopy(App.DEFAULT_CONFIG)
         config_copy.update(config)
 
@@ -385,7 +365,14 @@ def create_apps(
         if user_deposit_address:
             user_deposit = blockchain.user_deposit(user_deposit_address)
 
-        transport = MatrixTransport(config["transport"]["matrix"])
+        matrix_config = MatrixConfiguration(
+            available_servers=[local_matrix_url],
+            global_rooms=global_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            use_private_rooms=private_rooms,
+        )
+        transport = MatrixTransport(matrix_config)
 
         raiden_event_handler = RaidenEventHandler()
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)

@@ -9,6 +9,7 @@ from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
 import raiden
+from raiden.app import MatrixConfiguration
 from raiden.constants import (
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
@@ -33,7 +34,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address, List, Optional, Union
+from raiden.utils.typing import Address
 
 USERID0 = "@Arthur:RestaurantAtTheEndOfTheUniverse"
 USERID1 = "@Alice:Wonderland"
@@ -46,63 +47,6 @@ class MessageHandler:
 
     def on_message(self, _, message):
         self.bag.add(message)
-
-
-@pytest.fixture
-def mock_matrix(
-    monkeypatch,
-    retry_interval,
-    retries_before_backoff,
-    local_matrix_servers,
-    private_rooms,
-    global_rooms,
-):
-
-    from raiden.network.transport.matrix.client import User
-
-    monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
-
-    def mock_get_user(klass, user: Union[User, str]) -> User:  # pylint: disable=unused-argument
-        return User(None, USERID1)
-
-    def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
-        klass, address: Address, filter_private: bool = None
-    ) -> List[str]:
-        return ["!roomID:server"]
-
-    def mock_set_room_id_for_address(  # pylint: disable=unused-argument
-        self, address: Address, room_id: Optional[str]
-    ):
-        pass
-
-    def mock_receive_message(klass, message):  # pylint: disable=unused-argument
-        # We are just unit testing the matrix transport receive so do nothing
-        assert message
-
-    config = dict(
-        retry_interval=retry_interval,
-        retries_before_backoff=retries_before_backoff,
-        server=local_matrix_servers[0],
-        server_name=local_matrix_servers[0].netloc,
-        available_servers=[],
-        global_rooms=global_rooms,
-        private_rooms=private_rooms,
-    )
-
-    transport = MatrixTransport(config)
-    transport._raiden_service = MockRaidenService()
-    transport._stop_event.clear()
-    transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
-    transport._client.user_id = USERID0
-
-    monkeypatch.setattr(MatrixTransport, "_get_user", mock_get_user)
-    monkeypatch.setattr(
-        MatrixTransport, "_get_room_ids_for_address", mock_get_room_ids_for_address
-    )
-    monkeypatch.setattr(MatrixTransport, "_set_room_id_for_address", mock_set_room_id_for_address)
-    monkeypatch.setattr(MatrixTransport, "_receive_message", mock_receive_message)
-
-    return transport
 
 
 def ping_pong_message_success(transport0, transport1):
@@ -210,26 +154,26 @@ def make_message(overwrite_data=None):
 
 
 def test_normal_processing_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+    raiden_network, skip_userid_validation
 ):
-    m = mock_matrix
+    m = raiden_network[0].raiden.transport
     room, event = make_message()
     assert m._handle_message(room, event)
 
 
 def test_processing_invalid_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+    raiden_network, skip_userid_validation
 ):
-    m = mock_matrix
+    m = raiden_network[0].raiden.transport
     invalid_json = '{"foo": 1,'
     room, event = make_message(overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
 def test_sending_nonstring_body(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+    raiden_network, skip_userid_validation
 ):
-    m = mock_matrix
+    m = raiden_network[0].raiden.transport
     room, event = make_message(overwrite_data=b"somebinarydata")
     assert not m._handle_message(room, event)
 
@@ -238,17 +182,17 @@ def test_sending_nonstring_body(  # pylint: disable=unused-argument
     "message_input", ['{"this": 1, "message": 5, "is": 3, "not_valid": 5}', "["]
 )
 def test_processing_invalid_message_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation, message_input
+    raiden_network, skip_userid_validation, message_input
 ):
-    m = mock_matrix
+    m = raiden_network[0].raiden.transport
     room, event = make_message(overwrite_data=message_input)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argument
+    raiden_network, skip_userid_validation
 ):
-    m = mock_matrix
+    m = raiden_network[0].raiden.transport
     invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
@@ -361,17 +305,14 @@ def test_matrix_message_retry(
     """
     partner_address = factories.make_address()
 
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=[local_matrix_servers[0]],
+        global_rooms=global_rooms,
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
 
@@ -432,7 +373,7 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, global_rooms
+    private_rooms, retry_interval, retries_before_backoff, global_rooms
 ):
     """join_global_room tries to join on all servers on available_servers config
 
@@ -440,17 +381,14 @@ def test_join_invalid_discovery(
     to be handled, and if no discovery room is found on any of the available_servers, one in
     our current server should be created
     """
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": ["http://invalid.server"],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=["http://invalid.server"],
+        global_rooms=global_rooms,
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
@@ -506,17 +444,14 @@ def test_matrix_discovery_room_offline_server(
     local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
 ):
 
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0], "https://localhost:1"],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=[local_matrix_servers[0], "https://localhost:1"],
+        global_rooms=global_rooms,
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
     gevent.sleep(0.2)
 
@@ -530,17 +465,14 @@ def test_matrix_discovery_room_offline_server(
 def test_matrix_send_global(
     local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
 ):
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=[local_matrix_servers[0]],
+        global_rooms=global_rooms + [MONITORING_BROADCASTING_ROOM],
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
     gevent.idle()
 
@@ -580,17 +512,14 @@ def test_monitoring_global_messages(
     Test that RaidenService sends RequestMonitoring messages to global
     MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
     """
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=[local_matrix_servers[0]],
+        global_rooms=global_rooms + [MONITORING_BROADCASTING_ROOM],
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
@@ -647,17 +576,14 @@ def test_pfs_global_messages(
     Test that RaidenService sends PFSCapacityUpdate messages to global
     PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
     """
-    transport = MatrixTransport(
-        {
-            "global_rooms": global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
-        }
+    matrix_config = MatrixConfiguration(
+        available_servers=[local_matrix_servers[0]],
+        global_rooms=global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
+        retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
+        use_private_rooms=private_rooms,
     )
+    transport = MatrixTransport(matrix_config)
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)

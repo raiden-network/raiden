@@ -40,7 +40,7 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID
+from raiden.utils.typing import Address, ChainID, MatrixURL
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -466,7 +466,7 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     return address
 
 
-def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
+def sort_servers_closest(servers: Sequence[MatrixURL]) -> Sequence[Tuple[MatrixURL, float]]:
     """Sorts a list of servers by http round-trip time
 
     Params:
@@ -483,14 +483,14 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     )
     # these tasks should never raise, returns None on errors
     gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
-    sorted_servers: List[Tuple[str, float]] = sorted(
+    sorted_servers = sorted(
         (job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1)
     )
     log.debug("Matrix homeserver RTT times", rtt_times=sorted_servers)
     return sorted_servers
 
 
-def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
+def make_client(servers: List[MatrixURL], *args, **kwargs) -> GMatrixClient:
     """Given a list of possible servers, chooses the closest available and create a GMatrixClient
 
     Params:

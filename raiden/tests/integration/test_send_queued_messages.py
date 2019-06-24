@@ -76,7 +76,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     app0.stop()
 
     # Restart the app. The pending transfers must be processed.
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(app0.raiden.transport.config)
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
     app0_restart = App(
@@ -207,7 +207,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         default_service_registry=app0.raiden.default_service_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_msc_address=app0.raiden.default_msc_address,
-        transport=MatrixTransport(app0.raiden.config["transport"]["matrix"]),
+        transport=MatrixTransport(app0.raiden.transport.config),
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
         routing_mode=RoutingMode.PRIVATE,

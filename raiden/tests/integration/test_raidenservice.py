@@ -109,7 +109,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
 
     app0.stop()
 
-    transport = MatrixTransport(app0.config["transport"]["matrix"])
+    transport = MatrixTransport(app0.raiden.transport.config)
     transport.send_async = Mock()
     transport._send_raw = Mock()
 

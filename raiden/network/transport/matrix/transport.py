@@ -11,8 +11,9 @@ from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
+from raiden.app import MatrixConfiguration
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
-from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
+from raiden.exceptions import InvalidAddress, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import (
     Message,
@@ -135,9 +136,9 @@ class _RetryQueue(Runnable):
                 )
                 return
             timeout_generator = timeout_exponential_backoff(
-                self.transport._config["retries_before_backoff"],
-                self.transport._config["retry_interval"],
-                self.transport._config["retry_interval"] * 10,
+                self.transport._config.retries_before_backoff,
+                self.transport._config.retry_interval,
+                self.transport._config.retry_interval * 10,
             )
             expiration_generator = self._expiration_generator(timeout_generator)
             self._message_queue.append(
@@ -244,7 +245,7 @@ class _RetryQueue(Runnable):
             )
             self.transport._send_raw(self.receiver, "\n".join(message_texts))
 
-    def _run(self):
+    def _run(self, *args: Any, **kwargs: Any) -> None:
         msg = f"_RetryQueue started before transport._raiden_service is set"
         assert self.transport._raiden_service is not None, msg
         self.greenlet.name = (
@@ -260,7 +261,7 @@ class _RetryQueue(Runnable):
                 if self._message_queue:
                     self._check_and_send()
             # wait up to retry_interval (or to be notified) before checking again
-            self._notify_event.wait(self.transport._config["retry_interval"])
+            self._notify_event.wait(self.transport._config.retry_interval)
 
     def __str__(self):
         return self.greenlet.name
@@ -274,34 +275,25 @@ class MatrixTransport(Runnable):
     _room_sep = "_"
     log = log
 
-    def __init__(self, config: dict):
+    def __init__(self, config: MatrixConfiguration):
         super().__init__()
-        self._config = config
+        self.config = self._config = config
         self._raiden_service: Optional[RaidenService] = None
-
-        if config["server"] == "auto":
-            available_servers = config["available_servers"]
-        elif urlparse(config["server"]).scheme in {"http", "https"}:
-            available_servers = [config["server"]]
-        else:
-            raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
 
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return timeout_exponential_backoff(
-                config["retries_before_backoff"],
-                config["retry_interval"] / 5,
-                config["retry_interval"],
+                config.retries_before_backoff, config.retry_interval / 5, config.retry_interval
             )
 
         self._client: GMatrixClient = make_client(
-            available_servers,
+            config.available_servers,
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
         )
         self._server_url = self._client.api.base_url
-        self._server_name = config.get("server_name", urlparse(self._server_url).netloc)
+        self._server_name = urlparse(self._server_url).netloc
 
         self.greenlets: List[gevent.Greenlet] = list()
 
@@ -378,11 +370,9 @@ class MatrixTransport(Runnable):
             # this is needed so the rooms are populated before we _inventory_rooms
             self._client._handle_thread.get()
 
-        for suffix in self._config["global_rooms"]:
+        for suffix in self._config.global_rooms:
             room_name = make_room_alias(self.network_id, suffix)  # e.g. raiden_ropsten_discovery
-            room = join_global_room(
-                self._client, room_name, self._config.get("available_servers") or ()
-            )
+            room = join_global_room(self._client, room_name, self._config.available_servers)
             self._global_rooms[room_name] = room
 
         self._inventory_rooms()
@@ -549,23 +539,22 @@ class MatrixTransport(Runnable):
         self._global_send_queue.put((room, message))
         self._global_send_event.set()
 
-    def _global_send_worker(self):
+    def _global_send_worker(self) -> None:
         def _send_global(room_name, serialized_message):
-            if not any(suffix in room_name for suffix in self._config["global_rooms"]):
+            if not any(suffix in room_name for suffix in self._config.global_rooms):
                 raise RuntimeError(
                     f'Send global called on non-global room "{room_name}". '
-                    f'Known global rooms: {self._config["global_rooms"]}.'
+                    f"Known global rooms: {self._config.global_rooms}."
                 )
             room_name = make_room_alias(self.network_id, room_name)
-            if room_name not in self._global_rooms:
-                room = join_global_room(
-                    self._client, room_name, self._config.get("available_servers") or ()
-                )
+            room = self._global_rooms.get(room_name)
+
+            if room is None:
+                join_global_room(self._client, room_name, self._config.available_servers)
                 self._global_rooms[room_name] = room
 
-            assert self._global_rooms.get(room_name), f"Unknown global room: {room_name!r}"
+            assert room, "Failed to join room"
 
-            room = self._global_rooms[room_name]
             self.log.debug(
                 "Send global",
                 room_name=room_name,
@@ -593,7 +582,7 @@ class MatrixTransport(Runnable):
 
             # Stop prioritizing global messages after initial queue has been emptied
             self._prioritize_global_messages = False
-            self._global_send_event.wait(self._config["retry_interval"])
+            self._global_send_event.wait(self._config.retry_interval)
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
@@ -611,9 +600,9 @@ class MatrixTransport(Runnable):
 
     @property
     def _private_rooms(self) -> bool:
-        return bool(self._config.get("private_rooms"))
+        return self._config.use_private_rooms
 
-    def _inventory_rooms(self):
+    def _inventory_rooms(self) -> None:
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
@@ -621,7 +610,7 @@ class MatrixTransport(Runnable):
                 room_aliases.add(room.canonical_alias)
             room_alias_is_global = any(
                 global_alias in room_alias
-                for global_alias in self._config["global_rooms"]
+                for global_alias in self._config.global_rooms
                 for room_alias in room_aliases
             )
             if room_alias_is_global:
@@ -1001,10 +990,10 @@ class MatrixTransport(Runnable):
         self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
         return room
 
-    def _is_room_global(self, room):
+    def _is_room_global(self, room: Room) -> bool:
         return any(
             suffix in room_alias
-            for suffix in self._config["global_rooms"]
+            for suffix in self._config.global_rooms
             for room_alias in room.aliases
         )
 

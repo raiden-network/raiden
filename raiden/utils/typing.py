@@ -157,6 +157,12 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
 
+T_MatrixURL = str
+MatrixURL = NewType("MatrixURL", T_MatrixURL)
+
+T_MatrixRoomID = str
+MatrixRoomID = NewType("MatrixRoomID", T_MatrixRoomID)
+
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
 
