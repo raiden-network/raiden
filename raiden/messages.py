@@ -1227,26 +1227,14 @@ class FeeUpdate(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            [
-                "uint256",  # canonical_identifier
-                "address",
-                "uint256",
-                "address",  # updating participant
-                "uint256",  # fees
-                "uint256",
-                "bytes",
-                "string",  # timestamp
-            ],
-            [
-                self.canonical_identifier.chain_identifier,
-                self.canonical_identifier.token_network_address,
-                self.canonical_identifier.channel_identifier,
-                self.updating_participant,
-                self.fee_schedule.flat,
-                self.fee_schedule.proportional,
-                rlp.encode(self.fee_schedule.imbalance_penalty or 0),
-                DictSerializer.serialize(self)["timestamp"],
-            ],
+            (self.canonical_identifier.chain_identifier, "uint256"),
+            (self.canonical_identifier.token_network_address, "address"),
+            (self.canonical_identifier.channel_identifier, "uint256"),
+            (self.updating_participant, "address"),
+            (self.fee_schedule.flat, "uint256"),
+            (self.fee_schedule.proportional, "uint256"),
+            (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
+            (DictSerializer.serialize(self)["timestamp"], "string"),
         )
 
     @classmethod

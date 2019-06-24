@@ -55,16 +55,13 @@ class BalanceProof:
 
     def serialize_bin(self, msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF):
         return pack_data(
-            ["address", "uint256", "uint256", "uint256", "bytes32", "uint256", "bytes32"],
-            [
-                self.token_network_address,
-                self.chain_id,
-                msg_type.value,
-                self.channel_identifier,
-                decode_hex(self.balance_hash),
-                self.nonce,
-                decode_hex(self.additional_hash),
-            ],
+            (self.token_network_address, "address"),
+            (self.chain_id, "uint256"),
+            (msg_type.value, "uint256"),
+            (self.channel_identifier, "uint256"),
+            (decode_hex(self.balance_hash), "bytes32"),
+            (self.nonce, "uint256"),
+            (decode_hex(self.additional_hash), "bytes32"),
         )
 
     @property
