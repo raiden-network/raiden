@@ -10,7 +10,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from gevent.event import AsyncResult
-from gevent.lock import RLock, Semaphore
+from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
@@ -182,12 +182,6 @@ class TokenNetwork:
 
         # Forbids concurrent operations on the same channel
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
-
-        # Serialize concurent deposits/withdraw on this token network. This must be an
-        # exclusive lock, since we need to coordinate the approve and
-        # setTotalDeposit/setTotalWithdraw calls.
-        self.deposit_lock = Semaphore()
-        self.withdraw_lock = Semaphore()
 
     def token_address(self) -> TokenAddress:
         """ Return the token of this manager. """
@@ -698,7 +692,7 @@ class TokenNetwork:
         # transactions on-chain (account without balance). The lock
         # channel_operations_lock is not sufficient, as it allows two
         # concurrent deposits for different channels.
-        with self.channel_operations_lock[partner], self.deposit_lock, self.token.token_lock:
+        with self.channel_operations_lock[partner], self.token.token_lock:
             try:
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,
@@ -1118,7 +1112,7 @@ class TokenNetwork:
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
 
-        with self.channel_operations_lock[partner], self.withdraw_lock:
+        with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,
