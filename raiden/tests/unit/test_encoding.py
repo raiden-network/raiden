@@ -2,7 +2,7 @@ import pytest
 
 from raiden.encoding.encoders import integer
 from raiden.encoding.format import Field, make_field, namedbuffer
-from raiden.encoding.messages import SECRETREQUEST, SecretRequest, wrap
+from raiden.encoding.messages import SECRETREQUEST, wrap
 
 
 def test_integer_encoder():
@@ -43,17 +43,3 @@ def test_wrap_invalid():
     assert wrap(data=[]) is None
     assert wrap(data=[10000]) is None, "Unknown cmdid"
     assert wrap(data=[SECRETREQUEST]) is None, "Length not equal to SecretRequest.size"
-
-
-def test_wrap_and_namedbuffer():
-    valid = [SECRETREQUEST]
-    valid.extend([0] * (SecretRequest.size - 1))
-    message = wrap(data=valid)
-    assert type(message) == SecretRequest
-    assert message.amount == 0
-    assert message.message_identifier == 0
-    assert len(message) == SecretRequest.size
-    message.secrethash = b"\1"
-    assert message.secrethash[-1] == 1
-    with pytest.raises(ValueError):  # too many bytes
-        message.secrethash = b"\1" * 50
