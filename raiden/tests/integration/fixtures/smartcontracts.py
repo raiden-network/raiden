@@ -197,10 +197,15 @@ def register_token_and_return_the_network_proxy(
 ):
     registry_address = to_canonical_address(token_network_registry_address)
 
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
+
     token_network_registry_proxy = TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
         registry_address=registry_address,
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
     token_network_address = token_network_registry_proxy.add_token_with_limits(
         token_address=token_proxy.address,
