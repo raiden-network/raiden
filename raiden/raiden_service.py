@@ -26,6 +26,7 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import (
+    BrokenPreconditionError,
     InvalidAddress,
     InvalidDBData,
     InvalidSecret,
@@ -750,7 +751,7 @@ class RaidenService(Runnable):
                 log.error(str(e))
             except InvalidDBData:
                 raise
-            except RaidenUnrecoverableError as e:
+            except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
                 log_unrecoverable = (
                     self.config["environment_type"] == Environment.PRODUCTION
                     and not self.config["unrecoverable_error_should_crash"]
