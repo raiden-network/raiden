@@ -28,6 +28,7 @@ from raiden.constants import (
     UINT256_MAX,
     EthClient,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -255,6 +256,10 @@ def setup_raiden(
         client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
+    blockchain_service = BlockChainService(
+        jsonrpc_client=client, contract_manager=contract_manager
+    )
+
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
@@ -273,6 +278,7 @@ def setup_raiden(
         jsonrpc_client=client,
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
 
     if contracts_version == DEVELOPMENT_CONTRACT_VERSION:

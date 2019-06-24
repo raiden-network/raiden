@@ -7,13 +7,14 @@ from eth_utils import (
 )
 from gevent.lock import RLock
 
-from raiden.exceptions import DepositMismatch, InvalidAddress, RaidenUnrecoverableError
+from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     Balance,
     BlockSpecification,
@@ -26,6 +27,11 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.network.blockchain_service import BlockChainService
+
+
 log = structlog.get_logger(__name__)
 
 
@@ -35,6 +41,7 @@ class UserDeposit:
         jsonrpc_client: JSONRPCClient,
         user_deposit_address: Address,
         contract_manager: ContractManager,
+        blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(user_deposit_address):
             raise InvalidAddress("Expected binary address format for token nework")
@@ -49,6 +56,8 @@ class UserDeposit:
         self.node_address = self.client.address
         self.contract_manager = contract_manager
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
+
+        self.blockchain_service = blockchain_service
 
         self.proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
@@ -79,11 +88,7 @@ class UserDeposit:
         to the beneficiary's account. """
 
         token_address = self.token_address(block_identifier)
-        token = Token(
-            jsonrpc_client=self.client,
-            token_address=token_address,
-            contract_manager=self.contract_manager,
-        )
+        token = self.blockchain_service.token(token_address=token_address)
 
         log_details = {
             "beneficiary": to_checksum_address(beneficiary),
@@ -181,7 +186,7 @@ class UserDeposit:
                 f"than the requested total deposit amount {total_deposit}"
             )
             log.info("deposit failed", reason=msg, **log_details)
-            raise DepositMismatch(msg)
+            raise BrokenPreconditionError(msg)
 
         current_balance = token.balance_of(
             address=self.node_address, block_identifier=block_identifier
@@ -193,7 +198,7 @@ class UserDeposit:
                 f"for token at address {to_checksum_address(token.address)}"
             )
             log.info("deposit failed", reason=msg, **log_details)
-            raise DepositMismatch(msg)
+            raise BrokenPreconditionError(msg)
 
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
