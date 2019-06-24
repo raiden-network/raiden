@@ -10,7 +10,7 @@ from raiden.constants import (
     STATE_PRUNING_AFTER_BLOCKS,
 )
 from raiden.exceptions import (
-    DepositMismatch,
+    BrokenPreconditionError,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidChannelID,
@@ -70,7 +70,7 @@ def test_token_network_deposit_race(
         total_deposit=2,
         partner=c2_client.address,
     )
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -186,7 +186,7 @@ def test_token_network_proxy(
         )
 
     msg = "Trying a deposit to an inexisting channel must fail."
-    with pytest.raises(RaidenUnrecoverableError, message=msg):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=1,
@@ -244,7 +244,7 @@ def test_token_network_proxy(
     )
 
     msg = "set_total_deposit must fail if the amount exceed the account's balance"
-    with pytest.raises(DepositMismatch, message=msg):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -253,7 +253,7 @@ def test_token_network_proxy(
         )
 
     msg = "set_total_deposit must fail with a negative amount"
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -262,7 +262,7 @@ def test_token_network_proxy(
         )
 
     msg = "set_total_deposit must fail with a zero amount"
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -427,7 +427,7 @@ def test_token_network_proxy(
 
     msg = "depositing to a settled channel must fail"
     match = "The channel was not opened"
-    with pytest.raises(RaidenUnrecoverableError, message=msg, match=match):
+    with pytest.raises(BrokenPreconditionError, message=msg, match=match):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -633,7 +633,7 @@ def test_token_network_proxy_update_transfer(
     )
 
     # Already settled
-    with pytest.raises(RaidenUnrecoverableError) as exc:
+    with pytest.raises(BrokenPreconditionError) as exc:
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
