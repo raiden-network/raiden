@@ -34,10 +34,6 @@ other_nonce = make_field("other_nonce", 8, "8s", integer(0, UINT64_MAX))
 payment_identifier = make_field("payment_identifier", 8, "8s", integer(0, UINT64_MAX))
 chain_id = make_field("chain_id", 32, "32s", integer(0, UINT256_MAX))
 message_identifier = make_field("message_identifier", 8, "8s", integer(0, UINT64_MAX))
-current_protocol_version = make_field("current_protocol_version", 1, "1s", integer(0, 256))
-delivered_message_identifier = make_field(
-    "delivered_message_identifier", 8, "8s", integer(0, UINT64_MAX)
-)
 expiration = make_field("expiration", 32, "32s", integer(0, UINT256_MAX))
 
 token_network_address = make_field("token_network_address", 20, "20s")
@@ -69,14 +65,6 @@ message_type = make_field("message_type", 32, "32s", integer(0, UINT256_MAX))
 signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
-
-Delivered = namedbuffer(
-    "delivered", [cmdid(DELIVERED), pad(3), delivered_message_identifier, signature]
-)
-
-Ping = namedbuffer("ping", [cmdid(PING), pad(3), nonce, current_protocol_version, signature])
-
-Pong = namedbuffer("pong", [cmdid(PONG), pad(3), nonce, signature])
 
 SecretRequest = namedbuffer(
     "secret_request",
@@ -207,8 +195,6 @@ RequestMonitoring = namedbuffer(
 )
 
 
-ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier, signature])
-
 WithdrawRequest = namedbuffer(
     "withdraw_request",
     [
@@ -238,16 +224,12 @@ Withdraw = namedbuffer(
 
 
 CMDID_MESSAGE = {
-    PING: Ping,
-    PONG: Pong,
     SECRETREQUEST: SecretRequest,
     UNLOCK: Unlock,
     REVEALSECRET: RevealSecret,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
-    DELIVERED: Delivered,
     LOCKEXPIRED: LockExpired,
-    TODEVICE: ToDevice,
     WITHDRAW_REQUEST: WithdrawRequest,
     WITHDRAW: Withdraw,
 }

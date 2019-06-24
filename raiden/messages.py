@@ -409,6 +409,21 @@ class ToDevice(SignedMessage):
 
     message_identifier: MessageID
 
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"0" * 3, "bytes"),  # padding
+            (self.message_identifier, "uint64"),
+        )
+
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
@@ -426,6 +441,21 @@ class Delivered(SignedMessage):
 
     delivered_message_identifier: MessageID
 
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"0" * 3, "bytes"),  # padding
+            (self.delivered_message_identifier, "uint64"),
+        )
+
 
 @dataclass(repr=False, eq=False)
 class Pong(SignedMessage):
@@ -434,6 +464,19 @@ class Pong(SignedMessage):
     cmdid: ClassVar[int] = messages.PONG
 
     nonce: Nonce
+
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"), (b"0" * 3, "bytes"), (self.nonce, "uint64")  # padding
+        )
 
 
 @dataclass(repr=False, eq=False)
@@ -444,6 +487,22 @@ class Ping(SignedMessage):
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
+
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"0" * 3, "bytes"),  # padding
+            (self.nonce, "uint64"),
+            (self.current_protocol_version, "uint8"),
+        )
 
 
 @dataclass(repr=False, eq=False)
