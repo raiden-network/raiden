@@ -66,26 +66,6 @@ signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-
-Unlock = namedbuffer(
-    "unlock",
-    [
-        cmdid(UNLOCK),
-        pad(3),
-        chain_id,
-        message_identifier,
-        payment_identifier,
-        token_network_address,
-        secret,
-        nonce,
-        channel_identifier,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        signature,
-    ],
-)
-
 RevealSecret = namedbuffer(
     "reveal_secret", [cmdid(REVEALSECRET), pad(3), message_identifier, secret, signature]
 )
@@ -211,7 +191,6 @@ Withdraw = namedbuffer(
 
 
 CMDID_MESSAGE = {
-    UNLOCK: Unlock,
     REVEALSECRET: RevealSecret,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
