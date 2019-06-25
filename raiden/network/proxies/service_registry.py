@@ -83,7 +83,7 @@ class ServiceRegistry:
             "url": url,
         }
 
-        if len(url.strip()) == "":
+        if not url.strip():
             msg = "Invalid empty URL"
             raise BrokenPreconditionError(msg)
 
