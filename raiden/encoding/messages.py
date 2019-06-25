@@ -158,25 +158,10 @@ RequestMonitoring = namedbuffer(
 )
 
 
-Withdraw = namedbuffer(
-    "withdraw",
-    [
-        token_network_address,
-        chain_id,
-        message_type,
-        channel_identifier,
-        participant,
-        total_withdraw,
-        signature,
-    ],
-)
-
-
 CMDID_MESSAGE = {
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
     LOCKEXPIRED: LockExpired,
-    WITHDRAW: Withdraw,
 }
 
 
