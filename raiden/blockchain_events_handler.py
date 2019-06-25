@@ -8,12 +8,7 @@ from eth_utils import to_checksum_address, to_hex
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import (
-    EMPTY_HASH,
-    LOCKSROOT_OF_NO_LOCKS,
-    PATH_FINDING_BROADCASTING_ROOM,
-    RoutingMode,
-)
+from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages import PFSFeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.services import update_path_finding_service_from_channel_state
@@ -291,6 +286,15 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):  # pragma
         )
         raiden.handle_and_track_state_change(update_fee_statechange)
 
+        # Update PFS about changed fees for this channel, when not in private mode
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            chain_state=chain_state,
+            canonical_identifier=previous_channel_state.canonical_identifier,
+        )
+        msg = "Failed to find channel state after deposit"
+        assert channel_state is not None, msg
+        update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
+
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(token_network_address)
 
@@ -350,6 +354,7 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
         )
         raiden.handle_and_track_state_change(update_fee_statechange)
 
+        # Update PFS about changed fees for this channel, when not in private mode
         update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
 
