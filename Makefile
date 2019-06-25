@@ -47,7 +47,6 @@ lint: mypy mypy-all
 	isort $(ISORT_PARAMS) --diff --check-only
 	black --check --diff $(BLACK_PATHS)
 	pylint $(LINT_PATHS)
-	python setup.py check --restructuredtext --strict
 
 isort:
 	isort $(ISORT_PARAMS)
