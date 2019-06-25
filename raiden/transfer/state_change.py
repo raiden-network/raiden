@@ -399,9 +399,7 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
 
 
 @dataclass
-class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
-    """ A WithdrawRequest message received. """
-
+class ReceiveWithdrawBase(AuthenticatedSenderStateChange):
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
@@ -418,19 +416,21 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
 
 
 @dataclass
-class ReceiveWithdraw(AuthenticatedSenderStateChange):
+class ReceiveWithdrawRequest(ReceiveWithdrawBase):
     """ A Withdraw message received. """
 
-    message_identifier: MessageID
-    canonical_identifier: CanonicalIdentifier
-    total_withdraw: WithdrawAmount
-    nonce: Nonce
-    signature: Signature
+    pass
 
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
 
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.canonical_identifier.token_network_address
+@dataclass
+class ReceiveWithdraw(ReceiveWithdrawBase):
+    """ A Withdraw message was received. """
+
+    pass
+
+
+@dataclass
+class ReceiveWithdrawExpired(ReceiveWithdrawBase):
+    """ A WithdrawExpired message was received. """
+
+    pass
