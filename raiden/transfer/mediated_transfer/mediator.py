@@ -1005,8 +1005,8 @@ def mediate_transfer(
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
     )
 
-    candidate_route_states = routes.exclude_routes_from_channels(
-        route_states=candidate_route_states, channel_ids=state.refunded_channels
+    candidate_route_states = routes.filter_acceptable_routes(
+        route_states=candidate_route_states, blacklisted_channel_ids=state.refunded_channels
     )
 
     for route_state in candidate_route_states:

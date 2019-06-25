@@ -14,12 +14,14 @@ def filter_reachable_routes(
     ]
 
 
-def exclude_routes_from_channels(
-    route_states: List[RouteState], channel_ids: List[ChannelID]
+def filter_acceptable_routes(
+    route_states: List[RouteState], blacklisted_channel_ids: List[ChannelID]
 ) -> List[RouteState]:
-    """ Keeps only routes whose forward_channel is not in the given list. """
+    """ Keeps only routes whose forward_channel is not in the list of blacklisted channels """
 
-    return [route for route in route_states if route.forward_channel_id not in channel_ids]
+    return [
+        route for route in route_states if route.forward_channel_id not in blacklisted_channel_ids
+    ]
 
 
 def prune_route_table(
