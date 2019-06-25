@@ -45,6 +45,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     SendProcessed,
     SendWithdraw,
+    SendWithdrawExpired,
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -249,6 +250,16 @@ class RaidenEventHandler(EventHandler):
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
         raiden.transport.send_async(withdraw_event.queue_identifier, withdraw_message)
+
+    @staticmethod
+    def handle_send_withdrawexpired(
+        raiden: "RaidenService", withdraw_expired_event: SendWithdrawExpired
+    ):
+        withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
+        raiden.sign(withdraw_expired_message)
+        raiden.transport.send_async(
+            withdraw_expired_event.queue_identifier, withdraw_expired_message
+        )
 
     @staticmethod
     def handle_send_processed(
