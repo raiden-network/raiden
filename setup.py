@@ -36,7 +36,7 @@ class EggInfo(egg_info):
             pass
 
 
-with open("README.rst") as readme_file:
+with open("README.md") as readme_file:
     readme = readme_file.read()
 
 
