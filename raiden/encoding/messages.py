@@ -66,33 +66,6 @@ signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-
-RefundTransfer = namedbuffer(
-    "refund_transfer",
-    [
-        cmdid(REFUNDTRANSFER),
-        pad(3),
-        nonce,
-        chain_id,
-        message_identifier,
-        payment_identifier,
-        expiration,
-        token_network_address,
-        token,
-        channel_identifier,
-        recipient,
-        target,
-        initiator,
-        locksroot,
-        secrethash,
-        transferred_amount,
-        locked_amount,
-        amount,
-        fee,
-        signature,
-    ],
-)
-
 LockExpired = namedbuffer(
     "lock_expired",
     [
@@ -116,7 +89,7 @@ LockExpired = namedbuffer(
 Lock = namedbuffer("lock", [expiration, amount, secrethash])
 
 
-CMDID_MESSAGE = {REFUNDTRANSFER: RefundTransfer, LOCKEXPIRED: LockExpired}
+CMDID_MESSAGE = {LOCKEXPIRED: LockExpired}
 
 
 def wrap(data):

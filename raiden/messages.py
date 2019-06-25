@@ -1018,6 +1018,34 @@ class RefundTransfer(LockedTransfer):
             ),
         )
 
+    @property
+    def message_hash(self) -> bytes:
+        # TODO: This is the same as for LockedTransfer except for the metadata.
+        #       Refactor this into something shared.
+        return sha3(
+            pack_data(
+                (self.cmdid, "uint8"),
+                (b"\x00" * 3, "bytes"),  # padding
+                (self.nonce, "uint64"),
+                (self.chain_id, "uint256"),
+                (self.message_identifier, "uint64"),
+                (self.payment_identifier, "uint64"),
+                (self.lock.expiration, "uint256"),
+                (self.token_network_address, "address"),
+                (self.token, "address"),
+                (self.channel_identifier, "uint256"),
+                (self.recipient, "address"),
+                (self.target, "address"),
+                (self.initiator, "address"),
+                (self.locksroot, "bytes32"),
+                (self.lock.secrethash, "bytes32"),
+                (self.transferred_amount, "uint256"),
+                (self.locked_amount, "uint256"),
+                (self.lock.amount, "uint256"),
+                (self.fee, "uint256"),
+            )
+        )
+
 
 @dataclass(repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
