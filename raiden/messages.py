@@ -652,6 +652,14 @@ class RevealSecret(SignedRetrieableMessage):
             signature=EMPTY_SIGNATURE,
         )
 
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.cmdid, "uint8"),
+            (b"\x00" * 3, "bytes"),  # padding
+            (self.message_identifier, "uint64"),
+            (self.secret, "bytes32"),
+        )
+
 
 @dataclass(repr=False, eq=False)
 class WithdrawRequest(SignedRetrieableMessage):
