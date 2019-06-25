@@ -53,6 +53,15 @@ class SendWithdraw(SendMessageEvent):
 
 
 @dataclass
+class SendWithdrawExpired(SendMessageEvent):
+    """ Event used by node to expire a withdraw request."""
+
+    total_withdraw: WithdrawAmount
+    participant: Address
+    nonce: Nonce
+
+
+@dataclass
 class ContractSendChannelWithdraw(ContractSendEvent):
     """ Event emitted if node wants to withdraw from current channel balance. """
 
@@ -258,6 +267,14 @@ class EventInvalidReceivedWithdraw(Event):
     """ Event emitted when an invalid withdraw confirmation is received. """
 
     attempted_withdraw: WithdrawAmount
+    reason: str
+
+
+@dataclass
+class EventInvalidReceivedWithdrawExpired(Event):
+    """ Event emitted when an invalid withdraw expired event is received. """
+
+    total_withdraw: WithdrawAmount
     reason: str
 
 
