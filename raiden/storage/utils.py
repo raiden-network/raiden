@@ -89,10 +89,28 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 """
 
+DB_CREATE_MATRIX_USER_IDS = """
+CREATE TABLE IF NOT EXISTS matrix_user_ids (
+    address_identifier INTEGER PRIMARY KEY,
+    address BINARY NOT NULL,
+    userids TEXT NOT NULL,
+    log_time TEXT
+);
+"""
+DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES = """
+CREATE TABLE IF NOT EXISTS matrix_room_ids_and_aliases (
+    address_identifier INTEGER PRIMARY KEY,
+    address BINARY NOT NULL,
+    room_ids_to_aliases TEXT NOT NULL,
+    log_time TEXT,
+    FOREIGN KEY(address_identifier) REFERENCES matrix_user_ids(address_identifier)
+);
+"""
+
 DB_SCRIPT_CREATE_TABLES = """
 PRAGMA foreign_keys=off;
 BEGIN TRANSACTION;
-{}{}{}{}{}
+{}{}{}{}{}{}{}
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
@@ -101,4 +119,6 @@ PRAGMA foreign_keys=on;
     DB_CREATE_SNAPSHOT,
     DB_CREATE_STATE_EVENTS,
     DB_CREATE_RUNS,
+    DB_CREATE_MATRIX_USER_IDS,
+    DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES,
 )

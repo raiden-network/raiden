@@ -1,6 +1,7 @@
 import json
 import time
 from collections import defaultdict
+from datetime import datetime
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -40,6 +41,7 @@ from raiden.network.transport.matrix.utils import (
 from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state import (
@@ -343,6 +345,7 @@ class MatrixTransport(Runnable):
         self._account_data_lock = Semaphore()
 
         self._message_handler: Optional[MessageHandler] = None
+        self._storage: Optional[SerializedSQLiteStorage] = None
 
     def __repr__(self):
         if self._raiden_service is not None:
@@ -364,8 +367,12 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
+        if self._raiden_service.wal:
+            self._storage = self._raiden_service.wal.storage
+            self._address_mgr._address_to_userids = (
+                self._storage.get_matrix_userids_and_addresses()
+            )
         self._message_handler = message_handler
-
         prev_user_id: Optional[str]
         prev_access_token: Optional[str]
         if prev_auth_data and prev_auth_data.count("/") == 1:
@@ -542,6 +549,10 @@ class MatrixTransport(Runnable):
                 if validate_userid_signature(user) == node_address
             }
             self._address_mgr.add_userids_for_address(node_address, user_ids)
+
+            self._storage.write_matrix_userids_for_address(
+                node_address, list(user_ids), datetime.utcnow().isoformat(timespec="milliseconds")
+            )
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
@@ -1042,6 +1053,12 @@ class MatrixTransport(Runnable):
                     )
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
+        if self._storage:
+            self._storage.write_matrix_userids_for_address(
+                address,
+                [user.user_id for user in peers],
+                datetime.utcnow().isoformat(timespec="milliseconds"),
+            )
         self._set_room_id_for_address(address, room.room_id)
 
         if not room.listeners:
