@@ -5,7 +5,7 @@ from operator import attrgetter
 
 import rlp
 from cachetools import LRUCache, cached
-from eth_utils import big_endian_to_int, to_checksum_address, to_hex
+from eth_utils import big_endian_to_int, to_checksum_address
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -200,9 +200,7 @@ class Message:
         return not self.__eq__(other)
 
     def __repr__(self):
-        return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=to_hex(self.hash)
-        )
+        return "<{klass}>".format(klass=self.__class__.__name__)
 
     @property
     def hash(self):
@@ -210,13 +208,7 @@ class Message:
         return sha3(packed.data)
 
     def packed(self):
-        klass = messages.CMDID_MESSAGE[self.cmdid]
-        data = buffer_for(klass)
-        data[0] = self.cmdid
-        packed = klass(data)
-        self.pack(packed)
-
-        return packed
+        raise NotImplementedError
 
     def pack(self, packed) -> None:
         for f in fields(self):
@@ -1087,6 +1079,25 @@ class LockExpired(EnvelopeMessage):
             recipient=event.recipient,
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
+        )
+
+    @property
+    def message_hash(self) -> bytes:
+        return sha3(
+            pack_data(
+                (self.cmdid, "uint8"),
+                (b"\x00" * 3, "bytes"),  # padding
+                (self.nonce, "uint64"),
+                (self.chain_id, "uint256"),
+                (self.message_identifier, "uint64"),
+                (self.token_network_address, "address"),
+                (self.channel_identifier, "uint256"),
+                (self.recipient, "address"),
+                (self.locksroot, "bytes32"),
+                (self.secrethash, "bytes32"),
+                (self.transferred_amount, "uint256"),
+                (self.locked_amount, "uint256"),
+            )
         )
 
 
