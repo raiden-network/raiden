@@ -1,11 +1,11 @@
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 from operator import attrgetter
 
 import rlp
 from cachetools import LRUCache, cached
-from eth_utils import big_endian_to_int, to_checksum_address
+from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -189,29 +189,11 @@ class Message:
     # Needs to be set by a subclass
     cmdid: ClassVar[int]
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.hash == other.hash
-
-    def __hash__(self):
-        return big_endian_to_int(self.hash)
-
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __repr__(self):
         return "<{klass}>".format(klass=self.__class__.__name__)
-
-    @property
-    def hash(self):
-        packed = self.packed()
-        return sha3(packed.data)
-
-    def packed(self):
-        raise NotImplementedError
-
-    def pack(self, packed) -> None:
-        for f in fields(self):
-            setattr(packed, f.name, getattr(self, f.name))
 
 
 @dataclass(repr=False, eq=False)
@@ -231,13 +213,7 @@ class SignedMessage(AuthenticatedMessage):
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
-        packed = self.packed()
-
-        field = type(packed).fields_spec[-1]
-        assert field.name == "signature", "signature is not the last field"
-
-        # this slice must be from the end of the buffer
-        return packed.data[: -field.size_bytes]
+        raise NotImplementedError
 
     def sign(self, signer: Signer):
         """ Sign message using signer. """
@@ -303,17 +279,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
     @property
     def message_hash(self):
-        packed = self.packed()
-        klass = type(packed)
-
-        field = klass.fields_spec[-1]
-        assert field.name == "signature", "signature is not the last field"
-
-        data = packed.data
-        message_data = data[: -field.size_bytes]
-        message_hash = sha3(message_data)
-
-        return message_hash
+        raise NotImplementedError
 
     def _data_to_sign(self) -> bytes:
         balance_hash = hash_balance_data(
