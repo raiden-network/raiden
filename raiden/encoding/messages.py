@@ -2,7 +2,7 @@ import structlog
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer
-from raiden.encoding.format import make_field, namedbuffer
+from raiden.encoding.format import make_field
 
 
 def cmdid(id_):
@@ -64,5 +64,3 @@ message_type = make_field("message_type", 32, "32s", integer(0, UINT256_MAX))
 signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
-
-Lock = namedbuffer("lock", [expiration, amount, secrethash])

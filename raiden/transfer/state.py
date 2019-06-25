@@ -9,8 +9,6 @@ import networkx
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
-from raiden.encoding import messages
-from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
@@ -198,13 +196,10 @@ class HashTimeLockState(State):
         typecheck(self.expiration, T_BlockNumber)
         typecheck(self.secrethash, T_Secret)
 
-        packed = messages.Lock(buffer_for(messages.Lock))
-        # pylint: disable=assigning-non-slot
-        packed.amount = self.amount
-        packed.expiration = self.expiration
-        packed.secrethash = self.secrethash
+        from raiden.messages import Lock  # put here to avoid cyclic depenendcies
 
-        self.encoded = EncodedData(packed.data)
+        lock = Lock(amount=self.amount, expiration=self.expiration, secrethash=self.secrethash)
+        self.encoded = EncodedData(lock.as_bytes)
 
 
 @dataclass
