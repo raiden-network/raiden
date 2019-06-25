@@ -141,23 +141,6 @@ LockExpired = namedbuffer(
 Lock = namedbuffer("lock", [expiration, amount, secrethash])
 
 
-RequestMonitoring = namedbuffer(
-    "request_monitoring",
-    [
-        nonce,
-        chain_id,
-        token_network_address,
-        channel_identifier,
-        balance_hash,
-        additional_hash,
-        signature,
-        non_closing_signature,
-        reward_amount,
-        reward_proof_signature,
-    ],
-)
-
-
 CMDID_MESSAGE = {
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
