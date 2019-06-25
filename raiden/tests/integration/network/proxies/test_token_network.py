@@ -11,11 +11,9 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    DuplicatedChannelError,
     InvalidAddress,
     InvalidChannelID,
     InvalidSettleTimeout,
-    NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
@@ -216,7 +214,7 @@ def test_token_network_proxy(
     assert isinstance(channel_identifier, T_ChannelID), msg
 
     msg = "multiple channels with the same peer are not allowed"
-    with pytest.raises(DuplicatedChannelError, message=msg):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c1_token_network_proxy.new_netting_channel(
             partner=c2_client.address,
             settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
@@ -698,8 +696,6 @@ def test_token_network_actions_at_pruned_blocks(
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
 
-    c3_client = JSONRPCClient(web3, private_keys[0])
-
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
@@ -722,12 +718,6 @@ def test_token_network_actions_at_pruned_blocks(
     # Now wait until this block becomes pruned
     pruned_number = c1_chain.block_number()
     c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
-
-    # create a channel with given block being pruned, should always throw
-    with pytest.raises(NoStateForBlockIdentifier):
-        channel_identifier = c1_token_network_proxy.new_netting_channel(
-            partner=c3_client.address, settle_timeout=10, given_block_identifier=pruned_number
-        )
 
     # deposit with given block being pruned
     c1_token_network_proxy.set_total_deposit(
