@@ -283,12 +283,20 @@ class TransactionOrder(State):
 
 
 @dataclass
+class WithdrawState:
+    total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
+    nonce: Nonce
+
+
+@dataclass
 class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
     address: Address
     contract_balance: Balance
     total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
+    withdraws: List[WithdrawState] = field(repr=False, default_factory=list)
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
