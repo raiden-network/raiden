@@ -704,14 +704,14 @@ class TokenNetwork:
         - If Acc2's transaction is mined first, then Acc1 token supply is left intact.
         - If Acc1's transaction is mined first, then Acc2 will only move 3 tokens.
 
-        Races for the same account don't have any unexpeted side-effect.
+        Races for the same account don't have any unexpected side-effect.
 
         Raises:
             DepositMismatch: If the new request total deposit is lower than the
                 existing total deposit on-chain for the `given_block_identifier`.
             RaidenRecoverableError: If the channel was closed meanwhile the
                 deposit was in transit.
-            RaidenUnrecoverableError: If the transaction was sucessful and the
+            RaidenUnrecoverableError: If the transaction was successful and the
                 deposit_amount is not as large as the requested value.
             RuntimeError: If the token address is empty.
             ValueError: If an argument is of the invalid type.
@@ -852,7 +852,7 @@ class TokenNetwork:
         checking_block = self.client.get_checking_block()
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
-        # If there are channels being set up concurrenlty either the
+        # If there are channels being set up concurrently either the
         # allowance must be accumulated *or* the calls to `approve` and
         # `setTotalDeposit` must be serialized. This is necessary otherwise
         # the deposit will fail.
@@ -867,7 +867,7 @@ class TokenNetwork:
         # - setTotalDeposit
         # - setTotalDeposit
         #
-        # in which case  the second `approve` will overwrite the first,
+        # in which case the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         # making the second deposit fail.
         self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
@@ -1426,7 +1426,7 @@ class TokenNetwork:
         Raises:
             RaidenRecoverableError: If the close call failed but it is not
                 critical.
-            RaidenUnrecoverableError: If the operation was ilegal at the
+            RaidenUnrecoverableError: If the operation was illegal at the
                 `given_block_identifier` or if the channel changes in a way that
                 cannot be recovered.
         """
