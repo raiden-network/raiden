@@ -582,14 +582,13 @@ class SQLiteStorage:
             for entry in cursor
         ]
 
-    def _write_matrix_room_ids_for_address(self, room_id_data):
-        with self.write_lock, self.conn:
-            self.conn.execute(
-                "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?, ?)",
-                room_id_data,
-            )
+    def write_matrix_room_ids_for_address(self, room_id_data):
+        # FIXME
+        self.conn.execute(
+            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?, ?)", room_id_data
+        )
 
-    def _get_matrix_room_ids_aliases_for_address(self, address_identifier):
+    def get_matrix_room_ids_aliases_for_address(self, address_identifier):
         cursor = self.conn.cursor()
         cursor.execute(
             "SELECT room_ids_to_aliases, address FROM matrix_room_ids_and_aliases "
@@ -600,13 +599,13 @@ class SQLiteStorage:
         room_ids_to_aliases, stored_address = rows[0][0], rows[0][1]
         return room_ids_to_aliases, stored_address
 
-    def _write_matrix_user_ids_for_address(self, user_id_data):
-        with self.write_lock, self.conn:
-            self.conn.execute(
-                "INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?, ?) ", user_id_data
-            )
+    def write_matrix_user_ids_for_address(self, user_id_data):
+        # FIXME
+        self.conn.execute(
+            "INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?, ?) ", user_id_data
+        )
 
-    def _get_matrix_address_to_userids(self):
+    def get_matrix_address_to_userids(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT address, userids FROM matrix_user_ids")
         address_to_userids = {}
@@ -921,7 +920,7 @@ class SerializedSQLiteStorage:
         address_identifier = int(address_short, base=16)
         serialized_room_ids_to_aliases = self.serializer.serialize(room_ids_to_aliases)
         room_id_data = (address_identifier, address, serialized_room_ids_to_aliases, log_time)
-        return super()._write_matrix_room_ids_for_address(room_id_data)
+        return self.database.write_matrix_room_ids_for_address(room_id_data)
 
     def write_matrix_userids_for_address(self, address: Address, user_ids: List[str], log_time):
         """Save currently known matrix room_ids for an address. Assumes the caller has verified."""
@@ -930,12 +929,12 @@ class SerializedSQLiteStorage:
         address_identifier = int(address_short, base=16)
         serialized_userids = self.serializer.serialize(user_ids)
         user_id_data = (address_identifier, address, serialized_userids, log_time)
-        return super()._write_matrix_user_ids_for_address(user_id_data)
+        return self.database.write_matrix_user_ids_for_address(user_id_data)
 
-    def get_matrix_userids_and_addresses(self):
+    def get_matrix_userids_and_addresses(self) -> defaultdict:
         # Fixme: Type handling and conversion
-        address_to_userids = super()._get_matrix_address_to_userids()
-        returned_default_dict = defaultdict(set)
+        address_to_userids = self.database.get_matrix_address_to_userids()
+        returned_default_dict: defaultdict = defaultdict(set)
         for address, user_ids in address_to_userids.items():
             returned_default_dict[address] = set(self.serializer.deserialize(user_ids))
         return returned_default_dict
@@ -943,8 +942,8 @@ class SerializedSQLiteStorage:
     def get_matrix_roomids_for_address(self, address: Address):
         address_short = remove_0x_prefix(to_normalized_address(address))[:15]
         address_identifier = int(address_short, base=16)
-        room_ids_to_aliases, stored_address = super()._get_matrix_room_ids_aliases_for_address(
+        room_ids_aliases, stored_address = self.database.get_matrix_room_ids_aliases_for_address(
             address_identifier
         )
         assert stored_address == address
-        return self.serializer.deserialize(room_ids_to_aliases)
+        return self.serializer.deserialize(room_ids_aliases)
