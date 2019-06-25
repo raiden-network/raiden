@@ -212,10 +212,42 @@ class TokenNetwork:
             )
         )
 
+    def _token_network_deposit_limit_reached(self, block_identifier: BlockSpecification) -> bool:
+        balance = self.token.balance_of(
+            address=to_checksum_address(self.address), block_identifier=block_identifier
+        )
+        return balance >= self.token_network_deposit_limit(block_identifier=block_identifier)
+
     def safety_deprecation_switch(self, block_identifier: BlockSpecification) -> bool:
         return self.proxy.contract.functions.safety_deprecation_switch().call(
             block_identifier=block_identifier
         )
+
+    def _new_channel_preconditions(
+        self, partner: Address, given_block_identifier: BlockSpecification
+    ):
+        try:
+            channel_already_created = self._channel_exists_and_not_settled(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=given_block_identifier,
+            )
+            limit_reached = self._token_network_deposit_limit_reached(given_block_identifier)
+        except ValueError:
+            # If `given_block_identifier` has been pruned the checks cannot be
+            # performed.
+            pass
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(given_block_identifier)
+        else:
+            if channel_already_created:
+                raise BrokenPreconditionError(
+                    "A channel with the given partner address already exists."
+                )
+            if limit_reached:
+                raise BrokenPreconditionError(
+                    "Cannot open another channel, token network deposit limit has been reached."
+                )
 
     def _new_channel_postconditions(self, partner: Address, block: BlockSpecification):
         channel_created = self._channel_exists_and_not_settled(
@@ -251,19 +283,7 @@ class TokenNetwork:
             )
             raise InvalidSettleTimeout(msg)
 
-        if not self.client.can_query_state_for_block(given_block_identifier):
-            raise NoStateForBlockIdentifier(
-                "Tried to open a channel with a block identifier older than "
-                "the pruning limit. This should not happen."
-            )
-
-        channel_exists = self._channel_exists_and_not_settled(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=given_block_identifier,
-        )
-        if channel_exists:
-            raise DuplicatedChannelError("Channel with given partner address already exists")
+        self._new_channel_preconditions(partner, given_block_identifier)
 
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
