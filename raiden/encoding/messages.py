@@ -2,8 +2,7 @@ import structlog
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer
-from raiden.encoding.format import make_field, namedbuffer, pad
-from raiden.exceptions import InvalidProtocolMessage
+from raiden.encoding.format import make_field, namedbuffer
 
 
 def cmdid(id_):
@@ -66,50 +65,4 @@ signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-LockExpired = namedbuffer(
-    "lock_expired",
-    [
-        cmdid(LOCKEXPIRED),
-        pad(3),
-        nonce,
-        chain_id,
-        message_identifier,
-        token_network_address,
-        channel_identifier,
-        recipient,
-        locksroot,
-        secrethash,
-        transferred_amount,
-        locked_amount,
-        signature,
-    ],
-)
-
-
 Lock = namedbuffer("lock", [expiration, amount, secrethash])
-
-
-CMDID_MESSAGE = {LOCKEXPIRED: LockExpired}
-
-
-def wrap(data):
-    """ Try to decode data into a message, might return None if the data is invalid. """
-    try:
-        cmdid = data[0]
-    except IndexError:
-        log.warning("data is empty")
-        return None
-
-    try:
-        message_type = CMDID_MESSAGE[cmdid]
-    except KeyError:
-        log.error("unknown cmdid %s", cmdid)
-        return None
-
-    try:
-        message = message_type(data)
-    except (InvalidProtocolMessage, ValueError):
-        log.error("trying to decode invalid message")
-        return None
-
-    return message

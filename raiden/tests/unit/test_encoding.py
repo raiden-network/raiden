@@ -2,7 +2,6 @@ import pytest
 
 from raiden.encoding.encoders import integer
 from raiden.encoding.format import Field, make_field, namedbuffer
-from raiden.encoding.messages import SECRETREQUEST, wrap
 
 
 def test_integer_encoder():
@@ -37,9 +36,3 @@ def test_named_buffer_invalid_input():
         namedbuffer("field_named_data", [field_named_data, valid_field])
     with pytest.raises(ValueError):
         namedbuffer("repeated_field_name", [valid_field, valid_field])
-
-
-def test_wrap_invalid():
-    assert wrap(data=[]) is None
-    assert wrap(data=[10000]) is None, "Unknown cmdid"
-    assert wrap(data=[SECRETREQUEST]) is None, "Length not equal to SecretRequest.size"
