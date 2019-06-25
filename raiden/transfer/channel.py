@@ -32,7 +32,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     refund_from_sendmediated,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import calculate_rebalancing_fees
+from raiden.transfer.mediated_transfer.mediation_fee import calculate_imbalance_fees
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     LockedTransferUnsignedState,
@@ -64,7 +64,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionChannelSetFee,
+    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -1672,19 +1672,19 @@ def handle_action_close(
     return TransitionResult(channel_state, events)
 
 
-def handle_action_set_fee(
-    channel_state: NettingChannelState, set_fee: ActionChannelSetFee
+def handle_action_update_fee(
+    channel_state: NettingChannelState, update_fee: ActionChannelUpdateFee
 ) -> TransitionResult[NettingChannelState]:
     msg = "caller must make sure the ids match"
-    assert channel_state.canonical_identifier == set_fee.canonical_identifier, msg
+    assert channel_state.canonical_identifier == update_fee.canonical_identifier, msg
 
-    channel_state.fee_schedule.flat = set_fee.flat_fee
-    channel_state.fee_schedule.proportional = set_fee.proportional_fee
+    channel_state.fee_schedule.flat = update_fee.flat_fee
+    channel_state.fee_schedule.proportional = update_fee.proportional_fee
 
-    if set_fee.use_imbalance_penalty:
+    if update_fee.use_imbalance_penalty:
         our_balance = get_balance(channel_state.our_state, channel_state.partner_state)
         partner_balance = get_balance(channel_state.partner_state, channel_state.our_state)
-        channel_state.fee_schedule.imbalance_penalty = calculate_rebalancing_fees(
+        channel_state.fee_schedule.imbalance_penalty = calculate_imbalance_fees(
             our_balance=our_balance, partner_balance=partner_balance
         )
 
@@ -2143,9 +2143,9 @@ def state_transition(
             block_number=block_number,
             block_hash=block_hash,
         )
-    elif type(state_change) == ActionChannelSetFee:
-        assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
-        iteration = handle_action_set_fee(channel_state=channel_state, set_fee=state_change)
+    elif type(state_change) == ActionChannelUpdateFee:
+        assert isinstance(state_change, ActionChannelUpdateFee), MYPY_ANNOTATION
+        iteration = handle_action_update_fee(channel_state=channel_state, update_fee=state_change)
     elif type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
         iteration = handle_action_withdraw(

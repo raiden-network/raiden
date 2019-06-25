@@ -69,7 +69,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionChannelSetFee,
+    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
@@ -909,8 +909,7 @@ class RaidenService(Runnable):
                     proportional_fee=default_fee_schedule.proportional,
                 )
 
-                # FIXME: this should trigger an update of rebalancing fees
-                state_change = ActionChannelSetFee(
+                state_change = ActionChannelUpdateFee(
                     canonical_identifier=channel.canonical_identifier,
                     flat_fee=default_fee_schedule.flat,
                     proportional_fee=default_fee_schedule.proportional,
