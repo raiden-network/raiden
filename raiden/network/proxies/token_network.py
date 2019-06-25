@@ -26,6 +26,7 @@ from raiden.constants import (
 from raiden.exceptions import (
     BrokenPreconditionError,
     ChannelOutdatedError,
+    DepositOverLimit,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidChannelID,
@@ -256,6 +257,11 @@ class TokenNetwork:
         if channel_created:
             raise DuplicatedChannelError("Channel with given partner address already exists")
 
+        if self._token_network_deposit_limit_reached(block_identifier=block):
+            raise DepositOverLimit(
+                "Could open another channel, token network deposit limit has been reached."
+            )
+
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
     ) -> ChannelID:
@@ -270,7 +276,6 @@ class TokenNetwork:
         Returns:
             The ChannelID of the new netting channel.
         """
-        checking_block = self.client.get_checking_block()
         raise_if_invalid_address_pair(self.node_address, partner)
 
         timeout_min = self.settlement_timeout_min()
@@ -301,7 +306,7 @@ class TokenNetwork:
                 }
                 with log_transaction(log, "new_netting_channel", log_details):
                     channel_identifier = self._new_netting_channel(
-                        partner, settle_timeout, checking_block, log_details
+                        partner, settle_timeout, log_details
                     )
                     log_details["channel_identifier"] = str(channel_identifier)
             except Exception as e:
@@ -318,12 +323,9 @@ class TokenNetwork:
         return channel_identifier
 
     def _new_netting_channel(
-        self,
-        partner: Address,
-        settle_timeout: int,
-        checking_block: BlockSpecification,
-        log_details: Dict[Any, Any],
+        self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
     ) -> ChannelID:
+        checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             "openChannel",
@@ -332,15 +334,21 @@ class TokenNetwork:
             settle_timeout=settle_timeout,
         )
         if not gas_limit:
+            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at_blockhash = encode_hex(failed_at["hash"])
+            failed_at_blocknumber = failed_at["number"]
+
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
                 required_gas=self.gas_measurements["TokenNetwork.openChannel"],
-                block_identifier=checking_block,
+                block_identifier=failed_at_blocknumber,
             )
-            self._new_channel_postconditions(partner=partner, block=checking_block)
+            self._new_channel_postconditions(partner=partner, block=failed_at_blockhash)
 
-            raise RaidenUnrecoverableError("Creating a new channel will fail")
+            raise RaidenUnrecoverableError(
+                "Creating a new channel will fail - Gas estimation failed for unknown reason."
+            )
         else:
             gas_limit = safe_gas_limit(
                 gas_limit, self.gas_measurements["TokenNetwork.openChannel"]
@@ -359,7 +367,7 @@ class TokenNetwork:
                 self._new_channel_postconditions(
                     partner=partner, block=receipt_or_none["blockNumber"]
                 )
-                raise RaidenUnrecoverableError("creating new channel failed")
+                raise RaidenUnrecoverableError("Creating new channel failed.")
 
         channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address, participant2=partner, block_identifier="latest"
