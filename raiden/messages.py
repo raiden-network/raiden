@@ -9,7 +9,6 @@ from eth_utils import big_endian_to_int, to_checksum_address
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
-from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
@@ -769,13 +768,9 @@ class Lock:
     @property  # type: ignore
     @cached(_lock_bytes_cache, key=attrgetter("amount", "expiration", "secrethash"))
     def as_bytes(self):
-        packed = messages.Lock(buffer_for(messages.Lock))
-        packed.amount = self.amount
-        packed.expiration = self.expiration
-        packed.secrethash = self.secrethash
-
-        # convert bytearray to bytes
-        return bytes(packed.data)
+        return pack_data(
+            (self.expiration, "uint256"), (self.amount, "uint256"), (self.secrethash, "bytes32")
+        )
 
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("as_bytes"))
@@ -784,11 +779,10 @@ class Lock:
 
     @classmethod
     def from_bytes(cls, serialized):
-        packed = messages.Lock(serialized)
-
-        # pylint: disable=unexpected-keyword-arg
         return cls(
-            amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
+            expiration=int.from_bytes(serialized[:32], byteorder="big"),
+            amount=int.from_bytes(serialized[32:64], byteorder="big"),
+            secrethash=serialized[64:],
         )
 
 
