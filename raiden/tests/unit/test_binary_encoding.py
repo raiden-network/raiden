@@ -102,4 +102,4 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    refund_transfer.packed()  # Just test that packing works without exceptions.
+    refund_transfer._data_to_sign()  # Just test that packing works without exceptions.
