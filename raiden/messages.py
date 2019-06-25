@@ -392,7 +392,7 @@ class Processed(SignedRetrieableMessage):
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
-            (b"0" * 3, "bytes"),  # padding
+            (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
         )
 
@@ -420,7 +420,7 @@ class ToDevice(SignedMessage):
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
-            (b"0" * 3, "bytes"),  # padding
+            (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
         )
 
@@ -452,7 +452,7 @@ class Delivered(SignedMessage):
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
-            (b"0" * 3, "bytes"),  # padding
+            (b"\x00" * 3, "bytes"),  # padding
             (self.delivered_message_identifier, "uint64"),
         )
 
@@ -474,9 +474,7 @@ class Pong(SignedMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid, "uint8"), (b"0" * 3, "bytes"), (self.nonce, "uint64")  # padding
-        )
+        return pack_data((self.cmdid, "uint8"), (b"\x00" * 3, "bytes"), (self.nonce, "uint64"))
 
 
 @dataclass(repr=False, eq=False)
@@ -499,7 +497,7 @@ class Ping(SignedMessage):
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
-            (b"0" * 3, "bytes"),  # padding
+            (b"\x00" * 3, "bytes"),  # padding
             (self.nonce, "uint64"),
             (self.current_protocol_version, "uint8"),
         )
@@ -531,7 +529,7 @@ class SecretRequest(SignedRetrieableMessage):
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
-            (b"0" * 3, "bytes"),  # padding
+            (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
             (self.payment_identifier, "uint64"),
             (self.secrethash, "bytes32"),
