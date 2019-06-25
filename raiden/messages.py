@@ -901,43 +901,41 @@ class LockedTransfer(LockedTransferBase):
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
 
+    # TODO: move to SignedMessage
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+        )
+
     @property
-    def message_hash(self):
+    def message_hash(self) -> bytes:
         metadata_hash = (self.metadata and self.metadata.hash) or b""
-        packed = self.packed()
-        klass = type(packed)
-
-        field = klass.fields_spec[-1]
-        assert field.name == "signature", "signature is not the last field"
-
-        data = packed.data
-        message_data = data[: -field.size_bytes]
-        message_hash = sha3(message_data + metadata_hash)
-
-        return message_hash
-
-    def pack(self, packed) -> None:
-        packed.chain_id = self.chain_id
-        packed.message_identifier = self.message_identifier
-        packed.payment_identifier = self.payment_identifier
-        packed.nonce = self.nonce
-        packed.token_network_address = self.token_network_address
-        packed.token = self.token
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.recipient = self.recipient
-        packed.locksroot = self.locksroot
-        packed.target = self.target
-        packed.initiator = self.initiator
-        packed.fee = self.fee
-
-        lock = self.lock
-        packed.amount = lock.amount
-        packed.expiration = lock.expiration
-        packed.secrethash = lock.secrethash
-
-        packed.signature = self.signature
+        return sha3(
+            pack_data(
+                (self.cmdid, "uint8"),
+                (b"\x00" * 3, "bytes"),  # padding
+                (self.nonce, "uint64"),
+                (self.chain_id, "uint256"),
+                (self.message_identifier, "uint64"),
+                (self.payment_identifier, "uint64"),
+                (self.lock.expiration, "uint256"),
+                (self.token_network_address, "address"),
+                (self.token, "address"),
+                (self.channel_identifier, "uint256"),
+                (self.recipient, "address"),
+                (self.target, "address"),
+                (self.initiator, "address"),
+                (self.locksroot, "bytes32"),
+                (self.lock.secrethash, "bytes32"),
+                (self.transferred_amount, "uint256"),
+                (self.locked_amount, "uint256"),
+                (self.lock.amount, "uint256"),
+                (self.fee, "uint256"),
+            )
+            + metadata_hash
+        )
 
     @classmethod
     def from_event(cls, event: SendLockedTransfer) -> "LockedTransfer":
