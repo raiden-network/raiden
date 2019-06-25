@@ -63,6 +63,7 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
     ReceiveWithdraw,
+    ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
 from raiden.utils.typing import (
@@ -703,6 +704,16 @@ def handle_receive_withdraw(
     return iteration
 
 
+def handle_receive_withdraw_expired(
+    chain_state: ChainState, state_change: ReceiveWithdrawExpired
+) -> TransitionResult[ChainState]:
+    return subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=state_change.canonical_identifier,
+        state_change=state_change,
+    )
+
+
 def handle_receive_lock_expired(
     chain_state: ChainState, state_change: ReceiveLockExpired
 ) -> TransitionResult[ChainState]:
@@ -870,6 +881,9 @@ def handle_state_change(
     elif type(state_change) == ReceiveWithdraw:
         assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
         iteration = handle_receive_withdraw(chain_state, state_change)
+    elif type(state_change) == ReceiveWithdrawExpired:
+        assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_expired(chain_state, state_change)
 
     assert chain_state is not None, "chain_state must be set"
     return iteration
