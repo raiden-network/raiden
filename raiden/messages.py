@@ -14,7 +14,12 @@ from raiden.exceptions import InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.events import SendProcessed, SendWithdraw, SendWithdrawRequest
+from raiden.transfer.events import (
+    SendProcessed,
+    SendWithdraw,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -192,6 +197,8 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
         return WithdrawRequest.from_event(send_event)
     elif type(send_event) == SendWithdraw:
         return Withdraw.from_event(send_event)
+    elif type(send_event) == SendWithdrawExpired:
+        return WithdrawExpired.from_event(send_event)
     elif type(send_event) == SendProcessed:
         assert isinstance(send_event, SendProcessed), MYPY_ANNOTATION
         return Processed.from_event(send_event)
@@ -607,8 +614,8 @@ class RevealSecret(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawRequest(SignedRetrieableMessage):
-    """ Requests a signed on-chain withdraw confirmation from partner. """
+class WithdrawBase(SignedRetrieableMessage):
+    """ A base class for withdraw messages. """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
@@ -646,18 +653,11 @@ class WithdrawRequest(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class Withdraw(SignedRetrieableMessage):
-    """ Confirms withdraw to partner with a signature """
+class WithdrawRequest(WithdrawBase):
+    """ Requests a signed on-chain withdraw confirmation from partner. """
 
-    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
-
-    chain_id: ChainID
-    token_network_address: TokenNetworkAddress
-    channel_identifier: ChannelID
-    participant: Address
-    total_withdraw: WithdrawAmount
-    nonce: Nonce
 
     @classmethod
     def from_event(cls, event):
@@ -671,6 +671,18 @@ class Withdraw(SignedRetrieableMessage):
             nonce=event.nonce,
             signature=EMPTY_SIGNATURE,
         )
+
+
+@dataclass(repr=False, eq=False)
+class Withdraw(WithdrawBase):
+    """ Confirms withdraw to partner with a signature """
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW
+    message_type: ClassVar[int] = MessageTypeId.WITHDRAW
+
+
+@dataclass(repr=False, eq=False)
+class WithdrawExpired(WithdrawBase):
+    """ Notifies about withdraw expiration/cancellation from partner. """
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
