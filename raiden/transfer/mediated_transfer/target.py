@@ -273,7 +273,7 @@ def handle_block(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
-        lock_expiration_threshold=channel.get_receiver_expiration_threshold(lock),
+        lock_expiration_threshold=channel.get_receiver_expiration_threshold(lock.expiration),
     )
 
     if lock_has_expired and target_state.state != "expired":

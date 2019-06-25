@@ -915,7 +915,7 @@ def events_to_remove_expired_locks(
             lock = channel_state.our_state.secrethashes_to_unlockedlocks.get(secrethash)
 
         if lock:
-            lock_expiration_threshold = channel.get_sender_expiration_threshold(lock)
+            lock_expiration_threshold = channel.get_sender_expiration_threshold(lock.expiration)
             has_lock_expired, _ = channel.is_lock_expired(
                 end_state=channel_state.our_state,
                 lock=lock,
