@@ -47,13 +47,13 @@ class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
     Args:
-        routes: A list of possible routes provided by a routing service.
         from_hop: The payee route.
+        route_states: list of forward route states.
         from_transfer: The payee transfer.
     """
 
-    routes: List[RouteState] = field(repr=False)
     from_hop: HopState
+    route_states: List[RouteState]
     from_transfer: LockedTransferSignedState
 
     def __post_init__(self) -> None:
@@ -114,12 +114,16 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
 class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
+
+    Args:
+        is_reroute_allowed: indicates if the payment type allows for re-routing.
+            E.g, for token swaps, this should not be allowed.
     """
 
-    routes: List[RouteState] = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
+    is_reroute_allowed: bool = field(default=True)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -133,7 +137,6 @@ class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
     transfer: LockedTransferSignedState
-    routes: List[RouteState] = field(repr=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()

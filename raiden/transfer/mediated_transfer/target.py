@@ -1,9 +1,9 @@
 import random
 
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentReceivedSuccess, SendProcessed
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
@@ -90,8 +90,9 @@ def handle_inittarget(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles an ActionInitTarget state change. """
+    iteration: TransitionResult[Optional[TargetTransferState]]
     transfer = state_change.transfer
     route = state_change.from_hop
 
@@ -221,7 +222,7 @@ def handle_unlock(
     target_state: TargetTransferState,
     state_change: ReceiveUnlock,
     channel_state: NettingChannelState,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
     balance_proof_sender = state_change.balance_proof.sender
 
@@ -299,7 +300,7 @@ def handle_lock_expired(
     state_change: ReceiveLockExpired,
     channel_state: NettingChannelState,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state, state_change=state_change, block_number=block_number
@@ -325,7 +326,7 @@ def state_transition(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 

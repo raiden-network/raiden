@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -29,6 +30,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
     BalanceProofSignedStateProperties,
+    FeeScheduleStateProperties,
     LockedTransferSignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
@@ -59,6 +61,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.mediator import get_payee_channel, set_offchain_secret
 from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
@@ -77,6 +80,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
     HopState,
+    NettingChannelState,
     RouteState,
     message_identifier_from_prng,
 )
@@ -88,6 +92,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils import random_secret
+from raiden.utils.typing import FeeAmount
 
 
 def make_route_from_channelstate(channel_state):
@@ -143,8 +148,8 @@ def test_is_safe_to_wait():
     assert not is_safe, "this is expiration must not be safe"
 
 
-def test_next_route_amount():
-    """ Routes that dont have enough available_balance must be ignored. """
+def test_is_channel_usable():
+    """ Check rules that determine if a channel can be used for transfers """
     reveal_timeout = 30
     timeout_blocks = reveal_timeout + 10
     amount = UNIT_TRANSFER_AMOUNT
@@ -156,61 +161,34 @@ def test_next_route_amount():
             ),
             NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=0)),
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=amount)
+                our_state=NettingChannelEndStateProperties(balance=amount),
+                reveal_timeout=timeout_blocks,
+                settle_timeout=timeout_blocks * 2,
             ),
         ]
     )
 
-    # the first available route should be used
-    chosen_channel, _ = channel.next_channel_from_routes(
-        channels.get_routes(0), channels.channel_map, amount, timeout_blocks
+    # the first channel is usable
+    assert channel.is_channel_usable(
+        candidate_channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
     )
-    assert chosen_channel.identifier == channels[0].identifier
-
-    # additional routes do not change the order
-    chosen_channel, _ = channel.next_channel_from_routes(
-        channels.get_routes(0, 1), channels.channel_map, amount, timeout_blocks
-    )
-    assert chosen_channel.identifier == channels[0].identifier
-
-    chosen_channel, _ = channel.next_channel_from_routes(
-        channels.get_routes(2, 0), channels.channel_map, amount, timeout_blocks
-    )
-    assert chosen_channel.identifier == channels[2].identifier
 
     # a channel without capacity must be skipped
-    chosen_channel, _ = channel.next_channel_from_routes(
-        channels.get_routes(1, 0), channels.channel_map, amount, timeout_blocks
-    )
-    assert chosen_channel.identifier == channels[0].identifier
-
-
-def test_next_route_reveal_timeout():
-    """ Routes with a larger reveal timeout than timeout_blocks must be ignored. """
-    timeout_blocks = 10
-    identifiers = [make_canonical_identifier(channel_identifier=i) for i in range(1, 5)]
-
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                canonical_identifier=identifiers[0], reveal_timeout=timeout_blocks * 2
-            ),
-            NettingChannelStateProperties(
-                canonical_identifier=identifiers[1], reveal_timeout=timeout_blocks + 1
-            ),
-            NettingChannelStateProperties(
-                canonical_identifier=identifiers[2], reveal_timeout=timeout_blocks // 2
-            ),
-            NettingChannelStateProperties(
-                canonical_identifier=identifiers[3], reveal_timeout=timeout_blocks
-            ),
-        ]
+    assert not channel.is_channel_usable(
+        candidate_channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
-    chosen_channel, _ = channel.next_channel_from_routes(
-        channels.get_routes(0, 1, 2, 3), channels.channel_map, UNIT_TRANSFER_AMOUNT, timeout_blocks
+    # channel should be usable, due to lock_timeout larger than channel.reveal_timeout
+    assert channel.is_channel_usable(
+        candidate_channel_state=channels[2],
+        transfer_amount=amount,
+        lock_timeout=timeout_blocks + 1,
     )
-    assert chosen_channel.identifier == channels[2].identifier
+
+    # channel should not be usable, when lock_timeout equal or greater than channel.reveal_timeout
+    assert not channel.is_channel_usable(
+        candidate_channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
+    )
 
 
 def test_next_transfer_pair():
@@ -232,12 +210,14 @@ def test_next_transfer_pair():
         ]
     )
 
+    route_state_table = channels.get_routes()
     pair, events = mediator.forward_transfer_pair(
-        payer_transfer,
-        channels.get_routes(0),
-        channels.channel_map,
-        pseudo_random_generator,
-        block_number,
+        payer_transfer=payer_transfer,
+        route_state=route_state_table[0],
+        route_state_table=route_state_table,
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     assert pair.payer_transfer == payer_transfer
@@ -329,7 +309,7 @@ def test_events_for_refund():
     pseudo_random_generator = random.Random()
 
     our_state = factories.NettingChannelEndStateProperties(balance=amount)
-    partner_state = factories.replace(our_state, address=UNIT_TRANSFER_SENDER)
+    partner_state = replace(our_state, address=UNIT_TRANSFER_SENDER)
     refund_channel = factories.create(
         factories.NettingChannelStateProperties(our_state=our_state, partner_state=partner_state)
     )
@@ -836,21 +816,21 @@ def test_mediate_transfer():
         channels[0], LockedTransferSignedStateProperties(expiration=30)
     )
 
-    mediator_state = MediatorTransferState(
-        secrethash=UNIT_SECRETHASH, routes=channels.get_routes()
-    )
+    route_states = channels.get_routes(1)
+    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=route_states)
+
     iteration = mediator.mediate_transfer(
-        mediator_state,
-        channels.get_routes(1),
-        channels[0],
-        channels.channel_map,
-        channels.nodeaddresses_to_networkstates,
-        pseudo_random_generator,
-        payer_transfer,
-        block_number,
+        state=mediator_state,
+        candidate_route_states=route_states,
+        payer_channel=channels[0],
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=pseudo_random_generator,
+        payer_transfer=payer_transfer,
+        block_number=block_number,
     )
 
-    assert search_for_item(
+    item = search_for_item(
         iteration.events,
         SendLockedTransfer,
         {
@@ -867,6 +847,8 @@ def test_mediate_transfer():
             },
         },
     )
+
+    assert item is not None
 
 
 def test_init_mediator():
@@ -1002,9 +984,11 @@ def test_no_valid_routes():
         channels[0], LockedTransferSignedStateProperties(initiator=HOP1)
     )
 
+    state_change = mediator_make_init_action(channels, from_transfer)
+
     iteration = mediator.state_transition(
         mediator_state=None,
-        state_change=mediator_make_init_action(channels, from_transfer),
+        state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=random.Random(),
@@ -1115,7 +1099,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
 
     # C's channel with the Attacker node A2
     our_state = factories.NettingChannelEndStateProperties(balance=amount)
-    partner_state = factories.replace(our_state, address=UNIT_TRANSFER_SENDER)
+    partner_state = replace(our_state, address=UNIT_TRANSFER_SENDER)
 
     attacked_channel = factories.create(
         factories.NettingChannelStateProperties(our_state=our_state)
@@ -1139,14 +1123,18 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         ),
     )
 
-    available_routes = [factories.make_route_from_channel(attacked_channel)]
     channel_map = {
         bc_channel.identifier: bc_channel,
         attacked_channel.identifier: attacked_channel,
     }
 
     init_state_change = ActionInitMediator(
-        routes=available_routes,
+        route_states=[
+            RouteState(
+                route=[our_state.address, attacked_channel.partner_state.address],
+                forward_channel_id=attacked_channel.canonical_identifier.channel_identifier,
+            )
+        ],
         from_hop=from_hop,
         from_transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
@@ -1344,13 +1332,14 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
         [
             NettingChannelStateProperties(
                 make_canonical_identifier(channel_identifier=1),
+                our_state=NettingChannelEndStateProperties.OUR_STATE,
                 partner_state=NettingChannelEndStateProperties(
                     balance=balance, address=UNIT_TRANSFER_SENDER
                 ),
             ),
             NettingChannelStateProperties(
                 make_canonical_identifier(channel_identifier=2),
-                our_state=NettingChannelEndStateProperties(balance=balance),
+                our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=balance),
             ),
         ]
     )
@@ -1369,8 +1358,9 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 canonical_identifier=factories.make_canonical_identifier(channel_identifier=2),
                 transferred_amount=0,
                 message_identifier=index,
+                routes=[[factories.UNIT_OUR_ADDRESS, channels.channels[1].partner_state.address]],
             ),
-            compute_locksroot=True,
+            calculate_locksroot=True,
             allow_invalid=True,
             only_transfer=False,
         )
@@ -1418,7 +1408,7 @@ def test_mediator_lock_expired_with_new_block():
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        possible_routes=channels.get_routes(1),
+        candidate_route_states=channels.get_routes(0),
         payer_channel=channels[0],
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
@@ -1474,7 +1464,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        possible_routes=channels.get_routes(1),
+        candidate_route_states=channels.get_routes(1),
         payer_channel=channels[0],
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
@@ -1770,21 +1760,30 @@ def test_filter_reachable_routes():
     was unreachable and became reachable before the locked transfer expired.
     Expected result is to route the transfer through this node.
     """
+    target = factories.make_address()
     partner1 = factories.NettingChannelEndStateProperties(address=HOP1)
-    partner2 = factories.replace(partner1, address=HOP2)
+    partner2 = replace(partner1, address=HOP2)
     channel1 = factories.create(factories.NettingChannelStateProperties(partner_state=partner1))
     channel2 = factories.create(factories.NettingChannelStateProperties(partner_state=partner2))
 
     possible_routes = [
-        factories.make_route_from_channel(channel1),
-        factories.make_route_from_channel(channel2),
+        RouteState(
+            # pylint: disable=E1101
+            route=[channel1.our_state.address, partner1.address, target],
+            forward_channel_id=channel1.canonical_identifier.channel_identifier,
+        ),
+        RouteState(
+            # pylint: disable=E1101
+            route=[channel1.our_state.address, partner2.address, target],
+            forward_channel_id=channel2.canonical_identifier.channel_identifier,
+        ),
     ]
 
     # Both nodes are online
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP1, HOP2])
 
     filtered_routes = mediator.filter_reachable_routes(
-        routes=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 
     assert possible_routes[0] in filtered_routes
@@ -1794,7 +1793,7 @@ def test_filter_reachable_routes():
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP2])
 
     filtered_routes = mediator.filter_reachable_routes(
-        routes=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 
     assert possible_routes[0] not in filtered_routes
@@ -1804,7 +1803,7 @@ def test_filter_reachable_routes():
     nodeaddresses_to_networkstates = factories.make_node_availability_map([])
 
     filtered_routes = mediator.filter_reachable_routes(
-        routes=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
     )
 
     assert possible_routes[0] not in filtered_routes
@@ -1827,9 +1826,7 @@ def test_node_change_network_state_reachable_node():
     )
     setup.channels.channels.append(payer_channel)
 
-    possible_routes = [
-        factories.make_route_from_channel(channel) for channel in setup.channel_map.values()
-    ]
+    possible_routes = setup.channels.get_routes()
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
     received_transfer = factories.create(
@@ -1901,40 +1898,37 @@ def test_next_transfer_pair_with_fees_deducted():
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance + fee)
+                our_state=NettingChannelEndStateProperties(balance=balance),
+                fee_schedule=FeeScheduleState(flat=fee),
             )
         ]
     )
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
-        available_routes=channels.get_routes(0),
+        route_state=channels.get_route(0),
+        route_state_table=channels.get_routes(),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=random.Random(),
         block_number=2,
     )
+    assert pair
 
-    assert search_for_item(
-        events,
-        SendLockedTransfer,
-        {
-            "recipient": pair.payee_address,
-            "transfer": {"lock": {"amount": payer_transfer.lock.amount}},
-        },
-    )
+    event = search_for_item(events, SendLockedTransfer, {"recipient": pair.payee_address})
+    assert event.transfer.lock.amount == balance
 
 
 def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
-    fee = 5
+    fee = FeeAmount(5)
 
     end_state = factories.NettingChannelEndStateProperties(balance=amount + fee)
-    partner_state = factories.replace(end_state, address=UNIT_TRANSFER_SENDER)
-    refund_channel = factories.create(
+    partner_state = replace(end_state, address=UNIT_TRANSFER_SENDER)
+    refund_channel: NettingChannelState = factories.create(
         factories.NettingChannelStateProperties(our_state=end_state, partner_state=partner_state)
     )
 
-    refund_channel.mediation_fee = fee
+    refund_channel.fee_schedule.flat = fee
 
     transfer_data = LockedTransferSignedStateProperties(
         amount=amount + fee,
@@ -1976,27 +1970,42 @@ def test_sanity_check_for_refund_transfer_with_fees():
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                mediation_fee=UNIT_TRANSFER_FEE,
+                fee_schedule=FeeScheduleStateProperties(flat=UNIT_TRANSFER_FEE, proportional=0),
                 canonical_identifier=make_canonical_identifier(channel_identifier=1),
+                our_state=NettingChannelEndStateProperties.OUR_STATE,
                 partner_state=NettingChannelEndStateProperties(
                     balance=UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE, address=UNIT_TRANSFER_SENDER
                 ),
             ),
             NettingChannelStateProperties(
                 make_canonical_identifier(channel_identifier=2),
-                our_state=NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT - 1),
+                our_state=replace(
+                    NettingChannelEndStateProperties.OUR_STATE, balance=UNIT_TRANSFER_AMOUNT - 1
+                ),
             ),
             NettingChannelStateProperties(
                 make_canonical_identifier(channel_identifier=3),
-                our_state=NettingChannelEndStateProperties(balance=0),
+                our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=0),
             ),
         ]
     )
+
+    next_hop_address = channels[1].partner_state.address
+
     from_transfer_amount = UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE
     from_transfer = factories.make_signed_transfer_for(
-        channels[0],
-        LockedTransferSignedStateProperties(initiator=HOP1, amount=from_transfer_amount),
+        channel_state=channels[0],
+        properties=LockedTransferSignedStateProperties(
+            initiator=UNIT_TRANSFER_SENDER,
+            amount=from_transfer_amount,
+            routes=[
+                [factories.UNIT_OUR_ADDRESS, next_hop_address, factories.UNIT_TRANSFER_TARGET]
+            ],
+        ),
     )
+
+    assert from_transfer.routes[0][0] == factories.UNIT_OUR_ADDRESS, "not matching"
+    assert from_transfer.routes[0][1] == next_hop_address, "not right next hop"
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -2050,10 +2059,7 @@ def test_receive_unlock():
     )
     payee_transfer = factories.create(factories.LockedTransferUnsignedStateProperties())
     wrong_pair = MediationPairState(
-        route=RouteState([], -1),
-        payer_transfer=payer_transfer,
-        payee_address=HOP2,
-        payee_transfer=payee_transfer,
+        payer_transfer=payer_transfer, payee_address=HOP2, payee_transfer=payee_transfer
     )
     state.transfers_pair = [wrong_pair]
     iteration = mediator.state_transition(
@@ -2063,7 +2069,6 @@ def test_receive_unlock():
 
     payer_transfer = factories.create(factories.LockedTransferSignedStateProperties())
     pair = MediationPairState(
-        route=RouteState([], -1),
         payer_transfer=payer_transfer,
         payee_address=UNIT_TRANSFER_TARGET,
         payee_transfer=payee_transfer,
@@ -2081,7 +2086,7 @@ def test_receive_unlock():
     sender_state = channels[0].partner_state
     lock = HashTimeLockState(amount=10, expiration=10, secrethash=UNIT_SECRETHASH)
     sender_state.secrethashes_to_lockedlocks[factories.UNIT_SECRETHASH] = lock
-    sender_state.merkletree = factories.make_merkletree([lock.lockhash])
+    sender_state.pending_locks = factories.make_pending_locks([lock])
     sender_state.balance_proof = factories.create(
         factories.BalanceProofProperties(transferred_amount=0, locked_amount=10)
     )

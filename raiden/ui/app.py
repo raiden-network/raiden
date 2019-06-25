@@ -19,6 +19,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
+from raiden.messages import FeeScheduleState
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -39,7 +40,7 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, Endpoint, Optional, PrivateKey, Tuple
+from raiden.utils.typing import Address, ChainID, Endpoint, FeeAmount, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
@@ -50,7 +51,7 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config):
+def _setup_matrix(config: Dict, routing_mode: RoutingMode):
     if config["transport"]["matrix"].get("available_servers") is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
@@ -58,9 +59,8 @@ def _setup_matrix(config):
         log.debug("Fetching available matrix servers", available_servers=available_servers)
         config["transport"]["matrix"]["available_servers"] = available_servers
 
-    # TODO: This needs to be adjusted once #3735 gets implemented
-    # Add PFS broadcast room if enabled
-    if config["services"]["pathfinding_service_address"] is not None:
+    # Add PFS broadcast room when not in privat mode
+    if routing_mode != RoutingMode.PRIVATE:
         if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["global_rooms"]:
             config["transport"]["matrix"]["global_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
 
@@ -115,7 +115,6 @@ def run_app(
     one_to_n_contract_address: Address,
     secret_registry_contract_address: Address,
     service_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     monitoring_service_contract_address: Address,
     api_address: Endpoint,
@@ -127,7 +126,7 @@ def run_app(
     datadir: str,
     transport: str,
     matrix_server: str,
-    network_id: int,
+    network_id: ChainID,
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     pathfinding_service_address: str,
@@ -136,6 +135,9 @@ def run_app(
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
+    flat_fee: FeeAmount,
+    proportional_fee: int,
+    rebalancing_fee: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -153,11 +155,9 @@ def run_app(
     check_ethereum_client_is_supported(web3)
     check_ethereum_network_id(network_id, web3)
 
-    (address, privatekey_bin) = get_account_and_private_key(
-        account_manager, address, password_file
-    )
+    address, privatekey_bin = get_account_and_private_key(account_manager, address, password_file)
 
-    (api_host, api_port) = split_endpoint(api_address)
+    api_host, api_port = split_endpoint(api_address)
 
     config["console"] = console
     config["rpc"] = rpc
@@ -171,6 +171,8 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
+    config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
+    config["use_imbalance_penalty"] = True
 
     setup_environment(config, environment_type)
 
@@ -195,7 +197,6 @@ def run_app(
         config=config,
         tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
         secret_registry_contract_address=secret_registry_contract_address,
-        endpoint_registry_contract_address=endpoint_registry_contract_address,
         user_deposit_contract_address=user_deposit_contract_address,
         service_registry_contract_address=service_registry_contract_address,
         blockchain_service=blockchain_service,
@@ -220,12 +221,13 @@ def run_app(
     )
 
     if transport == "matrix":
-        transport = _setup_matrix(config)
+        transport = _setup_matrix(config, routing_mode)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     event_handler: EventHandler = RaidenEventHandler()
 
+    # Only send feedback when PFS was used
     if routing_mode == RoutingMode.PFS:
         event_handler = PFSFeedbackEventHandler(event_handler)
 
@@ -253,6 +255,7 @@ def run_app(
             transport=transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,
+            routing_mode=routing_mode,
             user_deposit=proxies.user_deposit,
         )
     except RaidenError as e:

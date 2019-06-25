@@ -150,6 +150,7 @@ class BlockChainService:
                     jsonrpc_client=self.client,
                     registry_address=PaymentNetworkAddress(address),
                     contract_manager=self.contract_manager,
+                    blockchain_service=self,
                 )
 
         return self.address_to_token_network_registry[address]
@@ -164,6 +165,7 @@ class BlockChainService:
                     jsonrpc_client=self.client,
                     token_network_address=address,
                     contract_manager=self.contract_manager,
+                    blockchain_service=self,
                 )
 
         return self.address_to_token_network[address]
@@ -226,6 +228,7 @@ class BlockChainService:
                     jsonrpc_client=self.client,
                     user_deposit_address=address,
                     contract_manager=self.contract_manager,
+                    blockchain_service=self,
                 )
 
         return self.address_to_user_deposit[address]

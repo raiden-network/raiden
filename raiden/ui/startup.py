@@ -7,7 +7,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.pathfinding import configure_pfs_or_exit
+from raiden.network.pathfinding import PFSConfig, configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, ChainID
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -53,7 +53,7 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
     print(f"Raiden is running in {environment_type.value.lower()} mode")
 
 
-def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str, Any]:
+def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
@@ -112,7 +112,6 @@ def setup_proxies_or_exit(
     config: Dict[str, Any],
     tokennetwork_registry_contract_address: Address,
     secret_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,
     blockchain_service: BlockChainService,
@@ -134,17 +133,15 @@ def setup_proxies_or_exit(
     environment_type = config["environment_type"]
 
     check_smart_contract_addresses(
-        environment_type,
-        node_network_id,
-        tokennetwork_registry_contract_address,
-        secret_registry_contract_address,
-        endpoint_registry_contract_address,
-        contracts,
+        environment_type=environment_type,
+        node_network_id=node_network_id,
+        tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
+        secret_registry_contract_address=secret_registry_contract_address,
+        contracts=contracts,
     )
     try:
-        registered_address: Address
         if tokennetwork_registry_contract_address is not None:
-            registered_address = Address(tokennetwork_registry_contract_address)
+            registered_address: Address = Address(tokennetwork_registry_contract_address)
         else:
             registered_address = to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
@@ -212,23 +209,30 @@ def setup_proxies_or_exit(
 
     if routing_mode == RoutingMode.PFS:
         check_pfs_configuration(
-            routing_mode, environment_type, service_registry, pathfinding_service_address
+            routing_mode=routing_mode,
+            environment_type=environment_type,
+            service_registry=service_registry,
+            pathfinding_service_address=pathfinding_service_address,
         )
 
-        pfs_config = configure_pfs_or_exit(
+        pfs_info = configure_pfs_or_exit(
             pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
+            node_network_id=node_network_id,
             token_network_registry_address=Address(token_network_registry.address),
         )
         msg = "Eth address of selected pathfinding service is unknown."
-        assert pfs_config.eth_address is not None, msg
-        config["services"]["pathfinding_service_address"] = pfs_config.url
-        config["services"]["pathfinding_eth_address"] = pfs_config.eth_address
-        config["services"]["pathfinding_fee"] = pfs_config.fee
+        assert pfs_info.payment_address is not None, msg
+
+        config["pfs_config"] = PFSConfig(
+            info=pfs_info,
+            maximum_fee=config["services"]["pathfinding_max_fee"],
+            iou_timeout=config["services"]["pathfinding_iou_timeout"],
+            max_paths=config["services"]["pathfinding_max_paths"],
+        )
     else:
-        config["services"]["pathfinding_service_address"] = None
-        config["services"]["pathfinding_eth_address"] = None
+        config["pfs_config"] = None
 
     proxies = Proxies(
         token_network_registry=token_network_registry,

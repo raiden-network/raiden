@@ -6,6 +6,7 @@ from raiden.storage.sqlite import (
     FilteredDBQuery,
     Operator,
     SerializedSQLiteStorage,
+    StateChangeID,
     StateChangeRecord,
 )
 from raiden.storage.wal import restore_to_state_change
@@ -21,8 +22,6 @@ from raiden.utils.typing import (
     List,
     Locksroot,
     Optional,
-    StateChangeID,
-    Union,
 )
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 def channel_state_until_state_change(
     raiden: "RaidenService",
     canonical_identifier: CanonicalIdentifier,
-    state_change_identifier: Union[StateChangeID, str],
+    state_change_identifier: StateChangeID,
 ) -> Optional[NettingChannelState]:  # pragma: no unittest
     """ Go through WAL state changes until a certain balance hash is found. """
     assert raiden.wal, "Raiden has not been started yet"
@@ -134,6 +133,7 @@ def get_event_with_balance_proof_by_balance_hash(
     storage: SerializedSQLiteStorage,
     canonical_identifier: CanonicalIdentifier,
     balance_hash: BalanceHash,
+    recipient: Address,
 ) -> Optional[EventRecord]:
     """ Returns the event which contains the corresponding balance
     proof.
@@ -142,7 +142,8 @@ def get_event_with_balance_proof_by_balance_hash(
     has the blinded balance proof data.
     """
     filters: List[Dict[str, Any]] = list()
-    balance_proof_filters = {
+
+    filter_items = {
         "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
         "canonical_identifier.token_network_address": to_checksum_address(
             canonical_identifier.token_network_address
@@ -151,10 +152,13 @@ def get_event_with_balance_proof_by_balance_hash(
         "balance_hash": to_hex(balance_hash),
     }
 
-    filters.append(balance_proof_query_from_keys(prefix="", filters=balance_proof_filters))
-    filters.append(
-        balance_proof_query_from_keys(prefix="transfer.", filters=balance_proof_filters)
-    )
+    balance_proof_filters = balance_proof_query_from_keys(prefix="", filters=filter_items)
+    balance_proof_filters["recipient"] = to_checksum_address(recipient)
+    filters.append(balance_proof_filters)
+
+    transfer_filters = balance_proof_query_from_keys(prefix="transfer.", filters=filter_items)
+    transfer_filters["recipient"] = to_checksum_address(recipient)
+    filters.append(transfer_filters)
 
     query = FilteredDBQuery(
         filters=filters, main_operator=Operator.OR, inner_operator=Operator.AND
@@ -178,35 +182,19 @@ def get_event_with_balance_proof_by_locksroot(
     """
     filters: List[Dict[str, Any]] = list()
 
-    balance_proof_filters = balance_proof_query_from_keys(
-        prefix="",
-        filters={
-            "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
-            "canonical_identifier.token_network_address": to_checksum_address(
-                canonical_identifier.token_network_address
-            ),
-            "canonical_identifier.channel_identifier": str(
-                canonical_identifier.channel_identifier
-            ),
-            "locksroot": to_hex(locksroot),
-        },
-    )
+    filter_items = {
+        "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
+        "canonical_identifier.token_network_address": to_checksum_address(
+            canonical_identifier.token_network_address
+        ),
+        "canonical_identifier.channel_identifier": str(canonical_identifier.channel_identifier),
+        "locksroot": to_hex(locksroot),
+    }
+    balance_proof_filters = balance_proof_query_from_keys(prefix="", filters=filter_items)
     balance_proof_filters["recipient"] = to_checksum_address(recipient)
     filters.append(balance_proof_filters)
 
-    transfer_filters = balance_proof_query_from_keys(
-        prefix="transfer.",
-        filters={
-            "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
-            "canonical_identifier.token_network_address": to_checksum_address(
-                canonical_identifier.token_network_address
-            ),
-            "canonical_identifier.channel_identifier": str(
-                canonical_identifier.channel_identifier
-            ),
-            "locksroot": to_hex(locksroot),
-        },
-    )
+    transfer_filters = balance_proof_query_from_keys(prefix="transfer.", filters=filter_items)
     transfer_filters["recipient"] = to_checksum_address(recipient)
     filters.append(transfer_filters)
 

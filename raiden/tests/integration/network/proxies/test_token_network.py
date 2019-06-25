@@ -3,9 +3,14 @@ import random
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, STATE_PRUNING_AFTER_BLOCKS
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SIGNATURE,
+    LOCKSROOT_OF_NO_LOCKS,
+    STATE_PRUNING_AFTER_BLOCKS,
+)
 from raiden.exceptions import (
-    DepositMismatch,
+    BrokenPreconditionError,
     DuplicatedChannelError,
     InvalidAddress,
     InvalidChannelID,
@@ -40,10 +45,16 @@ def test_token_network_deposit_race(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
+
+    blockchain_service = BlockChainService(
+        jsonrpc_client=c1_client, contract_manager=contract_manager
+    )
+
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
     token_proxy.transfer(c1_client.address, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -59,7 +70,7 @@ def test_token_network_deposit_race(
         total_deposit=2,
         partner=c2_client.address,
     )
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -80,15 +91,18 @@ def test_token_network_proxy(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
 
     initial_token_balance = 100
@@ -172,7 +186,7 @@ def test_token_network_proxy(
         )
 
     msg = "Trying a deposit to an inexisting channel must fail."
-    with pytest.raises(RaidenUnrecoverableError, message=msg, match="does not exist"):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=1,
@@ -230,7 +244,7 @@ def test_token_network_proxy(
     )
 
     msg = "set_total_deposit must fail if the amount exceed the account's balance"
-    with pytest.raises(DepositMismatch, message=msg):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -239,7 +253,7 @@ def test_token_network_proxy(
         )
 
     msg = "set_total_deposit must fail with a negative amount"
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -248,7 +262,7 @@ def test_token_network_proxy(
         )
 
     msg = "set_total_deposit must fail with a zero amount"
-    with pytest.raises(DepositMismatch):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -360,7 +374,7 @@ def test_token_network_proxy(
         )
 
     msg = "depositing to a closed channel must fail"
-    match = "setTotalDeposit call will fail. Channel is already closed"
+    match = "Channel is already closed"
     with pytest.raises(RaidenRecoverableError, message=msg, match=match):
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier=blocknumber_prior_to_close,
@@ -380,11 +394,11 @@ def test_token_network_proxy(
             channel_identifier=channel_identifier,
             transferred_amount=invalid_transferred_amount,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c1_client.address,
             partner_transferred_amount=transferred_amount,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -392,11 +406,11 @@ def test_token_network_proxy(
         channel_identifier=channel_identifier,
         transferred_amount=0,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c1_client.address,
         partner_transferred_amount=transferred_amount,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier="latest",
     )
     assert (
@@ -412,8 +426,8 @@ def test_token_network_proxy(
     assert token_proxy.balance_of(c2_client.address) == (initial_balance_c2 + transferred_amount)
 
     msg = "depositing to a settled channel must fail"
-    match = "setTotalDeposit call will fail."
-    with pytest.raises(RaidenUnrecoverableError, message=msg, match=match):
+    match = "The channel was not opened"
+    with pytest.raises(BrokenPreconditionError, message=msg, match=match):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -431,15 +445,18 @@ def test_token_network_proxy_update_transfer(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -570,11 +587,11 @@ def test_token_network_proxy_update_transfer(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=transferred_amount_c2,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -588,11 +605,11 @@ def test_token_network_proxy_update_transfer(
             channel_identifier=channel_identifier,
             transferred_amount=2,
             locked_amount=0,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=2,
             partner_locked_amount=0,
-            partner_locksroot=EMPTY_HASH,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier="latest",
         )
 
@@ -601,11 +618,11 @@ def test_token_network_proxy_update_transfer(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=transferred_amount_c2,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier="latest",
     )
     assert token_proxy.balance_of(c2_client.address) == (
@@ -616,7 +633,7 @@ def test_token_network_proxy_update_transfer(
     )
 
     # Already settled
-    with pytest.raises(RaidenUnrecoverableError) as exc:
+    with pytest.raises(BrokenPreconditionError) as exc:
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
@@ -641,6 +658,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
     # create a channel and query the state at the current block hash
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -668,18 +686,25 @@ def test_token_network_actions_at_pruned_blocks(
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
+
+    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c1_chain,
     )
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+
     c2_client = JSONRPCClient(web3, private_keys[2])
+    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+
     c3_client = JSONRPCClient(web3, private_keys[0])
+
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
         token_network_address=token_network_address,
         contract_manager=contract_manager,
+        blockchain_service=c2_chain,
     )
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)
@@ -782,11 +807,11 @@ def test_token_network_actions_at_pruned_blocks(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=0,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=close_pruned_number,
     )
     assert token_proxy.balance_of(c2_client.address) == (

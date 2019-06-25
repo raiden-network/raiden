@@ -1,31 +1,38 @@
-from typing import Tuple
+from typing import Dict, Tuple
 
 from raiden.constants import UNLOCK_TX_GAS_LIMIT
 from raiden.transfer import views
-from raiden_contracts.constants import (
-    GAS_REQUIRED_FOR_CLOSE_CHANNEL,
-    GAS_REQUIRED_FOR_OPEN_CHANNEL,
-    GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
-    GAS_REQUIRED_FOR_SETTLE_CHANNEL,
-)
+from raiden_contracts.contract_manager import gas_measurements
 
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = UNLOCK_TX_GAS_LIMIT
-GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE = (
-    GAS_REQUIRED_FOR_SETTLE_CHANNEL + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
-)
-GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN = (
-    GAS_REQUIRED_FOR_CLOSE_CHANNEL + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
-)
-GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE = (
-    GAS_REQUIRED_FOR_OPEN_CHANNEL
-    + GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT
-    + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
-)
+
+
+def gas_required_for_channel_lifecycle_after_close(gas_measurements: Dict[str, int]):
+    return (
+        gas_measurements["TokenNetwork.settleChannel"]
+        + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
+    )
+
+
+def gas_required_for_channel_lifecycle_after_open(gas_measurements: Dict[str, int]):
+    return gas_measurements[
+        "TokenNetwork.closeChannel"
+    ] + gas_required_for_channel_lifecycle_after_close(gas_measurements)
+
+
+def gas_required_for_channel_lifecycle_complete(gas_measurements: Dict[str, int]):
+    return (
+        gas_measurements["TokenNetwork.openChannel"]
+        + gas_measurements["TokenNetwork.setTotalDeposit"]
+        + gas_required_for_channel_lifecycle_after_open(gas_measurements)
+    )
+
 
 GAS_RESERVE_ESTIMATE_SECURITY_FACTOR = 1.1
 
 
 def _get_required_gas_estimate(
+    gas_measurements: Dict[str, int],
     new_channels: int = 0,
     opening_channels: int = 0,
     opened_channels: int = 0,
@@ -36,11 +43,11 @@ def _get_required_gas_estimate(
 ) -> int:
     estimate = 0
 
-    estimate += new_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE
-    estimate += opening_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE
-    estimate += opened_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
-    estimate += closing_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
-    estimate += closed_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
+    estimate += new_channels * gas_required_for_channel_lifecycle_complete(gas_measurements)
+    estimate += opening_channels * gas_required_for_channel_lifecycle_complete(gas_measurements)
+    estimate += opened_channels * gas_required_for_channel_lifecycle_after_open(gas_measurements)
+    estimate += closing_channels * gas_required_for_channel_lifecycle_after_close(gas_measurements)
+    estimate += closed_channels * gas_required_for_channel_lifecycle_after_close(gas_measurements)
     estimate += settling_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
     estimate += settled_channels * GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
 
@@ -51,6 +58,7 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
     chain_state = views.state_from_raiden(raiden)
     registry_address = raiden.default_registry.address
     token_addresses = views.get_token_identifiers(chain_state, registry_address)
+    measurements = gas_measurements(raiden.contract_manager.contracts_version)
 
     gas_estimate = 0
 
@@ -80,6 +88,7 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
         )
 
         gas_estimate += _get_required_gas_estimate(
+            gas_measurements=measurements,
             opening_channels=num_opening_channels,
             opened_channels=num_opened_channels,
             closing_channels=num_closing_channels,
@@ -93,7 +102,10 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
 
 def get_required_gas_estimate(raiden, channels_to_open: int = 0) -> int:
     gas_estimate = _get_required_gas_estimate_for_state(raiden)
-    gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
+    measurements = gas_measurements(raiden.contract_manager.contracts_version)
+    gas_estimate += _get_required_gas_estimate(
+        gas_measurements=measurements, new_channels=channels_to_open
+    )
     return gas_estimate
 
 

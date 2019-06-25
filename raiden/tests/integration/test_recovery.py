@@ -4,9 +4,11 @@ import pytest
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -20,7 +22,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import create_default_identifier
+from raiden.utils import BlockNumber, create_default_identifier
+from raiden.utils.typing import PaymentID, TokenAmount
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -111,7 +114,7 @@ def test_recovery_unhappy_case(
     )
 
     # make a few transfers from app0 to app2
-    amount = 1
+    amount = TokenAmount(1)
     spent_amount = deposit - 2
     for identifier in range(spent_amount):
         transfer(
@@ -119,7 +122,7 @@ def test_recovery_unhappy_case(
             target_app=app2,
             token_address=token_address,
             amount=amount,
-            identifier=identifier,
+            identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
         )
 
@@ -154,7 +157,7 @@ def test_recovery_unhappy_case(
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
@@ -163,12 +166,13 @@ def test_recovery_unhappy_case(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
 
-    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_STATE_CHANGES
     )
 
     assert search_for_item(
@@ -213,7 +217,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
@@ -222,6 +226,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
+        routing_mode=RoutingMode.PRIVATE,
     )
 
     del app0  # from here on the app0_restart should be used
@@ -231,7 +236,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
     waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
-    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        0, "latest"
+    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_STATE_CHANGES
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})

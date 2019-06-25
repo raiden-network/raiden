@@ -1,7 +1,7 @@
 import structlog
 from eth_utils import to_checksum_address
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
@@ -21,7 +21,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     PRODUCTION_CONTRACT_VERSION,
 )
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
@@ -74,6 +74,7 @@ class App:  # pylint: disable=too-few-public-methods
         transport,
         raiden_event_handler,
         message_handler,
+        routing_mode: RoutingMode,
         user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
@@ -87,6 +88,7 @@ class App:  # pylint: disable=too-few-public-methods
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
+            routing_mode=routing_mode,
             config=config,
             user_deposit=user_deposit,
         )
@@ -115,7 +117,7 @@ class App:  # pylint: disable=too-few-public-methods
         self.raiden = raiden
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, pex(self.raiden.address))
+        return "<{} {}>".format(self.__class__.__name__, to_checksum_address(self.raiden.address))
 
     def start(self):
         """ Start the raiden app. """

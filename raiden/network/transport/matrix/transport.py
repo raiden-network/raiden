@@ -11,11 +11,7 @@ from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
-from raiden.constants import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
-    DISCOVERY_DEFAULT_ROOM,
-    EMPTY_SIGNATURE,
-)
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
 from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
@@ -46,7 +42,7 @@ from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
@@ -57,7 +53,6 @@ from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionUpdateTransportAuthData,
 )
-from raiden.utils import pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
@@ -101,7 +96,7 @@ class _RetryQueue(Runnable):
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
         super().__init__()
-        self.greenlet.name = f"RetryQueue " f"recipient:{pex(self.receiver)}"
+        self.greenlet.name = f"RetryQueue " f"recipient:{to_checksum_address(self.receiver)}"
 
     @property
     def log(self):
@@ -256,8 +251,8 @@ class _RetryQueue(Runnable):
         assert self.transport._raiden_service is not None, msg
         self.greenlet.name = (
             f"RetryQueue "
-            f"node:{pex(self.transport._raiden_service.address)} "
-            f"recipient:{pex(self.receiver)}"
+            f"node:{to_checksum_address(self.transport._raiden_service.address)} "
+            f"recipient:{to_checksum_address(self.receiver)}"
         )
         # run while transport parent is running
         while not self.transport._stop_event.ready():
@@ -344,7 +339,7 @@ class MatrixTransport(Runnable):
 
     def __repr__(self):
         if self._raiden_service is not None:
-            node = f" node:{pex(self._raiden_service.address)}"
+            node = f" node:{to_checksum_address(self._raiden_service.address)}"
         else:
             node = ""
 
@@ -375,7 +370,9 @@ class MatrixTransport(Runnable):
             prev_user_id=prev_user_id,
             prev_access_token=prev_access_token,
         )
-        self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
+        self.log = log.bind(
+            current_user=self._user_id, node=to_checksum_address(self._raiden_service.address)
+        )
 
         self.log.debug("Start: handle thread", handle_thread=self._client._handle_thread)
         if self._client._handle_thread:
@@ -417,7 +414,9 @@ class MatrixTransport(Runnable):
         """ Runnable main method, perform wait on long-running subtasks """
         # dispatch auth data on first scheduling after start
         state_change = ActionUpdateTransportAuthData(f"{self._user_id}/{self._client.api.token}")
-        self.greenlet.name = f"MatrixTransport._run node:{pex(self._raiden_service.address)}"
+        self.greenlet.name = (
+            f"MatrixTransport._run node:{to_checksum_address(self._raiden_service.address)}"
+        )
         self._raiden_service.handle_and_track_state_change(state_change)
         try:
             # waits on _stop_event.ready()
@@ -523,7 +522,7 @@ class MatrixTransport(Runnable):
         receiver_address = queue_identifier.recipient
 
         if not is_binary_address(receiver_address):
-            raise ValueError("Invalid address {}".format(pex(receiver_address)))
+            raise ValueError("Invalid address {}".format(to_checksum_address(receiver_address)))
 
         # These are not protocol messages, but transport specific messages
         if isinstance(message, (Delivered, Ping, Pong)):
@@ -931,7 +930,7 @@ class MatrixTransport(Runnable):
                 room_id = room_ids.pop(0)
                 room = self._client.rooms[room_id]
                 if not self._is_room_global(room):
-                    self.log.warning("Existing room", room=room, members=room.get_joined_members())
+                    self.log.debug("Existing room", room=room, members=room.get_joined_members())
                     return room
                 self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
 
@@ -1077,7 +1076,9 @@ class MatrixTransport(Runnable):
         # maybe inviting user used to also possibly invite user's from presence changes
         assert self._raiden_service is not None  # make mypy happy
         greenlet = self._spawn(self._maybe_invite_user, user)
-        greenlet.name = f"invite node:{pex(self._raiden_service.address)} user:{user}"
+        greenlet.name = (
+            f"invite node:{to_checksum_address(self._raiden_service.address)} user:{user}"
+        )
 
     def _address_reachability_changed(self, address: Address, reachability: AddressReachability):
         if reachability is AddressReachability.REACHABLE:

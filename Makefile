@@ -5,18 +5,22 @@ help:
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
 	@echo "clean-test - remove test and coverage artifacts"
-	@echo "lint - check style with flake8"
+	@echo "-"
+	@echo "lint - run all checks (style, mypy, etc.)"
 	@echo "mypy - check types with mypy (coverage in progress)"
+	@echo "mypy-all - Run mypy without filters and report remaining issue count"
+	@echo "format - run isort and black"
 	@echo "isort - use isort to fix import order"
+	@echo "black - reformat code with black"
 	@echo "test - run tests quickly with the default Python"
-	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
-	#@echo "docs - generate Sphinx HTML documentation, including API docs"
-	#@echo "release - package and upload a release"
-	#@echo "dist - package"
-	#@echo "install - install the package to the active Python's site-packages"
-	@echo "deploy - deploy contracts via rpc"
-
+	@echo "-"
+	@echo "install - install Raiden and runtime requirements into the active virtualenv"
+	@echo "install-dev - install Raiden in editable mode and development dependencies into the active virtualenv"
+	@echo "-"
+	@echo "bundle - create standalone executable with PyInstaller"
+	@echo "bundle-docker - create standalone executable with PyInstaller via a docker container"
+	@echo "docs - generate Sphinx HTML documentation, including API docs"
 
 
 clean: clean-build clean-pyc clean-test
@@ -38,18 +42,14 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
-LINT_PATHS = raiden/ tools/
+LINT_PATHS = raiden/ tools/ setup.py
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
-BLACK_PATHS = raiden/ tools/ setup.py
 
-lint: mypy mypy-all
+lint: ISORT_CHECK_PARAMS := --diff --check-only
+lint: BLACK_CHECK_PARAMS := --check --diff
+lint: mypy mypy-all isort black
 	flake8 raiden/ tools/
-	isort $(ISORT_PARAMS) --diff --check-only
-	black --check --diff $(BLACK_PATHS)
 	pylint $(LINT_PATHS)
-
-isort:
-	isort $(ISORT_PARAMS)
 
 mypy:
 	mypy raiden
@@ -59,19 +59,19 @@ mypy-all:
 	# Remaining errors in tests:
 	mypy --config-file /dev/null raiden --ignore-missing-imports | grep error | wc -l
 
+isort:
+	isort $(ISORT_PARAMS) $(ISORT_CHECK_PARAMS)
+
 black:
-	black $(BLACK_PATHS)
+	black $(BLACK_CHECK_PARAMS) $(LINT_PATHS)
 
 format: isort black
 
 test:
-	python setup.py test
-
-test-all:
-	tox
+	pytest -n auto -v raiden/tests
 
 coverage:
-	coverage run --source raiden setup.py test
+	coverage run --source raiden pytest -v raiden/tests
 	coverage report -m
 	coverage html
 
@@ -83,6 +83,12 @@ docs:
 	$(MAKE) -C docs html
 
 
+install: check-pip-tools clean-pyc
+	cd requirements; pip-sync requirements.txt _raiden.txt
+
+install-dev: check-pip-tools clean-pyc
+	cd requirements; touch requirements-local.txt; pip-sync requirements-dev.txt _raiden-dev.txt requirements-local.txt
+
 ARCHIVE_TAG_ARG=
 ifdef ARCHIVE_TAG
 ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=$(ARCHIVE_TAG)
@@ -90,17 +96,16 @@ else
 ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=v$(shell python setup.py --version)
 endif
 
-# architecture needs to be asked in docker because docker can be run on remote host to create binary for different architectures
-ARCHITECTURE_TAG=$(shell docker run --rm python:3.7 uname -m)
 
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
 GITHUB_ACCESS_TOKEN_ARG=--build-arg GITHUB_ACCESS_TOKEN_FRAGMENT=$(GITHUB_ACCESS_TOKEN)@
 endif
 
-
+# architecture needs to be asked in docker because docker can be run on remote host to create binary for different architectures
+bundle-docker: ARCHITECTURE_TAG = $(shell docker run --rm python:3.7 uname -m)
 bundle-docker:
-	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
+	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
 	mkdir -p dist/archive
@@ -110,30 +115,11 @@ bundle-docker:
 bundle:
 	pyinstaller --noconfirm --clean raiden.spec
 
-release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
 
-dist: clean
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
+check-venv:
+	@python3 -c 'import sys; sys.exit(not (hasattr(sys, "real_prefix") or sys.base_prefix != sys.prefix))' \
+		|| (echo "It appears you're not working inside a venv / virtualen\nIt's strongly recommended to install raiden into a virtual environment.\nSee the documentation for more details."; exit 1)
 
-install: clean-pyc
-	pip install -c constraints.txt -r requirements.txt .
-
-install-dev: clean-pyc
-	pip install -c constraints-dev.txt -r requirements-dev.txt -e .
-
-logging_settings = :info,contracts:debug
-mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
-stop-geth:
-	killall -15 geth
-
-blockchain-geth:
-	rm -f blockchain.log
-	./tools/startcluster.py
-
-deploy:
-	./tools/deploy.py --keystore-path=${KEYSTORE}
+# Ensure pip-tools is installed
+check-pip-tools: check-venv
+	@type pip-compile > /dev/null 2>&1 || (echo "pip-tools is requried. Installing." && python3 -m pip install pip-tools)

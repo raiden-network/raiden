@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
 
-from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRETHASH
+from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -40,7 +40,16 @@ if TYPE_CHECKING:
 
 @dataclass
 class LockedTransferState(State):
-    pass
+
+    payment_identifier: PaymentID
+    token: TokenAddress
+    lock: HashTimeLockState
+    initiator: InitiatorAddress
+    target: TargetAddress
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.lock, HashTimeLockState):
+            raise ValueError("lock must be a HashTimeLockState instance")
 
 
 @dataclass
@@ -49,21 +58,18 @@ class LockedTransferUnsignedState(LockedTransferState):
     time lock and may be sent.
     """
 
-    payment_identifier: PaymentID
-    token: TokenAddress
     balance_proof: BalanceProofUnsignedState
-    lock: HashTimeLockState
-    initiator: InitiatorAddress
-    target: TargetAddress
+    route_states: List[RouteState] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        super().__post_init__()
 
         typecheck(self.lock, HashTimeLockState)
         typecheck(self.balance_proof, BalanceProofUnsignedState)
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+        if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
 
@@ -74,12 +80,8 @@ class LockedTransferSignedState(LockedTransferState):
     """
 
     message_identifier: MessageID
-    payment_identifier: PaymentID
-    token: TokenAddress
-    balance_proof: BalanceProofSignedState
-    lock: HashTimeLockState
-    initiator: InitiatorAddress
-    target: TargetAddress
+    balance_proof: BalanceProofSignedState = field(repr=False)
+    routes: List[List[Address]]
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)
@@ -87,11 +89,13 @@ class LockedTransferSignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
-        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+        # pylint: disable=E1101
+        if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
     @property
     def payer_address(self) -> Address:
+        # pylint: disable=E1101
         return self.balance_proof.sender
 
 
@@ -151,11 +155,10 @@ class InitiatorPaymentState(State):
 class MediationPairState(State):
     """ State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
-    the token expenses. This state keeps track of the routes and transfer for
+    the token expenses. This state keeps track of transfers for
     the payer and payee, and the current state of the payment.
     """
 
-    route: RouteState
     payer_transfer: LockedTransferSignedState
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState

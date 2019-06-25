@@ -71,7 +71,7 @@ def web3(
 
     # Save the Ethereum node's log, if needed for debugging
     base_logdir = os.path.join(
-        get_artifacts_storage(base_datadir), request.node.name, blockchain_type
+        get_artifacts_storage(request.node.name) or base_datadir, blockchain_type
     )
 
     genesis_description = GenesisDescription(

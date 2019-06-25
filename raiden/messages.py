@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
 from hashlib import sha256
 from operator import attrgetter
-from typing import List, Tuple
 
 import rlp
 from cachetools import LRUCache, cached
-from eth_utils import big_endian_to_int
+from eth_utils import big_endian_to_int, to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -24,6 +24,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -32,7 +33,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, pex, sha3
+from raiden.utils import ishash, sha3
 from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.utils.signer import Signer, recover
 from raiden.utils.signing import pack_data
@@ -46,8 +47,8 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     Dict,
-    FeeAmount,
     InitiatorAddress,
+    List,
     Locksroot,
     MessageID,
     Nonce,
@@ -77,18 +78,21 @@ __all__ = (
     "LockedTransferBase",
     "LockExpired",
     "Message",
+    "Metadata",
     "Ping",
     "Pong",
     "Processed",
     "RefundTransfer",
     "RequestMonitoring",
     "RevealSecret",
+    "RouteMetadata",
     "SecretRequest",
     "SignedBlindedBalanceProof",
     "SignedMessage",
     "Unlock",
     "ToDevice",
-    "UpdatePFS",
+    "PFSCapacityUpdate",
+    "PFSFeeUpdate",
     "Withdraw",
     "WithdrawRequest",
     "from_dict",
@@ -213,7 +217,7 @@ class Message:
 
     def __repr__(self):
         return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=pex(self.hash)
+            klass=self.__class__.__name__, msghash=to_hex(self.hash)
         )
 
     @property
@@ -466,7 +470,7 @@ class Unlock(EnvelopeMessage):
 
     For this message to be valid the balance proof has to be updated to:
 
-    - Remove the succesfull lock from the merkle tree and decrement the
+    - Remove the succesfull lock from the pending locks and decrement the
       locked_amount by the lock's amount, otherwise the sender will pay twice.
     - Increase the transferred_amount, otherwise the recepient will reject it
       because it is not being paid.
@@ -485,7 +489,7 @@ class Unlock(EnvelopeMessage):
     3. Node A sends a second LockedTransfer to B.
 
     At point 3, node A had no knowledge about the first payment having its
-    secret revealed, therefore the merkletree from message at step 3 will
+    secret revealed, therefore the pending locks from message at step 3 will
     include both locks. If B were to preemptively remove the lock it would
     reject the message.
     """
@@ -689,6 +693,30 @@ class Lock:
         )
 
 
+@dataclass(frozen=True)
+class RouteMetadata:
+    route: List[Address]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode(self.route))
+
+    def __repr__(self):
+        return f"RouteMetadata: {' -> '.join([to_checksum_address(a) for a in self.route])}"
+
+
+@dataclass(frozen=True)
+class Metadata:
+    routes: List[RouteMetadata]
+
+    @property
+    def hash(self):
+        return sha3(rlp.encode([r.hash for r in self.routes]))
+
+    def __repr__(self):
+        return f"Metadata: routes: {[repr(route) for route in self.routes]}"
+
+
 @dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
@@ -734,7 +762,7 @@ class LockedTransfer(LockedTransferBase):
     - Use a lock.amount smaller then its current capacity. If the amount is
       higher, then the recipient will reject it, as it means spending money it
       does not own.
-    - Have the new lock represented in merkleroot.
+    - Have the new lock represented in locksroot.
     - Increase the locked_amount by exactly `lock.amount` otherwise the message
       would be rejected by the recipient. If the locked_amount is increased by
       more, then funds may get locked in the channel. If the locked_amount is
@@ -752,6 +780,7 @@ class LockedTransfer(LockedTransferBase):
     target: TargetAddress
     initiator: InitiatorAddress
     fee: int
+    metadata: Metadata
 
     def __post_init__(self):
         super().__post_init__()
@@ -764,6 +793,21 @@ class LockedTransfer(LockedTransferBase):
 
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
+
+    @property
+    def message_hash(self):
+        metadata_hash = (self.metadata and self.metadata.hash) or b""
+        packed = self.packed()
+        klass = type(packed)
+
+        field = klass.fields_spec[-1]
+        assert field.name == "signature", "signature is not the last field"
+
+        data = packed.data
+        message_data = data[: -field.size_bytes]
+        message_hash = sha3(message_data + metadata_hash)
+
+        return message_hash
 
     def pack(self, packed) -> None:
         packed.chain_id = self.chain_id
@@ -817,6 +861,9 @@ class LockedTransfer(LockedTransferBase):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
+            metadata=Metadata(
+                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
+            ),
         )
 
 
@@ -865,6 +912,9 @@ class RefundTransfer(LockedTransfer):
             initiator=transfer.initiator,
             fee=fee,
             signature=EMPTY_SIGNATURE,
+            metadata=Metadata(
+                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
+            ),
         )
 
 
@@ -876,8 +926,8 @@ class LockExpired(EnvelopeMessage):
 
     For this message to be valid the balance proof has to be updated to:
 
-    - Remove the expired lock from the merkletree and reflect it in the
-      merkleroot.
+    - Remove the expired lock from the pending locks and reflect it in the
+      locksroot.
     - Decrease the locked_amount by exactly by lock.amount. If less tokens are
       decreased the sender may get tokens locked. If more tokens are decreased
       the recipient will reject the message as on-chain unlocks may fail.
@@ -1107,7 +1157,7 @@ class RequestMonitoring(SignedMessage):
 
 
 @dataclass(repr=False, eq=False)
-class UpdatePFS(SignedMessage):
+class PFSCapacityUpdate(SignedMessage):
     """ Message to inform a pathfinding service about a capacity change. """
 
     canonical_identifier: CanonicalIdentifier
@@ -1118,14 +1168,13 @@ class UpdatePFS(SignedMessage):
     updating_capacity: TokenAmount
     other_capacity: TokenAmount
     reveal_timeout: int
-    mediation_fee: FeeAmount
 
     def __post_init__(self):
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
     @classmethod
-    def from_channel_state(cls, channel_state: NettingChannelState) -> "UpdatePFS":
+    def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
         # pylint: disable=unexpected-keyword-arg
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
@@ -1140,12 +1189,11 @@ class UpdatePFS(SignedMessage):
                 sender=channel_state.partner_state, receiver=channel_state.our_state
             ),
             reveal_timeout=channel_state.reveal_timeout,
-            mediation_fee=channel_state.mediation_fee,
             signature=EMPTY_SIGNATURE,
         )
 
     def packed(self) -> bytes:
-        klass = messages.UpdatePFS
+        klass = messages.PFSCapacityUpdate
         data = buffer_for(klass)
         packed = klass(data)
         self.pack(packed)
@@ -1162,62 +1210,32 @@ class UpdatePFS(SignedMessage):
         packed.updating_capacity = self.updating_capacity
         packed.other_capacity = self.other_capacity
         packed.reveal_timeout = self.reveal_timeout
-        packed.fee = self.mediation_fee
         packed.signature = self.signature
 
 
 @dataclass
-class FeeSchedule:
-    flat: FeeAmount = FeeAmount(0)
-    proportional: int = 0  # as micros, e.g. 1% = 0.01e6
-    imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None
-
-
-@dataclass
-class FeeUpdate(SignedMessage):
+class PFSFeeUpdate(SignedMessage):
     """Informs the PFS of mediation fees demanded by the client"""
 
     canonical_identifier: CanonicalIdentifier
     updating_participant: Address
-    fee_schedule: FeeSchedule
-    nonce: Nonce
+    fee_schedule: FeeScheduleState
+    timestamp: datetime
 
     def __post_init__(self):
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
-    def pack(self, packed) -> None:
-        packed.chain_id = self.canonical_identifier.chain_identifier
-        packed.token_network_address = self.canonical_identifier.token_network_address
-        packed.channel_identifier = self.canonical_identifier.channel_identifier
-        packed.updating_participant = self.updating_participant
-        packed.flat = self.fee_schedule.flat
-        packed.proportional = self.fee_schedule.proportional
-        packed.imbalance_penalty = rlp.encode(self.fee_schedule.imbalance_penalty)
-        packed.nonce = self.nonce
-
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            [
-                "uint256",  # canonical_identifier
-                "address",
-                "uint256",
-                "address",  # updating participant
-                "uint256",  # fees
-                "uint256",
-                "bytes",
-                "uint256",  # nonce
-            ],
-            [
-                self.canonical_identifier.chain_identifier,
-                self.canonical_identifier.token_network_address,
-                self.canonical_identifier.channel_identifier,
-                self.updating_participant,
-                self.fee_schedule.flat,
-                self.fee_schedule.proportional,
-                rlp.encode(self.fee_schedule.imbalance_penalty or 0),
-                self.nonce,
-            ],
+            (self.canonical_identifier.chain_identifier, "uint256"),
+            (self.canonical_identifier.token_network_address, "address"),
+            (self.canonical_identifier.channel_identifier, "uint256"),
+            (self.updating_participant, "address"),
+            (self.fee_schedule.flat, "uint256"),
+            (self.fee_schedule.proportional, "uint256"),
+            (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
+            (DictSerializer.serialize(self)["timestamp"], "string"),
         )
 
     @classmethod
@@ -1225,26 +1243,26 @@ class FeeUpdate(SignedMessage):
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
-            fee_schedule=FeeSchedule(flat=channel_state.mediation_fee),
-            nonce=Nonce(1),
+            fee_schedule=channel_state.fee_schedule,
+            timestamp=datetime.now(timezone.utc),
             signature=EMPTY_SIGNATURE,
         )
 
 
-def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":
+def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransferSignedState:
     """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-
     transfer_state = LockedTransferSignedState(
-        message.message_identifier,
-        message.payment_identifier,
-        message.token,
-        balance_proof,
-        lock,
-        message.initiator,
-        message.target,
+        message_identifier=message.message_identifier,
+        payment_identifier=message.payment_identifier,
+        token=message.token,
+        balance_proof=balance_proof,
+        lock=lock,
+        initiator=message.initiator,
+        target=message.target,
+        routes=[r.route for r in message.metadata.routes],
     )
 
     return transfer_state

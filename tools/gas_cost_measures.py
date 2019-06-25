@@ -177,7 +177,7 @@ def find_max_pending_transfers(gas_limit) -> None:
         balance_hash = hash_balance_data(
             transferred_amount=TokenAmount(3000),
             locked_amount=TokenAmount(2000),
-            locksroot=Locksroot(pending_transfers_tree.merkle_root),
+            locksroot=Locksroot(pending_transfers_tree.hash_of_packed_transfers),
         )
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=CHAIN_ID,
@@ -216,7 +216,7 @@ def find_max_pending_transfers(gas_limit) -> None:
             participant2=tester.accounts[1],
             participant2_transferred_amount=3000,
             participant2_locked_amount=2000,
-            participant2_locksroot=pending_transfers_tree.merkle_root,
+            participant2_locksroot=pending_transfers_tree.hash_of_packed_transfers,
         )
 
         receipt = tester.call_transaction(

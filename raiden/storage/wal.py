@@ -1,21 +1,14 @@
-from datetime import datetime
-
 import gevent.lock
 import structlog
 
-from raiden.storage.sqlite import SerializedSQLiteStorage
-from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import (
-    Callable,
-    Generic,
-    List,
-    RaidenDBVersion,
+from raiden.storage.sqlite import (
+    LOW_STATECHANGE_ULID,
+    Range,
+    SerializedSQLiteStorage,
     StateChangeID,
-    T_StateChangeID,
-    Tuple,
-    TypeVar,
-    Union,
 )
+from raiden.transfer.architecture import Event, State, StateChange, StateManager
+from raiden.utils.typing import Callable, Generic, List, Optional, RaidenDBVersion, Tuple, TypeVar
 
 log = structlog.get_logger(__name__)
 
@@ -23,14 +16,12 @@ log = structlog.get_logger(__name__)
 def restore_to_state_change(
     transition_function: Callable,
     storage: SerializedSQLiteStorage,
-    state_change_identifier: Union[StateChangeID, str],
+    state_change_identifier: StateChangeID,
 ) -> "WriteAheadLog":
-    msg = "state change identifier 'latest' or an integer greater than zero"
-    assert state_change_identifier == "latest" or (
-        isinstance(state_change_identifier, T_StateChangeID) and state_change_identifier > 0
-    ), msg
+    chain_state: Optional[State]
+    from_identifier: StateChangeID
 
-    snapshot = storage.get_snapshot_closest_to_state_change(
+    snapshot = storage.get_snapshot_before_state_change(
         state_change_identifier=state_change_identifier
     )
 
@@ -47,11 +38,11 @@ def restore_to_state_change(
             "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
         )
-        from_identifier = StateChangeID(0)
+        from_identifier = LOW_STATECHANGE_ULID
         chain_state = None
 
-    unapplied_state_changes = storage.get_statechanges_by_identifier(
-        from_identifier=from_identifier, to_identifier=state_change_identifier
+    unapplied_state_changes = storage.get_statechanges_by_range(
+        Range(from_identifier, state_change_identifier)
     )
 
     state_manager = StateManager(transition_function, chain_state)
@@ -91,13 +82,13 @@ class WriteAheadLog(Generic[ST]):
         """
 
         with self._lock:
-            timestamp = datetime.utcnow()
-            state_change_id = self.storage.write_state_change(state_change, timestamp)
-            self.state_change_id = state_change_id
+            state_change_ids = self.storage.write_state_changes([state_change])
+            assert len(state_change_ids) == 1
+            self.state_change_id = state_change_ids[0]
 
             state, events = self.state_manager.dispatch(state_change)
 
-            self.storage.write_events(state_change_id, events, timestamp)
+            self.storage.write_events(state_change_ids[0], events)
 
         return state, events
 
@@ -113,7 +104,7 @@ class WriteAheadLog(Generic[ST]):
 
             # otherwise no state change was dispatched
             if state_change_id and current_state is not None:
-                self.storage.write_state_snapshot(state_change_id, current_state)
+                self.storage.write_state_snapshot(current_state, state_change_id)
 
     @property
     def version(self) -> RaidenDBVersion:

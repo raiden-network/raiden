@@ -1,4 +1,3 @@
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -16,7 +15,11 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
@@ -181,9 +184,9 @@ def subdispatch_to_paymenttask(
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
         sub_iteration: Union[
-            TransitionResult[InitiatorPaymentState],
-            TransitionResult[MediatorTransferState],
-            TransitionResult[TargetTransferState],
+            TransitionResult[Optional[InitiatorPaymentState]],
+            TransitionResult[Optional[MediatorTransferState]],
+            TransitionResult[Optional[TargetTransferState]],
         ]
 
         if isinstance(sub_task, InitiatorTask):
@@ -884,7 +887,7 @@ def is_transaction_effect_satisfied(
     On restarts: The state of the on-chain channel could have changed while the
     node was offline. Once the node learns about the change (e.g. the channel
     was settled), new transactions can be dispatched by Raiden as a side effect for the
-    on-chain *event* (e.g. do the batch unlock with the latest merkle tree),
+    on-chain *event* (e.g. do the batch unlock with the latest pending locks),
     but the dispatched transaction could have been completed by another agent (e.g.
     the partner node). For these cases, the transaction from a different
     address which achieves the same side-effect is sufficient, otherwise

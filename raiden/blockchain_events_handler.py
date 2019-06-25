@@ -1,14 +1,20 @@
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import gevent
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import PATH_FINDING_BROADCASTING_ROOM
-from raiden.messages import FeeUpdate
+from raiden.constants import (
+    EMPTY_HASH,
+    LOCKSROOT_OF_NO_LOCKS,
+    PATH_FINDING_BROADCASTING_ROOM,
+    RoutingMode,
+)
+from raiden.messages import PFSFeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.services import update_path_finding_service_from_channel_state
 from raiden.storage.restore import (
@@ -36,7 +42,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import pex, typing
+from raiden.utils import typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -115,6 +121,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
             reveal_timeout=raiden.config["reveal_timeout"],
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
+            fee_schedule=replace(raiden.config["default_fee_schedule"]),
         )
 
         new_channel = ContractReceiveChannelNew(
@@ -131,11 +138,12 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
             raiden.start_health_check_for(partner_address)
 
-        # Tell PFS about fees for this channel
-        fee_update = FeeUpdate.from_channel_state(channel_state)
-        fee_update.sign(raiden.signer)
-        # Appends message to queue, so it's not blocking
-        raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
+        # Tell PFS about fees for this channel, when not in private mode
+        if raiden.routing_mode != RoutingMode.PRIVATE:
+            fee_update = PFSFeeUpdate.from_channel_state(channel_state)
+            fee_update.sign(raiden.signer)
+            # Appends message to queue, so it's not blocking
+            raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
 
     # Raiden node is not participant of channel
     else:
@@ -389,6 +397,12 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):
             block_identifier="latest",
         )
 
+    # For saving gas, LOCKSROOT_OF_NO_LOCKS is stored as EMPTY_HASH onchain
+    if our_locksroot == EMPTY_HASH:
+        our_locksroot = LOCKSROOT_OF_NO_LOCKS
+    if partner_locksroot == EMPTY_HASH:
+        partner_locksroot = LOCKSROOT_OF_NO_LOCKS
+
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=transaction_hash,
         canonical_identifier=channel_state.canonical_identifier,
@@ -424,8 +438,8 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
     else:
         log.debug(
             "Discarding unlock event, we're not part of it",
-            participant1=pex(participant1),
-            participant2=pex(participant2),
+            participant1=to_checksum_address(participant1),
+            participant2=to_checksum_address(participant2),
         )
         return
 
@@ -445,7 +459,9 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 sender=partner,
             )
             if state_change_record is not None:
-                canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
+                canonical_identifier = (
+                    state_change_record.data.balance_proof.canonical_identifier  # type: ignore
+                )
                 break
         elif partner == args["receiver"]:
             event_record = get_event_with_balance_proof_by_locksroot(
@@ -459,12 +475,14 @@ def handle_channel_batch_unlock(raiden: "RaidenService", event: Event):
                 recipient=partner,
             )
             if event_record is not None:
-                canonical_identifier = event_record.data.balance_proof.canonical_identifier
+                canonical_identifier = (
+                    event_record.data.balance_proof.canonical_identifier  # type: ignore
+                )
                 break
 
     msg = (
-        f"Can not resolve channel_id for unlock with locksroot {pex(locksroot)} and "
-        f"partner {pex(partner)}."
+        f"Can not resolve channel_id for unlock with locksroot {to_hex(locksroot)} and "
+        f"partner {to_checksum_address(partner)}."
     )
     assert canonical_identifier is not None, msg
 
@@ -506,8 +524,8 @@ def on_blockchain_event(raiden: "RaidenService", event: Event):  # pragma: no un
     data = event.event_data
     log.debug(
         "Blockchain event",
-        node=pex(raiden.address),
-        contract=pex(event.originating_contract),
+        node=to_checksum_address(raiden.address),
+        contract=to_checksum_address(event.originating_contract),
         event_data=data,
     )
 

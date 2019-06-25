@@ -2,17 +2,13 @@ import math
 from enum import Enum
 from hashlib import sha256
 
-from eth_utils import to_checksum_address
+from eth_utils import keccak, to_checksum_address
 
-from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
     BalanceHash,
     BlockHash,
     BlockNumber,
-    ChainID,
-    ChannelID,
-    LockHash,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -20,7 +16,6 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
-    TokenNetworkAddress,
     TransactionHash,
 )
 
@@ -51,13 +46,12 @@ NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 EMPTY_HASH = BlockHash(bytes(32))
 EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
 EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
-EMPTY_LOCK_HASH = LockHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_SIGNATURE = Signature(bytes(65))
-EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 EMPTY_SECRET = Secret(bytes(32))
 EMPTY_SECRET_SHA256 = SecretHash(sha256(EMPTY_SECRET).digest())
+LOCKSROOT_OF_NO_LOCKS = Locksroot(keccak(b""))
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")
@@ -100,11 +94,11 @@ class Environment(Enum):
 class RoutingMode(Enum):
     """Routing mode configuration that can be chosen on the command line"""
 
-    BASIC = "basic"
     PFS = "pfs"
+    LOCAL = "local"
+    PRIVATE = "private"
 
 
-GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK = 3_234_716
 GAS_REQUIRED_PER_SECRET_IN_BATCH = math.ceil(UNLOCK_TX_GAS_LIMIT / MAXIMUM_PENDING_TRANSFERS)
 GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL = 100_000
 
@@ -125,6 +119,3 @@ PATH_FINDING_BROADCASTING_ROOM = "path_finding"
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
-CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
-    ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
-)

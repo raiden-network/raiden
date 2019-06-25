@@ -330,7 +330,7 @@ def eth_node_to_logpath(node_config: Dict[str, Any], base_logdir: str) -> str:
 def geth_prepare_datadir(datadir: str, genesis_file: str) -> None:
     node_genesis_path = os.path.join(datadir, "custom_genesis.json")
     ipc_path = datadir + "/geth.ipc"
-    assert len(ipc_path) <= 104, f'geth data path "{ipc_path}" is too large'
+    assert len(ipc_path) < 104, f'geth data path "{ipc_path}" is too large'
 
     os.makedirs(datadir, exist_ok=True)
     shutil.copy(genesis_file, node_genesis_path)
@@ -495,7 +495,7 @@ def run_private_blockchain(
     else:
         raise TypeError(f'Unknown blockchain client type "{blockchain_type}"')
 
-    runner = eth_run_nodes(
+    runner: ContextManager[List[JSONRPCExecutor]] = eth_run_nodes(
         eth_node_descs=eth_nodes,
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,

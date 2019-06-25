@@ -9,7 +9,7 @@ from uuid import UUID
 import filelock
 import gevent
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_checksum_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
@@ -23,8 +23,10 @@ from raiden.constants import (
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
     Environment,
+    RoutingMode,
 )
 from raiden.exceptions import (
+    BrokenPreconditionError,
     InvalidAddress,
     InvalidDBData,
     InvalidSecret,
@@ -56,6 +58,7 @@ from raiden.transfer import node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -66,12 +69,13 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelSetFee,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, pex, random_secret
+from raiden.utils import create_default_identifier, lpex, random_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -161,26 +165,21 @@ def initiator_init(
 
 def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
-    # Feedback token not used here, will be removed with source routing
-    routes, _ = routing.get_best_routes(
-        chain_state=views.state_from_raiden(raiden),
-        token_network_address=from_transfer.balance_proof.token_network_address,
-        one_to_n_address=raiden.default_one_to_n_address,
-        from_address=InitiatorAddress(raiden.address),
-        to_address=from_transfer.target,
-        amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated through #3863
-        previous_address=transfer.sender,
-        config=raiden.config,
-        privkey=raiden.privkey,
-    )
     from_hop = HopState(
         transfer.sender,
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
+    route_states = routing.resolve_routes(
+        routes=transfer.metadata.routes,
+        # pylint: disable=E1101
+        token_network_address=from_transfer.balance_proof.token_network_address,
+        chain_state=views.state_from_raiden(raiden),
+    )
+
     init_mediator_statechange = ActionInitMediator(
-        routes=routes,
         from_hop=from_hop,
+        route_states=route_states,
         from_transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -192,6 +191,7 @@ def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_hop = HopState(
         node_address=transfer.sender,
+        # pylint: disable=E1101
         channel_identifier=from_transfer.balance_proof.channel_identifier,
     )
     init_target_statechange = ActionInitTarget(
@@ -234,6 +234,7 @@ class RaidenService(Runnable):
         transport,
         raiden_event_handler: EventHandler,
         message_handler,
+        routing_mode: RoutingMode,
         config: Dict[str, Any],
         user_deposit: UserDeposit = None,
     ) -> None:
@@ -248,6 +249,7 @@ class RaidenService(Runnable):
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
         self.default_msc_address = default_msc_address
+        self.routing_mode = routing_mode
         self.config = config
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
@@ -341,12 +343,13 @@ class RaidenService(Runnable):
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
             storage=storage,
-            state_change_identifier="latest",
+            state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
         )
 
         if self.wal.state_manager.current_state is None:
             log.debug(
-                "No recoverable state available, creating inital state.", node=pex(self.address)
+                "No recoverable state available, creating inital state.",
+                node=to_checksum_address(self.address),
             )
             # On first run Raiden needs to fetch all events for the payment
             # network, to reconstruct all token network graphs and find opened
@@ -384,12 +387,12 @@ class RaidenService(Runnable):
             log.debug(
                 "Restored state from WAL",
                 last_restored_block=last_log_block_number,
-                node=pex(self.address),
+                node=to_checksum_address(self.address),
             )
 
             known_networks = views.get_payment_network_address(views.state_from_raiden(self))
             if known_networks and self.default_registry.address not in known_networks:
-                configured_registry = pex(self.default_registry.address)
+                configured_registry = to_checksum_address(self.default_registry.address)
                 known_registries = lpex(known_networks)
                 raise RuntimeError(
                     f"Token network address mismatch.\n"
@@ -425,6 +428,7 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
+        self._initialize_channel_fees(self.config.get("use_imbalance_penalty", False))
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -438,12 +442,12 @@ class RaidenService(Runnable):
         self._start_transport(chain_state)
         self._start_alarm_task()
 
-        log.debug("Raiden Service started", node=pex(self.address))
+        log.debug("Raiden Service started", node=to_checksum_address(self.address))
         super().start()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
-        self.greenlet.name = f"RaidenService._run node:{pex(self.address)}"
+        self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
         try:
             self.stop_event.wait()
         except gevent.GreenletExit:  # killed without exception
@@ -485,7 +489,7 @@ class RaidenService(Runnable):
         if self.db_lock is not None:
             self.db_lock.release()
 
-        log.debug("Raiden Service stopped", node=pex(self.address))
+        log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
 
     @property
     def confirmation_blocks(self) -> BlockTimeout:
@@ -506,7 +510,7 @@ class RaidenService(Runnable):
         greenlet.link_value(remove)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} node:{pex(self.address)}>"
+        return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
     def _start_transport(self, chain_state: ChainState) -> None:
         """ Initialize the transport and related facilities.
@@ -573,7 +577,7 @@ class RaidenService(Runnable):
         assert self.wal, f"WAL not restored. node:{self!r}"
         log.debug(
             "State change",
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
             state_change=_redact_secret(JSONSerializer.serialize(state_change)),
         )
 
@@ -585,7 +589,7 @@ class RaidenService(Runnable):
 
         log.debug(
             "Raiden events",
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
             raiden_events=[
                 _redact_secret(JSONSerializer.serialize(event)) for event in raiden_event_list
             ],
@@ -735,7 +739,7 @@ class RaidenService(Runnable):
         log.debug(
             "Processing pending transactions",
             num_pending_transactions=len(pending_transactions),
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
         )
 
         for transaction in pending_transactions:
@@ -747,7 +751,7 @@ class RaidenService(Runnable):
                 log.error(str(e))
             except InvalidDBData:
                 raise
-            except RaidenUnrecoverableError as e:
+            except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
                 log_unrecoverable = (
                     self.config["environment_type"] == Environment.PRODUCTION
                     and not self.config["unrecoverable_error_should_crash"]
@@ -876,6 +880,42 @@ class RaidenService(Runnable):
                     transfer = event.transfer
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
+
+    def _initialize_channel_fees(self, use_imbalance_penalty: bool) -> None:
+        """ Initializes the fees of all open channels to the latest set values.
+
+        This includes a recalculation of the dynamic rebalancing fees.
+        """
+        chain_state = views.state_from_raiden(self)
+        default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
+        token_addresses = views.get_token_identifiers(
+            chain_state=chain_state, payment_network_address=self.default_registry.address
+        )
+
+        for token_address in token_addresses:
+            channels = views.get_channelstate_open(
+                chain_state=chain_state,
+                payment_network_address=self.default_registry.address,
+                token_address=token_address,
+            )
+
+            for channel in channels:
+                log.info(
+                    "Updating channel fees",
+                    channel=channel.canonical_identifier,
+                    flat_fee=default_fee_schedule.flat,
+                    proportional_fee=default_fee_schedule.proportional,
+                )
+
+                # FIXME: this should trigger an update of rebalancing fees
+                state_change = ActionChannelSetFee(
+                    canonical_identifier=channel.canonical_identifier,
+                    flat_fee=default_fee_schedule.flat,
+                    proportional_fee=default_fee_schedule.proportional,
+                    use_imbalance_penalty=use_imbalance_penalty,
+                )
+
+                self.handle_and_track_state_change(state_change)
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
@@ -1007,7 +1047,7 @@ class RaidenService(Runnable):
         )
         if secret_registered:
             raise RaidenUnrecoverableError(
-                f"Attempted to initiate a locked transfer with secrethash {pex(secrethash)}."
+                f"Attempted to initiate a locked transfer with secrethash {to_hex(secrethash)}."
                 f" That secret is already registered onchain."
             )
 
@@ -1052,6 +1092,7 @@ class RaidenService(Runnable):
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer) -> None:
         init_mediator_statechange = mediator_init(self, transfer)
+
         self.handle_and_track_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer) -> None:

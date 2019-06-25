@@ -2,6 +2,7 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
     raiden_events_search_for_item,
@@ -131,7 +132,7 @@ def run_test_refund_transfer(
 
     TODO:
         - Unlock the token on refund #1091
-        - Clear the merkletree and update the locked amount #193
+        - Clear the pending locks and update the locked amount #193
         - Remove the refund message type #490"""
     # Topology:
     #
@@ -270,7 +271,7 @@ def run_test_refund_transfer(
         )
         assert send_lock_expired
         # make sure that app0 never got it
-        state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, "latest")
+        state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
         assert not search_for_item(state_changes, ReceiveLockExpired, {"secrethash": secrethash})
 
     # Out of the handicapped app0 transport.

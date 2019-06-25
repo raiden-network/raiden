@@ -18,14 +18,6 @@ class RaidenUnrecoverableError(RaidenError):
 # Exceptions raised due to programming errors
 
 
-class HashLengthNot32(RaidenError):
-    """ Raised if the length of the provided element is not 32 bytes in length,
-    a keccak hash is required to include the element in the merkle tree.
-    """
-
-    pass
-
-
 class UnknownEventType(RaidenError):
     """Raised if decoding of an event failed."""
 
@@ -276,6 +268,17 @@ class InsufficientGasReserve(RaidenError):
     """
 
 
+class BrokenPreconditionError(RaidenError):
+    """ Raised while checking transaction preconditions
+    which should be satisfied before sending the transaction.
+    This exception when:
+    1. An assert or a revert in the smart contract would be hit for
+    triggering block.
+
+    2. If provided values are invalid (i.e ValueError)
+    """
+
+
 class ServiceRequestFailed(RaidenError):
     """ Raised when a request to one of the raiden services fails. """
 
@@ -286,3 +289,16 @@ class ServiceRequestIOURejected(ServiceRequestFailed):
     def __init__(self, message: str, error_code: int) -> None:
         super().__init__(f"{message} ({error_code})")
         self.error_code = error_code
+
+
+class UndefinedMediationFee(RaidenError):
+    """The fee schedule is not applicable resulting in undefined fees
+
+    Either the raiden node is not capable of mediating this payment, or the
+    FeeSchedule is outdated/inconsistent."""
+
+
+class TokenNetworkDeprecated(RaidenError):
+    """ Raised when the token network proxy safety switch
+    is turned on (i.e deprecated).
+    """

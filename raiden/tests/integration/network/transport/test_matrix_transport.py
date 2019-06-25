@@ -10,14 +10,14 @@ from matrix_client.errors import MatrixRequestError
 
 import raiden
 from raiden.constants import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     UINT64_MAX,
+    RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Delivered, FeeUpdate, Processed, SecretRequest, ToDevice
+from raiden.messages import Delivered, PFSFeeUpdate, Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -30,7 +30,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
@@ -630,6 +630,7 @@ def test_monitoring_global_messages(
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("route_mode", [RoutingMode.LOCAL, RoutingMode.PFS])
 def test_pfs_global_messages(
     local_matrix_servers,
     private_rooms,
@@ -637,14 +638,15 @@ def test_pfs_global_messages(
     retries_before_backoff,
     monkeypatch,
     global_rooms,
+    route_mode,
 ):
     """
-    Test that RaidenService sends UpdatePFS messages to global
+    Test that RaidenService sends PFSCapacityUpdate messages to global
     PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms,  # FIXME: #3735
+            "global_rooms": global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -657,6 +659,7 @@ def test_pfs_global_messages(
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
     raiden_service.config = dict(services=dict(monitoring_enabled=True))
+    raiden_service.routing_mode = route_mode
 
     transport.start(raiden_service, raiden_service.message_handler, None)
 
@@ -668,7 +671,7 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    # send UpdatePFS
+    # send PFSCapacityUpdate
     balance_proof = factories.create(HOP1_BALANCE_PROOF)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
@@ -687,9 +690,9 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 1
 
-    # send FeeUpdate
+    # send PFSFeeUpdate
     channel_state = factories.create(factories.NettingChannelStateProperties())
-    fee_update = FeeUpdate.from_channel_state(channel_state)
+    fee_update = PFSFeeUpdate.from_channel_state(channel_state)
     fee_update.sign(raiden_service.signer)
     raiden_service.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
     with gevent.Timeout(2):
@@ -697,8 +700,7 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 2
     msg_data = json.loads(pfs_room.send_text.call_args[0][0])
-    assert msg_data["_type"] == "raiden.messages.FeeUpdate"
-    assert msg_data["nonce"] == "1"
+    assert msg_data["_type"] == "raiden.messages.PFSFeeUpdate"
 
     transport.stop()
     transport.get()

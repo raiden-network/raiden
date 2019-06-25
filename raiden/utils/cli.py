@@ -274,8 +274,7 @@ class NetworkChoiceType(click.Choice):
 class EnumChoiceType(Choice):
     def __init__(self, enum_type: EnumMeta, case_sensitive=True):
         self._enum_type = enum_type
-        # https://github.com/python/typeshed/issues/2942
-        super().__init__(  # type: ignore
+        super().__init__(
             [choice.value for choice in enum_type], case_sensitive=case_sensitive  # type: ignore
         )
 

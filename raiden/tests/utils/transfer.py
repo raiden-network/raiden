@@ -4,29 +4,30 @@ from enum import Enum
 from hashlib import sha256
 
 import gevent
+from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
+from raiden.messages import LockedTransfer, LockExpired, Message, Metadata, RouteMetadata, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
-from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelState,
+    PendingLocksState,
     balanceproof_from_envelope,
-    make_empty_merkle_tree,
+    make_empty_pending_locks_state,
 )
-from raiden.utils import lpex, pex, random_secret, sha3
+from raiden.utils import random_secret
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,
@@ -157,8 +158,8 @@ def _transfer_unlocked(
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
         msg = (
-            f"transfer from {pex(initiator_app.raiden.address)} "
-            f"to {pex(target_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
+            f"to {to_checksum_address(target_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
@@ -210,8 +211,8 @@ def _transfer_expired(
     with Timeout(seconds=timeout):
         wait_for_remove_expired_lock.get()
         msg = (
-            f"transfer from {pex(initiator_app.raiden.address)} "
-            f"to {pex(target_app.raiden.address)} did not expire."
+            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
+            f"to {to_checksum_address(target_app.raiden.address)} did not expire."
         )
         assert payment_status.payment_done.get() is False, msg
 
@@ -312,16 +313,16 @@ def transfer_and_assert_path(
         )
 
         msg = (
-            f"{pex(from_app.raiden.address)} does not have a channel with "
-            f"{pex(to_app.raiden.address)} needed to transfer through the "
-            f"path {lpex(app.raiden.address for app in path)}."
+            f"{to_checksum_address(from_app.raiden.address)} does not have a channel with "
+            f"{to_checksum_address(to_app.raiden.address)} needed to transfer through the "
+            f"path {[to_checksum_address(app.raiden.address) for app in path]}."
         )
         assert from_channel_state, msg
         assert to_channel_state, msg
 
         msg = (
-            f"channel among {pex(from_app.raiden.address)} and "
-            f"{pex(to_app.raiden.address)} must be open to be used for a "
+            f"channel among {to_checksum_address(from_app.raiden.address)} and "
+            f"{to_checksum_address(to_app.raiden.address)} must be open to be used for a "
             f"transfer"
         )
         assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
@@ -355,8 +356,8 @@ def transfer_and_assert_path(
     with Timeout(seconds=timeout):
         gevent.wait(results)
         msg = (
-            f"transfer from {pex(first_app.raiden.address)} "
-            f"to {pex(last_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(first_app.raiden.address)} "
+            f"to {to_checksum_address(last_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
@@ -450,13 +451,11 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        leaves = [sha3(lock.encoded) for lock in pending_locks]
-        layers = compute_layers(leaves)
-        tree = MerkleTreeState(layers)
+        locks = PendingLocksState(list(bytes(lock.encoded) for lock in pending_locks))
     else:
-        tree = make_empty_merkle_tree()
+        locks = make_empty_pending_locks_state()
 
-    assert from_channel.our_state.merkletree == tree
+    assert from_channel.our_state.pending_locks == locks
 
     for lock in pending_locks:
         pending = lock.secrethash in from_channel.our_state.secrethashes_to_lockedlocks
@@ -509,7 +508,7 @@ def make_receive_transfer_mediated(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    merkletree_leaves: List[Keccak256] = None,
+    pending_locks: PendingLocksState = None,
     locked_amount: Optional[LockedAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
@@ -521,23 +520,29 @@ def make_receive_transfer_mediated(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError("Private key does not match any of the participants.")
 
-    if merkletree_leaves is None:
-        layers = [[lock.lockhash]]
+    if pending_locks is None:
+        locks = make_empty_pending_locks_state()
+        locks.locks.append(bytes(lock.encoded))
     else:
-        assert lock.lockhash in merkletree_leaves
-        layers = compute_layers(merkletree_leaves)
+        assert bytes(lock.encoded) in pending_locks.locks
+        locks = pending_locks
 
     if locked_amount is None:
         locked_amount = lock.amount
 
     assert locked_amount >= lock.amount
 
-    locksroot = layers[MERKLEROOT][0]
+    locksroot = compute_locksroot(locks)
 
     payment_identifier = nonce
     transfer_target = make_address()
     transfer_initiator = make_address()
     chain_id = chain_id or channel_state.chain_id
+
+    transfer_metadata = Metadata(
+        routes=[RouteMetadata(route=[channel_state.our_state.address, transfer_target])]
+    )
+
     mediated_transfer_msg = LockedTransfer(
         chain_id=chain_id,
         message_identifier=random.randint(0, UINT64_MAX),
@@ -555,19 +560,21 @@ def make_receive_transfer_mediated(
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
         fee=0,
+        metadata=transfer_metadata,
     )
     mediated_transfer_msg.sign(signer)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
     receive_lockedtransfer = LockedTransferSignedState(
-        random.randint(0, UINT64_MAX),
-        payment_identifier,
-        channel_state.token_address,
-        balance_proof,
-        lock,
-        transfer_initiator,
-        transfer_target,
+        payment_identifier=payment_identifier,
+        token=channel_state.token_address,
+        lock=lock,
+        initiator=transfer_initiator,
+        target=transfer_target,
+        message_identifier=random.randint(0, UINT64_MAX),
+        balance_proof=balance_proof,
+        routes=transfer_metadata.routes,
     )
 
     return receive_lockedtransfer
@@ -579,7 +586,7 @@ def make_receive_expired_lock(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    merkletree_leaves: List[Keccak256] = None,
+    pending_locks: List[Keccak256] = None,
     locked_amount: LockedAmount = None,
     chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
@@ -591,13 +598,12 @@ def make_receive_expired_lock(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError("Private key does not match any of the participants.")
 
-    if merkletree_leaves is None:
-        layers = make_empty_merkle_tree().layers
+    if pending_locks is None:
+        pending_locks = make_empty_pending_locks_state()
     else:
-        assert lock.lockhash not in merkletree_leaves
-        layers = compute_layers(merkletree_leaves)
+        assert bytes(lock.encoded) not in pending_locks
 
-    locksroot = layers[MERKLEROOT][0]
+    locksroot = compute_locksroot(pending_locks)
 
     chain_id = chain_id or channel_state.chain_id
     lock_expired_msg = LockExpired(

@@ -42,6 +42,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.typing import FeeAmount
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -240,11 +241,12 @@ def options(func):
                 "--routing-mode",
                 help=(
                     "Specify the routing mode to be used.\n"
-                    '"basic": use local routing\n'
                     '"pfs": use the path finding service\n'
+                    '"local": use local routing, but send updates to the PFS\n'
+                    '"private": use local routing and don\'t send updates to the PFS\n'
                 ),
                 type=EnumChoiceType(RoutingMode),
-                default=RoutingMode.BASIC.value,
+                default=RoutingMode.LOCAL.value,
                 show_default=True,
             ),
             option(
@@ -379,7 +381,7 @@ def options(func):
             ),
         ),
         option_group(
-            "Hash Resolver options",
+            "Hash Resolver Options",
             option(
                 "--resolver-endpoint",
                 help=(
@@ -389,6 +391,29 @@ def options(func):
                 ),
                 default=None,
                 type=str,
+                show_default=True,
+            ),
+        ),
+        option_group(
+            "Mediation Fee Options",
+            option(
+                "--flat-fee",
+                help=("Flat fee required for every mediation in wei of the mediated token."),
+                default=FeeAmount(0),
+                type=FeeAmount,
+                show_default=True,
+            ),
+            option(
+                "--proportional-fee",
+                help=("Mediation fee as ratio of mediated amount in parts-per-million (10^-6)."),
+                default=0,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                "--rebalancing-fee/--no-rebalancing-fee",
+                help="Enables the rebalancing fee (Preview).",
+                default=False,
                 show_default=True,
             ),
         ),
@@ -625,14 +650,13 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 
             port = next(free_port_generator)
 
-            # TODO: To use a routing_mode other than BASIC the service registry
-            # has to be deployed
+            # TODO: Use a routing_mode PRIVATE here, as no updates should be broadcasted
             args["api_address"] = f"localhost:{port}"
             args["config"] = deepcopy(App.DEFAULT_CONFIG)
             args["environment_type"] = environment_type
             args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
             args["one_to_n_contract_address"] = "0x" + "1" * 40
-            args["routing_mode"] = RoutingMode.BASIC
+            args["routing_mode"] = RoutingMode.PRIVATE
 
             for option_ in run.params:
                 if option_.name in args.keys():

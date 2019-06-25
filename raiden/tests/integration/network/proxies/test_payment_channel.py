@@ -1,8 +1,8 @@
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.exceptions import (
-    ChannelOutdatedError,
+    BrokenPreconditionError,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -74,10 +74,10 @@ def test_payment_channel_proxy_basics(
     channel_proxy_1.settle(
         transferred_amount=0,
         locked_amount=0,
-        locksroot=EMPTY_HASH,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner_transferred_amount=0,
         partner_locked_amount=0,
-        partner_locksroot=EMPTY_HASH,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         block_identifier="latest",
     )
     assert channel_proxy_1.settled("latest") is True
@@ -120,6 +120,9 @@ def test_payment_channel_proxy_basics(
             block_identifier="latest",
         )
 
-    msg = "The channel is closed, set total deposit must fail"
-    with pytest.raises(ChannelOutdatedError, message=msg):
+    msg = (
+        "The channel was not opened at the provided block (latest). "
+        "This call should never have been attempted."
+    )
+    with pytest.raises(BrokenPreconditionError, message=msg):
         channel_proxy_1.set_total_deposit(total_deposit=20, block_identifier="latest")

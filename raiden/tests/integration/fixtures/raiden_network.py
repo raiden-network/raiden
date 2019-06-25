@@ -60,7 +60,7 @@ def raiden_chain(
     )
 
     base_datadir = os.path.join(
-        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes"
+        get_artifacts_storage(request.node.name) or str(tmpdir), "raiden_nodes"
     )
 
     service_registry_address = None
@@ -162,7 +162,7 @@ def raiden_network(
         service_registry_address = blockchain_services.service_registry.address
 
     base_datadir = os.path.join(
-        get_artifacts_storage(str(tmpdir)), request.node.name, "raiden_nodes"
+        get_artifacts_storage(request.node.name) or str(tmpdir), "raiden_nodes"
     )
 
     raiden_apps = create_apps(

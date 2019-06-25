@@ -3,6 +3,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
+from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden import waiting
@@ -11,6 +12,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.storage.restore import channel_state_until_state_change
+from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
@@ -23,7 +25,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import pex, sha3
+from raiden.utils import sha3
 from raiden.utils.timeout import BlockTimeout
 
 
@@ -32,9 +34,7 @@ def wait_for_batch_unlock(app, token_network_address, receiver, sender):
     while not unlock_event:
         gevent.sleep(1)
 
-        state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
-            from_identifier=0, to_identifier="latest"
-        )
+        state_changes = app.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
         unlock_event = search_for_item(
             state_changes,
@@ -111,9 +111,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
         not in token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
     )
 
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
-    )
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
         state_changes,
@@ -343,7 +341,7 @@ def run_test_batch_unlock(
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app.raiden,
         canonical_identifier=alice_bob_channel_state.canonical_identifier,
-        state_change_identifier="latest",
+        state_change_identifier=HIGH_STATECHANGE_ULID,
     )
 
     our_restored_balance_proof = restored_channel_state.our_state.balance_proof
@@ -459,8 +457,8 @@ def run_test_channel_withdraw(
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
         msg = (
-            f"transfer from {pex(alice_app.raiden.address)} "
-            f"to {pex(bob_app.raiden.address)} failed."
+            f"transfer from {to_checksum_address(alice_app.raiden.address)} "
+            f"to {to_checksum_address(bob_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
@@ -535,7 +533,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
 
     secret_available.wait()  # wait for the messages to be exchanged
 
-    # Save the merkle tree leaves from the pending transfer, used to test the unlock
+    # Save the pending locks from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
     batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
     assert batch_unlock
@@ -571,7 +569,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
         netting_channel.unlock(
             sender=channelstate_0_1.our_state.address,
             receiver=channelstate_0_1.partner_state.address,
-            merkle_tree_locks=batch_unlock,
+            pending_locks=batch_unlock,
             given_block_identifier=current_block,
         )
 
@@ -707,11 +705,6 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     hub_contract = get_channelstate(
         app1, app0, token_network_address
     ).external_state.netting_channel.address
-
-    # the attacker can create a merkle proof of the locked transfer
-    # <the commented code below is left for documentation purposes>
-    # lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
-    # unlock_proof = attack_channel.partner_state.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
     attack_balance_proof = attack_transfer.to_balanceproof()

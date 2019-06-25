@@ -4,7 +4,13 @@ from typing import TYPE_CHECKING
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
+from raiden.constants import (
+    EMPTY_BALANCE_HASH,
+    EMPTY_HASH,
+    EMPTY_MESSAGE_HASH,
+    EMPTY_SIGNATURE,
+    LOCKSROOT_OF_NO_LOCKS,
+)
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
@@ -57,7 +63,6 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
-from raiden.utils import pex
 from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 
@@ -78,6 +83,7 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedUnlock,
     EventInvalidReceivedWithdrawRequest,
     EventInvalidReceivedWithdraw,
+    EventRouteFailed,
 )
 
 
@@ -88,13 +94,13 @@ def unlock(
     receiver: Address,
     given_block_identifier: BlockSpecification,
 ) -> None:  # pragma: no unittest
-    merkle_tree_locks = get_batch_unlock(end_state)
-    assert merkle_tree_locks, "merkle tree is missing"
+    pending_locks = get_batch_unlock(end_state)
+    assert pending_locks, "pending lock set is missing"
 
     payment_channel.unlock(
         sender=sender,
         receiver=receiver,
-        merkle_tree_locks=merkle_tree_locks,
+        pending_locks=pending_locks,
         given_block_identifier=given_block_identifier,
     )
 
@@ -167,7 +173,11 @@ class RaidenEventHandler(EventHandler):
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
-            log.error("Unknown event", event_type=str(type(event)), node=pex(raiden.address))
+            log.error(
+                "Unknown event",
+                event_type=str(type(event)),
+                node=to_checksum_address(raiden.address),
+            )
 
     @staticmethod
     def handle_send_lockexpired(
@@ -283,9 +293,9 @@ class RaidenEventHandler(EventHandler):
         # pylint: disable=unused-argument
         log.error(
             "UnlockFailed!",
-            secrethash=pex(unlock_failed_event.secrethash),
+            secrethash=to_hex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
-            node=pex(raiden.address),
+            node=to_checksum_address(raiden.address),
         )
 
     @staticmethod
@@ -418,9 +428,9 @@ class RaidenEventHandler(EventHandler):
         partner_locksroot = channel_state.partner_state.onchain_locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        search_events = our_locksroot != EMPTY_HASH
+        search_events = our_locksroot != LOCKSROOT_OF_NO_LOCKS
         # we want to unlock, because there are unlocked/unclaimed locks
-        search_state_changes = partner_locksroot != EMPTY_HASH
+        search_state_changes = partner_locksroot != LOCKSROOT_OF_NO_LOCKS
 
         if not search_events and not search_state_changes:
             # In the case that someone else sent the unlock we do nothing
@@ -559,7 +569,7 @@ class RaidenEventHandler(EventHandler):
             "chain_id": canonical_identifier.chain_identifier,
             "token_network_address": canonical_identifier.token_network_address,
             "channel_identifier": canonical_identifier.channel_identifier,
-            "node": pex(raiden.address),
+            "node": to_checksum_address(raiden.address),
             "partner": to_checksum_address(partner_details.address),
             "our_deposit": our_details.deposit,
             "our_withdrawn": our_details.withdrawn,
@@ -582,6 +592,7 @@ class RaidenEventHandler(EventHandler):
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 balance_hash=our_details.balance_hash,
+                recipient=participants_details.partner_details.address,
             )
 
             if event_record is None:
@@ -590,14 +601,14 @@ class RaidenEventHandler(EventHandler):
                     "Our balance proof could not be found in the database"
                 )
 
-            our_balance_proof = event_record.data.balance_proof
+            our_balance_proof = event_record.data.balance_proof  # type: ignore
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
         else:
             our_transferred_amount = 0
             our_locked_amount = 0
-            our_locksroot = EMPTY_HASH
+            our_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
@@ -612,14 +623,14 @@ class RaidenEventHandler(EventHandler):
                     "Partner balance proof could not be found in the database"
                 )
 
-            partner_balance_proof = state_change_record.data.balance_proof
+            partner_balance_proof = state_change_record.data.balance_proof  # type: ignore
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot
         else:
             partner_transferred_amount = 0
             partner_locked_amount = 0
-            partner_locksroot = EMPTY_HASH
+            partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         payment_channel.settle(
             transferred_amount=our_transferred_amount,
@@ -656,8 +667,9 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         raiden: "RaidenService", route_failed_event: EventRouteFailed
     ) -> None:  # pragma: no unittest
         feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
+        pfs_config = raiden.config.get("pfs_config")
 
-        if feedback_token:
+        if feedback_token and pfs_config:
             log.debug(
                 "Received event for failed route",
                 route=route_failed_event.route,
@@ -665,11 +677,11 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
+                pfs_config=pfs_config,
                 token_network_address=route_failed_event.token_network_address,
                 route=route_failed_event.route,
                 token=feedback_token,
                 succesful=False,
-                service_config=raiden.config.get("services"),
             )
 
     @staticmethod
@@ -679,17 +691,18 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         feedback_token = raiden.route_to_feedback_token.get(
             tuple(payment_sent_success_event.route)
         )
+        pfs_config = raiden.config.get("pfs_config")
 
-        if feedback_token:
+        if feedback_token and pfs_config:
             log.debug(
                 "Received payment success event",
                 route=payment_sent_success_event.route,
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
+                pfs_config=pfs_config,
                 token_network_address=payment_sent_success_event.token_network_address,
                 route=payment_sent_success_event.route,
                 token=feedback_token,
                 succesful=True,
-                service_config=raiden.config.get("services"),
             )

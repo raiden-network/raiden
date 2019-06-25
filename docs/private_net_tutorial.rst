@@ -42,7 +42,7 @@ Install Raiden and dependencies
  <snip>/priv_chain
  (env) $ git clone https://github.com/raiden-network/raiden
  (env) $ cd raiden
- (env) $ pip install -r requirements.txt -c constraints.txt -e .
+ (env) $ make install-dev
 
 Launch a private network
 ========================

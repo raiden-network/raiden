@@ -1,10 +1,11 @@
 import itertools
 import random
 
-from raiden.constants import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnexpectedSecretReveal,
     EventUnlockClaimFailed,
@@ -31,7 +32,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
     RouteState,
     message_identifier_from_prng,
@@ -56,6 +56,7 @@ from raiden.utils.typing import (
     LockType,
     NodeNetworkStateMap,
     Optional,
+    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -128,7 +129,8 @@ def is_send_transfer_almost_equal(
         and isinstance(received, LockedTransferSignedState)
         and send.payment_identifier == received.payment_identifier
         and send.token == received.token
-        and send.lock.amount == received.lock.amount - send_channel.mediation_fee
+        # FIXME: user proper fee calculation
+        and send.lock.amount == received.lock.amount - send_channel.fee_schedule.flat
         and send.lock.expiration == received.lock.expiration
         and send.lock.secrethash == received.lock.secrethash
         and send.initiator == received.initiator
@@ -160,20 +162,15 @@ def has_secret_registration_started(
 
 
 def filter_reachable_routes(
-    routes: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
+    route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
 ) -> List[RouteState]:
-    """This function makes sure we use reachable routes only."""
-    reachable_routes = []
+    """ This function makes sure we use reachable routes only. """
 
-    for route in routes:
-        node_network_state = nodeaddresses_to_networkstates.get(
-            route.next_hop_address, NODE_NETWORK_UNREACHABLE
-        )
-
-        if node_network_state == NODE_NETWORK_REACHABLE:
-            reachable_routes.append(route)
-
-    return reachable_routes
+    return [
+        route
+        for route in route_states
+        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NODE_NETWORK_REACHABLE
+    ]
 
 
 def filter_used_routes(
@@ -246,7 +243,11 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    return PaymentWithFeeAmount(lock.amount - payee_channel.mediation_fee)
+    balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
+    # The fee should be calculated on the payment amount without fees. But we
+    # only have the amount including fees, so we use that as an approximation.
+    fee = payee_channel.fee_schedule.fee(PaymentAmount(lock.amount), balance)
+    return PaymentWithFeeAmount(lock.amount - fee)
 
 
 def sanity_check(
@@ -319,10 +320,10 @@ def sanity_check(
 def clear_if_finalized(
     iteration: TransitionResult,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-) -> TransitionResult[MediatorTransferState]:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """Clear the mediator task if all the locks have been finalized.
 
-    A lock is considered finalized if it has been removed from the merkle tree
+    A lock is considered finalized if it has been removed from the pending locks
     offchain, either because the transfer was unlocked or expired, or because the
     channel was settled on chain and therefore the channel is removed."""
     state = cast(MediatorTransferState, iteration.new_state)
@@ -354,60 +355,66 @@ def clear_if_finalized(
 
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
-    available_routes: List[RouteState],
+    route_state: RouteState,
+    route_state_table: List[RouteState],
     channelidentifiers_to_channels: Dict,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
-    """ Given a payer transfer tries a new route to proceed with the mediation.
+    """ Given a payer transfer tries the given route to proceed with the mediation.
 
     Args:
         payer_transfer: The transfer received from the payer_channel.
-        available_routes: Current available routes that may be used, it's
-            assumed that the routes list is ordered from best to worst.
+        route_state: route to be tried.
+        route_state_table: list of all candidate routes
         channelidentifiers_to_channels: All the channels available for this
             transfer.
+
         pseudo_random_generator: Number generator to generate a message id.
         block_number: The current block number.
     """
-    transfer_pair = None
-    mediated_events: List[Event] = list()
+    # check channel
+    payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
+    if not payee_channel:
+        return None, []
+
+    amount_after_fees = get_lock_amount_after_fees(payer_transfer.lock, payee_channel)
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
-
-    route_infos = channel.next_channel_from_routes(
-        available_routes=available_routes,
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
-        transfer_amount=payer_transfer.lock.amount,
+    if not channel.is_channel_usable(
+        candidate_channel_state=payee_channel,
+        transfer_amount=amount_after_fees,
         lock_timeout=lock_timeout,
+    ):
+        return None, []
+
+    assert payee_channel.settle_timeout >= lock_timeout
+    assert payee_channel.token_address == payer_transfer.token
+
+    # create events
+    route_states = channel.prune_route_table(
+        route_state_table=route_state_table, selected_route=route_state
     )
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    lockedtransfer_event = channel.send_lockedtransfer(
+        channel_state=payee_channel,
+        initiator=payer_transfer.initiator,
+        target=payer_transfer.target,
+        amount=amount_after_fees,
+        message_identifier=message_identifier,
+        payment_identifier=payer_transfer.payment_identifier,
+        expiration=payer_transfer.lock.expiration,
+        secrethash=payer_transfer.lock.secrethash,
+        route_states=route_states,
+    )
+    assert lockedtransfer_event
+    mediated_events: List[Event] = [lockedtransfer_event]
 
-    if route_infos:
-        payee_channel, route_state = route_infos
-        assert payee_channel.settle_timeout >= lock_timeout
-        assert payee_channel.token_address == payer_transfer.token
-
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        lock = payer_transfer.lock
-        lockedtransfer_event = channel.send_lockedtransfer(
-            channel_state=payee_channel,
-            initiator=payer_transfer.initiator,
-            target=payer_transfer.target,
-            amount=get_lock_amount_after_fees(lock, payee_channel),
-            message_identifier=message_identifier,
-            payment_identifier=payer_transfer.payment_identifier,
-            expiration=lock.expiration,
-            secrethash=lock.secrethash,
-        )
-        assert lockedtransfer_event
-
-        transfer_pair = MediationPairState(
-            route=route_state,
-            payer_transfer=payer_transfer,
-            payee_address=payee_channel.partner_state.address,
-            payee_transfer=lockedtransfer_event.transfer,
-        )
-
-        mediated_events = [lockedtransfer_event]
+    # create transfer pair
+    transfer_pair = MediationPairState(
+        payer_transfer=payer_transfer,
+        payee_address=payee_channel.partner_state.address,
+        payee_transfer=lockedtransfer_event.transfer,
+    )
 
     return transfer_pair, mediated_events
 
@@ -445,6 +452,12 @@ def backward_transfer_pair(
     # do anything and wait for the received lock to expire.
     if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+
+        backward_route_state = RouteState(
+            route=[backward_channel.our_state.address],
+            forward_channel_id=backward_channel.canonical_identifier.channel_identifier,
+        )
+
         refund_transfer = channel.send_refundtransfer(
             channel_state=backward_channel,
             initiator=payer_transfer.initiator,
@@ -454,11 +467,10 @@ def backward_transfer_pair(
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
             secrethash=lock.secrethash,
+            route_state=backward_route_state,
         )
 
-        backward_path = RouteState([], ChannelID(-1))
         transfer_pair = MediationPairState(
-            route=backward_path,
             payer_transfer=payer_transfer,
             payee_address=backward_channel.partner_state.address,
             payee_transfer=refund_transfer.transfer,
@@ -980,7 +992,7 @@ def secret_learned(
 
 def mediate_transfer(
     state: MediatorTransferState,
-    possible_routes: List[RouteState],
+    candidate_route_states: List[RouteState],
     payer_channel: NettingChannelState,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
@@ -996,18 +1008,26 @@ def mediate_transfer(
     send a refund back to the payer, allowing the payer to try a different
     route.
     """
-    reachable_routes = filter_reachable_routes(possible_routes, nodeaddresses_to_networkstates)
-    available_routes = filter_used_routes(state.transfers_pair, reachable_routes)
-
     assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
 
-    transfer_pair, mediated_events = forward_transfer_pair(
-        payer_transfer,
-        available_routes,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
-        block_number,
+    transfer_pair: Optional[MediationPairState] = None
+    mediated_events: List[Event] = list()
+
+    reachable_route_states = filter_reachable_routes(
+        candidate_route_states, nodeaddresses_to_networkstates
     )
+
+    for route_state in reachable_route_states:
+        transfer_pair, mediated_events = forward_transfer_pair(
+            payer_transfer=payer_transfer,
+            route_state=route_state,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            route_state_table=candidate_route_states,
+        )
+        if transfer_pair is not None:
+            break
 
     if transfer_pair is None:
         assert not mediated_events
@@ -1045,12 +1065,12 @@ def handle_init(
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[MediatorTransferState]:
-    routes = state_change.routes
-
+) -> TransitionResult[Optional[MediatorTransferState]]:
     from_hop = state_change.from_hop
     from_transfer = state_change.from_transfer
     payer_channel = channelidentifiers_to_channels.get(from_hop.channel_identifier)
+
+    routes = state_change.route_states
 
     # There is no corresponding channel for the message, ignore it
     if not payer_channel:
@@ -1165,15 +1185,26 @@ def handle_refundtransfer(
         if not is_valid:
             return TransitionResult(mediator_state, channel_events)
 
+        # We remove all routes where the sender of the refund is our forward hop
+        candidate_route_states = [
+            route
+            for route in mediator_state.routes
+            if route.forward_channel_id != payer_channel.canonical_identifier.channel_identifier
+        ]
+
+        # To avoid duplicated attempts at an already-tried route, we
+        # remove the unusable routes from the state.routes
+        mediator_state.routes = candidate_route_states
+
         iteration = mediate_transfer(
-            mediator_state,
-            mediator_state_change.routes,
-            payer_channel,
-            channelidentifiers_to_channels,
-            nodeaddresses_to_networkstates,
-            pseudo_random_generator,
-            payer_transfer,
-            block_number,
+            state=mediator_state,
+            candidate_route_states=candidate_route_states,
+            payer_channel=payer_channel,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            pseudo_random_generator=pseudo_random_generator,
+            payer_transfer=payer_transfer,
+            block_number=block_number,
         )
 
         events.extend(channel_events)
@@ -1392,7 +1423,7 @@ def handle_node_change_network_state(
 
     return mediate_transfer(
         state=mediator_state,
-        possible_routes=[route],
+        candidate_route_states=[route],
         payer_channel=payer_channel,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         nodeaddresses_to_networkstates={state_change.node_address: state_change.network_state},
@@ -1410,7 +1441,7 @@ def state_transition(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
-) -> TransitionResult[MediatorTransferState]:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches
     # Notes:

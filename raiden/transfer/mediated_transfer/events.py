@@ -101,11 +101,11 @@ class SendBalanceProof(SendMessageEvent):
         This event has a dual role, it serves as a synchronization and as
         balance-proof for the netting channel smart contract.
 
-        Nodes need to keep the last known merkle root synchronized. This is
+        Nodes need to keep the last known locksroot synchronized. This is
         required by the receiving end of a transfer in order to properly
         validate. The rule is "only the party that owns the current payment
         channel may change it" (remember that a netting channel is composed of
-        two uni-directional channels), as a consequence the merkle root is only
+        two uni-directional channels), as a consequence the locksroot is only
         updated by the recipient once a balance proof message is received.
     """
 

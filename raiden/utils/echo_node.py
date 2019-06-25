@@ -5,6 +5,7 @@ from typing import Deque, Set
 
 import gevent
 import structlog
+from eth_utils import to_checksum_address
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import BoundedSemaphore
@@ -16,7 +17,6 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.utils import pex
 
 log = structlog.get_logger(__name__)
 
@@ -46,8 +46,9 @@ class EchoNode:  # pragma: no unittest
             token = self.api.raiden.chain.token(self.token_address)
             if not token.balance_of(self.api.raiden.address) > 0:
                 raise ValueError(
-                    "not enough funds for echo node %s for token %s"
-                    % (pex(self.api.raiden.address), pex(self.token_address))
+                    f"not enough funds for echo node "
+                    f"{to_checksum_address(self.api.raiden.address)} for token "
+                    f"{to_checksum_address(self.token_address)}"
                 )
             self.api.token_network_connect(
                 self.api.raiden.default_registry.address,
@@ -140,7 +141,7 @@ class EchoNode:  # pragma: no unittest
                 if transfer in self.seen_transfers:
                     log.debug(
                         "duplicate transfer ignored",
-                        initiator=pex(transfer.initiator),
+                        initiator=to_checksum_address(transfer.initiator),
                         amount=transfer.amount,
                         identifier=transfer.identifier,
                     )
@@ -168,7 +169,7 @@ class EchoNode:  # pragma: no unittest
         if transfer.amount % 3 == 0:
             log.info(
                 "ECHO amount - 1",
-                initiator=pex(transfer.initiator),
+                initiator=to_checksum_address(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
             )
@@ -177,7 +178,7 @@ class EchoNode:  # pragma: no unittest
         elif transfer.amount == 7:
             log.info(
                 "ECHO lucky number draw",
-                initiator=pex(transfer.initiator),
+                initiator=to_checksum_address(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
                 poolsize=self.lottery_pool.qsize(),
@@ -193,7 +194,7 @@ class EchoNode:  # pragma: no unittest
                 assert transfer not in tickets
                 log.debug(
                     "duplicate lottery entry",
-                    initiator=pex(transfer.initiator),
+                    initiator=to_checksum_address(transfer.initiator),
                     identifier=transfer.identifier,
                     poolsize=len(tickets),
                 )
@@ -217,7 +218,7 @@ class EchoNode:  # pragma: no unittest
         else:
             log.debug(
                 "echo transfer received",
-                initiator=pex(transfer.initiator),
+                initiator=to_checksum_address(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
             )
@@ -226,11 +227,11 @@ class EchoNode:  # pragma: no unittest
         if echo_amount:
             log.debug(
                 "sending echo transfer",
-                target=pex(transfer.initiator),
+                target=to_checksum_address(transfer.initiator),
                 amount=echo_amount,
                 orig_identifier=transfer.identifier,
                 echo_identifier=transfer.identifier + echo_amount,
-                token_address=pex(self.token_address),
+                token_address=to_checksum_address(self.token_address),
                 num_handled_transfers=self.num_handled_transfers + 1,
             )
 

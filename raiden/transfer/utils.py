@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from web3 import Web3
 
-from raiden.constants import EMPTY_HASH
+from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ def hash_balance_data(
 ) -> BalanceHash:
     assert locksroot != b""
     assert len(locksroot) == 32
-    if transferred_amount == 0 and locked_amount == 0 and locksroot == EMPTY_HASH:
+    if transferred_amount == 0 and locked_amount == 0 and locksroot == LOCKSROOT_OF_NO_LOCKS:
         return BalanceHash(EMPTY_HASH)
 
     return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter

@@ -6,14 +6,9 @@ from random import Random
 from typing import TYPE_CHECKING, Tuple
 
 import networkx
+from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import (
-    EMPTY_LOCK_HASH,
-    EMPTY_MERKLE_ROOT,
-    EMPTY_SECRETHASH,
-    UINT64_MAX,
-    UINT256_MAX,
-)
+from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import (
@@ -25,7 +20,8 @@ from raiden.transfer.architecture import (
     TransferTask,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.utils import lpex, pex, sha3
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.utils import lpex
 from raiden.utils.typing import (
     Address,
     Any,
@@ -38,10 +34,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     EncodedData,
-    FeeAmount,
-    Keccak256,
     List,
-    LockHash,
     Locksroot,
     MessageID,
     Nonce,
@@ -103,12 +96,6 @@ def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "Balance
             token_network_address=envelope_message.token_network_address,
             channel_identifier=envelope_message.channel_identifier,
         ),
-    )
-
-
-def make_empty_merkle_tree() -> "MerkleTreeState":
-    return MerkleTreeState(
-        [[], [Keccak256(EMPTY_MERKLE_ROOT)]]  # the leaves are empty  # the root is the constant 0
     )
 
 
@@ -188,8 +175,13 @@ class RouteState(State):
 
     @property
     def next_hop_address(self) -> Address:
-        assert len(self.route) >= 2
+        assert len(self.route) >= 1
         return self.route[1]
+
+    def __repr__(self):
+        return "RouteState ({}), channel_id: {}".format(
+            " -> ".join(to_checksum_address(addr) for addr in self.route), self.forward_channel_id
+        )
 
 
 @dataclass
@@ -200,7 +192,6 @@ class HashTimeLockState(State):
     expiration: BlockExpiration
     secrethash: SecretHash
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         typecheck(self.amount, T_PaymentWithFeeAmount)
@@ -215,8 +206,6 @@ class HashTimeLockState(State):
 
         self.encoded = EncodedData(packed.data)
 
-        self.lockhash = LockHash(sha3(self.encoded))
-
 
 @dataclass
 class UnlockPartialProofState(State):
@@ -228,7 +217,6 @@ class UnlockPartialProofState(State):
     expiration: BlockExpiration = field(repr=False, default=BlockExpiration(0))
     secrethash: SecretHash = field(repr=False, default=EMPTY_SECRETHASH)
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)
@@ -238,7 +226,6 @@ class UnlockPartialProofState(State):
         self.expiration = self.lock.expiration
         self.secrethash = self.lock.secrethash
         self.encoded = self.lock.encoded
-        self.lockhash = self.lock.lockhash
 
 
 @dataclass
@@ -274,8 +261,12 @@ class TransactionExecutionStatus(State):
 
 
 @dataclass
-class MerkleTreeState(State):
-    layers: List[List[Keccak256]]
+class PendingLocksState(State):
+    locks: List[EncodedData]
+
+
+def make_empty_pending_locks_state() -> PendingLocksState:
+    return PendingLocksState(list())
 
 
 @dataclass(order=True)
@@ -319,9 +310,13 @@ class NettingChannelEndState(State):
     secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
-    merkletree: MerkleTreeState = field(repr=False, default_factory=make_empty_merkle_tree)
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
-    onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
+    #: A dictionary that maps secrethashes to lock states.
+    #: Used for calculating the locksroot.
+    pending_locks: PendingLocksState = field(
+        repr=False, default_factory=make_empty_pending_locks_state
+    )
+    onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))
 
     def __post_init__(self) -> None:
@@ -338,7 +333,7 @@ class NettingChannelState(State):
     payment_network_address: PaymentNetworkAddress = field(repr=False)
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
-    mediation_fee: FeeAmount = field(repr=False)
+    fee_schedule: FeeScheduleState = field(repr=False)
     our_state: NettingChannelEndState = field(repr=False)
     partner_state: NettingChannelEndState = field(repr=False)
     open_transaction: TransactionExecutionStatus
@@ -403,6 +398,11 @@ class NettingChannelState(State):
     def our_total_deposit(self) -> Balance:
         # pylint: disable=E1101
         return self.our_state.contract_balance
+
+    @property
+    def our_total_withdraw(self) -> WithdrawAmount:
+        # pylint: disable=E1101
+        return self.our_state.total_withdraw
 
     @property
     def partner_total_deposit(self) -> Balance:
@@ -498,7 +498,7 @@ class ChainState(State):
             "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
         ).format(
             self.block_number,
-            pex(self.block_hash),
+            to_hex(self.block_hash),
             # pylint: disable=E1101
             lpex(self.identifiers_to_paymentnetworks.keys()),
             # pylint: disable=E1101

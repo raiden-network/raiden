@@ -12,7 +12,7 @@ from raiden.utils import safe_gas_limit
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
 # set very low values to force the client to prune old state
-STATE_PRUNNING = {
+STATE_PRUNING = {
     "pruning": "fast",
     "pruning-history": 1,
     "pruning-memory": 1,
@@ -24,7 +24,7 @@ STATE_PRUNNING = {
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNNING])
+@pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_locksroot_loading_during_channel_settle_handling(
     raiden_chain, deploy_client, token_addresses
 ):

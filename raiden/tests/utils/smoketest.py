@@ -28,6 +28,7 @@ from raiden.constants import (
     UINT256_MAX,
     EthClient,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -49,7 +50,6 @@ from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterable, Port
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
@@ -94,12 +94,6 @@ def deploy_smoketest_contracts(
 ) -> Dict[str, Address]:
     client.web3.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
 
-    endpoint_registry_address = deploy_contract_web3(
-        contract_name=CONTRACT_ENDPOINT_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
-    )
-
     secret_registry_address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=client,
@@ -123,7 +117,6 @@ def deploy_smoketest_contracts(
     )
 
     addresses = {
-        CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
     }
@@ -263,6 +256,10 @@ def setup_raiden(
         client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
+    blockchain_service = BlockChainService(
+        jsonrpc_client=client, contract_manager=contract_manager
+    )
+
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
@@ -281,6 +278,7 @@ def setup_raiden(
         jsonrpc_client=client,
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
     )
 
     if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
@@ -295,9 +293,6 @@ def setup_raiden(
         )
 
     print_step("Setting up Raiden")
-    endpoint_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_ENDPOINT_REGISTRY]
-    )
     tokennetwork_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
     )
@@ -308,7 +303,6 @@ def setup_raiden(
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
         "datadir": keystore,
-        "endpoint_registry_contract_address": endpoint_registry_contract_address,
         "eth_rpc_endpoint": eth_rpc_endpoint,
         "gas_price": "fast",
         "keystore_path": keystore,

@@ -35,7 +35,9 @@ from raiden.utils.typing import (
 )
 
 
-def clear_if_finalized(iteration: TransitionResult,) -> TransitionResult[InitiatorPaymentState]:
+def clear_if_finalized(
+    iteration: TransitionResult
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     """ Clear the initiator payment task if all transfers have been finalized
     or expired. """
     state = cast(InitiatorPaymentState, iteration.new_state)
@@ -90,28 +92,38 @@ def cancel_current_route(
     return events_for_cancel_current_route(transfer_description)
 
 
-def maybe_try_new_route(
+def maybe_try_new_route_or_cancel(
     payment_state: InitiatorPaymentState,
     initiator_state: InitiatorTransferState,
     transfer_description: TransferDescriptionWithSecretState,
-    available_routes: List[RouteState],
+    candidate_route_states: List[RouteState],
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
+    is_reroute_allowed: bool = True,
 ) -> TransitionResult[InitiatorPaymentState]:
     events: List[Event] = list()
+
     if can_cancel(initiator_state):
         cancel_events = cancel_current_route(payment_state, initiator_state)
+        events.extend(cancel_events)
 
+        if not is_reroute_allowed:
+            return TransitionResult(payment_state, events)
+
+        filtered_route_states = [
+            route
+            for route in candidate_route_states
+            if route.forward_channel_id not in payment_state.cancelled_channels
+        ]
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            available_routes=available_routes,
+            candidate_route_states=filtered_route_states,
             transfer_description=transfer_description,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
 
-        events.extend(cancel_events)
         events.extend(sub_iteration.events)
 
         if sub_iteration.new_state is None:
@@ -134,7 +146,7 @@ def subdispatch_to_initiatortransfer(
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     channel_identifier = initiator_state.channel_identifier
     channel_state = channelidentifiers_to_channels.get(channel_identifier)
     if not channel_state:
@@ -197,12 +209,12 @@ def handle_init(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[InitiatorPaymentState]:
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     events: List[Event] = list()
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            available_routes=state_change.routes,
+            candidate_route_states=state_change.routes,
             transfer_description=state_change.transfer,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
@@ -317,14 +329,15 @@ def handle_transferrefundcancelroute(
         secrethash=state_change.secrethash,
     )
 
-    sub_iteration = maybe_try_new_route(
+    sub_iteration = maybe_try_new_route_or_cancel(
         payment_state=payment_state,
         initiator_state=initiator_state,
         transfer_description=transfer_description,
-        available_routes=state_change.routes,
+        candidate_route_states=payment_state.routes,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        is_reroute_allowed=state_change.is_reroute_allowed,
     )
 
     events.extend(sub_iteration.events)
@@ -465,8 +478,10 @@ def state_transition(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[InitiatorPaymentState]:
+) -> TransitionResult[Optional[InitiatorPaymentState]]:
     # pylint: disable=unidiomatic-typecheck
+    iteration: TransitionResult[Optional[InitiatorPaymentState]]
+
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         assert payment_state, "Block state changes should be accompanied by a valid payment state"

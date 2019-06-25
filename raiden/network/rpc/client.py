@@ -31,7 +31,7 @@ from raiden.network.rpc.middleware import (
     http_retry_with_backoff_middleware,
 )
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import pex, privatekey_to_address
+from raiden.utils import privatekey_to_address
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.typing import (
@@ -445,13 +445,17 @@ class JSONRPCClient:
 
         log.debug(
             "JSONRPCClient created",
-            node=pex(self.address),
+            node=to_checksum_address(self.address),
             available_nonce=available_nonce,
             client=version,
         )
 
     def __repr__(self):
-        return f"<JSONRPCClient node:{pex(self.address)} nonce:{self._available_nonce}>"
+        return (
+            f"<JSONRPCClient "
+            f"node:{to_checksum_address(self.address)} nonce:{self._available_nonce}"
+            f">"
+        )
 
     def block_number(self):
         """ Return the most recent block. """
@@ -613,7 +617,7 @@ class JSONRPCClient:
             node_gas_price = self.web3.eth.gasPrice
             log.debug(
                 "Calculated gas price for transaction",
-                node=pex(self.address),
+                node=to_checksum_address(self.address),
                 calculated_gas_price=gas_price,
                 node_gas_price=node_gas_price,
             )
@@ -625,7 +629,7 @@ class JSONRPCClient:
             signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
             log_details = {
-                "node": pex(self.address),
+                "node": to_checksum_address(self.address),
                 "nonce": transaction["nonce"],
                 "gasLimit": transaction["gas"],
                 "gasPrice": transaction["gasPrice"],

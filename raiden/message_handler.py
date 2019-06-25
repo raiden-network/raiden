@@ -1,4 +1,5 @@
 import structlog
+from eth_utils import to_hex
 
 from raiden.constants import ABSENT_SECRET
 from raiden.messages import (
@@ -16,7 +17,6 @@ from raiden.messages import (
     lockedtransfersigned_from_message,
 )
 from raiden.raiden_service import RaidenService
-from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -35,8 +35,8 @@ from raiden.transfer.state_change import (
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import pex, random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount
+from raiden.utils import random_secret
+from raiden.utils.typing import MYPY_ANNOTATION
 
 log = structlog.get_logger(__name__)
 
@@ -159,49 +159,29 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
-        token_network_address = message.token_network_address
-        from_transfer = lockedtransfersigned_from_message(message)
         chain_state = views.state_from_raiden(raiden)
-
-        # FIXME: Shouldn't request routes here
-        routes, _ = get_best_routes(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            one_to_n_address=raiden.default_one_to_n_address,
-            from_address=InitiatorAddress(raiden.address),
-            to_address=from_transfer.target,
-            amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated by #3863
-            previous_address=message.sender,
-            config=raiden.config,
-            privkey=raiden.privkey,
-        )
+        from_transfer = lockedtransfersigned_from_message(message=message)
 
         role = views.get_transfer_role(
             chain_state=chain_state, secrethash=from_transfer.lock.secrethash
         )
 
         if role == "initiator":
-            old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
-            # We currently don't allow multi routes if the initiator does not
-            # hold the secret. In such case we remove all other possible routes
-            # which allow the API call to return with with an error message.
-            if old_secret == ABSENT_SECRET:
-                routes = list()
-
             secret = random_secret()
+            old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
+            is_reroute_allowed = bool(old_secret) and old_secret != ABSENT_SECRET
             state_change: StateChange = ReceiveTransferRefundCancelRoute(
-                routes=routes,
                 transfer=from_transfer,
                 balance_proof=from_transfer.balance_proof,
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
                 secret=secret,
+                is_reroute_allowed=is_reroute_allowed,
             )
         else:
             state_change = ReceiveTransferRefund(
                 transfer=from_transfer,
                 balance_proof=from_transfer.balance_proof,
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-                routes=routes,
             )
 
         raiden.handle_and_track_state_change(state_change)
@@ -223,7 +203,7 @@ class MessageHandler:
         )
         if registered:
             log.warning(
-                f"Ignoring received locked transfer with secrethash {pex(secrethash)} "
+                f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
                 f"since it is already registered in the secret registry"
             )
             return

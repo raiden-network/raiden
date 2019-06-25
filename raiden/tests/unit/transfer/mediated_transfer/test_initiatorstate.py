@@ -155,11 +155,11 @@ def test_next_route():
     assert initiator_state.channel_identifier == channels[0].identifier, msg
     assert not state.cancelled_channels
 
-    iteration = initiator_manager.maybe_try_new_route(
+    iteration = initiator_manager.maybe_try_new_route_or_cancel(
         payment_state=state,
         initiator_state=initiator_state,
         transfer_description=initiator_state.transfer_description,
-        available_routes=channels.get_routes(),
+        candidate_route_states=channels.get_routes(),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=prng,
         block_number=block_number,
@@ -359,7 +359,8 @@ def test_state_wait_unlock_valid():
     assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert balance_proof
     assert complete
-    assert complete.route == setup.available_routes[0].route
+    assert len(complete.route) == 2
+    assert complete.route[1] == balance_proof.recipient
 
     assert balance_proof.recipient == setup.channel.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER
@@ -431,7 +432,6 @@ def test_refund_transfer_next_route():
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
@@ -484,7 +484,6 @@ def test_refund_transfer_no_more_routes():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=setup.available_routes,
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
@@ -703,7 +702,14 @@ def test_init_with_maximum_pending_transfers_exceeded():
         )
     )
     channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.make_route_from_channel(channel1)]
+    available_routes = [
+        RouteState(
+            # pylint: disable=E1101
+            route=[channel1.our_state.address, channel1.partner_state.address],
+            forward_channel_id=channel1.canonical_identifier.channel_identifier,
+        )
+    ]
+
     pseudo_random_generator = random.Random()
 
     transitions = list()
@@ -1147,7 +1153,6 @@ def test_secret_reveal_cancel_other_transfers():
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
@@ -1260,7 +1265,6 @@ def test_refund_after_secret_request():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=setup.available_routes,
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
@@ -1323,7 +1327,6 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
@@ -1457,7 +1460,6 @@ def test_initiator_manager_drops_invalid_state_changes():
     transfer = factories.create(factories.LockedTransferSignedStateProperties())
     secret = factories.UNIT_SECRET
     cancel_route = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=transfer,
         secret=secret,
         balance_proof=transfer.balance_proof,
@@ -1496,7 +1498,6 @@ def test_initiator_manager_drops_invalid_state_changes():
 
     transfer2 = factories.create(factories.LockedTransferSignedStateProperties(amount=2))
     cancel_route2 = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=transfer2,
         balance_proof=transfer2.balance_proof,
         # pylint: disable=no-member
@@ -1549,7 +1550,6 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(),
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,

@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
+from raiden.constants import RoutingMode
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
@@ -120,6 +121,7 @@ class MockRaidenService:
         self.signer = LocalSigner(self.privkey)
 
         self.message_handler = message_handler
+        self.routing_mode = RoutingMode.PRIVATE
         self.config = config
 
         self.user_deposit = Mock()
@@ -190,13 +192,14 @@ def patched_get_for_succesful_pfs_info():
     json_data = {
         "price_info": 5,
         "network_info": {
-            "chain_id": 1,
+            "chain_id": 42,
             "registry_address": token_network_registry_address_test_default,
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
         "version": "0.0.1",
         "payment_address": "0x2222222222222222222222222222222222222222",
+        "settings": "",
     }
 
     response = Mock()

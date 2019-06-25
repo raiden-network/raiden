@@ -1,31 +1,57 @@
 import sqlite3
-import threading
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from typing_extensions import Literal
+
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.serialization import SerializationBase
+from raiden.storage.ulid import ULID, ULIDMonotonicFactory
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.transfer.architecture import Event, State, StateChange
 from raiden.utils import get_system_spec
 from raiden.utils.typing import (
     Any,
     Dict,
-    EventID,
+    Generic,
     Iterator,
     List,
     NamedTuple,
+    NewType,
     Optional,
     RaidenDBVersion,
-    SnapshotID,
-    StateChangeID,
-    T_StateChangeID,
     Tuple,
+    Type,
+    TypeVar,
     Union,
 )
+
+StateChangeID = NewType("StateChangeID", ULID)
+SnapshotID = NewType("SnapshotID", ULID)
+EventID = NewType("EventID", ULID)
+ID = TypeVar("ID", StateChangeID, SnapshotID, EventID)
+
+
+@dataclass
+class Range(Generic[ID]):
+    """Inclusive range used to filter database entries."""
+
+    first: ID
+    last: ID
+
+    def __post_init__(self) -> None:
+        # Because the range is inclusive, the values can be equal
+        if self.first > self.last:
+            raise ValueError("last must be larger or equal to first")
+
+
+LOW_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
+HIGH_STATECHANGE_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
+RANGE_ALL_STATE_CHANGES = Range(LOW_STATECHANGE_ULID, HIGH_STATECHANGE_ULID)
 
 
 class Operator(Enum):
@@ -50,34 +76,59 @@ class FilteredDBQuery(NamedTuple):
     inner_operator: Operator
 
 
+class EventEncodedRecord(NamedTuple):
+    event_identifier: EventID
+    state_change_identifier: StateChangeID
+    data: str
+
+
+class StateChangeEncodedRecord(NamedTuple):
+    state_change_identifier: StateChangeID
+    data: str
+
+
+class SnapshotEncodedRecord(NamedTuple):
+    identifier: SnapshotID
+    state_change_identifier: StateChangeID
+    data: str
+
+
 class EventRecord(NamedTuple):
     event_identifier: EventID
     state_change_identifier: StateChangeID
-    data: Any
+    data: Event
 
 
 class StateChangeRecord(NamedTuple):
     state_change_identifier: StateChangeID
-    data: Any
+    data: StateChange
 
 
 class SnapshotRecord(NamedTuple):
     identifier: SnapshotID
     state_change_identifier: StateChangeID
-    data: Any
+    data: State
 
 
-def assert_sqlite_version() -> bool:
+def assert_sqlite_version() -> bool:  # pragma: no unittest
     if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
         return False
     return True
 
 
+def adapt_ulid_identifier(ulid: ULID) -> bytes:
+    return ulid.identifier
+
+
+def convert_ulid_identifier(data: bytes) -> ULID:
+    return ULID(identifier=data)
+
+
 def _sanitize_limit_and_offset(limit: int = None, offset: int = None) -> Tuple[int, int]:
-    if limit is not None and (not isinstance(limit, int) or limit < 0):
+    if limit is not None and (not isinstance(limit, int) or limit < 0):  # pragma: no unittest
         raise InvalidNumberInput("limit must be a positive integer")
 
-    if offset is not None and (not isinstance(offset, int) or offset < 0):
+    if offset is not None and (not isinstance(offset, int) or offset < 0):  # pragma: no unittest
         raise InvalidNumberInput("offset must be a positive integer")
 
     limit = -1 if limit is None else limit
@@ -153,7 +204,10 @@ def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
 
 
 class SQLiteStorage:
-    def __init__(self, database_path: Path):
+    def __init__(self, database_path: Union[Path, Literal[":memory:"]]):
+        sqlite3.register_adapter(ULID, adapt_ulid_identifier)
+        sqlite3.register_converter("ULID", convert_ulid_identifier)
+
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
         conn.execute("PRAGMA foreign_keys=ON")
@@ -179,21 +233,61 @@ class SQLiteStorage:
         with conn:
             conn.executescript(DB_SCRIPT_CREATE_TABLES)
 
-        # When writting to a table where the primary key is the identifier and we want
-        # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
-        # https://github.com/python/cpython/blob/2.7/Modules/_sqlite/cursor.c#L727-L732
-        #
-        # According to the documentation (http://www.sqlite.org/c3ref/last_insert_rowid.html)
-        # if a different thread tries to use the same connection to write into the table
-        # while we query the last_insert_rowid, the result is unpredictable. For that reason
-        # we have this write lock here.
-        #
-        # TODO (If possible):
-        # Improve on this and find a better way to protect against this potential race
-        # condition.
         self.conn = conn
-        self.write_lock = threading.Lock()
         self.in_transaction = False
+
+        # Dict[Type[ID], ULIDMonotonicFactory[ID]] is not supported yet.
+        # Reference: https://github.com/python/mypy/issues/4928
+        self._ulid_factories: Dict = dict()
+
+    def _ulid_factory(self, id_type: Type[ID]) -> ULIDMonotonicFactory[ID]:
+        """Return an ULID Factory for a specific table.
+
+        In order to guarantee ID monotonicity for a specific table it's
+        necessary to pick up the ID from the last run and restore the
+        timestamp. Since there is no global storage to store the last timestamp
+        across the whole database each table gets its own factory. The
+        alternative would require a scan over all tables, because scanning
+        would be error prone (it would depend on configuration of which tables
+        have an ULID), this is not done.
+        """
+        expected_types: Dict[Type, str] = {
+            StateChangeID: "state_changes",
+            EventID: "state_events",
+            SnapshotID: "state_snapshot",
+        }
+        table_name = expected_types.get(id_type)
+
+        if not table_name:
+            raise ValueError(f"Unexpected ID type {id_type}")
+
+        factory = self._ulid_factories.get(table_name)
+
+        if factory is None:
+            cursor = self.conn.cursor()
+
+            # Check the table name to avoid SQL injection
+            query_table_exists = cursor.execute(
+                "SELECT name FROM sqlite_master WHERE name=?", (table_name,)
+            )
+            assert query_table_exists.fetchone(), f"The table {table_name} does not exist."
+
+            # At this point it should be safe to interpolate the table_name in
+            # the SQL because the name was checked above.
+            query_last_id = cursor.execute(
+                f"SELECT identifier FROM {table_name} ORDER BY identifier DESC LIMIT 1"
+            )
+            result = query_last_id.fetchone()
+
+            if result:
+                timestamp = result[0].timestamp
+            else:
+                timestamp = None
+
+            factory = ULIDMonotonicFactory(start=timestamp)
+            self._ulid_factories[table_name] = factory
+
+        return factory
 
     def update_version(self) -> None:
         cursor = self.conn.cursor()
@@ -230,92 +324,77 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
-    def write_state_change(self, state_change: StateChange, log_time: datetime) -> StateChangeID:
-        with self.write_lock:
-            cursor = self.conn.execute(
-                "INSERT INTO state_changes(identifier, data, log_time) VALUES(null, ?, ?)",
-                (state_change, log_time),
-            )
-            last_id = cursor.lastrowid
+    def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
+        """Write `state_changes` to the database and returns the correspoding IDs."""
+        ulid_factory = self._ulid_factory(StateChangeID)
 
-            self.maybe_commit()
-        return last_id
+        state_change_data = list()
+        state_change_ids = list()
+        for state_change in state_changes:
+            new_id = ulid_factory.new()
+            state_change_ids.append(new_id)
+            state_change_data.append((new_id, state_change))
 
-    def write_state_snapshot(self, statechange_id: StateChangeID, snapshot: str) -> SnapshotID:
-        with self.write_lock:
-            cursor = self.conn.execute(
-                "INSERT INTO state_snapshot(statechange_id, data) VALUES(?, ?)",
-                (statechange_id, snapshot),
-            )
-            last_id = cursor.lastrowid
+        query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
+        self.conn.executemany(query, state_change_data)
+        self.maybe_commit()
 
-            self.maybe_commit()
-        return last_id
+        return state_change_ids
 
-    def write_events(self, events: List[Tuple[StateChangeID, datetime, str]]) -> None:
-        """ Save events.
+    def write_state_snapshot(self, snapshot: str, statechange_id: StateChangeID) -> SnapshotID:
+        snapshot_id = self._ulid_factory(SnapshotID).new()
 
-        Args:
-            state_change_identifier: Id of the state change that generate these events.
-            events: List of Event objects.
-        """
-        with self.write_lock:
-            self.conn.executemany(
-                "INSERT INTO state_events("
-                "   source_statechange_id, log_time, data"
-                ") VALUES(?, ?, ?)",
-                events,
-            )
-            self.maybe_commit()
+        query = (
+            "INSERT INTO state_snapshot (" " identifier, statechange_id, data" ") VALUES(?, ?, ?)"
+        )
+        self.conn.execute(query, (snapshot_id, statechange_id, snapshot))
+        self.maybe_commit()
+
+        return snapshot_id
+
+    def write_events(self, events: List[Tuple[StateChangeID, str]]) -> List[EventID]:
+        ulid_factory = self._ulid_factory(EventID)
+        events_ids: List[EventID] = list()
+
+        query = (
+            "INSERT INTO state_events("
+            "   identifier, source_statechange_id, data"
+            ") VALUES(?, ?, ?)"
+        )
+        self.conn.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
+        self.maybe_commit()
+
+        return events_ids
 
     def delete_state_changes(self, state_changes_to_delete: List[Tuple[StateChangeID]]) -> None:
-        """ Delete state changes.
-
-        Args:
-            state_changes_to_delete: List of ids to delete.
-        """
-        with self.write_lock:
-            self.conn.executemany(
-                "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
-            )
-            self.maybe_commit()
-
-    def get_latest_state_snapshot(self) -> Optional[SnapshotRecord]:
-        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
-        cursor = self.conn.execute(
-            "SELECT identifier, statechange_id, data "
-            "FROM state_snapshot "
-            "ORDER BY identifier "
-            "DESC LIMIT 1"
+        self.conn.executemany(
+            "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
         )
-        rows = cursor.fetchall()
+        self.maybe_commit()
 
-        if rows:
-            assert len(rows) == 1
-            snapshot_state_id = rows[0][0]
-            last_applied_state_change_id = rows[0][1]
-            snapshot_state = rows[0][2]
-            return SnapshotRecord(snapshot_state_id, last_applied_state_change_id, snapshot_state)
+    def get_snapshot_before_state_change(
+        self, state_change_identifier: StateChangeID
+    ) -> Optional[SnapshotEncodedRecord]:
+        """ Returns the Snapshot which can be used to restore the State with
+        the StateChange `state_change_identifier` applied.
 
-        return None
+        If `state_change_identifier` has a snapshot, that is returned,
+        otherwise the closest and newest snapshot is used. Example:
 
-    def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: Union[StateChangeID, str]
-    ) -> Optional[SnapshotRecord]:
-        """ Get snapshots earlier than state_change with provided ID. """
+        Queried:                        v
+        State Changes: |x---x---x---x---x---x---x--->
+        Snapshots:     |x-----------x-----------x--->
+        Returned:                   ^
+        Ignored:        !1                      !2
 
-        if not (state_change_identifier == "latest" or isinstance(state_change_identifier, int)):
-            raise ValueError("from_identifier must be an integer or 'latest'")
+        1- The returned snapshot is closer to the state change. Restoring the
+           state will be faster since less state changes have to be replayed.
+        2- This snapshot cannot be used because undoing state changes is not
+           supported.
+        """
 
-        cursor = self.conn.cursor()
-        if state_change_identifier == "latest":
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1")
-            result = cursor.fetchone()
-
-            if result:
-                state_change_identifier = result[0]
-            else:
-                state_change_identifier = StateChangeID(0)
+        if not isinstance(state_change_identifier, ULID):  # pragma: no unittest
+            raise ValueError("from_identifier must be an ULID")
 
         cursor = self.conn.execute(
             "SELECT identifier, statechange_id, data FROM state_snapshot "
@@ -323,21 +402,25 @@ class SQLiteStorage:
             "ORDER BY identifier DESC LIMIT 1",
             (state_change_identifier,),
         )
+
         rows = cursor.fetchall()
 
+        result: Optional[SnapshotEncodedRecord] = None
         if rows:
             assert len(rows) == 1, "LIMIT 1 must return one element"
             identifier = rows[0][0]
             last_applied_state_change_id = rows[0][1]
             snapshot_state = rows[0][2]
-            result = SnapshotRecord(identifier, last_applied_state_change_id, snapshot_state)
-        else:
-            result = None
+            result = SnapshotEncodedRecord(
+                identifier, last_applied_state_change_id, snapshot_state
+            )
 
         return result
 
-    def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
-        """ Return all state changes filtered by a named field and value."""
+    def get_latest_event_by_data_field(
+        self, query: FilteredDBQuery
+    ) -> Optional[EventEncodedRecord]:
+        """ Return the latest event filtered query."""
         cursor = self.conn.cursor()
 
         query_str, args = _query_to_string(query)
@@ -356,7 +439,7 @@ class SQLiteStorage:
             event_id = row[0]
             state_change_identifier = row[1]
             event = row[2]
-            result = EventRecord(
+            result = EventEncodedRecord(
                 event_identifier=event_id,
                 state_change_identifier=state_change_identifier,
                 data=event,
@@ -396,7 +479,7 @@ class SQLiteStorage:
 
     def get_latest_state_change_by_data_field(
         self, query: FilteredDBQuery
-    ) -> Optional[StateChangeRecord]:
+    ) -> Optional[StateChangeEncodedRecord]:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
@@ -416,7 +499,7 @@ class SQLiteStorage:
         if row:
             state_change_identifier = row[0]
             state_change = row[1]
-            result = StateChangeRecord(
+            result = StateChangeEncodedRecord(
                 state_change_identifier=state_change_identifier, data=state_change
             )
 
@@ -428,7 +511,7 @@ class SQLiteStorage:
         offset: int = None,
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
-    ) -> List[StateChangeRecord]:
+    ) -> List[StateChangeEncodedRecord]:
         """ Return a batch of state change records (identifier and data)
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
@@ -443,13 +526,15 @@ class SQLiteStorage:
             filters=filters,
             logical_and=logical_and,
         )
-        result = [StateChangeRecord(state_change_identifier=row[0], data=row[1]) for row in cursor]
+        result = [
+            StateChangeEncodedRecord(state_change_identifier=row[0], data=row[1]) for row in cursor
+        ]
 
         return result
 
     def batch_query_state_changes(
         self, batch_size: int, filters: List[Tuple[str, Any]] = None, logical_and: bool = True
-    ) -> Iterator[List[StateChangeRecord]]:
+    ) -> Iterator[List[StateChangeEncodedRecord]]:
         """Batch query state change records with a given batch size and an optional filter
 
         This is a generator function returning each batch to the caller to work with.
@@ -474,37 +559,27 @@ class SQLiteStorage:
         )
         self.maybe_commit()
 
-    def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
-    ) -> List[str]:
-        if not (from_identifier == "latest" or isinstance(from_identifier, T_StateChangeID)):
-            raise ValueError("from_identifier must be an integer or 'latest'")
-
-        if not (to_identifier == "latest" or isinstance(to_identifier, T_StateChangeID)):
-            raise ValueError("to_identifier must be an integer or 'latest'")
+    def get_statechanges_records_by_range(
+        self, db_range: Range[StateChangeID]
+    ) -> List[StateChangeEncodedRecord]:
+        if not isinstance(db_range, Range):  # pragma: no unittest
+            raise ValueError("db_range must be an Range")
 
         cursor = self.conn.cursor()
 
-        if from_identifier == "latest":
-            assert to_identifier is None
+        query = (
+            "SELECT identifier, data "
+            "FROM state_changes "
+            "WHERE identifier "
+            "BETWEEN ? AND ? "
+            "ORDER BY identifier ASC"
+        )
+        cursor.execute(query, (db_range.first, db_range.last))
 
-            cursor.execute("SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1")
-            from_identifier = cursor.fetchone()
-
-        if to_identifier == "latest":
-            cursor.execute(
-                "SELECT data FROM state_changes WHERE identifier >= ? ORDER BY identifier ASC",
-                (from_identifier,),
-            )
-        else:
-            cursor.execute(
-                "SELECT data FROM state_changes WHERE identifier "
-                "BETWEEN ? AND ? ORDER BY identifier ASC",
-                (from_identifier, to_identifier),
-            )
-
-        result = [entry[0] for entry in cursor]
-        return result
+        return [
+            StateChangeEncodedRecord(state_change_identifier=entry[0], data=entry[1])
+            for entry in cursor
+        ]
 
     def _query_events(self, limit: int = None, offset: int = None) -> List[Tuple[str, datetime]]:
         limit, offset = _sanitize_limit_and_offset(limit, offset)
@@ -512,7 +587,7 @@ class SQLiteStorage:
 
         cursor.execute(
             """
-            SELECT data, log_time FROM state_events
+            SELECT data, timestamp FROM state_events
                 ORDER BY identifier ASC LIMIT ? OFFSET ?
             """,
             (limit, offset),
@@ -526,7 +601,7 @@ class SQLiteStorage:
         offset: int = None,
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
-    ) -> List[EventRecord]:
+    ) -> List[EventEncodedRecord]:
         """ Return a batch of event records
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
@@ -543,14 +618,16 @@ class SQLiteStorage:
         )
 
         result = [
-            EventRecord(event_identifier=row[0], state_change_identifier=row[1], data=row[2])
+            EventEncodedRecord(
+                event_identifier=row[0], state_change_identifier=row[1], data=row[2]
+            )
             for row in cursor
         ]
         return result
 
     def batch_query_event_records(
         self, batch_size: int, filters: List[Tuple[str, Any]] = None, logical_and: bool = True
-    ) -> Iterator[List[EventRecord]]:
+    ) -> Iterator[List[EventEncodedRecord]]:
         """Batch query event records with a given batch size and an optional filter
 
         This is a generator function returning each batch to the caller to work with.
@@ -587,11 +664,13 @@ class SQLiteStorage:
         entries = self._get_state_changes(limit, offset)
         return [entry.data for entry in entries]
 
-    def get_snapshots(self) -> List[SnapshotRecord]:
+    def get_snapshots(self) -> List[SnapshotEncodedRecord]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT identifier, statechange_id, data FROM state_snapshot")
 
-        return [SnapshotRecord(snapshot[0], snapshot[1], snapshot[2]) for snapshot in cursor]
+        return [
+            SnapshotEncodedRecord(snapshot[0], snapshot[1], snapshot[2]) for snapshot in cursor
+        ]
 
     def update_snapshot(self, identifier: SnapshotID, new_snapshot: str) -> None:
         cursor = self.conn.cursor()
@@ -628,7 +707,7 @@ class SQLiteStorage:
         finally:
             self.in_transaction = False
 
-    def close(self):
+    def close(self) -> None:
         if not hasattr(self, "conn"):
             raise RuntimeError("The database connection was closed already.")
 
@@ -647,11 +726,21 @@ class SQLiteStorage:
 
 
 class SerializedSQLiteStorage:
-    def __init__(self, database_path: Path, serializer: SerializationBase) -> None:
+    """ A wrapper around SQLiteStorage that automatically serializes and
+    deserializes the data.
+
+    SQLiteStorage is necessary for database upgrades. Upgrades are necessary
+    when the data model changes, and as a consequence before the upgrades are
+    applied the automatic encoding/deconding will not work.
+    """
+
+    def __init__(
+        self, database_path: Union[Path, Literal[":memory:"]], serializer: SerializationBase
+    ) -> None:
         self.database = SQLiteStorage(database_path)
         self.serializer = serializer
 
-    def update_version(self) -> None:
+    def update_version(self) -> None:  # pragma: no unittest
         self.database.update_version()
 
     def count_state_changes(self) -> int:
@@ -663,17 +752,19 @@ class SerializedSQLiteStorage:
     def log_run(self) -> None:
         self.database.log_run()
 
-    def write_state_change(self, state_change: StateChange, log_time: datetime) -> StateChangeID:
-        serialized_data = self.serializer.serialize(state_change)
-        return self.database.write_state_change(serialized_data, log_time)
+    def write_state_changes(self, state_changes: List[StateChange]) -> List[StateChangeID]:
+        serialized_data = [
+            self.serializer.serialize(state_change) for state_change in state_changes
+        ]
+        return self.database.write_state_changes(serialized_data)
 
-    def write_state_snapshot(self, statechange_id: StateChangeID, snapshot: State) -> SnapshotID:
+    def write_state_snapshot(self, snapshot: State, statechange_id: StateChangeID) -> SnapshotID:
         serialized_data = self.serializer.serialize(snapshot)
-        return self.database.write_state_snapshot(statechange_id, serialized_data)
+        return self.database.write_state_snapshot(serialized_data, statechange_id)
 
     def write_events(
-        self, state_change_identifier: StateChangeID, events: List[Event], log_time: datetime
-    ) -> None:
+        self, state_change_identifier: StateChangeID, events: List[Event]
+    ) -> List[EventID]:
         """ Save events.
 
         Args:
@@ -681,28 +772,17 @@ class SerializedSQLiteStorage:
             events: List of Event objects.
         """
         events_data = [
-            (state_change_identifier, log_time, self.serializer.serialize(event))
-            for event in events
+            (state_change_identifier, self.serializer.serialize(event)) for event in events
         ]
-        self.database.write_events(events_data)
+        return self.database.write_events(events_data)
 
-    def get_latest_state_snapshot(self) -> Optional[SnapshotRecord]:
-        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
-        row = self.database.get_latest_state_snapshot()
-
-        if row:
-            snapshot_state = self.serializer.deserialize(row.data)
-            return SnapshotRecord(row.identifier, row.state_change_identifier, snapshot_state)
-
-        return None
-
-    def get_snapshot_closest_to_state_change(
-        self, state_change_identifier: Union[StateChangeID, str]
+    def get_snapshot_before_state_change(
+        self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotRecord]:
         """ Get snapshots earlier than state_change with provided ID. """
         result: Optional[SnapshotRecord]
 
-        row = self.database.get_snapshot_closest_to_state_change(state_change_identifier)
+        row = self.database.get_snapshot_before_state_change(state_change_identifier)
 
         if row is not None:
             result = SnapshotRecord(
@@ -715,13 +795,14 @@ class SerializedSQLiteStorage:
 
     def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
         """ Return all state changes filtered by a named field and value."""
-        event = self.database.get_latest_event_by_data_field(query)
+        encoded_event = self.database.get_latest_event_by_data_field(query)
 
-        if event is not None:
+        event = None
+        if encoded_event is not None:
             event = EventRecord(
-                event_identifier=event.event_identifier,
-                state_change_identifier=event.state_change_identifier,
-                data=self.serializer.deserialize(event.data),
+                event_identifier=encoded_event.event_identifier,
+                state_change_identifier=encoded_event.state_change_identifier,
+                data=self.serializer.deserialize(encoded_event.data),
             )
 
         return event
@@ -731,23 +812,34 @@ class SerializedSQLiteStorage:
     ) -> Optional[StateChangeRecord]:
         """ Return all state changes filtered by a named field and value."""
 
-        state_change = self.database.get_latest_state_change_by_data_field(query)
+        encoded_state_change = self.database.get_latest_state_change_by_data_field(query)
 
-        if state_change is not None:
+        state_change = None
+        if encoded_state_change is not None:
             state_change = StateChangeRecord(
-                state_change_identifier=state_change.state_change_identifier,
-                data=self.serializer.deserialize(state_change.data),
+                state_change_identifier=encoded_state_change.state_change_identifier,
+                data=self.serializer.deserialize(encoded_state_change.data),
             )
 
         return state_change
 
-    def get_statechanges_by_identifier(
-        self, from_identifier: Union[StateChangeID, str], to_identifier: Union[StateChangeID, str]
-    ) -> List[StateChange]:
-        state_changes = self.database.get_statechanges_by_identifier(
-            from_identifier, to_identifier
-        )
-        return [self.serializer.deserialize(state_change) for state_change in state_changes]
+    def get_statechanges_records_by_range(
+        self, db_range: Range[StateChangeID]
+    ) -> List[StateChangeRecord]:
+        state_changes = self.database.get_statechanges_records_by_range(db_range=db_range)
+        return [
+            StateChangeRecord(
+                state_change_identifier=state_change.state_change_identifier,
+                data=self.serializer.deserialize(state_change.data),
+            )
+            for state_change in state_changes
+        ]
+
+    def get_statechanges_by_range(self, db_range: Range[StateChangeID]) -> List[StateChange]:
+        return [
+            state_change_record.data
+            for state_change_record in self.get_statechanges_records_by_range(db_range=db_range)
+        ]
 
     def get_events_with_timestamps(
         self, limit: int = None, offset: int = None
@@ -766,5 +858,5 @@ class SerializedSQLiteStorage:
         state_changes = self.database.get_state_changes(limit, offset)
         return [self.serializer.deserialize(state_change) for state_change in state_changes]
 
-    def close(self):
+    def close(self) -> None:
         self.database.close()

@@ -3,6 +3,7 @@ import structlog
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer
 from raiden.encoding.format import make_field, namedbuffer, pad
+from raiden.exceptions import InvalidProtocolMessage
 
 
 def cmdid(id_):
@@ -208,7 +209,7 @@ RequestMonitoring = namedbuffer(
 )
 
 
-UpdatePFS = namedbuffer(
+PFSCapacityUpdate = namedbuffer(
     "update_pfs",
     [
         chain_id,
@@ -221,7 +222,6 @@ UpdatePFS = namedbuffer(
         updating_capacity,
         other_capacity,
         reveal_timeout,
-        fee,
         signature,
     ],
 )
@@ -289,7 +289,7 @@ def wrap(data):
 
     try:
         message = message_type(data)
-    except ValueError:
+    except (InvalidProtocolMessage, ValueError):
         log.error("trying to decode invalid message")
         return None
 

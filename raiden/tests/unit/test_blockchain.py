@@ -10,6 +10,7 @@ from raiden.network.proxies.token_network import (
 )
 from raiden.tests.utils import factories
 from raiden.transfer import channel
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
@@ -25,7 +26,7 @@ def participant_details(address):
         is_closer=False,
         balance_hash=None,
         nonce=1,
-        locksroot=factories.EMPTY_MERKLE_ROOT,
+        locksroot=factories.LOCKSROOT_OF_NO_LOCKS,
         locked_amount=0,
     )
 
@@ -68,6 +69,7 @@ def params(channel_details):
         settle_timeout=factories.UNIT_SETTLE_TIMEOUT,
         opened_block_number=10,
         closed_block_number=None,
+        fee_schedule=FeeScheduleState(),
     )
 
 

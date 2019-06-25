@@ -1,4 +1,4 @@
-from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.factories import (
@@ -37,8 +37,8 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         partner_address=participant,
     )
 
-    channel_state.our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
-    channel_state.partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+    channel_state.our_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
+    channel_state.partner_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
 
     def detail_participants(  # pylint: disable=unused-argument
         participant1, participant2, block_identifier, channel_identifier
@@ -69,7 +69,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
             is_closer=True,
             balance_hash=balance_hash,
             nonce=1,
-            locksroot=EMPTY_HASH,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
             locked_amount=locked_amount,
         )
         return ParticipantsDetails(our_details, partner_details)

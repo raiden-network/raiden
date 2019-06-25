@@ -1,10 +1,11 @@
 import random
 
-from raiden.constants import ABSENT_SECRET, CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.constants import ABSENT_SECRET
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockFailed,
@@ -38,6 +39,7 @@ from raiden.utils.typing import (
     Dict,
     List,
     MessageID,
+    Optional,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -87,7 +89,7 @@ def handle_block(
     state_change: Block,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Checks if the lock has expired, and if it has sends a remove expired
     lock and emits the failing events.
     """
@@ -179,21 +181,40 @@ def get_initial_lock_expiration(
 
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
-    available_routes: List[RouteState],
+    candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
 
-    route_infos = channel.next_channel_from_routes(
-        available_routes=available_routes,
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
-        transfer_amount=PaymentWithFeeAmount(transfer_description.amount),
+    initiator_state = None
+    events: List[Event] = list()
+    amount_with_fee: PaymentWithFeeAmount = PaymentWithFeeAmount(
+        transfer_description.amount + transfer_description.allocated_fee
     )
 
-    events: List[Event] = list()
-    if route_infos is None:
-        if not available_routes:
+    channel_state = None
+    route_state = None
+
+    for candidate_route_state in candidate_route_states:
+        forward_channel_id = candidate_route_state.forward_channel_id
+
+        candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
+            forward_channel_id
+        )
+
+        assert isinstance(candidate_channel_state, NettingChannelState)
+
+        is_usable_route = channel.is_channel_usable(
+            candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+        )
+        if is_usable_route:
+            channel_state = candidate_channel_state
+            route_state = candidate_route_state
+            break
+
+    if route_state is None:
+        if not candidate_route_states:
             reason = "there is no route available"
         else:
             reason = "none of the available routes could be used"
@@ -210,18 +231,21 @@ def try_new_route(
         initiator_state = None
 
     else:
-        channel_state, route = route_infos
+        assert channel_state is not None
+
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
             transfer_description=transfer_description,
             channel_state=channel_state,
             message_identifier=message_identifier,
             block_number=block_number,
+            route_state=route_state,
+            route_states=candidate_route_states,
         )
         assert lockedtransfer_event
 
         initiator_state = InitiatorTransferState(
-            route=route,
+            route=route_state,
             transfer_description=transfer_description,
             channel_identifier=channel_state.identifier,
             transfer=lockedtransfer_event.transfer,
@@ -236,6 +260,8 @@ def send_lockedtransfer(
     channel_state: NettingChannelState,
     message_identifier: MessageID,
     block_number: BlockNumber,
+    route_state: RouteState,
+    route_states: List[RouteState],
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
     assert channel_state.token_network_address == transfer_description.token_network_address
@@ -258,6 +284,9 @@ def send_lockedtransfer(
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
+        route_states=channel.prune_route_table(
+            route_state_table=route_states, selected_route=route_state
+        ),
     )
     return lockedtransfer_event
 
@@ -337,15 +366,15 @@ def handle_offchain_secretreveal(
     state_change: ReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
 
     This will validate the secret, and if valid a new balance proof is sent to
-    the next hop with the current lock removed from the merkle tree and the
+    the next hop with the current lock removed from the pending locks and the
     transferred amount updated.
     """
-    iteration: TransitionResult[InitiatorTransferState]
+    iteration: TransitionResult[Optional[InitiatorTransferState]]
     valid_reveal = is_valid_secret_reveal(
         state_change=state_change,
         transfer_secrethash=initiator_state.transfer_description.secrethash,
@@ -374,15 +403,15 @@ def handle_onchain_secretreveal(
     state_change: ContractReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
     This check the on-chain secret corresponds to the one used by the
     initiator, and if valid a new balance proof is sent to the next hop with
-    the current lock removed from the merkle tree and the transferred amount
+    the current lock removed from the pending locks and the transferred amount
     updated.
     """
-    iteration: TransitionResult[InitiatorTransferState]
+    iteration: TransitionResult[Optional[InitiatorTransferState]]
     secret = state_change.secret
     secrethash = initiator_state.transfer_description.secrethash
     is_valid_secret = is_valid_secret_reveal(
@@ -422,7 +451,7 @@ def state_transition(
     state_change: StateChange,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorTransferState]:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(

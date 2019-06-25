@@ -127,7 +127,9 @@ class ActionChannelWithdraw(StateChange):
 @dataclass
 class ActionChannelSetFee(StateChange):
     canonical_identifier: CanonicalIdentifier
-    mediation_fee: FeeAmount
+    flat_fee: FeeAmount
+    proportional_fee: int  # as micros, e.g. 1% = 0.01e6
+    use_imbalance_penalty: bool
 
     @property
     def channel_identifier(self) -> ChannelID:

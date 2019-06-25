@@ -15,7 +15,7 @@ from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import Address, Dict, Optional
+from raiden.utils.typing import Address, ChainID, Dict, Optional
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -71,14 +71,14 @@ def check_account(account_manager: AccountManager, address_hex: Address) -> None
         sys.exit(1)
 
 
-def check_ethereum_network_id(given_network_id: int, web3: Web3) -> None:
+def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
     """
     Takes the given network id and checks it against the connected network
 
     If they don't match, exits the program with an error. If they do adds it
     to the configuration and then returns it and whether it is a known network
     """
-    node_network_id = int(web3.version.network)  # pylint: disable=no-member
+    node_network_id = ChainID(int(web3.version.network))  # pylint: disable=no-member
 
     if node_network_id != given_network_id:
         given_name = ID_TO_NETWORKNAME.get(given_network_id)
@@ -96,7 +96,7 @@ def check_ethereum_network_id(given_network_id: int, web3: Web3) -> None:
         sys.exit(1)
 
 
-def check_raiden_environment(network_id: int, environment_type: Environment) -> None:
+def check_raiden_environment(network_id: ChainID, environment_type: Environment) -> None:
     not_allowed = (  # for now we only disallow mainnet with test configuration
         network_id == 1 and environment_type == Environment.DEVELOPMENT
     )
@@ -113,16 +113,14 @@ def check_raiden_environment(network_id: int, environment_type: Environment) -> 
 
 def check_smart_contract_addresses(
     environment_type: Environment,
-    node_network_id: int,
+    node_network_id: ChainID,
     tokennetwork_registry_contract_address: Address,
     secret_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     contracts: Dict[str, Address],
 ) -> None:
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None
         and secret_registry_contract_address is not None
-        and endpoint_registry_contract_address is not None
     )
 
     if not contract_addresses_given and not bool(contracts):
@@ -160,7 +158,7 @@ def check_pfs_configuration(
 
 
 def check_synced(blockchain_service: BlockChainService) -> None:
-    network_id = int(blockchain_service.client.web3.version.network)
+    network_id = ChainID(int(blockchain_service.client.web3.version.network))
     network_name = ID_TO_NETWORKNAME.get(network_id)
 
     if network_name is None:

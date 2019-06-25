@@ -1,6 +1,8 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
+from eth_utils import keccak
+
 from raiden.messages import message_from_sendevent
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -135,9 +137,7 @@ def test_regression_send_refund():
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(3)
 
-    mediator_state = MediatorTransferState(
-        secrethash=UNIT_SECRETHASH, routes=setup.channels.get_hops()
-    )
+    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=[])
     mediator_state.transfers_pair = setup.transfers_pair
 
     last_pair = setup.transfers_pair[-1]
@@ -156,13 +156,10 @@ def test_regression_send_refund():
     )
 
     # All three channels have been used
-    routes = []
-
     refund_state_change = ReceiveTransferRefund(
         transfer=received_transfer,
         balance_proof=received_transfer.balance_proof,
         sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
-        routes=routes,
     )
 
     iteration = mediator.handle_refundtransfer(
@@ -198,7 +195,7 @@ def test_regression_send_refund():
                 "balance_proof": {
                     "transferred_amount": 0,
                     "locked_amount": 10,
-                    "locksroot": lock.lockhash,
+                    "locksroot": keccak(lock.encoded),
                     "token_network_address": token_network_address,
                     "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
                     "chain_id": first_payer_transfer.balance_proof.chain_id,
@@ -313,8 +310,8 @@ def test_regression_mediator_task_no_routes():
     )
 
     init_state_change = ActionInitMediator(
-        routes=channels.get_routes(),
         from_hop=channels.get_hop(0),
+        route_states=channels.get_routes(),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -402,10 +399,9 @@ def test_regression_mediator_not_update_payer_state_twice():
     payer_route = factories.make_hop_from_channel(payer_channel)
     payer_transfer = factories.make_signed_transfer_for(payer_channel, LONG_EXPIRATION)
 
-    available_routes = [factories.make_route_from_channel(payee_channel)]
     init_state_change = ActionInitMediator(
-        routes=available_routes,
         from_hop=payer_route,
+        route_states=pair.get_routes(),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
         sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member

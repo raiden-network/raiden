@@ -5,7 +5,7 @@ import click
 import gevent
 import requests
 import structlog
-from eth_utils import to_hex
+from eth_utils import to_checksum_address, to_hex
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
@@ -22,7 +22,7 @@ from raiden.constants import (
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
-from raiden.utils import gas_reserve, pex, to_rdn
+from raiden.utils import gas_reserve, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Callable, List, Tuple
 
@@ -54,7 +54,7 @@ def _do_check_version(current_version: Tuple[str, ...]):
     return True
 
 
-def check_version(current_version: str):
+def check_version(current_version: str):  # pragma: no unittest
     """ Check periodically for a new release """
     app_version = parse_version(current_version)
     while True:
@@ -95,7 +95,7 @@ def check_gas_reserve(raiden):  # pragma: no unittest
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
+def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):  # pragma: no unittest
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
         rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
@@ -147,15 +147,17 @@ class AlarmTask(Runnable):
         self.sleep_time = 0.5
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} node:{pex(self.chain.client.address)}>"
+        return f"<{self.__class__.__name__} node:{to_checksum_address(self.chain.client.address)}>"
 
     def start(self):
-        log.debug("Alarm task started", node=pex(self.chain.node_address))
+        log.debug("Alarm task started", node=to_checksum_address(self.chain.node_address))
         self._stop_event = AsyncResult()
         super().start()
 
     def _run(self):  # pylint: disable=method-hidden
-        self.greenlet.name = f"AlarmTask._run node:{pex(self.chain.client.address)}"
+        self.greenlet.name = (
+            f"AlarmTask._run node:{to_checksum_address(self.chain.client.address)}"
+        )
         try:
             self.loop_until_stop()
         finally:
@@ -264,7 +266,7 @@ class AlarmTask(Runnable):
 
     def stop(self):
         self._stop_event.set(True)
-        log.debug("Alarm task stopped", node=pex(self.chain.node_address))
+        log.debug("Alarm task stopped", node=to_checksum_address(self.chain.node_address))
         result = self.join()
         # Callbacks should be cleaned after join
         self.callbacks = []
