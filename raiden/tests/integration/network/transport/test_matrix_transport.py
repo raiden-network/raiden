@@ -1144,3 +1144,59 @@ def test_send_to_device(matrix_transports):
     transport0.send_to_device(raiden_service1.address, message)
     gevent.sleep(0.5)
     transport1._receive_to_device.assert_called()
+
+
+@pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("number_of_transports", [2])
+def test_matrix_userid_persistence(matrix_transports):
+    transport0, transport1 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+    raiden_service2 = MockRaidenService(message_handler0)
+    raiden_service3 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, "")
+    transport1.start(raiden_service1, message_handler1, "")
+
+    transport1.start_health_check(raiden_service0.address)
+    transport1.start_health_check(raiden_service2.address)
+    transport1.start_health_check(raiden_service3.address)
+
+    user_ids0 = transport1._address_mgr.get_userids_for_address(raiden_service0.address)
+    user_ids2 = transport1._address_mgr.get_userids_for_address(raiden_service2.address)
+    user_ids3 = transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+
+    transport1.stop()
+
+    transport1._address_mgr = UserAddressManager(
+        client=transport1._client,
+        get_user_callable=transport1._get_user,
+        address_reachability_changed_callback=transport1._address_reachability_changed,
+        user_presence_changed_callback=transport1._user_presence_changed,
+        stop_event=transport1._stop_event,
+    )
+
+    assert not (
+        transport1._address_mgr.is_address_known(raiden_service0.address)
+        or transport1._address_mgr.is_address_known(raiden_service2.address)
+        or transport1._address_mgr.is_address_known(raiden_service3.address)
+    )
+
+    transport1.start(raiden_service1, message_handler1, "")
+
+    assert (
+        transport1._address_mgr.is_address_known(raiden_service0.address)
+        and transport1._address_mgr.is_address_known(raiden_service2.address)
+        and transport1._address_mgr.is_address_known(raiden_service3.address)
+    )
+
+    assert (
+        user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
+        and user_ids2 == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
+        and user_ids3 == transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+    )
