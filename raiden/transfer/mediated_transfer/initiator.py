@@ -32,9 +32,7 @@ from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
-    BlockExpiration,
     BlockNumber,
-    BlockTimeout,
     ChannelID,
     Dict,
     List,
@@ -173,13 +171,6 @@ def handle_block(
         return TransitionResult(initiator_state, events)
 
 
-def get_initial_lock_expiration(
-    block_number: BlockNumber, reveal_timeout: BlockTimeout
-) -> BlockExpiration:
-    """ Returns the expiration used for all hash-time-locks in transfer. """
-    return BlockExpiration(block_number + reveal_timeout * 2)
-
-
 def try_new_route(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
@@ -272,7 +263,9 @@ def send_lockedtransfer(
     """ Create a mediated transfer using channel. """
     assert channel_state.token_network_address == transfer_description.token_network_address
 
-    lock_expiration = get_initial_lock_expiration(block_number, channel_state.reveal_timeout)
+    lock_expiration = channel.get_initial_lock_expiration(
+        block_number, channel_state.reveal_timeout
+    )
 
     # The payment amount and the fee amount must be included in the locked
     # amount, as a guarantee to the mediator that the fee will be claimable

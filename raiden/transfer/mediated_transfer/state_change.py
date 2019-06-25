@@ -4,7 +4,6 @@ from hashlib import sha256
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
-from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -14,7 +13,6 @@ from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils.typing import (
     BlockExpiration,
-    ChannelID,
     List,
     MessageID,
     Optional,
@@ -22,9 +20,6 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
-    Signature,
-    TokenNetworkAddress,
-    WithdrawAmount,
     typecheck,
 )
 
@@ -142,39 +137,3 @@ class ReceiveTransferRefund(BalanceProofStateChange):
         super().__post_init__()
 
         typecheck(self.transfer, LockedTransferSignedState)
-
-
-@dataclass
-class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
-    """ A WithdrawRequest message received. """
-
-    message_identifier: MessageID
-    canonical_identifier: CanonicalIdentifier
-    total_withdraw: WithdrawAmount
-    signature: Signature
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
-
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.canonical_identifier.token_network_address
-
-
-@dataclass
-class ReceiveWithdraw(AuthenticatedSenderStateChange):
-    """ A Withdraw message received. """
-
-    message_identifier: MessageID
-    canonical_identifier: CanonicalIdentifier
-    total_withdraw: WithdrawAmount
-    signature: Signature
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
-
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.canonical_identifier.token_network_address
