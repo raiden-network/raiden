@@ -1,35 +1,18 @@
 <!-- PROJECT SHIELDS -->
 
-<h2 align="center">
-  <br/>
-  <a href='https://raiden.network/'><img 
-      width='400px' 
-      alt='' 
-      src="https://user-images.githubusercontent.com/35398162/54018436-ee3f6300-4188-11e9-9b4e-0666c44cda53.png" /></a>
-  <br/>
-  Raiden
-  <br/>
-</h2>
+[![Raiden](https://user-images.githubusercontent.com/35398162/54018436-ee3f6300-4188-11e9-9b4e-0666c44cda53.png)](https://raiden.network/)
 
 <h4 align="center">
   Fast, cheap, scalable token transfers for Ethereum
 </h4>
 
-<p align="center">
-  <a href="#getting-started">Getting Started</a> ∙
-  <a href="#repositories">Repositories</a> ∙
-  <a href='#contact'>Contact</a>
-</p>
+#### Quicklinks
 
-<p align="center">
-  <a href="https://pypi.org/project/raiden/">
-    <img src="https://img.shields.io/pypi/pyversions/raiden.svg">
-  </a>
-  <a href="https://gitter.im/raiden-network/raiden">
-    <img src="https://badges.gitter.im/gitterHQ/gitter.png" alt="Gitter Raiden Badge">
-  </a>
-</p>
+[![Python 3.7](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/raiden-network/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+- [Getting Started](#getting-started)
+- [Repositories](#repositories)
+- [Contact](#contact)
 
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
@@ -37,15 +20,7 @@ The Raiden Network is an off-chain scaling solution, enabling near-instant, low-
 
 The Raiden Network is an infrastructure layer on top of the Ethereum blockchain. While the basic idea is simple, the underlying protocol is quite complex and the implementation non-trivial. Nonetheless the technicalities can be abstracted away, such that developers can interface with a rather simple API to build scalable decentralized applications based on the Raiden Network.
 
-<p align="left">
-  <a href="https://youtu.be/R1tIy1XgdPw" target="_blank">
-    <img
-      width="824px"
-      alt="Raiden in a Nutshell"
-      src="https://user-images.githubusercontent.com/35398162/59496225-46c18300-8e91-11e9-9253-1465f5fd5985.PNG"
-    />
-  </a>
-</p>
+[![Raiden in a Nutshell](https://user-images.githubusercontent.com/35398162/59496225-46c18300-8e91-11e9-9253-1465f5fd5985.PNG)](https://youtu.be/R1tIy1XgdPw)
 
 ## Table of Contents
 - [Getting Started](#getting-started)
