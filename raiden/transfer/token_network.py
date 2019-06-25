@@ -17,6 +17,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
     ReceiveWithdraw,
+    ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
 from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, Union
@@ -34,6 +35,7 @@ StateChangeWithChannelID = Union[
     ContractReceiveChannelWithdraw,
     ReceiveWithdraw,
     ReceiveWithdrawRequest,
+    ReceiveWithdrawExpired,
 ]
 
 
@@ -327,6 +329,22 @@ def handle_receive_channel_withdraw(
     )
 
 
+def handle_receive_channel_withdraw_expired(
+    token_network_state: TokenNetworkState,
+    state_change: ReceiveWithdrawExpired,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+):
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
 def state_transition(
     token_network_state: TokenNetworkState,
     state_change: StateChange,
@@ -445,6 +463,15 @@ def state_transition(
     elif type(state_change) == ReceiveWithdraw:
         assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
         iteration = handle_receive_channel_withdraw(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveWithdrawExpired:
+        assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
+        iteration = handle_receive_channel_withdraw_expired(
             token_network_state=token_network_state,
             state_change=state_change,
             block_number=block_number,
