@@ -1141,6 +1141,16 @@ class RequestMonitoring(SignedMessage):
     def __post_init__(self):
         typecheck(self.balance_proof, SignedBlindedBalanceProof)
 
+    # TODO: Can this be moved to SignedMessage? We have two signatures.
+    # Or can we fall back to normal dataclasses comparison?
+    def __eq__(self, other):
+        return (
+            isinstance(other, self.__class__)
+            and self._data_to_sign() == other._data_to_sign()
+            and self.signature == other.signature
+            and self.non_closing_signature == other.non_closing_signature
+        )
+
     @classmethod
     def from_balance_proof_signed_state(
         cls,
@@ -1168,6 +1178,11 @@ class RequestMonitoring(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
+        if self.non_closing_signature is None:
+            raise ValueError("non_closing_signature missing, did you forget to sign()?")
+        if self.reward_proof_signature is None:
+            raise ValueError("reward_proof_signature missing, did you forget to sign()?")
+
         packed = pack_reward_proof(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=self.balance_proof.chain_id,
@@ -1178,6 +1193,7 @@ class RequestMonitoring(SignedMessage):
             nonce=self.balance_proof.nonce,
             monitoring_service_contract_address=self.monitoring_service_contract_address,
         )
+        # TODO: should we add cmdid?
         return packed
 
     def sign(self, signer: Signer):
@@ -1188,29 +1204,6 @@ class RequestMonitoring(SignedMessage):
         self.non_closing_signature = self.balance_proof._sign(signer)
         message_data = self._data_to_sign()
         self.signature = signer.sign(data=message_data)
-
-    def packed(self) -> bytes:
-        klass = messages.RequestMonitoring
-        data = buffer_for(klass)
-        packed = klass(data)
-        self.pack(packed)
-        return packed
-
-    def pack(self, packed) -> None:
-        if self.non_closing_signature is None:
-            raise ValueError("non_closing_signature missing, did you forget to sign()?")
-        if self.reward_proof_signature is None:
-            raise ValueError("reward_proof_signature missing, did you forget to sign()?")
-        packed.nonce = self.balance_proof.nonce
-        packed.chain_id = self.balance_proof.chain_id
-        packed.token_network_address = self.balance_proof.token_network_address
-        packed.channel_identifier = self.balance_proof.channel_identifier
-        packed.balance_hash = self.balance_proof.balance_hash
-        packed.additional_hash = self.balance_proof.additional_hash
-        packed.signature = self.balance_proof.signature
-        packed.non_closing_signature = self.non_closing_signature
-        packed.reward_amount = self.reward_amount
-        packed.reward_proof_signature = self.reward_proof_signature
 
     def verify_request_monitoring(
         self, partner_address: Address, requesting_address: Address
