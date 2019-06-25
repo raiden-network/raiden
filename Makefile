@@ -50,7 +50,6 @@ lint: BLACK_CHECK_PARAMS := --check --diff
 lint: mypy mypy-all isort black
 	flake8 raiden/ tools/
 	pylint $(LINT_PATHS)
-	python setup.py check --restructuredtext --strict
 
 mypy:
 	mypy raiden
