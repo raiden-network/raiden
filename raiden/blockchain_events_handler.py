@@ -29,6 +29,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
 )
 from raiden.transfer.state_change import (
+    ActionChannelSetFee,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
@@ -281,6 +282,15 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):  # pragma
         participant_address = args["participant"]
         total_deposit = args["total_deposit"]
 
+        update_fees_statechange = ActionChannelSetFee(
+            canonical_identifier=previous_channel_state.canonical_identifier,
+            flat_fee=previous_channel_state.fee_schedule.flat,
+            proportional_fee=previous_channel_state.fee_schedule.proportional,
+            use_imbalance_penalty=previous_channel_state.fee_schedule.imbalance_penalty
+            is not None,
+        )
+        raiden.handle_and_track_state_change(update_fees_statechange)
+
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(token_network_address)
 
@@ -330,6 +340,16 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
         )
         msg = "Failed to find channel state after withdraw"
         assert channel_state is not None, msg
+
+        update_fees_statechange = ActionChannelSetFee(
+            canonical_identifier=previous_channel_state.canonical_identifier,
+            flat_fee=previous_channel_state.fee_schedule.flat,
+            proportional_fee=previous_channel_state.fee_schedule.proportional,
+            use_imbalance_penalty=previous_channel_state.fee_schedule.imbalance_penalty
+            is not None,
+        )
+        raiden.handle_and_track_state_change(update_fees_statechange)
+
         update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
 
