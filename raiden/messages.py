@@ -5,7 +5,7 @@ from operator import attrgetter
 
 import rlp
 from cachetools import LRUCache, cached
-from eth_utils import to_checksum_address
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -189,12 +189,6 @@ class Message:
     # Needs to be set by a subclass
     cmdid: ClassVar[int]
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __repr__(self):
-        return "<{klass}>".format(klass=self.__class__.__name__)
-
 
 @dataclass(repr=False, eq=False)
 class AuthenticatedMessage(Message):
@@ -211,8 +205,25 @@ class SignedMessage(AuthenticatedMessage):
     # by changing the order to packing then signing
     signature: Signature
 
+    def __hash__(self):
+        return hash((self._data_to_sign(), self.signature))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return "<{klass} [msghash={msghash}]>".format(
+            klass=self.__class__.__name__, msghash=to_hex(hash(self))
+        )
+
     def _data_to_sign(self) -> bytes:
-        """ Return the binary data to be/which was signed """
+        """ Return the binary data to be/which was signed
+
+        Must be implemented by subclasses.
+        """
         raise NotImplementedError
 
     def sign(self, signer: Signer):
@@ -334,14 +345,6 @@ class Processed(SignedRetrieableMessage):
 
     message_identifier: MessageID
 
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
-
     @classmethod
     def from_event(cls, event):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
@@ -365,14 +368,6 @@ class ToDevice(SignedMessage):
     cmdid: ClassVar[int] = messages.TODEVICE
 
     message_identifier: MessageID
-
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
@@ -398,14 +393,6 @@ class Delivered(SignedMessage):
 
     delivered_message_identifier: MessageID
 
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
-
     def _data_to_sign(self) -> bytes:
         return pack_data(
             (self.cmdid, "uint8"),
@@ -422,14 +409,6 @@ class Pong(SignedMessage):
 
     nonce: Nonce
 
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
-
     def _data_to_sign(self) -> bytes:
         return pack_data((self.cmdid, "uint8"), (b"\x00" * 3, "bytes"), (self.nonce, "uint64"))
 
@@ -442,14 +421,6 @@ class Ping(SignedMessage):
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
-
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
@@ -853,14 +824,6 @@ class LockedTransfer(LockedTransferBase):
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
 
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
-
     @property
     def message_hash(self) -> bytes:
         metadata_hash = (self.metadata and self.metadata.hash) or b""
@@ -1138,15 +1101,8 @@ class RequestMonitoring(SignedMessage):
     def __post_init__(self):
         typecheck(self.balance_proof, SignedBlindedBalanceProof)
 
-    # TODO: Can this be moved to SignedMessage? We have two signatures.
-    # Or can we fall back to normal dataclasses comparison?
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-            and self.non_closing_signature == other.non_closing_signature
-        )
+    def __hash__(self):
+        return hash((self._data_to_sign(), self.signature, self.non_closing_signature))
 
     @classmethod
     def from_balance_proof_signed_state(
@@ -1265,14 +1221,6 @@ class PFSCapacityUpdate(SignedMessage):
     def __post_init__(self):
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
-
-    # TODO: move to SignedMessage
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self._data_to_sign() == other._data_to_sign()
-            and self.signature == other.signature
-        )
 
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
