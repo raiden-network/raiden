@@ -2190,7 +2190,7 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                if channel_onchain_detail.settle_block_number > given_block_number:
+                if given_block_number > channel_onchain_detail.settle_block_number:
                     msg = (
                         "settle cannot be called after the settlement "
                         "period, this call should never have been attempted."
@@ -2340,13 +2340,24 @@ class TokenNetwork:
                     block_identifier=failed_at_blockhash,
                 )
 
+                our_balance_hash = hash_balance_data(
+                    transferred_amount=transferred_amount,
+                    locked_amount=locked_amount,
+                    locksroot=locksroot,
+                )
+                partner_balance_hash = hash_balance_data(
+                    transferred_amount=partner_transferred_amount,
+                    locked_amount=partner_locked_amount,
+                    locksroot=partner_locksroot,
+                )
+
                 if channel_identifier != channel_onchain_detail.channel_identifier:
                     msg = (
                         f"The provided channel identifier {channel_identifier} "
                         f"does not match onchain channel_identifier "
                         f"{channel_onchain_detail.channel_identifier}."
                     )
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
 
                 if channel_onchain_detail.state == ChannelState.SETTLED:
                     raise RaidenRecoverableError("Channel is already settled")
@@ -2362,24 +2373,20 @@ class TokenNetwork:
                             "Channel cannot be settled before settlement window is over"
                         )
 
-                our_balance_hash = hash_balance_data(
-                    transferred_amount=transferred_amount,
-                    locked_amount=locked_amount,
-                    locksroot=locksroot,
-                )
-                partner_balance_hash = hash_balance_data(
-                    transferred_amount=partner_transferred_amount,
-                    locked_amount=partner_locked_amount,
-                    locksroot=partner_locksroot,
-                )
-
+                # on-chain balance hashes are never updated after
+                # the channel was closed / update transfer was called.
+                # Therefore, a non-matching balance hash values
+                # mean that the channel was removed / a new
+                # channel was created.
                 if our_details.balance_hash != our_balance_hash:
                     msg = "Our balance hash does not match the on-chain value"
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
 
                 if partner_details.balance_hash != partner_balance_hash:
                     msg = "Partner balance hash does not match the on-chain value"
-                    raise RaidenUnrecoverableError(msg)
+                    raise RaidenRecoverableError(msg)
+
+                raise RaidenRecoverableError("Settle failed for an unknown reason")
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
@@ -2406,26 +2413,6 @@ class TokenNetwork:
                 block_identifier=failed_at_blockhash,
             )
 
-            if channel_identifier != channel_onchain_detail.channel_identifier:
-                msg = (
-                    f"The provided channel identifier {channel_identifier} "
-                    f"does not match onchain channel_identifier "
-                    f"{channel_onchain_detail.channel_identifier}."
-                )
-                raise RaidenUnrecoverableError(msg)
-
-            if channel_onchain_detail.state == ChannelState.SETTLED:
-                raise RaidenRecoverableError("Channel is already settled")
-            elif channel_onchain_detail.state == ChannelState.REMOVED:
-                raise RaidenRecoverableError("Channel is already unlocked. It cannot be settled")
-            elif channel_onchain_detail.state == ChannelState.OPENED:
-                raise RaidenUnrecoverableError("Channel is still open. It cannot be settled")
-            elif channel_onchain_detail.state == ChannelState.CLOSED:
-                if failed_at_blocknumber < channel_onchain_detail.settle_block_number:
-                    raise RaidenUnrecoverableError(
-                        "Channel cannot be settled before settlement window is over"
-                    )
-
             our_balance_hash = hash_balance_data(
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
@@ -2437,13 +2424,38 @@ class TokenNetwork:
                 locksroot=partner_locksroot,
             )
 
+            if channel_identifier != channel_onchain_detail.channel_identifier:
+                msg = (
+                    f"The provided channel identifier {channel_identifier} "
+                    f"does not match onchain channel_identifier "
+                    f"{channel_onchain_detail.channel_identifier}."
+                )
+                raise RaidenRecoverableError(msg)
+
+            if channel_onchain_detail.state == ChannelState.SETTLED:
+                raise RaidenRecoverableError("Channel is already settled")
+
+            if channel_onchain_detail.state == ChannelState.REMOVED:
+                raise RaidenRecoverableError("Channel is already unlocked. It cannot be settled")
+
+            if channel_onchain_detail.state == ChannelState.OPENED:
+                raise RaidenRecoverableError("Channel is still open. It cannot be settled")
+
+            if channel_onchain_detail.state == ChannelState.CLOSED:
+                if failed_at_blocknumber < channel_onchain_detail.settle_block_number:
+                    raise RaidenUnrecoverableError(
+                        "Channel cannot be settled before settlement window is over"
+                    )
+
             if our_details.balance_hash != our_balance_hash:
                 msg = "Our balance hash does not match the on-chain value"
-                raise RaidenUnrecoverableError(msg)
+                raise RaidenRecoverableError(msg)
 
             if partner_details.balance_hash != partner_balance_hash:
                 msg = "Partner balance hash does not match the on-chain value"
-                raise RaidenUnrecoverableError(msg)
+                raise RaidenRecoverableError(msg)
+
+            raise RaidenRecoverableError("Settle failed for an unknown reason")
 
     def events_filter(
         self,

@@ -789,17 +789,32 @@ def test_token_network_actions_at_pruned_blocks(
     c1_chain.wait_until_block(target_block_number=c1_chain.block_number() + settle_timeout)
 
     # settle with given block being pruned
-    c1_token_network_proxy.settle(
-        channel_identifier=channel_identifier,
-        transferred_amount=transferred_amount_c1,
-        locked_amount=0,
-        locksroot=LOCKSROOT_OF_NO_LOCKS,
-        partner=c2_client.address,
-        partner_transferred_amount=0,
-        partner_locked_amount=0,
-        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
-        given_block_identifier=close_pruned_number,
-    )
+    with pytest.raises(BrokenPreconditionError):
+        # At close_pruned_block, the balance
+        # hash of the partner was not registered
+        c1_token_network_proxy.settle(
+            channel_identifier=channel_identifier,
+            transferred_amount=transferred_amount_c1,
+            locked_amount=0,
+            locksroot=LOCKSROOT_OF_NO_LOCKS,
+            partner=c2_client.address,
+            partner_transferred_amount=0,
+            partner_locked_amount=0,
+            partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
+            given_block_identifier=close_pruned_number,
+        )
+    # settle with given block being pruned
+    # c1_token_network_proxy.settle(
+    #     channel_identifier=channel_identifier,
+    #     transferred_amount=transferred_amount_c1,
+    #     locked_amount=0,
+    #     locksroot=LOCKSROOT_OF_NO_LOCKS,
+    #     partner=c2_client.address,
+    #     partner_transferred_amount=0,
+    #     partner_locked_amount=0,
+    #     partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
+    #     given_block_identifier=,
+    # )
     assert token_proxy.balance_of(c2_client.address) == (
         initial_balance_c2 + transferred_amount_c1 - 0
     )
