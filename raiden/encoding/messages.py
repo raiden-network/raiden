@@ -66,10 +66,6 @@ signature = make_field("signature", 65, "65s")
 non_closing_signature = make_field("non_closing_signature", 65, "65s")
 reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-RevealSecret = namedbuffer(
-    "reveal_secret", [cmdid(REVEALSECRET), pad(3), message_identifier, secret, signature]
-)
-
 LockedTransfer = namedbuffer(
     "mediated_transfer",
     [
@@ -191,7 +187,6 @@ Withdraw = namedbuffer(
 
 
 CMDID_MESSAGE = {
-    REVEALSECRET: RevealSecret,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
     LOCKEXPIRED: LockExpired,
