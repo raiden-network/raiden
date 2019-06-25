@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
 from operator import attrgetter
+from typing import overload
 
 import rlp
 from cachetools import LRUCache, cached
@@ -74,7 +75,6 @@ __all__ = (
     "EnvelopeMessage",
     "Lock",
     "LockedTransfer",
-    "LockedTransferBase",
     "LockExpired",
     "Message",
     "Metadata",
@@ -172,33 +172,31 @@ def assert_transfer_values(payment_identifier, token, recipient):
 def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
     if type(send_event) == SendLockedTransfer:
         assert isinstance(send_event, SendLockedTransfer), MYPY_ANNOTATION
-        message = LockedTransfer.from_event(send_event)
+        return LockedTransfer.from_event(send_event)
     elif type(send_event) == SendSecretReveal:
         assert isinstance(send_event, SendSecretReveal), MYPY_ANNOTATION
-        message = RevealSecret.from_event(send_event)
+        return RevealSecret.from_event(send_event)
     elif type(send_event) == SendBalanceProof:
         assert isinstance(send_event, SendBalanceProof), MYPY_ANNOTATION
-        message = Unlock.from_event(send_event)
+        return Unlock.from_event(send_event)
     elif type(send_event) == SendSecretRequest:
         assert isinstance(send_event, SendSecretRequest), MYPY_ANNOTATION
-        message = SecretRequest.from_event(send_event)
+        return SecretRequest.from_event(send_event)
     elif type(send_event) == SendRefundTransfer:
         assert isinstance(send_event, SendRefundTransfer), MYPY_ANNOTATION
-        message = RefundTransfer.from_event(send_event)
+        return RefundTransfer.from_event(send_event)
     elif type(send_event) == SendLockExpired:
         assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
-        message = LockExpired.from_event(send_event)
+        return LockExpired.from_event(send_event)
     elif type(send_event) == SendWithdrawRequest:
-        message = WithdrawRequest.from_event(send_event)
+        return WithdrawRequest.from_event(send_event)
     elif type(send_event) == SendWithdraw:
-        message = Withdraw.from_event(send_event)
+        return Withdraw.from_event(send_event)
     elif type(send_event) == SendProcessed:
         assert isinstance(send_event, SendProcessed), MYPY_ANNOTATION
-        message = Processed.from_event(send_event)
+        return Processed.from_event(send_event)
     else:
         raise ValueError(f"Unknown event type {send_event}")
-
-    return message
 
 
 @dataclass(repr=False, eq=False)
@@ -776,56 +774,6 @@ class LockedTransferBase(EnvelopeMessage):
     token: TokenAddress
     recipient: Address
     lock: Lock
-
-    def __post_init__(self):
-        super().__post_init__()
-        assert_transfer_values(self.payment_identifier, self.token, self.recipient)
-
-    def pack(self, packed) -> None:
-        packed.chain_id = self.chain_id
-        packed.message_identifier = self.message_identifier
-        packed.payment_identifier = self.payment_identifier
-        packed.nonce = self.nonce
-        packed.token_network_address = self.token_network_address
-        packed.token = self.token
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.recipient = self.recipient
-        packed.locksroot = self.locksroot
-
-        lock = self.lock
-        packed.amount = lock.amount
-        packed.expiration = lock.expiration
-        packed.secrethash = lock.secrethash
-
-        packed.signature = self.signature
-
-
-@dataclass(repr=False, eq=False)
-class LockedTransfer(LockedTransferBase):
-    """ Message used to reserve tokens for a new mediated transfer.
-
-    For this message to be valid, the sender must:
-
-    - Use a lock.amount smaller then its current capacity. If the amount is
-      higher, then the recipient will reject it, as it means spending money it
-      does not own.
-    - Have the new lock represented in locksroot.
-    - Increase the locked_amount by exactly `lock.amount` otherwise the message
-      would be rejected by the recipient. If the locked_amount is increased by
-      more, then funds may get locked in the channel. If the locked_amount is
-      increased by less, then the recipient will reject the message as it may
-      mean it received the funds with an on-chain unlock.
-
-    The initiator will estimate the fees based on the available routes and
-    incorporate it in the lock's amount. Note that with permissive routing it
-    is not possible to predetermine the exact fee amount, as the initiator does
-    not know which nodes are available, thus an estimated value is used.
-    """
-
-    cmdid: ClassVar[CmdId] = CmdId.LOCKEDTRANSFER
-
     target: TargetAddress
     initiator: InitiatorAddress
     fee: int
@@ -833,6 +781,7 @@ class LockedTransfer(LockedTransferBase):
 
     def __post_init__(self):
         super().__post_init__()
+        assert_transfer_values(self.payment_identifier, self.token, self.recipient)
 
         if len(self.target) != 20:
             raise ValueError("target is an invalid address")
@@ -843,82 +792,19 @@ class LockedTransfer(LockedTransferBase):
         if self.fee > UINT256_MAX:
             raise ValueError("fee is too large")
 
-    @property
-    def message_hash(self) -> bytes:
-        metadata_hash = (self.metadata and self.metadata.hash) or b""
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (b"\x00" * 3, "bytes"),  # padding
-                (self.nonce, "uint64"),
-                (self.chain_id, "uint256"),
-                (self.message_identifier, "uint64"),
-                (self.payment_identifier, "uint64"),
-                (self.lock.expiration, "uint256"),
-                (self.token_network_address, "address"),
-                (self.token, "address"),
-                (self.channel_identifier, "uint256"),
-                (self.recipient, "address"),
-                (self.target, "address"),
-                (self.initiator, "address"),
-                (self.locksroot, "bytes32"),
-                (self.lock.secrethash, "bytes32"),
-                (self.transferred_amount, "uint256"),
-                (self.locked_amount, "uint256"),
-                (self.lock.amount, "uint256"),
-                (self.fee, "uint256"),
-            )
-            + metadata_hash
-        )
-
+    @overload
     @classmethod
     def from_event(cls, event: SendLockedTransfer) -> "LockedTransfer":
-        transfer = event.transfer
-        balance_proof = transfer.balance_proof
-        lock = Lock(
-            amount=transfer.lock.amount,
-            expiration=transfer.lock.expiration,
-            secrethash=transfer.lock.secrethash,
-        )
-        fee = 0
+        # pylint: disable=unused-argument
+        ...
 
-        # pylint: disable=unexpected-keyword-arg
-        return cls(
-            chain_id=balance_proof.chain_id,
-            message_identifier=event.message_identifier,
-            payment_identifier=transfer.payment_identifier,
-            nonce=balance_proof.nonce,
-            token_network_address=balance_proof.token_network_address,
-            token=transfer.token,
-            channel_identifier=balance_proof.channel_identifier,
-            transferred_amount=balance_proof.transferred_amount,
-            locked_amount=balance_proof.locked_amount,
-            recipient=event.recipient,
-            locksroot=balance_proof.locksroot,
-            lock=lock,
-            target=transfer.target,
-            initiator=transfer.initiator,
-            fee=fee,
-            signature=EMPTY_SIGNATURE,
-            metadata=Metadata(
-                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
-            ),
-        )
-
-
-@dataclass(repr=False, eq=False)
-class RefundTransfer(LockedTransfer):
-    """ A message used when a payee does not have any available routes to
-    forward the transfer.
-
-    This message is used by the payee to refund the payer when no route is
-    available. This transfer refunds the payer, allowing him to try a new path
-    to complete the transfer.
-    """
-
-    cmdid: ClassVar[CmdId] = CmdId.REFUNDTRANSFER
-
+    @overload  # noqa: F811
     @classmethod
+    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":
+        # pylint: disable=unused-argument
+        ...
+
+    @classmethod  # noqa: F811
     def from_event(cls, event):
         transfer = event.transfer
         balance_proof = transfer.balance_proof
@@ -952,33 +838,75 @@ class RefundTransfer(LockedTransfer):
             ),
         )
 
+    def _packed_data(self):
+        return pack_data(
+            (self.cmdid.value, "uint8"),
+            (b"\x00" * 3, "bytes"),  # padding
+            (self.nonce, "uint64"),
+            (self.chain_id, "uint256"),
+            (self.message_identifier, "uint64"),
+            (self.payment_identifier, "uint64"),
+            (self.lock.expiration, "uint256"),
+            (self.token_network_address, "address"),
+            (self.token, "address"),
+            (self.channel_identifier, "uint256"),
+            (self.recipient, "address"),
+            (self.target, "address"),
+            (self.initiator, "address"),
+            (self.locksroot, "bytes32"),
+            (self.lock.secrethash, "bytes32"),
+            (self.transferred_amount, "uint256"),
+            (self.locked_amount, "uint256"),
+            (self.lock.amount, "uint256"),
+            (self.fee, "uint256"),
+        )
+
+
+@dataclass(repr=False, eq=False)
+class LockedTransfer(LockedTransferBase):
+    """ Message used to reserve tokens for a new mediated transfer.
+
+    For this message to be valid, the sender must:
+
+    - Use a lock.amount smaller then its current capacity. If the amount is
+      higher, then the recipient will reject it, as it means spending money it
+      does not own.
+    - Have the new lock represented in locksroot.
+    - Increase the locked_amount by exactly `lock.amount` otherwise the message
+      would be rejected by the recipient. If the locked_amount is increased by
+      more, then funds may get locked in the channel. If the locked_amount is
+      increased by less, then the recipient will reject the message as it may
+      mean it received the funds with an on-chain unlock.
+
+    The initiator will estimate the fees based on the available routes and
+    incorporate it in the lock's amount. Note that with permissive routing it
+    is not possible to predetermine the exact fee amount, as the initiator does
+    not know which nodes are available, thus an estimated value is used.
+    """
+
+    cmdid: ClassVar[CmdId] = CmdId.LOCKEDTRANSFER
+
     @property
     def message_hash(self) -> bytes:
-        # TODO: This is the same as for LockedTransfer except for the metadata.
-        #       Refactor this into something shared.
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (b"\x00" * 3, "bytes"),  # padding
-                (self.nonce, "uint64"),
-                (self.chain_id, "uint256"),
-                (self.message_identifier, "uint64"),
-                (self.payment_identifier, "uint64"),
-                (self.lock.expiration, "uint256"),
-                (self.token_network_address, "address"),
-                (self.token, "address"),
-                (self.channel_identifier, "uint256"),
-                (self.recipient, "address"),
-                (self.target, "address"),
-                (self.initiator, "address"),
-                (self.locksroot, "bytes32"),
-                (self.lock.secrethash, "bytes32"),
-                (self.transferred_amount, "uint256"),
-                (self.locked_amount, "uint256"),
-                (self.lock.amount, "uint256"),
-                (self.fee, "uint256"),
-            )
-        )
+        metadata_hash = (self.metadata and self.metadata.hash) or b""
+        return sha3(self._packed_data() + metadata_hash)
+
+
+@dataclass(repr=False, eq=False)
+class RefundTransfer(LockedTransferBase):
+    """ A message used when a payee does not have any available routes to
+    forward the transfer.
+
+    This message is used by the payee to refund the payer when no route is
+    available. This transfer refunds the payer, allowing him to try a new path
+    to complete the transfer.
+    """
+
+    cmdid: ClassVar[CmdId] = CmdId.REFUNDTRANSFER
+
+    @property
+    def message_hash(self) -> bytes:
+        return sha3(self._packed_data())
 
 
 @dataclass(repr=False, eq=False)
@@ -1311,7 +1239,7 @@ class PFSFeeUpdate(SignedMessage):
         )
 
 
-def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransferSignedState:
+def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTransferSignedState:
     """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = balanceproof_from_envelope(message)
 
