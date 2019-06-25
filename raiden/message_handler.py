@@ -13,6 +13,7 @@ from raiden.messages import (
     SecretRequest,
     Unlock,
     Withdraw,
+    WithdrawExpired,
     WithdrawRequest,
     lockedtransfersigned_from_message,
 )
@@ -33,6 +34,7 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
     ReceiveWithdraw,
+    ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
 from raiden.utils import random_secret
@@ -77,6 +79,10 @@ class MessageHandler:
             assert isinstance(message, Withdraw), MYPY_ANNOTATION
             self.handle_message_withdraw(raiden, message)
 
+        elif type(message) == WithdrawExpired:
+            assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
+            self.handle_message_withdraw_expired(raiden, message)
+
         elif type(message) == Delivered:
             assert isinstance(message, Delivered), MYPY_ANNOTATION
             self.handle_message_delivered(raiden, message)
@@ -118,6 +124,22 @@ class MessageHandler:
             signature=message.signature,
         )
         raiden.handle_and_track_state_changes([withdraw])
+
+    @staticmethod
+    def handle_message_withdraw_expired(raiden: RaidenService, message: WithdrawExpired):
+        withdraw = ReceiveWithdrawExpired(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=message.chain_id,
+                token_network_address=message.token_network_address,
+                channel_identifier=message.channel_identifier,
+            ),
+            message_identifier=message.message_identifier,
+            total_withdraw=message.total_withdraw,
+            sender=message.sender,
+            nonce=message.nonce,
+            signature=message.signature,
+        )
+        raiden.handle_and_track_state_change(withdraw)
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
