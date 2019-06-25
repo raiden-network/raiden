@@ -1,3 +1,4 @@
+import enum
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -8,7 +9,6 @@ from cachetools import LRUCache, cached
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
-from raiden.encoding import messages
 from raiden.exceptions import InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
@@ -103,6 +103,23 @@ _hashes_cache = LRUCache(maxsize=128)
 _lock_bytes_cache = LRUCache(maxsize=128)
 
 
+@enum.unique
+class CmdId(enum.Enum):
+    PROCESSED = 0
+    PING = 1
+    PONG = 2
+    SECRETREQUEST = 3
+    UNLOCK = 4
+    LOCKEDTRANSFER = 7
+    REFUNDTRANSFER = 8
+    REVEALSECRET = 11
+    DELIVERED = 12
+    LOCKEXPIRED = 13
+    TODEVICE = 14
+    WITHDRAW_REQUEST = 15
+    WITHDRAW = 16
+
+
 def assert_envelope_values(
     nonce: int,
     channel_identifier: ChannelID,
@@ -187,7 +204,7 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
 @dataclass(repr=False, eq=False)
 class Message:
     # Needs to be set by a subclass
-    cmdid: ClassVar[int]
+    cmdid: ClassVar[CmdId]
 
 
 @dataclass(repr=False, eq=False)
@@ -341,7 +358,7 @@ class Processed(SignedRetrieableMessage):
     """
 
     # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
-    cmdid: ClassVar[int] = messages.PROCESSED
+    cmdid: ClassVar[CmdId] = CmdId.PROCESSED
 
     message_identifier: MessageID
 
@@ -351,7 +368,7 @@ class Processed(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
         )
@@ -365,13 +382,13 @@ class ToDevice(SignedMessage):
     subclass.
     """
 
-    cmdid: ClassVar[int] = messages.TODEVICE
+    cmdid: ClassVar[CmdId] = CmdId.TODEVICE
 
     message_identifier: MessageID
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
         )
@@ -389,13 +406,13 @@ class Delivered(SignedMessage):
           successfully processed or not).
     """
 
-    cmdid: ClassVar[int] = messages.DELIVERED
+    cmdid: ClassVar[CmdId] = CmdId.DELIVERED
 
     delivered_message_identifier: MessageID
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.delivered_message_identifier, "uint64"),
         )
@@ -405,26 +422,28 @@ class Delivered(SignedMessage):
 class Pong(SignedMessage):
     """ Response to a Ping message. """
 
-    cmdid: ClassVar[int] = messages.PONG
+    cmdid: ClassVar[CmdId] = CmdId.PONG
 
     nonce: Nonce
 
     def _data_to_sign(self) -> bytes:
-        return pack_data((self.cmdid, "uint8"), (b"\x00" * 3, "bytes"), (self.nonce, "uint64"))
+        return pack_data(
+            (self.cmdid.value, "uint8"), (b"\x00" * 3, "bytes"), (self.nonce, "uint64")
+        )
 
 
 @dataclass(repr=False, eq=False)
 class Ping(SignedMessage):
     """ Healthcheck message. """
 
-    cmdid: ClassVar[int] = messages.PING
+    cmdid: ClassVar[CmdId] = CmdId.PING
 
     nonce: Nonce
     current_protocol_version: RaidenProtocolVersion
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.nonce, "uint64"),
             (self.current_protocol_version, "uint8"),
@@ -435,7 +454,7 @@ class Ping(SignedMessage):
 class SecretRequest(SignedRetrieableMessage):
     """ Requests the secret/preimage which unlocks a lock. """
 
-    cmdid: ClassVar[int] = messages.SECRETREQUEST
+    cmdid: ClassVar[CmdId] = CmdId.SECRETREQUEST
 
     payment_identifier: PaymentID
     secrethash: SecretHash
@@ -456,7 +475,7 @@ class SecretRequest(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
             (self.payment_identifier, "uint64"),
@@ -496,7 +515,7 @@ class Unlock(EnvelopeMessage):
     reject the message.
     """
 
-    cmdid: ClassVar[int] = messages.UNLOCK
+    cmdid: ClassVar[CmdId] = CmdId.UNLOCK
 
     payment_identifier: PaymentID
     secret: Secret = field(repr=False)
@@ -539,7 +558,7 @@ class Unlock(EnvelopeMessage):
     def message_hash(self) -> bytes:
         return sha3(
             pack_data(
-                (self.cmdid, "uint8"),
+                (self.cmdid.value, "uint8"),
                 (b"\x00" * 3, "bytes"),  # padding
                 (self.chain_id, "uint256"),
                 (self.message_identifier, "uint64"),
@@ -562,7 +581,7 @@ class RevealSecret(SignedRetrieableMessage):
     This message is not sufficient to unlock a lock, refer to the Unlock.
     """
 
-    cmdid: ClassVar[int] = messages.REVEALSECRET
+    cmdid: ClassVar[CmdId] = CmdId.REVEALSECRET
 
     secret: Secret = field(repr=False)
 
@@ -582,7 +601,7 @@ class RevealSecret(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            (self.cmdid, "uint8"),
+            (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.message_identifier, "uint64"),
             (self.secret, "bytes32"),
@@ -593,7 +612,7 @@ class RevealSecret(SignedRetrieableMessage):
 class WithdrawRequest(SignedRetrieableMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
 
-    cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -632,7 +651,7 @@ class WithdrawRequest(SignedRetrieableMessage):
 class Withdraw(SignedRetrieableMessage):
     """ Confirms withdraw to partner with a signature """
 
-    cmdid: ClassVar[int] = messages.WITHDRAW
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -805,7 +824,7 @@ class LockedTransfer(LockedTransferBase):
     not know which nodes are available, thus an estimated value is used.
     """
 
-    cmdid: ClassVar[int] = messages.LOCKEDTRANSFER
+    cmdid: ClassVar[CmdId] = CmdId.LOCKEDTRANSFER
 
     target: TargetAddress
     initiator: InitiatorAddress
@@ -829,7 +848,7 @@ class LockedTransfer(LockedTransferBase):
         metadata_hash = (self.metadata and self.metadata.hash) or b""
         return sha3(
             pack_data(
-                (self.cmdid, "uint8"),
+                (self.cmdid.value, "uint8"),
                 (b"\x00" * 3, "bytes"),  # padding
                 (self.nonce, "uint64"),
                 (self.chain_id, "uint256"),
@@ -897,7 +916,7 @@ class RefundTransfer(LockedTransfer):
     to complete the transfer.
     """
 
-    cmdid: ClassVar[int] = messages.REFUNDTRANSFER
+    cmdid: ClassVar[CmdId] = CmdId.REFUNDTRANSFER
 
     @classmethod
     def from_event(cls, event):
@@ -939,7 +958,7 @@ class RefundTransfer(LockedTransfer):
         #       Refactor this into something shared.
         return sha3(
             pack_data(
-                (self.cmdid, "uint8"),
+                (self.cmdid.value, "uint8"),
                 (b"\x00" * 3, "bytes"),  # padding
                 (self.nonce, "uint64"),
                 (self.chain_id, "uint256"),
@@ -980,7 +999,7 @@ class LockExpired(EnvelopeMessage):
     in-flight, vide Unlock for examples.
     """
 
-    cmdid: ClassVar[int] = messages.LOCKEXPIRED
+    cmdid: ClassVar[CmdId] = CmdId.LOCKEXPIRED
 
     recipient: Address
     secrethash: SecretHash
@@ -1008,7 +1027,7 @@ class LockExpired(EnvelopeMessage):
     def message_hash(self) -> bytes:
         return sha3(
             pack_data(
-                (self.cmdid, "uint8"),
+                (self.cmdid.value, "uint8"),
                 (b"\x00" * 3, "bytes"),  # padding
                 (self.nonce, "uint64"),
                 (self.chain_id, "uint256"),
@@ -1311,19 +1330,7 @@ def lockedtransfersigned_from_message(message: LockedTransfer) -> LockedTransfer
     return transfer_state
 
 
-CMDID_TO_CLASS: Dict[int, Type[Message]] = {
-    messages.DELIVERED: Delivered,
-    messages.LOCKEDTRANSFER: LockedTransfer,
-    messages.PING: Ping,
-    messages.PONG: Pong,
-    messages.PROCESSED: Processed,
-    messages.REFUNDTRANSFER: RefundTransfer,
-    messages.REVEALSECRET: RevealSecret,
-    messages.UNLOCK: Unlock,
-    messages.SECRETREQUEST: SecretRequest,
-    messages.LOCKEXPIRED: LockExpired,
-    messages.TODEVICE: ToDevice,
+CLASSNAME_TO_CLASS: Dict[str, Type[Message]] = {
+    klass.__name__: klass for klass in Message.__subclasses__()
 }
-
-CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
 CLASSNAME_TO_CLASS["Secret"] = Unlock
