@@ -125,7 +125,7 @@ class ActionChannelWithdraw(StateChange):
 
 
 @dataclass
-class ActionChannelSetFee(StateChange):
+class ActionChannelUpdateFee(StateChange):
     canonical_identifier: CanonicalIdentifier
     flat_fee: FeeAmount
     proportional_fee: int  # as micros, e.g. 1% = 0.01e6

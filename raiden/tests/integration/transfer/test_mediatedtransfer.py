@@ -18,7 +18,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, transfer, wait_assert
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.state_change import ActionChannelSetFee
+from raiden.transfer.state_change import ActionChannelUpdateFee
 from raiden.utils import sha3
 from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, TokenAmount
 from raiden.waiting import wait_for_block
@@ -470,14 +470,14 @@ def run_test_mediated_transfer_with_allocated_fee(
     )
 
     # Let app1 consume all of the allocated mediation fee
-    action_set_fee = ActionChannelSetFee(
+    action_update_fee = ActionChannelUpdateFee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
         flat_fee=fee,
         proportional_fee=0,
         use_imbalance_penalty=False,
     )
 
-    app1.raiden.handle_state_changes(state_changes=[action_set_fee])
+    app1.raiden.handle_state_changes(state_changes=[action_update_fee])
 
     transfer(
         initiator_app=app0,
@@ -567,14 +567,14 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     )
 
     # Let app1 consume all of the allocated mediation fee
-    action_set_fee = ActionChannelSetFee(
+    action_update_fee = ActionChannelUpdateFee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
         flat_fee=FeeAmount(fee * 2),
         proportional_fee=0,
         use_imbalance_penalty=False,
     )
 
-    app1.raiden.handle_state_changes(state_changes=[action_set_fee])
+    app1.raiden.handle_state_changes(state_changes=[action_update_fee])
 
     secret = factories.make_secret(0)
     secrethash = sha256(secret).digest()

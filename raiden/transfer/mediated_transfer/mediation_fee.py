@@ -93,7 +93,7 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
     return result
 
 
-def calculate_rebalancing_fees(
+def calculate_imbalance_fees(
     our_balance: Balance, partner_balance: Balance
 ) -> List[Tuple[TokenAmount, FeeAmount]]:
     """ Calculates a quadratic rebalancing curve.
