@@ -677,6 +677,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
+                routing_mode=raiden.routing_mode,
                 pfs_config=pfs_config,
                 token_network_address=route_failed_event.token_network_address,
                 route=route_failed_event.route,
@@ -700,6 +701,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
+                routing_mode=raiden.routing_mode,
                 pfs_config=pfs_config,
                 token_network_address=payment_sent_success_event.token_network_address,
                 route=payment_sent_success_event.route,

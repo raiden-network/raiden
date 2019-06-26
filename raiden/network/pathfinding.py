@@ -519,6 +519,7 @@ def query_paths(
 
 
 def post_pfs_feedback(
+    routing_mode: RoutingMode,
     pfs_config: PFSConfig,
     token_network_address: TokenNetworkAddress,
     route: List[Address],
@@ -526,8 +527,8 @@ def post_pfs_feedback(
     succesful: bool,
 ) -> None:
 
-    # PFS not enabled
-    if pfs_config is None:
+    feedback_disabled = routing_mode == RoutingMode.PRIVATE or pfs_config is None
+    if feedback_disabled:
         return
 
     hex_route = [to_checksum_address(address) for address in route]

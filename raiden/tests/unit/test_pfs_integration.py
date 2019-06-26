@@ -13,6 +13,7 @@ from eth_utils import (
     to_checksum_address,
 )
 
+from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
     IOU,
@@ -831,11 +832,12 @@ def test_post_pfs_feedback(query_paths_args):
 
     with patch.object(requests, "post", return_value=request_mock()) as feedback:
         post_pfs_feedback(
+            routing_mode=RoutingMode.PFS,
+            pfs_config=query_paths_args["pfs_config"],
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
             succesful=True,
-            pfs_config=query_paths_args["pfs_config"],
         )
 
         assert feedback.called
@@ -848,11 +850,12 @@ def test_post_pfs_feedback(query_paths_args):
 
     with patch.object(requests, "post", return_value=request_mock()) as feedback:
         post_pfs_feedback(
+            routing_mode=RoutingMode.PFS,
+            pfs_config=query_paths_args["pfs_config"],
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
             succesful=False,
-            pfs_config=query_paths_args["pfs_config"],
         )
 
         assert feedback.called
@@ -865,11 +868,12 @@ def test_post_pfs_feedback(query_paths_args):
 
     with patch.object(requests, "post", return_value=request_mock()) as feedback:
         post_pfs_feedback(
+            routing_mode=RoutingMode.PRIVATE,
+            pfs_config=query_paths_args["pfs_config"],
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
             succesful=False,
-            pfs_config=None,
         )
 
         assert not feedback.called
