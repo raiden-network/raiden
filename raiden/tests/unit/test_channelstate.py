@@ -60,6 +60,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
+    WithdrawState,
     balanceproof_from_envelope,
     make_empty_pending_locks_state,
     message_identifier_from_prng,
@@ -1660,8 +1661,9 @@ def test_action_withdraw():
 
     iteration = channel.handle_action_withdraw(
         channel_state=channel_state,
-        withdraw=action_withdraw,
+        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
+        block_number=2,
     )
 
     assert (
@@ -1683,8 +1685,9 @@ def test_action_withdraw():
 
     iteration = channel.handle_action_withdraw(
         channel_state=channel_state,
-        withdraw=action_withdraw,
+        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
+        block_number=3,
     )
 
     assert iteration.new_state.our_state.total_withdraw == our_balance
@@ -1700,8 +1703,9 @@ def test_action_withdraw():
 
     iteration = channel.handle_action_withdraw(
         channel_state=iteration.new_state,
-        withdraw=action_withdraw,
+        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
+        block_number=4,
     )
 
     assert (
@@ -1842,14 +1846,21 @@ def test_receive_withdraw_confirmation():
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
     block_hash = make_block_hash()
 
+    total_withdraw = 50
+
     packed = pack_withdraw(
         canonical_identifier=channel_state.canonical_identifier,
         # pylint: disable=no-member
         participant=channel_state.our_state.address,
         # pylint: enable=no-member
-        total_withdraw=70,
+        total_withdraw=total_withdraw,
     )
     partner_signature = signer.sign(packed)
+
+    channel_state.our_state.total_withdraw = total_withdraw
+    channel_state.our_state.withdraws.append(
+        WithdrawState(total_withdraw=total_withdraw, expiration=1, nonce=1)
+    )
 
     receive_withdraw = ReceiveWithdraw(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
@@ -1872,19 +1883,18 @@ def test_receive_withdraw_confirmation():
             EventInvalidReceivedWithdraw,
             {
                 "attempted_withdraw": 100,
-                "reason": "Total withdraw confirmation 100 does not match our total withdraw 0",
+                "reason": "Received withdraw confirmation 100 was not found in withdraw states",
             },
         )
         is not None
     )
 
     channel_state = iteration.new_state
-    channel_state.our_state.total_withdraw = 70
 
     receive_withdraw = ReceiveWithdraw(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
-        total_withdraw=70,
+        total_withdraw=total_withdraw,
         signature=make_32bytes(),
         sender=channel_state.partner_state.address,
         nonce=1,
@@ -1898,7 +1908,10 @@ def test_receive_withdraw_confirmation():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdraw,
-            {"attempted_withdraw": 70, "reason": "Signature invalid, could not be recovered."},
+            {
+                "attempted_withdraw": total_withdraw,
+                "reason": "Signature invalid, could not be recovered.",
+            },
         )
         is not None
     )
@@ -1906,7 +1919,7 @@ def test_receive_withdraw_confirmation():
     receive_withdraw = ReceiveWithdraw(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
-        total_withdraw=70,
+        total_withdraw=total_withdraw,
         signature=partner_signature,
         sender=channel_state.partner_state.address,
         nonce=1,
@@ -1917,6 +1930,8 @@ def test_receive_withdraw_confirmation():
     )
 
     assert (
-        search_for_item(iteration.events, ContractSendChannelWithdraw, {"total_withdraw": 70})
+        search_for_item(
+            iteration.events, ContractSendChannelWithdraw, {"total_withdraw": total_withdraw}
+        )
         is not None
     )

@@ -258,7 +258,7 @@ def run_test_refund_transfer(
     with dont_handle_lock_expired_mock(app0):
         wait_for_block(
             raiden=app0.raiden,
-            block_number=channel.get_sender_expiration_threshold(lock) + 1,
+            block_number=channel.get_sender_expiration_threshold(lock.expiration) + 1,
             retry_timeout=retry_timeout,
         )
         # make sure that app0 still has the payment task for the secrethash
@@ -475,7 +475,7 @@ def run_test_different_view_of_last_bp_during_unlock(
         # Wait for lock expiration so that app0 sends a LockExpired
         wait_for_block(
             raiden=app0.raiden,
-            block_number=channel.get_sender_expiration_threshold(lock) + 1,
+            block_number=channel.get_sender_expiration_threshold(lock.expiration) + 1,
             retry_timeout=retry_timeout,
         )
 
