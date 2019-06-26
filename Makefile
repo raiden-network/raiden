@@ -87,7 +87,9 @@ install: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements.txt _raiden.txt
 
 install-dev: check-pip-tools clean-pyc
-	cd requirements; touch requirements-local.txt; pip-sync requirements-dev.txt _raiden-dev.txt requirements-local.txt
+	touch requirements/requirements-local.txt
+	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
+	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
 
 ARCHIVE_TAG_ARG=
 ifdef ARCHIVE_TAG
