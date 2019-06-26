@@ -20,7 +20,7 @@ def cleanup_tasks() -> None:
     ]
 
     if tasks:
-        gevent.util.print_run_info()
+        log.debug("Pending greenlets", tracebacks="\n".join(gevent.util.format_run_info()))
 
         # Kill the pending greenlets hoping that the next tests will run
         # without interference
