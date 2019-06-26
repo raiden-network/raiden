@@ -3,6 +3,7 @@ from eth_utils import to_checksum_address
 
 from raiden.exceptions import InsufficientFunds
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
 
@@ -56,36 +57,11 @@ def test_transact_opcode_oog(deploy_client):
     assert check_transaction_threw(deploy_client, transaction), "must not be empty"
 
 
-GETH_GAS_PRICE = 1_000_000_000
-GETH_GAS_DEPLOY = 213105 * GETH_GAS_PRICE
-GETH_GAS_LOOP = 93864 * GETH_GAS_PRICE
-GETH_GAS_ACCOUNT_FAIL = GETH_GAS_DEPLOY + GETH_GAS_LOOP // 2
-PARITY_GAS_ACCOUNT_FAIL = GETH_GAS_ACCOUNT_FAIL * 4
-
-
-@pytest.mark.parametrize("account_genesis_eth_balance", [GETH_GAS_ACCOUNT_FAIL])
-def test_geth_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(
-    deploy_client, skip_if_not_geth  # pylint: disable=unused-argument
-):
+def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
     """ The gas estimation does not fail if the transaction execution requires
     more gas then the account's eth balance. However sending the transaction
     will.
     """
-    run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client)
-
-
-@pytest.mark.parametrize("account_genesis_eth_balance", [PARITY_GAS_ACCOUNT_FAIL])
-def test_parity_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(
-    deploy_client, skip_if_not_parity  # pylint: disable=unused-argument
-):
-    """ The gas estimation does not fail if the transaction execution requires
-    more gas then the account's eth balance. However sending the transaction
-    will.
-    """
-    run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client)
-
-
-def run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     check_block = deploy_client.get_checking_block()
@@ -93,5 +69,6 @@ def run_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(
     startgas = contract_proxy.estimate_gas(check_block, "loop", 1000)
     assert startgas, "The gas estimation should not have failed."
 
+    burn_eth(deploy_client, amount_to_leave=startgas // 2)
     with pytest.raises(InsufficientFunds):
         contract_proxy.transact("loop", startgas, 1000)
