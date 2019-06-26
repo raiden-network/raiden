@@ -7,6 +7,7 @@ import pytest
 from eth_utils import to_checksum_address
 from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
+from storage.sqlite import MatrixStorage
 
 import raiden
 from raiden.constants import (
@@ -22,6 +23,7 @@ from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias
+from raiden.network.transport.matrix.utils import UserAddressManager, make_room_alias
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
@@ -1066,6 +1068,7 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
 
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
+
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
@@ -1106,7 +1109,7 @@ def test_send_to_device(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
-def test_matrix_userid_persistence(matrix_transports):
+def test_matrix_userid_persistence(matrix_transports, tmp_path):
     transport0, transport1 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
