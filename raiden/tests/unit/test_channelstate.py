@@ -44,8 +44,11 @@ from raiden.transfer.events import (
     ContractSendChannelWithdraw,
     EventInvalidActionWithdraw,
     EventInvalidReceivedWithdraw,
+    EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
+    SendProcessed,
     SendWithdraw,
+    SendWithdrawExpired,
     SendWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -75,6 +78,7 @@ from raiden.transfer.state_change import (
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
     ReceiveWithdraw,
+    ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
 from raiden.utils import sha3
@@ -1932,6 +1936,255 @@ def test_receive_withdraw_confirmation():
     assert (
         search_for_item(
             iteration.events, ContractSendChannelWithdraw, {"total_withdraw": total_withdraw}
+        )
+        is not None
+    )
+
+
+def test_node_sends_withdraw_expiry():
+    pseudo_random_generator = random.Random()
+
+    our_model1, _ = create_model(balance=70)
+    partner_model1, privkey2 = create_model(balance=100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
+    block_hash = make_block_hash()
+
+    total_withdraw = 50
+    expiration_block_number = 10
+    expiration_threshold = channel.get_sender_expiration_threshold(expiration_block_number)
+
+    channel_state.our_state.total_withdraw = total_withdraw
+    channel_state.our_state.withdraws.append(
+        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    )
+
+    block_hash = make_transaction_hash()
+    block = Block(block_number=expiration_threshold - 1, gas_limit=1, block_hash=block_hash)
+
+    iteration = channel.handle_block(
+        channel_state=channel_state,
+        state_change=block,
+        block_number=expiration_threshold - 1,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert iteration.events == []
+
+    block_hash = make_transaction_hash()
+    block = Block(block_number=expiration_threshold, gas_limit=1, block_hash=block_hash)
+
+    iteration = channel.handle_block(
+        channel_state=channel_state,
+        state_change=block,
+        block_number=expiration_threshold,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert (
+        search_for_item(
+            iteration.events,
+            SendWithdrawExpired,
+            {
+                "total_withdraw": total_withdraw,
+                "participant": channel_state.our_state.address,
+                "recipient": channel_state.partner_state.address,
+                "nonce": 1,
+            },
+        )
+        is not None
+    )
+
+
+def test_node_handles_received_withdraw_expiry():
+    pseudo_random_generator = random.Random()
+
+    our_model1, _ = create_model(balance=70)
+    partner_model1, privkey2 = create_model(balance=100)
+    signer = LocalSigner(privkey2)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
+    block_hash = make_block_hash()
+
+    total_withdraw = 50
+    expiration_block_number = 10
+    expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
+
+    channel_state.partner_state.total_withdraw = total_withdraw
+    channel_state.partner_state.withdraws.append(
+        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    )
+
+    packed = pack_withdraw(
+        canonical_identifier=channel_state.canonical_identifier,
+        # pylint: disable=no-member
+        participant=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        total_withdraw=total_withdraw,
+    )
+    partner_signature = signer.sign(packed)
+
+    # Test a withdraw that has not expired yet
+    receive_withdraw_expired = ReceiveWithdrawExpired(
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        signature=partner_signature,
+        # pylint: disable=no-member
+        sender=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        nonce=1,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=receive_withdraw_expired,
+        block_number=expiration_threshold - 1,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert (
+        search_for_item(
+            iteration.events,
+            EventInvalidReceivedWithdrawExpired,
+            {
+                "attempted_withdraw": total_withdraw,
+                "reason": f"Invalid WithdrawExpired of {total_withdraw}",
+            },
+        )
+        is not None
+    )
+
+    # Invalid signature
+    receive_withdraw_expired = ReceiveWithdrawExpired(
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        signature=make_32bytes(),
+        # pylint: disable=no-member
+        sender=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        nonce=1,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=receive_withdraw_expired,
+        block_number=expiration_threshold,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert (
+        search_for_item(
+            iteration.events,
+            EventInvalidReceivedWithdrawExpired,
+            {
+                "attempted_withdraw": total_withdraw,
+                "reason": "Signature invalid, could not be recovered.",
+            },
+        )
+        is not None
+    )
+
+    # Invalid Nonce
+    receive_withdraw_expired = ReceiveWithdrawExpired(
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        signature=partner_signature,
+        # pylint: disable=no-member
+        sender=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        nonce=5,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=receive_withdraw_expired,
+        block_number=expiration_threshold,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert (
+        search_for_item(
+            iteration.events,
+            EventInvalidReceivedWithdrawExpired,
+            {
+                "attempted_withdraw": total_withdraw,
+                "reason": "Nonce did not change sequentially, expected: 1 got: 5.",
+            },
+        )
+        is not None
+    )
+
+    receive_withdraw_expired = ReceiveWithdrawExpired(
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        signature=partner_signature,
+        # pylint: disable=no-member
+        sender=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        nonce=1,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=receive_withdraw_expired,
+        block_number=expiration_threshold,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert search_for_item(iteration.events, SendProcessed, {}) is not None
+
+    channel_state = iteration.new_state
+    assert channel_state.partner_state.total_withdraw == 0
+    assert channel_state.partner_state.withdraws == []
+
+    # Test multiple withdraws with one expiring
+    channel_state.partner_state.total_withdraw = total_withdraw
+    channel_state.partner_state.withdraws.append(
+        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    )
+    channel_state.partner_state.withdraws.append(
+        WithdrawState(
+            total_withdraw=total_withdraw * 2, expiration=expiration_block_number * 2, nonce=2
+        )
+    )
+    channel_state.partner_state.nonce = 2
+
+    receive_withdraw_expired = ReceiveWithdrawExpired(
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        signature=partner_signature,
+        # pylint: disable=no-member
+        sender=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        nonce=3,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=receive_withdraw_expired,
+        block_number=expiration_threshold,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert search_for_item(iteration.events, SendProcessed, {}) is not None
+
+    channel_state = iteration.new_state
+    # An older withdraw expired.
+    # The latest withdraw should still be our partner's latest withdraw
+    assert channel_state.partner_state.total_withdraw == total_withdraw * 2
+    assert (
+        search_for_item(
+            channel_state.partner_state.withdraws,
+            WithdrawState,
+            {"total_withdraw": total_withdraw * 2},
         )
         is not None
     )
