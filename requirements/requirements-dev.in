@@ -42,3 +42,8 @@ bump2version
 
 # Test support
 matrix-synapse==0.33.9
+
+# Pin psycopg2 to prevent having to compile the c-extension
+# (see https://github.com/raiden-network/raiden/issues/3745)
+# can be removed once https://github.com/raiden-network/raiden/issues/3387
+psycopg2<2.8
