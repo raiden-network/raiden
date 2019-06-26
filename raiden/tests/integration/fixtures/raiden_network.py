@@ -26,8 +26,9 @@ def _stop_apps(raiden_apps):
     for app in raiden_apps:
         app.stop()
 
-    for app in raiden_apps:
-        app.raiden.get()
+    # Because of tests that force failure on the nodes, this cannot be done
+    # for app in raiden_apps:
+    #     app.raiden.get()
 
 
 def timeout(blockchain_type: str):
