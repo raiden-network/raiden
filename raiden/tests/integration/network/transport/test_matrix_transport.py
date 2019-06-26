@@ -21,10 +21,7 @@ from raiden.messages import Delivered, PFSFeeUpdate, Processed, SecretRequest, T
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.services import (
-    update_monitoring_service_from_balance_proof,
-    update_path_finding_service_from_balance_proof,
-)
+from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
@@ -681,9 +678,7 @@ def test_pfs_global_messages(
         "get_channelstate_by_canonical_identifier",
         lambda *a, **kw: channel_state,
     )
-    update_path_finding_service_from_balance_proof(
-        raiden=raiden_service, chain_state=None, new_balance_proof=balance_proof
-    )
+    send_pfs_update(raiden=raiden_service, canonical_identifier=balance_proof.canonical_identifier)
     gevent.idle()
     with gevent.Timeout(2):
         while pfs_room.send_text.call_count < 1:
