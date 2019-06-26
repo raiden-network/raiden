@@ -5,10 +5,11 @@ from eth_utils import to_checksum_address
 
 from raiden import constants
 from raiden.constants import RoutingMode
-from raiden.messages import PFSCapacityUpdate, RequestMonitoring
+from raiden.messages import PFSCapacityUpdate, PFSFeeUpdate, RequestMonitoring
 from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils import to_rdn
 from raiden.utils.typing import TYPE_CHECKING, Address
@@ -25,9 +26,7 @@ def update_services_from_balance_proof(
     chain_state: ChainState,
     balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
 ) -> None:
-    update_path_finding_service_from_balance_proof(
-        raiden=raiden, chain_state=chain_state, new_balance_proof=balance_proof
-    )
+    send_pfs_update(raiden=raiden, canonical_identifier=balance_proof.canonical_identifier)
     if isinstance(balance_proof, BalanceProofSignedState):
         update_monitoring_service_from_balance_proof(
             raiden=raiden,
@@ -37,36 +36,32 @@ def update_services_from_balance_proof(
         )
 
 
-def update_path_finding_service_from_channel_state(
-    raiden: "RaidenService", channel_state: NettingChannelState
-) -> None:
-    if raiden.routing_mode == RoutingMode.PRIVATE:
-        return
-
-    msg = PFSCapacityUpdate.from_channel_state(channel_state)
-    msg.sign(raiden.signer)
-    raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
-    log.debug("Sent a PFS Update", message=msg, channel_state=channel_state)
-
-
-def update_path_finding_service_from_balance_proof(
+def send_pfs_update(
     raiden: "RaidenService",
-    chain_state: ChainState,
-    new_balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
+    canonical_identifier: CanonicalIdentifier,
+    update_fee_schedule: bool = False,
 ) -> None:
     if raiden.routing_mode == RoutingMode.PRIVATE:
         return
 
     channel_state = views.get_channelstate_by_canonical_identifier(
-        chain_state=chain_state, canonical_identifier=new_balance_proof.canonical_identifier
+        chain_state=views.state_from_raiden(raiden), canonical_identifier=canonical_identifier
     )
-    network_address = new_balance_proof.canonical_identifier.token_network_address
-    error_msg = (
-        f"tried to send a balance proof in non-existant channel "
-        f"token_network_address: {to_checksum_address(network_address)} "
-    )
-    assert channel_state is not None, error_msg
-    update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
+
+    if channel_state is None:
+        return
+
+    capacity_msg = PFSCapacityUpdate.from_channel_state(channel_state)
+    capacity_msg.sign(raiden.signer)
+    raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
+    log.debug("Sent a PFS Capacity Update", message=capacity_msg, channel_state=channel_state)
+
+    if update_fee_schedule:
+        fee_msg = PFSFeeUpdate.from_channel_state(channel_state)
+        fee_msg.sign(raiden.signer)
+
+        raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
+        log.debug("Sent a PFS Fee Update", message=fee_msg, channel_state=channel_state)
 
 
 def update_monitoring_service_from_balance_proof(

@@ -11,7 +11,7 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages import PFSFeeUpdate
 from raiden.network.proxies.utils import get_onchain_locksroots
-from raiden.services import update_path_finding_service_from_channel_state
+from raiden.services import send_pfs_update
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
@@ -164,6 +164,21 @@ def create_channel_new_state_change(
             block_hash=block_hash,
         )
 
+        update_fee_statechange = ActionChannelUpdateFee(
+            canonical_identifier=channel_state.canonical_identifier,
+            flat_fee=channel_state.fee_schedule.flat,
+            proportional_fee=channel_state.fee_schedule.proportional,
+            use_imbalance_penalty=(channel_state.fee_schedule.imbalance_penalty is not None),
+        )
+        raiden.handle_and_track_state_change(update_fee_statechange)
+
+        # Update PFS about changed fees for this channel
+        send_pfs_update(
+            raiden=raiden,
+            canonical_identifier=channel_state.canonical_identifier,
+            update_fee_schedule=True,
+        )
+
         # pylint: disable=E1101
         partner_address = channel_state.partner_state.address
 
@@ -281,19 +296,18 @@ def handle_channel_new_balance(raiden: "RaidenService", event: Event):  # pragma
             canonical_identifier=previous_channel_state.canonical_identifier,
             flat_fee=previous_channel_state.fee_schedule.flat,
             proportional_fee=previous_channel_state.fee_schedule.proportional,
-            use_imbalance_penalty=previous_channel_state.fee_schedule.imbalance_penalty
-            is not None,
+            use_imbalance_penalty=(
+                previous_channel_state.fee_schedule.imbalance_penalty is not None
+            ),
         )
         raiden.handle_and_track_state_change(update_fee_statechange)
 
-        # Update PFS about changed fees for this channel, when not in private mode
-        channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state=chain_state,
+        # Update PFS about changed fees for this channel
+        send_pfs_update(
+            raiden=raiden,
             canonical_identifier=previous_channel_state.canonical_identifier,
+            update_fee_schedule=True,
         )
-        msg = "Failed to find channel state after deposit"
-        assert channel_state is not None, msg
-        update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
 
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(token_network_address)
@@ -338,24 +352,22 @@ def handle_channel_withdraw(raiden: "RaidenService", event: Event):
         )
         raiden.handle_and_track_state_changes([channel_withdraw])
 
-        chain_state = views.state_from_raiden(raiden)
-        channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state=chain_state, canonical_identifier=canonical_identifier
-        )
-        msg = "Failed to find channel state after withdraw"
-        assert channel_state is not None, msg
-
         update_fee_statechange = ActionChannelUpdateFee(
             canonical_identifier=previous_channel_state.canonical_identifier,
             flat_fee=previous_channel_state.fee_schedule.flat,
             proportional_fee=previous_channel_state.fee_schedule.proportional,
-            use_imbalance_penalty=previous_channel_state.fee_schedule.imbalance_penalty
-            is not None,
+            use_imbalance_penalty=(
+                previous_channel_state.fee_schedule.imbalance_penalty is not None
+            ),
         )
         raiden.handle_and_track_state_change(update_fee_statechange)
 
-        # Update PFS about changed fees for this channel, when not in private mode
-        update_path_finding_service_from_channel_state(raiden=raiden, channel_state=channel_state)
+        # Update PFS about changed fees for this channel
+        send_pfs_update(
+            raiden=raiden,
+            canonical_identifier=previous_channel_state.canonical_identifier,
+            update_fee_schedule=True,
+        )
 
 
 def create_channel_closed_state_change(
