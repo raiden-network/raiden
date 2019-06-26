@@ -216,7 +216,7 @@ def test_init_with_usable_routes():
 
     send_mediated_transfer = mediated_transfers[0]
     transfer = send_mediated_transfer.transfer
-    expiration = initiator.get_initial_lock_expiration(block_number, channels[0].reveal_timeout)
+    expiration = channel.get_initial_lock_expiration(block_number, channels[0].reveal_timeout)
 
     assert transfer.balance_proof.token_network_address == channels[0].token_network_address
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
@@ -607,7 +607,7 @@ def test_refund_transfer_no_more_routes():
         message_identifier=5,
     )
     before_expiry_block = original_transfer.lock.expiration - 1
-    expiry_block = channel.get_sender_expiration_threshold(original_transfer.lock)
+    expiry_block = channel.get_sender_expiration_threshold(original_transfer.lock.expiration)
 
     # a block before lock expiration, no events should be emitted
     current_state = iteration.new_state
@@ -745,7 +745,7 @@ def test_cancelpayment():
 
     transfer = transfer_state.transfer
 
-    expiry_block = channel.get_sender_expiration_threshold(transfer.lock)
+    expiry_block = channel.get_sender_expiration_threshold(transfer.lock.expiration)
     expiry_block_state_change = Block(
         block_number=expiry_block, gas_limit=1, block_hash=factories.make_transaction_hash()
     )
@@ -905,7 +905,7 @@ def test_initiator_lock_expired():
 
     # Trigger lock expiry
     state_change = Block(
-        block_number=channel.get_sender_expiration_threshold(transfer.lock),
+        block_number=channel.get_sender_expiration_threshold(transfer.lock.expiration),
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
@@ -977,7 +977,7 @@ def test_initiator_lock_expired():
 
     assert transfer2_lock.secrethash in channels[0].our_state.secrethashes_to_lockedlocks
 
-    expiration_block_number = channel.get_sender_expiration_threshold(transfer2_lock)
+    expiration_block_number = channel.get_sender_expiration_threshold(transfer2_lock.expiration)
 
     block = Block(
         block_number=expiration_block_number,
@@ -1030,7 +1030,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     )
     channel_state = channel_close_transition.new_state
 
-    expiration_block_number = channel.get_sender_expiration_threshold(setup.lock)
+    expiration_block_number = channel.get_sender_expiration_threshold(setup.lock.expiration)
     block = Block(
         block_number=expiration_block_number, gas_limit=1, block_hash=factories.make_block_hash()
     )
@@ -1219,7 +1219,7 @@ def test_lock_expiry_updates_balance_proof():
 
     # Trigger lock expiry
     state_change = Block(
-        block_number=channel.get_sender_expiration_threshold(transfer.lock),
+        block_number=channel.get_sender_expiration_threshold(transfer.lock.expiration),
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
@@ -1506,7 +1506,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         message_identifier=5,
     )
 
-    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock)
+    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock.expiration)
     iteration = initiator_manager.state_transition(
         payment_state=iteration.new_state,
         state_change=lock_expired_state_change,
@@ -1536,7 +1536,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     # the rerouted transfer and it's refund to check if the payment state
     # is cleared as expected.
     ##
-    expiry_block = channel.get_sender_expiration_threshold(rerouted_transfer.lock)
+    expiry_block = channel.get_sender_expiration_threshold(rerouted_transfer.lock.expiration)
     rerouted_transfer_expiry_block_state_change = Block(
         block_number=expiry_block, gas_limit=1, block_hash=factories.make_transaction_hash()
     )
@@ -1733,7 +1733,7 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
 
     initial_transfer_state = get_transfer_at_index(iteration.new_state, 0)
     initial_transfer = initial_transfer_state.transfer
-    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock)
+    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock.expiration)
 
     initial_transfer_expiry_block_state_change = Block(
         block_number=expiry_block, gas_limit=1, block_hash=factories.make_transaction_hash()

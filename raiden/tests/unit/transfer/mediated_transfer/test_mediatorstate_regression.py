@@ -250,7 +250,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
 
     transfer = send_transfer.transfer
 
-    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock.expiration)
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
@@ -354,7 +354,7 @@ def test_regression_mediator_task_no_routes():
 
     # Regression: The mediator must still be able to process the block which
     # expires the lock
-    expired_block_number = channel.get_sender_expiration_threshold(lock)
+    expired_block_number = channel.get_sender_expiration_threshold(lock.expiration)
     block_hash = factories.make_block_hash()
     expire_block_iteration = mediator.state_transition(
         mediator_state=init_iteration.new_state,
@@ -423,7 +423,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     assert send_transfer
 
     transfer = send_transfer.transfer
-    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock.expiration)
 
     block = Block(
         block_number=block_expiration_number, gas_limit=1, block_hash=factories.make_block_hash()
@@ -557,7 +557,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     balance_proof = balanceproof_from_envelope(expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
-    expired_block_number = channel.get_sender_expiration_threshold(lock)
+    expired_block_number = channel.get_sender_expiration_threshold(lock.expiration)
     mediator.state_transition(
         mediator_state=mediator_state,
         state_change=ReceiveLockExpired(
