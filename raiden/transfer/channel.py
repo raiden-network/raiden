@@ -945,7 +945,7 @@ def is_valid_withdraw_confirmation(
 
 def is_valid_withdraw_expired(
     channel_state: NettingChannelState,
-    withdraw_expired: ReceiveWithdrawExpired,
+    state_change: ReceiveWithdrawExpired,
     withdraw_state: WithdrawState,
     block_number: BlockNumber,
 ) -> SuccessOrError:
@@ -954,20 +954,18 @@ def is_valid_withdraw_expired(
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
     packed = pack_withdraw(
-        canonical_identifier=withdraw_expired.canonical_identifier,
+        canonical_identifier=state_change.canonical_identifier,
         participant=channel_state.partner_state.address,
-        total_withdraw=withdraw_expired.total_withdraw,
+        total_withdraw=state_change.total_withdraw,
     )
 
     valid_signature, signature_msg = is_valid_signature(
         data=packed,
-        signature=withdraw_expired.signature,
+        signature=state_change.signature,
         sender_address=channel_state.partner_state.address,
     )
 
-    withdraw_expired = is_withdraw_expired(
-        channel_state.partner_state,
-        withdraw_state=withdraw_state,
+    withdraw_expired, _ = is_withdraw_expired(
         block_number=block_number,
         expiration_threshold=get_receiver_expiration_threshold(
             expiration=withdraw_state.expiration
@@ -975,14 +973,14 @@ def is_valid_withdraw_expired(
     )
 
     if not withdraw_expired:
-        msg = f"Invalid WithdrawExpired of {withdraw_expired.total_withdraw}"
+        msg = f"Invalid WithdrawExpired of {state_change.total_withdraw}"
         result = (False, msg)
     elif not valid_signature:
         result = (False, signature_msg)
-    elif withdraw_expired.nonce != expected_nonce:
+    elif state_change.nonce != expected_nonce:
         msg = (
             f"Nonce did not change sequentially, expected: {expected_nonce} "
-            f"got: {withdraw_expired.nonce}."
+            f"got: {state_change.nonce}."
         )
 
         result = (False, msg)
@@ -1647,10 +1645,7 @@ def send_lock_expired(
 
 
 def is_withdraw_expired(
-    end_state: NettingChannelEndState,
-    withdraw_state: WithdrawState,
-    block_number: BlockNumber,
-    expiration_threshold: BlockNumber,
+    block_number: BlockNumber, expiration_threshold: BlockNumber
 ) -> SuccessOrError:
     """ Determine whether a withdraw has expired.
 
@@ -1668,20 +1663,23 @@ def is_withdraw_expired(
 
 
 def events_for_expired_withdraws(
-    channel_state: NettingChannelState, block_number: BlockNumber
+    channel_state: NettingChannelState,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
 ) -> List[SendWithdrawExpired]:
     events: List[SendWithdrawExpired] = list()
 
     for withdraw_state in channel_state.our_state.withdraws:
-        withdraw_expired = is_withdraw_expired(
-            end_state=channel_state.our_state,
-            withdraw_state=withdraw_state,
+        withdraw_expired, _ = is_withdraw_expired(
             block_number=block_number,
             expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
         )
         if withdraw_expired:
             events.append(
                 SendWithdrawExpired(
+                    recipient=channel_state.partner_state.address,
+                    canonical_identifier=channel_state.canonical_identifier,
+                    message_identifier=message_identifier_from_prng(pseudo_random_generator),
                     total_withdraw=withdraw_state.total_withdraw,
                     participant=channel_state.our_state.address,
                     nonce=get_next_nonce(channel_state.our_state),
@@ -1834,7 +1832,7 @@ def handle_action_withdraw(
         channel_state.our_state.nonce = nonce
         channel_state.our_state.withdraws.append(withdraw_state)
 
-        events: List[Event] = send_withdraw_request(
+        events = send_withdraw_request(
             channel_state=channel_state,
             withdraw_state=withdraw_state,
             pseudo_random_generator=pseudo_random_generator,
@@ -1944,7 +1942,7 @@ def handle_receive_withdraw_expired(
             channel_state,
             [
                 EventInvalidReceivedWithdrawExpired(
-                    total_withdraw=withdraw_expired.total_withdraw,
+                    attempted_withdraw=withdraw_expired.total_withdraw,
                     reason=invalid_withdraw_expired_msg,
                 )
             ],
@@ -1953,11 +1951,11 @@ def handle_receive_withdraw_expired(
     # Take the first withdraw state found because
     # withdraw expiry happens in order of which
     # withdraws have been triggered.
-    withdraw_state = withdraw_states[0]
+    withdraw_state = next(withdraw_states)
 
     is_valid, msg = is_valid_withdraw_expired(
         channel_state=channel_state,
-        withdraw_expired=withdraw_expired,
+        state_change=withdraw_expired,
         withdraw_state=withdraw_state,
         block_number=block_number,
     )
@@ -1969,7 +1967,7 @@ def handle_receive_withdraw_expired(
         # expiration means that the new total_withdraw becomes
         # the latest known non-expired value.
         if not withdraws:
-            channel_state.partner_state.total_withdraw = 0
+            channel_state.partner_state.total_withdraw = WithdrawAmount(0)
         else:
             channel_state.partner_state.total_withdraw = WithdrawAmount(
                 withdraws[-1].total_withdraw
@@ -1986,7 +1984,7 @@ def handle_receive_withdraw_expired(
     else:
         assert msg, "is_valid_withdraw_expired should return error msg if not valid"
         invalid_withdraw_expired = EventInvalidReceivedWithdrawExpired(
-            total_withdraw=withdraw_expired.total_withdraw, reason=msg
+            attempted_withdraw=withdraw_expired.total_withdraw, reason=msg
         )
         events = [invalid_withdraw_expired]
 
@@ -2144,14 +2142,19 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
 
 
 def handle_block(
-    channel_state: NettingChannelState, state_change: Block, block_number: BlockNumber
+    channel_state: NettingChannelState,
+    state_change: Block,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
     assert state_change.block_number == block_number
 
     events: List[Event] = list()
 
     expired_withdraws = events_for_expired_withdraws(
-        channel_state=channel_state, block_number=block_number
+        channel_state=channel_state,
+        block_number=block_number,
+        pseudo_random_generator=pseudo_random_generator,
     )
     events.extend(expired_withdraws)
 
@@ -2354,7 +2357,9 @@ def state_transition(
 
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
-        iteration = handle_block(channel_state, state_change, block_number)
+        iteration = handle_block(
+            channel_state, state_change, block_number, pseudo_random_generator
+        )
     elif type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_action_close(

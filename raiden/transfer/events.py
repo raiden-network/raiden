@@ -274,7 +274,7 @@ class EventInvalidReceivedWithdraw(Event):
 class EventInvalidReceivedWithdrawExpired(Event):
     """ Event emitted when an invalid withdraw expired event is received. """
 
-    total_withdraw: WithdrawAmount
+    attempted_withdraw: WithdrawAmount
     reason: str
 
 
