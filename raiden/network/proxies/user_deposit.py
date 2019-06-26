@@ -7,6 +7,7 @@ from eth_utils import (
     to_normalized_address,
 )
 from gevent.lock import RLock
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenRecoverableError
 from raiden.network.proxies.token import Token
@@ -110,7 +111,7 @@ class UserDeposit:
                 total_deposit=total_deposit,
                 beneficiary=beneficiary,
                 token=token,
-                block_identifier=block_identifier,
+                given_block_identifier=block_identifier,
                 log_details=log_details,
             )
 
@@ -168,36 +169,40 @@ class UserDeposit:
         total_deposit: TokenAmount,
         beneficiary: Address,
         token: Token,
-        block_identifier: BlockSpecification,
+        given_block_identifier: BlockSpecification,
         log_details: Dict,
     ) -> TokenAmount:
         typecheck(total_deposit, int)
 
-        previous_total_deposit = self.get_total_deposit(
-            address=beneficiary, block_identifier=block_identifier
-        )
-        log_details["previous_total_deposit"] = previous_total_deposit
-        amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
-
-        if total_deposit <= previous_total_deposit:
-            msg = (
-                f"Current total deposit {previous_total_deposit} is already larger "
-                f"than the requested total deposit amount {total_deposit}"
+        try:
+            previous_total_deposit = self.get_total_deposit(
+                address=beneficiary, block_identifier=given_block_identifier
             )
-            log.info("deposit failed", reason=msg, **log_details)
-            raise BrokenPreconditionError(msg)
-
-        current_balance = token.balance_of(
-            address=self.node_address, block_identifier=block_identifier
-        )
-        if current_balance < amount_to_deposit:
-            msg = (
-                f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
-                f"be larger than the available balance {current_balance}, "
-                f"for token at address {to_checksum_address(token.address)}"
+            current_balance = token.balance_of(
+                address=self.node_address, block_identifier=given_block_identifier
             )
-            log.info("deposit failed", reason=msg, **log_details)
-            raise BrokenPreconditionError(msg)
+        except (BadFunctionCallOutput, ValueError):
+            pass
+        else:
+            log_details["previous_total_deposit"] = previous_total_deposit
+            amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+
+            if total_deposit <= previous_total_deposit:
+                msg = (
+                    f"Current total deposit {previous_total_deposit} is already larger "
+                    f"than the requested total deposit amount {total_deposit}"
+                )
+                log.info("deposit failed", reason=msg, **log_details)
+                raise BrokenPreconditionError(msg)
+
+            if current_balance < amount_to_deposit:
+                msg = (
+                    f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
+                    f"be larger than the available balance {current_balance}, "
+                    f"for token at address {to_checksum_address(token.address)}"
+                )
+                log.info("deposit failed", reason=msg, **log_details)
+                raise BrokenPreconditionError(msg)
 
             return amount_to_deposit
 
