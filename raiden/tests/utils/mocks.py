@@ -112,7 +112,14 @@ class MockChainState:
 
 
 class MockRaidenService:
-    def __init__(self, message_handler=None, state_transition=None, private_key=None, config=None):
+    def __init__(
+        self,
+        message_handler=None,
+        state_transition=None,
+        private_key=None,
+        config=None,
+        tmp_path=None,
+    ):
         if private_key is None:
             self.privkey, self.address = factories.make_privkey_address()
         else:
@@ -132,13 +139,17 @@ class MockRaidenService:
         self.default_one_to_n_address = factories.make_address()
 
         self.route_to_feedback_token = {}
+        self.database_path = ":memory:"
 
         if state_transition is None:
             state_transition = node.state_transition
 
-        serializer = JSONSerializer
+        serializer = JSONSerializer()
         state_manager = StateManager(state_transition, None)
-        storage = SerializedSQLiteStorage(":memory:", serializer)
+        if tmp_path:
+            self.database_path = f"{tmp_path}/test.db"
+
+        storage = SerializedSQLiteStorage(self.database_path, serializer)
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(
