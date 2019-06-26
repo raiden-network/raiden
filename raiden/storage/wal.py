@@ -41,15 +41,15 @@ def restore_to_state_change(
         from_identifier = LOW_STATECHANGE_ULID
         chain_state = None
 
-    unapplied_state_changes = storage.get_statechanges_by_range(
-        Range(from_identifier, state_change_identifier)
-    )
-
     state_manager = StateManager(transition_function, chain_state)
     wal = WriteAheadLog(state_manager, storage)
 
-    log.debug("Replaying state changes", num_state_changes=len(unapplied_state_changes))
-    wal.state_manager.dispatch(unapplied_state_changes)
+    unapplied_state_changes = storage.get_statechanges_by_range(
+        Range(from_identifier, state_change_identifier)
+    )
+    if unapplied_state_changes:
+        log.debug("Replaying state changes", num_state_changes=len(unapplied_state_changes))
+        wal.state_manager.dispatch(unapplied_state_changes)
 
     return wal
 
