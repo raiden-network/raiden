@@ -17,7 +17,7 @@ from raiden.transfer.channel import (
     get_batch_unlock_gain,
     get_secret,
     get_status,
-    handle_action_set_fee,
+    handle_action_update_fee,
     handle_block,
     handle_receive_lockedtransfer,
     is_balance_proof_usable_onchain,
@@ -35,7 +35,7 @@ from raiden.transfer.state import (
     UnlockPartialProofState,
 )
 from raiden.transfer.state_change import (
-    ActionChannelSetFee,
+    ActionChannelUpdateFee,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
@@ -329,13 +329,13 @@ def test_handle_action_set_fee():
     state = factories.create(factories.NettingChannelStateProperties())
     flat_fee = 130
     proportional_fee = 1000
-    action = ActionChannelSetFee(
+    action = ActionChannelUpdateFee(
         canonical_identifier=state.canonical_identifier,
         flat_fee=flat_fee,
         proportional_fee=proportional_fee,
         use_imbalance_penalty=False,
     )
-    result = handle_action_set_fee(state, action)
+    result = handle_action_update_fee(state, action)
     assert result.new_state.fee_schedule.flat == flat_fee
     assert result.new_state.fee_schedule.proportional == proportional_fee
     assert not result.new_state.fee_schedule.imbalance_penalty

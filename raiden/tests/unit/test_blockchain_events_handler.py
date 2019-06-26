@@ -16,6 +16,7 @@ from raiden.storage.sqlite import EventRecord, StateChangeRecord
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import SendBalanceProof
 from raiden.transfer.state_change import (
+    ActionChannelUpdateFee,
     BalanceProofStateChange,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -256,8 +257,11 @@ def test_create_channel_new_state_change_as_participant(channel_new_event):
         )
         assert isinstance(state_change, ContractReceiveChannelNew)
         assert to_health_check == channel_state.partner_state.address
-        assert fee_update.canonical_identifier == channel_state.canonical_identifier
-        assert fee_update.fee_schedule.flat == 33
+        assert isinstance(fee_update, ActionChannelUpdateFee)
+        assert (
+            fee_update.canonical_identifier.channel_identifier == state_change.channel_identifier
+        )
+        assert fee_update.flat_fee == 33
 
 
 def test_create_channel_new_state_change_as_non_participant(channel_new_event):
@@ -294,18 +298,20 @@ def new_balance_event(chain_state_setup, event_data):
 
 
 def test_create_new_balance_state_change(chain_state_setup, new_balance_event):
-    state_change, _ = create_new_balance_state_change(
+    (new_balance, fee_update), _ = create_new_balance_state_change(
         chain_state=chain_state_setup.chain_state, event=new_balance_event
     )
-    assert isinstance(state_change, ContractReceiveChannelNewBalance)
+    assert isinstance(new_balance, ContractReceiveChannelNewBalance)
     assert (
-        state_change.canonical_identifier.token_network_address
+        new_balance.canonical_identifier.token_network_address
         == chain_state_setup.token_network_address
     )
     assert (
-        state_change.deposit_transaction.participant_address
+        new_balance.deposit_transaction.participant_address
         == new_balance_event.event_data["args"]["participant"]
     )
+    assert isinstance(fee_update, ActionChannelUpdateFee)
+    assert new_balance.canonical_identifier == fee_update.canonical_identifier
 
 
 def test_create_new_balance_state_change_unknown_channel(chain_state_setup, new_balance_event):
