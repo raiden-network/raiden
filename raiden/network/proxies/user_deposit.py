@@ -8,7 +8,7 @@ from eth_utils import (
 )
 from gevent.lock import RLock
 
-from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
+from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
@@ -22,7 +22,6 @@ from raiden.utils.typing import (
     Dict,
     TokenAddress,
     TokenAmount,
-    Tuple,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
@@ -107,12 +106,15 @@ class UserDeposit:
         error_prefix = "Call to deposit will fail"
 
         with self.deposit_lock:
-            amount_to_deposit, log_details = self._deposit_preconditions(
+            amount_to_deposit = self._check_deposit_preconditions(
                 total_deposit=total_deposit,
                 beneficiary=beneficiary,
                 token=token,
                 block_identifier=block_identifier,
+                log_details=log_details,
             )
+
+            token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
             with log_transaction(log, "deposit", log_details):
                 gas_limit = self.proxy.estimate_gas(
@@ -146,12 +148,9 @@ class UserDeposit:
                     )
 
                     msg = self._check_why_deposit_failed(
-                        token=token,
-                        amount_to_deposit=amount_to_deposit,
-                        total_deposit=total_deposit,
-                        block_identifier=block,
+                        token=token, total_deposit=total_deposit, block_identifier=block
                     )
-                    raise RaidenUnrecoverableError(f"{error_prefix}. {msg}")
+                    raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
@@ -164,27 +163,21 @@ class UserDeposit:
 
         return balance
 
-    def _deposit_preconditions(
+    def _check_deposit_preconditions(
         self,
         total_deposit: TokenAmount,
         beneficiary: Address,
         token: Token,
         block_identifier: BlockSpecification,
-    ) -> Tuple[TokenAmount, Dict]:
+        log_details: Dict,
+    ) -> TokenAmount:
         typecheck(total_deposit, int)
 
         previous_total_deposit = self.get_total_deposit(
             address=beneficiary, block_identifier=block_identifier
         )
+        log_details["previous_total_deposit"] = previous_total_deposit
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
-
-        log_details = {
-            "user_deposit_address": to_checksum_address(self.address),
-            "node": to_checksum_address(self.node_address),
-            "beneficiary": to_checksum_address(beneficiary),
-            "new_total_deposit": total_deposit,
-            "previous_total_deposit": previous_total_deposit,
-        }
 
         if total_deposit <= previous_total_deposit:
             msg = (
@@ -206,21 +199,15 @@ class UserDeposit:
             log.info("deposit failed", reason=msg, **log_details)
             raise BrokenPreconditionError(msg)
 
-        token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
-
-        return amount_to_deposit, log_details
+            return amount_to_deposit
 
     def _check_why_deposit_failed(
-        self,
-        token: Token,
-        amount_to_deposit: TokenAmount,
-        total_deposit: TokenAmount,
-        block_identifier: BlockSpecification,
+        self, token: Token, total_deposit: TokenAmount, block_identifier: BlockSpecification
     ) -> str:
-        msg = ""
         latest_deposit = self.get_total_deposit(
             address=self.node_address, block_identifier=block_identifier
         )
+        amount_to_deposit = TokenAmount(total_deposit - latest_deposit)
 
         allowance = token.allowance(
             owner=self.node_address,
