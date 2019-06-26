@@ -133,7 +133,7 @@ def run_test_register_token_insufficient_eth(raiden_network, token_amount, contr
     assert token_address not in api1.get_tokens_list(registry_address)
 
     # app1.raiden loses all its ETH because it has been naughty
-    burn_eth(app1.raiden)
+    burn_eth(app1.raiden.chain.client)
 
     # At this point we should get an UnrecoverableError due to InsufficientFunds
     with pytest.raises(InsufficientFunds):
@@ -411,7 +411,7 @@ def run_test_funds_check_for_openchannel(raiden_network, token_addresses):
     gas = get_required_gas_estimate(raiden=app0.raiden, channels_to_open=1)
     gas = round(gas * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
     api0 = RaidenAPI(app0.raiden)
-    burn_eth(raiden_service=app0.raiden, amount_to_leave=gas)
+    burn_eth(rpc_client=app0.raiden.chain.client, amount_to_leave=gas)
 
     partners = [app1.raiden.address, app2.raiden.address]
 
