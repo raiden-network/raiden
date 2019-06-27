@@ -14,7 +14,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
-from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH
+from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
@@ -239,6 +239,15 @@ class PartnersPerTokenListSchema(BaseListSchema):
     class Meta:
         strict = True
         decoding_class = PartnersPerTokenList
+
+
+class MintTokenSchema(BaseSchema):
+    to = AddressField(required=True)
+    value = fields.Integer(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
+
+    class Meta:
+        strict = True
+        decoding_class = dict
 
 
 class ChannelStateSchema(BaseSchema):

@@ -8,6 +8,7 @@ from raiden.api.v1.encoding import (
     ChannelPutSchema,
     ConnectionsConnectSchema,
     ConnectionsLeaveSchema,
+    MintTokenSchema,
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
@@ -160,6 +161,14 @@ class RegisterTokenResource(BaseResource):
         return self.rest_api.register_token(
             self.rest_api.raiden_api.raiden.default_registry.address, token_address
         )
+
+
+class MintTokenResource(BaseResource):
+    post_schema = MintTokenSchema
+
+    @use_kwargs(post_schema, locations=("json",))
+    def post(self, token_address, to, value):
+        return self.rest_api.mint_token(token_address=token_address, to=to, value=value)
 
 
 class ConnectionsResource(BaseResource):
