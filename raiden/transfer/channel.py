@@ -130,30 +130,35 @@ class UnlockGain(NamedTuple):
     from_partner_locks: TokenAmount
 
 
-def get_initial_lock_expiration(
+def get_safe_initial_expiration(
     block_number: BlockNumber, reveal_timeout: BlockTimeout
 ) -> BlockExpiration:
-    """ Returns the expiration used for all hash-time-locks in transfer. """
+    """ Returns the upper bound block expiration number used by the initiator of
+    a transfer or a withdraw. """
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
 def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
-    """ Returns the block number at which the sender can send the remove expired lock.
+    """ Returns the block number at which the sender can send:
+    - SendLockExpired
+    - SendWithdrawExpired
 
-    The remove lock expired message will be rejected if the expiration block
+    The expiry messages will be rejected if the expiration block
     has not been confirmed. Additionally the sender can account for possible
     delays in the receiver, so a few additional blocks are used to avoid hanging the channel.
     """
-    return BlockNumber(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
+    return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
 
 
 def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
-    """ Returns the block number at which a remove lock expired can be accepted.
+    """ Returns the block number at which the receiver can accept:
+    - ReceiveLockExpired
+    - ReceiveWithdrawExpired
 
     The receiver must wait for the block at which the lock expires to be confirmed.
     This is necessary to handle reorgs which could hide a secret registration.
     """
-    return BlockNumber(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+    return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
 
 def is_channel_usable(
@@ -1822,7 +1827,7 @@ def handle_action_withdraw(
         # a withdraw that will fail under congestion.
         # A value larger then 2 * reveal_timeout means Raiden would be slower
         # than the blockchain.
-        expiration = get_initial_lock_expiration(
+        expiration = get_safe_initial_expiration(
             block_number=block_number, reveal_timeout=channel_state.reveal_timeout
         )
         withdraw_state = WithdrawState(
