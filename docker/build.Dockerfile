@@ -17,8 +17,12 @@ RUN wget -nv -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && \
     rm geth.tar.gz
 
 
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
 ADD requirements/requirements.txt /tmp/
 WORKDIR /tmp
+
 
 RUN pip install -U 'pip<19.0.0' setuptools pip-tools
 RUN pip-sync requirements.txt
@@ -27,7 +31,6 @@ ADD . /raiden
 
 WORKDIR /raiden
 RUN git fetch --tags || true
-
 
 # install raiden
 RUN make install && pip install pyinstaller
