@@ -1555,6 +1555,18 @@ def send_withdraw_request(
     if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
         return events
 
+    nonce = get_next_nonce(channel_state.our_state)
+    expiration = get_safe_initial_expiration(
+        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+    )
+    withdraw_state = WithdrawState(
+        total_withdraw=total_withdraw, nonce=nonce, expiration=expiration
+    )
+    channel_state.our_state.total_withdraw = total_withdraw
+
+    channel_state.our_state.nonce = nonce
+    channel_state.our_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
+
     withdraw_event = SendWithdrawRequest(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=channel_state.chain_id,
@@ -1685,6 +1697,10 @@ def events_for_expired_withdraws(
         if not withdraw_expired:
             break
 
+        nonce = get_next_nonce(channel_state.our_state)
+        channel_state.our_state.nonce = nonce
+        del channel_state.our_state.withdraws[withdraw_state.total_withdraw]
+
         events.append(
             SendWithdrawExpired(
                 recipient=channel_state.partner_state.address,
@@ -1692,7 +1708,7 @@ def events_for_expired_withdraws(
                 message_identifier=message_identifier_from_prng(pseudo_random_generator),
                 total_withdraw=withdraw_state.total_withdraw,
                 participant=channel_state.our_state.address,
-                nonce=get_next_nonce(channel_state.our_state),
+                nonce=nonce,
             )
         )
     return events
@@ -1823,21 +1839,10 @@ def handle_action_withdraw(
     is_valid, msg = is_valid_action_withdraw(channel_state, action_withdraw)
 
     if is_valid:
-        nonce = get_next_nonce(channel_state.our_state)
-
-        expiration = get_safe_initial_expiration(
-            block_number=block_number, reveal_timeout=channel_state.reveal_timeout
-        )
-        withdraw_state = WithdrawState(
-            total_withdraw=action_withdraw.total_withdraw, nonce=nonce, expiration=expiration
-        )
-        channel_state.our_state.total_withdraw = action_withdraw.total_withdraw
-        channel_state.our_state.nonce = nonce
-        channel_state.our_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
-
         events = send_withdraw_request(
             channel_state=channel_state,
-            withdraw_state=withdraw_state,
+            total_withdraw=action_withdraw.total_withdraw,
+            block_number=block_number,
             pseudo_random_generator=pseudo_random_generator,
         )
     else:
