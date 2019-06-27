@@ -143,6 +143,13 @@ def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
     - SendLockExpired
     - SendWithdrawExpired
 
+    That value defines how many blocks it takes for a transaction to be
+    mined under congestion.
+    An expiration lower than 1 * reveal_timeout  means that we are requesting
+    a withdraw that will fail under congestion.
+    A value larger then 2 * reveal_timeout means Raiden would be slower
+    than the blockchain.
+
     The expiry messages will be rejected if the expiration block
     has not been confirmed. Additionally the sender can account for possible
     delays in the receiver, so a few additional blocks are used to avoid hanging the channel.
@@ -1821,14 +1828,7 @@ def handle_action_withdraw(
 
     if is_valid:
         nonce = get_next_nonce(channel_state.our_state)
-        # Calculate the withdraw's expiry exactly the same as we
-        # do for lock.
-        # That value defines how many blocks it takes for a transaction to be
-        # mined under congestion.
-        # An expiration lower than 1 * reveal_timeout  means that we are requesting
-        # a withdraw that will fail under congestion.
-        # A value larger then 2 * reveal_timeout means Raiden would be slower
-        # than the blockchain.
+
         expiration = get_safe_initial_expiration(
             block_number=block_number, reveal_timeout=channel_state.reveal_timeout
         )
