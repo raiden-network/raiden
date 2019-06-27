@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
 from eth_utils import to_canonical_address, to_checksum_address
 
@@ -7,20 +6,27 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput, UnknownEventType
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.utils import typing
 from raiden.utils.filters import (
     StatelessFilter,
     decode_event,
     get_filter_args_for_all_events_from_channel,
 )
 from raiden.utils.typing import (
+    ABI,
     Address,
-    Any,
+    BlockchainEvent,
+    BlockHash,
+    BlockNumber,
     BlockSpecification,
+    ChainID,
     ChannelID,
+    Dict,
+    Iterable,
+    List,
     Optional,
     PaymentNetworkAddress,
     TokenNetworkAddress,
+    TransactionHash,
 )
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
@@ -31,19 +37,28 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import ContractManager
 
+# `new_filter` uses None to signal the absence of topics filters
+ALL_EVENTS = None
+
 
 @dataclass(frozen=True)
 class EventListener:
     event_name: str
     filter: StatelessFilter
-    abi: List[Dict[str, Any]]
+    abi: ABI
 
 
-# `new_filter` uses None to signal the absence of topics filters
-ALL_EVENTS = None
+@dataclass(frozen=True)
+class DecodedEvent:
+    chain_id: ChainID
+    block_number: BlockNumber
+    block_hash: BlockHash
+    transaction_hash: TransactionHash
+    originating_contract: Address
+    event_data: BlockchainEvent
 
 
-def verify_block_number(number: typing.BlockSpecification, argname: str):
+def verify_block_number(number: BlockSpecification, argname: str):
     if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
         raise InvalidBlockNumberInput(
             "Provided block number {} for {} is invalid. Has to be in the range "
@@ -53,7 +68,7 @@ def verify_block_number(number: typing.BlockSpecification, argname: str):
 
 def get_contract_events(
     chain: BlockChainService,
-    abi: List[Dict],
+    abi: ABI,
     contract_address: Address,
     topics: Optional[List[str]],
     from_block: BlockSpecification,
@@ -139,14 +154,16 @@ def get_all_netting_channel_events(
     return get_contract_events(
         chain,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        typing.Address(token_network_address),
+        Address(token_network_address),
         filter_args["topics"],
         from_block,
         to_block,
     )
 
 
-def decode_event_to_internal(abi, log_event):
+def decode_event_to_internal(
+    abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
+) -> DecodedEvent:
     """ Enforce the binary for internal usage. """
     # Note: All addresses inside the event_data must be decoded.
 
@@ -167,6 +184,7 @@ def decode_event_to_internal(abi, log_event):
 
     assert data["block_number"], "The event must have the block_number"
     assert data["transaction_hash"], "The event must have the transaction hash field"
+    assert data["block_hash"], "The event must have the block_hash"
 
     event = data["event"]
     if event == EVENT_TOKEN_NETWORK_CREATED:
@@ -193,34 +211,31 @@ def decode_event_to_internal(abi, log_event):
         args["receiver"] = to_canonical_address(args["receiver"])
         args["sender"] = to_canonical_address(args["sender"])
 
-    return Event(originating_contract=to_canonical_address(log_event["address"]), event_data=data)
-
-
-class Event:
-    def __init__(self, originating_contract, event_data):
-        self.originating_contract = originating_contract
-        self.event_data = event_data
-
-    def __repr__(self):
-        return "<Event contract: {} event: {}>".format(
-            to_checksum_address(self.originating_contract), self.event_data
-        )
+    return DecodedEvent(
+        chain_id=chain_id,
+        originating_contract=to_canonical_address(log_event["address"]),
+        event_data=data,
+        block_number=data["block_number"],
+        block_hash=data["block_hash"],
+        transaction_hash=data["transaction_hash"],
+    )
 
 
 class BlockchainEvents:
     """ Events polling. """
 
-    def __init__(self):
+    def __init__(self, chain_id: ChainID):
+        self.chain_id = chain_id
         self.event_listeners: List[EventListener] = list()
 
-    def poll_blockchain_events(self, block_number: typing.BlockNumber):
+    def poll_blockchain_events(self, block_number: BlockNumber) -> Iterable[DecodedEvent]:
         """ Poll for new blockchain events up to `block_number`. """
 
         for event_listener in self.event_listeners:
             assert isinstance(event_listener.filter, StatelessFilter)
 
             for log_event in event_listener.filter.get_new_entries(block_number):
-                yield decode_event_to_internal(event_listener.abi, log_event)
+                yield decode_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
@@ -240,7 +255,7 @@ class BlockchainEvents:
         self,
         token_network_registry_proxy,
         contract_manager,
-        from_block: typing.BlockSpecification = "latest",
+        from_block: BlockSpecification = "latest",
     ):
         token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
         token_network_registry_address = token_network_registry_proxy.address
@@ -255,7 +270,7 @@ class BlockchainEvents:
         self,
         token_network_proxy,
         contract_manager: ContractManager,
-        from_block: typing.BlockSpecification = "latest",
+        from_block: BlockSpecification = "latest",
     ):
         token_network_filter = token_network_proxy.all_events_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
@@ -270,7 +285,7 @@ class BlockchainEvents:
         self,
         secret_registry_proxy: SecretRegistry,
         contract_manager: ContractManager,
-        from_block: typing.BlockSpecification = "latest",
+        from_block: BlockSpecification = "latest",
     ):
         secret_registry_filter = secret_registry_proxy.secret_registered_filter(
             from_block=from_block

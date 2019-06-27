@@ -138,6 +138,7 @@ class ParticipantsDetails(NamedTuple):
 
 class ChannelDetails(NamedTuple):
     chain_id: ChainID
+    token_address: TokenAddress
     channel_data: ChannelData
     participants_data: ParticipantsDetails
 
@@ -170,6 +171,10 @@ class TokenNetwork:
             address=Address(token_network_address),
         )
 
+        # These are constants
+        self._chain_id = proxy.contract.functions.chain_id().call()
+        self._token_address = to_canonical_address(proxy.contract.functions.token().call())
+
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = token_network_address
@@ -183,9 +188,13 @@ class TokenNetwork:
         # Forbids concurrent operations on the same channel
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
 
+    def chain_id(self) -> ChainID:
+        """ Return the token of this manager. """
+        return self._chain_id
+
     def token_address(self) -> TokenAddress:
         """ Return the token of this manager. """
-        return to_canonical_address(self.proxy.contract.functions.token().call())
+        return self._token_address
 
     def channel_participant_deposit_limit(
         self, block_identifier: BlockSpecification
@@ -540,10 +549,13 @@ class TokenNetwork:
             block_identifier=block_identifier,
             channel_identifier=channel_data.channel_identifier,
         )
-        chain_id = self.proxy.contract.functions.chain_id().call()
+        chain_id = self.chain_id()
 
         return ChannelDetails(
-            chain_id=chain_id, channel_data=channel_data, participants_data=participants_data
+            chain_id=chain_id,
+            token_address=self.token_address(),
+            channel_data=channel_data,
+            participants_data=participants_data,
         )
 
     def settlement_timeout_min(self) -> int:
