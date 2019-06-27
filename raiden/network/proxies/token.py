@@ -1,9 +1,9 @@
 import structlog
-from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, is_binary_address, to_checksum_address, to_normalized_address
 from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-from raiden.exceptions import RaidenRecoverableError, TransactionThrew
+from raiden.exceptions import RaidenRecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -17,16 +17,6 @@ log = structlog.get_logger(__name__)
 
 # Determined by safe_gas_limit(estimateGas(approve)) on 17/01/19 with geth 1.8.20
 GAS_REQUIRED_FOR_APPROVE = 58792
-
-
-def _insufficient_balance_message(prefix, balance, required):
-    msg = f"{prefix} Your balance of {balance} is below the required amount of {required}."
-    if balance == 0:
-        msg += (
-            " Note: The balance was 0, which may also happen if the contract "
-            "is not a valid ERC20 token (balanceOf method missing)."
-        )
-    return msg
 
 
 class Token:
@@ -100,22 +90,32 @@ class Token:
                 transaction_executed = gas_limit is not None
                 if not transaction_executed or receipt_or_none:
                     if transaction_executed:
-                        block = receipt_or_none["blockNumber"]
+                        failed_at_blocknumber = receipt_or_none["blockNumber"]
+                        failed_at_blockhash = encode_hex(receipt_or_none["blockHash"])
                     else:
-                        block = checking_block
+                        failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                        failed_at_blockhash = encode_hex(failed_at["hash"])
+                        failed_at_blocknumber = failed_at["number"]
 
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="approve",
                         transaction_executed=transaction_executed,
                         required_gas=GAS_REQUIRED_FOR_APPROVE,
-                        block_identifier=block,
+                        block_identifier=failed_at_blocknumber,
                     )
 
-                    balance = self.balance_of(self.client.address, checking_block)
+                    balance = self.balance_of(self.client.address, failed_at_blockhash)
                     if balance < allowance:
-                        raise RaidenRecoverableError(
-                            _insufficient_balance_message(error_prefix, balance, allowance)
+                        msg = (
+                            f"{error_prefix} Your balance of {balance} is "
+                            "below the required amount of {allowance}."
                         )
+                        if balance == 0:
+                            msg += (
+                                " Note: The balance was 0, which may also happen if the contract "
+                                "is not a valid ERC20 token (balanceOf method missing)."
+                            )
+                        raise RaidenRecoverableError(msg)
 
                     if gas_limit is None:
                         raise RaidenRecoverableError(
@@ -172,20 +172,33 @@ class Token:
                     failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
                 if gas_limit is None or failed_receipt is not None:
+                    if failed_receipt:
+                        failed_at_number = failed_receipt["blockNumber"]
+                    else:
+                        failed_at_number = checking_block
+                    failed_at_hash = encode_hex(
+                        self.client.blockhash_from_blocknumber(failed_at_number)
+                    )
+
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="transfer",
                         transaction_executed=False,
                         required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,
-                        block_identifier=checking_block,
+                        block_identifier=failed_at_number,
                     )
 
-                    balance = self.balance_of(self.client.address, checking_block)
+                    balance = self.balance_of(self.client.address, failed_at_hash)
                     if balance < amount:
-                        raise RaidenRecoverableError(
-                            _insufficient_balance_message(
-                                "Call to transfer will fail.", balance, amount
-                            )
+                        msg = (
+                            f"Call to transfer will fail. Your balance of {balance} is "
+                            f"below the required amount of {amount}."
                         )
+                        if balance == 0:
+                            msg += (
+                                " Note: The balance was 0, which may also happen if the contract "
+                                "is not a valid ERC20 token (balanceOf method missing)."
+                            )
+                        raise RaidenRecoverableError(msg)
 
                     if gas_limit is None:
                         raise RaidenRecoverableError(
@@ -193,4 +206,7 @@ class Token:
                             "reason. Please make sure the contract is a valid ERC20 token."
                         )
                     else:
-                        raise TransactionThrew("Transfer", failed_receipt)
+                        raise RaidenRecoverableError(
+                            "Call to transfer failed for unknown reason. Please make sure the "
+                            "contract is a valid ERC20 token."
+                        )
