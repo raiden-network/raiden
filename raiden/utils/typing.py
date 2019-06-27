@@ -29,6 +29,7 @@ def typecheck(value: Any, expected: Type):
 
 
 ABI = List[Dict[str, Any]]
+BlockchainEvent = Dict[str, Any]
 
 T_Address = bytes
 Address = NewType("Address", T_Address)

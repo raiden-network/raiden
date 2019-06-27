@@ -4,7 +4,9 @@ from hexbytes import HexBytes
 
 from raiden.blockchain.events import BlockchainEvents
 from raiden.tests.utils.events import check_dict_nested_attrs
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils.filters import StatelessFilter
+from raiden.utils.typing import BlockNumber
 
 
 def stub_web3(logs):
@@ -58,16 +60,18 @@ event_logs = [
 def test_blockchain_events(contract_manager):
     # TODO Expand this test: multiple listeners, removed listeners, multiple/missed events.
     # As it is now it only covers the classès helper functions in raiden.utils.filters properly.
-    blockchain_events = BlockchainEvents()
+    blockchain_events = BlockchainEvents(UNIT_CHAIN_ID)
     abi = contract_manager.get_contract_abi("TokenNetwork")
 
-    filter = StatelessFilter(web3=stub_web3(event_logs), filter_params=dict(toBlock="pending"))
-    blockchain_events.add_event_listener(event_name="Block", eth_filter=filter, abi=abi)
+    stateless_filter = StatelessFilter(
+        web3=stub_web3(event_logs), filter_params=dict(toBlock="pending")
+    )
+    blockchain_events.add_event_listener(event_name="Block", eth_filter=stateless_filter, abi=abi)
 
-    events = list(blockchain_events.poll_blockchain_events(block_number=235))
+    events = list(blockchain_events.poll_blockchain_events(block_number=BlockNumber(235)))
 
     assert len(events) == 1
-    assert len(filter.get_all_entries(235)) == 1
+    assert len(stateless_filter.get_all_entries(BlockNumber(235))) == 1
     assert check_dict_nested_attrs(events[0].event_data, event1)
 
     blockchain_events.uninstall_all_event_listeners()
