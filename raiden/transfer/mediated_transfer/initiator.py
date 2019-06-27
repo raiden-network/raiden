@@ -32,6 +32,7 @@ from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
+    BlockExpiration,
     BlockNumber,
     ChannelID,
     Dict,
@@ -103,7 +104,7 @@ def handle_block(
             # task can go
             return TransitionResult(None, list())
 
-    lock_expiration_threshold = BlockNumber(
+    lock_expiration_threshold = BlockExpiration(
         locked_lock.expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
     )
     lock_has_expired, _ = channel.is_lock_expired(
