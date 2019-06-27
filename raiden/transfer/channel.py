@@ -1675,17 +1675,23 @@ def events_for_expired_withdraws(
             block_number=block_number,
             expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
         )
-        if withdraw_expired:
-            events.append(
-                SendWithdrawExpired(
-                    recipient=channel_state.partner_state.address,
-                    canonical_identifier=channel_state.canonical_identifier,
-                    message_identifier=message_identifier_from_prng(pseudo_random_generator),
-                    total_withdraw=withdraw_state.total_withdraw,
-                    participant=channel_state.our_state.address,
-                    nonce=get_next_nonce(channel_state.our_state),
-                )
+
+        # Break on the first non-expired withdraw as the list
+        # of withdraws are ordered and only ealier withdraws
+        # can expire.
+        if not withdraw_expired:
+            break
+
+        events.append(
+            SendWithdrawExpired(
+                recipient=channel_state.partner_state.address,
+                canonical_identifier=channel_state.canonical_identifier,
+                message_identifier=message_identifier_from_prng(pseudo_random_generator),
+                total_withdraw=withdraw_state.total_withdraw,
+                participant=channel_state.our_state.address,
+                nonce=get_next_nonce(channel_state.our_state),
             )
+        )
     return events
 
 
