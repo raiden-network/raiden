@@ -970,7 +970,7 @@ def is_valid_withdraw_expired(
         sender_address=channel_state.partner_state.address,
     )
 
-    withdraw_expired, _ = is_withdraw_expired(
+    withdraw_expired = is_withdraw_expired(
         block_number=block_number,
         expiration_threshold=get_receiver_expiration_threshold(
             expiration=withdraw_state.expiration
@@ -1651,20 +1651,16 @@ def send_lock_expired(
 
 def is_withdraw_expired(
     block_number: BlockNumber, expiration_threshold: BlockNumber
-) -> SuccessOrError:
+) -> bool:
     """ Determine whether a withdraw has expired.
 
     The withdraw has expired if the current block exceeds
     the withdraw's expiration + confirmation blocks.
     """
     if block_number < expiration_threshold:
-        msg = (
-            f"current block number ({block_number}) is not larger than "
-            f"withdraw.expiration + confirmation blocks ({expiration_threshold})"
-        )
-        return (False, msg)
+        return False
 
-    return (True, None)
+    return True
 
 
 def events_for_expired_withdraws(
@@ -1675,7 +1671,7 @@ def events_for_expired_withdraws(
     events: List[SendWithdrawExpired] = list()
 
     for withdraw_state in channel_state.our_state.withdraws:
-        withdraw_expired, _ = is_withdraw_expired(
+        withdraw_expired = is_withdraw_expired(
             block_number=block_number,
             expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
         )
