@@ -34,6 +34,7 @@ from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block, wait_for_settle
 
 
+@pytest.mark.skip("refund transfers are disabled")
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("settle_timeout", [50])
@@ -107,6 +108,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
         )
 
 
+@pytest.mark.skip("refund transfers are disabled")
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
@@ -311,6 +313,7 @@ def run_test_refund_transfer(
     assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
 
+@pytest.mark.skip("refund transfers are disabled")
 @pytest.mark.parametrize("privatekey_seed", ["test_different_view_of_last_bp_during_unlock:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
@@ -541,6 +544,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     assert final_balance1 - deposit - initial_balance1 == 1
 
 
+@pytest.mark.skip("refund transfers are disabled")
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [4])
 @pytest.mark.parametrize("number_of_tokens", [1])

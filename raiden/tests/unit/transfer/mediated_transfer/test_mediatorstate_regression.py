@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
+import pytest
 from eth_utils import keccak
 
 from raiden.messages import message_from_sendevent
@@ -121,6 +122,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     )
 
 
+@pytest.mark.skip("refund transfers are disabled")
 def test_regression_send_refund():
     """Regression test for discarded refund transfer.
 

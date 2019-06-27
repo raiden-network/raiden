@@ -7,7 +7,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer import mediator
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
@@ -386,6 +386,7 @@ def test_mediator_skips_used_routes():
     assert mediator_state is not None
     assert events
 
-    # no other routes available, so refund HOP1
-    assert isinstance(events[-1], SendRefundTransfer)
-    assert events[-1].recipient == factories.HOP1
+    # FIXME: refund transfers are disabled.
+    # # no other routes available, so refund HOP1
+    # assert isinstance(events[-1], SendRefundTransfer)
+    # assert events[-1].recipient == factories.HOP1

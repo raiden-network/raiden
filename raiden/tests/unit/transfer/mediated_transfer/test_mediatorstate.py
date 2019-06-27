@@ -51,6 +51,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
@@ -306,6 +307,7 @@ def test_events_for_expired_pairs():
     assert pair.payer_state == "payer_expired"
 
 
+@pytest.mark.skip("refund transfers are disabled")
 def test_events_for_refund():
     amount = 10
     block_number = 1
@@ -964,6 +966,7 @@ def test_mediator_secret_reveal_empty_hash():
     assert secrethash not in channels[0].partner_state.secrethashes_to_onchain_unlockedlocks
 
 
+@pytest.mark.skip("refund transfers are disabled")
 def test_no_valid_routes():
     channels = make_channel_set(
         [
@@ -1101,7 +1104,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     pseudo_random_generator = random.Random()
 
     # C's channel with the Attacker node A2
-    our_state = factories.NettingChannelEndStateProperties(balance=amount)
+    our_state = replace(NettingChannelEndStateProperties.OUR_STATE, balance=amount)
     partner_state = replace(our_state, address=UNIT_TRANSFER_SENDER)
 
     attacked_channel = factories.create(
@@ -1182,11 +1185,14 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         )
 
         assert not any(
-            event for event in new_iteration.events if not isinstance(event, EventUnlockFailed)
+            event
+            for event in new_iteration.events
+            if not isinstance(event, EventUnlockClaimFailed)
         )
 
     # and reveal the secret
     receive_secret = ReceiveSecretReveal(UNIT_SECRET, target_attacker2)
+
     attack_iteration = mediator.state_transition(
         mediator_state=new_iteration.new_state,
         state_change=receive_secret,
@@ -1927,6 +1933,7 @@ def test_next_transfer_pair_with_fees_deducted():
     assert event.transfer.lock.amount == balance
 
 
+@pytest.mark.skip("refund transfers are disabled")
 def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
     fee = FeeAmount(0)  # Fee handling for refunds is currently undefined, so set it to 0 for now.
@@ -1975,6 +1982,7 @@ def test_backward_transfer_pair_with_fees_deducted():
     assert transfer_pair.payer_transfer == received_transfer
 
 
+@pytest.mark.skip("refund transfers are disabled")
 def test_sanity_check_for_refund_transfer_with_fees():
     fee = FeeAmount(0)  # Fee handling for refunds is currently undefined, so set it to 0 for now.
     channels = make_channel_set(
