@@ -1731,6 +1731,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1762,6 +1763,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1786,6 +1788,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1809,6 +1812,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1951,6 +1955,8 @@ def test_node_sends_withdraw_expiry():
         block_number=expiration_threshold,
         pseudo_random_generator=pseudo_random_generator,
     )
+
+    assert total_withdraw not in channel_state.our_state.withdraws
 
     assert (
         search_for_item(

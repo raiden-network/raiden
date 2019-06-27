@@ -89,6 +89,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         participant=our_address,
         recipient=recipient1,
         nonce=1,
+        expiration=10,
     )
 
     chain_state.queueids_to_queues[queue_identifier] = [withdraw_message]
