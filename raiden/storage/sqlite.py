@@ -908,6 +908,8 @@ class SerializedSQLiteStorage:
     def close(self) -> None:
         self.database.close()
 
+
+class MatrixStorage(SerializedSQLiteStorage):
     def write_matrix_roomids_for_address(
         self, address: Address, room_ids_to_aliases: Dict[str, Any], log_time
     ):
