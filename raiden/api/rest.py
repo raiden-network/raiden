@@ -42,6 +42,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
+    MintTokenResource,
     PartnersResourceByTokenAddress,
     PaymentResource,
     PendingTransfersResource,
@@ -154,6 +155,7 @@ URLS_V1 = [
         ChannelBlockchainEventsResource,
     ),
     ("/_debug/raiden_events", RaidenInternalEventsResource),
+    ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
 
 
@@ -537,6 +539,11 @@ class RestAPI:  # pragma: no unittest
             result=dict(token_network_address=to_checksum_address(token_network_address)),
             status_code=HTTPStatus.CREATED,
         )
+
+    def mint_token(
+        self, token_address: typing.TokenAddress, to: typing.Address, value: typing.TokenAmount
+    ):
+        return api_response(status_code=HTTPStatus.OK, result=dict())
 
     def open(
         self,
