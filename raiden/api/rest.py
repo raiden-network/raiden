@@ -449,7 +449,7 @@ class APIServer(Runnable):  # pragma: no unittest
 
     def stop(self):
         log.debug(
-            "REST API stoping",
+            "REST API stopping",
             host=self.config["host"],
             port=self.config["port"],
             node=to_checksum_address(self.rest_api.raiden_api.address),
