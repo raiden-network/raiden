@@ -543,6 +543,12 @@ class RestAPI:  # pragma: no unittest
     def mint_token(
         self, token_address: typing.TokenAddress, to: typing.Address, value: typing.TokenAmount
     ):
+        if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
+            return api_error(
+                errors="Minting a token is currently disabled in the Ethereum mainnet",
+                status_code=HTTPStatus.NOT_IMPLEMENTED,
+            )
+
         return api_response(status_code=HTTPStatus.OK, result=dict())
 
     def open(
