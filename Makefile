@@ -91,14 +91,6 @@ install-dev: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
 	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
 
-ARCHIVE_TAG_ARG=
-ifdef ARCHIVE_TAG
-ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=$(ARCHIVE_TAG)
-else
-ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=v$(shell python setup.py --version)
-endif
-
-
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
 GITHUB_ACCESS_TOKEN_ARG=--build-arg GITHUB_ACCESS_TOKEN_FRAGMENT=$(GITHUB_ACCESS_TOKEN)@
@@ -106,8 +98,9 @@ endif
 
 # architecture needs to be asked in docker because docker can be run on remote host to create binary for different architectures
 bundle-docker: ARCHITECTURE_TAG = $(shell docker run --rm python:3.7 uname -m)
+bundle-docker: ARCHIVE_TAG ?= v$(shell python setup.py --version)
 bundle-docker:
-	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
+	docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
 	mkdir -p dist/archive
