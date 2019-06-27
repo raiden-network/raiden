@@ -216,7 +216,7 @@ def test_init_with_usable_routes():
 
     send_mediated_transfer = mediated_transfers[0]
     transfer = send_mediated_transfer.transfer
-    expiration = channel.get_initial_lock_expiration(block_number, channels[0].reveal_timeout)
+    expiration = channel.get_safe_initial_expiration(block_number, channels[0].reveal_timeout)
 
     assert transfer.balance_proof.token_network_address == channels[0].token_network_address
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount

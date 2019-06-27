@@ -263,7 +263,7 @@ def send_lockedtransfer(
     """ Create a mediated transfer using channel. """
     assert channel_state.token_network_address == transfer_description.token_network_address
 
-    lock_expiration = channel.get_initial_lock_expiration(
+    lock_expiration = channel.get_safe_initial_expiration(
         block_number, channel_state.reveal_timeout
     )
 
