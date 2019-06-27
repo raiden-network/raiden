@@ -423,7 +423,7 @@ class ReceiveWithdrawRequest(ReceiveWithdrawBase):
 
 
 @dataclass
-class ReceiveWithdraw(ReceiveWithdrawBase):
+class ReceiveWithdrawConfirmation(ReceiveWithdrawBase):
     """ A Withdraw message was received. """
 
     pass

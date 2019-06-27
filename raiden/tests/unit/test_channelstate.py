@@ -47,7 +47,7 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
     SendProcessed,
-    SendWithdraw,
+    SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
@@ -77,7 +77,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
-    ReceiveWithdraw,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
@@ -1788,7 +1788,10 @@ def test_receive_withdraw_request():
     # pylint: disable=no-member
     assert channel_state.partner_state.total_withdraw == 20
     # pylint: enable=no-member
-    assert search_for_item(iteration.events, SendWithdraw, {"total_withdraw": 20}) is not None
+    assert (
+        search_for_item(iteration.events, SendWithdrawConfirmation, {"total_withdraw": 20})
+        is not None
+    )
 
     # Repeat above withdraw
     withdraw_request = ReceiveWithdrawRequest(
@@ -1866,7 +1869,7 @@ def test_receive_withdraw_confirmation():
         WithdrawState(total_withdraw=total_withdraw, expiration=1, nonce=1)
     )
 
-    receive_withdraw = ReceiveWithdraw(
+    receive_withdraw = ReceiveWithdrawConfirmation(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=100,
@@ -1895,7 +1898,7 @@ def test_receive_withdraw_confirmation():
 
     channel_state = iteration.new_state
 
-    receive_withdraw = ReceiveWithdraw(
+    receive_withdraw = ReceiveWithdrawConfirmation(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
@@ -1920,7 +1923,7 @@ def test_receive_withdraw_confirmation():
         is not None
     )
 
-    receive_withdraw = ReceiveWithdraw(
+    receive_withdraw = ReceiveWithdrawConfirmation(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,

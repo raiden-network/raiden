@@ -62,7 +62,7 @@ from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
-    ReceiveWithdraw,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
@@ -443,7 +443,7 @@ def sanity_check(iteration: TransitionResult[ChainState]) -> None:
 
 def inplace_delete_message_queue(
     chain_state: ChainState,
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdraw],
+    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
     queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -463,7 +463,7 @@ def inplace_delete_message_queue(
 
 def inplace_delete_message(
     message_queue: List[SendMessageEvent],
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdraw],
+    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
@@ -475,7 +475,7 @@ def inplace_delete_message(
         # This is avoided by waiting for the confirmation before removing
         # the withdraw request.
         if isinstance(message, SendWithdrawRequest):
-            if not isinstance(state_change, ReceiveWithdraw):
+            if not isinstance(state_change, ReceiveWithdrawConfirmation):
                 continue
 
         message_found = (
@@ -690,7 +690,7 @@ def handle_receive_withdraw_request(
 
 
 def handle_receive_withdraw(
-    chain_state: ChainState, state_change: ReceiveWithdraw
+    chain_state: ChainState, state_change: ReceiveWithdrawConfirmation
 ) -> TransitionResult[ChainState]:
     iteration = subdispatch_by_canonical_id(
         chain_state=chain_state,
@@ -878,8 +878,8 @@ def handle_state_change(
     elif type(state_change) == ReceiveWithdrawRequest:
         assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_request(chain_state, state_change)
-    elif type(state_change) == ReceiveWithdraw:
-        assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
+    elif type(state_change) == ReceiveWithdrawConfirmation:
+        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
         iteration = handle_receive_withdraw(chain_state, state_change)
     elif type(state_change) == ReceiveWithdrawExpired:
         assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION

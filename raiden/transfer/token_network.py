@@ -16,7 +16,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
-    ReceiveWithdraw,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
@@ -33,7 +33,7 @@ StateChangeWithChannelID = Union[
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
     ContractReceiveChannelWithdraw,
-    ReceiveWithdraw,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawRequest,
     ReceiveWithdrawExpired,
 ]
@@ -315,7 +315,7 @@ def handle_receive_channel_withdraw_request(
 
 def handle_receive_channel_withdraw(
     token_network_state: TokenNetworkState,
-    state_change: ReceiveWithdraw,
+    state_change: ReceiveWithdrawConfirmation,
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
@@ -460,8 +460,8 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
-    elif type(state_change) == ReceiveWithdraw:
-        assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
+    elif type(state_change) == ReceiveWithdrawConfirmation:
+        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
         iteration = handle_receive_channel_withdraw(
             token_network_state=token_network_state,
             state_change=state_change,

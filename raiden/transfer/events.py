@@ -44,7 +44,7 @@ class SendWithdrawRequest(SendMessageEvent):
 
 
 @dataclass
-class SendWithdraw(SendMessageEvent):
+class SendWithdrawConfirmation(SendMessageEvent):
     """ Event used by node to confirm a withdraw for a channel's partner."""
 
     total_withdraw: WithdrawAmount
