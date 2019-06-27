@@ -1,3 +1,0 @@
-*.retry
-terraform.tfstate.backup
-.terraform/plugins

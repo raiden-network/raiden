@@ -1,5 +1,0 @@
-127.0.0.1 localhost
-
-{% for name, group in display_groups.items()|sort %}{% for item in groups[group]|sort %}
-{{ hostvars[item]['private_ip'] }} {{ hostvars[item]['hostname'] }}
-{% endfor %}{% endfor %}
