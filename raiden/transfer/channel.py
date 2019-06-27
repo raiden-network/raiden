@@ -138,7 +138,7 @@ def get_safe_initial_expiration(
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
-def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
+def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
     """ Returns the block number at which the sender can send:
     - SendLockExpired
     - SendWithdrawExpired
@@ -157,7 +157,7 @@ def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
     return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
 
 
-def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockNumber:
+def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
     """ Returns the block number at which the receiver can accept:
     - ReceiveLockExpired
     - ReceiveWithdrawExpired
@@ -228,7 +228,7 @@ def is_lock_expired(
     end_state: NettingChannelEndState,
     lock: LockType,
     block_number: BlockNumber,
-    lock_expiration_threshold: BlockNumber,
+    lock_expiration_threshold: BlockExpiration,
 ) -> SuccessOrError:
     """ Determine whether a lock has expired.
 
@@ -1656,9 +1656,7 @@ def send_lock_expired(
     return []
 
 
-def is_withdraw_expired(
-    block_number: BlockNumber, expiration_threshold: BlockNumber
-) -> bool:
+def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
     """ Determine whether a withdraw has expired.
 
     The withdraw has expired if the current block exceeds
