@@ -1865,8 +1865,8 @@ def test_receive_withdraw_confirmation():
     partner_signature = signer.sign(packed)
 
     channel_state.our_state.total_withdraw = total_withdraw
-    channel_state.our_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=1, nonce=1)
+    channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=1, nonce=1
     )
 
     receive_withdraw = ReceiveWithdrawConfirmation(
@@ -1957,8 +1957,8 @@ def test_node_sends_withdraw_expiry():
     expiration_threshold = channel.get_sender_expiration_threshold(expiration_block_number)
 
     channel_state.our_state.total_withdraw = total_withdraw
-    channel_state.our_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     block_hash = make_transaction_hash()
@@ -2012,8 +2012,8 @@ def test_node_handles_received_withdraw_expiry():
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
     channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     packed = pack_withdraw(
@@ -2048,7 +2048,7 @@ def test_node_handles_received_withdraw_expiry():
 
     channel_state = iteration.new_state
     assert channel_state.partner_state.total_withdraw == 0
-    assert channel_state.partner_state.withdraws == []
+    assert not channel_state.partner_state.withdraws
 
 
 def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
@@ -2065,8 +2065,8 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
     channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     packed = pack_withdraw(
@@ -2124,8 +2124,8 @@ def test_node_rejects_received_withdraw_expiry_invalid_signature():
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
     channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     # Invalid signature
@@ -2175,8 +2175,8 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
     channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     packed = pack_withdraw(
@@ -2235,8 +2235,8 @@ def test_node_multiple_withdraws_with_one_expiring():
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
     channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
     packed = pack_withdraw(
@@ -2248,16 +2248,16 @@ def test_node_multiple_withdraws_with_one_expiring():
     )
     partner_signature = signer.sign(packed)
 
+    second_total_withdraw = total_withdraw * 2
+
     # Test multiple withdraws with one expiring
-    channel_state.partner_state.total_withdraw = total_withdraw
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1)
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
-    channel_state.partner_state.withdraws.append(
-        WithdrawState(
-            total_withdraw=total_withdraw * 2, expiration=expiration_block_number * 2, nonce=2
-        )
+    channel_state.partner_state.withdraws[second_total_withdraw] = WithdrawState(
+        total_withdraw=second_total_withdraw, expiration=expiration_block_number * 2, nonce=2
     )
+    channel_state.partner_state.total_withdraw = second_total_withdraw
     channel_state.partner_state.nonce = 2
 
     receive_withdraw_expired = ReceiveWithdrawExpired(
@@ -2284,12 +2284,5 @@ def test_node_multiple_withdraws_with_one_expiring():
     channel_state = iteration.new_state
     # An older withdraw expired.
     # The latest withdraw should still be our partner's latest withdraw
-    assert channel_state.partner_state.total_withdraw == total_withdraw * 2
-    assert (
-        search_for_item(
-            channel_state.partner_state.withdraws,
-            WithdrawState,
-            {"total_withdraw": total_withdraw * 2},
-        )
-        is not None
-    )
+    assert channel_state.partner_state.total_withdraw == second_total_withdraw
+    assert second_total_withdraw in channel_state.partner_state.withdraws
