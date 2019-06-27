@@ -1671,14 +1671,7 @@ def test_action_withdraw():
     )
 
     assert (
-        search_for_item(
-            iteration.events,
-            EventInvalidActionWithdraw,
-            {
-                "attempted_withdraw": 100,
-                "reason": "Insufficient balance: 70. Requested 100 for withdraw",
-            },
-        )
+        search_for_item(iteration.events, EventInvalidActionWithdraw, {"attempted_withdraw": 100})
         is not None
     )
 
@@ -1714,12 +1707,7 @@ def test_action_withdraw():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidActionWithdraw,
-            {
-                "attempted_withdraw": our_balance,
-                "reason": f"Total withdraw {our_balance} did not increase",
-            },
+            iteration.events, EventInvalidActionWithdraw, {"attempted_withdraw": our_balance}
         )
         is not None
     )
@@ -1751,12 +1739,7 @@ def test_receive_withdraw_request():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidReceivedWithdrawRequest,
-            {
-                "attempted_withdraw": 120,
-                "reason": "Insufficient balance: 100. Requested 120 for withdraw",
-            },
+            iteration.events, EventInvalidReceivedWithdrawRequest, {"attempted_withdraw": 120}
         )
         is not None
     )
@@ -1811,9 +1794,7 @@ def test_receive_withdraw_request():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidReceivedWithdrawRequest,
-            {"attempted_withdraw": 20, "reason": "Total withdraw 20 did not increase"},
+            iteration.events, EventInvalidReceivedWithdrawRequest, {"attempted_withdraw": 20}
         )
         is not None
     )
@@ -1836,9 +1817,7 @@ def test_receive_withdraw_request():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidReceivedWithdrawRequest,
-            {"attempted_withdraw": 40, "reason": "Signature invalid, could not be recovered."},
+            iteration.events, EventInvalidReceivedWithdrawRequest, {"attempted_withdraw": 40}
         )
         is not None
     )
@@ -1886,12 +1865,7 @@ def test_receive_withdraw_confirmation():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidReceivedWithdraw,
-            {
-                "attempted_withdraw": 100,
-                "reason": "Received withdraw confirmation 100 was not found in withdraw states",
-            },
+            iteration.events, EventInvalidReceivedWithdraw, {"attempted_withdraw": 100}
         )
         is not None
     )
@@ -1913,12 +1887,7 @@ def test_receive_withdraw_confirmation():
 
     assert (
         search_for_item(
-            iteration.events,
-            EventInvalidReceivedWithdraw,
-            {
-                "attempted_withdraw": total_withdraw,
-                "reason": "Signature invalid, could not be recovered.",
-            },
+            iteration.events, EventInvalidReceivedWithdraw, {"attempted_withdraw": total_withdraw}
         )
         is not None
     )
@@ -2102,10 +2071,7 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdrawExpired,
-            {
-                "attempted_withdraw": total_withdraw,
-                "reason": f"Invalid WithdrawExpired of {total_withdraw}",
-            },
+            {"attempted_withdraw": total_withdraw},
         )
         is not None
     )
@@ -2152,10 +2118,7 @@ def test_node_rejects_received_withdraw_expiry_invalid_signature():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdrawExpired,
-            {
-                "attempted_withdraw": total_withdraw,
-                "reason": "Signature invalid, could not be recovered.",
-            },
+            {"attempted_withdraw": total_withdraw},
         )
         is not None
     )
@@ -2212,10 +2175,7 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
         search_for_item(
             iteration.events,
             EventInvalidReceivedWithdrawExpired,
-            {
-                "attempted_withdraw": total_withdraw,
-                "reason": "Nonce did not change sequentially, expected: 1 got: 5.",
-            },
+            {"attempted_withdraw": total_withdraw},
         )
         is not None
     )
