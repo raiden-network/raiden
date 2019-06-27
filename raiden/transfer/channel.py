@@ -901,9 +901,7 @@ def is_valid_withdraw_confirmation(
 
     result: SuccessOrError
 
-    withdraw_exists = withdraw.total_withdraw in [
-        withdraw_state.total_withdraw for withdraw_state in channel_state.our_state.withdraws
-    ]
+    withdraw_exists = withdraw.total_withdraw in channel_state.our_state.withdraws
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
@@ -1675,7 +1673,7 @@ def events_for_expired_withdraws(
 ) -> List[SendWithdrawExpired]:
     events: List[SendWithdrawExpired] = list()
 
-    for withdraw_state in channel_state.our_state.withdraws:
+    for withdraw_state in channel_state.our_state.withdraws.values():
         withdraw_expired = is_withdraw_expired(
             block_number=block_number,
             expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
@@ -1835,7 +1833,7 @@ def handle_action_withdraw(
         )
         channel_state.our_state.total_withdraw = action_withdraw.total_withdraw
         channel_state.our_state.nonce = nonce
-        channel_state.our_state.withdraws.append(withdraw_state)
+        channel_state.our_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
 
         events = send_withdraw_request(
             channel_state=channel_state,
@@ -1868,7 +1866,7 @@ def handle_receive_withdraw_request(
             # to expire the withdraw.
             expiration=BlockExpiration(0),
         )
-        channel_state.partner_state.withdraws.append(withdraw_state)
+        channel_state.partner_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
         channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
         channel_state.partner_state.nonce = withdraw_request.nonce
 
@@ -1935,12 +1933,9 @@ def handle_receive_withdraw_expired(
 ) -> TransitionResult:
     events: List[Event] = list()
 
-    withdraw_states = filter(
-        lambda state: state.total_withdraw == withdraw_expired.total_withdraw,
-        channel_state.partner_state.withdraws,
-    )
+    withdraw_state = channel_state.partner_state.withdraws.get(withdraw_expired.total_withdraw)
 
-    if not withdraw_states:
+    if not withdraw_state:
         invalid_withdraw_expired_msg = (
             f"Withdraw expired of {withdraw_expired.total_withdraw} "
             f"did not correspond to previous withdraw request"
@@ -1955,11 +1950,6 @@ def handle_receive_withdraw_expired(
             ],
         )
 
-    # Take the first withdraw state found because
-    # withdraw expiry happens in order of which
-    # withdraws have been triggered.
-    withdraw_state = next(withdraw_states)
-
     is_valid, msg = is_valid_withdraw_expired(
         channel_state=channel_state,
         state_change=withdraw_expired,
@@ -1968,17 +1958,13 @@ def handle_receive_withdraw_expired(
     )
     if is_valid:
         withdraws = channel_state.partner_state.withdraws
-        withdraws.remove(withdraw_state)
+        del withdraws[withdraw_state.total_withdraw]
 
         # Since total_withdraw is monotonic, receiving withdraw
         # expiration means that the new total_withdraw becomes
         # the latest known non-expired value.
         if not withdraws:
             channel_state.partner_state.total_withdraw = WithdrawAmount(0)
-        else:
-            channel_state.partner_state.total_withdraw = WithdrawAmount(
-                withdraws[-1].total_withdraw
-            )
 
         channel_state.partner_state.nonce = withdraw_expired.nonce
 
