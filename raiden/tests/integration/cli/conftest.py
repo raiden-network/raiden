@@ -88,7 +88,14 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
     )
     os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
 
-    args = ["--gas-price", "1000000000", "--no-sync-check", f"--debug-logfile-name={base_logfile}"]
+    args = [
+        "--gas-price",
+        "1000000000",
+        "--no-sync-check",
+        f"--debug-logfile-name={base_logfile}",
+        "--routing-mode",
+        "local",
+    ]
 
     if environment_type == Environment.DEVELOPMENT.value:
         args += ["--environment-type", environment_type]
