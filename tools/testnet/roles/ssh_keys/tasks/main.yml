@@ -1,5 +1,0 @@
-- name: Ensure SSH authorized_keys
-  template:
-    src: templates/authorized_keys.j2
-    dest: "/home/{{ ansible_user }}/.ssh/authorized_keys"
-    mode: 0600
