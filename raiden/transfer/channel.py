@@ -1547,7 +1547,8 @@ def events_for_close(
 
 def send_withdraw_request(
     channel_state: NettingChannelState,
-    withdraw_state: WithdrawState,
+    total_withdraw: WithdrawAmount,
+    block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
     events: List[Event] = list()
@@ -1578,6 +1579,7 @@ def send_withdraw_request(
         total_withdraw=withdraw_state.total_withdraw,
         participant=channel_state.our_state.address,
         nonce=channel_state.our_state.nonce,
+        expiration=withdraw_state.expiration,
     )
 
     events.append(withdraw_event)
@@ -1678,14 +1680,14 @@ def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockEx
     return True
 
 
-def events_for_expired_withdraws(
+def send_expired_withdraws(
     channel_state: NettingChannelState,
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> List[SendWithdrawExpired]:
     events: List[SendWithdrawExpired] = list()
 
-    for withdraw_state in channel_state.our_state.withdraws.values():
+    for withdraw_state in list(channel_state.our_state.withdraws.values()):
         withdraw_expired = is_withdraw_expired(
             block_number=block_number,
             expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
@@ -1866,10 +1868,7 @@ def handle_receive_withdraw_request(
         withdraw_state = WithdrawState(
             total_withdraw=withdraw_request.total_withdraw,
             nonce=withdraw_request.nonce,
-            # Expiration for a received request is set to 0,
-            # as only the sender can instruct the current node
-            # to expire the withdraw.
-            expiration=BlockExpiration(0),
+            expiration=withdraw_request.expiration,
         )
         channel_state.partner_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
         channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
@@ -2149,7 +2148,7 @@ def handle_block(
 
     events: List[Event] = list()
 
-    expired_withdraws = events_for_expired_withdraws(
+    expired_withdraws = send_expired_withdraws(
         channel_state=channel_state,
         block_number=block_number,
         pseudo_random_generator=pseudo_random_generator,

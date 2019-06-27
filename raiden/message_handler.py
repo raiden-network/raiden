@@ -105,6 +105,7 @@ class MessageHandler:
             total_withdraw=message.total_withdraw,
             sender=message.sender,
             nonce=message.nonce,
+            expiration=message.expiration,
             signature=message.signature,
         )
         raiden.handle_and_track_state_changes([withdraw_request])

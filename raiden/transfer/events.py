@@ -14,6 +14,7 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils.typing import (
     Address,
+    BlockExpiration,
     ChannelID,
     InitiatorAddress,
     List,
@@ -40,6 +41,7 @@ class SendWithdrawRequest(SendMessageEvent):
 
     total_withdraw: WithdrawAmount
     participant: Address
+    expiration: BlockExpiration
     nonce: Nonce
 
 

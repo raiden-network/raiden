@@ -19,6 +19,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils.typing import (
     Address,
+    BlockExpiration,
     BlockGasLimit,
     BlockHash,
     BlockNumber,
@@ -419,7 +420,7 @@ class ReceiveWithdrawBase(AuthenticatedSenderStateChange):
 class ReceiveWithdrawRequest(ReceiveWithdrawBase):
     """ A Withdraw message received. """
 
-    pass
+    expiration: BlockExpiration
 
 
 @dataclass

@@ -659,6 +659,8 @@ class WithdrawRequest(WithdrawBase):
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
+    expiration: BlockExpiration
+
     @classmethod
     def from_event(cls, event):
         return cls(
@@ -669,6 +671,7 @@ class WithdrawRequest(WithdrawBase):
             total_withdraw=event.total_withdraw,
             participant=event.participant,
             nonce=event.nonce,
+            expiration=event.expiration,
             signature=EMPTY_SIGNATURE,
         )
 
