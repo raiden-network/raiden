@@ -10,7 +10,7 @@ from raiden.transfer.identifiers import (
     QueueIdentifier,
 )
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
-from raiden.transfer.state_change import ReceiveWithdraw
+from raiden.transfer.state_change import ReceiveWithdrawConfirmation
 
 
 def test_delivered_message_must_clean_unordered_messages(chain_id):
@@ -100,7 +100,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
     # Processed should not have removed the WithdrawRequest message
     assert withdraw_message in new_queue
 
-    receive_withdraw = ReceiveWithdraw(
+    receive_withdraw = ReceiveWithdrawConfirmation(
         message_identifier=message_identifier,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_id,
@@ -118,7 +118,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
     # ReceiveWithdraw from another recipient should not remove the WithdrawRequest
     assert withdraw_message in new_queue
 
-    receive_withdraw = ReceiveWithdraw(
+    receive_withdraw = ReceiveWithdrawConfirmation(
         message_identifier=message_identifier,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_id,

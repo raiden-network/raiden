@@ -44,7 +44,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
     SendProcessed,
-    SendWithdraw,
+    SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
@@ -138,8 +138,8 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == SendWithdrawRequest:
             assert isinstance(event, SendWithdrawRequest), MYPY_ANNOTATION
             self.handle_send_withdrawrequest(raiden, event)
-        elif type(event) == SendWithdraw:
-            assert isinstance(event, SendWithdraw), MYPY_ANNOTATION
+        elif type(event) == SendWithdrawConfirmation:
+            assert isinstance(event, SendWithdrawConfirmation), MYPY_ANNOTATION
             self.handle_send_withdraw(raiden, event)
         elif type(event) == SendProcessed:
             assert isinstance(event, SendProcessed), MYPY_ANNOTATION
@@ -246,7 +246,7 @@ class RaidenEventHandler(EventHandler):
         )
 
     @staticmethod
-    def handle_send_withdraw(raiden: "RaidenService", withdraw_event: SendWithdraw):
+    def handle_send_withdraw(raiden: "RaidenService", withdraw_event: SendWithdrawConfirmation):
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
         raiden.transport.send_async(withdraw_event.queue_identifier, withdraw_message)

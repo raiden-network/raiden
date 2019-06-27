@@ -22,7 +22,7 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
     SendProcessed,
-    SendWithdraw,
+    SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
@@ -77,7 +77,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
-    ReceiveWithdraw,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
@@ -884,7 +884,7 @@ def is_valid_withdraw_request(
 
 
 def is_valid_withdraw_confirmation(
-    channel_state: NettingChannelState, withdraw: ReceiveWithdraw
+    channel_state: NettingChannelState, withdraw: ReceiveWithdrawConfirmation
 ) -> SuccessOrError:
 
     result: SuccessOrError
@@ -1868,7 +1868,7 @@ def handle_receive_withdraw_request(
         channel_state.partner_state.nonce = withdraw_request.nonce
 
         channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
-        send_withdraw = SendWithdraw(
+        send_withdraw = SendWithdrawConfirmation(
             canonical_identifier=channel_state.canonical_identifier,
             recipient=channel_state.partner_state.address,
             message_identifier=withdraw_request.message_identifier,
@@ -1889,7 +1889,9 @@ def handle_receive_withdraw_request(
 
 
 def handle_receive_withdraw_confirmation(
-    channel_state: NettingChannelState, withdraw: ReceiveWithdraw, block_hash: BlockHash
+    channel_state: NettingChannelState,
+    withdraw: ReceiveWithdrawConfirmation,
+    block_hash: BlockHash,
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
@@ -2402,8 +2404,8 @@ def state_transition(
         iteration = handle_receive_withdraw_request(
             channel_state=channel_state, withdraw_request=state_change
         )
-    elif type(state_change) == ReceiveWithdraw:
-        assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
+    elif type(state_change) == ReceiveWithdrawConfirmation:
+        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_confirmation(
             channel_state=channel_state, withdraw=state_change, block_hash=block_hash
         )

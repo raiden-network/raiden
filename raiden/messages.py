@@ -16,7 +16,7 @@ from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.events import (
     SendProcessed,
-    SendWithdraw,
+    SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
@@ -97,7 +97,7 @@ __all__ = (
     "ToDevice",
     "PFSCapacityUpdate",
     "PFSFeeUpdate",
-    "Withdraw",
+    "WithdrawConfirmation",
     "WithdrawRequest",
     "message_from_sendevent",
 )
@@ -195,8 +195,8 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
         return LockExpired.from_event(send_event)
     elif type(send_event) == SendWithdrawRequest:
         return WithdrawRequest.from_event(send_event)
-    elif type(send_event) == SendWithdraw:
-        return Withdraw.from_event(send_event)
+    elif type(send_event) == SendWithdrawConfirmation:
+        return WithdrawConfirmation.from_event(send_event)
     elif type(send_event) == SendWithdrawExpired:
         return WithdrawExpired.from_event(send_event)
     elif type(send_event) == SendProcessed:
@@ -674,7 +674,7 @@ class WithdrawRequest(WithdrawBase):
 
 
 @dataclass(repr=False, eq=False)
-class Withdraw(WithdrawBase):
+class WithdrawConfirmation(WithdrawBase):
     """ Confirms withdraw to partner with a signature """
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
