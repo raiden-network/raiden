@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
+    TokenNetworkAddress,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
@@ -85,7 +86,7 @@ class TokenNetworkRegistry:
 
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockSpecification = "latest"
-    ) -> Optional[Address]:
+    ) -> Optional[TokenNetworkAddress]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
@@ -106,7 +107,7 @@ class TokenNetworkRegistry:
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
-    ) -> Address:
+    ) -> TokenNetworkAddress:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
@@ -120,7 +121,7 @@ class TokenNetworkRegistry:
             },
         )
 
-    def add_token_without_limits(self, token_address: TokenAddress) -> Address:
+    def add_token_without_limits(self, token_address: TokenAddress) -> TokenNetworkAddress:
         """
         Register token of `token_address` with the token network.
         This applies for versions prior to 0.13.0 of raiden-contracts,
@@ -128,7 +129,9 @@ class TokenNetworkRegistry:
         """
         return self._add_token(token_address=token_address, additional_arguments=dict())
 
-    def _add_token(self, token_address: TokenAddress, additional_arguments: Dict) -> Address:
+    def _add_token(
+        self, token_address: TokenAddress, additional_arguments: Dict
+    ) -> TokenNetworkAddress:
         if not is_binary_address(token_address):
             raise InvalidAddress("Expected binary address format for token")
 

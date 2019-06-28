@@ -22,8 +22,22 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
-from raiden.utils.typing import Address, Optional
+from raiden.utils.typing import (
+    Address,
+    BlockTimeout,
+    ChannelID,
+    Iterable,
+    List,
+    Optional,
+    PaymentNetworkAddress,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    Tuple,
+)
 from raiden.waiting import wait_for_payment_network
+
+AppChannels = Iterable[Tuple[App, App]]
 
 log = structlog.get_logger(__name__)
 
@@ -41,8 +55,13 @@ BlockchainServices = namedtuple(
 
 
 def check_channel(
-    app1, app2, token_network_address, channel_identifier, settle_timeout, deposit_amount
-):
+    app1: App,
+    app2: App,
+    token_network_address: TokenNetworkAddress,
+    channel_identifier: ChannelID,
+    settle_timeout: BlockTimeout,
+    deposit_amount: TokenAmount,
+) -> None:
     canonical_identifier = CanonicalIdentifier(
         chain_identifier=state_from_raiden(app1.raiden).chain_id,
         token_network_address=token_network_address,
@@ -89,11 +108,18 @@ def check_channel(
     assert app2_details.chain_id == UNIT_CHAIN_ID
 
 
-def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_timeout):
+def payment_channel_open_and_deposit(
+    app0: App,
+    app1: App,
+    token_address: TokenAddress,
+    deposit: TokenAmount,
+    settle_timeout: BlockTimeout,
+) -> None:
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
     token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    assert token_network_address, "request a channel for an unregistered token"
     token_network_proxy = app0.raiden.chain.token_network(token_network_address)
 
     channel_identifier = token_network_proxy.new_netting_channel(
@@ -133,8 +159,11 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
 
 
 def create_all_channels_for_network(
-    app_channels, token_addresses, channel_individual_deposit, channel_settle_timeout
-):
+    app_channels: AppChannels,
+    token_addresses: List[TokenAddress],
+    channel_individual_deposit: TokenAmount,
+    channel_settle_timeout: BlockTimeout,
+) -> None:
     greenlets = set()
     for token_address in token_addresses:
         for app_pair in app_channels:
@@ -162,7 +191,7 @@ def create_all_channels_for_network(
     log.info("Test channels", channels=channels)
 
 
-def network_with_minimum_channels(apps, channels_per_node):
+def network_with_minimum_channels(apps: List[App], channels_per_node: int) -> AppChannels:
     """ Return the channels that should be created so that each app has at
     least `channels_per_node` with the other apps.
 
@@ -224,7 +253,9 @@ def network_with_minimum_channels(apps, channels_per_node):
             yield curr_app, least_connect
 
 
-def create_network_channels(raiden_apps, channels_per_node):
+def create_network_channels(raiden_apps: List[App], channels_per_node: int) -> AppChannels:
+    app_channels: AppChannels
+
     num_nodes = len(raiden_apps)
 
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
@@ -240,7 +271,7 @@ def create_network_channels(raiden_apps, channels_per_node):
     return app_channels
 
 
-def create_sequential_channels(raiden_apps, channels_per_node):
+def create_sequential_channels(raiden_apps: List[App], channels_per_node: int) -> AppChannels:
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -249,6 +280,7 @@ def create_sequential_channels(raiden_apps, channels_per_node):
         sequential pair in the list has an open channel with `deposit` for each
         participant.
     """
+    app_channels: AppChannels
 
     num_nodes = len(raiden_apps)
 
@@ -379,7 +411,7 @@ def create_apps(
     return apps
 
 
-def parallel_start_apps(raiden_apps):
+def parallel_start_apps(raiden_apps: List[App]) -> None:
     """Start all the raiden apps in parallel."""
     start_tasks = set()
 
@@ -428,7 +460,9 @@ def jsonrpc_services(
     )
 
 
-def wait_for_alarm_start(raiden_apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
+def wait_for_alarm_start(
+    raiden_apps: List[App], retry_timeout: float = DEFAULT_RETRY_TIMEOUT
+) -> None:
     """Wait until all Alarm tasks start & set up the last_block"""
     apps = list(raiden_apps)
 
@@ -442,14 +476,14 @@ def wait_for_alarm_start(raiden_apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
 
 
 def wait_for_usable_channel(
-    app0,
-    app1,
-    registry_address,
-    token_address,
-    our_deposit,
-    partner_deposit,
-    retry_timeout=DEFAULT_RETRY_TIMEOUT,
-):
+    app0: App,
+    app1: App,
+    registry_address: PaymentNetworkAddress,
+    token_address: TokenAddress,
+    our_deposit: TokenAmount,
+    partner_deposit: TokenAmount,
+    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
+) -> None:
     """ Wait until the channel from app0 to app1 is usable.
 
     The channel and the deposits are registered, and the partner network state
@@ -483,11 +517,11 @@ def wait_for_usable_channel(
 
 
 def wait_for_token_networks(
-    raiden_apps,
-    token_network_registry_address,
-    token_addresses,
-    retry_timeout=DEFAULT_RETRY_TIMEOUT,
-):
+    raiden_apps: List[App],
+    token_network_registry_address: PaymentNetworkAddress,
+    token_addresses: List[TokenAddress],
+    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
+) -> None:
     for token_address in token_addresses:
         for app in raiden_apps:
             wait_for_payment_network(
@@ -496,8 +530,12 @@ def wait_for_token_networks(
 
 
 def wait_for_channels(
-    app_channels, registry_address, token_addresses, deposit, retry_timeout=DEFAULT_RETRY_TIMEOUT
-):
+    app_channels: AppChannels,
+    registry_address: PaymentNetworkAddress,
+    token_addresses: List[TokenAddress],
+    deposit: TokenAmount,
+    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
+) -> None:
     """ Wait until all channels are usable from both directions. """
     for app0, app1 in app_channels:
         for token_address in token_addresses:
