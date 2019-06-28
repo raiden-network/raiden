@@ -1,5 +1,6 @@
 import structlog
 from eth_utils import (
+    encode_hex,
     is_binary_address,
     to_bytes,
     to_canonical_address,
@@ -137,19 +138,24 @@ class UserDeposit:
                 transaction_executed = gas_limit is not None
                 if not transaction_executed or receipt_or_none:
                     if transaction_executed:
-                        block = receipt_or_none["blockNumber"]
+                        failed_at_blocknumber = receipt_or_none["blockNumber"]
+                        failed_at_blockhash = receipt_or_none["blockHash"]
                     else:
-                        block = checking_block
+                        failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                        failed_at_blocknumber = failed_at["number"]
+                        failed_at_blockhash = encode_hex(failed_at["hash"])
 
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="deposit",
                         transaction_executed=transaction_executed,
                         required_gas=self.gas_measurements["UserDeposit.deposit"],
-                        block_identifier=block,
+                        block_identifier=failed_at_blocknumber,
                     )
 
                     msg = self._check_why_deposit_failed(
-                        token=token, total_deposit=total_deposit, block_identifier=block
+                        token=token,
+                        total_deposit=total_deposit,
+                        block_identifier=failed_at_blockhash,
                     )
                     raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
