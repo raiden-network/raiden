@@ -304,6 +304,9 @@ class UserAddressManager:
     def _validate_userid_signature(user: User) -> Optional[Address]:
         return validate_userid_signature(user)
 
+    def recover_userids(self, address_to_userids: defaultdict) -> None:
+        self._address_to_userids = address_to_userids
+
     @property
     def log(self) -> BoundLoggerLazyProxy:
         if not self._log:
