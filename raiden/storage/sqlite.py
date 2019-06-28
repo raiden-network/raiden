@@ -219,7 +219,7 @@ class SQLiteStorage:
         # References:
         # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
         # https://sqlite.org/pragma.html#pragma_locking_mode
-        conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+        conn.execute("PRAGMA locking_mode=NORMAL")
 
         # Keep the journal around and skip inode updates.
         # References:
@@ -583,10 +583,11 @@ class SQLiteStorage:
         ]
 
     def write_matrix_room_ids_for_address(self, room_id_data):
-        # FIXME
-        self.conn.execute(
+        cursor = self.conn.cursor()
+        cursor.execute(
             "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?, ?)", room_id_data
         )
+        self.maybe_commit()
 
     def get_matrix_room_ids_aliases_for_address(self, address_identifier):
         cursor = self.conn.cursor()
@@ -600,10 +601,9 @@ class SQLiteStorage:
         return room_ids_to_aliases, stored_address
 
     def write_matrix_user_ids_for_address(self, user_id_data):
-        # FIXME
-        self.conn.execute(
-            "INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?, ?) ", user_id_data
-        )
+        cursor = self.conn.cursor()
+        cursor.execute("INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?, ?) ", user_id_data)
+        self.maybe_commit()
 
     def get_matrix_address_to_userids(self):
         cursor = self.conn.cursor()
