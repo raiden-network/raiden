@@ -21,7 +21,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
-from raiden.transfer.events import SendWithdrawConfirmation, SendWithdrawExpired
+from raiden.transfer.events import SendWithdrawConfirmation
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -485,7 +485,7 @@ def run_test_channel_withdraw(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw_expired(
-    raiden_network, number_of_nodes, token_addresses, deposit, network_wait
+    raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
 ):
     raise_on_failure(
         raiden_network,
@@ -495,11 +495,12 @@ def test_channel_withdraw_expired(
         deposit=deposit,
         network_wait=network_wait,
         number_of_nodes=number_of_nodes,
+        retry_timeout=retry_timeout,
     )
 
 
 def run_test_channel_withdraw_expired(
-    raiden_network, token_addresses, deposit, network_wait, number_of_nodes
+    raiden_network, token_addresses, deposit, network_wait, number_of_nodes, retry_timeout
 ):
     """ Tests withdraw expiration. """
     alice_app, bob_app = raiden_network
@@ -514,7 +515,6 @@ def run_test_channel_withdraw_expired(
     hold_event_handler = HoldRaidenEventHandler(RaidenEventHandler())
     # Prevent withdraw confirmation from being sent
     send_withdraw_confirmation_event = hold_event_handler.hold(SendWithdrawConfirmation, {})
-    withdraw_expired_event = hold_event_handler.hold(SendWithdrawExpired, {})
 
     alice_app.raiden.raiden_event_handler = hold_event_handler
     bob_app.raiden.raiden_event_handler = hold_event_handler
@@ -570,14 +570,18 @@ def run_test_channel_withdraw_expired(
     assert alice_bob_channel_state.partner_state.total_withdraw == total_withdraw
     assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is not None
 
-    with Timeout(seconds=timeout * 2):
-        event = withdraw_expired_event.get()
+    withdraw_expiration = bob_alice_channel_state.our_state.withdraws.get(
+        total_withdraw
+    ).expiration
+    expiration_threshold = channel.get_sender_expiration_threshold(withdraw_expiration)
 
-        bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
-        assert bob_alice_channel_state.our_state.total_withdraw == 0
-        assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is None
+    waiting.wait_for_block(
+        raiden=bob_app.raiden, block_number=expiration_threshold + 1, retry_timeout=retry_timeout
+    )
 
-        bob_app.raiden.raiden_event_handler.release(bob_app.raiden, event)
+    bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+    assert bob_alice_channel_state.our_state.total_withdraw == 0
+    assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is None
 
     with Timeout(seconds=timeout):
         wait_for_withdraw_expired_message.wait()
