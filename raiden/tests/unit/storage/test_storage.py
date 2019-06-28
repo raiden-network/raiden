@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import RAIDEN_DB_VERSION, SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import RAIDEN_DB_VERSION, MatrixStorage, SQLiteStorage
 from raiden.tests.utils.factories import make_address
 from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 
@@ -90,7 +90,7 @@ def test_regression_delete_should_not_commit_the_upgrade_transaction(tmp_path, m
 
 def test_get_matrix_userids_for_address():
     serializer = JSONSerializer
-    storage = SerializedSQLiteStorage(":memory:", serializer)
+    storage = MatrixStorage(":memory:", serializer)
     log_time = "2019-16-05T14:18:35.000"
     address = make_address()
     user_ids = [
