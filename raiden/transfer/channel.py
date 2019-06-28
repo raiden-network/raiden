@@ -1703,6 +1703,12 @@ def send_expired_withdraws(
         channel_state.our_state.nonce = nonce
         del channel_state.our_state.withdraws[withdraw_state.total_withdraw]
 
+        # Earlier withdraws expire but the more recent ones still exist.
+        # Therefore, the total_withdraw only changes back to 0
+        # if all existing withdraws expire.
+        if not channel_state.our_state.withdraws:
+            channel_state.our_state.total_withdraw = WithdrawAmount(0)
+
         events.append(
             SendWithdrawExpired(
                 recipient=channel_state.partner_state.address,
