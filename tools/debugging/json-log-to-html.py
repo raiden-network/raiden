@@ -12,7 +12,19 @@ from datetime import datetime
 from html import escape
 from json import JSONDecodeError
 from math import log10
-from typing import Any, Dict, Iterable, Set, TextIO, Tuple
+from typing import (
+    Any,
+    Counter as CounterType,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import click
 from cachetools import LRUCache, cached
@@ -292,6 +304,7 @@ PAGE_BEGIN = """\
 <!doctype html>
 <html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style>
 * {{
     font-family: Helvetica, sans-serif
@@ -383,14 +396,14 @@ ROW_TEMPLATE = """
 """
 
 
-def _colorize_cache_key(value, min_luminance):
+def _colorize_cache_key(value: Any, min_luminance: float) -> Tuple[str, float]:
     if isinstance(value, (list, dict)):
         return repr(value), min_luminance
     return value, min_luminance
 
 
 @cached(LRUCache(maxsize=2 ** 24))
-def rgb_color_picker(obj, min_luminance=None, max_luminance=None):
+def rgb_color_picker(obj, min_luminance: float = None, max_luminance: float = None) -> Color:
     """Modified version of colour.RGB_color_picker"""
     color_value = (
         int.from_bytes(hashlib.md5(str(obj).encode("utf-8")).digest(), "little") % 0xFFFFFF
@@ -417,7 +430,7 @@ def nice_time_diff(time_base: datetime, time_now: datetime) -> Tuple[str, float]
     return time_now.isoformat(), total_seconds
 
 
-def get_time_display(prev_record, record):
+def get_time_display(prev_record: Optional[Record], record: Record) -> Tuple[str, str, str]:
     time_absolute = record.timestamp.isoformat()
     time_color = ""
     if prev_record:
@@ -440,7 +453,7 @@ def get_time_display(prev_record, record):
 
 
 @cached(LRUCache(maxsize=2 ** 24), key=_colorize_cache_key)
-def colorize_value(value, min_luminance):
+def colorize_value(value: Any, min_luminance: float) -> Union[str, list, tuple, dict]:
     if isinstance(value, (list, tuple)):
         return type(value)(colorize_value(inner, min_luminance) for inner in value)
     elif isinstance(value, dict):
@@ -453,7 +466,7 @@ def colorize_value(value, min_luminance):
     return f'<span style="color: {color.web}">{escape(str_value)}</span>'
 
 
-def render_fields(record, sorted_known_fields):
+def render_fields(record: Record, sorted_known_fields: List[str]) -> List[str]:
     rendered_fields = []
     for field_name in sorted_known_fields:
         if field_name not in record.fields:
@@ -464,8 +477,8 @@ def render_fields(record, sorted_known_fields):
     return rendered_fields
 
 
-def parse_log(log_file):
-    known_fields = Counter()
+def parse_log(log_file: TextIO) -> Tuple[List[Record], CounterType[int]]:
+    known_fields: CounterType[int] = Counter()
     log_records = []
     for i, line in enumerate(log_file, start=1):
         try:
@@ -494,7 +507,7 @@ def filter_records(
     drop_events: Set[str],
     drop_loggers: Set[str],
     time_range: Tuple[datetime, datetime],
-):
+) -> Generator[Optional[Record], None, None]:
     time_from, time_to = time_range
     for record in log_records:
         drop = (
@@ -509,8 +522,10 @@ def filter_records(
             yield record
 
 
-def transform_records(log_records: Iterable[Record], replacements: Dict[str, Any]):
-    def replace(value):
+def transform_records(
+    log_records: Iterable[Optional[Record]], replacements: Dict[str, Any]
+) -> Generator[Record, None, None]:
+    def replace(value: Any) -> Any:
         # Use `type(value)()` construction to preserve exact (sub-)type
         if isinstance(value, tuple) and hasattr(value, "_fields"):
             # namedtuples have a different signature, *sigh*
@@ -542,7 +557,9 @@ def transform_records(log_records: Iterable[Record], replacements: Dict[str, Any
         yield replace(record)
 
 
-def render(name: str, log_records: Iterable[Record], known_fields: Counter, output: TextIO):
+def render(
+    name: str, log_records: Iterable[Record], known_fields: Counter, output: TextIO
+) -> None:
     sorted_known_fields = [name for name, count in known_fields.most_common()]
     prev_record = None
     output.write(PAGE_BEGIN.format(name=name, date=datetime.now()))
@@ -570,7 +587,7 @@ def render(name: str, log_records: Iterable[Record], known_fields: Counter, outp
 
 @click.command(help=__doc__)
 @click.argument("log-file", type=click.File("rt"))
-@click.option("-o", "--output", type=click.File("wt"), default="-")
+@click.option("-o", "--output", type=click.File("wt"), default="-", show_default=True)
 @click.option(
     "-e",
     "--drop-event",
@@ -618,19 +635,25 @@ def render(name: str, log_records: Iterable[Record], known_fields: Counter, outp
     ),
 )
 def main(
-    log_file, drop_events, drop_loggers, replacements, replacements_from_file, time_range, output
-):
+    log_file: TextIO,
+    drop_events: List[str],
+    drop_loggers: List[str],
+    replacements: str,
+    replacements_from_file: TextIO,
+    time_range: str,
+    output: TextIO,
+) -> None:
     if replacements_from_file:
         replacements = replacements_from_file.read()
     if not replacements:
         replacements = "{}"
     try:
-        replacements = json.loads(replacements)
+        replacements_dict = json.loads(replacements)
     except (JSONDecodeError, UnicodeDecodeError) as ex:
         raise UsageError(f'Option "--replacements" contains invalid JSON: {ex}') from ex
 
     time_from, _, time_to = time_range.partition("^")
-    time_range = (
+    time_range_dt = (
         datetime.fromisoformat(time_from) if time_from else TIME_PAST,
         datetime.fromisoformat(time_to) if time_to else TIME_FUTURE,
     )
@@ -649,9 +672,9 @@ def main(
                     log_records_progr,
                     drop_events=set(d.lower() for d in drop_events),
                     drop_loggers=set(l.lower() for l in drop_loggers),
-                    time_range=time_range,
+                    time_range=time_range_dt,
                 ),
-                replacements,
+                replacements_dict,
             ),
             known_fields,
             output,
