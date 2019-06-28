@@ -10,16 +10,18 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock
+from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock, WithdrawExpired
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
+from raiden.transfer.events import SendWithdrawConfirmation, SendWithdrawExpired
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -423,7 +425,7 @@ def test_channel_withdraw(
 def run_test_channel_withdraw(
     raiden_network, token_addresses, deposit, network_wait, number_of_nodes, retry_timeout
 ):
-    """Batch unlock can be called after the channel is settled."""
+    """ Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -479,6 +481,110 @@ def run_test_channel_withdraw(
 
     bob_balance_after_withdraw = token_proxy.balance_of(bob_app.raiden.address)
     assert bob_initial_balance + total_withdraw == bob_balance_after_withdraw
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_channel_withdraw_expired(
+    raiden_network, number_of_nodes, token_addresses, deposit, network_wait
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_channel_withdraw_expired,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        network_wait=network_wait,
+        number_of_nodes=number_of_nodes,
+    )
+
+
+def run_test_channel_withdraw_expired(
+    raiden_network, token_addresses, deposit, network_wait, number_of_nodes
+):
+    """ Tests withdraw expiration. """
+    alice_app, bob_app = raiden_network
+    token_address = token_addresses[0]
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
+    )
+
+    message_handler = WaitForMessage()
+    bob_app.raiden.message_handler = message_handler
+
+    hold_event_handler = HoldRaidenEventHandler(RaidenEventHandler())
+    # Prevent withdraw confirmation from being sent
+    send_withdraw_confirmation_event = hold_event_handler.hold(SendWithdrawConfirmation, {})
+    withdraw_expired_event = hold_event_handler.hold(SendWithdrawExpired, {})
+
+    alice_app.raiden.raiden_event_handler = hold_event_handler
+    bob_app.raiden.raiden_event_handler = hold_event_handler
+
+    alice_to_bob_amount = 10
+    identifier = 1
+    target = bob_app.raiden.address
+    secret = sha3(target)
+
+    payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
+        token_network_address=token_network_address,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
+    )
+
+    wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
+        Unlock, {"payment_identifier": identifier}
+    )
+    timeout = network_wait * number_of_nodes
+    with Timeout(seconds=timeout):
+        wait_for_unlock.get()
+        msg = (
+            f"transfer from {to_checksum_address(alice_app.raiden.address)} "
+            f"to {to_checksum_address(bob_app.raiden.address)} failed."
+        )
+        assert payment_status.payment_done.get(), msg
+
+    total_withdraw = deposit + alice_to_bob_amount
+
+    bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+
+    wait_for_withdraw_expired_message = alice_app.raiden.message_handler.wait_for_message(
+        WithdrawExpired, {"total_withdraw": total_withdraw}
+    )
+
+    bob_app.raiden.withdraw(
+        canonical_identifier=bob_alice_channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+    )
+
+    with Timeout(seconds=timeout):
+        send_withdraw_confirmation_event.wait()
+
+    # Make sure proper withdraw state is set in both channel states
+    bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+    assert bob_alice_channel_state.our_state.total_withdraw == total_withdraw
+    assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is not None
+
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
+    assert alice_bob_channel_state.partner_state.total_withdraw == total_withdraw
+    assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is not None
+
+    with Timeout(seconds=timeout * 2):
+        event = withdraw_expired_event.get()
+
+        bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+        assert bob_alice_channel_state.our_state.total_withdraw == 0
+        assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is None
+
+        bob_app.raiden.raiden_event_handler.release(bob_app.raiden, event)
+
+    with Timeout(seconds=timeout):
+        wait_for_withdraw_expired_message.wait()
+
+        alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
+        assert alice_bob_channel_state.partner_state.total_withdraw == 0
+        assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is None
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])

@@ -141,6 +141,9 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == SendWithdrawConfirmation:
             assert isinstance(event, SendWithdrawConfirmation), MYPY_ANNOTATION
             self.handle_send_withdraw(raiden, event)
+        elif type(event) == SendWithdrawExpired:
+            assert isinstance(event, SendWithdrawExpired), MYPY_ANNOTATION
+            self.handle_send_withdrawexpired(raiden, event)
         elif type(event) == SendProcessed:
             assert isinstance(event, SendProcessed), MYPY_ANNOTATION
             self.handle_send_processed(raiden, event)
