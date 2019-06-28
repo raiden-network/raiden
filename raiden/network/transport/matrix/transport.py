@@ -42,7 +42,7 @@ from raiden.network.transport.matrix.utils import (
 from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import MatrixStorage, SerializedSQLiteStorage
+from raiden.storage.sqlite import MatrixStorage
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state import (
@@ -338,6 +338,7 @@ class MatrixTransport(Runnable):
         self._account_data_lock = Semaphore()
 
         self._message_handler: Optional[MessageHandler] = None
+        self.storage: Optional[MatrixStorage] = None
 
     def __repr__(self):
         if self._raiden_service is not None:
@@ -360,7 +361,8 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         if storage:
             self.storage = storage
-            self._address_mgr._address_to_userids = self.storage.get_matrix_userids_and_addresses()
+            stored_userids_and_addresses = self.storage.get_matrix_userids_and_addresses()
+            self._address_mgr.recover_userids(stored_userids_and_addresses)
         self._message_handler = message_handler
         prev_user_id: Optional[str]
         prev_access_token: Optional[str]

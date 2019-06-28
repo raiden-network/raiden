@@ -599,7 +599,8 @@ class SQLiteStorage:
             (address_identifier,),
         )
         rows = cursor.fetchall()
-        room_ids_to_aliases, stored_address = rows[0][0], rows[0][1]
+        room_ids_to_aliases = rows[0][0] if rows else None
+        stored_address = rows[0][1] if rows else None
         return room_ids_to_aliases, stored_address
 
     def write_matrix_user_ids_for_address(self, user_id_data):
@@ -610,10 +611,7 @@ class SQLiteStorage:
     def get_matrix_address_to_userids(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT address, userids FROM matrix_user_ids")
-        address_to_userids = {}
-        for row in cursor.fetchall():
-            address_to_userids[row[0]] = row[1]
-        return address_to_userids
+        return {row[0]: row[1] for row in cursor.fetchall()}
 
     def _query_events(self, limit: int = None, offset: int = None) -> List[Tuple[str, datetime]]:
         limit, offset = _sanitize_limit_and_offset(limit, offset)
@@ -933,5 +931,5 @@ class MatrixStorage(SerializedSQLiteStorage):
         room_ids_aliases, stored_address = self.database.get_matrix_room_ids_aliases_for_address(
             address_identifier
         )
-        assert stored_address == address
+        assert stored_address == address or stored_address is None
         return self.serializer.deserialize(room_ids_aliases)

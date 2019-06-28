@@ -7,7 +7,6 @@ import pytest
 from eth_utils import to_checksum_address
 from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
-from storage.sqlite import MatrixStorage
 
 import raiden
 from raiden.constants import (
@@ -24,6 +23,7 @@ from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserAddressManager, make_room_alias
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.sqlite import MatrixStorage
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
@@ -1157,12 +1157,16 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     message_handler0 = MessageHandler(received_messages0)
     message_handler1 = MessageHandler(received_messages1)
     raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1)
+    raiden_service1 = MockRaidenService(message_handler1, tmp_path=tmp_path)
     raiden_service2 = MockRaidenService(message_handler0)
     raiden_service3 = MockRaidenService(message_handler1)
-
+    database_path = raiden_service1.database_path
     transport0.start(raiden_service0, message_handler0, "")
-    transport1.start(raiden_service1, message_handler1, "")
+
+    serializer = JSONSerializer()
+    transport1.start(
+        raiden_service1, message_handler1, "", storage=MatrixStorage(database_path, serializer)
+    )
 
     transport1.start_health_check(raiden_service0.address)
     transport1.start_health_check(raiden_service2.address)
@@ -1171,6 +1175,18 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     user_ids0 = transport1._address_mgr.get_userids_for_address(raiden_service0.address)
     user_ids2 = transport1._address_mgr.get_userids_for_address(raiden_service2.address)
     user_ids3 = transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+
+    assert (
+        transport1._address_mgr.is_address_known(raiden_service0.address)
+        and transport1._address_mgr.is_address_known(raiden_service2.address)
+        and transport1._address_mgr.is_address_known(raiden_service3.address)
+    )
+
+    assert (
+        user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
+        and user_ids2 == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
+        and user_ids3 == transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+    )
 
     transport1.stop()
 
@@ -1188,16 +1204,18 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
         or transport1._address_mgr.is_address_known(raiden_service3.address)
     )
 
-    transport1.start(raiden_service1, message_handler1, "")
-
-    assert (
-        transport1._address_mgr.is_address_known(raiden_service0.address)
-        and transport1._address_mgr.is_address_known(raiden_service2.address)
-        and transport1._address_mgr.is_address_known(raiden_service3.address)
+    transport1.start(
+        raiden_service1, message_handler1, "", storage=MatrixStorage(database_path, serializer)
     )
 
     assert (
         user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
         and user_ids2 == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
         and user_ids3 == transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+    )
+
+    assert (
+        transport1._address_mgr.is_address_known(raiden_service0.address)
+        and transport1._address_mgr.is_address_known(raiden_service2.address)
+        and transport1._address_mgr.is_address_known(raiden_service3.address)
     )

@@ -270,6 +270,9 @@ class UserAddressManager:
     def _validate_userid_signature(user: User) -> Optional[Address]:
         return validate_userid_signature(user)
 
+    def recover_userids(self, address_to_userids: defaultdict) -> None:
+        self._address_to_userids = address_to_userids
+
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
     """Join or create a global public room with given name
