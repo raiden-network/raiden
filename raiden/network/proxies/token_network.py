@@ -350,7 +350,7 @@ class TokenNetwork:
             if self.safety_deprecation_switch(block_identifier=failed_at_blockhash):
                 raise RaidenRecoverableError("This token network is deprecated.")
 
-            raise RaidenUnrecoverableError(
+            raise RaidenRecoverableError(
                 "Creating a new channel will fail - Gas estimation failed for unknown reason."
             )
         else:
@@ -391,7 +391,7 @@ class TokenNetwork:
                 if self.safety_deprecation_switch(block_identifier=failed_at_blockhash):
                     raise RaidenRecoverableError("This token network is deprecated.")
 
-                raise RaidenUnrecoverableError("Creating new channel failed.")
+                raise RaidenRecoverableError("Creating new channel failed.")
 
         channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address, participant2=partner, block_identifier="latest"
