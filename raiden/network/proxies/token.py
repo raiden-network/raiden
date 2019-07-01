@@ -61,6 +61,8 @@ class Token:
         """
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
+        # There are no direct calls to this method in any event handler,
+        # so a precondition check would make no sense.
         with self.token_lock:
             log_details = {
                 "node": to_checksum_address(self.node_address),
@@ -142,8 +144,17 @@ class Token:
         return self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
 
     def transfer(self, to_address: Address, amount: TokenAmount) -> None:
+        """ Transfer `amount` tokens to `to_address`.
+
+        Note:
+
+            We assume there to be sufficient balance as a precondition if
+            this is called, so that is not checked as a precondition here.
+        """
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
+        # There are no direct calls to this method in any event handler,
+        # so a precondition check would make no sense.
         with self.token_lock:
             log_details = {
                 "node": to_checksum_address(self.node_address),
