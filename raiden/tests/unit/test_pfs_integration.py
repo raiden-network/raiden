@@ -691,7 +691,7 @@ def assert_failed_pfs_request(
                 with pytest.raises(exception_type or ServiceRequestFailed) as raised_exception:
                     query_paths(**paths_args)
                     assert "broken iou" in str(raised_exception)
-            assert get_iou.call_count == expected_get_iou_requests or expected_requests
+            assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
             assert post_paths.call_count == expected_requests
 
 
@@ -789,7 +789,13 @@ def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
         )
 
         response[1] = valid_response_json
-        assert_failed_pfs_request(query_paths_args, response, [400, 200], expected_success=True)
+        assert_failed_pfs_request(
+            query_paths_args,
+            response,
+            [400, 200],
+            expected_success=True,
+            expected_get_iou_requests=1,
+        )
 
 
 def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
