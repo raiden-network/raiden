@@ -6,7 +6,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from eth_utils import remove_0x_prefix, to_normalized_address
 from typing_extensions import Literal
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
@@ -585,25 +584,22 @@ class SQLiteStorage:
     def write_matrix_room_ids_for_address(self, room_id_data):
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?, ?)", room_id_data
+            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?)", room_id_data
         )
         self.maybe_commit()
 
-    def get_matrix_room_ids_aliases_for_address(self, address_identifier):
+    def get_matrix_room_ids_aliases_for_address(self, address):
         cursor = self.conn.cursor()
         cursor.execute(
-            "SELECT room_ids_to_aliases, address FROM matrix_room_ids_and_aliases "
-            "WHERE address_identifier = ?",
-            (address_identifier,),
+            "SELECT room_ids_to_aliases FROM matrix_room_ids_and_aliases " "WHERE address = ?",
+            (address,),
         )
         rows = cursor.fetchall()
-        room_ids_to_aliases = rows[0][0] if rows else None
-        stored_address = rows[0][1] if rows else None
-        return room_ids_to_aliases, stored_address
+        return rows[0][0] if rows else {}
 
     def write_matrix_user_ids_for_address(self, user_id_data):
         cursor = self.conn.cursor()
-        cursor.execute("INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?, ?) ", user_id_data)
+        cursor.execute("INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?) ", user_id_data)
         self.maybe_commit()
 
     def get_matrix_address_to_userids(self):
@@ -911,24 +907,15 @@ class MatrixStorage(SerializedSQLiteStorage):
     def write_matrix_roomids_for_address(
         self, address: Address, room_ids_to_aliases: Dict[str, Any], log_time
     ):
-        """Save currently known matrix user_ids for an address
-        Shorten the address and int to 60bit identifier."""
-        # FIXME Error handling in case of precomputation attack,
-        #  writing room_ids for a node with the same shortened address crashes the db
-        #  address field can be removed then
-        address_short = remove_0x_prefix(to_normalized_address(address))[:15]
-        address_identifier = int(address_short, base=16)
+        """Save currently known matrix user_ids for an address"""
         serialized_room_ids_to_aliases = self.serializer.serialize(room_ids_to_aliases)
-        room_id_data = (address_identifier, address, serialized_room_ids_to_aliases, log_time)
+        room_id_data = (address, serialized_room_ids_to_aliases, log_time)
         return self.database.write_matrix_room_ids_for_address(room_id_data)
 
     def write_matrix_userids_for_address(self, address: Address, user_ids: List[str], log_time):
         """Save currently known matrix room_ids for an address. Assumes the caller has verified."""
-        # FIXME -"-
-        address_short = remove_0x_prefix(to_normalized_address(address))[:15]
-        address_identifier = int(address_short, base=16)
         serialized_userids = self.serializer.serialize(user_ids)
-        user_id_data = (address_identifier, address, serialized_userids, log_time)
+        user_id_data = (address, serialized_userids, log_time)
         return self.database.write_matrix_user_ids_for_address(user_id_data)
 
     def get_matrix_userids_and_addresses(self) -> defaultdict:
@@ -940,10 +927,5 @@ class MatrixStorage(SerializedSQLiteStorage):
         return returned_default_dict
 
     def get_matrix_roomids_for_address(self, address: Address):
-        address_short = remove_0x_prefix(to_normalized_address(address))[:15]
-        address_identifier = int(address_short, base=16)
-        room_ids_aliases, stored_address = self.database.get_matrix_room_ids_aliases_for_address(
-            address_identifier
-        )
-        assert stored_address == address or stored_address is None
+        room_ids_aliases = self.database.get_matrix_room_ids_aliases_for_address(address)
         return self.serializer.deserialize(room_ids_aliases)

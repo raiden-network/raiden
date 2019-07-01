@@ -91,19 +91,17 @@ CREATE TABLE IF NOT EXISTS runs (
 
 DB_CREATE_MATRIX_USER_IDS = """
 CREATE TABLE IF NOT EXISTS matrix_user_ids (
-    address_identifier INTEGER PRIMARY KEY,
-    address BINARY NOT NULL,
+    address BINARY PRIMARY KEY,
     userids TEXT NOT NULL,
     log_time TEXT
 );
 """
 DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES = """
 CREATE TABLE IF NOT EXISTS matrix_room_ids_and_aliases (
-    address_identifier INTEGER PRIMARY KEY,
-    address BINARY NOT NULL,
+    address BINARY PRIMARY KEY,
     room_ids_to_aliases TEXT NOT NULL,
     log_time TEXT,
-    FOREIGN KEY(address_identifier) REFERENCES matrix_user_ids(address_identifier)
+    FOREIGN KEY(address) REFERENCES matrix_user_ids(address)
 );
 """
 

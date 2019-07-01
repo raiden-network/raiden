@@ -148,7 +148,7 @@ class MockRaidenService:
         serializer = JSONSerializer()
         state_manager = StateManager(state_transition, None)
         if tmp_path:
-            self.database_path = f"{tmp_path}/{pex(self.address)}.db"
+            self.database_path = f"{tmp_path}/mock_{pex(self.address)}.db"
 
         storage = SerializedSQLiteStorage(self.database_path, serializer)
         self.wal = WriteAheadLog(state_manager, storage)
