@@ -134,7 +134,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v3-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -149,9 +149,10 @@ commands:
             .circleci/fetch_geth_parity_solc.sh
             ln -s ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v3-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
-            - "~/.local-*"
+            - "~/.local-LINUX"
+            - "~/.local-MACOS"
       - run:
           name: Fetch PR Base Commit
           command: source .circleci/fetch_pr_base_commit.sh
@@ -173,8 +174,8 @@ commands:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v2-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
@@ -194,9 +195,10 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
-          - "~/venv-<< parameters.py-version >>-*"
+          - "~/venv-<< parameters.py-version >>-LINUX"
+          - "~/venv-<< parameters.py-version >>-MACOS"
       - save_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
           paths:
