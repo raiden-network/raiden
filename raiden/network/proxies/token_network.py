@@ -393,8 +393,11 @@ class TokenNetwork:
 
                 raise RaidenRecoverableError("Creating new channel failed.")
 
+        receipt = self.client.get_transaction_receipt(transaction_hash)
         channel_identifier: ChannelID = self._detail_channel(
-            participant1=self.node_address, participant2=partner, block_identifier="latest"
+            participant1=self.node_address,
+            participant2=partner,
+            block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
         return channel_identifier
