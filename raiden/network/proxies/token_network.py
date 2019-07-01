@@ -219,25 +219,6 @@ class TokenNetwork:
             block_identifier=block_identifier
         )
 
-    def _new_channel_postconditions(self, partner: Address, block: BlockSpecification):
-        existing_channel_identifier = self.get_channel_identifier_or_none(
-            participant1=self.node_address, participant2=partner, block_identifier=block
-        )
-        if existing_channel_identifier is not None:
-            raise DuplicatedChannelError("Channel with given partner address already exists")
-
-        balance = self.token.balance_of(
-            address=to_checksum_address(self.address), block_identifier=block
-        )
-        limit = self.token_network_deposit_limit(block_identifier=block)
-        if balance >= limit:
-            raise DepositOverLimit(
-                "Could open another channel, token network deposit limit has been reached."
-            )
-
-        if self.safety_deprecation_switch(block_identifier=block):
-            raise RaidenRecoverableError("This token network is deprecated.")
-
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
     ) -> ChannelID:
@@ -348,7 +329,26 @@ class TokenNetwork:
                 required_gas=self.gas_measurements["TokenNetwork.openChannel"],
                 block_identifier=failed_at_blocknumber,
             )
-            self._new_channel_postconditions(partner=partner, block=failed_at_blockhash)
+
+            existing_channel_identifier = self.get_channel_identifier_or_none(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=failed_at_blockhash,
+            )
+            if existing_channel_identifier is not None:
+                raise DuplicatedChannelError("Channel with given partner address already exists")
+
+            balance = self.token.balance_of(
+                address=to_checksum_address(self.address), block_identifier=failed_at_blockhash
+            )
+            limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
+            if balance >= limit:
+                raise DepositOverLimit(
+                    "Could open another channel, token network deposit limit has been reached."
+                )
+
+            if self.safety_deprecation_switch(block_identifier=failed_at_blockhash):
+                raise RaidenRecoverableError("This token network is deprecated.")
 
             raise RaidenUnrecoverableError(
                 "Creating a new channel will fail - Gas estimation failed for unknown reason."
@@ -368,9 +368,29 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
-                self._new_channel_postconditions(
-                    partner=partner, block=receipt_or_none["blockNumber"]
+                failed_at_blockhash = encode_hex(receipt_or_none["blockHash"])
+                existing_channel_identifier = self.get_channel_identifier_or_none(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=failed_at_blockhash,
                 )
+                if existing_channel_identifier is not None:
+                    raise DuplicatedChannelError(
+                        "Channel with given partner address already exists"
+                    )
+
+                balance = self.token.balance_of(
+                    address=to_checksum_address(self.address), block_identifier=failed_at_blockhash
+                )
+                limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
+                if balance >= limit:
+                    raise DepositOverLimit(
+                        "Could open another channel, token network deposit limit has been reached."
+                    )
+
+                if self.safety_deprecation_switch(block_identifier=failed_at_blockhash):
+                    raise RaidenRecoverableError("This token network is deprecated.")
+
                 raise RaidenUnrecoverableError("Creating new channel failed.")
 
         channel_identifier: ChannelID = self._detail_channel(
@@ -414,10 +434,7 @@ class TokenNetwork:
         return channel_identifier
 
     def get_channel_identifier_or_none(
-        self,
-        participant1: Address,
-        participant2: Address,
-        block_identifier: BlockSpecification,
+        self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
     ) -> Optional[ChannelID]:
         """ Returns the channel identifier if an open channel exists, else None. """
         try:
