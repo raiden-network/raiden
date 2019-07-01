@@ -63,6 +63,7 @@ from raiden.utils.typing import (
     NamedTuple,
     Nonce,
     NoReturn,
+    Optional,
     Signature,
     T_BlockHash,
     T_ChannelID,
@@ -219,10 +220,10 @@ class TokenNetwork:
         )
 
     def _new_channel_postconditions(self, partner: Address, block: BlockSpecification):
-        channel_created = self._channel_exists_and_not_settled(
+        existing_channel_identifier = self.get_channel_identifier_or_none(
             participant1=self.node_address, participant2=partner, block_identifier=block
         )
-        if channel_created:
+        if existing_channel_identifier is not None:
             raise DuplicatedChannelError("Channel with given partner address already exists")
 
         balance = self.token.balance_of(
@@ -265,7 +266,7 @@ class TokenNetwork:
 
         # check preconditions
         try:
-            channel_already_created = self._channel_exists_and_not_settled(
+            existing_channel_identifier = self.get_channel_identifier_or_none(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=given_block_identifier,
@@ -282,7 +283,7 @@ class TokenNetwork:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(given_block_identifier)
         else:
-            if channel_already_created:
+            if existing_channel_identifier is not None:
                 raise BrokenPreconditionError(
                     "A channel with the given partner address already exists."
                 )
@@ -412,27 +413,21 @@ class TokenNetwork:
 
         return channel_identifier
 
-    def _channel_exists_and_not_settled(
+    def get_channel_identifier_or_none(
         self,
         participant1: Address,
         participant2: Address,
         block_identifier: BlockSpecification,
-        channel_identifier: ChannelID = None,
-    ) -> bool:
-        """Returns if the channel exists and is in a non-settled state"""
+    ) -> Optional[ChannelID]:
+        """ Returns the channel identifier if an open channel exists, else None. """
         try:
-            channel_state = self._get_channel_state(
+            return self.get_channel_identifier(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
-                channel_identifier=channel_identifier,
             )
         except RaidenRecoverableError:
-            return False
-        exists_and_not_settled = (
-            channel_state > ChannelState.NONEXISTENT and channel_state < ChannelState.SETTLED
-        )
-        return exists_and_not_settled
+            return None
 
     def _detail_participant(
         self,
