@@ -259,6 +259,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
         privkey=PRIVKEY,
         block_number=BlockNumber(10),
         chain_id=ChainID(5),
+        offered_fee=TokenAmount(1),
     )
     last_iou = copy(iou)
 
@@ -548,6 +549,7 @@ def test_get_and_update_iou(one_to_n_address):
         block_number=10,
         one_to_n_address=one_to_n_address,
         chain_id=4,
+        offered_fee=TokenAmount(1),
     )
     response.json = Mock(return_value=dict(last_iou=last_iou.as_json()))
     with patch.object(requests, "get", return_value=response):
@@ -617,6 +619,7 @@ def test_make_iou():
         block_number=10,
         one_to_n_address=one_to_n_address,
         chain_id=chain_id,
+        offered_fee=TokenAmount(1),
     )
 
     assert iou.sender == sender
