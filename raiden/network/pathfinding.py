@@ -510,8 +510,13 @@ def query_paths(
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
             elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                # TODO get info endpoint again and load config
-                raise
+                new_info = get_pfs_info(pfs_config.info.url)
+                if new_info is None:
+                    raise ServiceRequestFailed("Could not get updated fees from PFS.")
+                if new_info.price > pfs_config.maximum_fee:
+                    raise ServiceRequestFailed("PFS fees too high.")
+                log.info(f"PFS increased fees", new_price=new_info.price)
+                pfs_config.info = new_info
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths

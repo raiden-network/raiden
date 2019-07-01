@@ -673,7 +673,7 @@ def assert_failed_pfs_request(
     expected_requests: int = MAX_PATHS_QUERY_ATTEMPTS,
     expected_get_iou_requests: int = None,
     expected_success: bool = False,
-    exception_type: typing.Type = None,
+    exception_type: typing.Type = ServiceRequestFailed,
 ):
     while len(responses) < MAX_PATHS_QUERY_ATTEMPTS:
         responses.append(responses[0])
@@ -688,7 +688,7 @@ def assert_failed_pfs_request(
             if expected_success:
                 query_paths(**paths_args)
             else:
-                with pytest.raises(exception_type or ServiceRequestFailed) as raised_exception:
+                with pytest.raises(exception_type) as raised_exception:
                     query_paths(**paths_args)
                     assert "broken iou" in str(raised_exception)
             assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
@@ -818,7 +818,41 @@ def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
         )
 
 
-# TODO create tests for sufficient / insufficient payments
+def test_insufficient_payment(query_paths_args, valid_response_json):
+    """ When the PFS complains about insufficient fees, the client must update it's fee info """
+    insufficient_response = dict(error_code=PFSError.INSUFFICIENT_SERVICE_PAYMENT.value)
+
+    # PFS fails to return info
+    assert_failed_pfs_request(
+        query_paths_args, [insufficient_response], expected_requests=1, expected_get_iou_requests=2
+    )
+
+    # PFS has increased fees
+    increased_fee = PFS_CONFIG.info.price + 1
+    new_pfs_info = replace(PFS_CONFIG.info, price=increased_fee)
+    with patch("raiden.network.pathfinding.get_pfs_info", Mock(return_value=new_pfs_info)):
+        assert_failed_pfs_request(
+            query_paths_args,
+            [insufficient_response, valid_response_json],
+            status_codes=[400, 200],
+            expected_requests=2,
+            expected_get_iou_requests=2,
+            expected_success=True,
+        )
+
+    # PFS demands higher fees than allowed by client
+    too_high_fee = PFS_CONFIG.maximum_fee + 1
+    new_pfs_info = replace(PFS_CONFIG.info, price=too_high_fee)
+    with patch("raiden.network.pathfinding.get_pfs_info", Mock(return_value=new_pfs_info)):
+        assert_failed_pfs_request(
+            query_paths_args,
+            [insufficient_response],
+            expected_requests=1,
+            expected_get_iou_requests=1,
+        )
+
+
+# TODO create tests for sufficient payments
 
 
 def test_query_paths_with_multiple_errors(query_paths_args):
