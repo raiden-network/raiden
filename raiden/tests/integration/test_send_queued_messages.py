@@ -107,7 +107,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
             retry_timeout=network_wait,
         )
     exception = RuntimeError("Timeout while waiting for balance update for app0")
-    with gevent.Timeout(30, exception=exception):
+    with gevent.Timeout(90, exception=exception):
         waiting.wait_for_payment_balance(
             raiden=app0_restart.raiden,
             payment_network_address=payment_network_address,
