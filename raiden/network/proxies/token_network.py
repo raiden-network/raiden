@@ -234,6 +234,7 @@ class TokenNetwork:
                 block_identifier=given_block_identifier,
             )
             limit_reached = self._token_network_deposit_limit_reached(given_block_identifier)
+            safety_deprecation_switch = self.safety_deprecation_switch(given_block_identifier)
         except ValueError:
             # If `given_block_identifier` has been pruned the checks cannot be
             # performed.
@@ -249,6 +250,8 @@ class TokenNetwork:
                 raise BrokenPreconditionError(
                     "Cannot open another channel, token network deposit limit has been reached."
                 )
+            if safety_deprecation_switch:
+                raise BrokenPreconditionError("This token network is deprecated.")
 
     def _new_channel_postconditions(self, partner: Address, block: BlockSpecification):
         channel_created = self._channel_exists_and_not_settled(
@@ -261,6 +264,9 @@ class TokenNetwork:
             raise DepositOverLimit(
                 "Could open another channel, token network deposit limit has been reached."
             )
+
+        if self.safety_deprecation_switch(block_identifier=block):
+            raise RaidenRecoverableError("This token network is deprecated.")
 
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
