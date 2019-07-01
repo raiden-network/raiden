@@ -87,21 +87,48 @@ class Token:
                     )
 
                     self.client.poll(transaction_hash)
-                    receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-                transaction_executed = gas_limit is not None
-                if not transaction_executed or receipt_or_none:
-                    if transaction_executed:
-                        failed_at_blocknumber = receipt_or_none["blockNumber"]
-                        failed_at_blockhash = encode_hex(receipt_or_none["blockHash"])
-                    else:
-                        failed_at = self.proxy.jsonrpc_client.get_block("latest")
-                        failed_at_blockhash = encode_hex(failed_at["hash"])
-                        failed_at_blocknumber = failed_at["number"]
+                    if failed_receipt:
+                        failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+
+                        if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                            msg = (
+                                f"approve failed and all gas was used ({gas_limit}). "
+                                f"Estimate gas may have underestimated approve, or "
+                                f"succeeded even though an assert is triggered, or "
+                                f"the smart contract code has a conditional assert."
+                            )
+                            raise RaidenRecoverableError(msg)
+
+                        balance = self.balance_of(self.client.address, failed_at_blockhash)
+                        if balance < allowance:
+                            msg = (
+                                f"{error_prefix} Your balance of {balance} is "
+                                "below the required amount of {allowance}."
+                            )
+                            if balance == 0:
+                                msg += (
+                                    " Note: The balance was 0, which may also happen "
+                                    "if the contract is not a valid ERC20 token "
+                                    "(balanceOf method missing)."
+                                )
+                            raise RaidenRecoverableError(msg)
+
+                        raise RaidenRecoverableError(
+                            f"{error_prefix}. The reason is unknown, you have enough tokens for "
+                            f"the requested allowance and enough eth to pay the gas. There may "
+                            f"be a problem with the token contract."
+                        )
+
+                else:
+                    failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                    failed_at_blockhash = encode_hex(failed_at["hash"])
+                    failed_at_blocknumber = failed_at["number"]
 
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="approve",
-                        transaction_executed=transaction_executed,
+                        transaction_executed=False,
                         required_gas=GAS_REQUIRED_FOR_APPROVE,
                         block_identifier=failed_at_blocknumber,
                     )
@@ -119,17 +146,10 @@ class Token:
                             )
                         raise RaidenRecoverableError(msg)
 
-                    if gas_limit is None:
-                        raise RaidenRecoverableError(
-                            f"{error_prefix} Gas estimation failed for unknown reason. "
-                            f"Please make sure the contract is a valid ERC20 token."
-                        )
-                    else:
-                        raise RaidenRecoverableError(
-                            f"{error_prefix}. The reason is unknown, you have enough tokens for "
-                            f"the requested allowance and enough eth to pay the gas. There may "
-                            f"be a problem with the token contract."
-                        )
+                    raise RaidenRecoverableError(
+                        f"{error_prefix} Gas estimation failed for unknown reason. "
+                        f"Please make sure the contract is a valid ERC20 token."
+                    )
 
     def balance_of(
         self, address: Address, block_identifier: BlockSpecification = "latest"
