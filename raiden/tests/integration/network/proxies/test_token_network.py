@@ -114,12 +114,12 @@ def test_token_network_proxy(
 
     # instantiating a new channel - test basic assumptions
     assert (
-        c1_token_network_proxy._channel_exists_and_not_settled(
+        c1_token_network_proxy.get_channel_identifier_or_none(
             participant1=c1_client.address,
             participant2=c2_client.address,
             block_identifier="latest",
         )
-        is False
+        is None
     )
 
     msg = "Hex encoded addresses are not supported, an exception must be raised"
@@ -222,13 +222,12 @@ def test_token_network_proxy(
         )
 
     assert (
-        c1_token_network_proxy._channel_exists_and_not_settled(
+        c1_token_network_proxy.get_channel_identifier_or_none(
             participant1=c1_client.address,
             participant2=c2_client.address,
-            channel_identifier=channel_identifier,
             block_identifier="latest",
         )
-        is True
+        is not None
     )
 
     assert (
@@ -330,13 +329,12 @@ def test_token_network_proxy(
         is True
     )
     assert (
-        c1_token_network_proxy._channel_exists_and_not_settled(
+        c1_token_network_proxy.get_channel_identifier_or_none(
             participant1=c1_client.address,
             participant2=c2_client.address,
-            channel_identifier=channel_identifier,
             block_identifier="latest",
         )
-        is True
+        is not None
     )
 
     msg = (
@@ -412,13 +410,12 @@ def test_token_network_proxy(
         given_block_identifier="latest",
     )
     assert (
-        c1_token_network_proxy._channel_exists_and_not_settled(
+        c1_token_network_proxy.get_channel_identifier_or_none(
             participant1=c1_client.address,
             participant2=c2_client.address,
-            channel_identifier=channel_identifier,
             block_identifier="latest",
         )
-        is False
+        is None
     )
     assert token_proxy.balance_of(c1_client.address) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.address) == (initial_balance_c2 + transferred_amount)
@@ -766,13 +763,12 @@ def test_token_network_actions_at_pruned_blocks(
         is True
     )
     assert (
-        c1_token_network_proxy._channel_exists_and_not_settled(
+        c1_token_network_proxy.get_channel_identifier_or_none(
             participant1=c1_client.address,
             participant2=c2_client.address,
-            channel_identifier=channel_identifier,
             block_identifier="latest",
         )
-        is True
+        is not None
     )
 
     c1_chain.wait_until_block(target_block_number=close_pruned_number + STATE_PRUNING_AFTER_BLOCKS)
