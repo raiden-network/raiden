@@ -93,24 +93,21 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
     return result
 
 
-def calculate_imbalance_fees(
-    our_balance: Balance, partner_balance: Balance
-) -> List[Tuple[TokenAmount, FeeAmount]]:
+def calculate_imbalance_fees(channel_capacity: TokenAmount) -> List[Tuple[TokenAmount, FeeAmount]]:
     """ Calculates a quadratic rebalancing curve.
 
     The penalty term takes the value `MAX_IMBALANCE_FEE` at the extrema.
     """
-    total_balance = TokenAmount(our_balance + partner_balance)
 
     def f(balance: TokenAmount) -> FeeAmount:
-        constant = 4 * MAX_IMBALANCE_FEE / total_balance ** 2
-        inner = balance - (total_balance // 2)
+        constant = 4 * MAX_IMBALANCE_FEE / channel_capacity ** 2
+        inner = balance - (channel_capacity // 2)
 
         return FeeAmount(constant * inner ** 2)
 
     # Do not duplicate base points when not enough token are available
-    num_base_points = min(NUM_DISCRETISATION_POINTS, total_balance)
-    x_values = linspace(TokenAmount(0), total_balance, num_base_points)
+    num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity)
+    x_values = linspace(TokenAmount(0), channel_capacity, num_base_points)
     y_values = [f(x) for x in x_values]
 
     return list(zip(x_values, y_values))
