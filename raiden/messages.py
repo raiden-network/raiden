@@ -877,10 +877,6 @@ class RefundTransfer(LockedTransfer):
     to complete the transfer.
     """
 
-    # TODO: Consider removing this message. The same transfer may loop back to
-    # the same node through a different path. Consider the graph at
-    # https://github.com/raiden-network/raiden/issues/490
-
     cmdid: ClassVar[int] = messages.REFUNDTRANSFER
 
     @classmethod
