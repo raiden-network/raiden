@@ -16,6 +16,7 @@ token:
 nodes:
   mode: managed
   count: 5
+  raiden_version: local
 
   default_options:
     gas-price: fast

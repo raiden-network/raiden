@@ -16,7 +16,7 @@ token:
 nodes:
   mode: managed
   count: 5
-  ## add path to Raiden virtual env
+  raiden_version: local
 
   default_options:
     gas-price: fast
