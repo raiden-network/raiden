@@ -41,6 +41,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
+from raiden.utils.typing import TokenAmount
 
 
 def _channel_and_transfer(num_pending_locks):
@@ -402,3 +403,19 @@ def test_handle_block_closed_channel():
     after_settle = handle_block(before_settle.new_state, block, block.block_number)
     assert get_status(after_settle.new_state) == CHANNEL_STATE_SETTLING
     assert after_settle.events
+
+
+def test_get_capacity():
+    our_state = factories.create(
+        factories.NettingChannelEndStateProperties(balance=TokenAmount(100))
+    )
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=our_state,
+            partner_state=factories.NettingChannelEndStateProperties(balance=TokenAmount(50)),
+        )
+    )
+    assert channel.get_capacity(channel_state) == 150
+
+    channel_state.our_state = replace(our_state, total_withdraw=50)
+    assert channel.get_capacity(channel_state) == 100

@@ -98,7 +98,7 @@ def calculate_imbalance_fees(
 ) -> List[Tuple[TokenAmount, FeeAmount]]:
     """ Calculates a quadratic rebalancing curve.
 
-    The penalty term takes the value `UINT256_MAX` at the extrema.
+    The penalty term takes the value `MAX_IMBALANCE_FEE` at the extrema.
     """
     total_balance = TokenAmount(our_balance + partner_balance)
 
