@@ -317,7 +317,7 @@ def make_iou(
     privkey: bytes,
     block_number: BlockNumber,
     chain_id: ChainID,
-    offered_fee: TokenAmount = None,
+    offered_fee: TokenAmount,
 ) -> IOU:
     expiration = BlockNumber(block_number + pfs_config.iou_timeout)
 
@@ -325,7 +325,7 @@ def make_iou(
         sender=our_address,
         receiver=pfs_config.info.payment_address,
         one_to_n_address=one_to_n_address,
-        amount=offered_fee or pfs_config.maximum_fee,
+        amount=offered_fee,
         expiration_block=expiration,
         chain_id=chain_id,
     )
@@ -374,7 +374,7 @@ def create_current_iou(
     privkey: bytes,
     block_number: BlockNumber,
     chain_id: ChainID,
-    offered_fee: TokenAmount = None,
+    offered_fee: TokenAmount,
     scrap_existing_iou: bool = False,
 ) -> IOU:
 
@@ -399,7 +399,7 @@ def create_current_iou(
             one_to_n_address=one_to_n_address,
         )
     else:
-        added_amount = offered_fee or pfs_config.maximum_fee
+        added_amount = offered_fee
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
@@ -510,8 +510,13 @@ def query_paths(
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
             elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                # TODO get info endpoint again and load config
-                raise
+                new_info = get_pfs_info(pfs_config.info.url)
+                if new_info is None:
+                    raise ServiceRequestFailed("Could not get updated fees from PFS.")
+                if new_info.price > pfs_config.maximum_fee:
+                    raise ServiceRequestFailed("PFS fees too high.")
+                log.info(f"PFS increased fees", new_price=new_info.price)
+                pfs_config.info = new_info
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
