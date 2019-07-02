@@ -43,7 +43,7 @@ def log_open_channels(raiden, registry_address, token_address, funds):  # pragma
     )
 
     if open_channels:
-        sum_deposits = views.get_our_capacity_for_token_network(
+        sum_deposits = views.get_our_deposits_for_token_network(
             views.state_from_raiden(raiden), registry_address, token_address
         )
         log.debug(
@@ -440,7 +440,7 @@ class ConnectionManager:  # pragma: no unittest
         if self.funds > 0:
             token = self.raiden.chain.token(self.token_address)
             token_balance = token.balance_of(self.raiden.address)
-            sum_deposits = views.get_our_capacity_for_token_network(
+            sum_deposits = views.get_our_deposits_for_token_network(
                 views.state_from_raiden(self.raiden), self.registry_address, self.token_address
             )
 
