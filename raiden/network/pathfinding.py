@@ -477,18 +477,19 @@ def query_paths(
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
-        new_iou = create_current_iou(
-            pfs_config=pfs_config,
-            token_network_address=token_network_address,
-            one_to_n_address=one_to_n_address,
-            our_address=our_address,
-            privkey=privkey,
-            chain_id=chain_id,
-            block_number=current_block_number,
-            offered_fee=offered_fee,
-            scrap_existing_iou=scrap_existing_iou,
-        )
-        payload["iou"] = new_iou.as_json()
+        if offered_fee > 0:
+            new_iou = create_current_iou(
+                pfs_config=pfs_config,
+                token_network_address=token_network_address,
+                one_to_n_address=one_to_n_address,
+                our_address=our_address,
+                privkey=privkey,
+                chain_id=chain_id,
+                block_number=current_block_number,
+                offered_fee=offered_fee,
+                scrap_existing_iou=scrap_existing_iou,
+            )
+            payload["iou"] = new_iou.as_json()
 
         log.info(
             "Requesting paths from Pathfinding Service",
