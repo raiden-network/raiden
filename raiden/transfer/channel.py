@@ -978,6 +978,15 @@ def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
     )
 
 
+def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
+    return TokenAmount(
+        channel_state.our_total_deposit
+        - channel_state.our_total_withdraw
+        + channel_state.partner_total_deposit
+        - channel_state.partner_total_withdraw
+    )
+
+
 def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> Balance:
     sender_transferred_amount = 0
     receiver_transferred_amount = 0
