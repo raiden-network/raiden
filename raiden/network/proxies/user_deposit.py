@@ -21,10 +21,8 @@ from raiden.utils.typing import (
     Address,
     Balance,
     BlockSpecification,
-    Dict,
     TokenAddress,
     TokenAmount,
-    typecheck,
 )
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
@@ -89,12 +87,12 @@ class UserDeposit:
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        block_identifier: BlockSpecification,
+        given_block_identifier: BlockSpecification,
     ) -> None:
         """ Deposit provided amount into the user-deposit contract
         to the beneficiary's account. """
 
-        token_address = self.token_address(block_identifier)
+        token_address = self.token_address(given_block_identifier)
         token = self.blockchain_service.token(token_address=token_address)
 
         log_details = {
@@ -108,13 +106,36 @@ class UserDeposit:
         error_prefix = "Call to deposit will fail"
 
         with self.deposit_lock:
-            amount_to_deposit = self._check_deposit_preconditions(
-                total_deposit=total_deposit,
-                beneficiary=beneficiary,
-                token=token,
-                given_block_identifier=block_identifier,
-                log_details=log_details,
-            )
+            # check preconditions
+            try:
+                previous_total_deposit = self.get_total_deposit(
+                    address=beneficiary, block_identifier=given_block_identifier
+                )
+                current_balance = token.balance_of(
+                    address=self.node_address, block_identifier=given_block_identifier
+                )
+            except (BadFunctionCallOutput, ValueError):
+                pass
+            else:
+                log_details["previous_total_deposit"] = previous_total_deposit
+                amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+
+                if total_deposit <= previous_total_deposit:
+                    msg = (
+                        f"Current total deposit {previous_total_deposit} is already larger "
+                        f"than the requested total deposit amount {total_deposit}"
+                    )
+                    log.info("deposit failed", reason=msg, **log_details)
+                    raise BrokenPreconditionError(msg)
+
+                if current_balance < amount_to_deposit:
+                    msg = (
+                        f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} "
+                        f"can not be larger than the available balance {current_balance}, "
+                        f"for token at address {to_checksum_address(token.address)}"
+                    )
+                    log.info("deposit failed", reason=msg, **log_details)
+                    raise BrokenPreconditionError(msg)
 
             token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
@@ -164,7 +185,6 @@ class UserDeposit:
                         )
                         raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
-                
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
         balance = self.proxy.contract.functions.effectiveBalance(address).call(
@@ -175,48 +195,6 @@ class UserDeposit:
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
 
         return balance
-
-    def _check_deposit_preconditions(
-        self,
-        total_deposit: TokenAmount,
-        beneficiary: Address,
-        token: Token,
-        given_block_identifier: BlockSpecification,
-        log_details: Dict,
-    ) -> TokenAmount:
-        typecheck(total_deposit, int)
-
-        try:
-            previous_total_deposit = self.get_total_deposit(
-                address=beneficiary, block_identifier=given_block_identifier
-            )
-            current_balance = token.balance_of(
-                address=self.node_address, block_identifier=given_block_identifier
-            )
-        except (BadFunctionCallOutput, ValueError):
-            pass
-        else:
-            log_details["previous_total_deposit"] = previous_total_deposit
-            amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
-
-            if total_deposit <= previous_total_deposit:
-                msg = (
-                    f"Current total deposit {previous_total_deposit} is already larger "
-                    f"than the requested total deposit amount {total_deposit}"
-                )
-                log.info("deposit failed", reason=msg, **log_details)
-                raise BrokenPreconditionError(msg)
-
-            if current_balance < amount_to_deposit:
-                msg = (
-                    f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
-                    f"be larger than the available balance {current_balance}, "
-                    f"for token at address {to_checksum_address(token.address)}"
-                )
-                log.info("deposit failed", reason=msg, **log_details)
-                raise BrokenPreconditionError(msg)
-
-            return amount_to_deposit
 
     def _check_why_deposit_failed(
         self, token: Token, total_deposit: TokenAmount, block_identifier: BlockSpecification

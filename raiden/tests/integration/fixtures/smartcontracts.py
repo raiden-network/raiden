@@ -124,7 +124,9 @@ def deploy_user_deposit_and_return_address(
 
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
-        user_deposit.deposit(beneficiary=transfer_to, total_deposit=100, block_identifier="latest")
+        user_deposit.deposit(
+            beneficiary=transfer_to, total_deposit=100, given_block_identifier="latest"
+        )
 
     return user_deposit_address
 
