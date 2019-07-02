@@ -302,6 +302,13 @@ class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class EnvelopeMessage(SignedRetrieableMessage):
+    """ Contains an on-chain message and shares its signature.
+
+    For performance reasons envelope messages share the signature with the
+    blockchain message. The same signature is used for authenticating for both
+    the client and the smart contract.
+    """
+
     chain_id: ChainID
     nonce: Nonce
     transferred_amount: TokenAmount
