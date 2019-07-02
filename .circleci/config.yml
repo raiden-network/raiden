@@ -362,19 +362,7 @@ jobs:
             rm ${COVERAGE_DIR}/.coverage.* || true
       - run:
           name: Select tests
-          command: |
-            pytest \
-              raiden/tests/<< parameters.test-type >> \
-              --collect-only \
-              --quiet \
-              --blockchain-type=<< parameters.blockchain-type >> \
-              << parameters.additional-args >> \
-              | \
-            grep '::' | \
-            circleci tests split --split-by=timings --timings-type=testname | \
-            grep '::' > selected-tests.txt
-
-            cat selected-tests.txt
+          command: .circleci/select_tests.sh "raiden/tests/<< parameters.test-type >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
 
       - run:
           name: Run tests
