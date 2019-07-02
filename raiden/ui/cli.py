@@ -246,7 +246,7 @@ def options(func):
                     '"private": use local routing and don\'t send updates to the PFS\n'
                 ),
                 type=EnumChoiceType(RoutingMode),
-                default=RoutingMode.LOCAL.value,
+                default=RoutingMode.PFS.value,
                 show_default=True,
             ),
             option(
