@@ -173,22 +173,16 @@ def check_address_has_code(
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), "latest")
 
-    def formatted_contract_name():
-        if contract_name:
-            return f"[{contract_name}]: "
-        else:
-            return ""
-
     if not result:
         raise AddressWithoutCode(
-            "{}Address {} does not contain code".format(
-                formatted_contract_name(), to_checksum_address(address)
+            "[{}]Address {} does not contain code".format(
+                contract_name, to_checksum_address(address)
             )
         )
 
     if expected_code is not None and result != expected_code:
         raise ContractCodeMismatch(
-            f"{formatted_contract_name()}Address {to_checksum_address(address)} has wrong code."
+            f"[{contract_name}]Address {to_checksum_address(address)} has wrong code."
         )
 
 
