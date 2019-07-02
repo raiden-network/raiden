@@ -786,7 +786,7 @@ def test_token_network_actions_at_pruned_blocks(
     )
 
     # update transfer
-    c1_chain.wait_until_block(target_block_number=c1_chain.block_number() + settle_timeout)
+    c1_chain.wait_until_block(target_block_number=close_pruned_number + settle_timeout)
 
     # settle with given block being pruned
     with pytest.raises(BrokenPreconditionError):
@@ -803,18 +803,24 @@ def test_token_network_actions_at_pruned_blocks(
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=close_pruned_number,
         )
-    # settle with given block being pruned
-    # c1_token_network_proxy.settle(
-    #     channel_identifier=channel_identifier,
-    #     transferred_amount=transferred_amount_c1,
-    #     locked_amount=0,
-    #     locksroot=LOCKSROOT_OF_NO_LOCKS,
-    #     partner=c2_client.address,
-    #     partner_transferred_amount=0,
-    #     partner_locked_amount=0,
-    #     partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
-    #     given_block_identifier=,
-    # )
+
+    settle_block_number = close_pruned_number + settle_timeout
+
+    # Wait until the settle block is pruned
+    c1_chain.wait_until_block(target_block_number=settle_block_number + STATE_PRUNING_AFTER_BLOCKS)
+
+    c1_token_network_proxy.settle(
+        channel_identifier=channel_identifier,
+        transferred_amount=transferred_amount_c1,
+        locked_amount=0,
+        locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner=c2_client.address,
+        partner_transferred_amount=0,
+        partner_locked_amount=0,
+        partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        # Settle is block number is pruned, we should not fail at pre-conditions.
+        given_block_identifier=settle_block_number + 1,
+    )
     assert token_proxy.balance_of(c2_client.address) == (
         initial_balance_c2 + transferred_amount_c1 - 0
     )
