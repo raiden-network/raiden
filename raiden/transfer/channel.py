@@ -1677,10 +1677,8 @@ def handle_action_update_fee(
     channel_state.fee_schedule.proportional = update_fee.proportional_fee
 
     if update_fee.use_imbalance_penalty:
-        our_balance = get_balance(channel_state.our_state, channel_state.partner_state)
-        partner_balance = get_balance(channel_state.partner_state, channel_state.our_state)
         channel_state.fee_schedule.imbalance_penalty = calculate_imbalance_fees(
-            our_balance=our_balance, partner_balance=partner_balance
+            channel_capacity=get_capacity(channel_state)
         )
 
     return TransitionResult(channel_state, list())

@@ -71,12 +71,12 @@ def test_linspace():
 
 
 def test_rebalancing_fee_calculation():
-    sample = calculate_imbalance_fees(Balance(100), Balance(100))
+    sample = calculate_imbalance_fees(TA(200))
     assert len(sample) == NUM_DISCRETISATION_POINTS
     assert max(x for x, _ in sample) == 200
     assert max(y for _, y in sample) == 10 ** 18
 
-    sample = calculate_imbalance_fees(Balance(0), Balance(10))
+    sample = calculate_imbalance_fees(TA(10))
     assert len(sample) == 10
     assert max(x for x, _ in sample) == 10
     assert max(y for _, y in sample) == 10 ** 18
