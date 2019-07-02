@@ -2190,10 +2190,10 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                if given_block_number > channel_onchain_detail.settle_block_number:
+                if given_block_number < channel_onchain_detail.settle_block_number:
                     msg = (
-                        "settle cannot be called after the settlement "
-                        "period, this call should never have been attempted."
+                        "settle cannot be called before the settlement "
+                        "period ends, this call should never have been attempted."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -2312,13 +2312,13 @@ class TokenNetwork:
 
             if receipt:
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
-                failed_at_blocknumber = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=False,
                     required_gas=self.gas_measurements["TokenNetwork.settleChannel"],
-                    block_identifier=failed_at_blockhash,
+                    block_identifier=failed_at_blocknumber,
                 )
 
                 channel_onchain_detail = self._detail_channel(
