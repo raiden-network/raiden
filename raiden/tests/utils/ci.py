@@ -1,12 +1,36 @@
 import os
+from typing import Optional
 
-from raiden.utils.typing import Optional
+from raiden.utils import pex
 
 
-def get_artifacts_storage(*parts) -> Optional[str]:
-    artifact_dir = os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
+def get_artifacts_storage() -> Optional[str]:
+    return os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
 
-    if artifact_dir:
-        return os.path.join(artifact_dir, *parts)
 
-    return None
+def shortned_artifacts_storage(test_node, *parts: str) -> Optional[str]:
+    """Return a pathname based on the test details.
+
+    Some platforms have a limit to the length of a file path. This function
+    will compute a path name based on the test details, and if necessary trim
+    it down to fit 300 characters.
+    """
+    artifacts_dir = get_artifacts_storage()
+
+    if artifacts_dir is None:
+        return None
+
+    path = os.path.join(artifacts_dir, test_node.name, *parts)
+
+    if len(path) >= 286:
+        original_name = test_node.originalname
+        shortned_args = pex(test_node.name.encode("utf8"))
+        path = os.path.join(artifacts_dir, f"{original_name}-{shortned_args}", *parts)
+
+    msg = (
+        "Trimming the tests arguments didn't result in a path short enough, the "
+        "base_dir or *parts have to be trimmed."
+    )
+    assert len(path) < 286, msg
+
+    return path

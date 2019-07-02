@@ -6,7 +6,7 @@ from web3 import HTTPProvider, Web3
 from raiden.constants import EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.ci import get_artifacts_storage
+from raiden.tests.utils.ci import shortned_artifacts_storage
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -74,9 +74,9 @@ def web3(
     # The private chain data is always discarded on the CI
     base_datadir = str(tmpdir)
 
-    # Save the Ethereum node's log, if needed for debugging
+    # Save the Ethereum node's log for debugging
     base_logdir = os.path.join(
-        get_artifacts_storage(request.node.name) or base_datadir, blockchain_type
+        shortned_artifacts_storage(request.node) or base_datadir, blockchain_type
     )
 
     genesis_description = GenesisDescription(

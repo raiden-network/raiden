@@ -31,9 +31,8 @@ from raiden.constants import EthClient
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-from raiden.tests.utils.ci import get_artifacts_storage
+from raiden.tests.utils.ci import shortned_artifacts_storage
 from raiden.tests.utils.transport import make_requests_insecure
-from raiden.utils import pex
 from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
 
@@ -137,13 +136,7 @@ def logging_level(request, tmpdir):
     else:
         logging_levels = {"": level}
 
-    # The test name including the arguments cannot be used because of the path
-    # length. Some tests will have a path longer than 300 characters.
-    original_name = request.node.originalname
-    shorted_arguments = pex(request.node.name.encode("utf8"))
-    shortened_test_name = f"{original_name}-{shorted_arguments}"
-
-    base_dir = get_artifacts_storage(shortened_test_name) or str(tmpdir)
+    base_dir = shortned_artifacts_storage(request.node) or str(tmpdir)
     os.makedirs(base_dir, exist_ok=True)
 
     time = datetime.datetime.utcnow().isoformat()
