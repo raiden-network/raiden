@@ -385,7 +385,7 @@ def test_token_network_proxy(
 
     invalid_transferred_amount = 1
     msg = "settle with invalid transferred_amount data must fail"
-    with pytest.raises(RaidenUnrecoverableError, message=msg):
+    with pytest.raises(BrokenPreconditionError, message=msg):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=invalid_transferred_amount,
@@ -577,7 +577,7 @@ def test_token_network_proxy_update_transfer(
         given_block_identifier="latest",
     )
 
-    with pytest.raises(RaidenUnrecoverableError) as exc:
+    with pytest.raises(BrokenPreconditionError) as exc:
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
@@ -595,7 +595,7 @@ def test_token_network_proxy_update_transfer(
     c1_chain.wait_until_block(target_block_number=c1_chain.block_number() + 10)
 
     # settling with an invalid amount
-    with pytest.raises(RaidenUnrecoverableError):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,
