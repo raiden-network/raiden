@@ -1,6 +1,6 @@
 from copy import copy
 from dataclasses import replace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -15,6 +15,7 @@ from eth_utils import (
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
+from raiden.network import pathfinding
 from raiden.network.pathfinding import (
     IOU,
     MAX_PATHS_QUERY_ATTEMPTS,
@@ -877,3 +878,47 @@ def test_post_pfs_feedback(query_paths_args):
         )
 
         assert not feedback.called
+
+
+def test_no_iou_when_pfs_price_0(query_paths_args):
+    """ Test that no IOU is sent when PFS is for free """
+    query_paths_args["pfs_config"] = PFSConfig(
+        info=PFSInfo(
+            url="abc",
+            price=TokenAmount(0),
+            chain_id=ChainID(42),
+            token_network_registry_address=factories.make_token_network_address(),
+            payment_address=factories.make_address(),
+            message="",
+            operator="",
+            version="",
+            settings="",
+        ),
+        maximum_fee=TokenAmount(100),
+        iou_timeout=BlockNumber(100),
+        max_paths=5,
+    )
+
+    with patch.object(pathfinding, "post_pfs_paths", return_value=request_mock()) as post_path:
+        query_paths(
+            pfs_config=query_paths_args["pfs_config"],
+            our_address=query_paths_args["our_address"],
+            privkey=query_paths_args["privkey"],
+            current_block_number=query_paths_args["current_block_number"],
+            token_network_address=query_paths_args["token_network_address"],
+            one_to_n_address=query_paths_args["one_to_n_address"],
+            chain_id=query_paths_args["chain_id"],
+            route_from=query_paths_args["route_from"],
+            route_to=query_paths_args["route_to"],
+            value=query_paths_args["value"],
+        )
+    assert post_path.call_args == call(
+        payload={
+            "from": to_checksum_address(query_paths_args["route_from"]),
+            "to": to_checksum_address(query_paths_args["route_to"]),
+            "value": query_paths_args["value"],
+            "max_paths": query_paths_args["pfs_config"].max_paths,
+        },
+        token_network_address=query_paths_args["token_network_address"],
+        url=query_paths_args["pfs_config"].info.url,
+    )
