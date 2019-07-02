@@ -123,31 +123,14 @@ class UserDeposit:
                     checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
                 )
 
-                if gas_limit:
-                    error_prefix = "Call to deposit failed"
-                    gas_limit = safe_gas_limit(gas_limit)
-                    log_details["gas_limit"] = gas_limit
-
-                    transaction_hash = self.proxy.transact(
-                        "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
-                    )
-
-                    self.client.poll(transaction_hash)
-                    receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-                transaction_executed = gas_limit is not None
-                if not transaction_executed or receipt_or_none:
-                    if transaction_executed:
-                        failed_at_blocknumber = receipt_or_none["blockNumber"]
-                        failed_at_blockhash = receipt_or_none["blockHash"]
-                    else:
-                        failed_at = self.proxy.jsonrpc_client.get_block("latest")
-                        failed_at_blocknumber = failed_at["number"]
-                        failed_at_blockhash = encode_hex(failed_at["hash"])
+                if not gas_limit:
+                    failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                    failed_at_blocknumber = failed_at["number"]
+                    failed_at_blockhash = encode_hex(failed_at["hash"])
 
                     self.proxy.jsonrpc_client.check_for_insufficient_eth(
                         transaction_name="deposit",
-                        transaction_executed=transaction_executed,
+                        transaction_executed=False,
                         required_gas=self.gas_measurements["UserDeposit.deposit"],
                         block_identifier=failed_at_blocknumber,
                     )
@@ -159,6 +142,29 @@ class UserDeposit:
                     )
                     raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
+                else:
+                    error_prefix = "Call to deposit failed"
+                    gas_limit = safe_gas_limit(gas_limit)
+                    log_details["gas_limit"] = gas_limit
+
+                    transaction_hash = self.proxy.transact(
+                        "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
+                    )
+
+                    self.client.poll(transaction_hash)
+                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
+
+                    if failed_receipt:
+                        failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+
+                        msg = self._check_why_deposit_failed(
+                            token=token,
+                            total_deposit=total_deposit,
+                            block_identifier=failed_at_blockhash,
+                        )
+                        raise RaidenRecoverableError(f"{error_prefix}. {msg}")
+
+                
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
         balance = self.proxy.contract.functions.effectiveBalance(address).call(
