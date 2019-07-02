@@ -115,7 +115,13 @@ class UserDeposit:
                     address=self.node_address, block_identifier=given_block_identifier
                 )
             except (BadFunctionCallOutput, ValueError):
-                pass
+                # If 'given_block_identifier' has been pruned, we cannot perform the
+                # precondition checks but must still set the amount_to_deposit to a
+                # reasonable value.
+                previous_total_deposit = self.get_total_deposit(
+                    address=beneficiary, block_identifier=checking_block
+                )
+                amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
             else:
                 log_details["previous_total_deposit"] = previous_total_deposit
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
