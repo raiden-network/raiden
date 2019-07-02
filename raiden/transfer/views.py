@@ -119,7 +119,7 @@ def get_participants_addresses(
     return addresses
 
 
-def get_our_capacity_for_token_network(
+def get_our_deposits_for_token_network(
     chain_state: ChainState,
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,

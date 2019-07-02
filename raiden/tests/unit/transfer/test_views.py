@@ -211,7 +211,7 @@ def test_get_our_capacity_for_token_network():
     )
     expected_sum = sum(c.our_state.contract_balance for c in test_state.channels[:-1])
     assert (
-        views.get_our_capacity_for_token_network(
+        views.get_our_deposits_for_token_network(
             chain_state=chain_state,
             payment_network_address=test_state.payment_network_address,
             token_address=test_state.token_address,
