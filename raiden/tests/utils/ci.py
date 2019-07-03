@@ -8,7 +8,7 @@ def get_artifacts_storage() -> Optional[str]:
     return os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
 
 
-def shortned_artifacts_storage(test_node, *parts: str) -> Optional[str]:
+def shortened_artifacts_storage(test_node, *parts: str) -> Optional[str]:
     """Return a pathname based on the test details.
 
     Some platforms have a limit to the length of a file path. This function
@@ -24,8 +24,8 @@ def shortned_artifacts_storage(test_node, *parts: str) -> Optional[str]:
 
     if len(path) >= 286:
         original_name = test_node.originalname
-        shortned_args = pex(test_node.name.encode("utf8"))
-        path = os.path.join(artifacts_dir, f"{original_name}-{shortned_args}", *parts)
+        shortened_args = pex(test_node.name.encode("utf8"))
+        path = os.path.join(artifacts_dir, f"{original_name}-{shortened_args}", *parts)
 
     msg = (
         "Trimming the tests arguments didn't result in a path short enough, the "
