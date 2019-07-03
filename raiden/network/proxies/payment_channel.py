@@ -178,6 +178,7 @@ class PaymentChannel:
     def set_total_withdraw(
         self,
         total_withdraw: WithdrawAmount,
+        expiration_block: BlockNumber,
         participant_signature: Signature,
         partner_signature: Signature,
         block_identifier: BlockSpecification,
@@ -186,6 +187,7 @@ class PaymentChannel:
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
             total_withdraw=total_withdraw,
+            expiration_block=expiration_block,
             participant_signature=participant_signature,
             partner_signature=partner_signature,
             participant=self.participant1,
