@@ -614,8 +614,8 @@ class RevealSecret(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawBase(SignedRetrieableMessage):
-    """ A base class for withdraw messages. """
+class WithdrawRequest(SignedRetrieableMessage):
+    """ Requests a signed on-chain withdraw confirmation from partner. """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
@@ -626,6 +626,7 @@ class WithdrawBase(SignedRetrieableMessage):
     participant: Address
     total_withdraw: WithdrawAmount
     nonce: Nonce
+    expiration: BlockExpiration
 
     @classmethod
     def from_event(cls, event):
@@ -637,6 +638,7 @@ class WithdrawBase(SignedRetrieableMessage):
             total_withdraw=event.total_withdraw,
             participant=event.participant,
             nonce=event.nonce,
+            expiration=event.expiration,
             signature=EMPTY_SIGNATURE,
         )
 
@@ -653,13 +655,28 @@ class WithdrawBase(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawRequest(WithdrawBase):
-    """ Requests a signed on-chain withdraw confirmation from partner. """
+class WithdrawConfirmation(SignedRetrieableMessage):
+    """ Confirms withdraw to partner with a signature """
 
-    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
+    cmdid: ClassVar[int] = messages.WITHDRAW_CONFIRMATION
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    channel_identifier: ChannelID
+    participant: Address
+    total_withdraw: WithdrawAmount
+    nonce: Nonce
     expiration: BlockExpiration
+
+    def pack(self, packed):
+        packed.chain_id = self.chain_id
+        packed.token_network_address = self.token_network_address
+        packed.channel_identifier = self.channel_identifier
+        packed.total_withdraw = self.total_withdraw
+        packed.participant = self.participant
+        packed.message_type = MessageTypeId.WITHDRAW
+        packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
@@ -683,9 +700,31 @@ class WithdrawConfirmation(WithdrawBase):
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
 
-@dataclass(repr=False, eq=False)
-class WithdrawExpired(WithdrawBase):
+class WithdrawExpired(SignedRetrieableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
+
+    cmdid: ClassVar[int] = messages.WITHDRAW_EXPIRED
+    message_type: ClassVar[int] = MessageTypeId.WITHDRAW
+
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    channel_identifier: ChannelID
+    participant: Address
+    total_withdraw: WithdrawAmount
+    nonce: Nonce
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(
+            message_identifier=event.message_identifier,
+            chain_id=event.canonical_identifier.chain_identifier,
+            token_network_address=event.canonical_identifier.token_network_address,
+            channel_identifier=event.canonical_identifier.channel_identifier,
+            total_withdraw=event.total_withdraw,
+            participant=event.participant,
+            nonce=event.nonce,
+            signature=EMPTY_SIGNATURE,
+        )
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
