@@ -509,15 +509,10 @@ def run_test_channel_withdraw_expired(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
 
-    message_handler = WaitForMessage()
-    bob_app.raiden.message_handler = message_handler
-
-    hold_event_handler = HoldRaidenEventHandler(RaidenEventHandler())
     # Prevent withdraw confirmation from being sent
-    send_withdraw_confirmation_event = hold_event_handler.hold(SendWithdrawConfirmation, {})
-
-    alice_app.raiden.raiden_event_handler = hold_event_handler
-    bob_app.raiden.raiden_event_handler = hold_event_handler
+    send_withdraw_confirmation_event = alice_app.raiden.raiden_event_handler.hold(
+        SendWithdrawConfirmation, {}
+    )
 
     alice_to_bob_amount = 10
     identifier = 1
