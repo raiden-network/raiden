@@ -1183,7 +1183,7 @@ class TokenNetwork:
                     )
                     raise WithdrawMismatch(msg)
 
-                current_block_number = self.client.get_block("latest").number
+                current_block_number = self.client.get_block(given_block_identifier).number
                 if expiration_block <= current_block_number:
                     msg = (
                         f"The current block number {current_block_number} is "
