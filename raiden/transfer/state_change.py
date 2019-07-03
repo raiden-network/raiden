@@ -427,11 +427,9 @@ class ReceiveWithdrawRequest(ReceiveWithdrawBase):
 class ReceiveWithdrawConfirmation(ReceiveWithdrawBase):
     """ A Withdraw message was received. """
 
-    pass
+    expiration: BlockExpiration
 
 
 @dataclass
 class ReceiveWithdrawExpired(ReceiveWithdrawBase):
     """ A WithdrawExpired message was received. """
-
-    pass

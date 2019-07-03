@@ -51,6 +51,7 @@ class SendWithdrawConfirmation(SendMessageEvent):
 
     total_withdraw: WithdrawAmount
     participant: Address
+    expiration: BlockExpiration
     nonce: Nonce
 
 
