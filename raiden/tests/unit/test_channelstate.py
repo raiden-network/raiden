@@ -1966,7 +1966,7 @@ def test_node_sends_withdraw_expiry():
                 "total_withdraw": total_withdraw,
                 "participant": channel_state.our_state.address,
                 "recipient": channel_state.partner_state.address,
-                "nonce": 1,
+                "nonce": 2,
             },
         )
         is not None
