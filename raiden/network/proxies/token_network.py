@@ -1137,6 +1137,7 @@ class TokenNetwork:
         given_block_identifier: BlockSpecification,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
+        expiration_block: BlockNumber,
         participant_signature: Signature,
         partner_signature: Signature,
         participant: Address,
@@ -1206,6 +1207,15 @@ class TokenNetwork:
                     )
                     raise WithdrawMismatch(msg)
 
+                current_block_number = self.client.get_block("latest").number
+                if expiration_block <= current_block_number:
+                    msg = (
+                        f"The current block number {current_block_number} is "
+                        f"already at expiration block {expiration_block} or "
+                        "later."
+                    )
+                    raise WithdrawMismatch(msg)
+
                 if participant_signature == EMPTY_SIGNATURE:
                     msg = "set_total_withdraw requires a valid participant signature"
                     raise RaidenUnrecoverableError(msg)
@@ -1265,6 +1275,7 @@ class TokenNetwork:
                 self._set_total_withdraw(
                     channel_identifier=channel_identifier,
                     total_withdraw=total_withdraw,
+                    expiration_block=expiration_block,
                     participant=participant,
                     partner=partner,
                     partner_signature=partner_signature,
@@ -1276,6 +1287,7 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
+        expiration_block: BlockNumber,
         participant: Address,
         partner: Address,
         partner_signature: Signature,
@@ -1290,6 +1302,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
             participant=participant,
             total_withdraw=total_withdraw,
+            expiration_block=expiration_block,
             partner_signature=partner_signature,
             participant_signature=participant_signature,
         )
