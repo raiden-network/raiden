@@ -147,7 +147,6 @@ def wait_for_payment_balance(
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.critical("wait", b=balance(channel_state), t=target_balance)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
