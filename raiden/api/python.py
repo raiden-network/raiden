@@ -130,7 +130,7 @@ def get_transfer_from_task(
     elif isinstance(transfer_task, TargetTask):
         transfer = transfer_task.target_state.transfer
     else:  # pragma: no unittest
-        raise ValueError("get_tranfer_from_task for a non TransferTask argument")
+        raise ValueError("get_transfer_from_task for a non TransferTask argument")
 
     return transfer, role
 
@@ -264,7 +264,7 @@ class RaidenAPI:  # pragma: no unittest
 
         Args:
             token_address: the ERC20 token network to connect to.
-            funds: the amount of funds that can be used by the ConnectionMananger.
+            funds: the amount of funds that can be used by the ConnectionManager.
             initial_channel_target: number of channels to open proactively.
             joinable_funds_target: fraction of the funds that will be used to join
                 channels opened by other participants.
@@ -423,7 +423,7 @@ class RaidenAPI:  # pragma: no unittest
         retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
-        given `token_address.
+        given `token_address`.
 
         Raises:
             InvalidAddress: If either token_address or partner_address is not
@@ -948,7 +948,7 @@ class RaidenAPI:  # pragma: no unittest
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
     ):
-        """Returns a list of blockchain events coresponding to the token_address."""
+        """Returns a list of blockchain events corresponding to the token_address."""
 
         if not is_binary_address(token_address):
             raise InvalidAddress(
