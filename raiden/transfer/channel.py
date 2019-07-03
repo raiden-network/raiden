@@ -896,56 +896,68 @@ def is_valid_withdraw_request(
 
 
 def is_valid_withdraw_confirmation(
-    channel_state: NettingChannelState, withdraw: ReceiveWithdrawConfirmation
+    channel_state: NettingChannelState,
+    received_withdraw: ReceiveWithdrawConfirmation,
+    block_number: BlockNumber,
 ) -> SuccessOrError:
 
     result: SuccessOrError
 
-    withdraw_exists = withdraw.total_withdraw in channel_state.our_state.withdraws
+    withdraw_state = channel_state.our_state.withdraws.get(received_withdraw.total_withdraw)
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
     packed = pack_withdraw(
-        canonical_identifier=withdraw.canonical_identifier,
+        canonical_identifier=received_withdraw.canonical_identifier,
         participant=channel_state.our_state.address,
-        total_withdraw=withdraw.total_withdraw,
+        total_withdraw=received_withdraw.total_withdraw,
     )
 
     valid_signature, signature_msg = is_valid_signature(
         data=packed,
-        signature=withdraw.signature,
+        signature=received_withdraw.signature,
         sender_address=channel_state.partner_state.address,
     )
 
     # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
-    total_channel_withdraw = withdraw.total_withdraw + channel_state.partner_state.total_withdraw
+    total_channel_withdraw = (
+        received_withdraw.total_withdraw + channel_state.partner_state.total_withdraw
+    )
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
-    if channel_state.canonical_identifier != withdraw.canonical_identifier:
+    withdraw_expired = is_withdraw_expired(
+        block_number=block_number,
+        expiration_threshold=get_sender_expiration_threshold(
+            expiration=withdraw_state.expiration
+        ),
+    )
+
+    if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
         msg = f"Invalid canonical identifier provided in withdraw request"
-
-    if not withdraw_exists:
+        result = (False, msg)
+    elif not withdraw_state:
         msg = "Received withdraw confirmation {} was not found in withdraw states".format(
-            withdraw.total_withdraw
+            received_withdraw.total_withdraw
         )
         result = (False, msg)
-    elif withdraw.total_withdraw != channel_state.our_state.total_withdraw:
+    elif withdraw_expired:
+        msg = "Withdraw has already expired."
+        result = (False, msg)
+    elif received_withdraw.total_withdraw != channel_state.our_state.total_withdraw:
         msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
-            withdraw.total_withdraw, channel_state.our_state.total_withdraw
+            received_withdraw.total_withdraw, channel_state.our_state.total_withdraw
         )
         result = (False, msg)
-
     elif not valid_signature:
         result = (False, signature_msg)
-    elif withdraw.nonce != expected_nonce:
+    elif received_withdraw.nonce != expected_nonce:
         msg = (
             f"Nonce did not change sequentially, expected: {expected_nonce} "
-            f"got: {withdraw.nonce}."
+            f"got: {received_withdraw.nonce}."
         )
-
         result = (False, msg)
     elif withdraw_overflow:
-        msg = f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
+        msg = f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
         result = (False, msg)
     else:
         result = (True, None)
@@ -1888,6 +1900,7 @@ def handle_receive_withdraw_request(
             total_withdraw=withdraw_request.total_withdraw,
             participant=channel_state.partner_state.address,
             nonce=channel_state.our_state.nonce,
+            expiration=withdraw_state.expiration,
         )
 
         events: List[Event] = [send_withdraw]
@@ -1904,11 +1917,14 @@ def handle_receive_withdraw_request(
 def handle_receive_withdraw_confirmation(
     channel_state: NettingChannelState,
     withdraw: ReceiveWithdrawConfirmation,
+    block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
-    is_valid, msg = is_valid_withdraw_confirmation(channel_state=channel_state, withdraw=withdraw)
+    is_valid, msg = is_valid_withdraw_confirmation(
+        channel_state=channel_state, withdraw=withdraw, block_number=block_number
+    )
     if is_valid:
         channel_state.partner_state.nonce = withdraw.nonce
         events.extend(
@@ -2408,7 +2424,10 @@ def state_transition(
     elif type(state_change) == ReceiveWithdrawConfirmation:
         assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_confirmation(
-            channel_state=channel_state, withdraw=state_change, block_hash=block_hash
+            channel_state=channel_state,
+            withdraw=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
         )
     elif type(state_change) == ReceiveWithdrawExpired:
         assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
