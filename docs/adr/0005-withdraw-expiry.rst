@@ -1,7 +1,7 @@
 Withdraw & Expiry
 =================
 
-**Status**: proposed
+**Status**: implemented
 **Deciders**: @konradkonrad @palango @hackaugusto @rakanalh
 **Date**: 2019-07-03
 
