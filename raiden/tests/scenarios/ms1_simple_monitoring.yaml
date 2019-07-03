@@ -5,6 +5,8 @@ settings:
   # Adapt to chain used
   chain: any
   services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
     udc:
       enable: true
       token:
