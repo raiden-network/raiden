@@ -10,6 +10,7 @@ from raiden.constants import (
     EMPTY_MESSAGE_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
+    UINT256_MAX,
 )
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
@@ -65,7 +66,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
-from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
+from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockNumber, BlockSpecification, Nonce
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -335,6 +336,7 @@ class RaidenEventHandler(EventHandler):
 
         channel_proxy.set_total_withdraw(
             total_withdraw=channel_withdraw_event.total_withdraw,
+            expiration_block=BlockNumber(UINT256_MAX),  # FIXME: faking
             participant_signature=our_signature,
             partner_signature=channel_withdraw_event.partner_signature,
             block_identifier=channel_withdraw_event.triggered_by_block_hash,
