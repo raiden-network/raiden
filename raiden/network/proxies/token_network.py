@@ -1174,7 +1174,7 @@ class TokenNetwork:
                     partner=participant,
                     block_identifier=given_block_identifier,
                 )
-                current_block_number = self.client.get_block(given_block_identifier).number
+                given_block_number = self.client.get_block(given_block_identifier)["number"]
             except ValueError:
                 # If `given_block_identifier` has been pruned the checks cannot be
                 # performed.
@@ -1208,13 +1208,13 @@ class TokenNetwork:
                     )
                     raise WithdrawMismatch(msg)
 
-                if expiration_block <= current_block_number:
+                if expiration_block <= given_block_number:
                     msg = (
-                        f"The current block number {current_block_number} is "
+                        f"The current block number {given_block_number} is "
                         f"already at expiration block {expiration_block} or "
                         "later."
                     )
-                    raise WithdrawMismatch(msg)
+                    raise BrokenPreconditionError(msg)
 
                 if participant_signature == EMPTY_SIGNATURE:
                     msg = "set_total_withdraw requires a valid participant signature"
