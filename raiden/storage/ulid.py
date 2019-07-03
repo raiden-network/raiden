@@ -22,6 +22,9 @@ class ULID:
     def __post_init__(self):
         assert len(self.identifier) == 16, "id_ must be 16 bytes long"
 
+    def __str__(self):
+        return f"ULID<{self.identifier.hex()}>"
+
     @property
     def timestamp(self):
         """Aproximated timestamp of the database entry.
