@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, List
 
 import gevent
 import structlog
+from eth_utils import to_checksum_address
 
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
@@ -31,17 +32,25 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 ALARM_TASK_ERROR_MSG = "Waiting relies on alarm task polling to update the node's internal state."
-TRANSPORT_ERROR_MSG = "Waiting for protocol messags requires a running transport."
+TRANSPORT_ERROR_MSG = "Waiting for protocol messages requires a running transport."
 
 
 def wait_for_block(
     raiden: "RaidenService", block_number: BlockNumber, retry_timeout: float
 ) -> None:  # pragma: no unittest
-    while raiden.get_block_number() < block_number:
+    current = raiden.get_block_number()
+
+    log_details = {
+        "node": to_checksum_address(raiden.address),
+        "target_block_number": block_number,
+    }
+    while current < block_number:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
+        log.debug("wait_for_block", current_block_number=current, **log_details)
         gevent.sleep(retry_timeout)
+        current = raiden.get_block_number()
 
 
 def wait_for_newchannel(
@@ -60,10 +69,17 @@ def wait_for_newchannel(
         views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
 
+    log_details = {
+        "node": to_checksum_address(raiden.address),
+        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_address": to_checksum_address(token_address),
+        "partner_address": to_checksum_address(partner_address),
+    }
     while channel_state is None:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
+        log.debug("wait_for_newchannel", **log_details)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
@@ -97,11 +113,23 @@ def wait_for_participant_newbalance(
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
+    current_balance = balance(channel_state)
 
-    while balance(channel_state) < target_balance:
+    log_details = {
+        "node": to_checksum_address(raiden.address),
+        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_address": to_checksum_address(token_address),
+        "partner_address": to_checksum_address(partner_address),
+        "target_address": to_checksum_address(target_address),
+        "target_balance": target_balance,
+    }
+    while current_balance < target_balance:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
+        log.debug(
+            "wait_for_participant_newbalance", current_balance=current_balance, **log_details
+        )
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
@@ -109,6 +137,7 @@ def wait_for_participant_newbalance(
             token_address,
             partner_address,
         )
+        current_balance = balance(channel_state)
 
 
 def wait_for_payment_balance(
@@ -142,12 +171,20 @@ def wait_for_payment_balance(
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
     )
+    current_balance = balance(channel_state)
 
-    while balance(channel_state) < target_balance:
+    log_details = {
+        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_address": to_checksum_address(token_address),
+        "partner_address": to_checksum_address(partner_address),
+        "target_address": to_checksum_address(target_address),
+        "target_balance": target_balance,
+    }
+    while current_balance < target_balance:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.critical("wait", b=balance(channel_state), t=target_balance)
+        log.critical("wait_for_payment_balance", current_balance=current_balance, **log_details)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
@@ -155,6 +192,7 @@ def wait_for_payment_balance(
             token_address,
             partner_address,
         )
+        current_balance = balance(channel_state)
 
 
 def wait_for_channel_in_states(
@@ -198,6 +236,13 @@ def wait_for_channel_in_states(
         for channel_identifier in channel_ids
     ]
 
+    log_details = {
+        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_address": to_checksum_address(token_address),
+        "list_cannonical_ids": list_cannonical_ids,
+        "target_states": target_states,
+    }
+
     while list_cannonical_ids:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
@@ -216,6 +261,7 @@ def wait_for_channel_in_states(
         if channel_is_settled:
             list_cannonical_ids.pop()
         else:
+            log.debug("wait_for_channel_in_states", **log_details)
             gevent.sleep(retry_timeout)
 
 
@@ -250,10 +296,15 @@ def wait_for_payment_network(
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(raiden), payment_network_address, token_address
     )
+    log_details = {
+        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_address": to_checksum_address(token_address),
+    }
     while token_network is None:
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
+        log.debug("wait_for_payment_network", **log_details)
         gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
             views.state_from_raiden(raiden), payment_network_address, token_address
@@ -291,13 +342,20 @@ def wait_for_network_state(
         This does not time out, use gevent.Timeout.
     """
     network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
+    current = network_statuses.get(node_address)
 
-    while network_statuses.get(node_address) != network_state:
+    log_details = {
+        "node_address": to_checksum_address(node_address),
+        "target_network_state": network_state,
+    }
+    while current != network_state:
         assert raiden, TRANSPORT_ERROR_MSG
         assert raiden.transport, TRANSPORT_ERROR_MSG
 
+        log.debug("wait_for_network_state", current_network_state=current, **log_details)
         gevent.sleep(retry_timeout)
         network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
+        current = network_statuses.get(node_address)
 
 
 def wait_for_healthy(
@@ -324,6 +382,7 @@ def wait_for_transfer_success(
     Note:
         This does not time out, use gevent.Timeout.
     """
+    log_details = {"payment_identifier": payment_identifier, "amount": amount}
     found = False
     while not found:
         assert raiden, TRANSPORT_ERROR_MSG
@@ -340,6 +399,7 @@ def wait_for_transfer_success(
             if found:
                 break
 
+        log.debug("wait_for_transfer_success", **log_details)
         gevent.sleep(retry_timeout)
 
 
@@ -355,6 +415,10 @@ def wait_for_withdraw_complete(
     Note:
         This does not time out, use gevent.Timeout.
     """
+    log_details = {
+        "canonical_identifier": canonical_identifier,
+        "target_total_withdraw": total_withdraw,
+    }
     found = False
     while not found:
         assert raiden, TRANSPORT_ERROR_MSG
@@ -371,4 +435,5 @@ def wait_for_withdraw_complete(
             if found:
                 break
 
+        log.debug("wait_for_withdraw_complete", **log_details)
         gevent.sleep(retry_timeout)
