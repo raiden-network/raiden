@@ -771,7 +771,7 @@ class RaidenService(Runnable):
         pending_transactions = views.get_pending_transactions(chain_state)
 
         log.debug(
-            "Processing pending transactions",
+            "Initializing transaction queues",
             num_pending_transactions=len(pending_transactions),
             node=to_checksum_address(self.address),
         )
@@ -804,6 +804,16 @@ class RaidenService(Runnable):
         """
 
         with self.payment_identifier_lock:
+            secret_hashes = [
+                to_hex(secrethash)
+                for secrethash in chain_state.payment_mapping.secrethashes_to_task
+            ]
+            log.debug(
+                "Initializing payment statuses",
+                secret_hashes=secret_hashes,
+                node=to_checksum_address(self.address),
+            )
+
             for task in chain_state.payment_mapping.secrethashes_to_task.values():
                 if not isinstance(task, InitiatorTask):
                     continue
@@ -842,6 +852,12 @@ class RaidenService(Runnable):
         assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
 
         events_queues = views.get_all_messagequeues(chain_state)
+
+        log.debug(
+            "Initializing message queues",
+            queues_identifiers=list(events_queues.keys()),
+            node=to_checksum_address(self.address),
+        )
 
         for queue_identifier, event_queue in events_queues.items():
             self.start_health_check_for(queue_identifier.recipient)
@@ -885,23 +901,40 @@ class RaidenService(Runnable):
         msg = "The node state was not yet recovered, cant read balance proofs. node:{self!r}"
         assert self.wal, msg
 
-        current_balance_proofs = views.detect_balance_proof_change(
-            old_state=ChainState(
-                pseudo_random_generator=chain_state.pseudo_random_generator,
-                block_number=GENESIS_BLOCK_NUMBER,
-                block_hash=constants.EMPTY_HASH,
-                our_address=chain_state.our_address,
-                chain_id=chain_state.chain_id,
-            ),
-            current_state=chain_state,
+        current_balance_proofs = list(
+            views.detect_balance_proof_change(
+                old_state=ChainState(
+                    pseudo_random_generator=chain_state.pseudo_random_generator,
+                    block_number=GENESIS_BLOCK_NUMBER,
+                    block_hash=constants.EMPTY_HASH,
+                    our_address=chain_state.our_address,
+                    chain_id=chain_state.chain_id,
+                ),
+                current_state=chain_state,
+            )
         )
+
+        log.debug(
+            "Initializing monitoring services",
+            num_of_balance_proofs=len(current_balance_proofs),
+            node=to_checksum_address(self.address),
+        )
+
         for balance_proof in current_balance_proofs:
             update_services_from_balance_proof(self, chain_state, balance_proof)
 
     def _initialize_whitelists(self, chain_state: ChainState) -> None:
         """ Whitelist neighbors and mediated transfer targets on transport """
 
-        for neighbour in views.all_neighbour_nodes(chain_state):
+        all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
+
+        log.debug(
+            "Initializing whitelists",
+            neighbour_nodes=[to_checksum_address(neighbour) for neighbour in all_neighbour_nodes],
+            node=to_checksum_address(self.address),
+        )
+
+        for neighbour in all_neighbour_nodes:
             if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
                 continue
             self.transport.whitelist(neighbour)
