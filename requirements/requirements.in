@@ -22,7 +22,7 @@ py-geth
 py-solc
 pysha3
 pytoml
-raiden-contracts==0.24.0
+raiden-contracts==0.25.1
 raiden-webui
 requests
 structlog
