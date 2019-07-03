@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 import gevent
 import pytest
 
@@ -9,16 +11,14 @@ from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
+from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import (
-    HoldRaidenEventHandler,
-    dont_handle_node_change_network_state,
-)
+from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
-from raiden.transfer.mediated_transfer.events import SendSecretReveal
-from raiden.utils import BlockNumber
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
+from raiden.utils import BlockNumber, create_default_identifier
 from raiden.utils.typing import TokenAmount
 
 
@@ -48,31 +48,36 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         chain_state, payment_network_address, token_address
     )
 
-    with dont_handle_node_change_network_state():
-        # stop app1 - transfer must be left unconfirmed
-        app1.stop()
+    number_of_transfers = 7
+    amount_per_transfer = 1
+    total_transferred_amount = amount_per_transfer * number_of_transfers
 
-        # make a few transfers from app0 to app1
-        amount = 1
-        spent_amount = 7
-        identifier = 1
-        for _ in range(spent_amount):
-            app0.raiden.mediated_transfer_async(
-                token_network_address=token_network_address,
-                amount=amount,
-                target=app1.raiden.address,
-                identifier=identifier,
-            )
-            identifier += 1
+    # Make sure none of the transfers will be sent before the restart
+    transfers = []
+    for secret_seed in range(number_of_transfers):
+        secret = make_secret(secret_seed)
+        secrethash = sha256(secret).digest()
+        transfers.append((create_default_identifier(), amount_per_transfer, secret, secrethash))
 
-    # restart app0
-    app0.raiden.stop()
+        app0.raiden.raiden_event_handler.hold(
+            SendLockedTransfer, {"transfer": {"lock": {"secrethash": secrethash}}}
+        )
 
+    for identifier, amount, secret, _ in transfers:
+        app0.raiden.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=amount,
+            target=app1.raiden.address,
+            identifier=identifier,
+            secret=secret,
+        )
+
+    app0.stop()
+
+    # Restart the app. The pending transfers must be processed.
     new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
-
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
-
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -88,53 +93,49 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         routing_mode=RoutingMode.PRIVATE,
     )
 
-    app0.stop()
-    del app0  # from here on the app0_restart should be used
-    app1.start()
-
+    del app0
     app0_restart.start()
 
-    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
-    waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
+    # XXX: There is no synchronization among the app and the test, so it is
+    # possible between `start` and the check bellow that some of the transfers
+    # have completed, making it flaky.
+    #
+    # Make sure the transfers are in the queue and fail otherwise.
+    # chain_state = views.state_from_raiden(app0_restart.raiden)
+    # for _, _, _, secrethash in transfers:
+    #     msg = "The secrethashes of the pending transfers must be in the queue after a restart."
+    #     assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
 
-    exception = RuntimeError("Timeout while waiting for new channel")
-    with gevent.Timeout(5, exception=exception):
-        waiting.wait_for_newchannel(
-            raiden=app0_restart.raiden,
-            payment_network_address=payment_network_address,
-            token_address=token_address,
-            partner_address=app1.raiden.address,
-            retry_timeout=network_wait,
-        )
     exception = RuntimeError("Timeout while waiting for balance update for app0")
-    with gevent.Timeout(90, exception=exception):
+    with gevent.Timeout(20, exception=exception):
         waiting.wait_for_payment_balance(
             raiden=app0_restart.raiden,
             payment_network_address=payment_network_address,
             token_address=token_address,
             partner_address=app1.raiden.address,
             target_address=app1.raiden.address,
-            target_balance=spent_amount,
+            target_balance=total_transferred_amount,
             retry_timeout=network_wait,
         )
-
-    waiting.wait_for_payment_balance(
-        raiden=app1.raiden,
-        payment_network_address=payment_network_address,
-        token_address=token_address,
-        partner_address=app0_restart.raiden.address,
-        target_address=app1.raiden.address,
-        target_balance=spent_amount,
-        retry_timeout=network_wait,
-    )
+    exception = RuntimeError("Timeout while waiting for balance update for app1")
+    with gevent.Timeout(20, exception=exception):
+        waiting.wait_for_payment_balance(
+            raiden=app1.raiden,
+            payment_network_address=payment_network_address,
+            token_address=token_address,
+            partner_address=app0_restart.raiden.address,
+            target_address=app1.raiden.address,
+            target_balance=total_transferred_amount,
+            retry_timeout=network_wait,
+        )
 
     assert_synced_channel_state(
         token_network_address,
         app0_restart,
-        deposit - spent_amount,
+        deposit - total_transferred_amount,
         [],
         app1,
-        deposit + spent_amount,
+        deposit + total_transferred_amount,
         [],
     )
 
