@@ -48,7 +48,7 @@ def restore_to_state_change(
         Range(from_identifier, state_change_identifier)
     )
     if unapplied_state_changes:
-        log.debug("Replaying state changes", num_state_changes=len(unapplied_state_changes))
+        log.debug("Replaying state changes", state_changes=unapplied_state_changes)
         wal.state_manager.dispatch(unapplied_state_changes)
 
     return wal
