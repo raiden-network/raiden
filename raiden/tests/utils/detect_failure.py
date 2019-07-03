@@ -1,7 +1,10 @@
 import traceback
 
 import gevent
+import structlog
 from gevent.event import AsyncResult
+
+log = structlog.get_logger(__name__)
 
 
 def raise_on_failure(raiden_apps, test_function, **kwargs):
@@ -26,11 +29,15 @@ def raise_on_failure(raiden_apps, test_function, **kwargs):
     try:
         result.get()
     except:  # noqa
-        # Always print the stack trace of the test greenlet. The stack trace of
-        # the greenlet that was killed is always printed, because the test
-        # itself may be killed with anassert its stack trace may be printed
-        # twice, however this is necessary for tests which a app was killed,
-        # otherwise the state of the test is unknown.
-        print("".join(traceback.format_stack(test_greenlet.gr_frame)))
+        # Print the stack trace of the running test to know in which line the
+        # test is waiting.
+        #
+        # This may print a duplicated stack trace, when the test fails.
+        log.exception("Test failed")
+        log.debug(
+            "Test stacktrace",
+            test_traceback="".join(traceback.format_stack(test_greenlet.gr_frame)),
+        )
+        log.exception("Pending greenlets", tracebacks="\n".join(gevent.util.format_run_info()))
 
         raise
