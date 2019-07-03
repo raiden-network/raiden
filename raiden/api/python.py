@@ -18,6 +18,7 @@ from raiden.exceptions import (
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
+    RaidenError,
     RaidenRecoverableError,
     TokenNetworkDeprecated,
     TokenNotRegistered,
@@ -42,6 +43,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
+from raiden.utils.testnet import token_minting_proxy
 from raiden.utils.typing import (
     Address,
     Any,
@@ -413,6 +415,22 @@ class RaidenAPI:  # pragma: no unittest
         assert channel_state, f"channel {channel_state} is gone"
 
         return channel_state.identifier
+
+    def mint_token(
+        self, token_address: typing.TokenAddress, to: typing.Address, value: typing.TokenAmount
+    ) -> typing.TransactionHash:
+        token_proxy = token_minting_proxy(self.raiden.chain.client, token_address)
+
+        gas_limit = token_proxy.estimate_gas("latest", "mintFor", value, to)
+        if gas_limit is None:
+            raise ValueError("Gas limit is None")
+
+        try:
+            tx_hash = token_proxy.transact("mintFor", gas_limit, value, to)
+        except (RaidenError, ValueError) as e:
+            raise ValueError(str(e))
+
+        return tx_hash
 
     def set_total_channel_withdraw(
         self,

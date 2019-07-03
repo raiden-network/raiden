@@ -549,7 +549,22 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
-        return api_response(status_code=HTTPStatus.OK, result=dict())
+        log.debug(
+            "Minting token",
+            node=to_checksum_address(self.raiden_api.address),
+            token_address=to_checksum_address(token_address),
+            to=to_checksum_address(to),
+            value=value,
+        )
+
+        try:
+            tx_hash = self.raiden_api.mint_token(token_address=token_address, to=to, value=value)
+        except ValueError as e:
+            return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
+
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(tx_hash))
+        )
 
     def open(
         self,
