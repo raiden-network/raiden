@@ -60,9 +60,10 @@ def test_request_monitoring() -> None:
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
         balance_proof, reward_amount=55, monitoring_service_contract_address=MSC_ADDRESS
     )
-    with pytest.raises(ValueError):
-        # equality test uses `validated` packed format
-        assert direct_created == request_monitoring
+    # `direct_created` is not signed while request_monitoring is
+    assert DictSerializer().serialize(direct_created) != DictSerializer().serialize(
+        request_monitoring
+    )
 
     direct_created.sign(signer)
     # Instances created from same balance proof are equal

@@ -1078,11 +1078,6 @@ class RequestMonitoring(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
-        if self.non_closing_signature is None:
-            raise ValueError("non_closing_signature missing, did you forget to sign()?")
-        if self.reward_proof_signature is None:
-            raise ValueError("reward_proof_signature missing, did you forget to sign()?")
-
         packed = pack_reward_proof(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=self.balance_proof.chain_id,
