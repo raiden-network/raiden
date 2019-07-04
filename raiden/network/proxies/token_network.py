@@ -10,7 +10,6 @@ from eth_utils import (
     to_hex,
     to_normalized_address,
 )
-from gevent.event import AsyncResult
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
@@ -181,7 +180,6 @@ class TokenNetwork:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
-        self.open_channel_transactions: Dict[Address, AsyncResult] = dict()
 
         self.token: Token = blockchain_service.token(token_address=self.token_address())
 
@@ -245,67 +243,56 @@ class TokenNetwork:
             )
             raise InvalidSettleTimeout(msg)
 
-        # check preconditions
-        try:
-            existing_channel_identifier = self.get_channel_identifier_or_none(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=given_block_identifier,
-            )
-            balance = self.token.balance_of(
-                address=to_checksum_address(self.address), block_identifier=given_block_identifier
-            )
-            limit = self.token_network_deposit_limit(block_identifier=given_block_identifier)
-            safety_deprecation_switch = self.safety_deprecation_switch(given_block_identifier)
-        except ValueError:
-            # If `given_block_identifier` has been pruned the checks cannot be
-            # performed.
-            pass
-        except BadFunctionCallOutput:
-            raise_on_call_returned_empty(given_block_identifier)
-        else:
-            if existing_channel_identifier is not None:
-                raise BrokenPreconditionError(
-                    "A channel with the given partner address already exists."
-                )
-            if balance >= limit:
-                raise BrokenPreconditionError(
-                    "Cannot open another channel, token network deposit limit has been reached."
-                )
-            if safety_deprecation_switch:
-                raise BrokenPreconditionError("This token network is deprecated.")
-
-        # Prevent concurrent attempts to open a channel with the same token and
-        # partner address.
-        if partner not in self.open_channel_transactions:
-            new_open_channel_transaction = AsyncResult()
-            self.open_channel_transactions[partner] = new_open_channel_transaction
-
+        with self.channel_operations_lock[partner]:
+            # check preconditions
             try:
-                log_details = {
-                    "node": to_checksum_address(self.node_address),
-                    "contract": to_checksum_address(self.address),
-                    "peer1": to_checksum_address(self.node_address),
-                    "peer2": to_checksum_address(partner),
-                    "settle_timeout": settle_timeout,
-                }
-                with log_transaction(log, "new_netting_channel", log_details):
-                    channel_identifier = self._new_netting_channel(
-                        partner, settle_timeout, log_details
-                    )
-                    log_details["channel_identifier"] = str(channel_identifier)
-            except Exception as e:
-                new_open_channel_transaction.set_exception(e)
-                raise
+                existing_channel_identifier = self.get_channel_identifier_or_none(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
+                )
+                balance = self.token.balance_of(
+                    address=to_checksum_address(self.address),
+                    block_identifier=given_block_identifier,
+                )
+                limit = self.token_network_deposit_limit(block_identifier=given_block_identifier)
+                safety_deprecation_switch = self.safety_deprecation_switch(given_block_identifier)
+            except ValueError:
+                # If `given_block_identifier` has been pruned the checks cannot be
+                # performed.
+                pass
+            except BadFunctionCallOutput:
+                raise_on_call_returned_empty(given_block_identifier)
             else:
-                new_open_channel_transaction.set(channel_identifier)
-            finally:
-                self.open_channel_transactions.pop(partner, None)
-        else:
-            # All other concurrent threads should block on the result of opening this channel
-            channel_identifier = self.open_channel_transactions[partner].get()
+                if existing_channel_identifier is not None:
+                    raise BrokenPreconditionError(
+                        "A channel with the given partner address already exists."
+                    )
+                if balance >= limit:
+                    raise BrokenPreconditionError(
+                        "Cannot open another channel, token network deposit limit reached."
+                    )
+                if safety_deprecation_switch:
+                    raise BrokenPreconditionError("This token network is deprecated.")
 
-        return channel_identifier
+            log_details = {
+                "node": to_checksum_address(self.node_address),
+                "contract": to_checksum_address(self.address),
+                "peer1": to_checksum_address(self.node_address),
+                "peer2": to_checksum_address(partner),
+                "settle_timeout": settle_timeout,
+            }
+
+            with log_transaction(log, "new_netting_channel", log_details):
+                channel_identifier = self._new_netting_channel(
+                    partner, settle_timeout, log_details
+                )
+                log_details["channel_identifier"] = str(channel_identifier)
+
+            return channel_identifier
+
+        checking_block = self.client.get_checking_block()
+        return self.get_channel_identifier(self.node_address, partner, checking_block)
 
     def _new_netting_channel(
         self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
