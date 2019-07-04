@@ -24,8 +24,10 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    Any,
     Balance,
     BlockSpecification,
+    Dict,
     TokenAddress,
     TokenAmount,
 )
@@ -107,7 +109,6 @@ class UserDeposit:
             "total_deposit": total_deposit,
         }
 
-        checking_block = self.client.get_checking_block()
         error_prefix = "Call to deposit will fail"
 
         with self.deposit_lock:
@@ -124,7 +125,7 @@ class UserDeposit:
                 # precondition checks but must still set the amount_to_deposit to a
                 # reasonable value.
                 previous_total_deposit = self.get_total_deposit(
-                    address=beneficiary, block_identifier=checking_block
+                    address=beneficiary, block_identifier=self.client.get_checking_block()
                 )
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
             except BadFunctionCallOutput:
@@ -154,53 +155,14 @@ class UserDeposit:
                     log.info("deposit failed", reason=msg, **log_details)
                     raise BrokenPreconditionError(msg)
 
-            token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
-
             with log_transaction(log, "deposit", log_details):
-                gas_limit = self.proxy.estimate_gas(
-                    checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
+                self._deposit(
+                    beneficiary=beneficiary,
+                    token=token,
+                    total_deposit=total_deposit,
+                    amount_to_deposit=amount_to_deposit,
+                    log_details=log_details,
                 )
-
-                if not gas_limit:
-                    failed_at = self.proxy.jsonrpc_client.get_block("latest")
-                    failed_at_blocknumber = failed_at["number"]
-                    failed_at_blockhash = encode_hex(failed_at["hash"])
-
-                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                        transaction_name="deposit",
-                        transaction_executed=False,
-                        required_gas=self.gas_measurements["UserDeposit.deposit"],
-                        block_identifier=failed_at_blocknumber,
-                    )
-
-                    msg = self._check_why_deposit_failed(
-                        token=token,
-                        total_deposit=total_deposit,
-                        block_identifier=failed_at_blockhash,
-                    )
-                    raise RaidenRecoverableError(f"{error_prefix}. {msg}")
-
-                else:
-                    error_prefix = "Call to deposit failed"
-                    gas_limit = safe_gas_limit(gas_limit)
-                    log_details["gas_limit"] = gas_limit
-
-                    transaction_hash = self.proxy.transact(
-                        "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
-                    )
-
-                    self.client.poll(transaction_hash)
-                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
-
-                    if failed_receipt:
-                        failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-
-                        msg = self._check_why_deposit_failed(
-                            token=token,
-                            total_deposit=total_deposit,
-                            block_identifier=failed_at_blockhash,
-                        )
-                        raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
@@ -212,6 +174,59 @@ class UserDeposit:
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
 
         return balance
+
+    def _deposit(
+        self,
+        beneficiary: Address,
+        token: Token,
+        total_deposit: TokenAmount,
+        amount_to_deposit: TokenAmount,
+        log_details: Dict[str, Any],
+    ):
+        error_prefix = "Call to deposit will fail."
+        token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+
+        checking_block = self.client.get_checking_block()
+        gas_limit = self.proxy.estimate_gas(
+            checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
+        )
+
+        if not gas_limit:
+            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at_blocknumber = failed_at["number"]
+            failed_at_blockhash = encode_hex(failed_at["hash"])
+
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name="deposit",
+                transaction_executed=False,
+                required_gas=self.gas_measurements["UserDeposit.deposit"],
+                block_identifier=failed_at_blocknumber,
+            )
+
+            msg = self._check_why_deposit_failed(
+                token=token, total_deposit=total_deposit, block_identifier=failed_at_blockhash
+            )
+            raise RaidenRecoverableError(f"{error_prefix}. {msg}")
+
+        else:
+            error_prefix = "Call to deposit failed"
+            gas_limit = safe_gas_limit(gas_limit)
+            log_details["gas_limit"] = gas_limit
+
+            transaction_hash = self.proxy.transact(
+                "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
+            )
+
+            self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+
+            if failed_receipt:
+                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+
+                msg = self._check_why_deposit_failed(
+                    token=token, total_deposit=total_deposit, block_identifier=failed_at_blockhash
+                )
+                raise RaidenRecoverableError(f"{error_prefix}. {msg}")
 
     def _check_why_deposit_failed(
         self, token: Token, total_deposit: TokenAmount, block_identifier: BlockSpecification
