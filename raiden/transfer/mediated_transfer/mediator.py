@@ -52,6 +52,7 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
+    FeeAmount,
     List,
     LockType,
     NodeNetworkStateMap,
@@ -222,6 +223,11 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
+def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> FeeAmount:
+    balance = get_balance(channel.our_state, channel.partner_state)
+    return channel.fee_schedule.fee(amount, balance)
+
+
 def get_lock_amount_after_fees(
     lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
 ) -> PaymentWithFeeAmount:
@@ -231,11 +237,12 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
-    # The fee should be calculated on the payment amount without fees. But we
-    # only have the amount including fees, so we use that as an approximation.
-    fee = payee_channel.fee_schedule.fee(PaymentAmount(lock.amount), balance)
-    return PaymentWithFeeAmount(lock.amount - fee)
+    fee_in = _fee_for_channel(payer_channel, PaymentAmount(lock.amount))
+    # fee_out should be calculated on the payment amount without any fees. But
+    # we only have the amount including fee_out, so we use that as an
+    # approximation.
+    fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
+    return PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
 
 
 def sanity_check(
