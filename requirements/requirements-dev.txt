@@ -51,7 +51,7 @@ execnet==1.6.0            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
 filelock==3.0.12
 flake8-bugbear==19.3.0
-flake8-tuple==0.3.1
+flake8-tuple==0.4.0
 flake8==3.7.7
 flask-cors==3.0.8
 flask-restful==0.3.7
