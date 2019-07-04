@@ -38,9 +38,9 @@ itsdangerous==1.1.0       # via flask
 jinja2==2.10.1            # via flask
 lru-dict==1.1.6           # via web3
 markupsafe==1.1.1         # via jinja2
-marshmallow-dataclass==6.0.0rc2
-marshmallow-polyfield==5.5
-marshmallow==3.0.0rc6
+marshmallow-dataclass==6.0.0rc4
+marshmallow-polyfield==5.7
+marshmallow==3.0.0rc8
 matrix-client==0.3.2
 mirakuru==1.1.0
 mypy-extensions==0.4.1    # via raiden-contracts, typing-inspect

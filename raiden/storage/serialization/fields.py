@@ -11,20 +11,20 @@ from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tupl
 
 
 class IntegerToStringField(marshmallow.fields.Field):
-    def _serialize(self, value: int, attr: Any, obj: Any) -> str:
+    def _serialize(self, value: int, attr: Any, obj: Any, **kwargs) -> str:
         return str(value)
 
-    def _deserialize(self, value: str, attr: Any, data: Any) -> int:
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs) -> int:
         return int(value)
 
 
 class OptionalIntegerToStringField(marshmallow.fields.Field):
-    def _serialize(self, value: Optional[int], attr: Any, obj: Any) -> str:
+    def _serialize(self, value: Optional[int], attr: Any, obj: Any, **kwargs) -> str:
         if value is None:
             return ""
         return str(value)
 
-    def _deserialize(self, value: str, attr: Any, data: Any) -> Optional[int]:
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs) -> Optional[int]:
         if value == "":
             return None
         return int(value)
@@ -33,12 +33,12 @@ class OptionalIntegerToStringField(marshmallow.fields.Field):
 class BytesField(marshmallow.fields.Field):
     """ Used for `bytes` in the dataclass, serialize to hex encoding"""
 
-    def _serialize(self, value: bytes, attr: Any, obj: Any) -> str:
+    def _serialize(self, value: bytes, attr: Any, obj: Any, **kwargs) -> str:
         if value is None:
             return value
         return to_hex(value)
 
-    def _deserialize(self, value: str, attr: Any, data: Any) -> bytes:
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs) -> bytes:
         if value is None:
             return value
         return to_bytes(hexstr=value)
@@ -47,10 +47,10 @@ class BytesField(marshmallow.fields.Field):
 class AddressField(marshmallow.fields.Field):
     """ Converts addresses from bytes to hex and vice versa """
 
-    def _serialize(self, value: Address, attr: Any, obj: Any) -> str:
+    def _serialize(self, value: Address, attr: Any, obj: Any, **kwargs) -> str:
         return to_checksum_address(value)
 
-    def _deserialize(self, value: str, attr: Any, data: Any) -> Address:
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs) -> Address:
         return to_canonical_address(value)
 
 
@@ -77,13 +77,15 @@ class QueueIdentifierField(marshmallow.fields.Field):
             f"{canonical_id.channel_identifier}"
         )
 
-    def _serialize(self, queue_identifier: QueueIdentifier, attr: Any, obj: Any) -> str:
+    def _serialize(self, queue_identifier: QueueIdentifier, attr: Any, obj: Any, **kwargs) -> str:
         return (
             f"{to_checksum_address(queue_identifier.recipient)}"
             f"-{self._canonical_id_to_string(queue_identifier.canonical_identifier)}"
         )
 
-    def _deserialize(self, queue_identifier_str: str, attr: Any, data: Any) -> QueueIdentifier:
+    def _deserialize(
+        self, queue_identifier_str: str, attr: Any, data: Any, **kwargs
+    ) -> QueueIdentifier:
         str_recipient, str_canonical_id = queue_identifier_str.split("-")
         return QueueIdentifier(
             to_canonical_address(str_recipient), self._canonical_id_from_string(str_canonical_id)
@@ -103,10 +105,10 @@ class PRNGField(marshmallow.fields.Field):
 
         return pseudo_random_generator
 
-    def _serialize(self, value: Random, attr: Any, obj: Any) -> Tuple[Any, ...]:
+    def _serialize(self, value: Random, attr: Any, obj: Any, **kwargs) -> Tuple[Any, ...]:
         return value.getstate()
 
-    def _deserialize(self, value: str, attr: Any, data: Any) -> Random:
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs) -> Random:
         return self.pseudo_random_generator_from_json(data)
 
 
@@ -133,12 +135,12 @@ class CallablePolyField(PolyField):
 class NetworkXGraphField(marshmallow.fields.Field):
     """ Converts networkx.Graph objects to a string """
 
-    def _serialize(self, graph: networkx.Graph, attr: Any, obj: Any) -> str:
+    def _serialize(self, graph: networkx.Graph, attr: Any, obj: Any, **kwargs) -> str:
         return json.dumps(
             [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in graph.edges]
         )
 
-    def _deserialize(self, graph_data: str, attr: Any, data: Any) -> networkx.Graph:
+    def _deserialize(self, graph_data: str, attr: Any, data: Any, **kwargs) -> networkx.Graph:
         raw_data = json.loads(graph_data)
         canonical_addresses = [
             (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data

@@ -58,10 +58,10 @@ class AddressField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_checksum_address(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -81,11 +81,11 @@ class AddressField(fields.Field):
 
 class DataField(fields.Field):
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return data_encoder(value)
 
     @staticmethod
-    def _deserialize(value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(value, attr, data, **kwargs):  # pylint: disable=unused-argument
         return data_decoder(value)
 
 
@@ -99,10 +99,10 @@ class SecretField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_hex(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -127,10 +127,10 @@ class SecretHashField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_hex(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -159,7 +159,7 @@ class BaseSchema(Schema):
     OPTIONS_CLASS = BaseOpts
 
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         # this will depend on the Schema used, which has its object class in
         # the class Meta attributes
         decoding_class = self.opts.decoding_class  # pylint: disable=no-member
@@ -170,7 +170,7 @@ class BaseListSchema(Schema):
     OPTIONS_CLASS = BaseOpts
 
     @pre_load
-    def wrap_data_envelope(self, data):  # pylint: disable=no-self-use
+    def wrap_data_envelope(self, data, **kwargs):  # pylint: disable=no-self-use,unused-argument
         # because the EventListSchema and ChannelListSchema objects need to
         # have some field ('data'), the data has to be enveloped in the
         # internal representation to comply with the Schema
@@ -178,11 +178,11 @@ class BaseListSchema(Schema):
         return data
 
     @post_dump
-    def unwrap_data_envelope(self, data):  # pylint: disable=no-self-use
+    def unwrap_data_envelope(self, data, **kwargs):  # pylint: disable=no-self-use,unused-argument
         return data["data"]
 
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         decoding_class = self.opts.decoding_class  # pylint: disable=no-member
         list_ = data["data"]
         return decoding_class(list_)

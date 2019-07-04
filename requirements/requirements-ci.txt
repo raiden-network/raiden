@@ -81,9 +81,9 @@ ldap3==2.6
 lru-dict==1.1.6
 macholib==1.11            # via pyinstaller
 markupsafe==1.1.1
-marshmallow-dataclass==6.0.0rc2
-marshmallow-polyfield==5.5
-marshmallow==3.0.0rc6
+marshmallow-dataclass==6.0.0rc4
+marshmallow-polyfield==5.7
+marshmallow==3.0.0rc8
 matrix-angular-sdk==0.6.8
 matrix-client==0.3.2
 matrix-synapse-ldap3==0.1.3
