@@ -1890,22 +1890,24 @@ def test_node_change_network_state_unreachable_node():
 
 def test_next_transfer_pair_with_fees_deducted():
     balance = 10
-    fee = 5
+    fee_in = 1
+    fee_out = 2
 
     payer_transfer = create(
         LockedTransferSignedStateProperties(
-            amount=balance + fee, initiator=HOP1, target=ADDR, expiration=50
+            amount=balance + fee_in + fee_out, initiator=HOP1, target=ADDR, expiration=50
         )
     )
 
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance)
+                our_state=NettingChannelEndStateProperties(balance=balance),
+                fee_schedule=FeeScheduleState(flat=fee_in),
             ),
             NettingChannelStateProperties(
                 our_state=NettingChannelEndStateProperties(balance=balance),
-                fee_schedule=FeeScheduleState(flat=fee),
+                fee_schedule=FeeScheduleState(flat=fee_out),
             ),
         ]
     )
