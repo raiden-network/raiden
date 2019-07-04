@@ -10,7 +10,12 @@ from eth_utils import (
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenRecoverableError
+from raiden.exceptions import (
+    BrokenPreconditionError,
+    InvalidAddress,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
@@ -114,7 +119,7 @@ class UserDeposit:
                 current_balance = token.balance_of(
                     address=self.node_address, block_identifier=given_block_identifier
                 )
-            except (BadFunctionCallOutput, ValueError):
+            except ValueError:
                 # If 'given_block_identifier' has been pruned, we cannot perform the
                 # precondition checks but must still set the amount_to_deposit to a
                 # reasonable value.
@@ -122,6 +127,12 @@ class UserDeposit:
                     address=beneficiary, block_identifier=checking_block
                 )
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+            except BadFunctionCallOutput:
+                raise RaidenUnrecoverableError(
+                    f"Either the given address is for a different smart contract, or the "
+                    f"contract was not yet deployed at block {given_block_identifier}. "
+                    f"Either way this call should never have happened."
+                )
             else:
                 log_details["previous_total_deposit"] = previous_total_deposit
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
