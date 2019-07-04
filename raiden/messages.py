@@ -10,7 +10,7 @@ from eth_utils import big_endian_to_int, to_checksum_address, to_hex
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
-from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
+from raiden.exceptions import InvalidSignature
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
@@ -95,7 +95,6 @@ __all__ = (
     "PFSFeeUpdate",
     "Withdraw",
     "WithdrawRequest",
-    "from_dict",
     "message_from_sendevent",
 )
 
@@ -152,21 +151,6 @@ def assert_transfer_values(payment_identifier, token, recipient):
 
     if len(recipient) != 20:
         raise ValueError("recipient is an invalid address")
-
-
-def from_dict(data: dict) -> "Message":
-    try:
-        CLASSNAME_TO_CLASS[data["type"]]
-    except KeyError:
-        if "type" in data:
-            raise InvalidProtocolMessage(
-                'Invalid message type (data["type"] = {})'.format(data["type"])
-            ) from None
-        else:
-            raise InvalidProtocolMessage(
-                "Invalid message data. Can not find the data type"
-            ) from None
-    return DictSerializer.serialize(data)
 
 
 def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
