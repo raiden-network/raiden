@@ -18,6 +18,9 @@ from requests.adapters import HTTPAdapter
 log = structlog.get_logger(__name__)
 
 
+SHUTDOWN_TIMEOUT = 35
+
+
 class Room(MatrixRoom):
     """ Matrix `Room` subclass that invokes listener callbacks in separate greenlets """
 
@@ -188,8 +191,8 @@ class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
 
     sync_filter: str
-    sync_thread: gevent.Greenlet = None
-    _handle_thread: gevent.Greenlet = None
+    sync_thread: Optional[gevent.Greenlet] = None
+    _handle_thread: Optional[gevent.Greenlet] = None
 
     def __init__(
         self,
@@ -282,8 +285,14 @@ class GMatrixClient(MatrixClient):
         self.should_listen = False
         if self.sync_thread:
             self.sync_thread.kill()
+            exited = gevent.wait([self.sync_thread], timeout=SHUTDOWN_TIMEOUT)
+            if not exited:
+                raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
         if self._handle_thread is not None:
+            exited = gevent.wait([self._handle_thread], timeout=SHUTDOWN_TIMEOUT)
+            if not exited:
+                raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
             self._handle_thread.get()
         self.sync_thread = None
         self._handle_thread = None
@@ -392,22 +401,26 @@ class GMatrixClient(MatrixClient):
             self._post_hook_func(self.sync_token)
 
     def _handle_response(self, response, first_sync=False):
+        # We must ignore the stop flag during first_sync
+        if not self.should_listen and not first_sync:
+            log.warning("Aborting handle response", reason="Transport stopped")
+            return
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
-            for callback in self.presence_listeners.values():
+            for callback in list(self.presence_listeners.values()):
                 self.call(callback, presence_update)
 
         for to_device_message in response["to_device"]["events"]:
-            for listener in self.listeners:
+            for listener in self.listeners[:]:
                 if listener["event_type"] == "to_device":
                     self.call(listener["callback"], to_device_message)
 
         for room_id, invite_room in response["rooms"]["invite"].items():
-            for listener in self.invite_listeners:
+            for listener in self.invite_listeners[:]:
                 self.call(listener, room_id, invite_room["invite_state"])
 
         for room_id, left_room in response["rooms"]["leave"].items():
-            for listener in self.left_listeners:
+            for listener in self.left_listeners[:]:
                 self.call(listener, room_id, left_room)
             if room_id in self.rooms:
                 del self.rooms[room_id]

@@ -1,3 +1,4 @@
+import uuid
 from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import pytest
@@ -33,10 +34,14 @@ class DummyMatrixClient:
         # This is only used in `get_user_presence()`
         self._user_presence: Dict[str, str] = {}
 
-    def add_presence_listener(self, callback: Callable):
+    def add_presence_listener(self, callback: Callable) -> uuid.UUID:
         if self._presence_callback is not None:
             raise RuntimeError("Callback has already been registered")
         self._presence_callback = callback
+        return uuid.uuid4()
+
+    def remove_presence_listener(self, uid: uuid.UUID) -> None:  # pylint: disable=unused-argument
+        self._presence_callback = None
 
     def search_user_directory(self, term: str) -> Iterator[DummyUser]:
         for user in self._user_directory_content:
@@ -133,13 +138,17 @@ def address_reachability_callback(address_reachability):
 
 @pytest.fixture
 def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_presence_callback):
-    return NonValidatingUserAddressManager(
+    address_manager = NonValidatingUserAddressManager(
         client=dummy_matrix_client,
         get_user_callable=dummy_get_user,
         address_reachability_changed_callback=address_reachability_callback,
         user_presence_changed_callback=user_presence_callback,
-        stop_event=None,
     )
+    address_manager.start()
+
+    yield address_manager
+
+    address_manager.stop()
 
 
 def test_user_addr_mgr_basics(

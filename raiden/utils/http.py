@@ -127,14 +127,19 @@ class HTTPExecutor(MiHTTPExecutor):
     def kill(self):
         STDOUT = subprocess.STDOUT  # pylint: disable=no-member
 
-        ps_fax = subprocess.check_output(["ps", "fax"], stderr=STDOUT)
+        ps_param = "fax"
+        if platform.system() == "Darwin":
+            # BSD ``ps`` doesn't support the ``f`` flag
+            ps_param = "ax"
+
+        ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
 
         log.debug("Executor process: killing process", command=self.command)
         log.debug("EXecutor process: current processes", ps_fax=ps_fax)
 
         super().kill()
 
-        ps_fax = subprocess.check_output(["ps", "fax"], stderr=STDOUT)
+        ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
 
         log.debug("Executor process: process killed", command=self.command)
         log.debug("EXecutor process: current processes", ps_fax=ps_fax)
