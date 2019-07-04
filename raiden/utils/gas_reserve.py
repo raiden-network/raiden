@@ -68,9 +68,9 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
             payment_network_address=registry_address,
             token_address=token_address,
         )
-        num_opening_channels = len(
-            raiden.chain.token_network(token_network_address).open_channel_transactions
-        )
+        num_opening_channels = raiden.chain.token_network(
+            token_network_address
+        ).opening_channels_count
         num_opened_channels = len(
             views.get_channelstate_open(chain_state, registry_address, token_address)
         )
