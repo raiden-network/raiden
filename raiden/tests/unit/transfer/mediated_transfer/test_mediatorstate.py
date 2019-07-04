@@ -25,7 +25,6 @@ from raiden.tests.utils.factories import (
     UNIT_SETTLE_TIMEOUT,
     UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
-    UNIT_TRANSFER_FEE,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
@@ -1920,7 +1919,7 @@ def test_next_transfer_pair_with_fees_deducted():
 
 def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
-    fee = FeeAmount(5)
+    fee = FeeAmount(0)  # Fee handling for refunds is currently undefined, so set it to 0 for now.
 
     end_state = factories.NettingChannelEndStateProperties(balance=amount + fee)
     partner_state = replace(end_state, address=UNIT_TRANSFER_SENDER)
@@ -1967,14 +1966,15 @@ def test_backward_transfer_pair_with_fees_deducted():
 
 
 def test_sanity_check_for_refund_transfer_with_fees():
+    fee = FeeAmount(0)  # Fee handling for refunds is currently undefined, so set it to 0 for now.
     channels = make_channel_set(
         [
             NettingChannelStateProperties(
-                fee_schedule=FeeScheduleStateProperties(flat=UNIT_TRANSFER_FEE, proportional=0),
+                fee_schedule=FeeScheduleStateProperties(flat=fee, proportional=0),
                 canonical_identifier=make_canonical_identifier(channel_identifier=1),
                 our_state=NettingChannelEndStateProperties.OUR_STATE,
                 partner_state=NettingChannelEndStateProperties(
-                    balance=UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE, address=UNIT_TRANSFER_SENDER
+                    balance=UNIT_TRANSFER_AMOUNT + fee, address=UNIT_TRANSFER_SENDER
                 ),
             ),
             NettingChannelStateProperties(
@@ -1992,7 +1992,7 @@ def test_sanity_check_for_refund_transfer_with_fees():
 
     next_hop_address = channels[1].partner_state.address
 
-    from_transfer_amount = UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE
+    from_transfer_amount = UNIT_TRANSFER_AMOUNT + fee
     from_transfer = factories.make_signed_transfer_for(
         channel_state=channels[0],
         properties=LockedTransferSignedStateProperties(
