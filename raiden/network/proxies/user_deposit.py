@@ -140,6 +140,7 @@ class UserDeposit:
 
                 if total_deposit <= previous_total_deposit:
                     msg = (
+                        f"{error_prefix} "
                         f"Current total deposit {previous_total_deposit} is already larger "
                         f"than the requested total deposit amount {total_deposit}"
                     )
@@ -148,7 +149,8 @@ class UserDeposit:
 
                 if current_balance < amount_to_deposit:
                     msg = (
-                        f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} "
+                        f"{error_prefix} "
+                        f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
                         f"can not be larger than the available balance {current_balance}, "
                         f"for token at address {to_checksum_address(token.address)}"
                     )
