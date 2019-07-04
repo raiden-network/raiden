@@ -185,6 +185,7 @@ class TokenNetwork:
 
         # Forbids concurrent operations on the same channel
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
+        self.opening_channels_count = 0
 
     def chain_id(self) -> ChainID:
         """ Return the token of this manager. """
@@ -284,9 +285,13 @@ class TokenNetwork:
             }
 
             with log_transaction(log, "new_netting_channel", log_details):
-                channel_identifier = self._new_netting_channel(
-                    partner, settle_timeout, log_details
-                )
+                self.opening_channels_count += 1
+                try:
+                    channel_identifier = self._new_netting_channel(
+                        partner, settle_timeout, log_details
+                    )
+                finally:
+                    self.opening_channels_count -= 1
                 log_details["channel_identifier"] = str(channel_identifier)
 
             return channel_identifier
