@@ -118,8 +118,8 @@ def assert_envelope_values(
     if nonce > UINT64_MAX:
         raise ValueError("nonce is too large")
 
-    if channel_identifier < 0:
-        raise ValueError("channel id cannot be negative")
+    if channel_identifier <= 0:
+        raise ValueError("channel id cannot be zero or negative")
 
     if channel_identifier > UINT256_MAX:
         raise ValueError("channel id is too large")
