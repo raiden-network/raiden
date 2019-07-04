@@ -19,12 +19,12 @@ def class_type(instance: Any) -> str:
     return f"{instance.__class__.__module__}.{instance.__class__.__name__}"
 
 
-def set_class_type(schema, data, instance):  # pylint: disable=unused-argument
+def set_class_type(schema, data, instance, **kwargs):  # pylint: disable=unused-argument
     data["_type"] = class_type(instance)
     return data
 
 
-def remove_class_type(schema, data):  # pylint: disable=unused-argument
+def remove_class_type(schema, data, **kwargs):  # pylint: disable=unused-argument
     if "_type" in data:
         del data["_type"]
     return data
