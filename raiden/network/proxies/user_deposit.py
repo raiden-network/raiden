@@ -10,6 +10,7 @@ from eth_utils import (
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
+from raiden.constants import UINT256_MAX
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidAddress,
@@ -90,6 +91,18 @@ class UserDeposit:
             block_identifier=block_identifier
         )
 
+    def whole_balance(self, block_identifier: BlockSpecification) -> TokenAmount:
+        return TokenAmount(
+            self.proxy.contract.functions.whole_balance().call(block_identifier=block_identifier)
+        )
+
+    def whole_balance_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
+        return TokenAmount(
+            self.proxy.contract.functions.whole_balance_limit().call(
+                block_identifier=block_identifier
+            )
+        )
+
     def deposit(
         self,
         beneficiary: Address,
@@ -102,14 +115,13 @@ class UserDeposit:
         token_address = self.token_address(given_block_identifier)
         token = self.blockchain_service.token(token_address=token_address)
 
+        error_prefix = "Call to deposit will fail"
         log_details = {
             "beneficiary": to_checksum_address(beneficiary),
             "contract": to_checksum_address(self.address),
             "node": to_checksum_address(self.node_address),
             "total_deposit": total_deposit,
         }
-
-        error_prefix = "Call to deposit will fail"
 
         with self.deposit_lock:
             # check preconditions
@@ -119,6 +131,10 @@ class UserDeposit:
                 )
                 current_balance = token.balance_of(
                     address=self.node_address, block_identifier=given_block_identifier
+                )
+                whole_balance = self.whole_balance(block_identifier=given_block_identifier)
+                whole_balance_limit = self.whole_balance_limit(
+                    block_identifier=given_block_identifier
                 )
             except ValueError:
                 # If 'given_block_identifier' has been pruned, we cannot perform the
@@ -137,6 +153,23 @@ class UserDeposit:
             else:
                 log_details["previous_total_deposit"] = previous_total_deposit
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+
+                if whole_balance + amount_to_deposit > UINT256_MAX:
+                    msg = (
+                        f"{error_prefix} Current whole balance is {whole_balance}. "
+                        f"The new deposit of {amount_to_deposit} would lead to an overflow."
+                    )
+                    log.info("deposit failed", reason=msg, **log_details)
+                    raise BrokenPreconditionError(msg)
+
+                if whole_balance + amount_to_deposit > whole_balance_limit:
+                    msg = (
+                        f"{error_prefix} Current whole balance is {whole_balance}. "
+                        f"With the new deposit of {amount_to_deposit}, the deposit "
+                        f"limit of {whole_balance_limit} would be exceeded."
+                    )
+                    log.info("deposit failed", reason=msg, **log_details)
+                    raise BrokenPreconditionError(msg)
 
                 if total_deposit <= previous_total_deposit:
                     msg = (
