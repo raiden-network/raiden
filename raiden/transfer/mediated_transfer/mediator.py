@@ -449,7 +449,10 @@ def backward_transfer_pair(
             channel_state=backward_channel,
             initiator=payer_transfer.initiator,
             target=payer_transfer.target,
-            amount=get_lock_amount_after_fees(lock, backward_channel),
+            # `amount` should be `get_lock_amount_after_fees(...)`, but fees
+            # for refunds are currently not defined, so we assume fee=0 to keep
+            # it simple, for now.
+            amount=lock.amount,
             message_identifier=message_identifier,
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
