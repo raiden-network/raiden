@@ -207,7 +207,7 @@ def logging_level(request, logs_storage):
     For integration tests this also sets the geth verbosity.
     """
     # disable pytest's built in log capture, otherwise logs are printed twice
-    request.config.option.showcapture = "no"
+    request.config.option.showcapture = "stdout"
 
     if request.config.option.log_cli_level:
         level = request.config.option.log_cli_level

@@ -269,6 +269,7 @@ jobs:
     executor:
       name: docker
       py-version: << parameters.py-version >>
+      resource: xlarge
 
     steps:
       - attach-and-link:
@@ -329,7 +330,7 @@ jobs:
       test-type:
         description: "type of test"
         type: enum
-        enum: ["integration", "unit", "fuzz"]
+        enum: ["fuzz", "integration", "mocked", "unit"]
       parallelism:
         description: "number of containers to be used in parallel for this test"
         default: 1
@@ -703,7 +704,13 @@ workflows:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
-          blockchain-type: "geth"
+          requires:
+            - lint-3.7
+
+      - test:
+          name: test-mocked-3.7
+          py-version: "3.7"
+          test-type: "mocked"
           requires:
             - lint-3.7
 
@@ -711,7 +718,6 @@ workflows:
           name: test-fuzz-3.7
           py-version: "3.7"
           test-type: "fuzz"
-          blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
@@ -730,6 +736,7 @@ workflows:
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -745,6 +752,7 @@ workflows:
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - finalize:
           requires:
@@ -903,7 +911,13 @@ workflows:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
-          blockchain-type: "geth"
+          requires:
+            - lint-3.7
+
+      - test:
+          name: test-mocked-3.7
+          py-version: "3.7"
+          test-type: "mocked"
           requires:
             - lint-3.7
 
@@ -911,7 +925,6 @@ workflows:
           name: test-fuzz-3.7
           py-version: "3.7"
           test-type: "fuzz"
-          blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
@@ -930,6 +943,7 @@ workflows:
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -945,6 +959,7 @@ workflows:
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - finalize:
           requires:

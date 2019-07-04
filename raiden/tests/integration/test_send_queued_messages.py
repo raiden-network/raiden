@@ -138,6 +138,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
         deposit + total_transferred_amount,
         [],
     )
+    new_transport.stop()
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])

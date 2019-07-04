@@ -33,6 +33,7 @@ from eth_utils import (
 from gevent.event import Event
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
+from structlog._config import BoundLoggerLazyProxy
 
 from raiden.exceptions import InvalidSignature, SerializationError, TransportError
 from raiden.messages.abstract import Message, SignedMessage
@@ -99,19 +100,36 @@ class UserAddressManager:
         get_user_callable: Callable[[Union[User, str]], User],
         address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
-        stop_event: Optional[Event] = None,
-    ):
+        _log_context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self._client = client
         self._get_user = get_user_callable
         self._address_reachability_changed_callback = address_reachability_changed_callback
         self._user_presence_changed_callback = user_presence_changed_callback
-        self._stop_event = stop_event if stop_event else Event()
+        self._stop_event = Event()
 
-        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
-        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
-        self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._reset_state()
 
-        self._client.add_presence_listener(self._presence_listener)
+        self._log_context = _log_context
+        self._log = None
+        self._listener_id = None
+
+    def start(self) -> None:
+        """ Start listening for presence updates.
+
+        Should be called before ``.login()`` is called on the underlying client. """
+        assert self._listener_id is None, "UserAddressManager.start() called twice"
+        self._stop_event.clear()
+        self._listener_id = self._client.add_presence_listener(self._presence_listener)
+
+    def stop(self) -> None:
+        """ Stop listening on presence updates. """
+        assert self._listener_id is not None, "UserAddressManager.stop() called before start"
+        self._stop_event.set()
+        self._client.remove_presence_listener(self._listener_id)
+        self._listener_id = None
+        self._log = None
+        self._reset_state()
 
     @property
     def known_addresses(self) -> KeysView[Address]:
@@ -206,9 +224,8 @@ class UserAddressManager:
         if new_address_reachability == prev_addresss_reachability:
             # Cached address reachability matches new state, do nothing
             return
-        log.debug(
-            "Changing address presence state",
-            current_user=self._user_id,
+        self.log.debug(
+            "Changing address reachability state",
             address=to_checksum_address(address),
             prev_state=prev_addresss_reachability,
             state=new_address_reachability,
@@ -246,13 +263,19 @@ class UserAddressManager:
             # Cached presence state matches, no action required
             return
 
+        self.log.debug(
+            "Changing user presence state",
+            user_id=user_id,
+            prev_state=self._userid_to_presence.get(user_id),
+            state=new_state,
+        )
         self._userid_to_presence[user_id] = new_state
         self.refresh_address_presence(address)
 
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
 
-    def get_address_mgr_info(self):
+    def log_status_message(self):
         while not self._stop_event.ready():
             addresses_uids_presence = {
                 to_checksum_address(address): {
@@ -263,11 +286,16 @@ class UserAddressManager:
             }
 
             log.debug(
-                "Matrix address manager info",
+                "Matrix address manager status",
                 addresses_uids_and_presence=addresses_uids_presence,
-                current_user_id=self._user_id,
+                current_user=self._user_id,
             )
             self._stop_event.wait(30)
+
+    def _reset_state(self):
+        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
+        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
+        self._userid_to_presence: Dict[str, UserPresence] = dict()
 
     @property
     def _user_id(self) -> str:
@@ -287,6 +315,20 @@ class UserAddressManager:
     @staticmethod
     def _validate_userid_signature(user: User) -> Optional[Address]:
         return validate_userid_signature(user)
+
+    @property
+    def log(self) -> BoundLoggerLazyProxy:
+        if not self._log:
+            if not hasattr(self._client, "user_id"):
+                return log
+            self._log = log.bind(
+                **{
+                    "current_user": self._user_id,
+                    "node": to_checksum_address(self._user_id.split(":", 1)[0][1:]),
+                    **(self._log_context or {}),
+                }
+            )
+        return self._log
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
@@ -426,7 +468,6 @@ def login_or_register(
             prev_sync_limit = client.set_sync_limit(0)
             client._sync()  # when logging, do initial_sync with limit=0
             client.set_sync_limit(prev_sync_limit)
-            log.debug("Login", homeserver=server_name, server_url=server_url, username=username)
             break
         except MatrixRequestError as ex:
             if ex.code != 403:
@@ -454,6 +495,9 @@ def login_or_register(
     name = encode_hex(signer.sign(client.user_id.encode()))
     user = client.get_user(client.user_id)
     user.set_display_name(name)
+    log.debug(
+        "Matrix user login", homeserver=server_name, server_url=server_url, username=username
+    )
     return user
 
 
