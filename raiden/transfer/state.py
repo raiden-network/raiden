@@ -295,7 +295,7 @@ class NettingChannelEndState(State):
 
     address: Address
     contract_balance: Balance
-    total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
+    onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     withdraws: Dict[WithdrawAmount, WithdrawState] = field(repr=False, default_factory=dict)
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
@@ -325,6 +325,12 @@ class NettingChannelEndState(State):
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
+
+    @property
+    def offchain_total_withdraw(self):
+        if not self.withdraws:
+            return 0
+        return self.withdraws[-1].total_withdraw
 
 
 @dataclass
