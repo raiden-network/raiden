@@ -659,7 +659,7 @@ class WithdrawRequest(SignedRetrieableMessage):
 class WithdrawConfirmation(SignedRetrieableMessage):
     """ Confirms withdraw to partner with a signature """
 
-    cmdid: ClassVar[int] = CmdId.WITHDRAW_CONFIRMATION
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_CONFIRMATION
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -692,14 +692,13 @@ class WithdrawConfirmation(SignedRetrieableMessage):
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
-            (self.expiration, "uint256"),
         )
 
 
 class WithdrawExpired(SignedRetrieableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
 
-    cmdid: ClassVar[int] = CmdId.WITHDRAW_EXPIRED
+    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_EXPIRED
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -724,14 +723,12 @@ class WithdrawExpired(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            # TODO: should we add cmdid?
             (self.token_network_address, "address"),
             (self.chain_id, "uint256"),
             (self.message_type, "uint256"),
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
-            (self.expiration, "uint256"),
         )
 
 
