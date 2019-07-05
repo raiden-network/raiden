@@ -129,7 +129,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_withdraw_expired(raiden: RaidenService, message: WithdrawExpired):
-        withdraw = ReceiveWithdrawExpired(
+        withdraw_expired = ReceiveWithdrawExpired(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
                 token_network_address=message.token_network_address,
@@ -141,7 +141,7 @@ class MessageHandler:
             nonce=message.nonce,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_change(withdraw)
+        raiden.handle_and_track_state_changes([withdraw_expired])
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
