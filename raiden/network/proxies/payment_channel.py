@@ -1,10 +1,10 @@
 from typing import Optional
 
-from eth_utils import decode_hex
 from web3.utils.filters import Filter
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
+from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
+from raiden.network.proxies.utils import get_channel_participants_from_open_event
 from raiden.transfer.state import PendingLocksState
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
@@ -36,31 +36,16 @@ class PaymentChannel:
         if channel_identifier <= 0 or channel_identifier > UINT256_MAX:
             raise ValueError(f"channel_identifier {channel_identifier} is not a uint256")
 
-        # FIXME: Issue #3958
-        from_block = GENESIS_BLOCK_NUMBER
-
-        # For this check it is perfectly fine to use a `latest` block number.
-        # Because the filter is looking just for the OPENED event.
-        to_block = "latest"
-
-        filter_args = get_filter_args_for_specific_event_from_channel(
-            token_network_address=token_network.address,
+        participants = get_channel_participants_from_open_event(
+            token_network=token_network,
             channel_identifier=channel_identifier,
-            event_name=ChannelEvent.OPENED,
             contract_manager=contract_manager,
-            from_block=from_block,
-            to_block=to_block,
         )
 
-        events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
-
-        # There must be only one channel open event per channel identifier
-        if len(events) != 1:
+        if not participants:
             raise ValueError("Channel is non-existing.")
 
-        event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0])
-        participant1 = Address(decode_hex(event["args"]["participant1"]))
-        participant2 = Address(decode_hex(event["args"]["participant2"]))
+        participant1, participant2 = participants
 
         if token_network.node_address not in (participant1, participant2):
             raise ValueError("One participant must be the node address")
