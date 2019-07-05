@@ -112,6 +112,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         signature=factories.make_32bytes(),
         sender=recipient2,
         nonce=1,
+        expiration=10,
     )
     iteration = node.handle_receive_withdraw(chain_state, receive_withdraw)
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
@@ -130,6 +131,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         signature=factories.make_32bytes(),
         sender=recipient1,
         nonce=1,
+        expiration=10,
     )
     iteration = node.handle_receive_withdraw(chain_state, receive_withdraw)
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])

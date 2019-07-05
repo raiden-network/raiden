@@ -1720,6 +1720,7 @@ def test_receive_withdraw_request():
     partner_model1, privkey2 = create_model(balance=100)
     signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
+    expiration = 10
 
     # Withdraw request larger than balance
     withdraw_request = ReceiveWithdrawRequest(
@@ -1731,7 +1732,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
-        expiration=10,
+        expiration=expiration,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1751,6 +1752,7 @@ def test_receive_withdraw_request():
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         total_withdraw=20,
+        expiration_block=expiration,
     )
     signature = signer.sign(packed)
 
@@ -1763,7 +1765,7 @@ def test_receive_withdraw_request():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
-        expiration=10,
+        expiration=expiration,
     )
 
     iteration = channel.handle_receive_withdraw_request(
@@ -1844,6 +1846,7 @@ def test_receive_withdraw_confirmation():
         participant=channel_state.our_state.address,
         # pylint: enable=no-member
         total_withdraw=total_withdraw,
+        expiration_block=10,
     )
     partner_signature = signer.sign(packed)
 
@@ -1861,10 +1864,14 @@ def test_receive_withdraw_confirmation():
         sender=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_confirmation(
-        channel_state=channel_state, withdraw=receive_withdraw, block_hash=block_hash
+        channel_state=channel_state,
+        withdraw=receive_withdraw,
+        block_number=10,
+        block_hash=block_hash,
     )
 
     assert (
@@ -1883,10 +1890,14 @@ def test_receive_withdraw_confirmation():
         signature=make_32bytes(),
         sender=channel_state.partner_state.address,
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_confirmation(
-        channel_state=iteration.new_state, withdraw=receive_withdraw, block_hash=block_hash
+        channel_state=iteration.new_state,
+        withdraw=receive_withdraw,
+        block_number=10,
+        block_hash=block_hash,
     )
 
     assert (
@@ -1903,10 +1914,14 @@ def test_receive_withdraw_confirmation():
         signature=partner_signature,
         sender=channel_state.partner_state.address,
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.handle_receive_withdraw_confirmation(
-        channel_state=iteration.new_state, withdraw=receive_withdraw, block_hash=block_hash
+        channel_state=iteration.new_state,
+        withdraw=receive_withdraw,
+        block_number=10,
+        block_hash=block_hash,
     )
 
     assert (
@@ -1929,6 +1944,7 @@ def test_node_sends_withdraw_expiry():
     expiration_block_number = 10
     expiration_threshold = channel.get_sender_expiration_threshold(expiration_block_number)
 
+    channel_state.our_state.nonce = 1
     channel_state.our_state.total_withdraw = total_withdraw
     channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
@@ -1997,6 +2013,7 @@ def test_node_handles_received_withdraw_expiry():
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         total_withdraw=total_withdraw,
+        expiration_block=10,
     )
     partner_signature = signer.sign(packed)
 
@@ -2050,6 +2067,7 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         total_withdraw=total_withdraw,
+        expiration_block=expiration_block_number,
     )
     partner_signature = signer.sign(packed)
 
@@ -2154,6 +2172,7 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         total_withdraw=total_withdraw,
+        expiration_block=expiration_block_number,
     )
     partner_signature = signer.sign(packed)
 
@@ -2211,6 +2230,7 @@ def test_node_multiple_withdraws_with_one_expiring():
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         total_withdraw=total_withdraw,
+        expiration_block=expiration_block_number,
     )
     partner_signature = signer.sign(packed)
 

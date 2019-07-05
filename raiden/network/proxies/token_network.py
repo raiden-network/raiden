@@ -56,6 +56,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     BalanceHash,
+    BlockExpiration,
     BlockNumber,
     BlockSpecification,
     ChainID,
@@ -1137,7 +1138,7 @@ class TokenNetwork:
         given_block_identifier: BlockSpecification,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
-        expiration_block: BlockNumber,
+        expiration_block: BlockExpiration,
         participant_signature: Signature,
         partner_signature: Signature,
         participant: Address,
@@ -1233,6 +1234,7 @@ class TokenNetwork:
                     participant=participant,
                     total_withdraw=total_withdraw,
                     canonical_identifier=canonical_identifier,
+                    expiration_block=expiration_block,
                 )
                 try:
                     participant_recovered_address = recover(
@@ -1250,6 +1252,7 @@ class TokenNetwork:
                     participant=participant,
                     total_withdraw=total_withdraw,
                     canonical_identifier=canonical_identifier,
+                    expiration_block=expiration_block,
                 )
                 try:
                     partner_recovered_address = recover(
@@ -1287,7 +1290,7 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
-        expiration_block: BlockNumber,
+        expiration_block: BlockExpiration,
         participant: Address,
         partner: Address,
         partner_signature: Signature,

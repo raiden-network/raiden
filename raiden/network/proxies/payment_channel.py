@@ -11,6 +11,7 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BalanceHash,
+    BlockExpiration,
     BlockNumber,
     BlockSpecification,
     BlockTimeout,
@@ -163,9 +164,9 @@ class PaymentChannel:
     def set_total_withdraw(
         self,
         total_withdraw: WithdrawAmount,
-        expiration_block: BlockNumber,
         participant_signature: Signature,
         partner_signature: Signature,
+        expiration_block: BlockExpiration,
         block_identifier: BlockSpecification,
     ):
         self.token_network.set_total_withdraw(

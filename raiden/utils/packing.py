@@ -1,11 +1,10 @@
-from raiden.constants import UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BalanceHash,
-    BlockNumber,
+    BlockExpiration,
     Nonce,
     Signature,
     TokenAmount,
@@ -82,7 +81,10 @@ def pack_reward_proof(
 
 
 def pack_withdraw(
-    canonical_identifier: CanonicalIdentifier, participant: Address, total_withdraw: WithdrawAmount
+    canonical_identifier: CanonicalIdentifier,
+    participant: Address,
+    total_withdraw: WithdrawAmount,
+    expiration_block: BlockExpiration,
 ) -> bytes:
     """Packs withdraw data to be signed
 
@@ -95,7 +97,6 @@ def pack_withdraw(
     participant_address,
     total_withdraw
     """
-    expiration_block = BlockNumber(UINT256_MAX)  # FIXME: faking
     return pack_data(
         (canonical_identifier.token_network_address, "address"),
         (canonical_identifier.chain_identifier, "uint256"),

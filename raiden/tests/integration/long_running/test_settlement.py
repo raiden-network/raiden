@@ -11,14 +11,13 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock, WithdrawExpired
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
@@ -515,6 +514,11 @@ def run_test_channel_withdraw_expired(
     )
 
     alice_to_bob_amount = 10
+    total_withdraw = deposit + alice_to_bob_amount
+    wait_for_withdraw_expired_message = alice_app.raiden.message_handler.wait_for_message(
+        WithdrawExpired, {"total_withdraw": total_withdraw}
+    )
+
     identifier = 1
     target = bob_app.raiden.address
     secret = sha3(target)
@@ -528,25 +532,15 @@ def run_test_channel_withdraw_expired(
         secret=secret,
     )
 
-    wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
-        Unlock, {"payment_identifier": identifier}
-    )
     timeout = network_wait * number_of_nodes
     with Timeout(seconds=timeout):
-        wait_for_unlock.get()
         msg = (
             f"transfer from {to_checksum_address(alice_app.raiden.address)} "
             f"to {to_checksum_address(bob_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
-    total_withdraw = deposit + alice_to_bob_amount
-
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
-
-    wait_for_withdraw_expired_message = alice_app.raiden.message_handler.wait_for_message(
-        WithdrawExpired, {"total_withdraw": total_withdraw}
-    )
 
     bob_app.raiden.withdraw(
         canonical_identifier=bob_alice_channel_state.canonical_identifier,
