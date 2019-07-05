@@ -2295,8 +2295,7 @@ def test_receive_contract_withdraw():
     )
 
     iteration = channel.handle_channel_withdraw(
-        channel_state=channel_state,
-        state_change=contract_receive_withdraw,
+        channel_state=channel_state, state_change=contract_receive_withdraw
     )
 
     assert iteration.new_state.our_state.onchain_total_withdraw == total_withdraw
@@ -2315,8 +2314,7 @@ def test_receive_contract_withdraw():
     )
 
     iteration = channel.handle_channel_withdraw(
-        channel_state=iteration.new_state,
-        state_change=contract_receive_withdraw,
+        channel_state=iteration.new_state, state_change=contract_receive_withdraw
     )
 
     assert iteration.new_state.partner_state.onchain_total_withdraw == total_withdraw
