@@ -1322,6 +1322,7 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 participant=participant,
                 total_withdraw=total_withdraw,
+                expiration_block=expiration_block,
                 partner_signature=partner_signature,
                 participant_signature=participant_signature,
             )
