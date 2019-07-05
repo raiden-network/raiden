@@ -302,3 +302,7 @@ class TokenNetworkDeprecated(RaidenError):
     """ Raised when the token network proxy safety switch
     is turned on (i.e deprecated).
     """
+
+
+class MintFailed(RaidenError):
+    """ Raised when an attempt to mint a testnet token failed. """
