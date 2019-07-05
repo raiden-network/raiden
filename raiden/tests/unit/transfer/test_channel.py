@@ -393,14 +393,24 @@ def test_handle_block_closed_channel():
             settle_timeout=50,
         )
     )
-
+    pseudo_random_generator = random.Random()
     block = Block(block_number=90, gas_limit=100000, block_hash=factories.make_block_hash())
-    before_settle = handle_block(channel_state, block, block.block_number)
+    before_settle = handle_block(
+        channel_state=channel_state,
+        state_change=block,
+        block_number=block.block_number,
+        pseudo_random_generator=pseudo_random_generator,
+    )
     assert get_status(before_settle.new_state) == CHANNEL_STATE_CLOSED
     assert not before_settle.events
 
     block = Block(block_number=102, gas_limit=100000, block_hash=factories.make_block_hash())
-    after_settle = handle_block(before_settle.new_state, block, block.block_number)
+    after_settle = handle_block(
+        channel_state=before_settle.new_state,
+        state_change=block,
+        block_number=block.block_number,
+        pseudo_random_generator=pseudo_random_generator,
+    )
     assert get_status(after_settle.new_state) == CHANNEL_STATE_SETTLING
     assert after_settle.events
 

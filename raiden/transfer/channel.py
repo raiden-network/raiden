@@ -850,6 +850,7 @@ def is_valid_withdraw_request(
         canonical_identifier=withdraw_request.canonical_identifier,
         participant=channel_state.partner_state.address,
         total_withdraw=withdraw_request.total_withdraw,
+        expiration_block=withdraw_request.expiration,
     )
 
     valid_signature, signature_msg = is_valid_signature(
@@ -911,6 +912,7 @@ def is_valid_withdraw_confirmation(
         canonical_identifier=received_withdraw.canonical_identifier,
         participant=channel_state.our_state.address,
         total_withdraw=received_withdraw.total_withdraw,
+        expiration_block=received_withdraw.expiration,
     )
 
     valid_signature, signature_msg = is_valid_signature(
@@ -918,6 +920,12 @@ def is_valid_withdraw_confirmation(
         signature=received_withdraw.signature,
         sender_address=channel_state.partner_state.address,
     )
+
+    if not withdraw_state:
+        msg = "Received withdraw confirmation {} was not found in withdraw states".format(
+            received_withdraw.total_withdraw
+        )
+        return (False, msg)
 
     # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
     total_channel_withdraw = (
@@ -927,18 +935,11 @@ def is_valid_withdraw_confirmation(
 
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
-        expiration_threshold=get_sender_expiration_threshold(
-            expiration=withdraw_state.expiration
-        ),
+        expiration_threshold=get_sender_expiration_threshold(expiration=withdraw_state.expiration),
     )
 
     if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
         msg = f"Invalid canonical identifier provided in withdraw request"
-        result = (False, msg)
-    elif not withdraw_state:
-        msg = "Received withdraw confirmation {} was not found in withdraw states".format(
-            received_withdraw.total_withdraw
-        )
         result = (False, msg)
     elif withdraw_expired:
         msg = "Withdraw has already expired."
@@ -979,6 +980,7 @@ def is_valid_withdraw_expired(
         canonical_identifier=state_change.canonical_identifier,
         participant=channel_state.partner_state.address,
         total_withdraw=state_change.total_withdraw,
+        expiration_block=withdraw_state.expiration,
     )
 
     valid_signature, signature_msg = is_valid_signature(
@@ -1923,7 +1925,7 @@ def handle_receive_withdraw_confirmation(
     events: List[Event] = list()
 
     is_valid, msg = is_valid_withdraw_confirmation(
-        channel_state=channel_state, withdraw=withdraw, block_number=block_number
+        channel_state=channel_state, received_withdraw=withdraw, block_number=block_number
     )
     if is_valid:
         channel_state.partner_state.nonce = withdraw.nonce
@@ -1933,6 +1935,7 @@ def handle_receive_withdraw_confirmation(
                     canonical_identifier=withdraw.canonical_identifier,
                     total_withdraw=withdraw.total_withdraw,
                     partner_signature=withdraw.signature,
+                    expiration=withdraw.expiration,
                     triggered_by_block_hash=block_hash,
                 ),
                 SendProcessed(

@@ -70,6 +70,7 @@ class ContractSendChannelWithdraw(ContractSendEvent):
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
     partner_signature: Signature
 
 
