@@ -541,7 +541,11 @@ class RestAPI:  # pragma: no unittest
         )
 
     def mint_token(
-        self, token_address: typing.TokenAddress, to: typing.Address, value: typing.TokenAmount
+        self,
+        token_address: typing.TokenAddress,
+        to: typing.Address,
+        value: typing.TokenAmount,
+        method: str,
     ):
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
@@ -555,10 +559,13 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
             to=to_checksum_address(to),
             value=value,
+            method=method,
         )
 
         try:
-            tx_hash = self.raiden_api.mint_token(token_address=token_address, to=to, value=value)
+            tx_hash = self.raiden_api.mint_token(
+                token_address=token_address, to=to, value=value, method=method
+            )
         except ValueError as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
 
