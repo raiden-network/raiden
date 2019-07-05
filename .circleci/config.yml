@@ -338,7 +338,7 @@ jobs:
     environment:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
-      RAIDEN_TESTS_ETH_LOGSDIR: /tmp/eth/logs
+      RAIDEN_TESTS_LOGSDIR: /tmp/tests/logs
       COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
