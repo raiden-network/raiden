@@ -330,6 +330,7 @@ class NettingChannelEndState(State):
     def offchain_total_withdraw(self):
         if not self.withdraws:
             return 0
+        # pylint: disable=E1101
         return list(self.withdraws.keys())[-1]
 
 
@@ -411,7 +412,7 @@ class NettingChannelState(State):
     @property
     def our_total_withdraw(self) -> WithdrawAmount:
         # pylint: disable=E1101
-        return self.our_state.total_withdraw
+        return max(self.our_state.offchain_total_withdraw, self.our_state.onchain_total_withdraw)
 
     @property
     def partner_total_deposit(self) -> Balance:
@@ -421,7 +422,9 @@ class NettingChannelState(State):
     @property
     def partner_total_withdraw(self) -> WithdrawAmount:
         # pylint: disable=E1101
-        return self.partner_state.total_withdraw
+        return max(
+            self.partner_state.offchain_total_withdraw, self.partner_state.onchain_total_withdraw
+        )
 
 
 @dataclass

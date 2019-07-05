@@ -447,7 +447,6 @@ class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
     nonce: Nonce
-    expiration: BlockExpiration
     signature: Signature
 
     @property
