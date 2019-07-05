@@ -6,7 +6,6 @@ from structlog import BoundLoggerBase
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.network.proxies.token_network import TokenNetwork
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
@@ -28,10 +27,11 @@ from raiden_contracts.contract_manager import ContractManager
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.token_network import TokenNetwork
 
 
 def get_channel_participants_from_open_event(
-    token_network: TokenNetwork, channel_identifier: ChannelID, contract_manager: ContractManager
+    token_network: "TokenNetwork", channel_identifier: ChannelID, contract_manager: ContractManager
 ) -> Optional[Tuple[Address, Address]]:
     # FIXME: Issue #3958
     from_block = GENESIS_BLOCK_NUMBER
