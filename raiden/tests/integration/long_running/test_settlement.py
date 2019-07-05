@@ -532,8 +532,12 @@ def run_test_channel_withdraw_expired(
         secret=secret,
     )
 
+    wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
+        Unlock, {"payment_identifier": identifier}
+    )
     timeout = network_wait * number_of_nodes
     with Timeout(seconds=timeout):
+        wait_for_unlock.get()
         msg = (
             f"transfer from {to_checksum_address(alice_app.raiden.address)} "
             f"to {to_checksum_address(bob_app.raiden.address)} failed."
@@ -552,11 +556,11 @@ def run_test_channel_withdraw_expired(
 
     # Make sure proper withdraw state is set in both channel states
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
-    assert bob_alice_channel_state.our_state.total_withdraw == total_withdraw
+    assert bob_alice_channel_state.our_total_withdraw == total_withdraw
     assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is not None
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
-    assert alice_bob_channel_state.partner_state.total_withdraw == total_withdraw
+    assert alice_bob_channel_state.partner_total_withdraw == total_withdraw
     assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is not None
 
     withdraw_expiration = bob_alice_channel_state.our_state.withdraws.get(
@@ -569,14 +573,14 @@ def run_test_channel_withdraw_expired(
     )
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
-    assert bob_alice_channel_state.our_state.total_withdraw == 0
+    assert bob_alice_channel_state.our_total_withdraw == 0
     assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is None
 
     with Timeout(seconds=timeout):
         wait_for_withdraw_expired_message.wait()
 
         alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
-        assert alice_bob_channel_state.partner_state.total_withdraw == 0
+        assert alice_bob_channel_state.partner_total_withdraw == 0
         assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is None
 
 
