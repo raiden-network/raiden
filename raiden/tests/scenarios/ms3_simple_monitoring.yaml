@@ -56,4 +56,4 @@ scenario:
       ## Settlement timeout is 500 blocks -> 500 * 15s in Kovan = 7500s
       - wait_blocks: 461
       # will fail for now since channel was closed by node1. We should add functionality to assert a fail
-      - assert_ms_claim: {channel_info_key: "MS Test Channel"}
+      - assert_ms_claim: {channel_info_key: "MS Test Channel", must_claim: False}
