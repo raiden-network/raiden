@@ -427,5 +427,5 @@ def test_get_capacity():
     )
     assert channel.get_capacity(channel_state) == 150
 
-    channel_state.our_state = replace(our_state, total_withdraw=50)
+    channel_state.our_state = replace(our_state, onchain_total_withdraw=50)
     assert channel.get_capacity(channel_state) == 100

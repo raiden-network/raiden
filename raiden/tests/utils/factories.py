@@ -392,13 +392,13 @@ class NettingChannelEndStateProperties(Properties):
     address: Address = EMPTY
     privatekey: bytes = EMPTY
     balance: TokenAmount = EMPTY
-    total_withdraw: TokenAmount = EMPTY
+    onchain_total_withdraw: TokenAmount = EMPTY
     pending_locks: PendingLocksState = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
 
 NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
-    address=None, privatekey=None, balance=100, total_withdraw=0, pending_locks=None
+    address=None, privatekey=None, balance=100, onchain_total_withdraw=0, pending_locks=None
 )
 
 
@@ -406,7 +406,7 @@ NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
     address=UNIT_OUR_ADDRESS,
     privatekey=UNIT_OUR_KEY,
     balance=100,
-    total_withdraw=0,
+    onchain_total_withdraw=0,
     pending_locks=None,
 )
 
