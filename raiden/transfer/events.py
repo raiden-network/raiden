@@ -62,6 +62,7 @@ class SendWithdrawExpired(SendMessageEvent):
     total_withdraw: WithdrawAmount
     participant: Address
     nonce: Nonce
+    expiration: BlockExpiration
 
 
 @dataclass

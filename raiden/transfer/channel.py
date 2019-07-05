@@ -1755,6 +1755,7 @@ def send_expired_withdraws(
                 message_identifier=message_identifier_from_prng(pseudo_random_generator),
                 total_withdraw=withdraw_state.total_withdraw,
                 participant=channel_state.our_state.address,
+                expiration=withdraw_state.expiration,
                 nonce=nonce,
             )
         )
