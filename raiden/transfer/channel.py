@@ -2325,12 +2325,26 @@ def apply_channel_newbalance(
 def handle_channel_withdraw(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
 ) -> TransitionResult[NettingChannelState]:
-    # pylint: disable=unused-argument
+    """ An on-chain total withdraw took place which means that we have to keep
+    track of this not to go lower than the on-chain value. The value is set to
+    onchain_total_withdraw and the corresponding withdraw_state is cleared.
+    """
+    participants = (channel_state.our_state.address, channel_state.partner_state.address)
+    if state_change.participant not in participants:
+        return TransitionResult(channel_state, list())
 
-    # Currently, the state machine doesn't need to process this event.
-    # NOTE: Keep until withdraw expiration is implemented
-    events: List[Event] = list()
-    return TransitionResult(channel_state, events)
+    if state_change.participant == channel_state.our_state.address:
+        end_state = channel_state.our_state
+    else:
+        end_state = channel_state.partner_state
+
+    withdraw_state = end_state.withdraws.get(state_change.total_withdraw)
+    if withdraw_state:
+        del end_state.withdraws[state_change.total_withdraw]
+
+    end_state.onchain_total_withdraw = state_change.total_withdraw
+
+    return TransitionResult(channel_state, list())
 
 
 def handle_channel_batch_unlock(
