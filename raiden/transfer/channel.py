@@ -139,11 +139,10 @@ def get_safe_initial_expiration(
 
 
 def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
-    """ Returns the block number at which the sender can send:
-    - SendLockExpired
-    - SendWithdrawExpired
+    """ Compute the block at which an expiration message can be sent
+    without worrying about blocking the message queue.
 
-    That value defines how many blocks it takes for a transaction to be
+    The computed value defines how many blocks it takes for a transaction to be
     mined under congestion.
     An expiration lower than 1 * reveal_timeout  means that we are requesting
     a withdraw that will fail under congestion.
@@ -816,11 +815,28 @@ def is_valid_action_withdraw(
 
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
+    # offchain_total_withdraw represents pending withdraw that was not mined on-chain.
+    # onchain_total_withdraw is a withdraw that was mined on-chain.
+    # The below code makes sure that we check the latest value of the total_withdraw
+    # on both sides of the channel.
+    # If we only take offchain_total_withdraw, this means that it might go back to zero
+    # as there aren't pending withdraws. Taking onchain_total_withdraw means that we might
+    # be checking against a value that has been already increased by a pending offchain total
+    # withdraw. Therefore, we take the bigger value of both.
+    partner_total_withdraw = max(
+        channel_state.partner_state.offchain_total_withdraw,
+        channel_state.partner_state.onchain_total_withdraw,
+    )
+    our_total_withdraw = max(
+        channel_state.our_state.offchain_total_withdraw,
+        channel_state.our_state.onchain_total_withdraw,
+    )
+    total_channel_withdraw = our_total_withdraw + partner_total_withdraw
+
     # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
-    total_channel_withdraw = withdraw.total_withdraw + channel_state.partner_state.total_withdraw
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
-    withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
+    withdraw_amount = withdraw.total_withdraw - our_total_withdraw
     if withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
         result = (False, msg)
@@ -846,6 +862,16 @@ def is_valid_withdraw_request(
     expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
+    # See `is_valid_action_withdraw`
+    partner_total_withdraw = max(
+        channel_state.partner_state.offchain_total_withdraw,
+        channel_state.partner_state.onchain_total_withdraw,
+    )
+    our_total_withdraw = max(
+        channel_state.our_state.offchain_total_withdraw,
+        channel_state.our_state.onchain_total_withdraw,
+    )
+
     packed = pack_withdraw(
         canonical_identifier=withdraw_request.canonical_identifier,
         participant=channel_state.partner_state.address,
@@ -859,11 +885,11 @@ def is_valid_withdraw_request(
         sender_address=channel_state.partner_state.address,
     )
 
-    withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
+    withdraw_amount = withdraw_request.total_withdraw - partner_total_withdraw
 
     # Does the new partner total_withdraw with our total_withdraw cause an overflow?
     total_channel_withdraw = (
-        withdraw_request.total_withdraw + channel_state.our_state.total_withdraw
+        withdraw_request.total_withdraw + our_total_withdraw
     )
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
@@ -904,6 +930,16 @@ def is_valid_withdraw_confirmation(
 
     result: SuccessOrError
 
+    # See `is_valid_action_withdraw`
+    partner_total_withdraw = max(
+        channel_state.partner_state.offchain_total_withdraw,
+        channel_state.partner_state.onchain_total_withdraw,
+    )
+    our_total_withdraw = max(
+        channel_state.our_state.offchain_total_withdraw,
+        channel_state.our_state.onchain_total_withdraw,
+    )
+
     withdraw_state = channel_state.our_state.withdraws.get(received_withdraw.total_withdraw)
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
@@ -929,7 +965,7 @@ def is_valid_withdraw_confirmation(
 
     # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
     total_channel_withdraw = (
-        received_withdraw.total_withdraw + channel_state.partner_state.total_withdraw
+        received_withdraw.total_withdraw + partner_total_withdraw
     )
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
@@ -944,9 +980,9 @@ def is_valid_withdraw_confirmation(
     elif withdraw_expired:
         msg = "Withdraw has already expired."
         result = (False, msg)
-    elif received_withdraw.total_withdraw != channel_state.our_state.total_withdraw:
+    elif received_withdraw.total_withdraw != our_total_withdraw:
         msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
-            received_withdraw.total_withdraw, channel_state.our_state.total_withdraw
+            received_withdraw.total_withdraw, our_total_withdraw
         )
         result = (False, msg)
     elif not valid_signature:
@@ -1100,7 +1136,7 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
 
     return Balance(
         sender.contract_balance
-        - sender.total_withdraw
+        - max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
         - sender_transferred_amount
         + receiver_transferred_amount
     )
@@ -1577,7 +1613,6 @@ def send_withdraw_request(
     withdraw_state = WithdrawState(
         total_withdraw=total_withdraw, nonce=nonce, expiration=expiration
     )
-    channel_state.our_state.total_withdraw = total_withdraw
 
     channel_state.our_state.nonce = nonce
     channel_state.our_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
@@ -1891,7 +1926,6 @@ def handle_receive_withdraw_request(
             expiration=withdraw_request.expiration,
         )
         channel_state.partner_state.withdraws[withdraw_state.total_withdraw] = withdraw_state
-        channel_state.partner_state.total_withdraw = withdraw_request.total_withdraw
         channel_state.partner_state.nonce = withdraw_request.nonce
 
         channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)

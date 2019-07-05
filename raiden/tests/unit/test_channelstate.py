@@ -75,6 +75,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
@@ -1687,7 +1688,7 @@ def test_action_withdraw():
         block_number=3,
     )
 
-    assert iteration.new_state.our_state.total_withdraw == our_balance
+    assert iteration.new_state.our_state.offchain_total_withdraw == our_balance
     assert (
         search_for_item(iteration.events, SendWithdrawRequest, {"total_withdraw": our_balance})
         is not None
@@ -1773,7 +1774,7 @@ def test_receive_withdraw_request():
     )
 
     # pylint: disable=no-member
-    assert channel_state.partner_state.total_withdraw == 20
+    assert channel_state.partner_state.offchain_total_withdraw == 20
     # pylint: enable=no-member
     assert (
         search_for_item(iteration.events, SendWithdrawConfirmation, {"total_withdraw": 20})
@@ -1850,7 +1851,6 @@ def test_receive_withdraw_confirmation():
     )
     partner_signature = signer.sign(packed)
 
-    channel_state.our_state.total_withdraw = total_withdraw
     channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=1, nonce=1
     )
@@ -1945,7 +1945,6 @@ def test_node_sends_withdraw_expiry():
     expiration_threshold = channel.get_sender_expiration_threshold(expiration_block_number)
 
     channel_state.our_state.nonce = 1
-    channel_state.our_state.total_withdraw = total_withdraw
     channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2002,7 +2001,6 @@ def test_node_handles_received_withdraw_expiry():
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
-    channel_state.partner_state.total_withdraw = total_withdraw
     channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2039,7 +2037,7 @@ def test_node_handles_received_withdraw_expiry():
     assert search_for_item(iteration.events, SendProcessed, {}) is not None
 
     channel_state = iteration.new_state
-    assert channel_state.partner_state.total_withdraw == 0
+    assert channel_state.partner_state.offchain_total_withdraw == 0
     assert not channel_state.partner_state.withdraws
 
 
@@ -2056,7 +2054,6 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
-    channel_state.partner_state.total_withdraw = total_withdraw
     channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2113,7 +2110,6 @@ def test_node_rejects_received_withdraw_expiry_invalid_signature():
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
-    channel_state.partner_state.total_withdraw = total_withdraw
     channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2161,7 +2157,6 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
-    channel_state.partner_state.total_withdraw = total_withdraw
     channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2219,7 +2214,6 @@ def test_node_multiple_withdraws_with_one_expiring():
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
 
-    channel_state.partner_state.total_withdraw = total_withdraw
     channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
@@ -2243,7 +2237,6 @@ def test_node_multiple_withdraws_with_one_expiring():
     channel_state.partner_state.withdraws[second_total_withdraw] = WithdrawState(
         total_withdraw=second_total_withdraw, expiration=expiration_block_number * 2, nonce=2
     )
-    channel_state.partner_state.total_withdraw = second_total_withdraw
     channel_state.partner_state.nonce = 2
 
     receive_withdraw_expired = ReceiveWithdrawExpired(
@@ -2270,5 +2263,62 @@ def test_node_multiple_withdraws_with_one_expiring():
     channel_state = iteration.new_state
     # An older withdraw expired.
     # The latest withdraw should still be our partner's latest withdraw
-    assert channel_state.partner_state.total_withdraw == second_total_withdraw
+    assert channel_state.partner_state.offchain_total_withdraw == second_total_withdraw
     assert second_total_withdraw in channel_state.partner_state.withdraws
+
+
+def test_receive_contract_withdraw():
+    our_model1, _ = create_model(balance=70)
+    partner_model1, privkey2 = create_model(balance=100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
+    block_hash = make_block_hash()
+
+    total_withdraw = 50
+
+    channel_state.our_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=1, nonce=1
+    )
+
+    channel_state.partner_state.withdraws[total_withdraw] = WithdrawState(
+        total_withdraw=total_withdraw, expiration=1, nonce=1
+    )
+
+    contract_receive_withdraw = ContractReceiveChannelWithdraw(
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        # pylint: disable=no-member
+        participant=channel_state.our_state.address,
+        # pylint: enable=no-member
+        block_number=15,
+        block_hash=block_hash,
+        transaction_hash=make_transaction_hash(),
+    )
+
+    iteration = channel.handle_channel_withdraw(
+        channel_state=channel_state,
+        state_change=contract_receive_withdraw,
+    )
+
+    assert iteration.new_state.our_state.onchain_total_withdraw == total_withdraw
+    assert iteration.new_state.our_state.offchain_total_withdraw == 0
+    assert total_withdraw not in iteration.new_state.our_state.withdraws
+
+    contract_receive_withdraw = ContractReceiveChannelWithdraw(
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=total_withdraw,
+        # pylint: disable=no-member
+        participant=channel_state.partner_state.address,
+        # pylint: enable=no-member
+        block_number=15,
+        block_hash=block_hash,
+        transaction_hash=make_transaction_hash(),
+    )
+
+    iteration = channel.handle_channel_withdraw(
+        channel_state=iteration.new_state,
+        state_change=contract_receive_withdraw,
+    )
+
+    assert iteration.new_state.partner_state.onchain_total_withdraw == total_withdraw
+    assert iteration.new_state.partner_state.offchain_total_withdraw == 0
+    assert total_withdraw not in iteration.new_state.partner_state.withdraws
