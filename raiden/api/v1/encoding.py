@@ -244,6 +244,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 class MintTokenSchema(BaseSchema):
     to = AddressField(required=True)
     value = fields.Integer(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
+    method = fields.String(validate=validate.OneOf(choices=("increaseSupply", "mint", "mintFor")))
 
     class Meta:
         strict = True

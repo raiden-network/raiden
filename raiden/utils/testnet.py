@@ -12,6 +12,24 @@ if TYPE_CHECKING:
 
 _MINT_ABI = [
     dict(
+        name="increaseSupply",
+        type="function",
+        constant=False,
+        payable=False,
+        stateMutability="nonPayable",
+        inputs=[dict(name="value", type="uint256"), dict(name="to", type="address")],
+        outputs=[],
+    ),
+    dict(
+        name="mint",
+        type="function",
+        constant=False,
+        payable=False,
+        stateMutability="nonPayable",
+        inputs=[dict(name="to", type="address"), dict(name="value", type="uint256")],
+        outputs=[],
+    ),
+    dict(
         name="mintFor",
         type="function",
         constant=False,
@@ -19,7 +37,7 @@ _MINT_ABI = [
         stateMutability="nonPayable",
         inputs=[dict(name="num", type="uint256"), dict(name="target", type="address")],
         outputs=[],
-    )
+    ),
 ]
 
 

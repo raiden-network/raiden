@@ -167,8 +167,10 @@ class MintTokenResource(BaseResource):
     post_schema = MintTokenSchema
 
     @use_kwargs(post_schema, locations=("json",))
-    def post(self, token_address, to, value):
-        return self.rest_api.mint_token(token_address=token_address, to=to, value=value)
+    def post(self, token_address, to, value, method="mintFor"):
+        return self.rest_api.mint_token(
+            token_address=token_address, to=to, value=value, method=method
+        )
 
 
 class ConnectionsResource(BaseResource):

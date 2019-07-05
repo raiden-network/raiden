@@ -417,16 +417,25 @@ class RaidenAPI:  # pragma: no unittest
         return channel_state.identifier
 
     def mint_token(
-        self, token_address: typing.TokenAddress, to: typing.Address, value: typing.TokenAmount
+        self,
+        token_address: typing.TokenAddress,
+        to: typing.Address,
+        value: typing.TokenAmount,
+        method: str,
     ) -> typing.TransactionHash:
         token_proxy = token_minting_proxy(self.raiden.chain.client, token_address)
 
-        gas_limit = token_proxy.estimate_gas("latest", "mintFor", value, to)
+        args = [to, value] if method == "mint" else [value, to]
+
+        gas_limit = token_proxy.estimate_gas("latest", method, *args)
         if gas_limit is None:
-            raise ValueError("Gas limit is None")
+            raise ValueError(
+                f"Gas estimation failed. Make sure the token has a minting method "
+                f"named {method} with the expected signature."
+            )
 
         try:
-            tx_hash = token_proxy.transact("mintFor", gas_limit, value, to)
+            tx_hash = token_proxy.transact(method, gas_limit, *args)
         except (RaidenError, ValueError) as e:
             raise ValueError(str(e))
 
