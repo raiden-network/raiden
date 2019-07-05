@@ -459,6 +459,7 @@ def test_join_invalid_discovery(
     transport.get()
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [3])
 def test_matrix_cross_server_with_load_balance(matrix_transports):
@@ -701,6 +702,7 @@ def test_pfs_global_messages(
     transport.get()
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule",
     [
@@ -817,6 +819,7 @@ def test_matrix_invite_private_room_unhappy_case1(
     assert join_rule1 == expected_join_rule1
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule0, expected_join_rule1",
     [
