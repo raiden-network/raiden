@@ -16,7 +16,9 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_token_network_registry(deploy_client, contract_manager, token_network_registry_address):
+def test_token_network_registry(
+    deploy_client, contract_manager, token_network_registry_address, token_contract_name
+):
     registry_address = to_canonical_address(token_network_registry_address)
 
     blockchain_service = BlockChainService(
@@ -49,6 +51,7 @@ def test_token_network_registry(deploy_client, contract_manager, token_network_r
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
+        token_contract_name=token_contract_name,
     )
 
     test_token_address = to_canonical_address(test_token.contract.address)

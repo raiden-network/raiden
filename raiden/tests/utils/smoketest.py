@@ -51,6 +51,7 @@ from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterable, Port
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
@@ -271,6 +272,7 @@ def setup_raiden(
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
+        token_contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
