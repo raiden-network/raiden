@@ -1,10 +1,22 @@
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from eth_utils import to_hex
 from structlog import BoundLoggerBase
 
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils.typing import Address, Any, BlockSpecification, Dict, Generator, Locksroot, Tuple
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BlockSpecification,
+    Dict,
+    Generator,
+    Locksroot,
+    NoReturn,
+    T_BlockHash,
+    Tuple,
+)
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -74,3 +86,19 @@ def log_transaction(log: BoundLoggerBase, description: str, details: Dict[Any, A
         raise
     else:
         log.debug("Exited", description=description, **details)
+
+
+def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:
+    """Format a message and raise RaidenUnrecoverableError."""
+    # We know that the given address has code because this is checked
+    # in the constructor
+    if isinstance(given_block_identifier, T_BlockHash):
+        given_block_identifier = to_hex(given_block_identifier)
+
+    msg = (
+        f"Either the given address is for a different smart contract, "
+        f"or the contract was not yet deployed at the block "
+        f"{given_block_identifier}. Either way this call should never "
+        f"happened."
+    )
+    raise RaidenUnrecoverableError(msg)
