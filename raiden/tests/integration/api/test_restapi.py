@@ -45,6 +45,15 @@ class CustomException(Exception):
     pass
 
 
+def get_json_response(response):
+    """
+    Utility function to deal with JSON responses.
+    requests's `.json` can fail when simplejson is installed. See
+    https://github.com/raiden-network/raiden/issues/4174
+    """
+    return json.loads(response.content)
+
+
 def assert_no_content_response(response):
     assert (
         response is not None
@@ -58,11 +67,12 @@ def assert_response_with_code(response, status_code):
 
 
 def assert_response_with_error(response, status_code):
+    json_response = get_json_response(response)
     assert (
         response is not None
         and response.status_code == status_code
-        and "errors" in response.json()
-        and response.json()["errors"] != ""
+        and "errors" in json_response
+        and json_response["errors"] != ""
     )
 
 
@@ -229,7 +239,7 @@ def test_api_query_our_address(api_server_test_instance):
     assert_proper_response(response)
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
-    assert response.json() == {"our_address": to_checksum_address(our_address)}
+    assert get_json_response(response) == {"our_address": to_checksum_address(our_address)}
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -240,7 +250,9 @@ def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_
     request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    assert response.json() == []
+
+    json_response = get_json_response(response)
+    assert json_response == []
 
     # let's create a new channel
     token_address = token_addresses[0]
@@ -262,7 +274,8 @@ def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_
     request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    channel_info = response.json()[0]
+    json_response = get_json_response(response)
+    channel_info = json_response[0]
     assert channel_info["partner_address"] == partner_address
     assert channel_info["token_address"] == to_checksum_address(token_address)
     assert channel_info["total_deposit"] == 0
@@ -285,7 +298,7 @@ def test_api_channel_status_channel_nonexistant(api_server_test_instance, token_
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.NOT_FOUND)
-    assert response.json()["errors"] == (
+    assert get_json_response(response)["errors"] == (
         "Channel with partner '{}' for token '{}' could not be found.".format(
             to_checksum_address(partner_address), to_checksum_address(token_address)
         )
@@ -313,14 +326,14 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
 
     assert_proper_response(response, HTTPStatus.CREATED)
     first_channel_id = 1
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {"balance": 0, "state": CHANNEL_STATE_OPENED, "channel_identifier": 1, "total_deposit": 0}
     )
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
-    token_network_address = response["token_network_address"]
+    token_network_address = json_response["token_network_address"]
 
     # now let's open a channel and make a deposit too
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
@@ -339,7 +352,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
 
     assert_proper_response(response, HTTPStatus.CREATED)
     second_channel_id = 2
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
@@ -350,7 +363,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
             "total_deposit": total_deposit,
         }
     )
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # assert depositing again with less than the initial deposit returns 409
     request = grequests.patch(
@@ -390,7 +403,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = {
         "channel_identifier": first_channel_id,
         "partner_address": first_partner_address,
@@ -402,7 +415,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
     }
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # let's try querying for the second channel
     request = grequests.get(
@@ -416,7 +429,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
 
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = {
         "channel_identifier": second_channel_id,
         "partner_address": second_partner_address,
@@ -428,7 +441,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
     }
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # finally let's burn all eth and try to open another channel
     burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.chain.client)
@@ -444,8 +457,8 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
-    response = response.json()
-    assert "The account balance is below the estimated amount" in response["errors"]
+    json_response = get_json_response(response)
+    assert "The account balance is below the estimated amount" in json_response["errors"]
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -470,7 +483,7 @@ def test_api_open_close_and_settle_channel(
     balance = 0
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
     channel_identifier = 1
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
@@ -481,9 +494,9 @@ def test_api_open_close_and_settle_channel(
             "total_deposit": 0,
         }
     )
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
-    token_network_address = response["token_network_address"]
+    token_network_address = json_response["token_network_address"]
 
     # let's close the channel
     request = grequests.patch(
@@ -508,7 +521,7 @@ def test_api_open_close_and_settle_channel(
         "balance": balance,
         "total_deposit": balance,
     }
-    assert check_dict_nested_attrs(response.json(), expected_response)
+    assert check_dict_nested_attrs(get_json_response(response), expected_response)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -532,7 +545,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     balance = 0
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
     channel_identifier = 1
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
@@ -543,7 +556,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
             "total_deposit": 0,
         }
     )
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # let's burn all eth and try to close the channel
     burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.chain.client)
@@ -558,8 +571,8 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
-    response = response.json()
-    assert "Insufficient ETH" in response["errors"]
+    json_response = get_json_response(response)
+    assert "Insufficient ETH" in json_response["errors"]
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -717,9 +730,9 @@ def test_api_tokens(api_server_test_instance, blockchain_services, token_address
     request = grequests.get(api_url_for(api_server_test_instance, "tokensresource"))
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = [to_checksum_address(token_address1), to_checksum_address(token_address2)]
-    assert set(response) == set(expected_response)
+    assert set(json_response) == set(expected_response)
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -739,7 +752,7 @@ def test_query_partners_by_token(api_server_test_instance, blockchain_services, 
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
-    response = response.json()
+    json_response = get_json_response(response)
 
     channel_data_obj["partner_address"] = second_partner_address
     request = grequests.put(
@@ -747,7 +760,7 @@ def test_query_partners_by_token(api_server_test_instance, blockchain_services, 
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
-    response = response.json()
+    json_response = get_json_response(response)
 
     # and a channel for another token
     channel_data_obj["partner_address"] = "0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E"
@@ -768,7 +781,7 @@ def test_query_partners_by_token(api_server_test_instance, blockchain_services, 
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = [
         {
             "partner_address": first_partner_address,
@@ -783,7 +796,7 @@ def test_query_partners_by_token(api_server_test_instance, blockchain_services, 
             ),
         },
     ]
-    assert all(r in response for r in expected_response)
+    assert all(r in json_response for r in expected_response)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -840,8 +853,8 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
-    assert_payment_secret_and_hash(response, payment)
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -952,9 +965,9 @@ def test_api_payments_with_secret_no_hash(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
-    assert_payment_secret_and_hash(response, payment)
-    assert secret == response["secret"]
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
+    assert secret == json_response["secret"]
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -1031,10 +1044,10 @@ def test_api_payments_with_secret_and_hash(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
-    assert_payment_secret_and_hash(response, payment)
-    assert secret == response["secret"]
-    assert secret_hash == response["secret_hash"]
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
+    assert secret == json_response["secret"]
+    assert secret_hash == json_response["secret_hash"]
 
 
 def assert_payment_secret_and_hash(response, payment):
@@ -1052,9 +1065,9 @@ def assert_payment_secret_and_hash(response, payment):
 def assert_payment_conflict(responses):
     assert all(response is not None for response in responses)
     assert any(
-        response.status_code == HTTPStatus.CONFLICT
-        and response.json()["errors"] == "Another payment with the same id is in flight"
-        for response in responses
+        resp.status_code == HTTPStatus.CONFLICT
+        and get_json_response(resp)["errors"] == "Another payment with the same id is in flight"
+        for resp in responses
     )
 
 
@@ -1146,7 +1159,7 @@ def test_register_token(
     )
     register_response = register_request.send().response
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
-    response_json = register_response.json()
+    response_json = get_json_response(register_response)
     assert "token_network_address" in response_json
     assert is_checksum_address(response_json["token_network_address"])
 
@@ -1211,7 +1224,7 @@ def test_get_token_network_for_token(
     )
     register_response = register_request.send().response
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
-    token_network_address = register_response.json()["token_network_address"]
+    token_network_address = get_json_response(register_response)["token_network_address"]
 
     gevent.sleep(app0.raiden.alarm.sleep_time * 10)
 
@@ -1225,7 +1238,7 @@ def test_get_token_network_for_token(
     )
     token_response = token_request.send().response
     assert_proper_response(token_response, status_code=HTTPStatus.OK)
-    assert token_network_address == token_response.json()
+    assert token_network_address == get_json_response(token_response)
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -1237,7 +1250,7 @@ def test_get_connection_managers_info(api_server_test_instance, token_addresses)
     # check that there are no registered tokens
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
-    result = response.json()
+    result = get_json_response(response)
     assert len(result) == 0
 
     funds = 100
@@ -1253,7 +1266,7 @@ def test_get_connection_managers_info(api_server_test_instance, token_addresses)
     # check that there now is one registered channel manager
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
-    result = response.json()
+    result = get_json_response(response)
     assert isinstance(result, dict) and len(result.keys()) == 1
     assert token_address1 in result
     assert isinstance(result[token_address1], dict)
@@ -1303,8 +1316,8 @@ def test_connect_insufficient_reserve(api_server_test_instance, token_addresses)
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
-    response = response.json()
-    assert "The account balance is below the estimated amount" in response["errors"]
+    json_response = get_json_response(response)
+    assert "The account balance is below the estimated amount" in json_response["errors"]
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -1335,7 +1348,7 @@ def test_network_events(api_server_test_instance, token_addresses):
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) > 0
+    assert len(get_json_response(response)) > 0
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -1367,7 +1380,7 @@ def test_token_events(api_server_test_instance, token_addresses):
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) > 0
+    assert len(get_json_response(response)) > 0
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -1400,7 +1413,7 @@ def test_channel_events(api_server_test_instance, token_addresses):
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(response.json()) > 0
+    assert len(get_json_response(response)) > 0
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -1458,7 +1471,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
 
     assert_proper_response(response, HTTPStatus.CREATED)
     first_channel_identifier = 1
-    response = response.json()
+    json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
@@ -1468,7 +1481,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
             "total_deposit": balance_working,
         }
     )
-    assert check_dict_nested_attrs(response, expected_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
@@ -1486,9 +1499,9 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     response = request.send().response
 
     assert_proper_response(response, HTTPStatus.CONFLICT)
-    response = response.json()
+    json_response = get_json_response(response)
     assert (
-        response["errors"]
+        json_response["errors"]
         == "Deposit of 75000000000000001 is larger than the channel participant deposit limit"
     )
 
@@ -1557,9 +1570,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     request = grequests.get(api_url_for(api_server_test_instance, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier1,
@@ -1567,7 +1580,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
         },
     )
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier2,
@@ -1579,23 +1592,23 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     request = grequests.get(api_url_for(app1_server, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
     )
     assert must_have_event(
-        response, {"event": "EventPaymentSentSuccess", "identifier": identifier3}
+        json_response, {"event": "EventPaymentSentSuccess", "identifier": identifier3}
     )
     # test endpoint without (partner and token) for target2
     request = grequests.get(api_url_for(app2_server, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
     )
     assert must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
     )
 
     # test endpoint without partner for app0
@@ -1604,9 +1617,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier1,
@@ -1614,7 +1627,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
         },
     )
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier2,
@@ -1627,9 +1640,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_events(
-        response,
+        json_response,
         {"event": "EventPaymentReceivedSuccess", "identifier": identifier1},
         {
             "event": "EventPaymentSentSuccess",
@@ -1643,9 +1656,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_events(
-        response,
+        json_response,
         {"event": "EventPaymentReceivedSuccess", "identifier": identifier2},
         {"event": "EventPaymentReceivedSuccess", "identifier": identifier3},
     )
@@ -1661,9 +1674,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier1,
@@ -1671,7 +1684,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
         },
     )
     assert not must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier2,
@@ -1690,9 +1703,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_event(
-        response,
+        json_response,
         {
             "event": "EventPaymentSentSuccess",
             "identifier": identifier3,
@@ -1712,8 +1725,8 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
-    assert len(response) == 0
+    json_response = get_json_response(response)
+    assert len(json_response) == 0
     # test endpoint for token and partner for target2
     request = grequests.get(
         api_url_for(
@@ -1725,15 +1738,15 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_events(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
     )
     assert not must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
     )
     assert not must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
     )
     request = grequests.get(
         api_url_for(
@@ -1745,15 +1758,15 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
-    response = response.json()
+    json_response = get_json_response(response)
     assert must_have_events(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier3}
     )
     assert not must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier2}
     )
     assert not must_have_event(
-        response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
+        json_response, {"event": "EventPaymentReceivedSuccess", "identifier": identifier1}
     )
 
     app1_server.stop()

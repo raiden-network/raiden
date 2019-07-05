@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import shutil
@@ -407,7 +408,7 @@ def run_smoketest(
 
         assert response.status_code == HTTPStatus.OK
 
-        response_json = response.json()
+        response_json = json.loads(response.content)
         assert response_json[0]["partner_address"] == to_checksum_address(
             ConnectionManager.BOOTSTRAP_ADDR
         )

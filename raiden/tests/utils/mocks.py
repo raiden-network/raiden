@@ -1,5 +1,6 @@
+import json
 import random
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 
 import requests
 
@@ -19,6 +20,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     ChannelID,
     Dict,
+    Optional,
     PaymentNetworkAddress,
     TokenNetworkAddress,
 )
@@ -187,6 +189,18 @@ def make_raiden_service_mock(
     return raiden_service
 
 
+def mocked_failed_response(error: Exception, status_code: int = 200) -> Mock:
+    m = Mock(json=Mock(side_effect=error), status_code=status_code)
+
+    type(m).content = PropertyMock(side_effect=error)
+    return m
+
+
+def mocked_json_response(response_data: Optional[Dict] = None, status_code: int = 200) -> Mock:
+    data = response_data or {}
+    return Mock(json=Mock(return_value=data), content=json.dumps(data), status_code=status_code)
+
+
 def patched_get_for_succesful_pfs_info():
     token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
     json_data = {
@@ -203,8 +217,9 @@ def patched_get_for_succesful_pfs_info():
     }
 
     response = Mock()
-    response.configure_mock(status_code=200)
+    response.configure_mock(status_code=200, content=json.dumps(json_data))
     response.json = Mock(return_value=json_data)
+    type(response).content = PropertyMock(return_value=json.dumps(json_data))
     return patch.object(requests, "get", return_value=response)
 
 
