@@ -400,11 +400,14 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
 
 
 @dataclass
-class ReceiveWithdrawBase(AuthenticatedSenderStateChange):
+class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
+    """ A Withdraw message received. """
+
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
     nonce: Nonce
+    expiration: BlockExpiration
     signature: Signature
 
     @property
@@ -417,19 +420,40 @@ class ReceiveWithdrawBase(AuthenticatedSenderStateChange):
 
 
 @dataclass
-class ReceiveWithdrawRequest(ReceiveWithdrawBase):
-    """ A Withdraw message received. """
-
-    expiration: BlockExpiration
-
-
-@dataclass
-class ReceiveWithdrawConfirmation(ReceiveWithdrawBase):
+class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
     """ A Withdraw message was received. """
 
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
+    nonce: Nonce
     expiration: BlockExpiration
+    signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
 
 
 @dataclass
-class ReceiveWithdrawExpired(ReceiveWithdrawBase):
+class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     """ A WithdrawExpired message was received. """
+
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_withdraw: WithdrawAmount
+    nonce: Nonce
+    expiration: BlockExpiration
+    signature: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address

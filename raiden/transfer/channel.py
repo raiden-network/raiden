@@ -888,9 +888,7 @@ def is_valid_withdraw_request(
     withdraw_amount = withdraw_request.total_withdraw - partner_total_withdraw
 
     # Does the new partner total_withdraw with our total_withdraw cause an overflow?
-    total_channel_withdraw = (
-        withdraw_request.total_withdraw + our_total_withdraw
-    )
+    total_channel_withdraw = withdraw_request.total_withdraw + our_total_withdraw
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
     if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
@@ -964,9 +962,7 @@ def is_valid_withdraw_confirmation(
         return (False, msg)
 
     # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
-    total_channel_withdraw = (
-        received_withdraw.total_withdraw + partner_total_withdraw
-    )
+    total_channel_withdraw = received_withdraw.total_withdraw + partner_total_withdraw
     withdraw_overflow = total_channel_withdraw >= UINT256_MAX
 
     withdraw_expired = is_withdraw_expired(

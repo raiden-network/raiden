@@ -122,7 +122,8 @@ class CmdId(enum.Enum):
     LOCKEXPIRED = 13
     TODEVICE = 14
     WITHDRAW_REQUEST = 15
-    WITHDRAW = 16
+    WITHDRAW_CONFIRMATION = 16
+    WITHDRAW_EXPIRED = 17
 
 
 def assert_envelope_values(
@@ -644,13 +645,13 @@ class WithdrawRequest(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return pack_data(
-            # TODO: should we add cmdid?
             (self.token_network_address, "address"),
             (self.chain_id, "uint256"),
             (self.message_type, "uint256"),
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
+            (self.expiration, "uint256"),
         )
 
 
@@ -658,7 +659,7 @@ class WithdrawRequest(SignedRetrieableMessage):
 class WithdrawConfirmation(SignedRetrieableMessage):
     """ Confirms withdraw to partner with a signature """
 
-    cmdid: ClassVar[int] = messages.WITHDRAW_CONFIRMATION
+    cmdid: ClassVar[int] = CmdId.WITHDRAW_CONFIRMATION
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -668,15 +669,6 @@ class WithdrawConfirmation(SignedRetrieableMessage):
     total_withdraw: WithdrawAmount
     nonce: Nonce
     expiration: BlockExpiration
-
-    def pack(self, packed):
-        packed.chain_id = self.chain_id
-        packed.token_network_address = self.token_network_address
-        packed.channel_identifier = self.channel_identifier
-        packed.total_withdraw = self.total_withdraw
-        packed.participant = self.participant
-        packed.message_type = MessageTypeId.WITHDRAW
-        packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
@@ -692,18 +684,22 @@ class WithdrawConfirmation(SignedRetrieableMessage):
             signature=EMPTY_SIGNATURE,
         )
 
-
-@dataclass(repr=False, eq=False)
-class WithdrawConfirmation(WithdrawBase):
-    """ Confirms withdraw to partner with a signature """
-    cmdid: ClassVar[CmdId] = CmdId.WITHDRAW
-    message_type: ClassVar[int] = MessageTypeId.WITHDRAW
+    def _data_to_sign(self) -> bytes:
+        return pack_data(
+            (self.token_network_address, "address"),
+            (self.chain_id, "uint256"),
+            (self.message_type, "uint256"),
+            (self.channel_identifier, "uint256"),
+            (self.participant, "address"),
+            (self.total_withdraw, "uint256"),
+            (self.expiration, "uint256"),
+        )
 
 
 class WithdrawExpired(SignedRetrieableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
 
-    cmdid: ClassVar[int] = messages.WITHDRAW_EXPIRED
+    cmdid: ClassVar[int] = CmdId.WITHDRAW_EXPIRED
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
     chain_id: ChainID
@@ -735,6 +731,7 @@ class WithdrawExpired(SignedRetrieableMessage):
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
+            (self.expiration, "uint256"),
         )
 
 
