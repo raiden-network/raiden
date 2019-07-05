@@ -54,6 +54,7 @@ filelock==3.0.12
 flake8-bugbear==19.3.0
 flake8-tuple==0.4.0
 flake8==3.7.7
+flaky==3.6.0
 flask-cors==3.0.8
 flask-restful==0.3.7
 flask==1.0.3
