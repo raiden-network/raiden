@@ -279,20 +279,18 @@ def get_last_iou(
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
-        data = (
-            requests.get(
-                f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
-                params=dict(
-                    sender=to_checksum_address(sender),
-                    receiver=to_checksum_address(receiver),
-                    timestamp=timestamp,
-                    signature=signature,
-                ),
-                timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
-            )
-            .json()
-            .get("last_iou")
+        response = requests.get(
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
+            params=dict(
+                sender=to_checksum_address(sender),
+                receiver=to_checksum_address(receiver),
+                timestamp=timestamp,
+                signature=signature,
+            ),
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
+
+        data = json.loads(response.content).get("last_iou")
 
         if data is None:
             return None

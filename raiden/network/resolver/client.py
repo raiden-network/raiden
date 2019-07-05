@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -52,7 +53,7 @@ def reveal_secret_with_resolver(
 
     state_change = ReceiveSecretReveal(
         sender=secret_request_event.recipient,
-        secret=Secret(to_bytes(hexstr=response.json()["secret"])),
+        secret=Secret(to_bytes(hexstr=json.loads(response.content)["secret"])),
     )
     raiden.handle_and_track_state_changes([state_change])
     return True

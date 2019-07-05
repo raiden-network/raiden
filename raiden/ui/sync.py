@@ -1,3 +1,4 @@
+import json
 import sys
 from itertools import count
 
@@ -10,15 +11,19 @@ from raiden.network.blockchain_service import BlockChainService
 
 
 def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
+    def get_result():
+        response = requests.get(url)
+        return json.loads(response.content)["result"]
+
     for _ in range(retries - 1):
         try:
-            etherscan_block = to_int(hexstr=requests.get(url).json()["result"])
+            etherscan_block = to_int(hexstr=get_result())
         except (RequestException, ValueError, KeyError):
             gevent.sleep(sleep)
         else:
             return etherscan_block
 
-    etherscan_block = to_int(hexstr=requests.get(url).json()["result"])
+    etherscan_block = to_int(hexstr=get_result())
     return etherscan_block
 
 

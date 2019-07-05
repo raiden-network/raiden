@@ -31,7 +31,11 @@ from raiden.network.pathfinding import (
 )
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
-from raiden.tests.utils.mocks import patched_get_for_succesful_pfs_info
+from raiden.tests.utils.mocks import (
+    mocked_failed_response,
+    mocked_json_response,
+    patched_get_for_succesful_pfs_info,
+)
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
@@ -138,7 +142,7 @@ def get_best_routes_with_iou_request_mocked(
         assert is_hex(body["signature"])
         assert len(body["signature"]) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
 
-        return Mock(json=Mock(return_value=iou_json_data or {}), status_code=200)
+        return mocked_json_response(response_data=iou_json_data)
 
     with patch.object(requests, "get", side_effect=iou_side_effect) as patched:
         best_routes, feedback_token = get_best_routes(
@@ -208,9 +212,7 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
         "feedback_token": DEFAULT_FEEDBACK_TOKEN.hex,
     }
 
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data)
 
     return addresses, chain_state, channel_states, response, token_network_state
 
@@ -358,9 +360,7 @@ def test_routing_mocked_pfs_bad_http_code(
         ]
     }
 
-    response = Mock()
-    response.configure_mock(status_code=400)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data, status_code=400)
 
     with patch.object(requests, "post", return_value=response):
         routes, feedback_token = get_best_routes_with_iou_request_mocked(
@@ -527,22 +527,17 @@ def test_get_and_update_iou(one_to_n_address):
             get_last_iou(**request_args)
 
     # invalid JSON should raise a ServiceRequestFailed
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(side_effect=ValueError)
+    response = mocked_failed_response(error=ValueError)
+
     with pytest.raises(ServiceRequestFailed):
         with patch.object(requests, "get", return_value=response):
             get_last_iou(**request_args)
 
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value={"other_key": "other_value"})
+    response = mocked_json_response(response_data={"other_key": "other_value"})
     with patch.object(requests, "get", return_value=response):
         iou = get_last_iou(**request_args)
     assert iou is None, "get_pfs_iou should return None if pfs returns no iou."
 
-    response = Mock()
-    response.configure_mock(status_code=200)
     last_iou = make_iou(
         pfs_config=PFS_CONFIG,
         our_address=factories.UNIT_TRANSFER_INITIATOR,
@@ -552,7 +547,9 @@ def test_get_and_update_iou(one_to_n_address):
         chain_id=4,
         offered_fee=TokenAmount(1),
     )
-    response.json = Mock(return_value=dict(last_iou=last_iou.as_json()))
+
+    response = mocked_json_response(response_data=dict(last_iou=last_iou.as_json()))
+
     with patch.object(requests, "get", return_value=response):
         iou = get_last_iou(**request_args)
     assert iou == last_iou
@@ -577,9 +574,9 @@ def test_get_pfs_iou(one_to_n_address):
     privkey = bytes([2] * 32)
     sender = privatekey_to_address(privkey)
     receiver = factories.make_address()
-    with patch("raiden.network.pathfinding.requests.get") as get_mock:
-        # No previous IOU
-        get_mock.return_value.json.return_value = {"last_iou": None}
+
+    response = mocked_json_response(response_data={"last_iou": None})
+    with patch.object(requests, "get", return_value=response):
         assert (
             get_last_iou("http://example.com", token_network_address, sender, receiver, PRIVKEY)
             is None
@@ -596,7 +593,8 @@ def test_get_pfs_iou(one_to_n_address):
         )
         iou.sign(privkey)
 
-        get_mock.return_value.json.return_value = {"last_iou": iou.as_json()}
+    response = mocked_json_response(response_data={"last_iou": iou.as_json()})
+    with patch.object(requests, "get", return_value=response):
         assert (
             get_last_iou("http://example.com", token_network_address, sender, receiver, PRIVKEY)
             == iou
@@ -660,13 +658,6 @@ def test_update_iou():
         update_iou(iou=tampered_iou, privkey=privkey, added_amount=added_amount)
 
 
-def request_mock(response=None, status_code=200) -> Mock:
-    mock = Mock()
-    mock.configure_mock(status_code=status_code)
-    mock.json = Mock(return_value=response or {})
-    return mock
-
-
 def assert_failed_pfs_request(
     paths_args: typing.Dict[str, typing.Any],
     responses: typing.List[typing.Dict],
@@ -682,9 +673,12 @@ def assert_failed_pfs_request(
         if "error_code" in response:
             response["errors"] = "broken iou"
 
-    path_mocks = [request_mock(*data) for data in zip(responses, status_codes)]
+    path_mocks = [
+        mocked_json_response(response_data=data, status_code=status_code)
+        for data, status_code in zip(responses, status_codes)
+    ]
 
-    with patch.object(requests, "get", return_value=request_mock()) as get_iou:
+    with patch.object(requests, "get", return_value=mocked_json_response()) as get_iou:
         with patch.object(requests, "post", side_effect=path_mocks) as post_paths:
             if expected_success:
                 query_paths(**paths_args)
@@ -874,7 +868,7 @@ def test_post_pfs_feedback(query_paths_args):
     token_network_address = factories.make_token_network_address()
     route = [factories.make_address(), factories.make_address()]
 
-    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+    with patch.object(requests, "post", return_value=mocked_json_response()) as feedback:
         post_pfs_feedback(
             routing_mode=RoutingMode.PFS,
             pfs_config=query_paths_args["pfs_config"],
@@ -892,7 +886,7 @@ def test_post_pfs_feedback(query_paths_args):
         assert payload["success"] is True
         assert payload["path"] == [to_checksum_address(addr) for addr in route]
 
-    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+    with patch.object(requests, "post", return_value=mocked_json_response()) as feedback:
         post_pfs_feedback(
             routing_mode=RoutingMode.PFS,
             pfs_config=query_paths_args["pfs_config"],
@@ -910,7 +904,7 @@ def test_post_pfs_feedback(query_paths_args):
         assert payload["success"] is False
         assert payload["path"] == [to_checksum_address(addr) for addr in route]
 
-    with patch.object(requests, "post", return_value=request_mock()) as feedback:
+    with patch.object(requests, "post", return_value=mocked_json_response()) as feedback:
         post_pfs_feedback(
             routing_mode=RoutingMode.PRIVATE,
             pfs_config=query_paths_args["pfs_config"],
@@ -942,7 +936,9 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
         max_paths=5,
     )
 
-    with patch.object(pathfinding, "post_pfs_paths", return_value=request_mock()) as post_path:
+    with patch.object(
+        pathfinding, "post_pfs_paths", return_value=mocked_json_response()
+    ) as post_path:
         query_paths(
             pfs_config=query_paths_args["pfs_config"],
             our_address=query_paths_args["our_address"],
