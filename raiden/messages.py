@@ -695,6 +695,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
         )
 
 
+@dataclass
 class WithdrawExpired(SignedRetrieableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
 
