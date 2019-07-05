@@ -692,6 +692,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
+            (self.expiration, "uint256"),
         )
 
 
@@ -707,6 +708,7 @@ class WithdrawExpired(SignedRetrieableMessage):
     channel_identifier: ChannelID
     participant: Address
     total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
     nonce: Nonce
 
     @classmethod
@@ -719,6 +721,7 @@ class WithdrawExpired(SignedRetrieableMessage):
             total_withdraw=event.total_withdraw,
             participant=event.participant,
             nonce=event.nonce,
+            expiration=event.expiration,
             signature=EMPTY_SIGNATURE,
         )
 
@@ -730,6 +733,7 @@ class WithdrawExpired(SignedRetrieableMessage):
             (self.channel_identifier, "uint256"),
             (self.participant, "address"),
             (self.total_withdraw, "uint256"),
+            (self.expiration, "uint256"),
         )
 
 
