@@ -72,6 +72,7 @@ from raiden.exceptions import (
     InvalidSecretHash,
     InvalidSettleTimeout,
     InvalidToken,
+    MintFailed,
     PaymentConflict,
     SamePeerAddress,
     TokenNetworkDeprecated,
@@ -545,7 +546,7 @@ class RestAPI:  # pragma: no unittest
         token_address: typing.TokenAddress,
         to: typing.Address,
         value: typing.TokenAmount,
-        method: str,
+        contract_method: str,
     ):
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
@@ -559,14 +560,14 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
             to=to_checksum_address(to),
             value=value,
-            method=method,
+            contract_method=contract_method,
         )
 
         try:
             tx_hash = self.raiden_api.mint_token(
-                token_address=token_address, to=to, value=value, method=method
+                token_address=token_address, to=to, value=value, contract_method=contract_method
             )
-        except ValueError as e:
+        except MintFailed as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
 
         return api_response(

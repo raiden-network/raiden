@@ -18,7 +18,6 @@ from raiden.exceptions import (
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
-    RaidenError,
     RaidenRecoverableError,
     TokenNetworkDeprecated,
     TokenNotRegistered,
@@ -43,7 +42,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
-from raiden.utils.testnet import token_minting_proxy
+from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
 from raiden.utils.typing import (
     Address,
     Any,
@@ -421,25 +420,19 @@ class RaidenAPI:  # pragma: no unittest
         token_address: typing.TokenAddress,
         to: typing.Address,
         value: typing.TokenAmount,
-        method: str,
+        contract_method: MintingMethod,
     ) -> typing.TransactionHash:
-        token_proxy = token_minting_proxy(self.raiden.chain.client, token_address)
+        """ Try to mint `value` units of the token at `token_address` and assign them to `to`,
+        using the minting method named `contract_method`.
 
-        args = [to, value] if method == "mint" else [value, to]
+        Raises:
+            MintFailed if the minting fails for any reason.
+        """
+        jsonrpc_client = self.raiden.chain.client
+        token_proxy = token_minting_proxy(jsonrpc_client, token_address)
+        args = [to, value] if contract_method == MintingMethod.MINT else [value, to]
 
-        gas_limit = token_proxy.estimate_gas("latest", method, *args)
-        if gas_limit is None:
-            raise ValueError(
-                f"Gas estimation failed. Make sure the token has a minting method "
-                f"named {method} with the expected signature."
-            )
-
-        try:
-            tx_hash = token_proxy.transact(method, gas_limit, *args)
-        except (RaidenError, ValueError) as e:
-            raise ValueError(str(e))
-
-        return tx_hash
+        return call_minting_method(jsonrpc_client, token_proxy, contract_method, args)
 
     def set_total_channel_withdraw(
         self,

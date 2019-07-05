@@ -13,6 +13,7 @@ from raiden.api.v1.encoding import (
     RaidenEventsRequestSchema,
 )
 from raiden.utils import typing
+from raiden.utils.testnet import MintingMethod
 
 
 def create_blueprint():
@@ -167,9 +168,12 @@ class MintTokenResource(BaseResource):
     post_schema = MintTokenSchema
 
     @use_kwargs(post_schema, locations=("json",))
-    def post(self, token_address, to, value, method="mintFor"):
+    def post(self, token_address, to, value, contract_method="mintFor"):
         return self.rest_api.mint_token(
-            token_address=token_address, to=to, value=value, method=method
+            token_address=token_address,
+            to=to,
+            value=value,
+            contract_method=MintingMethod(contract_method),
         )
 
 
