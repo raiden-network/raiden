@@ -37,7 +37,7 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import log_transaction
+from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
@@ -61,10 +61,8 @@ from raiden.utils.typing import (
     Locksroot,
     NamedTuple,
     Nonce,
-    NoReturn,
     Optional,
     Signature,
-    T_BlockHash,
     T_ChannelID,
     T_ChannelState,
     TokenAddress,
@@ -87,22 +85,6 @@ if TYPE_CHECKING:
 
 
 log = structlog.get_logger(__name__)
-
-
-def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:
-    """Format a message and raise RaidenUnrecoverableError."""
-    # We know that the given address has code because this is checked
-    # in the constructor
-    if isinstance(given_block_identifier, T_BlockHash):
-        given_block_identifier = to_hex(given_block_identifier)
-
-    msg = (
-        f"Either the given address is for a different smart contract, "
-        f"or the contract was not yet deployed at the block "
-        f"{given_block_identifier}. Either way this call should never "
-        f"happened."
-    )
-    raise RaidenUnrecoverableError(msg)
 
 
 def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
