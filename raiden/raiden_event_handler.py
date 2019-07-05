@@ -546,21 +546,21 @@ class RaidenEventHandler(EventHandler):
         )
         token_network_proxy: TokenNetwork = payment_channel.token_network
 
-        if not token_network_proxy.client.can_query_state_for_block(triggered_by_block_hash):
-            # The only time this can happen is during restarts after a long time
-            # when the triggered block ends up getting pruned
-            # In that case it's safe to just use the latest view of the chain to
-            # query the on-chain participant/channel details
-            triggered_by_block_hash = token_network_proxy.client.blockhash_from_blocknumber(
-                "latest"
+        try:
+            participants_details = token_network_proxy.detail_participants(
+                participant1=payment_channel.participant1,
+                participant2=payment_channel.participant2,
+                block_identifier=triggered_by_block_hash,
+                channel_identifier=channel_settle_event.channel_identifier,
             )
-
-        participants_details = token_network_proxy.detail_participants(
-            participant1=payment_channel.participant1,
-            participant2=payment_channel.participant2,
-            block_identifier=triggered_by_block_hash,
-            channel_identifier=channel_settle_event.channel_identifier,
-        )
+        except ValueError:
+            # The triggered_by_block_hash block was pruned.
+            participants_details = token_network_proxy.detail_participants(
+                participant1=payment_channel.participant1,
+                participant2=payment_channel.participant2,
+                block_identifier="latest",
+                channel_identifier=channel_settle_event.channel_identifier,
+            )
 
         our_details = participants_details.our_details
         partner_details = participants_details.partner_details
