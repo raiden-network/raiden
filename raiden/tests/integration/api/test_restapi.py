@@ -33,6 +33,7 @@ from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
+    CONTRACT_CUSTOM_TOKEN,
     CONTRACT_HUMAN_STANDARD_TOKEN,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -1927,3 +1928,44 @@ def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses)
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("token_contract_name", [CONTRACT_CUSTOM_TOKEN])
+def test_api_testnet_token_mint(api_server_test_instance, token_addresses):
+    user_address = factories.make_checksum_address()
+    token_address = token_addresses[0]
+    url = api_url_for(api_server_test_instance, "tokensmintresource", token_address=token_address)
+
+    request = grequests.post(url, json=dict(to=user_address, value=1, contract_method="mintFor"))
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # mint method defaults to mintFor
+    request = grequests.post(url, json=dict(to=user_address, value=10))
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # fails because requested mint method is not there
+    request = grequests.post(url, json=dict(to=user_address, value=10, contract_method="mint"))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # fails because of invalid choice of mint method
+    request = grequests.post(
+        url, json=dict(to=user_address, value=10, contract_method="unknownMethod")
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # invalid due to negative value
+    request = grequests.post(url, json=dict(to=user_address, value=-1))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # invalid due to invalid address
+    request = grequests.post(url, json=dict(to=user_address[:-2], value=10))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
