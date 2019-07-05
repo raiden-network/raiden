@@ -1141,7 +1141,6 @@ class RequestMonitoring(SignedMessage):
             nonce=self.balance_proof.nonce,
             monitoring_service_contract_address=self.monitoring_service_contract_address,
         )
-        # TODO: should we add cmdid?
         return packed
 
     def sign(self, signer: Signer):
