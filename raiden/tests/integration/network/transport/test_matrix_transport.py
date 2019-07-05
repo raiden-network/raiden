@@ -153,8 +153,33 @@ def ping_pong_message_success(transport0, transport1):
 
 
 def is_reachable(transport: MatrixTransport, address: Address) -> bool:
+    with Timeout(40, exception="Node presence hasn't changed as expected"):
+        while not (
+            transport._address_mgr.get_address_reachability(address)
+            is AddressReachability.REACHABLE
+        ):
+            gevent.sleep(0.1)
+            transport._address_mgr.refresh_address_presence(address)
+
     return (
         transport._address_mgr.get_address_reachability(address) is AddressReachability.REACHABLE
+    )
+
+
+def is_not_reachable(transport: MatrixTransport, address: Address) -> bool:
+    with Timeout(40, exception="Node presence hasn't changed as expected"):
+        while not (
+            transport._address_mgr.get_address_reachability(address)
+            is AddressReachability.UNREACHABLE
+            or transport._address_mgr.get_address_reachability(address)
+            is AddressReachability.UNKNOWN
+        ):
+            gevent.sleep(0.1)
+            transport._address_mgr.refresh_address_presence(address)
+
+    return (
+        transport._address_mgr.get_address_reachability(address) is AddressReachability.UNREACHABLE
+        or transport._address_mgr.get_address_reachability(address) is AddressReachability.UNKNOWN
     )
 
 
@@ -274,6 +299,9 @@ def test_matrix_message_sync(matrix_transports):
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
+
+    assert is_reachable(transport0, raiden_service1.address)
+    assert is_reachable(transport1, raiden_service0.address)
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,
@@ -488,6 +516,13 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
 
     transport2.start_health_check(raiden_service0.address)
     transport2.start_health_check(raiden_service1.address)
+
+    assert is_reachable(transport0, raiden_service1.address)
+    assert is_reachable(transport0, raiden_service2.address)
+    assert is_reachable(transport1, raiden_service0.address)
+    assert is_reachable(transport1, raiden_service2.address)
+    assert is_reachable(transport2, raiden_service0.address)
+    assert is_reachable(transport2, raiden_service1.address)
 
     assert ping_pong_message_success(transport0, transport1)
     assert ping_pong_message_success(transport0, transport2)
@@ -704,13 +739,7 @@ def test_pfs_global_messages(
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
-    "private_rooms, expected_join_rule",
-    [
-        [[True, True], "invite"],
-        [[True, False], "invite"],
-        [[False, True], "public"],
-        [[False, False], "public"],
-    ],
+    "private_rooms, expected_join_rule", [[[True, True], "invite"], [[True, False], "invite"]]
 )
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
@@ -726,7 +755,15 @@ def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+    assert is_reachable(transport0, raiden_service1.address)
+    assert is_reachable(transport1, raiden_service0.address)
+
+    with Timeout(5):
+        room = transport0._get_room_for_address(raiden_service1.address)
+        while not room:
+            gevent.sleep(0.1)
+            room = transport0._get_room_for_address(raiden_service1.address)
+    room_id = room.room_id
     with Timeout(40):
         while True:
             try:
@@ -762,12 +799,7 @@ def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_
 
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule0, expected_join_rule1",
-    [
-        [[True, True], "invite", "invite"],
-        [[True, False], "invite", "invite"],
-        [[False, True], "public", "public"],
-        [[False, False], "public", "public"],
-    ],
+    [[[True, True], "invite", "invite"], [[True, False], "invite", "invite"]],
 )
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
@@ -785,7 +817,16 @@ def test_matrix_invite_private_room_unhappy_case1(
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+    assert is_reachable(transport0, raiden_service1.address)
+    assert is_reachable(transport1, raiden_service0.address)
+
+    with Timeout(5):
+        room = transport0._get_room_for_address(raiden_service1.address)
+        while not room:
+            gevent.sleep(0.1)
+            room = transport0._get_room_for_address(raiden_service1.address)
+    room_id = room.room_id
+
     with Timeout(40):
         while True:
             try:
@@ -822,12 +863,7 @@ def test_matrix_invite_private_room_unhappy_case1(
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule0, expected_join_rule1",
-    [
-        [[True, True], "invite", "invite"],
-        [[True, False], "invite", "invite"],
-        [[False, True], "public", "public"],
-        [[False, False], "public", "public"],
-    ],
+    [[[True, True], "invite", "invite"], [[True, False], "invite", "invite"]],
 )
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
@@ -849,13 +885,15 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert is_reachable(transport0, raiden_service1.address)
 
     transport1.stop()
+
+    assert is_not_reachable(transport0, raiden_service1.address)
+
     with Timeout(40):
-        while is_reachable(transport0, raiden_service1.address):
+        room = transport0._get_room_for_address(raiden_service1.address)
+        while not room:
             gevent.sleep(0.1)
-
-    assert not is_reachable(transport0, raiden_service1.address)
-
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+            room = transport0._get_room_for_address(raiden_service1.address)
+    room_id = room.room_id
 
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
@@ -893,13 +931,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
 
 @pytest.mark.parametrize(
-    "private_rooms, expected_join_rule",
-    [
-        [[True, True], "invite"],
-        [[True, False], "invite"],
-        [[False, True], "public"],
-        [[False, False], "public"],
-    ],
+    "private_rooms, expected_join_rule", [[[True, True], "invite"], [[True, False], "invite"]]
 )
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
@@ -917,14 +949,17 @@ def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_j
 
     assert is_reachable(transport1, raiden_service0.address)
     assert is_reachable(transport0, raiden_service1.address)
+
     transport1.stop()
-    with Timeout(40):
-        while is_reachable(transport0, raiden_service1.address):
+    assert is_not_reachable(transport0, raiden_service1.address)
+
+    with Timeout(5):
+        room = transport0._get_room_for_address(raiden_service1.address)
+        while not room:
             gevent.sleep(0.1)
+            room = transport0._get_room_for_address(raiden_service1.address)
+    room_id = room.room_id
 
-    assert not is_reachable(transport0, raiden_service1.address)
-
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
     transport0.stop()
@@ -965,33 +1000,26 @@ def test_matrix_user_roaming(matrix_transports):
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
+    assert is_reachable(transport0, raiden_service1.address)
+    assert is_reachable(transport1, raiden_service0.address)
+
     assert ping_pong_message_success(transport0, transport1)
 
     transport0.stop()
-    with Timeout(40):
-        while is_reachable(transport1, raiden_service0.address):
-            gevent.sleep(0.1)
-
-    assert not is_reachable(transport1, raiden_service0.address)
+    assert is_not_reachable(transport1, raiden_service0.address)
 
     transport2.start(raiden_service0, message_handler0, "")
 
     transport2.start_health_check(raiden_service1.address)
 
+    assert is_reachable(transport1, raiden_service0.address)
+    assert is_reachable(transport2, raiden_service1.address)
     assert ping_pong_message_success(transport2, transport1)
 
     transport2.stop()
-    with Timeout(40):
-        while is_reachable(transport1, raiden_service0.address):
-            gevent.sleep(0.1)
-
-    assert not is_reachable(transport1, raiden_service0.address)
+    assert is_not_reachable(transport1, raiden_service0.address)
 
     transport0.start(raiden_service0, message_handler0, "")
-    with Timeout(40):
-        while not is_reachable(transport1, raiden_service0.address):
-            gevent.sleep(0.1)
-
     assert is_reachable(transport1, raiden_service0.address)
 
     assert ping_pong_message_success(transport0, transport1)
