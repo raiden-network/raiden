@@ -8,7 +8,7 @@ import pytest
 
 from raiden.constants import Environment, EthClient
 from raiden.settings import PRODUCTION_CONTRACT_VERSION
-from raiden.tests.utils.ci import get_artifacts_storage, shortned_artifacts_storage
+from raiden.tests.utils.ci import get_artifacts_storage, shortened_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
 
@@ -84,7 +84,7 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
 
     # This assumes that there is only one Raiden instance per CLI test
     base_logfile = os.path.join(
-        shortned_artifacts_storage(request.node) or str(tmpdir), "raiden_nodes", "cli_test.log"
+        shortened_artifacts_storage(request.node) or str(tmpdir), "raiden_nodes", "cli_test.log"
     )
 
     os.makedirs(os.path.dirname(base_logfile), exist_ok=True)

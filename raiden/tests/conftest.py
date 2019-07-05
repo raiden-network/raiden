@@ -31,7 +31,7 @@ from raiden.constants import EthClient
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-from raiden.tests.utils.ci import shortned_artifacts_storage
+from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
@@ -136,7 +136,7 @@ def logging_level(request, tmpdir):
     else:
         logging_levels = {"": level}
 
-    base_dir = shortned_artifacts_storage(request.node) or str(tmpdir)
+    base_dir = shortened_artifacts_storage(request.node) or str(tmpdir)
     os.makedirs(base_dir, exist_ok=True)
 
     time = datetime.datetime.utcnow().isoformat()

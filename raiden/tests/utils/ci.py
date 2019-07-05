@@ -5,7 +5,7 @@ from raiden.utils import pex
 
 
 def get_artifacts_storage() -> Optional[str]:
-    return os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
+    return os.environ.get("RAIDEN_TESTS_LOGSDIR")
 
 
 def shortened_artifacts_storage(test_node, *parts: str) -> Optional[str]:
