@@ -330,7 +330,7 @@ class NettingChannelEndState(State):
     def offchain_total_withdraw(self):
         if not self.withdraws:
             return 0
-        return self.withdraws[-1].total_withdraw
+        return list(self.withdraws.keys())[-1]
 
 
 @dataclass
