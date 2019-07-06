@@ -22,6 +22,7 @@ def shortened_artifacts_storage(test_node, *parts: str) -> Optional[str]:
 
     path = os.path.join(artifacts_dir, test_node.name, *parts)
 
+    # Paths longer than 286 will be reject on CircleCI
     if len(path) >= 286:
         original_name = test_node.originalname
         shortened_args = pex(test_node.name.encode("utf8"))
