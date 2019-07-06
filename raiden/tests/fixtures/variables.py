@@ -9,7 +9,9 @@ from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
+from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.tests import unique_path
 from raiden.utils import sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -103,6 +105,23 @@ def random_marker():
     """
     random_hex = hex(random.getrandbits(100))
     return remove_0x_prefix(random_hex)
+
+
+@pytest.fixture
+def logs_storage(request, tmpdir):
+    """Returns the path where debugging data should be saved.
+
+    Use this to preserve the databases and logs necessary to debug test
+    failures on the CI system.
+    """
+    # A shortened path is necessary because some system have limits on the path
+    # length
+    short_path = shortened_artifacts_storage(request.node) or str(tmpdir)
+
+    # A unique path is necssary because flaky tests are executed multiple
+    # times, and the state of the previous run must not interfere with the new
+    # run.
+    return unique_path(short_path)
 
 
 @pytest.fixture
