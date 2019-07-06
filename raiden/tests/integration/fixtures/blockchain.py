@@ -6,7 +6,6 @@ from web3 import HTTPProvider, Web3
 from raiden.constants import EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -34,6 +33,7 @@ def web3(
     request,
     tmpdir,
     chain_id,
+    logs_storage,
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
@@ -75,9 +75,7 @@ def web3(
     base_datadir = str(tmpdir)
 
     # Save the Ethereum node's log for debugging
-    base_logdir = os.path.join(
-        shortened_artifacts_storage(request.node) or base_datadir, blockchain_type
-    )
+    base_logdir = os.path.join(logs_storage, blockchain_type)
 
     genesis_description = GenesisDescription(
         prefunded_accounts=accounts_to_fund, chain_id=chain_id, random_marker=random_marker

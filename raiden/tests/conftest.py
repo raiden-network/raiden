@@ -31,7 +31,6 @@ from raiden.constants import EthClient
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
@@ -111,7 +110,7 @@ def enable_greenlet_debugger(request):
 
 
 @pytest.fixture(autouse=True)
-def logging_level(request, tmpdir):
+def logging_level(request, logs_storage):
     """ Configure the structlog level for each test run.
 
     For integration tests this also sets the geth verbosity.
@@ -136,11 +135,11 @@ def logging_level(request, tmpdir):
     else:
         logging_levels = {"": level}
 
-    base_dir = shortened_artifacts_storage(request.node) or str(tmpdir)
-    os.makedirs(base_dir, exist_ok=True)
+    # configure_logging requires the path to exist
+    os.makedirs(logs_storage, exist_ok=True)
 
     time = datetime.datetime.utcnow().isoformat()
-    debug_path = os.path.join(base_dir, f"raiden-debug_{time}.log")
+    debug_path = os.path.join(logs_storage, f"raiden-debug_{time}.log")
 
     configure_logging(
         logging_levels,

@@ -4,7 +4,6 @@ import gevent
 import pytest
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.network import (
     CHAIN,
     create_all_channels_for_network,
@@ -47,8 +46,7 @@ def raiden_chain(
     user_deposit_address,
     monitoring_service_contract_address,
     global_rooms,
-    tmpdir,
-    request,
+    logs_storage,
 ):
 
     if len(token_addresses) != 1:
@@ -59,9 +57,7 @@ def raiden_chain(
         "with 0, 1 or 2 channels"
     )
 
-    base_datadir = os.path.join(
-        shortened_artifacts_storage(request.node) or str(tmpdir), "raiden_nodes"
-    )
+    base_datadir = os.path.join(logs_storage, "raiden_nodes")
 
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -154,16 +150,13 @@ def raiden_network(
     user_deposit_address,
     monitoring_service_contract_address,
     global_rooms,
-    tmpdir,
-    request,
+    logs_storage,
 ):
     service_registry_address = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
 
-    base_datadir = os.path.join(
-        shortened_artifacts_storage(request.node) or str(tmpdir), "raiden_nodes"
-    )
+    base_datadir = os.path.join(logs_storage, "raiden_nodes")
 
     raiden_apps = create_apps(
         chain_id=chain_id,

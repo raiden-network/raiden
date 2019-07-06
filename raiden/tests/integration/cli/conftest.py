@@ -8,8 +8,9 @@ import pytest
 
 from raiden.constants import Environment, EthClient
 from raiden.settings import PRODUCTION_CONTRACT_VERSION
-from raiden.tests.utils.ci import get_artifacts_storage, shortened_artifacts_storage
+from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
+from raiden.utils.typing import Any, ContextManager, Dict
 
 
 @pytest.fixture(scope="module")
@@ -32,12 +33,14 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
     base_logdir = os.path.join(get_artifacts_storage() or str(tmpdir), blockchain_type)
     os.makedirs(base_logdir, exist_ok=True)
 
-    with setup_testchain(
+    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
         eth_client=eth_client,
         free_port_generator=port_generator,
         base_datadir=base_datadir,
         base_logdir=base_logdir,
-    ) as testchain:
+    )
+
+    with testchain_manager as testchain:
         result = setup_raiden(
             transport="matrix",
             matrix_server="auto",
@@ -70,7 +73,7 @@ def changed_args():
 
 
 @pytest.fixture()
-def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environment_type):
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -83,9 +86,7 @@ def cli_args(request, tmpdir, raiden_testchain, removed_args, changed_args, envi
             initial_args[k] = v
 
     # This assumes that there is only one Raiden instance per CLI test
-    base_logfile = os.path.join(
-        shortened_artifacts_storage(request.node) or str(tmpdir), "raiden_nodes", "cli_test.log"
-    )
+    base_logfile = os.path.join(logs_storage, "raiden_nodes", "cli_test.log")
 
     os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
 

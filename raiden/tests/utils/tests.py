@@ -1,7 +1,21 @@
 import gc
-from itertools import chain, combinations, product
+import os
+from itertools import chain, combinations, count, product
 
 import gevent
+
+
+def unique_path(initial_path: str) -> str:
+    proposed_path = initial_path
+
+    counter = count()
+    while os.path.exists(proposed_path):
+        # Adding ## before the number to differenciate from the tests
+        # parametrized arguments
+        number = f"##{next(counter)}"
+        proposed_path = f"{initial_path[:-len(number)]}{number}"
+
+    return proposed_path
 
 
 def cleanup_tasks():
