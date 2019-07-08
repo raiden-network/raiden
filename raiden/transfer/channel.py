@@ -2229,12 +2229,13 @@ def handle_block(
 
     events: List[Event] = list()
 
-    expired_withdraws = send_expired_withdraws(
-        channel_state=channel_state,
-        block_number=block_number,
-        pseudo_random_generator=pseudo_random_generator,
-    )
-    events.extend(expired_withdraws)
+    if get_status(channel_state) == CHANNEL_STATE_OPENED:
+        expired_withdraws = send_expired_withdraws(
+            channel_state=channel_state,
+            block_number=block_number,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+        events.extend(expired_withdraws)
 
     if get_status(channel_state) == CHANNEL_STATE_CLOSED:
         msg = "channel get_status is STATE_CLOSED, but close_transaction is not set"
