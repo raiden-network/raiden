@@ -4,13 +4,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
-
-from typing_extensions import Literal
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
-from raiden.storage.serialization import SerializationBase
+from raiden.storage.serialization import JSONSerializer, SerializationBase
 from raiden.storage.ulid import ULID, ULIDMonotonicFactory
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.transfer.architecture import Event, State, StateChange
@@ -769,9 +766,9 @@ class SerializedSQLiteStorage:
     applied the automatic encoding/deconding will not work.
     """
 
-    def __init__(self, connection, serializer: SerializationBase) -> None:
+    def __init__(self, connection, serializer: SerializationBase = None) -> None:
         self.database = SQLiteStorage(connection)
-        self.serializer = serializer
+        self.serializer = JSONSerializer() if serializer is None else serializer
 
     def update_version(self) -> None:  # pragma: no unittest
         self.database.update_version()

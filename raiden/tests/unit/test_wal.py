@@ -7,13 +7,12 @@ import pytest
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
-from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
     HIGH_STATECHANGE_ULID,
     RANGE_ALL_STATE_CHANGES,
     SerializedSQLiteStorage,
 )
-from raiden.storage.utils import TimestampedEvent
+from raiden.storage.utils import TimestampedEvent, make_db_connection
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils.factories import (
     make_address,
@@ -48,22 +47,21 @@ def state_transtion_acc(state, state_change):
 
 
 def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
-    serializer = JSONSerializer()
-
     state_manager = StateManager(state_transition, state)
-    storage = SerializedSQLiteStorage(":memory:", serializer)
+    conn = make_db_connection()
+    storage = SerializedSQLiteStorage(conn)
     wal = WriteAheadLog(state_manager, storage)
     return wal
 
 
 def test_connect_to_corrupt_db(tmpdir):
-    serializer = JSONSerializer
     dbpath = os.path.join(tmpdir, "log.db")
     with open(dbpath, "wb") as f:
         f.write(os.urandom(256))
 
     with pytest.raises(InvalidDBData):
-        SerializedSQLiteStorage(dbpath, serializer)
+        conn = make_db_connection(dbpath)
+        SerializedSQLiteStorage(conn)
 
 
 def test_wal_has_version():

@@ -17,8 +17,8 @@ from itertools import chain
 import click
 from eth_utils import encode_hex, is_checksum_address, to_canonical_address
 
-from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
+from raiden.storage.utils import make_db_connection
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
@@ -196,6 +196,7 @@ def replay_wal(
 )
 def main(db_file, token_network_address, partner_address, names_translator):
     translator: Optional[Translator]
+    conn = make_db_connection(db_file)
 
     if names_translator:
         translator = Translator(json.load(names_translator))
@@ -208,13 +209,12 @@ def main(db_file, token_network_address, partner_address, names_translator):
     assert is_checksum_address(token_network_address), "token_network_address must be provided"
     assert is_checksum_address(partner_address), "partner_address must be provided"
 
-    with closing(SerializedSQLiteStorage(db_file, JSONSerializer())) as storage:
-        replay_wal(
-            storage=storage,
-            token_network_address=token_network_address,
-            partner_address=partner_address,
-            translator=translator,
-        )
+    replay_wal(
+        storage=SerializedSQLiteStorage(conn),
+        token_network_address=token_network_address,
+        partner_address=partner_address,
+        translator=translator,
+    )
 
 
 if __name__ == "__main__":

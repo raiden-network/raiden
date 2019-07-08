@@ -39,12 +39,17 @@ of the easy of conversion.
 6- https://tools.ietf.org/html/rfc4122.html
 7- https://github.com/ulid/spec
 """
+import sqlite3
 from collections import namedtuple
 
 
 class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
     def __getattr__(self, item):
         return getattr(self.wrapped_event, item)
+
+
+def make_db_connection(database_path=":memory:") -> sqlite3.Connection:
+    return sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
 
 
 DB_CREATE_SETTINGS = """

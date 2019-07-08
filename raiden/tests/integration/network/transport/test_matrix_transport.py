@@ -1121,12 +1121,9 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     raiden_service1 = MockRaidenService(message_handler1, tmp_path=tmp_path)
     raiden_service2 = MockRaidenService(message_handler0)
     raiden_service3 = MockRaidenService(message_handler1)
-    database_path = raiden_service1.database_path
     transport0.start(raiden_service0, message_handler0, "")
-
-    serializer = JSONSerializer()
     transport1.start(
-        raiden_service1, message_handler1, "", storage=MatrixStorage(database_path, serializer)
+        raiden_service1, message_handler1, "", storage=MatrixStorage(raiden_service1.conn)
     )
 
     transport1.start_health_check(raiden_service0.address)
@@ -1166,7 +1163,7 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     )
 
     transport1.start(
-        raiden_service1, message_handler1, "", storage=MatrixStorage(database_path, serializer)
+        raiden_service1, message_handler1, "", storage=MatrixStorage(raiden_service1.conn)
     )
 
     assert (
