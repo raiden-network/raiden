@@ -13,13 +13,13 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
-from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
     RANGE_ALL_STATE_CHANGES,
     Range,
     SerializedSQLiteStorage,
     SQLiteStorage,
 )
+from raiden.storage.utils import make_db_connection
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -160,8 +160,8 @@ def test_get_state_change_with_balance_proof():
     """ All state changes which contain a balance proof must be found when
     querying the database.
     """
-    serializer = JSONSerializer()
-    storage = SerializedSQLiteStorage(":memory:", serializer)
+    conn = make_db_connection()
+    storage = SerializedSQLiteStorage(conn)
     counter = itertools.count()
 
     balance_proof = make_signed_balance_proof_from_counter(counter)
@@ -280,8 +280,8 @@ def test_get_event_with_balance_proof():
     """ All events which contain a balance proof must be found by when
     querying the database.
     """
-    serializer = JSONSerializer()
-    storage = SerializedSQLiteStorage(":memory:", serializer)
+    conn = make_db_connection()
+    storage = SerializedSQLiteStorage(conn)
     counter = itertools.count(1)
     partner_address = factories.make_address()
 
@@ -357,25 +357,25 @@ def test_get_event_with_balance_proof():
 def test_log_run():
     with patch("raiden.storage.sqlite.get_system_spec") as get_speck_mock:
         get_speck_mock.return_value = dict(raiden="1.2.3")
-        serializer = JSONSerializer()
-        store = SerializedSQLiteStorage(":memory:", serializer)
-        store.log_run()
-    cursor = store.database.conn.cursor()
+        conn = make_db_connection()
+        storage = SerializedSQLiteStorage(conn)
+        storage.log_run()
+    cursor = storage.database.conn.cursor()
     cursor.execute("SELECT started_at, raiden_version FROM runs")
     run = cursor.fetchone()
     now = datetime.utcnow()
     assert now - timedelta(seconds=2) <= run[0] <= now, f"{run[0]} not right before {now}"
     assert run[1] == "1.2.3"
 
-    store.close()
+    storage.close()
 
 
 @pytest.fixture
 def storage():
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
-
-    with SQLiteStorage(":memory:") as storage:
+    conn = make_db_connection()
+    with SQLiteStorage(conn) as storage:
         storage.write_state_changes(
             state_changes=[
                 json.dumps(state_change_record[1]) for state_change_record in state_changes_data
@@ -388,8 +388,8 @@ def storage():
 def test_batch_query_state_changes():
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
-
-    storage = SQLiteStorage(":memory:")
+    conn = make_db_connection()
+    storage = SQLiteStorage(conn)
     state_change_identifiers = storage.write_state_changes(
         state_changes=[
             json.dumps(state_change_record[1]) for state_change_record in state_changes_data
@@ -435,7 +435,8 @@ def test_batch_query_state_changes():
 
 
 def test_batch_query_event_records():
-    storage = SQLiteStorage(":memory:")
+    conn = make_db_connection()
+    storage = SQLiteStorage(conn)
 
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
@@ -488,7 +489,8 @@ def test_batch_query_event_records():
 
 
 def test_storage_get_and_update(storage):
-    other_storage = SQLiteStorage(":memory:")
+    conn = make_db_connection()
+    other_storage = SQLiteStorage(conn)
     data = storage.get_events()
     event_data = [(item, number) for number, item in enumerate(data)]
     other_storage.update_events(event_data)
@@ -496,7 +498,8 @@ def test_storage_get_and_update(storage):
 
 
 def test_storage_close():
-    storage = SerializedSQLiteStorage(":memory:", JSONSerializer())
+    conn = make_db_connection()
+    storage = SerializedSQLiteStorage(conn)
     storage.close()
     with pytest.raises(RuntimeError):  # attempt to close an already closed database
         storage.close()

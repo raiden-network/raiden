@@ -5,6 +5,7 @@ from unittest.mock import ANY, Mock, patch
 import raiden.utils.upgrades
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import FilteredDBQuery, Operator, SQLiteStorage
+from raiden.storage.utils import make_db_connection
 from raiden.tests.utils import factories
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.transfer.state_change import ActionInitChain
@@ -29,9 +30,9 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
     # Setup multiple old databases
     for version in [16, 17, 18, 19]:
         old_db_filename = tmp_path / Path(f"v{version}_log.db")
-
+        conn = make_db_connection(str(old_db_filename))
         with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=version), SQLiteStorage(
-            str(old_db_filename)
+            conn
         ) as storage:
             storage.update_version()
 
@@ -46,10 +47,8 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
 
 def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
     old_db_filename = tmp_path / Path(f"v18_log.db")
-
-    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=18), SQLiteStorage(
-        str(old_db_filename)
-    ) as storage:
+    conn = make_db_connection(str(old_db_filename))
+    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=18), SQLiteStorage(conn) as storage:
         storage.update_version()
 
     db_path = tmp_path / Path("v20_log.db")
@@ -76,10 +75,8 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     db_path = tmp_path / Path("v17_log.db")
 
     old_db_filename = tmp_path / Path("v16_log.db")
-
-    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=16), SQLiteStorage(
-        str(old_db_filename)
-    ) as storage:
+    conn = make_db_connection(str(old_db_filename))
+    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=16), SQLiteStorage(conn) as storage:
         state_change = ActionInitChain(
             chain_id=1,
             our_address=factories.make_address(),
@@ -103,7 +100,8 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
 
     # Once restored, the state changes written above should be
     # in the restored database
-    with SQLiteStorage(str(db_path)) as storage:
+    conn = make_db_connection(str(db_path))
+    with SQLiteStorage(conn) as storage:
         state_change_record = storage.get_latest_state_change_by_data_field(
             FilteredDBQuery(
                 filters=[{"_type": "raiden.transfer.state_change.ActionInitChain"}],
@@ -128,16 +126,14 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
     db_path = tmp_path / Path("v19_log.db")
 
     old_db_filename = tmp_path / Path("v16_log.db")
-
+    conn = make_db_connection(str(old_db_filename))
     upgrade_functions = []
     for i in range(16, 19):
         mock = Mock()
         mock.return_value = i + 1
         upgrade_functions.append(UpgradeRecord(from_version=i, function=mock))
 
-    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=16), SQLiteStorage(
-        str(old_db_filename)
-    ) as storage:
+    with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=16), SQLiteStorage(conn) as storage:
         storage.update_version()
 
     with monkeypatch.context() as m:

@@ -5,8 +5,8 @@ from unittest.mock import Mock, PropertyMock, patch
 import requests
 
 from raiden.constants import RoutingMode
-from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.utils import make_db_connection
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
 from raiden.transfer import node
@@ -144,12 +144,12 @@ class MockRaidenService:
         if state_transition is None:
             state_transition = node.state_transition
 
-        serializer = JSONSerializer()
         state_manager = StateManager(state_transition, None)
         if tmp_path:
             self.database_path = f"{tmp_path}/mock_{pex(self.address)}.db"
 
-        storage = SerializedSQLiteStorage(self.database_path, serializer)
+        self.conn = make_db_connection(self.database_path)
+        storage = SerializedSQLiteStorage(self.conn)
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(

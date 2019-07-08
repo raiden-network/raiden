@@ -53,6 +53,7 @@ from raiden.services import update_services_from_balance_proof
 from raiden.settings import MEDIATION_FEE
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.utils import make_db_connection
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
@@ -335,10 +336,8 @@ class RaidenService(Runnable):
             assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
 
         self.maybe_upgrade_db()
-
-        storage = sqlite.SerializedSQLiteStorage(
-            database_path=self.database_path, serializer=JSONSerializer()
-        )
+        conn = make_db_connection(self.database_path)
+        storage = sqlite.SerializedSQLiteStorage(conn)
         storage.update_version()
         storage.log_run()
         self.wal = wal.restore_to_state_change(
