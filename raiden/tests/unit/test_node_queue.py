@@ -111,6 +111,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         total_withdraw=100,
         signature=factories.make_32bytes(),
         sender=recipient2,
+        participant=recipient2,
         nonce=1,
         expiration=10,
     )
@@ -130,6 +131,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         total_withdraw=100,
         signature=factories.make_32bytes(),
         sender=recipient1,
+        participant=recipient1,
         nonce=1,
         expiration=10,
     )
