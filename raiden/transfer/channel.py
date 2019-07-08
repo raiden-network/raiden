@@ -1985,34 +1985,34 @@ def handle_receive_withdraw_confirmation(
         channel_state=channel_state, received_withdraw=withdraw
     )
 
-    # Send a processed regardless of the confirmation being valid or not. A
-    # confirmation is considered invalid if it arrives *after* the expiration
-    # timeout, if the processed is not sent the partne's queue will be stuck.
-    events: List[Event] = [
-        SendProcessed(
-            recipient=channel_state.partner_state.address,
-            message_identifier=withdraw.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
-        )
-    ]
-
-    if is_valid and withdraw.expiration <= block_number:
+    events: List[Event]
+    if is_valid:
         channel_state.partner_state.nonce = withdraw.nonce
-        events.append(
-            ContractSendChannelWithdraw(
+        events = [
+            SendProcessed(
+                recipient=channel_state.partner_state.address,
+                message_identifier=withdraw.message_identifier,
+                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            )
+        ]
+
+        # Only send the transaction on-chain if there is enough time for the
+        # withdraw transaction to be mined
+        if withdraw.expiration >= block_number - channel_state.reveal_timeout:
+            withdraw_on_chain = ContractSendChannelWithdraw(
                 canonical_identifier=withdraw.canonical_identifier,
                 total_withdraw=withdraw.total_withdraw,
                 partner_signature=withdraw.signature,
                 expiration=withdraw.expiration,
                 triggered_by_block_hash=block_hash,
             )
-        )
+            events.append(withdraw_on_chain)
     else:
         assert msg, "is_valid_withdraw_confirmation should return error msg if not valid"
         invalid_withdraw = EventInvalidReceivedWithdraw(
             attempted_withdraw=withdraw.total_withdraw, reason=msg
         )
-        events.append(invalid_withdraw)
+        events = [invalid_withdraw]
 
     return TransitionResult(channel_state, events)
 
