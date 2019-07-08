@@ -256,7 +256,7 @@ def configure_pfs_or_exit(
         f"Operator: {pathfinding_service_info.operator}, "
         f"running version: {pathfinding_service_info.version}, "
         f"chain_id: {pathfinding_service_info.chain_id}.\n"
-        f"Fees will be paid to {pathfinding_service_info.payment_address}. "
+        f"Fees will be paid to {to_checksum_address(pathfinding_service_info.payment_address)}. "
         f"For each request costs {pathfinding_service_info.price}.\n"
         f"Message from the PFS:\n{pathfinding_service_info.message}"
     )
