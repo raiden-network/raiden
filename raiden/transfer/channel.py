@@ -2434,6 +2434,13 @@ def handle_channel_batch_unlock(
     return TransitionResult(new_channel_state, events)
 
 
+def sanity_check(channel_state):
+    previous = 0
+    for withdraw_state in channel_state.our_state.withdraws.values():
+        assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
+        previous = withdraw_state.total_withdraw
+
+
 def state_transition(
     channel_state: NettingChannelState,
     state_change: StateChange,
@@ -2508,5 +2515,7 @@ def state_transition(
         iteration = handle_receive_withdraw_expired(
             channel_state=channel_state, withdraw_expired=state_change, block_number=block_number
         )
+
+    sanity_check(iteration.new_state)
 
     return iteration
