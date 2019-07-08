@@ -206,11 +206,9 @@ def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
 
 
 class SQLiteStorage:
-    def __init__(self, database_path: Union[Path, Literal[":memory:"]]):
+    def __init__(self, conn: sqlite3.Connection):
         sqlite3.register_adapter(ULID, adapt_ulid_identifier)
         sqlite3.register_converter("ULID", convert_ulid_identifier)
-
-        conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
         conn.execute("PRAGMA foreign_keys=ON")
 
@@ -218,7 +216,7 @@ class SQLiteStorage:
         # References:
         # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
         # https://sqlite.org/pragma.html#pragma_locking_mode
-        conn.execute("PRAGMA locking_mode=NORMAL")
+        conn.execute("PRAGMA locking_mode=EXCLUSIVE")
 
         # Keep the journal around and skip inode updates.
         # References:
@@ -228,7 +226,8 @@ class SQLiteStorage:
             conn.execute("PRAGMA journal_mode=PERSIST")
         except sqlite3.DatabaseError:
             raise InvalidDBData(
-                f"Existing DB {database_path} was found to be corrupt at Raiden startup. "
+                # FIXME get db path
+                f"Existing DB was found to be corrupt at Raiden startup. "
                 f"Manual user intervention required. Bailing."
             )
 
@@ -762,10 +761,8 @@ class SerializedSQLiteStorage:
     applied the automatic encoding/deconding will not work.
     """
 
-    def __init__(
-        self, database_path: Union[Path, Literal[":memory:"]], serializer: SerializationBase
-    ) -> None:
-        self.database = SQLiteStorage(database_path)
+    def __init__(self, connection, serializer: SerializationBase) -> None:
+        self.database = SQLiteStorage(connection)
         self.serializer = serializer
 
     def update_version(self) -> None:  # pragma: no unittest

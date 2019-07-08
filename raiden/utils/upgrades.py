@@ -178,8 +178,8 @@ class UpgradeManager:
             # Only instantiate `SQLiteStorage` after the copy. Otherwise
             # `_copy` will deadlock because only one connection is allowed to
             # `target_file`.
-
-            with SQLiteStorage(target_file) as storage:
+            conn = sqlite3.connect(target_file, detect_types=sqlite3.PARSE_DECLTYPES)
+            with SQLiteStorage(conn) as storage:
                 log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
 
                 try:
