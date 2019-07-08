@@ -914,7 +914,10 @@ def is_valid_action_withdraw(
     )
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
-    if withdraw_amount <= 0:
+    if get_status(channel_state) != CHANNEL_STATE_OPENED:
+        msg = f"Invalid withdraw, the channel is not opened"
+        result = (False, msg)
+    elif withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
         result = (False, msg)
     elif balance <= withdraw_amount:
