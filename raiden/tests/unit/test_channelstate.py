@@ -1731,6 +1731,7 @@ def test_receive_withdraw_request():
         signature=make_32bytes(),
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
         expiration=expiration,
@@ -1764,6 +1765,7 @@ def test_receive_withdraw_request():
         signature=signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
         expiration=expiration,
@@ -1789,6 +1791,7 @@ def test_receive_withdraw_request():
         signature=make_32bytes(),
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
         expiration=10,
@@ -1813,6 +1816,7 @@ def test_receive_withdraw_request():
         signature=make_32bytes(),
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
         expiration=10,
@@ -1862,6 +1866,7 @@ def test_receive_withdraw_confirmation():
         signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
         expiration=10,
@@ -1889,6 +1894,7 @@ def test_receive_withdraw_confirmation():
         total_withdraw=total_withdraw,
         signature=make_32bytes(),
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         nonce=1,
         expiration=10,
     )
@@ -1913,6 +1919,7 @@ def test_receive_withdraw_confirmation():
         total_withdraw=total_withdraw,
         signature=partner_signature,
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         nonce=1,
         expiration=10,
     )
@@ -2022,8 +2029,10 @@ def test_node_handles_received_withdraw_expiry():
         signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=10,
     )
 
     iteration = channel.state_transition(
@@ -2076,8 +2085,10 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
         signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=expiration_block_number,
     )
 
     iteration = channel.state_transition(
@@ -2122,8 +2133,10 @@ def test_node_rejects_received_withdraw_expiry_invalid_signature():
         signature=make_32bytes(),
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
+        expiration=expiration_block_number,
     )
 
     iteration = channel.state_transition(
@@ -2179,8 +2192,10 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
         signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=5,
+        expiration=expiration_block_number,
     )
 
     iteration = channel.state_transition(
@@ -2246,8 +2261,10 @@ def test_node_multiple_withdraws_with_one_expiring():
         signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
+        participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=3,
+        expiration=expiration_block_number,
     )
 
     iteration = channel.state_transition(

@@ -409,6 +409,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     nonce: Nonce
     expiration: BlockExpiration
     signature: Signature
+    participant: Address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -429,6 +430,7 @@ class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
     nonce: Nonce
     expiration: BlockExpiration
     signature: Signature
+    participant: Address
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -446,8 +448,10 @@ class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
     nonce: Nonce
     signature: Signature
+    participant: Address
 
     @property
     def channel_identifier(self) -> ChannelID:

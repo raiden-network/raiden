@@ -104,6 +104,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
+            participant=message.participant,
             nonce=message.nonce,
             expiration=message.expiration,
             signature=message.signature,
@@ -121,6 +122,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
+            participant=message.participant,
             nonce=message.nonce,
             expiration=message.expiration,
             signature=message.signature,
@@ -138,7 +140,9 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             total_withdraw=message.total_withdraw,
             sender=message.sender,
+            participant=message.participant,
             nonce=message.nonce,
+            expiration=message.expiration,
             signature=message.signature,
         )
         raiden.handle_and_track_state_changes([withdraw_expired])
