@@ -283,7 +283,14 @@ class TransactionOrder(State):
 
 
 @dataclass
-class WithdrawState:
+class ExpiredWithdrawState:
+    total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
+    nonce: Nonce
+
+
+@dataclass
+class PendingWithdrawState:
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
@@ -296,7 +303,10 @@ class NettingChannelEndState(State):
     address: Address
     contract_balance: Balance
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
-    withdraws: Dict[WithdrawAmount, WithdrawState] = field(repr=False, default_factory=dict)
+    withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
+        repr=False, default_factory=dict
+    )
+    withdraws_expired: List[ExpiredWithdrawState] = field(repr=False, default_factory=list)
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
@@ -327,8 +337,18 @@ class NettingChannelEndState(State):
         typecheck(self.contract_balance, T_TokenAmount)
 
     @property
-    def offchain_total_withdraw(self):
-        return max(self.withdraws, default=0)
+    def offchain_total_withdraw(self) -> WithdrawAmount:
+        return max(self.withdraws_pending, default=WithdrawAmount(0))
+
+    @property
+    def total_withdraw(self) -> WithdrawAmount:
+        return max(self.offchain_total_withdraw, self.onchain_total_withdraw)
+
+    @property
+    def transferred_amount(self) -> TokenAmount:
+        if self.balance_proof:
+            return self.balance_proof.transferred_amount
+        return TokenAmount(0)
 
 
 @dataclass
@@ -416,7 +436,7 @@ class NettingChannelState(State):
         withdraw. Therefore, we take the bigger value of both.
         """
         # pylint: disable=E1101
-        return max(self.our_state.offchain_total_withdraw, self.our_state.onchain_total_withdraw)
+        return self.our_state.total_withdraw
 
     @property
     def partner_total_deposit(self) -> Balance:
@@ -426,9 +446,7 @@ class NettingChannelState(State):
     @property
     def partner_total_withdraw(self) -> WithdrawAmount:
         # pylint: disable=E1101
-        return max(
-            self.partner_state.offchain_total_withdraw, self.partner_state.onchain_total_withdraw
-        )
+        return self.partner_state.total_withdraw
 
 
 @dataclass
