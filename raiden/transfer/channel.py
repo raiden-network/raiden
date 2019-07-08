@@ -269,6 +269,15 @@ def is_transfer_expired(
     return has_lock_expired
 
 
+def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
+    """ Determine whether a withdraw has expired.
+
+    The withdraw has expired if the current block exceeds
+    the withdraw's expiration + confirmation blocks.
+    """
+    return block_number >= expiration_threshold
+
+
 def is_secret_known(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
     """True if the `secrethash` is for a lock with a known secret."""
     return (
@@ -1748,18 +1757,6 @@ def send_lock_expired(
         return [send_lock_expired]
 
     return []
-
-
-def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
-    """ Determine whether a withdraw has expired.
-
-    The withdraw has expired if the current block exceeds
-    the withdraw's expiration + confirmation blocks.
-    """
-    if block_number < expiration_threshold:
-        return False
-
-    return True
 
 
 def send_expired_withdraws(
