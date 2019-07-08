@@ -565,17 +565,9 @@ class Unlock(EnvelopeMessage):
         return sha3(
             pack_data(
                 (self.cmdid.value, "uint8"),
-                (b"\x00" * 3, "bytes"),  # padding
-                (self.chain_id, "uint256"),
                 (self.message_identifier, "uint64"),
                 (self.payment_identifier, "uint64"),
-                (self.token_network_address, "address"),
                 (self.secret, "bytes32"),
-                (self.nonce, "uint64"),
-                (self.channel_identifier, "uint256"),
-                (self.transferred_amount, "uint256"),
-                (self.locked_amount, "uint256"),
-                (self.locksroot, "bytes32"),
             )
         )
 
@@ -894,22 +886,14 @@ class LockedTransferBase(EnvelopeMessage):
     def _packed_data(self):
         return pack_data(
             (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.nonce, "uint64"),
-            (self.chain_id, "uint256"),
             (self.message_identifier, "uint64"),
             (self.payment_identifier, "uint64"),
             (self.lock.expiration, "uint256"),
-            (self.token_network_address, "address"),
             (self.token, "address"),
-            (self.channel_identifier, "uint256"),
             (self.recipient, "address"),
             (self.target, "address"),
             (self.initiator, "address"),
-            (self.locksroot, "bytes32"),
             (self.lock.secrethash, "bytes32"),
-            (self.transferred_amount, "uint256"),
-            (self.locked_amount, "uint256"),
             (self.lock.amount, "uint256"),
             (self.fee, "uint256"),
         )
@@ -1009,17 +993,9 @@ class LockExpired(EnvelopeMessage):
         return sha3(
             pack_data(
                 (self.cmdid.value, "uint8"),
-                (b"\x00" * 3, "bytes"),  # padding
-                (self.nonce, "uint64"),
-                (self.chain_id, "uint256"),
                 (self.message_identifier, "uint64"),
-                (self.token_network_address, "address"),
-                (self.channel_identifier, "uint256"),
                 (self.recipient, "address"),
-                (self.locksroot, "bytes32"),
                 (self.secrethash, "bytes32"),
-                (self.transferred_amount, "uint256"),
-                (self.locked_amount, "uint256"),
             )
         )
 
