@@ -55,7 +55,7 @@ with open("requirements/requirements.txt") as req_file:
 test_requirements = []
 
 # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
-version = "0.100.3"
+version = "0.100.4"
 
 setup(
     name="raiden",
