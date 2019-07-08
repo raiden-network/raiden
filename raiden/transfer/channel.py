@@ -133,36 +133,39 @@ class UnlockGain(NamedTuple):
 def get_safe_initial_expiration(
     block_number: BlockNumber, reveal_timeout: BlockTimeout
 ) -> BlockExpiration:
-    """ Returns the upper bound block expiration number used by the initiator of
-    a transfer or a withdraw. """
+    """ Returns the upper bound block expiration number used by the initiator
+    of a transfer or a withdraw.
+
+    The `reveal_timeout` defines how many blocks it takes for a transaction to
+    be mined under congestion. The expiration is defined in terms of
+    `reveal_timeout`.
+
+    It must be at least `reveal_timeout` to allow a lock or withdraw to be used
+    on-chain under congestion. Ideally it should not be larger than `2 *
+    reveal_timeout`, otherwise for off-chain transfers Raiden would be slower
+    than blockchain.
+    """
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
 def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
-    """ Compute the block at which an expiration message can be sent
-    without worrying about blocking the message queue.
+    """ Compute the block at which an expiration message can be sent without
+    worrying about blocking the message queue.
 
-    The computed value defines how many blocks it takes for a transaction to be
-    mined under congestion.
-    An expiration lower than 1 * reveal_timeout  means that we are requesting
-    a withdraw that will fail under congestion.
-    A value larger then 2 * reveal_timeout means Raiden would be slower
-    than the blockchain.
-
-    The expiry messages will be rejected if the expiration block
-    has not been confirmed. Additionally the sender can account for possible
-    delays in the receiver, so a few additional blocks are used to avoid hanging the channel.
+    The expiry messages will be rejected if the expiration block has not been
+    confirmed. Additionally the sender can account for possible delays in the
+    receiver, so a few additional blocks are used to avoid hanging the channel.
     """
     return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
 
 
 def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
-    """ Returns the block number at which the receiver can accept:
-    - ReceiveLockExpired
-    - ReceiveWithdrawExpired
+    """ Returns the block number at which the receiver can accept an expiry
+    message.
 
-    The receiver must wait for the block at which the lock expires to be confirmed.
-    This is necessary to handle reorgs which could hide a secret registration.
+    The receiver must wait for the block at which the expired message to be
+    confirmed. This is necessary to handle reorgs, e.g. which could hide a
+    secret registration.
     """
     return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
