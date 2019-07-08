@@ -287,6 +287,97 @@ def is_secret_known_onchain(end_state: NettingChannelEndState, secrethash: Secre
     return secrethash in end_state.secrethashes_to_onchain_unlockedlocks
 
 
+def is_valid_channel_total_withdraw(channel_total_withdraw) -> bool:
+    """Sanity check for the channel's total withdraw.
+
+    The channel's total deposit is:
+
+        p1.total_deposit + p2.total_deposit
+
+    The channel's total withdraw is:
+
+        p1.total_withdraw + p2.total_withdraw
+
+    The smart contract forces:
+
+        - The channel's total deposit to fit in a UINT256.
+        - The channel's withdraw must be in the range [0,channel_total_deposit].
+
+    Because the `total_withdraw` must be in the range [0,channel_deposit], and
+    the maximum value for channel_deposit is UINT256, the overflow bellow must
+    never happen, otherwise there is a smart contract bug.
+    """
+    return channel_total_withdraw <= UINT256_MAX
+
+
+def is_valid_withdraw_request_signature(
+    withdraw_request: ReceiveWithdrawRequest
+) -> SuccessOrError:
+    """True if the signature of the ReceiveWithdrawRequest message corresponds
+    to the data in the message itself.
+
+    This predicate is intentionally only checking the signature against the
+    message data, and not the expected data. Before this check the fields of
+    the message must be validated.
+    """
+    packed = pack_withdraw(
+        canonical_identifier=withdraw_request.canonical_identifier,
+        participant=withdraw_request.participant,
+        total_withdraw=withdraw_request.total_withdraw,
+        expiration_block=withdraw_request.expiration,
+    )
+
+    return is_valid_signature(
+        data=packed, signature=withdraw_request.signature, sender_address=withdraw_request.sender
+    )
+
+
+def is_valid_withdraw_confirmation_signature(
+    withdraw_confirmation: ReceiveWithdrawConfirmation
+) -> SuccessOrError:
+    """True if the signature of the ReceiveWithdrawConfirmation message
+    corresponds to the data in the message itself.
+
+    This predicate is intentionally only checking the signature against the
+    message data, and not the expected data. Before this check the fields of
+    the message must be validated.
+    """
+    packed = pack_withdraw(
+        canonical_identifier=withdraw_confirmation.canonical_identifier,
+        participant=withdraw_confirmation.participant,
+        total_withdraw=withdraw_confirmation.total_withdraw,
+        expiration_block=withdraw_confirmation.expiration,
+    )
+
+    return is_valid_signature(
+        data=packed,
+        signature=withdraw_confirmation.signature,
+        sender_address=withdraw_confirmation.sender,
+    )
+
+
+def is_valid_withdraw_expired_signature(
+    withdraw_expired: ReceiveWithdrawExpired
+) -> SuccessOrError:
+    """True if the signature of the ReceiveWithdrawExpired message corresponds
+    to the data in the message itself.
+
+    This predicate is intentionally only checking the signature against the
+    message data, and not the expected data. Before this check the fields of
+    the message must be validated.
+    """
+    packed = pack_withdraw(
+        canonical_identifier=withdraw_expired.canonical_identifier,
+        participant=withdraw_expired.participant,
+        total_withdraw=withdraw_expired.total_withdraw,
+        expiration_block=withdraw_expired.expiration,
+    )
+
+    return is_valid_signature(
+        data=packed, signature=withdraw_expired.signature, sender_address=withdraw_expired.sender
+    )
+
+
 def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Optional[Secret]:
     """Returns `secret` if the `secrethash` is for a lock with a known secret."""
     partial_unlock_proof = end_state.secrethashes_to_unlockedlocks.get(secrethash)
@@ -818,35 +909,16 @@ def is_valid_action_withdraw(
 
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
-    # offchain_total_withdraw represents pending withdraw that was not mined on-chain.
-    # onchain_total_withdraw is a withdraw that was mined on-chain.
-    # The below code makes sure that we check the latest value of the total_withdraw
-    # on both sides of the channel.
-    # If we only take offchain_total_withdraw, this means that it might go back to zero
-    # as there aren't pending withdraws. Taking onchain_total_withdraw means that we might
-    # be checking against a value that has been already increased by a pending offchain total
-    # withdraw. Therefore, we take the bigger value of both.
-    partner_total_withdraw = max(
-        channel_state.partner_state.offchain_total_withdraw,
-        channel_state.partner_state.onchain_total_withdraw,
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        withdraw.total_withdraw + channel_state.partner_total_withdraw
     )
-    our_total_withdraw = max(
-        channel_state.our_state.offchain_total_withdraw,
-        channel_state.our_state.onchain_total_withdraw,
-    )
-    total_channel_withdraw = our_total_withdraw + partner_total_withdraw
 
-    # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
-    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
-
-    withdraw_amount = withdraw.total_withdraw - our_total_withdraw
+    withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
     if withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
         result = (False, msg)
-    elif balance < withdraw_amount:
-        msg = "Insufficient balance: {}. Requested {} for withdraw".format(
-            balance, withdraw_amount
-        )
+    elif balance <= withdraw_amount:
+        msg = f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
         result = (False, msg)
     elif withdraw_overflow:
         msg = f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
@@ -865,58 +937,41 @@ def is_valid_withdraw_request(
     expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
-    # See `is_valid_action_withdraw`
-    partner_total_withdraw = max(
-        channel_state.partner_state.offchain_total_withdraw,
-        channel_state.partner_state.onchain_total_withdraw,
-    )
-    our_total_withdraw = max(
-        channel_state.our_state.offchain_total_withdraw,
-        channel_state.our_state.onchain_total_withdraw,
+    valid_signature, signature_msg = is_valid_withdraw_request_signature(withdraw_request)
+
+    withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
+
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        withdraw_request.total_withdraw + channel_state.our_total_withdraw
     )
 
-    packed = pack_withdraw(
-        canonical_identifier=withdraw_request.canonical_identifier,
-        participant=channel_state.partner_state.address,
-        total_withdraw=withdraw_request.total_withdraw,
-        expiration_block=withdraw_request.expiration,
-    )
-
-    valid_signature, signature_msg = is_valid_signature(
-        data=packed,
-        signature=withdraw_request.signature,
-        sender_address=channel_state.partner_state.address,
-    )
-
-    withdraw_amount = withdraw_request.total_withdraw - partner_total_withdraw
-
-    # Does the new partner total_withdraw with our total_withdraw cause an overflow?
-    total_channel_withdraw = withdraw_request.total_withdraw + our_total_withdraw
-    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
+    # The confirming node must accept an expired withdraw request. This is
+    # necessary to clear the requesting node's queue. This is not a security
+    # flaw because the smart contract will not allow the withdraw to happen.
 
     if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
         msg = f"Invalid canonical identifier provided in withdraw request"
+        result = (False, msg)
+    elif withdraw_request.participant == channel_state.partner_state.address:
+        msg = f"Invalid participant, it must be the partner address"
         result = (False, msg)
     elif withdraw_amount <= 0:
         msg = f"Total withdraw {withdraw_request.total_withdraw} did not increase"
         result = (False, msg)
     elif balance < withdraw_amount:
-        msg = "Insufficient balance: {}. Requested {} for withdraw".format(
-            balance, withdraw_amount
-        )
+        msg = f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
         result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
     elif withdraw_request.nonce != expected_nonce:
         msg = (
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {withdraw_request.nonce}."
         )
-
         result = (False, msg)
     elif withdraw_overflow:
         msg = f"The new total_withdraw {withdraw_request.total_withdraw} will cause an overflow"
         result = (False, msg)
+    elif not valid_signature:
+        result = (False, signature_msg)
     else:
         result = (True, None)
 
@@ -924,68 +979,42 @@ def is_valid_withdraw_request(
 
 
 def is_valid_withdraw_confirmation(
-    channel_state: NettingChannelState,
-    received_withdraw: ReceiveWithdrawConfirmation,
-    block_number: BlockNumber,
+    channel_state: NettingChannelState, received_withdraw: ReceiveWithdrawConfirmation
 ) -> SuccessOrError:
 
     result: SuccessOrError
-
-    # See `is_valid_action_withdraw`
-    partner_total_withdraw = max(
-        channel_state.partner_state.offchain_total_withdraw,
-        channel_state.partner_state.onchain_total_withdraw,
-    )
-    our_total_withdraw = max(
-        channel_state.our_state.offchain_total_withdraw,
-        channel_state.our_state.onchain_total_withdraw,
-    )
 
     withdraw_state = channel_state.our_state.withdraws.get(received_withdraw.total_withdraw)
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    packed = pack_withdraw(
-        canonical_identifier=received_withdraw.canonical_identifier,
-        participant=channel_state.our_state.address,
-        total_withdraw=received_withdraw.total_withdraw,
-        expiration_block=received_withdraw.expiration,
-    )
-
-    valid_signature, signature_msg = is_valid_signature(
-        data=packed,
-        signature=received_withdraw.signature,
-        sender_address=channel_state.partner_state.address,
-    )
+    valid_signature, signature_msg = is_valid_withdraw_confirmation_signature(received_withdraw)
 
     if not withdraw_state:
-        msg = "Received withdraw confirmation {} was not found in withdraw states".format(
-            received_withdraw.total_withdraw
+        msg = (
+            f"Received withdraw confirmation {received_withdraw.total_withdraw} "
+            f"was not found in withdraw states"
         )
         return (False, msg)
 
-    # Does our new total_withdraw with the partner's total_withdraw cause an overflow?
-    total_channel_withdraw = received_withdraw.total_withdraw + partner_total_withdraw
-    withdraw_overflow = total_channel_withdraw >= UINT256_MAX
-
-    withdraw_expired = is_withdraw_expired(
-        block_number=block_number,
-        expiration_threshold=get_sender_expiration_threshold(expiration=withdraw_state.expiration),
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        received_withdraw.total_withdraw + channel_state.partner_total_withdraw
     )
+
+    # The requesting node must accept an confirmation for an expired withdraw
+    # request. This is necessary to clear the confirming node's queue. At this
+    # point the withdraw is not valid anymore, if the requesting node wishes
+    # wants to withdraw, it will have to request it again.
 
     if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
         msg = f"Invalid canonical identifier provided in withdraw request"
         result = (False, msg)
-    elif withdraw_expired:
-        msg = "Withdraw has already expired."
-        result = (False, msg)
-    elif received_withdraw.total_withdraw != our_total_withdraw:
-        msg = "Total withdraw confirmation {} does not match our total withdraw {}".format(
-            received_withdraw.total_withdraw, our_total_withdraw
+    elif received_withdraw.total_withdraw != channel_state.our_total_withdraw:
+        msg = (
+            f"Total withdraw confirmation {received_withdraw.total_withdraw} "
+            f"does not match our total withdraw {channel_state.our_total_withdraw}"
         )
         result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
     elif received_withdraw.nonce != expected_nonce:
         msg = (
             f"Nonce did not change sequentially, expected: {expected_nonce} "
@@ -995,6 +1024,8 @@ def is_valid_withdraw_confirmation(
     elif withdraw_overflow:
         msg = f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
         result = (False, msg)
+    elif not valid_signature:
+        result = (False, signature_msg)
     else:
         result = (True, None)
 
@@ -1011,18 +1042,7 @@ def is_valid_withdraw_expired(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    packed = pack_withdraw(
-        canonical_identifier=state_change.canonical_identifier,
-        participant=channel_state.partner_state.address,
-        total_withdraw=state_change.total_withdraw,
-        expiration_block=withdraw_state.expiration,
-    )
-
-    valid_signature, signature_msg = is_valid_signature(
-        data=packed,
-        signature=state_change.signature,
-        sender_address=channel_state.partner_state.address,
-    )
+    valid_signature, signature_msg = is_valid_withdraw_expired_signature(state_change)
 
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
@@ -1032,10 +1052,19 @@ def is_valid_withdraw_expired(
     )
 
     if not withdraw_expired:
-        msg = f"Invalid WithdrawExpired of {state_change.total_withdraw}"
+        msg = (
+            f"WithdrawExpired for withdraw that has not yet expired {state_change.total_withdraw}."
+        )
         result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
+    elif channel_state.canonical_identifier != state_change.canonical_identifier:
+        msg = f"Invalid canonical identifier provided in WithdrawExpire"
+        result = (False, msg)
+    elif state_change.total_withdraw != channel_state.our_total_withdraw:
+        msg = (
+            f"Total withdraw of expiration {state_change.total_withdraw} does not "
+            f"match our total withdraw {channel_state.our_total_withdraw}"
+        )
+        result = (False, msg)
     elif state_change.nonce != expected_nonce:
         msg = (
             f"Nonce did not change sequentially, expected: {expected_nonce} "
@@ -1043,6 +1072,8 @@ def is_valid_withdraw_expired(
         )
 
         result = (False, msg)
+    elif not valid_signature:
+        result = (False, signature_msg)
     else:
         result = (True, None)
 
@@ -1950,35 +1981,38 @@ def handle_receive_withdraw_confirmation(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
-
     is_valid, msg = is_valid_withdraw_confirmation(
-        channel_state=channel_state, received_withdraw=withdraw, block_number=block_number
+        channel_state=channel_state, received_withdraw=withdraw
     )
-    if is_valid:
+
+    # Send a processed regardless of the confirmation being valid or not. A
+    # confirmation is considered invalid if it arrives *after* the expiration
+    # timeout, if the processed is not sent the partne's queue will be stuck.
+    events: List[Event] = [
+        SendProcessed(
+            recipient=channel_state.partner_state.address,
+            message_identifier=withdraw.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+        )
+    ]
+
+    if is_valid and withdraw.expiration <= block_number:
         channel_state.partner_state.nonce = withdraw.nonce
-        events.extend(
-            [
-                ContractSendChannelWithdraw(
-                    canonical_identifier=withdraw.canonical_identifier,
-                    total_withdraw=withdraw.total_withdraw,
-                    partner_signature=withdraw.signature,
-                    expiration=withdraw.expiration,
-                    triggered_by_block_hash=block_hash,
-                ),
-                SendProcessed(
-                    recipient=channel_state.partner_state.address,
-                    message_identifier=withdraw.message_identifier,
-                    canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
-                ),
-            ]
+        events.append(
+            ContractSendChannelWithdraw(
+                canonical_identifier=withdraw.canonical_identifier,
+                total_withdraw=withdraw.total_withdraw,
+                partner_signature=withdraw.signature,
+                expiration=withdraw.expiration,
+                triggered_by_block_hash=block_hash,
+            )
         )
     else:
         assert msg, "is_valid_withdraw_confirmation should return error msg if not valid"
         invalid_withdraw = EventInvalidReceivedWithdraw(
             attempted_withdraw=withdraw.total_withdraw, reason=msg
         )
-        events = [invalid_withdraw]
+        events.append(invalid_withdraw)
 
     return TransitionResult(channel_state, events)
 
