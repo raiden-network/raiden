@@ -328,10 +328,7 @@ class NettingChannelEndState(State):
 
     @property
     def offchain_total_withdraw(self):
-        if not self.withdraws:
-            return 0
-        # pylint: disable=E1101
-        return list(self.withdraws.keys())[-1]
+        return max(self.withdraws, default=0)
 
 
 @dataclass
@@ -411,6 +408,13 @@ class NettingChannelState(State):
 
     @property
     def our_total_withdraw(self) -> WithdrawAmount:
+        """The current total withdraw.
+
+        If we only take offchain_total_withdraw, this means that it might go back to zero
+        as there aren't pending withdraws. Taking onchain_total_withdraw means that we might
+        be checking against a value that has been already increased by a pending offchain total
+        withdraw. Therefore, we take the bigger value of both.
+        """
         # pylint: disable=E1101
         return max(self.our_state.offchain_total_withdraw, self.our_state.onchain_total_withdraw)
 
