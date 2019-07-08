@@ -2,6 +2,18 @@
 Changelog
 =========
 
+* :release:`0.100.4 <2019-06-08>`
+* :feature:`4095` Prevent Raiden from sending IOU to PFS when fee is 0
+* :feature:`4088` Check PFS info about registry address, prevent use of a PFS that doesn't support the current network.
+* :feature:`4062` Use PFS requested fee instead of client max fee
+* :bug:`4036` Initiator should check the state of the partner nodes
+* :feature:`3894` Drop support for UDP transport
+* :feature:`3863` Implement permissive source routing
+* :bug:`3778` Fix handling of pruned blocks in proxies.
+* :feature:`3754` Publish mediation fee infos to PFS
+* :feature:`3303` Use direct channels for payments when possible, without asking PFS
+* :feature:`1498` Implement on-chain channel withdraw
+
 * :release:`0.100.3 <2019-05-22>`
 * :feature:`4043` Update raiden-contracts to 0.19.0 with Görli Testnet support
 * :bug:`4024` Fix clearing a channel state iff all unlocks are done by channel participants
