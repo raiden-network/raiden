@@ -557,13 +557,13 @@ def run_test_channel_withdraw_expired(
     # Make sure proper withdraw state is set in both channel states
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     assert bob_alice_channel_state.our_total_withdraw == total_withdraw
-    assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is not None
+    assert bob_alice_channel_state.our_state.withdraws_pending.get(total_withdraw) is not None
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     assert alice_bob_channel_state.partner_total_withdraw == total_withdraw
-    assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is not None
+    assert alice_bob_channel_state.partner_state.withdraws_pending.get(total_withdraw) is not None
 
-    withdraw_expiration = bob_alice_channel_state.our_state.withdraws.get(
+    withdraw_expiration = bob_alice_channel_state.our_state.withdraws_pending.get(
         total_withdraw
     ).expiration
     expiration_threshold = channel.get_sender_expiration_threshold(withdraw_expiration)
@@ -574,14 +574,14 @@ def run_test_channel_withdraw_expired(
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     assert bob_alice_channel_state.our_total_withdraw == 0
-    assert bob_alice_channel_state.our_state.withdraws.get(total_withdraw) is None
+    assert bob_alice_channel_state.our_state.withdraws_pending.get(total_withdraw) is None
 
     with Timeout(seconds=timeout):
         wait_for_withdraw_expired_message.wait()
 
         alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
         assert alice_bob_channel_state.partner_total_withdraw == 0
-        assert alice_bob_channel_state.partner_state.withdraws.get(total_withdraw) is None
+        assert alice_bob_channel_state.partner_state.withdraws_pending.get(total_withdraw) is None
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
