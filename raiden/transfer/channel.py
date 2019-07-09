@@ -182,13 +182,13 @@ def is_channel_usable_for_mediation(
     This will make sure that:
 
     - The channel has capacity.
-    - The merkle tree's size is claimable on-chain.
+    - The number of locks can be claimed on-chain.
     - The transfer amount does not overflow.
     - The lock expiration is smaller than the settlement window.
 
-    The merkle tree size has to be checked because the gas usage will increase
-    linearly with the number of locks in it. A tree too big can not be unlocked
-    because of block gas limit constraints.
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
 
     The lock expiration has to be smaller than the channel's settlement window
     because otherwise it is possible to employ attacks. Where an attacker open
@@ -218,12 +218,12 @@ def is_channel_usable_for_new_transfer(
     This will make sure that:
 
     - The channel has capacity.
-    - The merkle tree's size is claimable on-chain.
+    - The number of locks can be claimed on-chain.
     - The transfer amount does not overflow.
 
-    The merkle tree size has to be checked because the gas usage will increase
-    linearly with the number of locks in it. A tree too big can not be unlocked
-    because of block gas limit constraints.
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
     """
     pending_transfers = get_number_of_pending_transfers(channel_state.our_state)
     distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
