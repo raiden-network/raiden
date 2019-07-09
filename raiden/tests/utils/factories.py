@@ -1224,10 +1224,8 @@ def make_transfers_pair(
         assert lockedtransfer_event
 
         lock_timeout = lock_expiration - block_number
-        assert channel.is_channel_usable(
-            candidate_channel_state=channels[payee_index],
-            transfer_amount=amount,
-            lock_timeout=lock_timeout,
+        assert channel.is_channel_usable_for_mediation(
+            channel_state=channels[payee_index], transfer_amount=amount, lock_timeout=lock_timeout
         )
         sent_transfer = lockedtransfer_event.transfer
 

@@ -203,10 +203,10 @@ def try_new_route(
 
         assert isinstance(candidate_channel_state, NettingChannelState)
 
-        is_usable_route = channel.is_channel_usable(
-            candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+        is_channel_usable = channel.is_channel_usable_for_new_transfer(
+            channel_state=candidate_channel_state, transfer_amount=amount_with_fee
         )
-        if is_usable_route:
+        if is_channel_usable:
             channel_state = candidate_channel_state
             route_state = reachable_route_state
             break

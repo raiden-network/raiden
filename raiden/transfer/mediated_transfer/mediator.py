@@ -378,11 +378,11 @@ def forward_transfer_pair(
         payer_transfer.lock, payer_channel, payee_channel
     )
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
-    if not channel.is_channel_usable(
-        candidate_channel_state=payee_channel,
-        transfer_amount=amount_after_fees,
-        lock_timeout=lock_timeout,
-    ):
+    safe_to_use_channel = channel.is_channel_usable_for_mediation(
+        channel_state=payee_channel, transfer_amount=amount_after_fees, lock_timeout=lock_timeout
+    )
+
+    if not safe_to_use_channel:
         return None, []
 
     assert payee_channel.settle_timeout >= lock_timeout
@@ -447,7 +447,7 @@ def backward_transfer_pair(
 
     # Ensure the refund transfer's lock has a safe expiration, otherwise don't
     # do anything and wait for the received lock to expire.
-    if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
+    if channel.is_channel_usable_for_mediation(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
         backward_route_state = RouteState(
