@@ -78,14 +78,10 @@ def test_request_monitoring() -> None:
 
     # test signature verification
     reward_proof_data = pack_reward_proof(
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=request_monitoring.balance_proof.chain_id,
-            token_network_address=request_monitoring.balance_proof.token_network_address,
-            channel_identifier=request_monitoring.balance_proof.channel_identifier,
-        ),
+        chain_id=request_monitoring.balance_proof.chain_id,
         reward_amount=request_monitoring.reward_amount,
-        nonce=request_monitoring.balance_proof.nonce,
         monitoring_service_contract_address=MSC_ADDRESS,
+        non_closing_signature=request_monitoring.non_closing_signature,
     )
 
     assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
@@ -170,14 +166,10 @@ def test_tamper_request_monitoring():
     exploited_signature = request_monitoring.reward_proof_signature
 
     reward_proof_data = pack_reward_proof(
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=request_monitoring.balance_proof.chain_id,
-            token_network_address=request_monitoring.balance_proof.token_network_address,
-            channel_identifier=request_monitoring.balance_proof.channel_identifier,
-        ),
+        chain_id=request_monitoring.balance_proof.chain_id,
         reward_amount=request_monitoring.reward_amount,
-        nonce=request_monitoring.balance_proof.nonce,
         monitoring_service_contract_address=msc_address,
+        non_closing_signature=request_monitoring.non_closing_signature,
     )
 
     # An attacker might change the balance hash
@@ -192,14 +184,10 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
     tampered_balance_hash_reward_proof_data = pack_reward_proof(
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=tampered_bp.chain_id,
-            token_network_address=tampered_bp.token_network_address,
-            channel_identifier=tampered_bp.channel_identifier,
-        ),
+        chain_id=tampered_bp.chain_id,
         reward_amount=tampered_balance_hash_request_monitoring.reward_amount,
-        nonce=tampered_balance_hash_request_monitoring.balance_proof.nonce,
         monitoring_service_contract_address=msc_address,
+        non_closing_signature=request_monitoring.non_closing_signature,
     )
     # The signature works/is unaffected by that change...
     recovered_address_tampered = recover(
@@ -226,14 +214,10 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
     tampered_additional_hash_reward_proof_data = pack_reward_proof(
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=tampered_bp.chain_id,
-            token_network_address=tampered_bp.token_network_address,
-            channel_identifier=tampered_bp.channel_identifier,
-        ),
+        chain_id=tampered_bp.chain_id,
         reward_amount=tampered_additional_hash_request_monitoring.reward_amount,
-        nonce=tampered_additional_hash_request_monitoring.balance_proof.nonce,
         monitoring_service_contract_address=msc_address,
+        non_closing_signature=request_monitoring.non_closing_signature,
     )
 
     # The signature works/is unaffected by that change...
@@ -261,14 +245,10 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
     tampered_non_closing_signature_reward_proof_data = pack_reward_proof(
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=tampered_bp.chain_id,
-            token_network_address=tampered_bp.token_network_address,
-            channel_identifier=tampered_bp.channel_identifier,
-        ),
+        chain_id=tampered_bp.chain_id,
         reward_amount=tampered_non_closing_signature_request_monitoring.reward_amount,
-        nonce=tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
         monitoring_service_contract_address=msc_address,
+        non_closing_signature=request_monitoring.non_closing_signature,
     )
 
     # The signature works/is unaffected by that change...

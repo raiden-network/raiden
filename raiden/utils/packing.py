@@ -1,3 +1,5 @@
+from eth_utils import to_checksum_address
+
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
@@ -5,12 +7,14 @@ from raiden.utils.typing import (
     Address,
     BalanceHash,
     BlockExpiration,
+    ChainID,
     Nonce,
     Signature,
     TokenAmount,
     WithdrawAmount,
 )
 from raiden_contracts.constants import MessageTypeId
+from raiden_contracts.utils import proofs
 
 
 def pack_balance_proof(
@@ -61,22 +65,16 @@ def pack_balance_proof_update(
 
 
 def pack_reward_proof(
-    canonical_identifier: CanonicalIdentifier,
+    chain_id: ChainID,
     reward_amount: TokenAmount,
-    nonce: Nonce,
     monitoring_service_contract_address: Address,
+    non_closing_signature: Signature,
 ) -> bytes:
-    channel_identifier = canonical_identifier.channel_identifier
-    token_network_address = canonical_identifier.token_network_address
-    chain_id = canonical_identifier.chain_identifier
-    return pack_data(
-        (monitoring_service_contract_address, "address"),
-        (chain_id, "uint256"),
-        (MessageTypeId.MSReward, "uint256"),
-        (channel_identifier, "uint256"),
-        (reward_amount, "uint256"),
-        (token_network_address, "address"),
-        (nonce, "uint256"),
+    return proofs.pack_reward_proof(
+        to_checksum_address(monitoring_service_contract_address),
+        chain_id,
+        non_closing_signature,
+        reward_amount,
     )
 
 
