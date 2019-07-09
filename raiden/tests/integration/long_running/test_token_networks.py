@@ -66,7 +66,6 @@ def saturated_count(connection_managers, registry_address, token_address):
 # - Check if this test needs to be adapted for the matrix transport
 #   layer when activating it again. It might as it depends on the
 #   raiden_network fixture.
-@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [6])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
