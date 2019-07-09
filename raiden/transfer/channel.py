@@ -176,6 +176,27 @@ def is_channel_usable(
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: BlockTimeout = None,
 ) -> bool:
+    """True if the channel can safely used for the given parameters.
+
+    This will make sure that:
+
+    - The channel has capacity.
+    - The merkle tree's size is claimable on-chain.
+    - The lock expiration is smaller than the settlement window.
+
+    The merkle tree size has to be checked because the gas usage will increase
+    linearly with the number of locks in it. A tree too big can not be unlocked
+    because of block gas limit constraints.
+
+    The lock expiration has to be smaller than the channel's settlement window
+    because otherwise it is possible to employ attacks. Where an attacker open
+    two channels to the victim, with different settlement windows. The channel
+    with lower settlement is used to start a payment to the other channel, if
+    the lock's expiration is allowed to be larger than the settlement window,
+    then the attacker can close and settle the incoming channel before the lock
+    expires, and claim the lock on the outgoing channel by registering the
+    secret on-chain.
+    """
     pending_transfers = get_number_of_pending_transfers(candidate_channel_state.our_state)
     distributable = get_distributable(
         candidate_channel_state.our_state, candidate_channel_state.partner_state
