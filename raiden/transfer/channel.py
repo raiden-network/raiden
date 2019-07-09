@@ -224,7 +224,7 @@ def is_channel_usable_for_new_transfer(
     distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
 
     channel_usable = (
-        get_status(candidate_channel_state) == ChannelState.CHANNEL_STATE_OPENED
+        get_status(candidate_channel_state) == ChannelState.STATE_OPENED
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
@@ -536,7 +536,7 @@ def is_balance_proof_usable_onchain(
     # TODO: Accept unlock messages if the node has not yet sent a transaction
     # with the balance proof to the blockchain, this will save one call to
     # unlock on-chain for the non-closing party.
-    if get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
         # The channel must be opened, otherwise if receiver is the closer, the
         # balance proof cannot be used onchain.
         msg = f"The channel is already closed."
@@ -957,7 +957,7 @@ def is_valid_action_withdraw(
     )
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
-    if get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
         msg = f"Invalid withdraw, the channel is not opened"
         result = (False, msg)
     elif withdraw_amount <= 0:
@@ -1354,11 +1354,11 @@ def get_status(channel_state: NettingChannelState) -> ChannelState:
         running = channel_state.settle_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = ChannelState.CHANNEL_STATE_SETTLED
+            result = ChannelState.STATE_SETTLED
         elif running:
-            result = ChannelState.CHANNEL_STATE_SETTLING
+            result = ChannelState.STATE_SETTLING
         else:
-            result = ChannelState.CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     elif channel_state.close_transaction:
         finished_successfully = (
@@ -1367,14 +1367,14 @@ def get_status(channel_state: NettingChannelState) -> ChannelState:
         running = channel_state.close_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = ChannelState.CHANNEL_STATE_CLOSED
+            result = ChannelState.STATE_CLOSED
         elif running:
-            result = ChannelState.CHANNEL_STATE_CLOSING
+            result = ChannelState.STATE_CLOSING
         else:
-            result = ChannelState.CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     else:
-        result = ChannelState.CHANNEL_STATE_OPENED
+        result = ChannelState.STATE_OPENED
 
     return result
 
@@ -1478,7 +1478,7 @@ def create_sendlockedtransfer(
     assert amount <= get_distributable(our_state, partner_state), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     lock = HashTimeLockState(amount=amount, expiration=expiration, secrethash=secrethash)
 
@@ -1544,7 +1544,7 @@ def create_unlock(
     assert is_lock_pending(our_state, lock.secrethash), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     our_balance_proof = our_state.balance_proof
     msg = "the lock is pending, it must be in the pending locks"
@@ -1636,7 +1636,7 @@ def send_refundtransfer(
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     send_mediated_transfer, pending_locks = create_sendlockedtransfer(
         channel_state=channel_state,
@@ -1804,7 +1804,7 @@ def send_lock_expired(
     pseudo_random_generator: random.Random,
 ) -> List[SendLockExpired]:
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     send_lock_expired, pending_locks = create_sendexpiredlock(
         sender_end_state=channel_state.our_state,
@@ -2308,7 +2308,7 @@ def handle_block(
 
     events: List[Event] = list()
 
-    if get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED:
+    if get_status(channel_state) == ChannelState.STATE_OPENED:
         expired_withdraws = send_expired_withdraws(
             channel_state=channel_state,
             block_number=block_number,
@@ -2316,7 +2316,7 @@ def handle_block(
         )
         events.extend(expired_withdraws)
 
-    if get_status(channel_state) == ChannelState.CHANNEL_STATE_CLOSED:
+    if get_status(channel_state) == ChannelState.STATE_CLOSED:
         msg = "channel get_status is STATE_CLOSED, but close_transaction is not set"
         assert channel_state.close_transaction, msg
         msg = "channel get_status is STATE_CLOSED, but close_transaction block number is missing"
@@ -2491,7 +2491,7 @@ def handle_channel_batch_unlock(
     new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(channel_state) == ChannelState.CHANNEL_STATE_SETTLED:
+    if get_status(channel_state) == ChannelState.STATE_SETTLED:
 
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state

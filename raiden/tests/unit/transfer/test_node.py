@@ -329,14 +329,14 @@ def test_subdispatch_by_canonical_id(chain_state):
     )
     assert not transition_result.events, transition_result
 
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
+    assert get_status(channel_state) == ChannelState.STATE_OPENED
     transition_result = subdispatch_by_canonical_id(
         chain_state=chain_state,
         canonical_identifier=canonical_identifier,
         state_change=state_change,
     )
 
-    assert get_status(channel_state) == ChannelState.CHANNEL_STATE_CLOSING
+    assert get_status(channel_state) == ChannelState.STATE_CLOSING
     assert transition_result.new_state == chain_state, transition_result
 
 

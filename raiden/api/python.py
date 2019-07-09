@@ -577,7 +577,7 @@ class RaidenAPI:  # pragma: no unittest
         )
         total_channel_deposit = total_deposit + channel_state.partner_state.contract_balance
 
-        is_channel_open = channel.get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
+        is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
         if not is_channel_open:
             msg = "Channel is not in an open state."

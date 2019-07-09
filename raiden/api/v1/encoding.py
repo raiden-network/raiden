@@ -312,9 +312,9 @@ class ChannelPatchSchema(BaseSchema):
         missing=None,
         validate=validate.OneOf(
             [
-                ChannelState.CHANNEL_STATE_CLOSED.value,
-                ChannelState.CHANNEL_STATE_OPENED.value,
-                ChannelState.CHANNEL_STATE_SETTLED.value,
+                ChannelState.STATE_CLOSED.value,
+                ChannelState.STATE_OPENED.value,
+                ChannelState.STATE_SETTLED.value,
             ]
         ),
     )

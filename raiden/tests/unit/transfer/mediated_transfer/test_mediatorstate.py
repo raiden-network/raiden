@@ -502,12 +502,12 @@ def test_events_for_balanceproof_channel_closed():
     """
     pseudo_random_generator = random.Random()
 
-    for invalid_state in (ChannelState.CHANNEL_STATE_CLOSED, ChannelState.CHANNEL_STATE_SETTLED):
+    for invalid_state in (ChannelState.STATE_CLOSED, ChannelState.STATE_SETTLED):
         setup = factories.make_transfers_pair(2)
         last_pair = setup.transfers_pair[-1]
         last_channel = mediator.get_payee_channel(setup.channel_map, last_pair)
 
-        if invalid_state == ChannelState.CHANNEL_STATE_CLOSED:
+        if invalid_state == ChannelState.STATE_CLOSED:
             channel.set_closed(last_channel, setup.block_number)
         else:
             channel.set_settled(last_channel, setup.block_number)

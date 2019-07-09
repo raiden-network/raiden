@@ -325,7 +325,7 @@ def wait_for_settle(
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,
-        target_states=(ChannelState.CHANNEL_STATE_SETTLED,),
+        target_states=(ChannelState.STATE_SETTLED,),
     )
 
 

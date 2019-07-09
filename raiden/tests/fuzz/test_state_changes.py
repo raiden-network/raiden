@@ -285,7 +285,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
     def channel_opened(self, partner_address):
         needed_channel = self.address_to_channel[partner_address]
-        return channel.get_status(needed_channel) == ChannelState.CHANNEL_STATE_OPENED
+        return channel.get_status(needed_channel) == ChannelState.STATE_OPENED
 
 
 class InitiatorMixin:

@@ -167,7 +167,7 @@ def get_best_routes_internal(
         if not channel_state:
             continue
 
-        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),
@@ -266,7 +266,7 @@ def get_best_routes_pfs(
             continue
 
         # check channel state
-        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),

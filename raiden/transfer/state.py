@@ -67,24 +67,21 @@ QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
 
 class ChannelState(Enum):
-    CHANNEL_STATE_CLOSED = "closed"
-    CHANNEL_STATE_CLOSING = "waiting_for_close"
-    CHANNEL_STATE_OPENED = "opened"
-    CHANNEL_STATE_SETTLED = "settled"
-    CHANNEL_STATE_SETTLING = "waiting_for_settle"
-    CHANNEL_STATE_UNUSABLE = "channel_unusable"
+    STATE_CLOSED = "closed"
+    STATE_CLOSING = "waiting_for_close"
+    STATE_OPENED = "opened"
+    STATE_SETTLED = "settled"
+    STATE_SETTLING = "waiting_for_settle"
+    STATE_UNUSABLE = "channel_unusable"
 
 
-CHANNEL_STATES_PRIOR_TO_CLOSED = (
-    ChannelState.CHANNEL_STATE_OPENED,
-    ChannelState.CHANNEL_STATE_CLOSING,
-)
+CHANNEL_STATES_PRIOR_TO_CLOSED = (ChannelState.STATE_OPENED, ChannelState.STATE_CLOSING)
 
-CHANNEL_STATES_UP_TO_CLOSED = CHANNEL_STATES_PRIOR_TO_CLOSED + (ChannelState.CHANNEL_STATE_CLOSED,)
+CHANNEL_STATES_UP_TO_CLOSED = CHANNEL_STATES_PRIOR_TO_CLOSED + (ChannelState.STATE_CLOSED,)
 
 CHANNEL_AFTER_CLOSE_STATES = CHANNEL_STATES_UP_TO_CLOSED + (
-    ChannelState.CHANNEL_STATE_SETTLING,
-    ChannelState.CHANNEL_STATE_SETTLED,
+    ChannelState.STATE_SETTLING,
+    ChannelState.STATE_SETTLED,
 )
 
 NODE_NETWORK_UNKNOWN = "unknown"
