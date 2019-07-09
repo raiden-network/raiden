@@ -147,7 +147,7 @@ def test_is_safe_to_wait():
     assert not is_safe, "this is expiration must not be safe"
 
 
-def test_is_channel_usable():
+def test_is_channel_usable_for_mediation():
     """ Check rules that determine if a channel can be used for transfers """
     reveal_timeout = 30
     timeout_blocks = reveal_timeout + 10
@@ -168,25 +168,23 @@ def test_is_channel_usable():
     )
 
     # the first channel is usable
-    assert channel.is_channel_usable(
-        candidate_channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert channel.is_channel_usable_for_mediation(
+        channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
     # a channel without capacity must be skipped
-    assert not channel.is_channel_usable(
-        candidate_channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert not channel.is_channel_usable_for_mediation(
+        channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
     # channel should be usable, due to lock_timeout larger than channel.reveal_timeout
-    assert channel.is_channel_usable(
-        candidate_channel_state=channels[2],
-        transfer_amount=amount,
-        lock_timeout=timeout_blocks + 1,
+    assert channel.is_channel_usable_for_mediation(
+        channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks + 1
     )
 
     # channel should not be usable, when lock_timeout equal or greater than channel.reveal_timeout
-    assert not channel.is_channel_usable(
-        candidate_channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert not channel.is_channel_usable_for_mediation(
+        channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
 
