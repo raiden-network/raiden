@@ -271,6 +271,7 @@ class UserAddressManager:
         return validate_userid_signature(user)
 
     def recover_userids(self, address_to_userids: defaultdict) -> None:
+        """Restores the mapping address: userids for all known addresses"""
         self._address_to_userids = address_to_userids
 
 

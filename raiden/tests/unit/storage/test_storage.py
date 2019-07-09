@@ -1,4 +1,6 @@
 import os.path
+from collections import defaultdict
+from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -103,20 +105,24 @@ def test_regression_delete_should_not_commit_the_upgrade_transaction(tmp_path, m
 def test_get_matrix_userids_for_address():
     conn = make_db_connection()
     storage = MatrixStorage(conn)
-    log_time = "2019-16-05T14:18:35.000"
+    timestamp = datetime.utcnow()
     address = make_address()
-    user_ids = [
+    user_ids = {
         "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500",
         "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501",
-    ]
+    }
+    assert storage.get_matrix_userids_and_addresses() == defaultdict(set)
+    assert storage.get_matrix_roomids_for_address(address) == {}
 
-    storage.write_matrix_userids_for_address(address=address, user_ids=user_ids, log_time=log_time)
+    storage.write_matrix_userids_for_address(
+        address=address, user_ids=user_ids, timestamp=timestamp
+    )
     room_ids_to_aliases = {
         "!EccQWEAMFrOhVqPgYt:localhost:8500": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8500",
         "!lWOxcxArgnXltwsAaP:localhost:8501": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8501",
     }
     storage.write_matrix_roomids_for_address(
-        address=address, room_ids_to_aliases=room_ids_to_aliases, log_time=log_time
+        address=address, room_ids_to_aliases=room_ids_to_aliases, timestamp=timestamp
     )
 
     stored_user_ids_for_address = storage.get_matrix_userids_and_addresses()
@@ -124,4 +130,4 @@ def test_get_matrix_userids_for_address():
 
     assert stored_user_ids_for_address[address] == set(user_ids)
     assert stored_room_ids_to_aliases == room_ids_to_aliases
-    storage.close()
+    storage.database.close()

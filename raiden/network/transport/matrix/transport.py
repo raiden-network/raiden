@@ -517,9 +517,7 @@ class MatrixTransport(Runnable):
 
             if self.storage:
                 self.storage.write_matrix_userids_for_address(
-                    node_address,
-                    list(user_ids),
-                    datetime.utcnow().isoformat(timespec="milliseconds"),
+                    node_address, user_ids, datetime.utcnow()
                 )
 
             # Ensure network state is updated in case we already know about the user presences
@@ -1009,9 +1007,7 @@ class MatrixTransport(Runnable):
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         if self.storage:
             self.storage.write_matrix_userids_for_address(
-                address,
-                [user.user_id for user in peers],
-                datetime.utcnow().isoformat(timespec="milliseconds"),
+                address, {user.user_id for user in peers}, datetime.utcnow()
             )
         self._set_room_id_for_address(address, room.room_id)
 

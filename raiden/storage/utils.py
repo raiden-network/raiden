@@ -42,6 +42,8 @@ of the easy of conversion.
 import sqlite3
 from collections import namedtuple
 
+from raiden.exceptions import InvalidDBData
+
 
 class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
     def __getattr__(self, item):
@@ -49,7 +51,32 @@ class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time"))
 
 
 def make_db_connection(database_path=":memory:") -> sqlite3.Connection:
-    return sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
+    conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
+    conn.text_factory = str
+    conn.execute("PRAGMA foreign_keys=ON")
+
+    # Skip the acquire/release cycle for the exclusive write lock.
+    # References:
+    # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
+    # https://sqlite.org/pragma.html#pragma_locking_mode
+    conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+
+    # Keep the journal around and skip inode updates.
+    # References:
+    # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
+    # https://sqlite.org/pragma.html#pragma_journal_mode
+    try:
+        conn.execute("PRAGMA journal_mode=PERSIST")
+    except sqlite3.DatabaseError:
+        raise InvalidDBData(
+            # FIXME get db path
+            f"Existing DB was found to be corrupt at Raiden startup. "
+            f"Manual user intervention required. Bailing."
+        )
+
+    with conn:
+        conn.executescript(DB_SCRIPT_CREATE_TABLES)
+    return conn
 
 
 DB_CREATE_SETTINGS = """
