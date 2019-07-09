@@ -29,9 +29,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
+    ChannelState,
     NettingChannelState,
     RouteState,
     message_identifier_from_prng,
@@ -715,7 +714,8 @@ def events_for_balanceproof(
 
         payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
         payee_channel_open = (
-            payee_channel and channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
+            payee_channel
+            and channel.get_status(payee_channel) == ChannelState.CHANNEL_STATE_OPENED
         )
 
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
@@ -861,7 +861,10 @@ def events_for_onchain_secretreveal_if_closed(
     for pending_pair in get_pending_transfer_pairs(transfers_pair):
         payer_channel = get_payer_channel(channelmap, pending_pair)
         # Don't register the secret on-chain if the channel is open or settled
-        if payer_channel and channel.get_status(payer_channel) == CHANNEL_STATE_CLOSED:
+        if (
+            payer_channel
+            and channel.get_status(payer_channel) == ChannelState.CHANNEL_STATE_CLOSED
+        ):
             pending_pair.payer_state = "payer_waiting_secret_reveal"
 
             if not transaction_sent:
@@ -923,7 +926,9 @@ def events_to_remove_expired_locks(
                 lock_expiration_threshold=lock_expiration_threshold,
             )
 
-            is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+            is_channel_open = (
+                channel.get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
+            )
 
             if has_lock_expired and is_channel_open:
                 transfer_pair.payee_state = "payee_expired"
@@ -1415,7 +1420,7 @@ def handle_node_change_network_state(
     if not payee_channel or not payer_channel:
         return TransitionResult(mediator_state, list())
 
-    payee_channel_open = channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
+    payee_channel_open = channel.get_status(payee_channel) == ChannelState.CHANNEL_STATE_OPENED
     if not payee_channel_open:
         return TransitionResult(mediator_state, list())
 

@@ -6,7 +6,7 @@ from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 
 
 def wait_for_transaction(receiver, registry_address, token_address, sender_address):
@@ -29,7 +29,7 @@ def wait_for_transaction(receiver, registry_address, token_address, sender_addre
 
 def is_channel_open_and_funded(channel_state):
     return (
-        channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        channel.get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
         and channel_state.our_state.contract_balance > 0
     )
 

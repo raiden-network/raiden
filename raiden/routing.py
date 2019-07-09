@@ -10,7 +10,7 @@ from raiden.exceptions import ServiceRequestFailed
 from raiden.messages import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_paths
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
+from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -167,7 +167,7 @@ def get_best_routes_internal(
         if not channel_state:
             continue
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),
@@ -266,7 +266,7 @@ def get_best_routes_pfs(
             continue
 
         # check channel state
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),

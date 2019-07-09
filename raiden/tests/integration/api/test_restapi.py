@@ -30,7 +30,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_CUSTOM_TOKEN,
@@ -155,7 +155,9 @@ def test_payload_with_invalid_addresses(api_server_test_instance, rest_api_port_
         "http://localhost:{port}/api/v1/" "channels/ea674fdde714fd979de3edf0f56aa9716b898ec8"
     ).format(port=rest_api_port_number)
 
-    request = grequests.patch(url_without_prefix, json=dict(state="CHANNEL_STATE_SETTLED"))
+    request = grequests.patch(
+        url_without_prefix, json=dict(state=ChannelState.CHANNEL_STATE_SETTLED.value)
+    )
     response = request.send().response
 
     assert_response_with_code(response, HTTPStatus.NOT_FOUND)
@@ -330,7 +332,12 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
-        {"balance": 0, "state": CHANNEL_STATE_OPENED, "channel_identifier": 1, "total_deposit": 0}
+        {
+            "balance": 0,
+            "state": ChannelState.CHANNEL_STATE_OPENED.value,
+            "channel_identifier": 1,
+            "total_deposit": 0,
+        }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
 
@@ -358,7 +365,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     expected_response.update(
         {
             "balance": total_deposit,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.CHANNEL_STATE_OPENED.value,
             "channel_identifier": second_channel_id,
             "token_network_address": token_network_address,
             "total_deposit": total_deposit,
@@ -411,7 +418,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_OPENED,
+        "state": ChannelState.CHANNEL_STATE_OPENED.value,
         "balance": total_deposit,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
@@ -437,7 +444,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_OPENED,
+        "state": ChannelState.CHANNEL_STATE_OPENED.value,
         "balance": total_deposit,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
@@ -489,7 +496,7 @@ def test_api_open_close_and_settle_channel(
     expected_response.update(
         {
             "balance": balance,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.CHANNEL_STATE_OPENED.value,
             "reveal_timeout": reveal_timeout,
             "channel_identifier": channel_identifier,
             "total_deposit": 0,
@@ -507,7 +514,7 @@ def test_api_open_close_and_settle_channel(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json={"state": CHANNEL_STATE_CLOSED},
+        json={"state": ChannelState.CHANNEL_STATE_CLOSED.value},
     )
     response = request.send().response
     assert_proper_response(response)
@@ -518,7 +525,7 @@ def test_api_open_close_and_settle_channel(
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_CLOSED,
+        "state": ChannelState.CHANNEL_STATE_CLOSED.value,
         "balance": balance,
         "total_deposit": balance,
     }
@@ -551,7 +558,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     expected_response.update(
         {
             "balance": balance,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.CHANNEL_STATE_OPENED.value,
             "reveal_timeout": reveal_timeout,
             "channel_identifier": channel_identifier,
             "total_deposit": 0,
@@ -568,7 +575,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json={"state": CHANNEL_STATE_CLOSED},
+        json={"state": ChannelState.CHANNEL_STATE_CLOSED.value},
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
@@ -650,7 +657,7 @@ def test_api_channel_state_change_errors(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json=dict(state=CHANNEL_STATE_CLOSED, total_deposit=200),
+        json=dict(state=ChannelState.CHANNEL_STATE_CLOSED.value, total_deposit=200),
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
@@ -674,7 +681,7 @@ def test_api_channel_state_change_errors(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json=dict(state=CHANNEL_STATE_CLOSED),
+        json=dict(state=ChannelState.CHANNEL_STATE_CLOSED.value),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -1477,7 +1484,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     expected_response.update(
         {
             "balance": balance_working,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.CHANNEL_STATE_OPENED.value,
             "channel_identifier": first_channel_identifier,
             "total_deposit": balance_working,
         }

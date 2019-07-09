@@ -25,10 +25,7 @@ from raiden.transfer.channel import (
     set_settled,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-    CHANNEL_STATE_SETTLING,
-    CHANNEL_STATE_UNUSABLE,
+    ChannelState,
     HashTimeLockState,
     PendingLocksState,
     TransactionExecutionStatus,
@@ -306,12 +303,12 @@ def test_get_status():
     close_failed = factories.create(
         factories.NettingChannelStateProperties(close_transaction=failed_status)
     )
-    assert get_status(close_failed) == CHANNEL_STATE_UNUSABLE
+    assert get_status(close_failed) == ChannelState.CHANNEL_STATE_UNUSABLE
 
     settle_failed = factories.create(
         factories.NettingChannelStateProperties(settle_transaction=failed_status)
     )
-    assert get_status(settle_failed) == CHANNEL_STATE_UNUSABLE
+    assert get_status(settle_failed) == ChannelState.CHANNEL_STATE_UNUSABLE
 
 
 def test_set_settled():
@@ -321,9 +318,9 @@ def test_set_settled():
         )
     )
 
-    assert get_status(channel) == CHANNEL_STATE_SETTLING
+    assert get_status(channel) == ChannelState.CHANNEL_STATE_SETTLING
     set_settled(channel, block_number=100)
-    assert get_status(channel) == CHANNEL_STATE_SETTLED
+    assert get_status(channel) == ChannelState.CHANNEL_STATE_SETTLED
 
 
 def test_handle_action_set_fee():
@@ -401,7 +398,7 @@ def test_handle_block_closed_channel():
         block_number=block.block_number,
         pseudo_random_generator=pseudo_random_generator,
     )
-    assert get_status(before_settle.new_state) == CHANNEL_STATE_CLOSED
+    assert get_status(before_settle.new_state) == ChannelState.CHANNEL_STATE_CLOSED
     assert not before_settle.events
 
     block = Block(block_number=102, gas_limit=100000, block_hash=factories.make_block_hash())
@@ -411,7 +408,7 @@ def test_handle_block_closed_channel():
         block_number=block.block_number,
         pseudo_random_generator=pseudo_random_generator,
     )
-    assert get_status(after_settle.new_state) == CHANNEL_STATE_SETTLING
+    assert get_status(after_settle.new_state) == ChannelState.CHANNEL_STATE_SETTLING
     assert after_settle.events
 
 

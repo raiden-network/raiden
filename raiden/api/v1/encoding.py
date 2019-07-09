@@ -17,7 +17,7 @@ from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersP
 from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
+from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.utils import data_decoder, data_encoder
 
 
@@ -266,24 +266,24 @@ class ChannelStateSchema(BaseSchema):
     total_withdraw = fields.Method("get_total_withdraw")
 
     @staticmethod
-    def get_partner_address(channel_state):
+    def get_partner_address(channel_state: NettingChannelState) -> str:
         return to_checksum_address(channel_state.partner_state.address)
 
     @staticmethod
-    def get_balance(channel_state):
+    def get_balance(channel_state: NettingChannelState) -> int:
         return channel.get_distributable(channel_state.our_state, channel_state.partner_state)
 
     @staticmethod
-    def get_state(channel_state):
-        return channel.get_status(channel_state)
+    def get_state(channel_state: NettingChannelState) -> str:
+        return channel.get_status(channel_state).value
 
     @staticmethod
-    def get_total_deposit(channel_state):
+    def get_total_deposit(channel_state: NettingChannelState) -> int:
         """Return our total deposit in the contract for this channel"""
         return channel_state.our_total_deposit
 
     @staticmethod
-    def get_total_withdraw(channel_state):
+    def get_total_withdraw(channel_state: NettingChannelState) -> int:
         """Return our total withdraw from this channel"""
         return channel_state.our_total_withdraw
 
@@ -311,7 +311,11 @@ class ChannelPatchSchema(BaseSchema):
         default=None,
         missing=None,
         validate=validate.OneOf(
-            [CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED]
+            [
+                ChannelState.CHANNEL_STATE_CLOSED.value,
+                ChannelState.CHANNEL_STATE_OPENED.value,
+                ChannelState.CHANNEL_STATE_SETTLED.value,
+            ]
         ),
     )
 
