@@ -22,12 +22,14 @@ RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO} /app/raiden
 
 RUN python3 -m venv /opt/venv
 
+ENV PATH="/opt/venv/bin:$PATH"
+
 WORKDIR /app/raiden
 
 RUN make install
 
 
-FROM python:3-slim as runner
+FROM python:3.7-slim as runner
 
 COPY --from=builder /opt/venv /opt/venv
 
