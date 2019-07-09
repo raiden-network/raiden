@@ -29,7 +29,7 @@ def test_wait_for_channel_in_states():
             token_address=container.token_address,
             channel_ids=channel_ids,
             retry_timeout=0.01,
-            target_states=[ChannelState.CHANNEL_STATE_CLOSED],
+            target_states=[ChannelState.STATE_CLOSED],
         )
 
     with patch("raiden.transfer.views.state_from_raiden", return_value=container.chain_state):

@@ -73,7 +73,7 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
     assert len(channels) == 1
 
     channel12 = get_channelstate(node1, node2, token_network_address)
-    assert channel.get_status(channel12) == ChannelState.CHANNEL_STATE_OPENED
+    assert channel.get_status(channel12) == ChannelState.STATE_OPENED
 
     channel_event_list1 = api1.get_blockchain_events_channel(
         token_address, channel12.partner_state.address
@@ -115,7 +115,7 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
 
     channel12 = get_channelstate(node1, node2, token_network_address)
 
-    assert channel.get_status(channel12) == ChannelState.CHANNEL_STATE_OPENED
+    assert channel.get_status(channel12) == ChannelState.STATE_OPENED
     assert channel.get_balance(channel12.our_state, channel12.partner_state) == deposit
     assert channel12.our_state.contract_balance == deposit
     assert api1.get_channel_list(registry_address, token_address, api2.address) == [channel12]
@@ -151,7 +151,7 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
             "args": {"closing_participant": to_checksum_address(api1.address)},
         },
     )
-    assert channel.get_status(channel12) == ChannelState.CHANNEL_STATE_CLOSED
+    assert channel.get_status(channel12) == ChannelState.STATE_CLOSED
 
     assert wait_for_state_change(
         node1.raiden,

@@ -39,7 +39,7 @@ class EchoNode:  # pragma: no unittest
         open_channels = [
             channel_state
             for channel_state in existing_channels
-            if channel.get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
+            if channel.get_status(channel_state) == ChannelState.STATE_OPENED
         ]
 
         if len(open_channels) == 0:

@@ -256,7 +256,7 @@ def get_channelstate_for(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
         ]
-        states = filter_channels_by_status(channels, [ChannelState.CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         # If multiple channel states are found, return the last one.
         if states:
             channel_state = states[-1]
@@ -276,7 +276,7 @@ def get_channelstate_by_token_network_and_partner(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
         ]
-        states = filter_channels_by_status(channels, [ChannelState.CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         if states:
             channel_state = states[-1]
 
@@ -332,8 +332,7 @@ def get_channelstate_open(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state)
-        == ChannelState.CHANNEL_STATE_OPENED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_OPENED,
     )
 
 
@@ -347,8 +346,7 @@ def get_channelstate_closing(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state)
-        == ChannelState.CHANNEL_STATE_CLOSING,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSING,
     )
 
 
@@ -362,8 +360,7 @@ def get_channelstate_closed(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state)
-        == ChannelState.CHANNEL_STATE_CLOSED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSED,
     )
 
 
@@ -377,8 +374,7 @@ def get_channelstate_settling(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state)
-        == ChannelState.CHANNEL_STATE_SETTLING,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLING,
     )
 
 
@@ -392,8 +388,7 @@ def get_channelstate_settled(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state)
-        == ChannelState.CHANNEL_STATE_SETTLED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLED,
     )
 
 
@@ -495,7 +490,7 @@ def filter_channels_by_partneraddress(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner]
         ]
-        states = filter_channels_by_status(channels, [ChannelState.CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         # If multiple channel states are found, return the last one.
         if states:
             result.append(states[-1])

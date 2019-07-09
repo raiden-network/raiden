@@ -29,7 +29,7 @@ def wait_for_transaction(receiver, registry_address, token_address, sender_addre
 
 def is_channel_open_and_funded(channel_state):
     return (
-        channel.get_status(channel_state) == ChannelState.CHANNEL_STATE_OPENED
+        channel.get_status(channel_state) == ChannelState.STATE_OPENED
         and channel_state.our_state.contract_balance > 0
     )
 

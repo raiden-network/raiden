@@ -1058,7 +1058,7 @@ class RestAPI:  # pragma: no unittest
             total_deposit=total_deposit,
         )
 
-        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Can't set total deposit on a closed channel",
                 status_code=HTTPStatus.CONFLICT,
@@ -1101,7 +1101,7 @@ class RestAPI:  # pragma: no unittest
             total_withdraw=total_withdraw,
         )
 
-        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
             )
@@ -1133,7 +1133,7 @@ class RestAPI:  # pragma: no unittest
             channel_identifier=channel_state.identifier,
         )
 
-        if channel.get_status(channel_state) != ChannelState.CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Attempted to close an already closed channel",
                 status_code=HTTPStatus.CONFLICT,
@@ -1218,7 +1218,7 @@ class RestAPI:  # pragma: no unittest
         elif total_withdraw is not None:
             result = self._withdraw(registry_address, channel_state, total_withdraw)
 
-        elif state == ChannelState.CHANNEL_STATE_CLOSED:
+        elif state == ChannelState.STATE_CLOSED:
             result = self._close(registry_address, channel_state)
 
         else:  # should never happen, channel_state is validated in the schema
