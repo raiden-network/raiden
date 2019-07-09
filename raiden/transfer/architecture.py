@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     List,
     Locksroot,
     MessageID,
+    NamedTuple,
     Nonce,
     Optional,
     Signature,
@@ -117,6 +118,11 @@ class Event:
     """
 
     pass
+
+
+class EventsError(NamedTuple):
+    events: List[Event]
+    error: str
 
 
 @dataclass

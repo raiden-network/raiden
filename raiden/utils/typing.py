@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NewType, NoReturn, Optional, Tuple, Type, Union
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
@@ -158,8 +158,7 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
 
-# This should be changed to `Optional[str]`
-SuccessOrError = Tuple[bool, Optional[str]]
+SuccessOrErrorMsg = Optional[str]
 
 BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 
@@ -173,3 +172,12 @@ Endpoint = NewType("Endpoint", str)
 LockType = Union["HashTimeLockState", "UnlockPartialProofState"]
 ErrorType = Union[Type["RaidenRecoverableError"], Type["RaidenUnrecoverableError"]]
 LockedTransferType = Union["LockedTransferUnsignedState", "LockedTransferSignedState"]
+
+
+class Uninhabited:
+    def __init__(self):
+        raise RuntimeError("Uninhabited class cannot be instantiated")
+
+
+def never(x: Uninhabited) -> NoReturn:
+    raise RuntimeError(f"Unhandled type: {type(x).__name__}")

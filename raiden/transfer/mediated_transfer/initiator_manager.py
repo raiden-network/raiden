@@ -1,7 +1,7 @@
 import random
 
 from raiden.transfer import channel, routes
-from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.architecture import Event, EventsError, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator
 from raiden.transfer.mediated_transfer.events import (
@@ -299,18 +299,18 @@ def handle_transferrefundcancelroute(
 
     is_valid_refund = channel.refund_transfer_matches_transfer(refund_transfer, original_transfer)
 
-    events = list()
+    events: List[Event] = list()
     if not is_valid_lock or not is_valid_refund:
         return TransitionResult(payment_state, list())
 
-    is_valid, channel_events, _ = channel.handle_receive_refundtransfercancelroute(
+    events_or_error = channel.handle_receive_refundtransfercancelroute(
         channel_state, refund_transfer
     )
 
-    events.extend(channel_events)
-
-    if not is_valid:
+    if isinstance(events_or_error, EventsError):
         return TransitionResult(payment_state, list())
+
+    events.extend(events_or_error)
 
     transfer_secrethash = original_transfer.lock.secrethash
     transfer_state = payment_state.initiator_transfers[transfer_secrethash]

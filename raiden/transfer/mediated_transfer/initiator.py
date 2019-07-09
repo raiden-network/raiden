@@ -107,7 +107,7 @@ def handle_block(
     lock_expiration_threshold = BlockExpiration(
         locked_lock.expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
     )
-    lock_has_expired, _ = channel.is_lock_expired(
+    msg_if_lock_has_not_expired = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=locked_lock,
         block_number=state_change.block_number,
@@ -116,7 +116,10 @@ def handle_block(
 
     events: List[Event] = list()
 
-    if lock_has_expired and initiator_state.transfer_state != "transfer_expired":
+    if (
+        msg_if_lock_has_not_expired is None
+        and initiator_state.transfer_state != "transfer_expired"
+    ):
         is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
         if is_channel_open:
             expired_lock_events = channel.send_lock_expired(

@@ -65,13 +65,13 @@ def events_for_onchain_secretreveal(
     transfer = target_state.transfer
     expiration = transfer.lock.expiration
 
-    safe_to_wait, _ = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
+    msg_if_not_safe = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
     secret_known_offchain = channel.is_secret_known_offchain(
         channel_state.partner_state, transfer.lock.secrethash
     )
     has_onchain_reveal_started = target_state.state == TargetTransferState.ONCHAIN_SECRET_REVEAL
 
-    if not safe_to_wait and secret_known_offchain and not has_onchain_reveal_started:
+    if msg_if_not_safe is None and secret_known_offchain and not has_onchain_reveal_started:
         target_state.state = TargetTransferState.ONCHAIN_SECRET_REVEAL
         secret = channel.get_secret(channel_state.partner_state, transfer.lock.secrethash)
         assert secret, "secret should be known at this point"
@@ -97,11 +97,11 @@ def handle_inittarget(
     route = state_change.from_hop
 
     assert channel_state.identifier == transfer.balance_proof.channel_identifier
-    is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
-        channel_state, transfer
-    )
+    events_or_error = channel.handle_receive_lockedtransfer(channel_state, transfer)
 
-    if is_valid:
+    if isinstance(events_or_error, list):
+        channel_events = events_or_error
+
         # A valid balance proof does not mean the payment itself is still valid.
         # e.g. the lock may be near expiration or have expired. This is fine. The
         # message with an unusable lock must be handled to properly synchronize the
@@ -111,7 +111,7 @@ def handle_inittarget(
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(route, transfer)
 
-        safe_to_wait, _ = is_safe_to_wait(
+        msg_if_not_safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
         )
 
@@ -119,7 +119,7 @@ def handle_inittarget(
         # silently let the transfer expire. The target task must be created to
         # handle the ReceiveLockExpired state change, which will clear the
         # expired lock.
-        if safe_to_wait:
+        if msg_if_not_safe_to_wait is None:
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
@@ -138,11 +138,10 @@ def handle_inittarget(
         # If the balance proof is not valid, do *not* create a task. Otherwise it's
         # possible for an attacker to send multiple invalid transfers, and increase
         # the memory usage of this Node.
-        assert errormsg, "handle_receive_lockedtransfer should return error msg if not valid"
         unlock_failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
-            reason=errormsg,
+            reason=events_or_error.error,
         )
         channel_events.append(unlock_failed)
         iteration = TransitionResult(None, channel_events)
@@ -226,10 +225,10 @@ def handle_unlock(
     """ Handles a ReceiveUnlock state change. """
     balance_proof_sender = state_change.balance_proof.sender
 
-    is_valid, events, _ = channel.handle_unlock(channel_state, state_change)
+    event_or_error = channel.handle_unlock(channel_state, state_change)
     next_target_state: Optional[TargetTransferState] = target_state
 
-    if is_valid:
+    if isinstance(event_or_error, list):
         transfer = target_state.transfer
         payment_received_success = EventPaymentReceivedSuccess(
             payment_network_address=channel_state.payment_network_address,
@@ -249,8 +248,11 @@ def handle_unlock(
             canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
 
+        events = event_or_error
         events.extend([payment_received_success, unlock_success, send_processed])
         next_target_state = None
+    else:
+        events = event_or_error.events
 
     return TransitionResult(next_target_state, events)
 
@@ -269,14 +271,14 @@ def handle_block(
     lock = transfer.lock
 
     secret_known = channel.is_secret_known(channel_state.partner_state, lock.secrethash)
-    lock_has_expired, _ = channel.is_lock_expired(
+    msg_if_lock_has_not_expired = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
         lock_expiration_threshold=channel.get_receiver_expiration_threshold(lock.expiration),
     )
 
-    if lock_has_expired and target_state.state != "expired":
+    if msg_if_lock_has_not_expired is None and target_state.state != "expired":
         failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,

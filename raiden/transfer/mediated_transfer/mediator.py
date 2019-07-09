@@ -2,7 +2,7 @@ import itertools
 import random
 
 from raiden.transfer import channel, routes, secret_registry
-from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.architecture import Event, EventsError, StateChange, TransitionResult
 from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
@@ -61,7 +61,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    SuccessOrError,
+    SuccessOrErrorMsg,
     Tuple,
     Union,
     cast,
@@ -93,7 +93,7 @@ def is_lock_valid(expiration: BlockExpiration, block_number: BlockNumber) -> boo
 
 def is_safe_to_wait(
     lock_expiration: BlockExpiration, reveal_timeout: BlockTimeout, block_number: BlockNumber
-) -> SuccessOrError:
+) -> SuccessOrErrorMsg:
     """ True if waiting is safe, i.e. there are more than enough blocks to safely
     unlock on chain.
     """
@@ -108,14 +108,14 @@ def is_safe_to_wait(
     # A node may wait for a new balance proof while there are reveal_timeout
     # blocks left, at that block and onwards it is not safe to wait.
     if lock_timeout > reveal_timeout:
-        return True, None
+        return None
 
     msg = (
         f"lock timeout is unsafe."
         f" timeout must be larger than {reveal_timeout}, but it is {lock_timeout}."
         f" expiration: {lock_expiration} block_number: {block_number}"
     )
-    return False, msg
+    return msg
 
 
 def is_send_transfer_almost_equal(
@@ -725,9 +725,9 @@ def events_for_balanceproof(
         # on-chain unlock may fail. If the lock is nearing it's expiration
         # block, then on-chain unlock should be done, and if successful it can
         # be unlocked off-chain.
-        is_safe_to_send_balanceproof = False
+        msg_for_unsafe_to_send: SuccessOrErrorMsg = None
         if payer_channel:
-            is_safe_to_send_balanceproof, _ = is_safe_to_wait(
+            msg_for_unsafe_to_send = is_safe_to_wait(
                 pair.payer_transfer.lock.expiration, payer_channel.reveal_timeout, block_number
             )
 
@@ -735,7 +735,7 @@ def events_for_balanceproof(
             payee_channel_open
             and payee_knows_secret
             and not payee_payed
-            and is_safe_to_send_balanceproof
+            and msg_for_unsafe_to_send is None
         )
 
         if should_send_balanceproof_to_payee:
@@ -798,7 +798,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
 
         lock = pair.payer_transfer.lock
 
-        safe_to_wait, _ = is_safe_to_wait(
+        msg_unsafe_to_wait = is_safe_to_wait(
             lock.expiration, payer_channel.reveal_timeout, block_number
         )
 
@@ -806,7 +806,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
             payer_channel.partner_state, pair.payer_transfer.lock.secrethash
         )
 
-        if not safe_to_wait and secret_known:
+        if msg_unsafe_to_wait is None and secret_known:
             pair.payer_state = "payer_waiting_secret_reveal"
 
             if not transaction_sent:
@@ -916,7 +916,7 @@ def events_to_remove_expired_locks(
 
         if lock:
             lock_expiration_threshold = channel.get_sender_expiration_threshold(lock.expiration)
-            has_lock_expired, _ = channel.is_lock_expired(
+            msg_lock_not_expired = channel.is_lock_expired(
                 end_state=channel_state.our_state,
                 lock=lock,
                 block_number=block_number,
@@ -925,7 +925,7 @@ def events_to_remove_expired_locks(
 
             is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
-            if has_lock_expired and is_channel_open:
+            if msg_lock_not_expired is None and is_channel_open:
                 transfer_pair.payee_state = "payee_expired"
                 expired_lock_events = channel.send_lock_expired(
                     channel_state=channel_state,
@@ -1084,12 +1084,13 @@ def handle_init(
 
     mediator_state = MediatorTransferState(secrethash=from_transfer.lock.secrethash, routes=routes)
 
-    is_valid, events, _ = channel.handle_receive_lockedtransfer(payer_channel, from_transfer)
-    if not is_valid:
+    events_and_error = channel.handle_receive_lockedtransfer(payer_channel, from_transfer)
+
+    if isinstance(events_and_error, tuple):
         # If the balance proof is not valid, do *not* create a task. Otherwise it's
         # possible for an attacker to send multiple invalid transfers, and increase
         # the memory usage of this Node.
-        return TransitionResult(None, events)
+        return TransitionResult(None, events_and_error[0])
 
     iteration = mediate_transfer(
         state=mediator_state,
@@ -1102,6 +1103,7 @@ def handle_init(
         block_number=block_number,
     )
 
+    events = events_and_error
     events.extend(iteration.events)
     return TransitionResult(iteration.new_state, events)
 
@@ -1183,13 +1185,13 @@ def handle_refundtransfer(
         if not payer_channel:
             return TransitionResult(mediator_state, list())
 
-        is_valid, channel_events, _ = channel.handle_refundtransfer(
+        channel_events = channel.handle_refundtransfer(
             received_transfer=payee_transfer,
             channel_state=payer_channel,
             refund=mediator_state_change,
         )
-        if not is_valid:
-            return TransitionResult(mediator_state, channel_events)
+        if isinstance(channel_events, EventsError):
+            return TransitionResult(mediator_state, channel_events[0])
 
         mediator_state.refunded_channels.append(
             payer_channel.canonical_identifier.channel_identifier
@@ -1310,7 +1312,7 @@ def handle_unlock(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[MediatorTransferState]:
     """ Handle a ReceiveUnlock state change. """
-    events = list()
+    events: List[Event] = list()
     balance_proof_sender = state_change.balance_proof.sender
     channel_identifier = state_change.balance_proof.channel_identifier
 
@@ -1319,10 +1321,9 @@ def handle_unlock(
             channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
             if channel_state:
-                is_valid, channel_events, _ = channel.handle_unlock(channel_state, state_change)
-                events.extend(channel_events)
+                channel_events = channel.handle_unlock(channel_state, state_change)
 
-                if is_valid:
+                if isinstance(channel_events, EventsError):
                     unlock = EventUnlockClaimSuccess(
                         pair.payee_transfer.payment_identifier, pair.payee_transfer.lock.secrethash
                     )
@@ -1336,6 +1337,8 @@ def handle_unlock(
                     events.append(send_processed)
 
                     pair.payer_state = "payer_balance_proof"
+                elif isinstance(channel_events, list):
+                    events.extend(channel_events)
 
     iteration = TransitionResult(mediator_state, events)
     return iteration
