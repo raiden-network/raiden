@@ -414,7 +414,7 @@ jobs:
           destination: synapse-logs
 
       - store_artifacts:
-          path: /tmp/eth/logs
+          path: /tmp/tests/logs
           destination: eth-logs
 
   finalize:
