@@ -132,6 +132,7 @@ def run_app(
     pathfinding_service_address: str,
     pathfinding_max_paths: int,
     enable_monitoring: bool,
+    enable_refund_transfers: bool,
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
@@ -173,6 +174,7 @@ def run_app(
     config["chain_id"] = network_id
     config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
     config["use_imbalance_penalty"] = True
+    config["enable_refund_transfers"] = enable_refund_transfers
 
     setup_environment(config, environment_type)
 

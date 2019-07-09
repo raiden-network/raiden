@@ -63,7 +63,7 @@ class MessageHandler:
             assert isinstance(message, LockExpired), MYPY_ANNOTATION
             self.handle_message_lockexpired(raiden, message)
 
-        elif type(message) == RefundTransfer:
+        elif type(message) == RefundTransfer and raiden.config.get("enable_refund_transfers"):
             assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
             self.handle_message_refundtransfer(raiden, message)
 

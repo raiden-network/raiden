@@ -442,46 +442,41 @@ def backward_transfer_pair(
     transfer_pair = None
     events: List[Event] = list()
 
-    # FIXME: we want to disable sending of refund transfers for the
-    # moment. This is the one point in the client that such a message is ever
-    # sent. So let's make this function effectively a no-op until we find out
-    # if we will restore refunds or go through with removing it.
-
-    # lock = payer_transfer.lock
-    # lock_timeout = BlockTimeout(lock.expiration - block_number)
+    lock = payer_transfer.lock
+    lock_timeout = BlockTimeout(lock.expiration - block_number)
 
     # Ensure the refund transfer's lock has a safe expiration, otherwise don't
     # do anything and wait for the received lock to expire.
-    # if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
-    #     message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
-    #     backward_route_state = RouteState(
-    #         route=[backward_channel.our_state.address],
-    #         forward_channel_id=backward_channel.canonical_identifier.channel_identifier,
-    #     )
+        backward_route_state = RouteState(
+            route=[backward_channel.our_state.address],
+            forward_channel_id=backward_channel.canonical_identifier.channel_identifier,
+        )
 
-    #     refund_transfer = channel.send_refundtransfer(
-    #         channel_state=backward_channel,
-    #         initiator=payer_transfer.initiator,
-    #         target=payer_transfer.target,
-    #         # `amount` should be `get_lock_amount_after_fees(...)`, but fees
-    #         # for refunds are currently not defined, so we assume fee=0 to keep
-    #         # it simple, for now.
-    #         amount=lock.amount,
-    #         message_identifier=message_identifier,
-    #         payment_identifier=payer_transfer.payment_identifier,
-    #         expiration=lock.expiration,
-    #         secrethash=lock.secrethash,
-    #         route_state=backward_route_state,
-    #     )
+        refund_transfer = channel.send_refundtransfer(
+            channel_state=backward_channel,
+            initiator=payer_transfer.initiator,
+            target=payer_transfer.target,
+            # `amount` should be `get_lock_amount_after_fees(...)`, but fees
+            # for refunds are currently not defined, so we assume fee=0 to keep
+            # it simple, for now.
+            amount=lock.amount,
+            message_identifier=message_identifier,
+            payment_identifier=payer_transfer.payment_identifier,
+            expiration=lock.expiration,
+            secrethash=lock.secrethash,
+            route_state=backward_route_state,
+        )
 
-    #     transfer_pair = MediationPairState(
-    #         payer_transfer=payer_transfer,
-    #         payee_address=backward_channel.partner_state.address,
-    #         payee_transfer=refund_transfer.transfer,
-    #     )
+        transfer_pair = MediationPairState(
+            payer_transfer=payer_transfer,
+            payee_address=backward_channel.partner_state.address,
+            payee_transfer=refund_transfer.transfer,
+        )
 
-    #     events.append(refund_transfer)
+        events.append(refund_transfer)
 
     return transfer_pair, events
 

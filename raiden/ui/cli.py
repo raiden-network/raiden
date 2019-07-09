@@ -287,6 +287,12 @@ def options(func):
                 help="Enable broadcasting of balance proofs to the monitoring services.",
                 is_flag=True,
             ),
+            option(
+                "--enable-refund-transfers",
+                help="Enable refund transfer mechanism",
+                is_flag=True,
+                hidden=True,
+            ),
         ),
         option_group(
             "Matrix Transport Options",
