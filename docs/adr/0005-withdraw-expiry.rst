@@ -34,6 +34,16 @@ Considered Options
   This approach resolves the issue of having the locked funds indefinitely or until the channel is closed with a non-cooperating partner node because
   once the withdraw request expires, Alice will remove the expired total withdraw state and locked withdraw will be unlocked.
 
+Decision
+========
+
+Option 2 of `WithdrawExpiry` has the disadvantage of adding a collection of new messages to the
+protocol, which could be seen as further complication of the protocol. However, it has the advantage that
+amounts locked for withdraw can be unlocked and used for transfers instead in case of an expired withdraw attempt.
+
+Though Option 1 can be argued that its much simpler, the benefit of unlocking funds previously locked for withdraw was seen
+as more viable solution even with the added complexity.
+
 Examples of Option 2
 ====================
 
