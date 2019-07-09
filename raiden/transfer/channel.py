@@ -358,11 +358,12 @@ def is_valid_channel_total_withdraw(channel_total_withdraw) -> bool:
     return channel_total_withdraw <= UINT256_MAX
 
 
-def is_valid_withdraw_request_signature(
-    withdraw_request: ReceiveWithdrawRequest
+def is_valid_withdraw(
+    withdraw_request: Union[
+        ReceiveWithdrawRequest, ReceiveWithdrawConfirmation, ReceiveWithdrawExpired
+    ]
 ) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawRequest message corresponds
-    to the data in the message itself.
+    """True if the signature of the message corresponds is valid.
 
     This predicate is intentionally only checking the signature against the
     message data, and not the expected data. Before this check the fields of
@@ -377,52 +378,6 @@ def is_valid_withdraw_request_signature(
 
     return is_valid_signature(
         data=packed, signature=withdraw_request.signature, sender_address=withdraw_request.sender
-    )
-
-
-def is_valid_withdraw_confirmation_signature(
-    withdraw_confirmation: ReceiveWithdrawConfirmation
-) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawConfirmation message
-    corresponds to the data in the message itself.
-
-    This predicate is intentionally only checking the signature against the
-    message data, and not the expected data. Before this check the fields of
-    the message must be validated.
-    """
-    packed = pack_withdraw(
-        canonical_identifier=withdraw_confirmation.canonical_identifier,
-        participant=withdraw_confirmation.participant,
-        total_withdraw=withdraw_confirmation.total_withdraw,
-        expiration_block=withdraw_confirmation.expiration,
-    )
-
-    return is_valid_signature(
-        data=packed,
-        signature=withdraw_confirmation.signature,
-        sender_address=withdraw_confirmation.sender,
-    )
-
-
-def is_valid_withdraw_expired_signature(
-    withdraw_expired: ReceiveWithdrawExpired
-) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawExpired message corresponds
-    to the data in the message itself.
-
-    This predicate is intentionally only checking the signature against the
-    message data, and not the expected data. Before this check the fields of
-    the message must be validated.
-    """
-    packed = pack_withdraw(
-        canonical_identifier=withdraw_expired.canonical_identifier,
-        participant=withdraw_expired.participant,
-        total_withdraw=withdraw_expired.total_withdraw,
-        expiration_block=withdraw_expired.expiration,
-    )
-
-    return is_valid_signature(
-        data=packed, signature=withdraw_expired.signature, sender_address=withdraw_expired.sender
     )
 
 
@@ -988,7 +943,7 @@ def is_valid_withdraw_request(
     expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_request_signature(withdraw_request)
+    valid_signature, signature_msg = is_valid_withdraw(withdraw_request)
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
 
@@ -1054,7 +1009,7 @@ def is_valid_withdraw_confirmation(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_confirmation_signature(received_withdraw)
+    valid_signature, signature_msg = is_valid_withdraw(received_withdraw)
 
     if not withdraw_state:
         msg = (
@@ -1126,7 +1081,7 @@ def is_valid_withdraw_expired(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_expired_signature(state_change)
+    valid_signature, signature_msg = is_valid_withdraw(state_change)
 
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
