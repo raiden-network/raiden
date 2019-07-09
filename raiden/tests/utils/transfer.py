@@ -20,7 +20,7 @@ from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
+    ChannelState,
     HashTimeLockState,
     NettingChannelState,
     PendingLocksState,
@@ -325,8 +325,8 @@ def transfer_and_assert_path(
             f"{to_checksum_address(to_app.raiden.address)} must be open to be used for a "
             f"transfer"
         )
-        assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
-        assert channel.get_status(to_channel_state) == CHANNEL_STATE_OPENED, msg
+        assert channel.get_status(from_channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
+        assert channel.get_status(to_channel_state) == ChannelState.CHANNEL_STATE_OPENED, msg
 
         receiving.append((to_app, to_channel_state.identifier))
 

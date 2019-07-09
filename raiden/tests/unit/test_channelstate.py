@@ -54,7 +54,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSING,
+    ChannelState,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -1455,7 +1455,7 @@ def test_action_close_must_change_the_channel_state():
         block_hash=make_block_hash(),
         pseudo_random_generator=random.Random(),
     )
-    assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
+    assert channel.get_status(iteration.new_state) == ChannelState.CHANNEL_STATE_CLOSING
 
 
 def test_update_must_be_called_if_close_lost_race():

@@ -2,6 +2,7 @@
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import Enum
 from random import Random
 from typing import TYPE_CHECKING, Tuple
 
@@ -64,16 +65,27 @@ if TYPE_CHECKING:
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
-CHANNEL_STATE_CLOSED = "closed"
-CHANNEL_STATE_CLOSING = "waiting_for_close"
-CHANNEL_STATE_OPENED = "opened"
-CHANNEL_STATE_SETTLED = "settled"
-CHANNEL_STATE_SETTLING = "waiting_for_settle"
-CHANNEL_STATE_UNUSABLE = "channel_unusable"
 
-CHANNEL_STATES_PRIOR_TO_CLOSED = (CHANNEL_STATE_OPENED, CHANNEL_STATE_CLOSING)
+class ChannelState(Enum):
+    CHANNEL_STATE_CLOSED = "closed"
+    CHANNEL_STATE_CLOSING = "waiting_for_close"
+    CHANNEL_STATE_OPENED = "opened"
+    CHANNEL_STATE_SETTLED = "settled"
+    CHANNEL_STATE_SETTLING = "waiting_for_settle"
+    CHANNEL_STATE_UNUSABLE = "channel_unusable"
 
-CHANNEL_AFTER_CLOSE_STATES = (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLING, CHANNEL_STATE_SETTLED)
+
+CHANNEL_STATES_PRIOR_TO_CLOSED = (
+    ChannelState.CHANNEL_STATE_OPENED,
+    ChannelState.CHANNEL_STATE_CLOSING,
+)
+
+CHANNEL_STATES_UP_TO_CLOSED = CHANNEL_STATES_PRIOR_TO_CLOSED + (ChannelState.CHANNEL_STATE_CLOSED,)
+
+CHANNEL_AFTER_CLOSE_STATES = CHANNEL_STATES_UP_TO_CLOSED + (
+    ChannelState.CHANNEL_STATE_SETTLING,
+    ChannelState.CHANNEL_STATE_SETTLED,
+)
 
 NODE_NETWORK_UNKNOWN = "unknown"
 NODE_NETWORK_UNREACHABLE = "unreachable"
