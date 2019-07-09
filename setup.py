@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from typing import List
+
 from setuptools import find_packages, setup
 from setuptools.command.egg_info import egg_info
 from setuptools.command.test import test as TestCommand
@@ -7,7 +9,7 @@ from setuptools.command.test import test as TestCommand
 class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = []
+        self.test_args: List[str] = []
         self.test_suite = True
 
     def run_tests(self):
@@ -52,7 +54,7 @@ with open("requirements/requirements.txt") as req_file:
         }
     )
 
-test_requirements = []
+test_requirements: List[str] = []
 
 # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 version = "0.100.4"
@@ -68,6 +70,7 @@ setup(
     package_data={"raiden": ["py.typed"]},
     license="MIT",
     zip_safe=False,
+    long_description_content_type="text/markdown",
     keywords="raiden",
     classifiers=[
         "Development Status :: 3 - Alpha",
