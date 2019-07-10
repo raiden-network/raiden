@@ -458,6 +458,11 @@ class ConnectionManager:  # pragma: no unittest
         return self.initial_channel_target < 1
 
     def __repr__(self) -> str:
+        if self.raiden.wal is None:
+            return (
+                f"{self.__class__.__name__}(target={self.initial_channel_target} "
+                "WAL not initialized)"
+            )
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_address=self.registry_address,
