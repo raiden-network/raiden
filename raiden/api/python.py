@@ -350,17 +350,6 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(partner_address):
             raise InvalidAddress("Expected binary address format for partner in channel open")
 
-        chain_state = views.state_from_raiden(self.raiden)
-        channel_state = views.get_channelstate_for(
-            chain_state=chain_state,
-            payment_network_address=registry_address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
-
-        if channel_state:
-            raise DuplicatedChannelError("Channel with given partner address already exists")
-
         registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = registry.get_token_network(token_address)
 
@@ -370,6 +359,18 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         token_network = self.raiden.chain.token_network(registry.get_token_network(token_address))
+
+        token_network_proxy = self.raiden.chain.address_to_token_network[token_network_address]
+        channel_identifier = token_network_proxy.get_channel_identifier_or_none(
+            participant1=self.raiden.address,
+            participant2=partner_address,
+            block_identifier=token_network.client.get_checking_block(),
+        )
+
+        if channel_identifier:
+            raise RecoverableDuplicatedChannelError(
+                "Channel with given partner address already exists"
+            )
 
         with self.raiden.gas_reserve_lock:
             has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(

@@ -310,6 +310,22 @@ class ConnectionManager:  # pragma: no unittest
             # If channel already exists (either because partner created it,
             # or it's nonfunded channel), continue to ensure it's funded
             pass
+        except RaidenRecoverableError:
+            # The channel may still have been created in the pending block.
+            # If that is the case, swallow the exception
+            token_network_address = views.get_token_network_address_by_token_address(
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_address=self.registry_address,
+                token_address=self.token_address,
+            )
+            token_network = self.raiden.chain.address_to_token_network[token_network_address]
+            channel_identifier = token_network.get_channel_identifier_or_none(
+                participant1=self.raiden.address,
+                participant2=partner,
+                block_identifier=token_network.client.get_checking_block(),
+            )
+            if not channel_identifier:
+                raise
 
         # Wait until a newer block is mined before moving to deposit.
         # TODO: Remove this waiting block when
@@ -325,6 +341,16 @@ class ConnectionManager:  # pragma: no unittest
         total_deposit = self._initial_funding_per_partner
         if total_deposit == 0:
             return
+
+        # The channel may still be in the pending block only and our node may
+        # not be aware of it.
+        waiting.wait_for_newchannel(
+            raiden=self.raiden,
+            payment_network_address=self.registry_address,
+            token_address=self.token_address,
+            partner_address=partner,
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
+        )
 
         try:
             self.api.set_total_channel_deposit(
