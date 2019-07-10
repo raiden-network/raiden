@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from raiden.messages import Lock
+from raiden.messages.transfers import Lock
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_event_with_balance_proof_by_locksroot,

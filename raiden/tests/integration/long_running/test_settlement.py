@@ -10,7 +10,8 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.messages import LockedTransfer, LockExpired, RevealSecret, Unlock, WithdrawExpired
+from raiden.messages.transfers import LockedTransfer, LockExpired, RevealSecret, Unlock
+from raiden.messages.withdraw import WithdrawExpired
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories

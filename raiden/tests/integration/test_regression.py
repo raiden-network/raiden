@@ -6,7 +6,8 @@ import pytest
 from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
-from raiden.messages import Lock, LockedTransfer, Metadata, RevealSecret, RouteMetadata, Unlock
+from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure

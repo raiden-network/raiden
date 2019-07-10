@@ -35,7 +35,7 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidSignature, SerializationError, TransportError
-from raiden.messages import Message, SignedMessage
+from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer

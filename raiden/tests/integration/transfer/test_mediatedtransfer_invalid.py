@@ -5,7 +5,8 @@ import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
-from raiden.messages import Lock, LockedTransfer, Metadata, RouteMetadata
+from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.transfers import Lock, LockedTransfer
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,

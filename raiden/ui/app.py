@@ -19,7 +19,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.messages import FeeScheduleState
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -29,6 +28,7 @@ from raiden.settings import (
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
     check_ethereum_has_accounts,

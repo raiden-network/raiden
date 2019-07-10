@@ -1,5 +1,5 @@
 from raiden.constants import EMPTY_SIGNATURE
-from raiden.messages import Processed
+from raiden.messages.synchronization import Processed
 from raiden.tests.utils import factories
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,

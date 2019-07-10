@@ -14,17 +14,15 @@ from matrix_client.errors import MatrixRequestError
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
 from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
-from raiden.messages import (
-    Delivered,
+from raiden.messages.abstract import (
     Message,
-    Ping,
-    Pong,
-    Processed,
     RetrieableMessage,
     SignedMessage,
     SignedRetrieableMessage,
-    ToDevice,
 )
+from raiden.messages.healthcheck import Ping, Pong
+from raiden.messages.matrix import ToDevice
+from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
@@ -872,9 +870,11 @@ class MatrixTransport(Runnable):
                 delivered_message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
             )
             self._raiden_service.sign(delivered_message)
-            retrier = self._get_retrier(message.sender)
-            retrier.enqueue_global(delivered_message)
-            self._raiden_service.on_message(message)
+
+            if message.sender:  # Ignore unsigned messages
+                retrier = self._get_retrier(message.sender)
+                retrier.enqueue_global(delivered_message)
+                self._raiden_service.on_message(message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning("Exception while processing message", exc_info=True)

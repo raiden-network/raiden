@@ -3,7 +3,7 @@ import random
 import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
-from raiden.messages import RevealSecret, SecretRequest, Unlock
+from raiden.messages.transfers import RevealSecret, SecretRequest, Unlock
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import HOP1_KEY, UNIT_CHAIN_ID, UNIT_SECRET, UNIT_SECRETHASH
