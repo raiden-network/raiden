@@ -2,7 +2,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
-from eth_utils import to_hex
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.api.python import RaidenAPI
 from raiden.messages.transfers import Unlock
@@ -13,6 +13,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
+from raiden.waiting import wait_for_transfer_success
 
 
 @pytest.mark.parametrize("number_of_nodes", [4])
@@ -91,59 +92,50 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 
 def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, echo_app = raiden_chain
-    address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
-    echo_api = RaidenAPI(echo_app.raiden)
 
+    echo_api = RaidenAPI(echo_app.raiden)
     echo_node = EchoNode(echo_api, token_address)
+
     echo_node.ready.wait(timeout=30)
     assert echo_node.ready.is_set()
-    expected = list()
 
-    # Create some transfers
+    transfer_timeout = 10
+
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
+        identifier = 10 ** (num + 1)
         payment_status = RaidenAPI(app.raiden).transfer_async(
-            app.raiden.default_registry.address,
-            token_address,
-            amount,
-            echo_app.raiden.address,
-            10 ** (num + 1),
-        )
-        payment_status.payment_done.wait(timeout=20)
-        expected.append(amount)
-
-    while echo_node.num_handled_transfers < len(expected):
-        gevent.sleep(0.5)
-
-    # Check that all transfers were handled correctly
-    def test_events(handled_transfer):
-        app = address_to_app[handled_transfer.initiator]
-        events = RaidenAPI(app.raiden).get_raiden_events_payment_history(
-            token_address=token_address
+            registry_address=app.raiden.default_registry.address,
+            token_address=token_address,
+            amount=amount,
+            target=echo_app.raiden.address,
+            identifier=identifier,
         )
 
-        received = {
-            event.identifier: event
-            for event in events
-            if type(event) == EventPaymentReceivedSuccess
-        }
-
-        if len(received) != 1:
-            return None
-        transfer = received.popitem()[1]
-
-        is_not_valid = (
-            transfer.initiator != echo_app.raiden.address
-            or transfer.identifier != handled_transfer.identifier + transfer.amount
+        msg = (
+            f"Transfer {identifier} from "
+            f"{to_checksum_address(app.raiden.address)} to "
+            f"{to_checksum_address(echo_app.raiden.address)} timedout after "
+            f"{transfer_timeout}"
         )
+        with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
+            payment_status.payment_done.wait()
 
-        if is_not_valid:
-            return None
-        return transfer
-
-    for handled_transfer in echo_node.seen_transfers:
-        assert wait_until(lambda: test_events(handled_transfer), network_wait)
+        echo_identifier = identifier + 1
+        msg = (
+            f"Response transfer {echo_identifier} from echo node "
+            f"{to_checksum_address(echo_app.raiden.address)} to "
+            f"{to_checksum_address(app.raiden.address)} timedout after "
+            f"{transfer_timeout}"
+        )
+        with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
+            wait_for_transfer_success(
+                raiden=app.raiden,
+                payment_identifier=echo_identifier,
+                amount=amount,
+                retry_timeout=network_wait,
+            )
 
     echo_node.stop()
 
