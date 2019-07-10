@@ -1883,6 +1883,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     assert response.status_code == 404 and b"Channel" in response.content
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
 def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses):
