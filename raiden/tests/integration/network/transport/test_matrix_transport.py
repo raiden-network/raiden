@@ -17,7 +17,10 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Delivered, PFSFeeUpdate, Processed, SecretRequest, ToDevice
+from raiden.messages.matrix import ToDevice
+from raiden.messages.path_finding_service import PFSFeeUpdate
+from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.transfers import SecretRequest
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias

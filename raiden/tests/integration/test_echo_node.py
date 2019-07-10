@@ -5,7 +5,7 @@ import pytest
 from eth_utils import to_hex
 
 from raiden.api.python import RaidenAPI
-from raiden.messages import Unlock
+from raiden.messages.transfers import Unlock
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN

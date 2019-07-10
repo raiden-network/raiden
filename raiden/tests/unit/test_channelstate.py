@@ -9,7 +9,8 @@ from typing import List
 import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
-from raiden.messages import Lock, Unlock
+from raiden.messages.decode import balanceproof_from_envelope
+from raiden.messages.transfers import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -65,7 +66,6 @@ from raiden.transfer.state import (
     TransactionChannelDeposit,
     TransactionExecutionStatus,
     UnlockPartialProofState,
-    balanceproof_from_envelope,
     make_empty_pending_locks_state,
     message_identifier_from_prng,
 )

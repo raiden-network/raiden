@@ -24,7 +24,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     WithdrawMismatch,
 )
-from raiden.messages import RequestMonitoring
+from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.transfer import architecture, channel, views
 from raiden.transfer.architecture import TransferTask

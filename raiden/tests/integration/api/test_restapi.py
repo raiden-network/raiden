@@ -21,7 +21,7 @@ from raiden.constants import (
     SECRET_LENGTH,
     Environment,
 )
-from raiden.messages import LockedTransfer, Unlock
+from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth

@@ -4,17 +4,11 @@ import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import (
-    Delivered,
-    PFSCapacityUpdate,
-    PFSFeeUpdate,
-    Ping,
-    Processed,
-    RequestMonitoring,
-    RevealSecret,
-    SecretRequest,
-    SignedBlindedBalanceProof,
-)
+from raiden.messages.healthcheck import Ping
+from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
+from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
+from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.tests import fixture_all_combinations

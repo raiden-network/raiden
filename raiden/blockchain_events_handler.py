@@ -4,7 +4,7 @@ import gevent
 
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import PATH_FINDING_BROADCASTING_ROOM, RoutingMode
-from raiden.messages import PFSFeeUpdate
+from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.services import send_pfs_update
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (

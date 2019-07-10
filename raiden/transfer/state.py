@@ -4,7 +4,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
-from typing import TYPE_CHECKING, Tuple
 
 import networkx
 from eth_utils import to_checksum_address, to_hex
@@ -53,15 +52,11 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    Tuple,
     Union,
     WithdrawAmount,
     typecheck,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from messages import EnvelopeMessage
-
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
@@ -86,23 +81,6 @@ CHANNEL_AFTER_CLOSE_STATES = (
 NODE_NETWORK_UNKNOWN = "unknown"
 NODE_NETWORK_UNREACHABLE = "unreachable"
 NODE_NETWORK_REACHABLE = "reachable"
-
-
-def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "BalanceProofSignedState":
-    return BalanceProofSignedState(
-        nonce=envelope_message.nonce,
-        transferred_amount=envelope_message.transferred_amount,
-        locked_amount=envelope_message.locked_amount,
-        locksroot=envelope_message.locksroot,
-        message_hash=envelope_message.message_hash,
-        signature=envelope_message.signature,
-        sender=envelope_message.sender,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=envelope_message.chain_id,
-            token_network_address=envelope_message.token_network_address,
-            channel_identifier=envelope_message.channel_identifier,
-        ),
-    )
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -204,7 +182,7 @@ class HashTimeLockState(State):
         typecheck(self.expiration, T_BlockNumber)
         typecheck(self.secrethash, T_Secret)
 
-        from raiden.messages import Lock  # put here to avoid cyclic depenendcies
+        from raiden.messages.transfers import Lock  # put here to avoid cyclic depenendcies
 
         lock = Lock(amount=self.amount, expiration=self.expiration, secrethash=self.secrethash)
         self.encoded = EncodedData(lock.as_bytes)

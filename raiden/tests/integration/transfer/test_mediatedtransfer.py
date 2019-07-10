@@ -6,7 +6,7 @@ import pytest
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, RevealSecret, SecretRequest
+from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES

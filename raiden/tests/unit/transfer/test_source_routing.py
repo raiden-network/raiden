@@ -1,6 +1,7 @@
 import random
 
-from raiden.messages import LockedTransfer, Metadata, RefundTransfer, RouteMetadata
+from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.transfers import LockedTransfer, RefundTransfer
 from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
