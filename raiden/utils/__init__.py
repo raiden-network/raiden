@@ -98,7 +98,7 @@ def split_endpoint(endpoint: Endpoint) -> HostPort:
         raise ValueError("Invalid endpoint", endpoint)
     host, port = match.groups()
     if not port:
-        port = 0
+        port = "0"
     return Host(host), Port(int(port))
 
 

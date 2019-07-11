@@ -27,6 +27,7 @@ from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
+from raiden.utils.typing import Port
 
 from .app import run_app
 from .config import dump_cmd_options, dump_config, dump_module
@@ -118,8 +119,8 @@ class NodeRunner:
             rest_api = RestAPI(self._raiden_api)
             (api_host, api_port) = split_endpoint(self._options["api_address"])
 
-            if api_port == 0:
-                api_port == settings.DEFAULT_HTTP_SERVER_PORT
+            if not api_port:
+                api_port = Port(settings.DEFAULT_HTTP_SERVER_PORT)
 
             api_server = APIServer(
                 rest_api,
