@@ -224,7 +224,7 @@ def is_channel_usable_for_new_transfer(
     distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
 
     channel_usable = (
-        get_status(candidate_channel_state) == ChannelState.STATE_OPENED
+        get_status(channel_state) == ChannelState.STATE_OPENED
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
