@@ -322,6 +322,7 @@ def assert_channels(raiden_network, token_network_address, deposit):
         )
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
