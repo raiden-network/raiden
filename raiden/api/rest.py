@@ -1218,7 +1218,7 @@ class RestAPI:  # pragma: no unittest
         elif total_withdraw is not None:
             result = self._withdraw(registry_address, channel_state, total_withdraw)
 
-        elif state == ChannelState.STATE_CLOSED:
+        elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)
 
         else:  # should never happen, channel_state is validated in the schema
