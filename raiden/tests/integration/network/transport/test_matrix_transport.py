@@ -26,6 +26,7 @@ from raiden.network.transport.matrix.utils import UserAddressManager, make_room_
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import MatrixStorage
+from raiden.storage.utils import make_db_connection
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
@@ -1121,10 +1122,9 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     raiden_service1 = MockRaidenService(message_handler1, tmp_path=tmp_path)
     raiden_service2 = MockRaidenService(message_handler0)
     raiden_service3 = MockRaidenService(message_handler1)
-    transport0.start(raiden_service0, message_handler0, "")
-    transport1.start(
-        raiden_service1, message_handler1, "", storage=MatrixStorage(raiden_service1.conn)
-    )
+    transport0.start(raiden_service0, message_handler0, "")  #
+    conn = make_db_connection()
+    transport1.start(raiden_service1, message_handler1, "", storage=MatrixStorage(conn))
 
     transport1.start_health_check(raiden_service0.address)
     transport1.start_health_check(raiden_service2.address)
@@ -1162,9 +1162,7 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
         or transport1._address_mgr.is_address_known(raiden_service3.address)
     )
 
-    transport1.start(
-        raiden_service1, message_handler1, "", storage=MatrixStorage(raiden_service1.conn)
-    )
+    transport1.start(raiden_service1, message_handler1, "", storage=MatrixStorage(conn))
 
     assert (
         user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
