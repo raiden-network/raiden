@@ -384,7 +384,10 @@ class APIServer(Runnable):  # pragma: no unittest
                     web3_host, web3_port = split_endpoint(web3)
                     if web3_host in ("localhost", "127.0.0.1"):
                         host, _ = split_endpoint(Endpoint(host_header))
-                        web3 = f"http://{host}:{web3_port}"
+                        web3_port_str = ""
+                        if web3_port:
+                            web3_port_str = f":{web3_port}"
+                        web3 = f"http://{host}{web3_port_str}"
                         config["web3"] = web3
 
                 response = jsonify(config)
