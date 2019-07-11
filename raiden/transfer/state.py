@@ -273,7 +273,7 @@ def make_empty_pending_locks_state() -> PendingLocksState:
 
 
 @dataclass(order=True)
-class TransactionChannelNewBalance(State):
+class TransactionChannelDeposit(State):
     participant_address: Address
     contract_balance: TokenAmount
     deposit_block_number: BlockNumber
@@ -287,7 +287,7 @@ class TransactionChannelNewBalance(State):
 @dataclass(order=True)
 class TransactionOrder(State):
     block_number: BlockNumber
-    transaction: TransactionChannelNewBalance
+    transaction: TransactionChannelDeposit
 
 
 @dataclass

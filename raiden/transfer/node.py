@@ -49,8 +49,8 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveNewPaymentNetwork,
@@ -84,7 +84,7 @@ TokenNetworkStateChange = Union[
     ActionChannelClose,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveRouteNew,
     ContractReceiveRouteClosed,
@@ -833,8 +833,8 @@ def handle_state_change(
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
         iteration = handle_contract_receive_channel_closed(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
         iteration = handle_token_network_action(chain_state, state_change)
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
@@ -926,7 +926,7 @@ def is_transaction_effect_satisfied(
     # exclusively through the external APIs.
     #
     #  - ContractReceiveChannelNew
-    #  - ContractReceiveChannelNewBalance
+    #  - ContractReceiveChannelDeposit
     #  - ContractReceiveNewPaymentNetwork
     #  - ContractReceiveNewTokenNetwork
     #  - ContractReceiveRouteNew

@@ -23,15 +23,15 @@ from raiden.transfer.state import (
     NettingChannelState,
     TokenNetworkGraphState,
     TokenNetworkState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
     TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import (
     ActionChannelUpdateFee,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveNewTokenNetwork,
@@ -160,20 +160,18 @@ def contractreceivechannelnew_from_event(
     )
 
 
-def contractreceivechannelnewbalance_from_event(
-    event: DecodedEvent
-) -> ContractReceiveChannelNewBalance:
+def contractreceivechanneldeposit_from_event(event: DecodedEvent) -> ContractReceiveChannelDeposit:
     data = event.event_data
     args = data["args"]
     block_number = event.block_number
 
-    return ContractReceiveChannelNewBalance(
+    return ContractReceiveChannelDeposit(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=event.chain_id,
             token_network_address=TokenNetworkAddress(event.originating_contract),
             channel_identifier=args["channel_identifier"],
         ),
-        deposit_transaction=TransactionChannelNewBalance(
+        deposit_transaction=TransactionChannelDeposit(
             args["participant"], args["total_deposit"], block_number
         ),
         transaction_hash=event.transaction_hash,
@@ -363,11 +361,11 @@ def blockchainevent_to_statechange(
             state_changes.append(contractreceiveroutenew_from_event(event))
 
     elif event_name == ChannelEvent.DEPOSIT:
-        new_balance = contractreceivechannelnewbalance_from_event(event)
-        state_changes.append(new_balance)
+        deposit = contractreceivechanneldeposit_from_event(event)
+        state_changes.append(deposit)
 
         channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state, new_balance.canonical_identifier
+            chain_state, deposit.canonical_identifier
         )
         if channel_state is not None:
             update_fee = actionchannelupdatefee_from_channelstate(channel_state)

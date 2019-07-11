@@ -55,7 +55,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
     TransactionExecutionStatus,
     TransactionOrder,
     UnlockPartialProofState,
@@ -68,7 +68,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
@@ -2292,7 +2292,7 @@ def handle_block(
 
     while is_deposit_confirmed(channel_state, block_number):
         order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
-        apply_channel_newbalance(channel_state, order_deposit_transaction.transaction)
+        apply_channel_deposit(channel_state, order_deposit_transaction.transaction)
 
     return TransitionResult(channel_state, events)
 
@@ -2384,15 +2384,15 @@ def handle_channel_settled(
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_newbalance(
+def handle_channel_depsoit(
     channel_state: NettingChannelState,
-    state_change: ContractReceiveChannelNewBalance,
+    state_change: ContractReceiveChannelDeposit,
     block_number: BlockNumber,
 ) -> TransitionResult[NettingChannelState]:
     deposit_transaction = state_change.deposit_transaction
 
     if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
-        apply_channel_newbalance(channel_state, state_change.deposit_transaction)
+        apply_channel_deposit(channel_state, state_change.deposit_transaction)
     else:
         order = TransactionOrder(deposit_transaction.deposit_block_number, deposit_transaction)
         heapq.heappush(channel_state.deposit_transaction_queue, order)
@@ -2401,8 +2401,8 @@ def handle_channel_newbalance(
     return TransitionResult(channel_state, events)
 
 
-def apply_channel_newbalance(
-    channel_state: NettingChannelState, deposit_transaction: TransactionChannelNewBalance
+def apply_channel_deposit(
+    channel_state: NettingChannelState, deposit_transaction: TransactionChannelDeposit
 ) -> None:
     participant_address = deposit_transaction.participant_address
     contract_balance = Balance(deposit_transaction.contract_balance)
@@ -2523,9 +2523,9 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
         iteration = handle_channel_settled(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
-        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
+        iteration = handle_channel_depsoit(channel_state, state_change, block_number)
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)

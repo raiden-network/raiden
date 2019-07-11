@@ -85,7 +85,7 @@ def wait_for_newchannel(
         )
 
 
-def wait_for_participant_newbalance(
+def wait_for_participant_deposit(
     raiden: "RaidenService",
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
@@ -123,9 +123,7 @@ def wait_for_participant_newbalance(
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.debug(
-            "wait_for_participant_newbalance", current_balance=current_balance, **log_details
-        )
+        log.debug("wait_for_participant_deposit", current_balance=current_balance, **log_details)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
