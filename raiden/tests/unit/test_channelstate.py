@@ -62,7 +62,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
@@ -74,7 +74,7 @@ from raiden.transfer.state_change import (
     ActionChannelWithdraw,
     Block,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
@@ -250,10 +250,10 @@ def test_channelstate_update_contract_balance():
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -294,10 +294,10 @@ def test_channelstate_decreasing_contract_balance():
     amount = 10
     balance1_new = our_model1.balance - amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -333,10 +333,10 @@ def test_channelstate_repeated_contract_balance():
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -386,10 +386,10 @@ def test_deposit_must_wait_for_confirmation():
     # pylint: disable=E1101
     assert channel_state.partner_state.contract_balance == 0
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         channel_state.our_state.address, deposit_amount, block_number
     )
-    new_balance = ContractReceiveChannelNewBalance(
+    new_balance = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,

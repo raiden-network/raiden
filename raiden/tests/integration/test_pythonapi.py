@@ -221,7 +221,7 @@ def run_test_token_registered_race(raiden_chain, token_amount, retry_timeout, co
 def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     """ Test that the balance of a channel gets updated by the deposit() call
     immediately and without having to wait for the
-    `ContractReceiveChannelNewBalance` message since the API needs to return
+    `ContractReceiveChannelDeposit` message since the API needs to return
     the channel with the deposit balance updated.
     """
     raise_on_failure(

@@ -138,7 +138,7 @@ def wait_both_channel_open(app0, app1, registry_address, token_address, retry_ti
 def wait_both_channel_deposit(
     app_deposit, app_partner, registry_address, token_address, total_deposit, retry_timeout
 ):
-    waiting.wait_for_participant_newbalance(
+    waiting.wait_for_participant_deposit(
         app_deposit.raiden,
         registry_address,
         token_address,
@@ -148,7 +148,7 @@ def wait_both_channel_deposit(
         retry_timeout,
     )
 
-    waiting.wait_for_participant_newbalance(
+    waiting.wait_for_participant_deposit(
         app_partner.raiden,
         registry_address,
         token_address,

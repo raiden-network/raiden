@@ -623,7 +623,7 @@ class RaidenAPI:  # pragma: no unittest
         channel_proxy.set_total_deposit(total_deposit=total_deposit, block_identifier=blockhash)
 
         target_address = self.raiden.address
-        waiting.wait_for_participant_newbalance(
+        waiting.wait_for_participant_deposit(
             raiden=self.raiden,
             payment_network_address=registry_address,
             token_address=token_address,

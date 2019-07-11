@@ -893,11 +893,11 @@
                 "participant_address": "0x3503221a95028173969fc1f36b2E4F0705a3cc8b",
                 "contract_balance": "200",
                 "deposit_block_number": "28",
-                "_type": "raiden.transfer.state.TransactionChannelNewBalance",
+                "_type": "raiden.transfer.state.TransactionChannelDeposit",
                 "_version": 0
             },
             "block_number": "28",
-            "_type": "raiden.transfer.state_change.ContractReceiveChannelNewBalance",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelDeposit",
             "_version": 0
         }
     ],
@@ -951,11 +951,11 @@
                 "participant_address": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
                 "contract_balance": "200",
                 "deposit_block_number": "32",
-                "_type": "raiden.transfer.state.TransactionChannelNewBalance",
+                "_type": "raiden.transfer.state.TransactionChannelDeposit",
                 "_version": 0
             },
             "block_number": "32",
-            "_type": "raiden.transfer.state_change.ContractReceiveChannelNewBalance",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelDeposit",
             "_version": 0
         }
     ],

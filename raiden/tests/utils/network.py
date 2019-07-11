@@ -493,7 +493,7 @@ def wait_for_usable_channel(
         app0.raiden, registry_address, token_address, app1.raiden.address, retry_timeout
     )
 
-    waiting.wait_for_participant_newbalance(
+    waiting.wait_for_participant_deposit(
         app0.raiden,
         registry_address,
         token_address,
@@ -503,7 +503,7 @@ def wait_for_usable_channel(
         retry_timeout,
     )
 
-    waiting.wait_for_participant_newbalance(
+    waiting.wait_for_participant_deposit(
         app0.raiden,
         registry_address,
         token_address,
