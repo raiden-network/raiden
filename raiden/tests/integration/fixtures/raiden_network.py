@@ -13,12 +13,14 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
     parallel_start_apps,
+)
+from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
+from raiden.tests.utils.transport import ParsedURL
+from raiden.tests.utils.waiting import (
     wait_for_alarm_start,
     wait_for_channels,
     wait_for_token_networks,
 )
-from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
-from raiden.tests.utils.transport import ParsedURL
 from raiden.utils.typing import (
     Address,
     BlockTimeout,

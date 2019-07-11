@@ -27,7 +27,6 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
@@ -1818,8 +1817,8 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     mediator_server = create_api_server(mediator, 8576)
     target_server = create_api_server(target, 8577)
 
-    target.raiden.message_handler = target_wait = WaitForMessage()
-    mediator.raiden.message_handler = mediator_wait = WaitForMessage()
+    target_wait = target.raiden.message_handler
+    mediator_wait = mediator.raiden.message_handler
 
     secret = factories.make_secret()
     secrethash = sha256(secret).digest()

@@ -8,19 +8,18 @@ import structlog
 from eth_utils import to_checksum_address
 from web3 import Web3
 
-from raiden import waiting
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.raiden_service import RaidenService
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transport import ParsedURL
+from raiden.tests.utils.typing import AppChannels
+from raiden.tests.utils.waiting import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
@@ -30,7 +29,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
-    Iterable,
     List,
     Optional,
     PaymentNetworkAddress,
@@ -39,12 +37,8 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    Tuple,
 )
-from raiden.waiting import wait_for_token_network
 from raiden_contracts.contract_manager import ContractManager
-
-AppChannels = Iterable[Tuple[App, App]]
 
 log = structlog.get_logger(__name__)
 
@@ -464,112 +458,3 @@ def jsonrpc_services(
         deploy_service=deploy_service,
         blockchain_services=blockchain_services,
     )
-
-
-def wait_for_alarm_start(
-    raiden_apps: List[App], retry_timeout: float = DEFAULT_RETRY_TIMEOUT
-) -> None:
-    """Wait until all Alarm tasks start & set up the last_block"""
-    apps = list(raiden_apps)
-
-    while apps:
-        app = apps[-1]
-
-        if app.raiden.alarm.known_block_number is None:
-            gevent.sleep(retry_timeout)
-        else:
-            apps.pop()
-
-
-def wait_for_usable_channel(
-    raiden: RaidenService,
-    partner_address: Address,
-    payment_network_address: PaymentNetworkAddress,
-    token_address: TokenAddress,
-    our_deposit: TokenAmount,
-    partner_deposit: TokenAmount,
-    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
-) -> None:
-    """ Wait until the channel from app0 to app1 is usable.
-
-    The channel and the deposits are registered, and the partner network state
-    is reachable.
-    """
-    waiting.wait_for_newchannel(
-        raiden=raiden,
-        payment_network_address=payment_network_address,
-        token_address=token_address,
-        partner_address=partner_address,
-        retry_timeout=retry_timeout,
-    )
-
-    # wait for our deposit
-    waiting.wait_for_participant_deposit(
-        raiden=raiden,
-        payment_network_address=payment_network_address,
-        token_address=token_address,
-        partner_address=partner_address,
-        target_address=raiden.address,
-        target_balance=our_deposit,
-        retry_timeout=retry_timeout,
-    )
-
-    # wait for the partner deposit
-    waiting.wait_for_participant_deposit(
-        raiden=raiden,
-        payment_network_address=payment_network_address,
-        token_address=token_address,
-        partner_address=partner_address,
-        target_address=partner_address,
-        target_balance=partner_deposit,
-        retry_timeout=retry_timeout,
-    )
-
-    waiting.wait_for_healthy(
-        raiden=raiden, node_address=partner_address, retry_timeout=retry_timeout
-    )
-
-
-def wait_for_token_networks(
-    raiden_apps: List[App],
-    token_network_registry_address: PaymentNetworkAddress,
-    token_addresses: List[TokenAddress],
-    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
-) -> None:
-    for token_address in token_addresses:
-        for app in raiden_apps:
-            wait_for_token_network(
-                app.raiden, token_network_registry_address, token_address, retry_timeout
-            )
-
-
-def wait_for_channels(
-    app_channels: AppChannels,
-    payment_network_address: PaymentNetworkAddress,
-    token_addresses: List[TokenAddress],
-    deposit: TokenAmount,
-    retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
-) -> None:
-    """ Wait until all channels are usable from both directions. """
-    for app0, app1 in app_channels:
-        for token_address in token_addresses:
-            # app0 waits for the channel to be usable
-            wait_for_usable_channel(
-                raiden=app0.raiden,
-                partner_address=app1.raiden.address,
-                payment_network_address=payment_network_address,
-                token_address=token_address,
-                our_deposit=deposit,
-                partner_deposit=deposit,
-                retry_timeout=retry_timeout,
-            )
-            # app1 waits for the channel to be usable
-            wait_for_usable_channel(
-                raiden=app1.raiden,
-                partner_address=app0.raiden.address,
-                payment_network_address=payment_network_address,
-                token_address=token_address,
-                our_deposit=deposit,
-                partner_deposit=deposit,
-                retry_timeout=retry_timeout,
-            )

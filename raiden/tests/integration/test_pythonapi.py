@@ -21,11 +21,12 @@ from raiden.exceptions import (
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import must_have_event, wait_for_state_change
+from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
+from raiden.tests.utils.waiting import wait_for_state_change
 from raiden.transfer import views
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,

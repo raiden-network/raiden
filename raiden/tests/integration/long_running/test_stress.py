@@ -17,7 +17,8 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
-from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
+from raiden.tests.utils.transfer import assert_synced_channel_state
+from raiden.tests.utils.waiting import wait_assert
 from raiden.transfer import views
 from raiden.utils.typing import (
     Address,

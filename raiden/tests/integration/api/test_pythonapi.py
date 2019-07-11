@@ -4,8 +4,9 @@ from eth_utils import to_checksum_address
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import DepositMismatch, UnknownTokenAddress
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import must_have_event, wait_for_state_change
+from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.transfer import get_channelstate
+from raiden.tests.utils.waiting import wait_for_state_change
 from raiden.transfer import channel, views
 from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNKNOWN, ChannelState
 from raiden.transfer.state_change import ContractReceiveChannelSettled

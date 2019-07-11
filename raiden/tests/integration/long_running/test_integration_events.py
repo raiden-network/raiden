@@ -19,9 +19,10 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
+from raiden.tests.utils.events import must_have_event, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
+from raiden.tests.utils.waiting import wait_for_state_change
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
@@ -138,7 +139,7 @@ def wait_both_channel_open(app0, app1, registry_address, token_address, retry_ti
 def wait_both_channel_deposit(
     app_deposit, app_partner, registry_address, token_address, total_deposit, retry_timeout
 ):
-    waiting.wait_for_participant_deposit(
+    waiting.wait_for_participant_totaldeposit(
         app_deposit.raiden,
         registry_address,
         token_address,
@@ -148,7 +149,7 @@ def wait_both_channel_deposit(
         retry_timeout,
     )
 
-    waiting.wait_for_participant_deposit(
+    waiting.wait_for_participant_totaldeposit(
         app_partner.raiden,
         registry_address,
         token_address,

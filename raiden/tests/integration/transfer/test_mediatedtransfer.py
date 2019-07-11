@@ -14,13 +14,12 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     transfer,
     transfer_and_assert_path,
-    wait_assert,
 )
+from raiden.tests.utils.waiting import wait_assert
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
@@ -240,11 +239,8 @@ def run_test_mediated_transfer_messages_out_of_order(
     """Raiden must properly handle repeated locked transfer messages."""
     app0, app1, app2 = raiden_network
 
-    app1_wait_for_message = WaitForMessage()
-    app2_wait_for_message = WaitForMessage()
-
-    app1.raiden.message_handler = app1_wait_for_message
-    app2.raiden.message_handler = app2_wait_for_message
+    app1_wait_for_message = app1.raiden.message_handler
+    app2_wait_for_message = app2.raiden.message_handler
 
     secret = factories.make_secret(0)
     secrethash = sha256(secret).digest()
@@ -580,9 +576,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     secret = factories.make_secret(0)
     secrethash = sha256(secret).digest()
 
-    wait_message_handler = WaitForMessage()
-    app0.raiden.message_handler = wait_message_handler
-    secret_request_received = wait_message_handler.wait_for_message(
+    secret_request_received = app0.raiden.message_handler.wait_for_message(
         SecretRequest, {"secrethash": secrethash}
     )
 

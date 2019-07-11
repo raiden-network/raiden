@@ -20,7 +20,7 @@ from raiden.storage.restore import (
 from raiden.storage.wal import SavedState
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_address, make_secret
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.waiting import WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
@@ -48,7 +48,6 @@ from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,
     Balance,
-    Callable,
     ChainID,
     FeeAmount,
     Keccak256,
@@ -742,24 +741,6 @@ def assert_synced_channel_state(
         balance1=balance1,
         pending_locks1=pending_locks1,
     )
-
-
-def wait_assert(func: Callable, *args, **kwargs) -> None:
-    """ Utility to re-run `func` if it raises an assert. Return once `func`
-    doesn't hit a failed assert anymore.
-
-    This will loop forever unless a gevent.Timeout is used.
-    """
-    while True:
-        try:
-            func(*args, **kwargs)
-        except AssertionError as e:
-            try:
-                gevent.sleep(0.5)
-            except gevent.Timeout:
-                raise e
-        else:
-            break
 
 
 def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) -> None:

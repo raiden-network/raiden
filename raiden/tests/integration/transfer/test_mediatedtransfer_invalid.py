@@ -20,8 +20,8 @@ from raiden.tests.utils.transfer import (
     get_channelstate,
     sign_and_inject,
     transfer,
-    wait_assert,
 )
+from raiden.tests.utils.waiting import wait_assert
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.utils.signer import LocalSigner

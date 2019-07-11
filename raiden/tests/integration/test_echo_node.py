@@ -10,7 +10,6 @@ from raiden.messages.transfers import Unlock
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
@@ -42,9 +41,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 
     echo_api = RaidenAPI(echo_app.raiden)
     echo_node = EchoNode(echo_api, token_address)
-
-    message_handler = WaitForMessage()
-    echo_app.raiden.message_handler = message_handler
+    message_handler = echo_app.raiden.message_handler
 
     echo_node.ready.wait(timeout=30)
     assert echo_node.ready.is_set()

@@ -4,23 +4,14 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import (
-    raiden_events_search_for_item,
-    search_for_item,
-    wait_for_raiden_event,
-    wait_for_state_change,
-)
+from raiden.tests.utils.events import raiden_events_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import (
     dont_handle_lock_expired_mock,
     dont_handle_node_change_network_state,
 )
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    get_channelstate,
-    transfer,
-    wait_assert,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
+from raiden.tests.utils.waiting import wait_assert, wait_for_raiden_event, wait_for_state_change
 from raiden.transfer import channel, views
 from raiden.transfer.events import ContractSendChannelUpdateTransfer, EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import (

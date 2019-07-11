@@ -3,9 +3,9 @@ import pytest
 from raiden import waiting
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.tests.utils.transfer import TransferState, get_channelstate, transfer
+from raiden.tests.utils.waiting import wait_for_state_change
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils import safe_gas_limit

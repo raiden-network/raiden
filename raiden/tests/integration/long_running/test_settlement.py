@@ -18,7 +18,6 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
@@ -435,9 +434,6 @@ def run_test_channel_withdraw(
     token_proxy = bob_app.raiden.chain.token(token_address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
-    message_handler = WaitForMessage()
-    bob_app.raiden.message_handler = message_handler
-
     alice_to_bob_amount = 10
     identifier = 1
     target = bob_app.raiden.address
@@ -706,9 +702,7 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     amount = 100
     identifier = 1
 
-    message_handler = WaitForMessage()
-
-    app1.raiden.message_handler = message_handler
+    message_handler = app1.raiden.message_handler
 
     target = app1.raiden.address
     secret = sha3(target)

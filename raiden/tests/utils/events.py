@@ -1,7 +1,5 @@
 from collections.abc import Mapping
 
-import gevent
-
 from raiden.raiden_service import RaidenService
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
@@ -125,34 +123,3 @@ def must_have_events(event_list: List[TM], *args) -> bool:
             return False
 
     return True
-
-
-def wait_for_raiden_event(
-    raiden: RaidenService, item_type: Type[Event], attributes: Mapping, retry_timeout: float
-) -> Optional[Event]:
-    """Wait until an event is seen in the WAL events
-
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-    found = None
-    while found is None:
-        found = raiden_events_search_for_item(raiden, item_type, attributes)
-        gevent.sleep(retry_timeout)
-    return found
-
-
-def wait_for_state_change(
-    raiden: RaidenService, item_type: Type[StateChange], attributes: Mapping, retry_timeout: float
-) -> Optional[StateChange]:
-    """Wait until a state change is seen in the WAL
-
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-    found = None
-    while found is None:
-        found = raiden_state_changes_search_for_item(raiden, item_type, attributes)
-        gevent.sleep(retry_timeout)
-
-    return found
