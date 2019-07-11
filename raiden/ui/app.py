@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Any, Callable, Dict, TextIO
 from urllib.parse import urlparse
 
 import click
@@ -45,16 +46,12 @@ from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import (
     Address,
-    Any,
-    Callable,
     ChainID,
-    Dict,
     Endpoint,
     FeeAmount,
     Optional,
     Port,
     PrivateKey,
-    TextIO,
     Tuple,
 )
 from raiden_contracts.constants import (
