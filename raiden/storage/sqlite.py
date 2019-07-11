@@ -6,10 +6,14 @@ from datetime import datetime
 from enum import Enum
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
-from raiden.exceptions import InvalidNumberInput
+from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.serialization import JSONSerializer, SerializationBase
 from raiden.storage.ulid import ULID, ULIDMonotonicFactory
-from raiden.storage.utils import TimestampedEvent
+from raiden.storage.utils import (
+    DB_SCRIPT_CREATE_MATRIX_TABLES,
+    DB_SCRIPT_CREATE_TABLES,
+    TimestampedEvent,
+)
 from raiden.transfer.architecture import Event, State, StateChange
 from raiden.utils import get_system_spec
 from raiden.utils.typing import (
@@ -207,6 +211,30 @@ class SQLiteStorage:
     def __init__(self, conn: sqlite3.Connection):
         sqlite3.register_adapter(ULID, adapt_ulid_identifier)
         sqlite3.register_converter("ULID", convert_ulid_identifier)
+        conn.text_factory = str
+        conn.execute("PRAGMA foreign_keys=ON")
+
+        # Skip the acquire/release cycle for the exclusive write lock.
+        # References:
+        # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
+        # https://sqlite.org/pragma.html#pragma_locking_mode
+        conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+
+        # Keep the journal around and skip inode updates.
+        # References:
+        # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
+        # https://sqlite.org/pragma.html#pragma_journal_mode
+        try:
+            conn.execute("PRAGMA journal_mode=PERSIST")
+        except sqlite3.DatabaseError:
+            raise InvalidDBData(
+                # FIXME get db path
+                f"Existing DB was found to be corrupt at Raiden startup. "
+                f"Manual user intervention required. Bailing."
+            )
+
+        with conn:
+            conn.executescript(DB_SCRIPT_CREATE_TABLES)
         self.conn = conn
         self.in_transaction = False
 
@@ -555,32 +583,6 @@ class SQLiteStorage:
             for entry in cursor
         ]
 
-    def write_matrix_room_ids_for_address(self, room_id_data) -> None:
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?)", room_id_data
-        )
-        self.maybe_commit()
-
-    def get_matrix_room_ids_aliases_for_address(self, address) -> str:
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT room_ids_to_aliases FROM matrix_room_ids_and_aliases " "WHERE address = ?",
-            (address,),
-        )
-        rows = cursor.fetchall()
-        return rows[0][0] if rows else "{}"
-
-    def write_matrix_user_ids_for_address(self, user_id_data: Tuple[Address, Any, str]) -> None:
-        cursor = self.conn.cursor()
-        cursor.execute("INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?) ", user_id_data)
-        self.maybe_commit()
-
-    def get_matrix_address_to_userids(self) -> Dict[Address, str]:
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT address, userids FROM matrix_user_ids")
-        return {row[0]: row[1] for row in cursor.fetchall()}
-
     def _query_events(self, limit: int = None, offset: int = None) -> List[Tuple[str, datetime]]:
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
@@ -861,12 +863,94 @@ class SerializedSQLiteStorage:
         self.database.close()
 
 
+class MatrixSQLiteStorage:
+    def __init__(self, conn: sqlite3.Connection):
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+        try:
+            conn.execute("PRAGMA journal_mode=PERSIST")
+        except sqlite3.DatabaseError:
+            raise InvalidDBData(
+                f"Existing MatrixDB was found to be corrupt at Raiden startup. "
+                f"Manual user intervention required. Bailing."
+            )
+
+        with conn:
+            conn.executescript(DB_SCRIPT_CREATE_MATRIX_TABLES)
+        self.conn = conn
+        self.in_transaction = False
+
+    def write_matrix_room_ids_for_address(self, room_id_data) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?)", room_id_data
+        )
+        self.maybe_commit()
+
+    def get_matrix_room_ids_aliases_for_address(self, address) -> str:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT room_ids_to_aliases FROM matrix_room_ids_and_aliases " "WHERE address = ?",
+            (address,),
+        )
+        rows = cursor.fetchall()
+        return rows[0][0] if rows else "{}"
+
+    def write_matrix_user_ids_for_address(self, user_id_data: Tuple[Address, Any, str]) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute("INSERT OR REPLACE INTO matrix_user_ids VALUES(?, ?, ?) ", user_id_data)
+        self.maybe_commit()
+
+    def get_matrix_address_to_userids(self) -> Dict[Address, str]:
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT address, userids FROM matrix_user_ids")
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+    def maybe_commit(self) -> None:
+        if not self.in_transaction:
+            self.conn.commit()
+
+    @contextmanager
+    def transaction(self):
+        cursor = self.conn.cursor()
+        self.in_transaction = True
+        try:
+            cursor.execute("BEGIN")
+            yield
+            cursor.execute("COMMIT")
+        except:  # noqa
+            cursor.execute("ROLLBACK")
+            raise
+        finally:
+            self.in_transaction = False
+
+    def close(self) -> None:
+        if not hasattr(self, "conn"):
+            raise RuntimeError("The database connection was closed already.")
+
+        self.conn.close()
+        del self.conn
+
+    def __del__(self):
+        if hasattr(self, "conn"):
+            raise RuntimeError("The database connection was not closed.")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):  # pylint: disable=unused-arguments
+        self.close()
+
+
 class MatrixStorage:
     def __init__(
         self, connection: sqlite3.Connection, serializer: SerializationBase = None
     ) -> None:
-        self.database = SQLiteStorage(connection)
-        self.serializer = JSONSerializer() if serializer is None else serializer
+        self.database = MatrixSQLiteStorage(connection)
+        self.serializer = JSONSerializer() if not serializer else serializer
+
+    def close(self) -> None:
+        self.database.close()
 
     def write_matrix_roomids_for_address(
         self, address: Address, room_ids_to_aliases: Dict[str, Any], timestamp: datetime
@@ -899,6 +983,3 @@ class MatrixStorage:
     def get_matrix_roomids_for_address(self, address: Address) -> List[str]:
         room_ids_aliases = self.database.get_matrix_room_ids_aliases_for_address(address)
         return self.serializer.deserialize(room_ids_aliases)
-
-    def close(self) -> None:
-        self.database.close()

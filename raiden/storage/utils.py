@@ -42,8 +42,6 @@ of the easy of conversion.
 import sqlite3
 from collections import namedtuple
 
-from raiden.exceptions import InvalidDBData
-
 
 class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
     def __getattr__(self, item):
@@ -52,30 +50,6 @@ class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time"))
 
 def make_db_connection(database_path=":memory:") -> sqlite3.Connection:
     conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
-    conn.text_factory = str
-    conn.execute("PRAGMA foreign_keys=ON")
-
-    # Skip the acquire/release cycle for the exclusive write lock.
-    # References:
-    # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
-    # https://sqlite.org/pragma.html#pragma_locking_mode
-    conn.execute("PRAGMA locking_mode=EXCLUSIVE")
-
-    # Keep the journal around and skip inode updates.
-    # References:
-    # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
-    # https://sqlite.org/pragma.html#pragma_journal_mode
-    try:
-        conn.execute("PRAGMA journal_mode=PERSIST")
-    except sqlite3.DatabaseError:
-        raise InvalidDBData(
-            # FIXME get db path
-            f"Existing DB was found to be corrupt at Raiden startup. "
-            f"Manual user intervention required. Bailing."
-        )
-
-    with conn:
-        conn.executescript(DB_SCRIPT_CREATE_TABLES)
     return conn
 
 
@@ -121,6 +95,20 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 """
 
+DB_SCRIPT_CREATE_TABLES = """
+PRAGMA foreign_keys=off;
+BEGIN TRANSACTION;
+{}{}{}{}{}
+COMMIT;
+PRAGMA foreign_keys=on;
+""".format(
+    DB_CREATE_SETTINGS,
+    DB_CREATE_STATE_CHANGES,
+    DB_CREATE_SNAPSHOT,
+    DB_CREATE_STATE_EVENTS,
+    DB_CREATE_RUNS,
+)
+
 DB_CREATE_MATRIX_USER_IDS = """
 CREATE TABLE IF NOT EXISTS matrix_user_ids (
     address BINARY PRIMARY KEY,
@@ -137,18 +125,12 @@ CREATE TABLE IF NOT EXISTS matrix_room_ids_and_aliases (
 );
 """
 
-DB_SCRIPT_CREATE_TABLES = """
+DB_SCRIPT_CREATE_MATRIX_TABLES = """
 PRAGMA foreign_keys=off;
 BEGIN TRANSACTION;
-{}{}{}{}{}{}{}
+{}{}
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
-    DB_CREATE_SETTINGS,
-    DB_CREATE_STATE_CHANGES,
-    DB_CREATE_SNAPSHOT,
-    DB_CREATE_STATE_EVENTS,
-    DB_CREATE_RUNS,
-    DB_CREATE_MATRIX_USER_IDS,
-    DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES,
+    DB_CREATE_MATRIX_USER_IDS, DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES
 )
