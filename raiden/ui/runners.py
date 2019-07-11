@@ -117,6 +117,10 @@ class NodeRunner:
         if self._options["rpc"]:
             rest_api = RestAPI(self._raiden_api)
             (api_host, api_port) = split_endpoint(self._options["api_address"])
+
+            if api_port == 0:
+                api_port == settings.DEFAULT_HTTP_SERVER_PORT
+
             api_server = APIServer(
                 rest_api,
                 config={"host": api_host, "port": api_port},
