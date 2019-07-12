@@ -143,7 +143,7 @@ python-magic==0.4.15      # via s3cmd
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1
-raiden-contracts==0.25.1
+raiden-contracts==0.26.0
 raiden-webui==0.8.0
 readme-renderer==24.0
 releases==1.6.1
