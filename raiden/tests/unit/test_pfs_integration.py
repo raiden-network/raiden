@@ -398,9 +398,7 @@ def test_routing_mocked_pfs_invalid_json(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(side_effect=ValueError())
+    response = mocked_failed_response(error=ValueError(), status_code=200)
 
     with patch.object(requests, "post", return_value=response):
         routes, feedback_token = get_best_routes_with_iou_request_mocked(
@@ -438,9 +436,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    response = Mock()
-    response.configure_mock(status_code=400)
-    response.json = Mock(return_value={})
+    response = mocked_json_response(response_data={}, status_code=400)
 
     with patch.object(requests, "post", return_value=response):
         routes, feedback_token = get_best_routes_with_iou_request_mocked(
@@ -493,9 +489,8 @@ def test_routing_mocked_pfs_unavailable_peer(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data, status_code=200)
+
     with patch.object(requests, "post", return_value=response):
         routes, feedback_token = get_best_routes_with_iou_request_mocked(
             chain_state=chain_state,

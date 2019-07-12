@@ -1,4 +1,5 @@
 import errno
+import json
 import socket
 import sys
 from contextlib import closing
@@ -12,6 +13,11 @@ import requests
 from raiden.utils.typing import Iterator, Optional, Port
 
 LOOPBACK = "127.0.0.1"
+
+
+def get_response_json(response):
+    return json.loads(response.content)
+
 
 # The solution based on psutils does not work on MacOS because it needs
 # root access
