@@ -8,6 +8,7 @@ from raiden.constants import RoutingMode
 from raiden.exceptions import BrokenPreconditionError
 from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs
 from raiden.tests.utils.factories import HOP1
+from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
 from raiden.utils.typing import ChainID
@@ -79,9 +80,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "payment_address": "0x2222222222222222222222222222222222222222",
     }
 
-    response = Mock()
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data)
 
     # With local routing configure pfs should raise assertion
     with pytest.raises(AssertionError):
@@ -130,8 +129,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     assert config.price == json_data["price_info"]
 
     # Bad address, should exit the program
-    response = Mock()
-    response.configure_mock(status_code=400)
+    response = mocked_failed_response(error=requests.RequestException(), status_code=400)
     bad_address = "http://badaddress"
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", side_effect=requests.RequestException()):
@@ -145,8 +143,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             )
 
     # Addresses of token network registries of pfs and client conflic, should exit the client
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data)
 
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
@@ -159,8 +156,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             )
 
     # ChainIDs of pfs and client conflic, should exit the client
-    response.configure_mock(status_code=200)
-    response.json = Mock(return_value=json_data)
+    response = mocked_json_response(response_data=json_data)
 
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
