@@ -22,7 +22,7 @@ from raiden.exceptions import (
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.transfer import views
 from raiden.utils import typing
-from raiden.utils.typing import Address, BlockNumber, TokenAmount, TokenNetworkAddress
+from raiden.utils.typing import Address, TokenAmount, TokenNetworkAddress
 
 log = structlog.get_logger(__name__)
 RECOVERABLE_ERRORS = (
@@ -326,17 +326,6 @@ class ConnectionManager:  # pragma: no unittest
             )
             if not channel_identifier:
                 raise
-
-        # Wait until a newer block is mined before moving to deposit.
-        # TODO: Remove this waiting block when
-        # https://github.com/raiden-network/raiden/issues/4220
-        # is resolved.
-        chain_state = views.state_from_raiden(self.raiden)
-        waiting.wait_for_block(
-            raiden=self.raiden,
-            block_number=BlockNumber(chain_state.block_number + 1),
-            retry_timeout=DEFAULT_RETRY_TIMEOUT,
-        )
 
         total_deposit = self._initial_funding_per_partner
         if total_deposit == 0:
