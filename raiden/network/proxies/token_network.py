@@ -762,7 +762,13 @@ class TokenNetwork:
             except ValueError:
                 # If `given_block_identifier` has been pruned the checks cannot be
                 # performed.
-                pass
+                our_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    detail_for=self.node_address,
+                    partner=partner,
+                    block_identifier="latest",
+                )
+                given_block_identifier = self.proxy.jsonrpc_client.get_block("latest")["number"]
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
@@ -817,25 +823,25 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                log_details = {
-                    "node": to_checksum_address(self.node_address),
-                    "contract": to_checksum_address(self.address),
-                    "participant": to_checksum_address(self.node_address),
-                    "receiver": to_checksum_address(partner),
-                    "channel_identifier": channel_identifier,
-                    "total_deposit": total_deposit,
-                    "previous_total_deposit": our_details.deposit,
-                }
+            log_details = {
+                "node": to_checksum_address(self.node_address),
+                "contract": to_checksum_address(self.address),
+                "participant": to_checksum_address(self.node_address),
+                "receiver": to_checksum_address(partner),
+                "channel_identifier": channel_identifier,
+                "total_deposit": total_deposit,
+                "previous_total_deposit": our_details.deposit,
+            }
 
-                with log_transaction(log, "set_total_deposit", log_details):
-                    self._set_total_deposit(
-                        channel_identifier=channel_identifier,
-                        total_deposit=total_deposit,
-                        previous_total_deposit=our_details.deposit,
-                        partner=partner,
-                        given_block_identifier=given_block_identifier,
-                        log_details=log_details,
-                    )
+            with log_transaction(log, "set_total_deposit", log_details):
+                self._set_total_deposit(
+                    channel_identifier=channel_identifier,
+                    total_deposit=total_deposit,
+                    previous_total_deposit=our_details.deposit,
+                    partner=partner,
+                    given_block_identifier=given_block_identifier,
+                    log_details=log_details,
+                )
 
     def _set_total_deposit(
         self,
