@@ -250,6 +250,10 @@ class EchoNodeRunner(NodeRunner):
         self._token_address = token_address
         self._echo_node = None
 
+    def run(self):
+        super().run()
+        return self._start_services()
+
     @property
     def welcome_string(self):
         return "{} [ECHO NODE]".format(super().welcome_string)
