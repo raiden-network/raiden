@@ -587,7 +587,11 @@ class MatrixTransport(Runnable):
                     JSONSerializer.serialize(message) for message in messages_for_room
                 )
                 _send_global(room_name, message_text)
-                self._global_send_queue.task_done()
+                for _ in messages_for_room:
+                    # Every message needs to be marked as done.
+                    # Unfortunately there's no way to do that in one call :(
+                    # https://github.com/gevent/gevent/issues/1436
+                    self._global_send_queue.task_done()
 
             # Stop prioritizing global messages after initial queue has been emptied
             self._prioritize_global_messages = False
