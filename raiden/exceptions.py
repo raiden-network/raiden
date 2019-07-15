@@ -44,9 +44,12 @@ class RaidenUnrecoverableError(RaidenError):
     """
 
 
-class ChannelNotFound(RaidenError):
-    """ Raised when a provided channel via the REST api is not found in the
-    internal data structures"""
+class RaidenValidationError(RaidenRecoverableError):
+    """Exception raised when an input value is invalid.
+
+    This exception must be raised on the edges of the system, to inform the
+    caller one of the provided values is invalid.
+    """
 
 
 class PaymentConflict(RaidenRecoverableError):

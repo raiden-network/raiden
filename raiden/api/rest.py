@@ -20,6 +20,7 @@ from raiden_webui import RAIDEN_WEBUI_PATH
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
+from raiden.api.exceptions import ChannelNotFound
 from raiden.api.objects import AddressList, PartnersPerTokenList
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -58,7 +59,6 @@ from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
     APIServerPortInUseError,
-    ChannelNotFound,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,

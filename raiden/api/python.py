@@ -4,10 +4,10 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
+from raiden.api.exceptions import ChannelNotFound
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
-    ChannelNotFound,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -183,11 +183,12 @@ class RaidenAPI:  # pragma: no unittest
         assert len(channel_list) <= 1
 
         if not channel_list:
-            raise ChannelNotFound(
-                "Channel with partner '{}' for token '{}' could not be found.".format(
-                    to_checksum_address(partner_address), to_checksum_address(token_address)
-                )
+            msg = (
+                f"Channel with partner '{to_checksum_address(partner_address)}' "
+                f"for token '{to_checksum_address(token_address)}' could not be "
+                f"found."
             )
+            raise ChannelNotFound(msg)
 
         return channel_list[0]
 
