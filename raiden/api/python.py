@@ -322,6 +322,22 @@ class RaidenAPI:  # pragma: no unittest
 
         return connection_manager.leave(registry_address)
 
+    def is_already_existing_channel(
+        self,
+        token_network_address: TokenNetworkAddress,
+        partner_address: Address,
+        block_identifier: Optional[BlockSpecification] = None,
+    ) -> bool:
+        chain_state = self.raiden.chain
+        proxy = chain_state.address_to_token_network[token_network_address]
+        channel_identifier = proxy.get_channel_identifier_or_none(
+            participant1=self.raiden.address,
+            participant2=partner_address,
+            block_identifier=block_identifier or chain_state.client.get_checking_block(),
+        )
+
+        return channel_identifier is not None
+
     def channel_open(
         self,
         registry_address: PaymentNetworkAddress,
@@ -358,18 +374,18 @@ class RaidenAPI:  # pragma: no unittest
                 "Token network for token %s does not exist" % to_checksum_address(token_address)
             )
 
-        token_network = self.raiden.chain.token_network(registry.get_token_network(token_address))
+        token_network = self.raiden.chain.token_network(token_network_address)
+        given_block_identifier = views.state_from_raiden(self.raiden).block_hash
 
-        token_network_proxy = self.raiden.chain.address_to_token_network[token_network_address]
-        channel_identifier = token_network_proxy.get_channel_identifier_or_none(
-            participant1=self.raiden.address,
-            participant2=partner_address,
-            block_identifier=token_network.client.get_checking_block(),
+        duplicated_channel = self.is_already_existing_channel(
+            token_network_address=token_network_address,
+            partner_address=partner_address,
+            block_identifier=given_block_identifier,
         )
-
-        if channel_identifier:
-            raise RecoverableDuplicatedChannelError(
-                "Channel with given partner address already exists"
+        if duplicated_channel:
+            raise DuplicatedChannelError(
+                f"A channel with {partner_address} for token {token_address} already exists. "
+                f"(At block: {given_block_identifier})"
             )
 
         with self.raiden.gas_reserve_lock:
@@ -388,10 +404,19 @@ class RaidenAPI:  # pragma: no unittest
                 token_network.new_netting_channel(
                     partner=partner_address,
                     settle_timeout=settle_timeout,
-                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
+                    given_block_identifier=given_block_identifier,
                 )
             except DuplicatedChannelError:
                 log.info("partner opened channel first")
+            except RaidenRecoverableError:
+                # The channel may have been created in the pending block.
+                duplicated_channel = self.is_already_existing_channel(
+                    token_network_address=token_network_address, partner_address=partner_address
+                )
+                if duplicated_channel:
+                    log.info("partner opened channel first")
+                else:
+                    raise
 
         waiting.wait_for_newchannel(
             raiden=self.raiden,
