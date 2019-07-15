@@ -13,12 +13,7 @@ from eth_utils import (
 )
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
-from raiden.exceptions import (
-    InvalidAddress,
-    InvalidToken,
-    RaidenRecoverableError,
-    RaidenUnrecoverableError,
-)
+from raiden.exceptions import InvalidToken, RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -55,7 +50,7 @@ class TokenNetworkRegistry:
         blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(registry_address):
-            raise InvalidAddress("Expected binary address format for token network registry")
+            raise ValueError("Expected binary address format for token network registry")
 
         check_address_has_code(
             client=jsonrpc_client,
@@ -130,7 +125,7 @@ class TokenNetworkRegistry:
         self, token_address: TokenAddress, additional_arguments: Dict
     ) -> TokenNetworkAddress:
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token")
+            raise ValueError("Expected binary address format for token")
 
         token_proxy = self.blockchain_service.token(token_address)
 

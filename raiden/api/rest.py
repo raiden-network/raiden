@@ -20,7 +20,7 @@ from raiden_webui import RAIDEN_WEBUI_PATH
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
-from raiden.api.exceptions import ChannelNotFound
+from raiden.api.exceptions import ChannelNotFound, UnexistingChannel
 from raiden.api.objects import AddressList, PartnersPerTokenList
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -64,8 +64,8 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     InsufficientFunds,
     InsufficientGasReserve,
-    InvalidAddress,
     InvalidAmount,
+    InvalidBinaryAddress,
     InvalidBlockNumberInput,
     InvalidNumberInput,
     InvalidSecret,
@@ -515,7 +515,7 @@ class RestAPI:  # pragma: no unittest
             )
 
         conflict_exceptions = (
-            InvalidAddress,
+            InvalidBinaryAddress,
             AlreadyRegisteredTokenAddress,
             TransactionThrew,
             InvalidToken,
@@ -612,7 +612,7 @@ class RestAPI:  # pragma: no unittest
                 registry_address, token_address, partner_address, settle_timeout
             )
         except (
-            InvalidAddress,
+            InvalidBinaryAddress,
             InvalidSettleTimeout,
             SamePeerAddress,
             AddressWithoutCode,
@@ -642,6 +642,8 @@ class RestAPI:  # pragma: no unittest
                 )
             except InsufficientFunds as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
+            except (UnexistingChannel, UnknownTokenAddress) as e:
+                return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
             except (DepositOverLimit, DepositMismatch) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
@@ -683,7 +685,7 @@ class RestAPI:  # pragma: no unittest
             )
         except (InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
-        except (InvalidAmount, InvalidAddress) as e:
+        except (InvalidAmount, InvalidBinaryAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
@@ -724,7 +726,7 @@ class RestAPI:  # pragma: no unittest
                 connection_manager = self.raiden_api.raiden.connection_manager_for_token_network(
                     token_network_address
                 )
-            except InvalidAddress:
+            except InvalidBinaryAddress:
                 connection_manager = None
 
             open_channels = views.get_channelstate_open(
@@ -838,7 +840,7 @@ class RestAPI:  # pragma: no unittest
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-        except (InvalidBlockNumberInput, InvalidAddress) as e:
+        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_raiden_events_payment_history_with_timestamps(
@@ -863,7 +865,7 @@ class RestAPI:  # pragma: no unittest
                 limit=limit,
                 offset=offset,
             )
-        except (InvalidNumberInput, InvalidAddress) as e:
+        except (InvalidNumberInput, InvalidBinaryAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         result = []
@@ -915,7 +917,7 @@ class RestAPI:  # pragma: no unittest
                 to_block=to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
-        except (InvalidBlockNumberInput, InvalidAddress) as e:
+        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
         except UnknownTokenAddress as e:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
@@ -958,7 +960,7 @@ class RestAPI:  # pragma: no unittest
             raiden_service_result = self.raiden_api.get_channel_list(
                 registry_address, token_address
             )
-        except InvalidAddress as e:
+        except InvalidBinaryAddress as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         for result in raiden_service_result:
@@ -1015,7 +1017,7 @@ class RestAPI:  # pragma: no unittest
             )
         except (
             InvalidAmount,
-            InvalidAddress,
+            InvalidBinaryAddress,
             InvalidSecret,
             InvalidSecretHash,
             PaymentConflict,
@@ -1116,6 +1118,8 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_withdraw,
             )
+        except (UnexistingChannel, UnknownTokenAddress) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
@@ -1212,7 +1216,7 @@ class RestAPI:  # pragma: no unittest
                 ),
                 status_code=HTTPStatus.CONFLICT,
             )
-        except InvalidAddress as e:
+        except InvalidBinaryAddress as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         if total_deposit is not None:

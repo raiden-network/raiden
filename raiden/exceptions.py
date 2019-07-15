@@ -91,8 +91,23 @@ class WithdrawMismatch(RaidenRecoverableError):
     """ Raised when the requested withdraw is larger than actual channel balance. """
 
 
-class InvalidAddress(RaidenError):
-    """ Raised when the user provided value is not a valid address. """
+class InvalidChecksummedAddress(RaidenError):
+    """Raised when the user provided address is not a str or the valus is not
+    properly checksummed.
+
+    Exception used to enforce the checksummed for external APIs. The address
+    provided by a user must be checksummed to avoid errors, the checksummed
+    address must be validated at the edges before calling internal functions.
+    """
+
+
+class InvalidBinaryAddress(RaidenValidationError):
+    """Raised when the address is not binary or it is not 20 bytes long.
+
+    Exception used to enforce the sandwhich encoding for python APIs. The
+    internal address representation used by Raiden is binary, the binary
+    address must be validated at the edges before calling internal functions.
+    """
 
 
 class InvalidSecret(RaidenError):

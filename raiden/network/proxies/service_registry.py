@@ -5,7 +5,7 @@ import web3
 from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
+from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -24,7 +24,7 @@ class ServiceRegistry:
         contract_manager: ContractManager,
     ):
         if not is_binary_address(service_registry_address):
-            raise InvalidAddress("Expected binary address for service registry")
+            raise ValueError("Expected binary address for service registry")
 
         self.contract_manager = contract_manager
         check_address_has_code(

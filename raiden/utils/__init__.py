@@ -22,7 +22,7 @@ from web3 import Web3
 
 import raiden
 from raiden import constants
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils.signing import sha3  # noqa
 from raiden.utils.typing import (
     Address,
@@ -64,10 +64,10 @@ def address_checksum_and_decode(addr: str) -> Address:
         checksummed according to EIP55 specification
     """
     if not is_0x_prefixed(addr):
-        raise InvalidAddress("Address must be 0x prefixed")
+        raise InvalidChecksummedAddress("Address must be 0x prefixed")
 
     if not is_checksum_address(addr):
-        raise InvalidAddress("Address must be EIP55 checksummed")
+        raise InvalidChecksummedAddress("Address must be EIP55 checksummed")
 
     addr_bytes = decode_hex(addr)
     assert len(addr_bytes) in (20, 0)

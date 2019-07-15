@@ -17,7 +17,7 @@ from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
@@ -229,7 +229,7 @@ class AddressType(click.ParamType):
     def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         try:
             return address_checksum_and_decode(value)
-        except InvalidAddress as e:
+        except InvalidChecksummedAddress as e:
             self.fail(str(e))
 
 

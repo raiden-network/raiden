@@ -16,7 +16,7 @@ from raiden.exceptions import (
     DepositOverLimit,
     InsufficientFunds,
     InsufficientGasReserve,
-    InvalidAddress,
+    InvalidBinaryAddress,
 )
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
@@ -263,15 +263,16 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
 def run_test_transfer_to_unknownchannel(raiden_network, token_addresses):
     app0, _ = raiden_network
     token_address = token_addresses[0]
-    non_existing_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
+    str_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
 
-    with pytest.raises(InvalidAddress):
-        # sending to an unknown/non-existant address
+    # Enforce sandwhich encoding. Calling `transfer` with a non binary address
+    # raises an exception
+    with pytest.raises(InvalidBinaryAddress):
         RaidenAPI(app0.raiden).transfer(
             app0.raiden.default_registry.address,
             token_address,
             10,
-            target=non_existing_address,
+            target=str_address,
             transfer_timeout=10,
         )
 

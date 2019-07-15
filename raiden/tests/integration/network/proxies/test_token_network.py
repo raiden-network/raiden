@@ -12,7 +12,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    InvalidAddress,
     InvalidChannelID,
     InvalidSettleTimeout,
     RaidenRecoverableError,
@@ -125,7 +124,7 @@ def test_token_network_proxy(
     )
 
     msg = "Hex encoded addresses are not supported, an exception must be raised"
-    with pytest.raises(InvalidAddress):
+    with pytest.raises(ValueError):
         c1_token_network_proxy.get_channel_identifier(
             participant1=to_checksum_address(c1_client.address),
             participant2=to_checksum_address(c2_client.address),

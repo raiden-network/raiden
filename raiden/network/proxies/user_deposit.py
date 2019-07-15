@@ -10,7 +10,7 @@ from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import UINT256_MAX
-from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenRecoverableError
+from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
@@ -46,7 +46,7 @@ class UserDeposit:
         blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(user_deposit_address):
-            raise InvalidAddress("Expected binary address format for token nework")
+            raise ValueError("Expected binary address format for token nework")
 
         check_address_has_code(
             jsonrpc_client,

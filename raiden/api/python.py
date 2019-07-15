@@ -4,7 +4,7 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.api.exceptions import ChannelNotFound
+from raiden.api.exceptions import ChannelNotFound, UnexistingChannel
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -13,8 +13,8 @@ from raiden.exceptions import (
     DuplicatedChannelError,
     InsufficientFunds,
     InsufficientGasReserve,
-    InvalidAddress,
     InvalidAmount,
+    InvalidBinaryAddress,
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
@@ -174,10 +174,10 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
     ) -> NettingChannelState:
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in get_channel")
+            raise InvalidBinaryAddress("Expected binary address format for token in get_channel")
 
         if not is_binary_address(partner_address):
-            raise InvalidAddress("Expected binary address format for partner in get_channel")
+            raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
         channel_list = self.get_channel_list(registry_address, token_address, partner_address)
         assert len(channel_list) <= 1
@@ -205,7 +205,7 @@ class RaidenAPI:  # pragma: no unittest
            until the next block to make sure the event is processed.
 
         Raises:
-            InvalidAddress: If the registry_address or token_address is not a valid address.
+            InvalidBinaryAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
             TransactionThrew: If the register transaction failed, this may
                 happen because the account has not enough balance to pay for the
@@ -213,10 +213,10 @@ class RaidenAPI:  # pragma: no unittest
         """
 
         if not is_binary_address(registry_address):
-            raise InvalidAddress("registry_address must be a valid address in binary")
+            raise InvalidBinaryAddress("registry_address must be a valid address in binary")
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("token_address must be a valid address in binary")
+            raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress("Token already registered")
@@ -269,9 +269,9 @@ class RaidenAPI:  # pragma: no unittest
                 channels opened by other participants.
         """
         if not is_binary_address(registry_address):
-            raise InvalidAddress("registry_address must be a valid address in binary")
+            raise InvalidBinaryAddress("registry_address must be a valid address in binary")
         if not is_binary_address(token_address):
-            raise InvalidAddress("token_address must be a valid address in binary")
+            raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
@@ -305,9 +305,9 @@ class RaidenAPI:  # pragma: no unittest
     ) -> List[NettingChannelState]:
         """ Close all channels and wait for settlement. """
         if not is_binary_address(registry_address):
-            raise InvalidAddress("registry_address must be a valid address in binary")
+            raise InvalidBinaryAddress("registry_address must be a valid address in binary")
         if not is_binary_address(token_address):
-            raise InvalidAddress("token_address must be a valid address in binary")
+            raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
         if token_address not in self.get_tokens_list(registry_address):
             raise UnknownTokenAddress("token_address unknown")
@@ -360,13 +360,17 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         if not is_binary_address(registry_address):
-            raise InvalidAddress("Expected binary address format for registry in channel open")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for registry in channel open"
+            )
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in channel open")
+            raise InvalidBinaryAddress("Expected binary address format for token in channel open")
 
         if not is_binary_address(partner_address):
-            raise InvalidAddress("Expected binary address format for partner in channel open")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel open"
+            )
 
         registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = registry.get_token_network(token_address)
@@ -470,7 +474,7 @@ class RaidenAPI:  # pragma: no unittest
         given `token_address`.
 
         Raises:
-            InvalidAddress: If either token_address or partner_address is not
+            InvalidBinaryAddress: If either token_address or partner_address is not
                 20 bytes long.
             RaidenUnrecoverableError: May happen for multiple reasons:
                 - During preconditions checks, if the channel was not open
@@ -491,16 +495,20 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in channel deposit")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in channel deposit"
+            )
 
         if not is_binary_address(partner_address):
-            raise InvalidAddress("Expected binary address format for partner in channel deposit")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel deposit"
+            )
 
         if token_address not in token_addresses:
             raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
-            raise InvalidAddress("No channel with partner_address for the given token")
+            raise UnexistingChannel("No channel with partner_address for the given token")
 
         if total_withdraw <= channel_state.our_total_withdraw:
             raise WithdrawMismatch(f"Total withdraw {total_withdraw} did not increase")
@@ -539,7 +547,7 @@ class RaidenAPI:  # pragma: no unittest
         given `token_address` in order to be able to do transfers.
 
         Raises:
-            InvalidAddress: If either token_address or partner_address is not
+            InvalidBinaryAddress: If either token_address or partner_address is not
                 20 bytes long.
             TransactionThrew: May happen for multiple reasons:
                 - If the token approval fails, e.g. the token may validate if
@@ -563,16 +571,20 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in channel deposit")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in channel deposit"
+            )
 
         if not is_binary_address(partner_address):
-            raise InvalidAddress("Expected binary address format for partner in channel deposit")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel deposit"
+            )
 
         if token_address not in token_addresses:
             raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
-            raise InvalidAddress("No channel with partner_address for the given token")
+            raise UnexistingChannel("No channel with partner_address for the given token")
 
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
@@ -694,10 +706,12 @@ class RaidenAPI:  # pragma: no unittest
         """
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in channel close")
+            raise InvalidBinaryAddress("Expected binary address format for token in channel close")
 
         if not all(map(is_binary_address, partner_addresses)):
-            raise InvalidAddress("Expected binary address format for partner in channel close")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel close"
+            )
 
         valid_tokens = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
@@ -753,14 +767,18 @@ class RaidenAPI:  # pragma: no unittest
             KeyError: An error occurred when the token address is unknown to the node.
         """
         if registry_address and not is_binary_address(registry_address):
-            raise InvalidAddress("Expected binary address format for registry in get_channel_list")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for registry in get_channel_list"
+            )
 
         if token_address and not is_binary_address(token_address):
-            raise InvalidAddress("Expected binary address format for token in get_channel_list")
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in get_channel_list"
+            )
 
         if partner_address:
             if not is_binary_address(partner_address):
-                raise InvalidAddress(
+                raise InvalidBinaryAddress(
                     "Expected binary address format for partner in get_channel_list"
                 )
             if not token_address:
@@ -867,13 +885,13 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidAmount("Amount too large")
 
         if not is_binary_address(token_address):
-            raise InvalidAddress("token address is not valid.")
+            raise InvalidBinaryAddress("token address is not valid.")
 
         if token_address not in views.get_token_identifiers(current_state, registry_address):
             raise UnknownTokenAddress("Token address is not known.")
 
         if not is_binary_address(target):
-            raise InvalidAddress("target address is not valid.")
+            raise InvalidBinaryAddress("target address is not valid.")
 
         valid_tokens = views.get_token_identifiers(
             views.state_from_raiden(self.raiden), registry_address
@@ -919,12 +937,12 @@ class RaidenAPI:  # pragma: no unittest
         offset: int = None,
     ) -> List[TimestampedEvent]:
         if token_address and not is_binary_address(token_address):
-            raise InvalidAddress(
+            raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_raiden_events_payment_history"
             )
 
         if target_address and not is_binary_address(target_address):
-            raise InvalidAddress(
+            raise InvalidBinaryAddress(
                 "Expected binary address format for "
                 "target_address in get_raiden_events_payment_history"
             )
@@ -995,7 +1013,7 @@ class RaidenAPI:  # pragma: no unittest
         """Returns a list of blockchain events corresponding to the token_address."""
 
         if not is_binary_address(token_address):
-            raise InvalidAddress(
+            raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_token_network"
             )
 
@@ -1028,7 +1046,7 @@ class RaidenAPI:  # pragma: no unittest
         to_block: BlockSpecification = "latest",
     ):
         if not is_binary_address(token_address):
-            raise InvalidAddress(
+            raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_channel"
             )
         token_network_address = self.raiden.default_registry.get_token_network(token_address)

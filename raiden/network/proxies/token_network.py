@@ -27,7 +27,6 @@ from raiden.exceptions import (
     ChannelOutdatedError,
     DepositOverLimit,
     DuplicatedChannelError,
-    InvalidAddress,
     InvalidChannelID,
     InvalidSettleTimeout,
     RaidenRecoverableError,
@@ -94,13 +93,13 @@ log = structlog.get_logger(__name__)
 
 def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
     if NULL_ADDRESS_BYTES in (address1, address2):
-        raise InvalidAddress("The null address is not allowed as a channel participant.")
+        raise ValueError("The null address is not allowed as a channel participant.")
 
     if address1 == address2:
         raise SamePeerAddress("Using the same address for both participants is forbiden.")
 
     if not (is_binary_address(address1) and is_binary_address(address2)):
-        raise InvalidAddress("Addresses must be in binary")
+        raise ValueError("Addresses must be in binary")
 
 
 class ChannelData(NamedTuple):
@@ -141,7 +140,7 @@ class TokenNetwork:
         blockchain_service: "BlockChainService",
     ):
         if not is_binary_address(token_network_address):
-            raise InvalidAddress("Expected binary address format for token nework")
+            raise ValueError("Expected binary address format for token nework")
 
         check_address_has_code(
             jsonrpc_client,
@@ -391,7 +390,7 @@ class TokenNetwork:
             BadFunctionCallOutput: If the `block_identifier` points to a block
                 prior to the deployment of the TokenNetwork.
             SamePeerAddress: If an both addresses are equal.
-            InvalidAddress: If either of the address is an invalid type or the
+            ValueError: If either of the address is an invalid type or the
                 null address.
         """
         raise_if_invalid_address_pair(participant1, participant2)
@@ -552,7 +551,7 @@ class TokenNetwork:
             For now one of the participants has to be the node_address
         """
         if self.node_address not in (participant1, participant2):
-            raise InvalidAddress("One participant must be the node address")
+            raise ValueError("One participant must be the node address")
 
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1

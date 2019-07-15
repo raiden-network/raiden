@@ -20,7 +20,6 @@ from raiden.constants import (
     RECEIPT_FAILURE_CODE,
 )
 from raiden.exceptions import (
-    InvalidAddress,
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -47,7 +46,7 @@ log = structlog.get_logger(__name__)
 class SecretRegistry:
     def __init__(self, jsonrpc_client, secret_registry_address, contract_manager: ContractManager):
         if not is_binary_address(secret_registry_address):
-            raise InvalidAddress("Expected binary address format for secret registry")
+            raise ValueError("Expected binary address format for secret registry")
 
         self.contract_manager = contract_manager
         check_address_has_code(
