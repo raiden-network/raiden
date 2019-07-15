@@ -40,8 +40,9 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID
+from raiden.utils.typing import Address
 from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.utils.type_aliases import ChainID
 
 log = structlog.get_logger(__name__)
 
@@ -273,6 +274,37 @@ class UserAddressManager:
     def recover_userids(self, address_to_userids: defaultdict) -> None:
         """Restores the mapping address: userids for all known addresses"""
         self._address_to_userids = address_to_userids
+
+
+def node_is_room_member(self, address: Address, room: Room) -> bool:
+    peer_ids = self.get_userids_for_address(address)
+    member_ids = {member.user_id for member in room.get_joined_members()}
+    node_is_member = bool(peer_ids & member_ids)
+    last_ex: Optional[Exception] = None
+    if not node_is_member:
+        log.debug(
+            "Waiting for peer to join from invite", peer_address=to_checksum_address(address)
+        )
+        retry_interval: float = 0.1
+        for _ in range(JOIN_RETRIES):
+            try:
+                member_ids = {
+                    member.user_id for member in room.get_joined_members(force_resync=True)
+                }
+            except MatrixRequestError as e:
+                last_ex = e
+            room_is_empty = not bool(peer_ids & member_ids)
+            if room_is_empty or last_ex:
+                if self._stop_event.wait(retry_interval):
+                    break
+                retry_interval = retry_interval * 2
+            else:
+                break
+
+    if last_ex:
+        raise last_ex
+
+    return node_is_member
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:

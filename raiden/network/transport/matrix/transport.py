@@ -36,6 +36,7 @@ from raiden.network.transport.matrix.utils import (
     login_or_register,
     make_client,
     make_room_alias,
+    node_is_room_member,
     validate_and_parse_message,
     validate_userid_signature,
 )
@@ -498,6 +499,9 @@ class MatrixTransport(Runnable):
 
         with self._health_lock:
             if self._address_mgr.is_address_known(node_address):
+                self.log.debug(
+                    "Address already healtchecked", peer_address=to_checksum_address(node_address)
+                )
                 return  # already healthchecked
 
             node_address_hex = to_normalized_address(node_address)
@@ -972,37 +976,11 @@ class MatrixTransport(Runnable):
         else:
             room = self._get_public_room(room_name, invitees=peers)
 
-        peer_ids = self._address_mgr.get_userids_for_address(address)
-        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-        room_is_empty = not bool(peer_ids & member_ids)
-        if room_is_empty:
-            last_ex: Optional[Exception] = None
-            retry_interval = 0.1
-            self.log.debug(
-                "Waiting for peer to join from invite", peer_address=to_checksum_address(address)
+        if not node_is_room_member(address, room):
+            self.log.error(
+                "Peer has not joined from invite yet, should join eventually",
+                peer_address=to_checksum_address(address),
             )
-            for _ in range(JOIN_RETRIES):
-                try:
-                    member_ids = {member.user_id for member in room.get_joined_members()}
-                except MatrixRequestError as e:
-                    last_ex = e
-                room_is_empty = not bool(peer_ids & member_ids)
-                if room_is_empty or last_ex:
-                    if self._stop_event.wait(retry_interval):
-                        break
-                    retry_interval = retry_interval * 2
-                else:
-                    break
-
-            if room_is_empty or last_ex:
-                if last_ex:
-                    raise last_ex  # re-raise if couldn't succeed in retries
-                else:
-                    # Inform the client, that currently no one listens:
-                    self.log.error(
-                        "Peer has not joined from invite yet, should join eventually",
-                        peer_address=to_checksum_address(address),
-                    )
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         if self.storage:
