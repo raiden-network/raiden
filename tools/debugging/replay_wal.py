@@ -11,7 +11,7 @@ import json
 import re
 
 import click
-from eth_utils import encode_hex, to_canonical_address
+from eth_utils import encode_hex, is_checksum_address, to_canonical_address
 
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
@@ -19,7 +19,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
 from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
-from raiden.utils.typing import Optional
+from raiden.utils.typing import Address, Dict, Optional, TokenNetworkAddress
 
 
 def state_change_contains_secrethash(obj, secrethash):
@@ -73,7 +73,7 @@ class Translator(dict):
     def __init__(self, *args, **kwargs):
         kwargs = dict((k.lower(), v) for k, v in args[0].items())
         super().__init__(kwargs)
-        self._extra_keys = dict()
+        self._extra_keys: Dict[str, str] = dict()
         self._regex = None
         self._make_regex()
 
@@ -126,16 +126,24 @@ class Translator(dict):
         return self._regex.sub(self, text)
 
 
-def replay_wal(storage, token_network_address, partner_address, translator=None):
+def replay_wal(
+    storage: SerializedSQLiteStorage,
+    token_network_address: TokenNetworkAddress,
+    partner_address: Address,
+    translator: Optional[Translator] = None,
+):
     all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     state_manager = StateManager(state_transition=node.state_transition, current_state=None)
     wal = WriteAheadLog(state_manager, storage)
 
     for _, state_change in enumerate(all_state_changes):
-        events = wal.state_manager.dispatch(state_change)
+        # Dispatching the state changes one-by-one to easy debugging
+        events = wal.state_manager.dispatch([state_change])
 
         chain_state = wal.state_manager.current_state
+        msg = "Chain state must never be cleared up."
+        assert chain_state, msg
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state,
@@ -158,7 +166,7 @@ def replay_wal(storage, token_network_address, partner_address, translator=None)
 
 @click.command(help=__doc__)
 @click.argument("db-file", type=click.Path(exists=True))
-@click.argument("token-network-identifier")
+@click.argument("token-network-address")
 @click.argument("partner-address")
 @click.option(
     "-x",
@@ -180,6 +188,9 @@ def main(db_file, token_network_address, partner_address, names_translator):
         partner_address = lookup.get(partner_address, partner_address)
     else:
         translator = None
+
+    assert is_checksum_address(token_network_address), "token_network_address must be provided"
+    assert is_checksum_address(partner_address), "partner_address must be provided"
 
     replay_wal(
         storage=SerializedSQLiteStorage(db_file, JSONSerializer()),
