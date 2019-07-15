@@ -860,8 +860,6 @@ class RaidenService(Runnable):
         )
 
         for queue_identifier, event_queue in events_queues.items():
-            self.start_health_check_for(queue_identifier.recipient)
-
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
