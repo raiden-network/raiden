@@ -10,6 +10,7 @@ The ignored state changes will still be applied, but they will just not be print
 import json
 import re
 from contextlib import closing
+from itertools import chain
 
 import click
 from eth_utils import encode_hex, is_checksum_address, to_canonical_address
@@ -18,54 +19,9 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
-from raiden.transfer.architecture import StateManager
+from raiden.transfer.architecture import Event, StateChange, StateManager
 from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
-from raiden.utils.typing import Address, Dict, Optional, TokenNetworkAddress
-
-
-def state_change_contains_secrethash(obj, secrethash):
-    return (hasattr(obj, "secrethash") and obj.secrethash == secrethash) or (
-        hasattr(obj, "transfer")
-        and (
-            (hasattr(obj.transfer, "secrethash") and obj.transfer.secrethash == secrethash)
-            or (hasattr(obj.transfer, "lock") and obj.transfer.lock.secrethash == secrethash)
-        )
-    )
-
-
-def state_change_with_nonce(obj, nonce, channel_identifier, sender):
-    return (
-        hasattr(obj, "balance_proof")
-        and obj.balance_proof.nonce == nonce
-        and obj.balance_proof.channel_identifier == channel_identifier
-        and obj.balance_proof.sender == to_canonical_address(sender)
-    )
-
-
-def print_attributes(data, translator=None):
-    if translator is None:
-        trans = lambda s: s
-    else:
-        trans = translator.translate
-    for key, value in data.items():
-        if isinstance(value, bytes):
-            value = encode_hex(value)
-
-        click.echo("\t", nl=False)
-        click.echo(click.style(key, fg="blue"), nl=False)
-        click.echo(click.style("="), nl=False)
-        click.echo(click.style(trans(repr(value)), fg="yellow"))
-
-
-def print_state_change(state_change, translator=None):
-    click.echo(click.style(f"> {state_change.__class__.__name__}", fg="red", bold=True))
-    print_attributes(state_change.__dict__, translator=translator)
-
-
-def print_events(events, translator=None):
-    for event in events:
-        click.echo(click.style(f"< {event.__class__.__name__}", fg="green", bold=True))
-        print_attributes(event.__dict__, translator=translator)
+from raiden.utils.typing import Address, Dict, Iterable, List, Optional, TokenNetworkAddress
 
 
 class Translator(dict):
@@ -127,6 +83,51 @@ class Translator(dict):
         return self._regex.sub(self, text)
 
 
+def state_change_contains_secrethash(obj, secrethash):
+    return (hasattr(obj, "secrethash") and obj.secrethash == secrethash) or (
+        hasattr(obj, "transfer")
+        and (
+            (hasattr(obj.transfer, "secrethash") and obj.transfer.secrethash == secrethash)
+            or (hasattr(obj.transfer, "lock") and obj.transfer.lock.secrethash == secrethash)
+        )
+    )
+
+
+def state_change_with_nonce(obj, nonce, channel_identifier, sender):
+    return (
+        hasattr(obj, "balance_proof")
+        and obj.balance_proof.nonce == nonce
+        and obj.balance_proof.channel_identifier == channel_identifier
+        and obj.balance_proof.sender == to_canonical_address(sender)
+    )
+
+
+def print_attributes(data, translator: Optional[Translator] = None) -> None:
+    if translator is None:
+        trans = lambda s: s
+    else:
+        trans = translator.translate
+    for key, value in data.items():
+        if isinstance(value, bytes):
+            value = encode_hex(value)
+
+        click.echo("\t", nl=False)
+        click.echo(click.style(key, fg="blue"), nl=False)
+        click.echo(click.style("="), nl=False)
+        click.echo(click.style(trans(repr(value)), fg="yellow"))
+
+
+def print_state_change(state_change: StateChange, translator: Optional[Translator] = None) -> None:
+    click.echo(click.style(f"> {state_change.__class__.__name__}", fg="red", bold=True))
+    print_attributes(state_change.__dict__, translator=translator)
+
+
+def print_events(events: Iterable[Event], translator: Optional[Translator] = None) -> None:
+    for event in events:
+        click.echo(click.style(f"< {event.__class__.__name__}", fg="green", bold=True))
+        print_attributes(event.__dict__, translator=translator)
+
+
 def replay_wal(
     storage: SerializedSQLiteStorage,
     token_network_address: TokenNetworkAddress,
@@ -140,7 +141,7 @@ def replay_wal(
 
     for _, state_change in enumerate(all_state_changes):
         # Dispatching the state changes one-by-one to easy debugging
-        events = wal.state_manager.dispatch([state_change])
+        _, events = wal.state_manager.dispatch([state_change])
 
         chain_state = wal.state_manager.current_state
         msg = "Chain state must never be cleared up."
@@ -162,7 +163,7 @@ def replay_wal(
         ###
 
         print_state_change(state_change, translator=translator)
-        print_events(events, translator=translator)
+        print_events(chain.from_iterable(events), translator=translator)
 
 
 @click.command(help=__doc__)
