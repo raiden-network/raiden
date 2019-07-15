@@ -12,7 +12,7 @@ from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
-from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
+from raiden.exceptions import TransportError
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import (
     Message,
@@ -861,25 +861,20 @@ class MatrixTransport(Runnable):
             sender=to_checksum_address(message.sender),
         )
 
-        try:
-            # TODO: Maybe replace with Matrix read receipts.
-            #       Unfortunately those work on an 'up to' basis, not on individual messages
-            #       which means that message order is important which isn't guaranteed between
-            #       federated servers.
-            #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-            delivered_message = Delivered(
-                delivered_message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
-            )
-            self._raiden_service.sign(delivered_message)
+        # TODO: Maybe replace with Matrix read receipts.
+        #       Unfortunately those work on an 'up to' basis, not on individual messages
+        #       which means that message order is important which isn't guaranteed between
+        #       federated servers.
+        #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
+        delivered_message = Delivered(
+            delivered_message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
+        )
+        self._raiden_service.sign(delivered_message)
 
-            if message.sender:  # Ignore unsigned messages
-                retrier = self._get_retrier(message.sender)
-                retrier.enqueue_global(delivered_message)
-                self._raiden_service.on_message(message)
-
-        except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
-            self.log.warning("Exception while processing message", exc_info=True)
-            return
+        if message.sender:  # Ignore unsigned messages
+            retrier = self._get_retrier(message.sender)
+            retrier.enqueue_global(delivered_message)
+            self._raiden_service.on_message(message)
 
     def _receive_to_device(self, to_device: ToDevice):
         self.log.debug(

@@ -31,7 +31,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    InvalidAddress,
+    InvalidBinaryAddress,
     InvalidDBData,
     InvalidSecret,
     InvalidSecretHash,
@@ -1022,14 +1022,14 @@ class RaidenService(Runnable):
         self, token_network_address: TokenNetworkAddress
     ) -> ConnectionManager:
         if not is_binary_address(token_network_address):
-            raise InvalidAddress("token address is not valid.")
+            raise InvalidBinaryAddress("token address is not valid.")
 
         known_token_networks = views.get_token_network_addresses(
             views.state_from_raiden(self), self.default_registry.address
         )
 
         if token_network_address not in known_token_networks:
-            raise InvalidAddress("token is not registered.")
+            raise InvalidBinaryAddress("token is not registered.")
 
         manager = self.tokennetworkaddrs_to_connectionmanagers.get(token_network_address)
 
