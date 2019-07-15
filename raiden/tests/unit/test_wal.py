@@ -16,7 +16,7 @@ from raiden.storage.sqlite import (
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils import factories
-from raiden.transfer.architecture import State, StateManager, TransitionResult
+from raiden.transfer.architecture import State, StateChange, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils import sha3
@@ -122,7 +122,7 @@ def test_write_read_log():
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
-        wal.storage.write_state_snapshot(34, "AAAA")
+        wal.storage.write_state_snapshot(State(), "AAAA")
 
 
 def test_timestamped_event():
@@ -158,7 +158,7 @@ def test_write_read_events():
 
     previous_events = wal.storage.get_events_with_timestamps()
 
-    state_change_ids = wal.storage.write_state_changes(["statechangedata"])
+    state_change_ids = wal.storage.write_state_changes([StateChange()])
     wal.storage.write_events([(state_change_ids[0], event)])
 
     new_events = wal.storage.get_events_with_timestamps()

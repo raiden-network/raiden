@@ -212,10 +212,6 @@ class TransactionThrew(RaidenError):
         super().__init__(f"{txname} transaction threw. Receipt={receipt}")
 
 
-class InvalidProtocolMessage(RaidenError):
-    """Raised on an invalid or an unknown Raiden protocol message"""
-
-
 class APIServerPortInUseError(RaidenError):
     """Raised when API server port is already in use"""
 
@@ -306,3 +302,7 @@ class TokenNetworkDeprecated(RaidenError):
 
 class MintFailed(RaidenError):
     """ Raised when an attempt to mint a testnet token failed. """
+
+
+class SerializationError(RaidenError):
+    """ Invalid data are to be (de-)serialized. """

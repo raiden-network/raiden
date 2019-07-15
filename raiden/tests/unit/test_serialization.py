@@ -1,3 +1,4 @@
+import json
 import random
 from dataclasses import dataclass
 
@@ -5,6 +6,7 @@ import pytest
 from eth_utils import to_canonical_address
 from networkx import Graph
 
+from raiden.exceptions import SerializationError
 from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
@@ -15,26 +17,53 @@ class ClassWithGraphObject:
     graph: Graph
 
 
-def test_decode_with_unknown_type():
-    test_str = """
-{
-    "_type": "some.non.existent.package",
-    "attr1": "test"
-}
-"""
-    with pytest.raises(TypeError) as m:
-        JSONSerializer.deserialize(test_str)
-        assert str(m) == "Module some.non.existent.package does not exist"
+@dataclass
+class ClassWithInt:
+    value: int
 
-    test_str = """
-{
-    "_type": "raiden.tests.unit.test_serialization.NonExistentClass",
-    "attr1": "test"
-}
-"""
-    with pytest.raises(TypeError) as m:
+
+def test_decode_with_unknown_type():
+    test_str = """{"_type": "some.non.existent.package"}"""
+    with pytest.raises(SerializationError):
         JSONSerializer.deserialize(test_str)
-        assert str(m) == "raiden.tests.unit.test_serialization.NonExistentClass"
+
+    test_str = """{"_type": "raiden.tests.NonExistentClass"}"""
+    with pytest.raises(SerializationError):
+        JSONSerializer.deserialize(test_str)
+
+    test_str = """{"_type": "NonExistentClass"}"""
+    with pytest.raises(SerializationError):
+        JSONSerializer.deserialize(test_str)
+
+
+@pytest.mark.parametrize("input_value", ["[", b"\x00"])
+def test_deserialize_invalid_json(input_value):
+    with pytest.raises(SerializationError):
+        JSONSerializer.deserialize(input_value)
+
+
+def test_deserialize_wrong_type():
+    with pytest.raises(SerializationError):
+        JSONSerializer.deserialize("[]")
+
+
+def test_deserialize_missing_attribute():
+    test_input = json.dumps({"_type": f"{ClassWithInt.__module__}.ClassWithInt"})
+    with pytest.raises(SerializationError):
+        JSONSerializer.deserialize(test_input)
+
+
+def test_serialize_wrong_type():
+    with pytest.raises(SerializationError):
+        JSONSerializer.serialize([])
+
+
+def test_serialize_missing_attribute():
+    instance = ClassWithInt(1)
+    instance.value = b"a"
+
+    with pytest.raises(SerializationError):
+        JSONSerializer.serialize(instance)
 
 
 def test_serialization_networkx_graph():
