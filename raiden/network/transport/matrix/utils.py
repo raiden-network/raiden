@@ -32,6 +32,7 @@ from eth_utils import (
 )
 from gevent.event import Event
 from gevent.lock import Semaphore
+from marshmallow.exceptions import ValidationError
 from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
@@ -560,6 +561,14 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             continue
         try:
             message = JSONSerializer.deserialize(line)
+        except ValidationError as ex:
+            log.warning(
+                "Can't parse Message data JSON",
+                message_data=line,
+                peer_address=to_checksum_address(peer_address),
+                _exc=ex,
+            )
+            continue
         except (UnicodeDecodeError, json.JSONDecodeError) as ex:
             log.warning(
                 "Can't parse Message data JSON",
