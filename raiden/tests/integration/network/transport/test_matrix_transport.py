@@ -231,20 +231,22 @@ def test_sending_nonstring_body(  # pylint: disable=unused-argument
     assert not m._handle_message(room, event)
 
 
+@pytest.mark.parametrize(
+    "message_input", ['{"this": 1, "message": 5, "is": 3, "not_valid": 5}', "["]
+)
 def test_processing_invalid_message_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+    mock_matrix, skip_userid_validation, message_input
 ):
     m = mock_matrix
-    invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
-    room, event = make_message(overwrite_data=invalid_message)
+    room, event = make_message(overwrite_data=message_input)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argument
+def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     m = mock_matrix
-    invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
+    invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
