@@ -768,7 +768,6 @@ class TokenNetwork:
                     partner=partner,
                     block_identifier="latest",
                 )
-                given_block_identifier = self.proxy.jsonrpc_client.get_block("latest")["number"]
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
@@ -839,7 +838,6 @@ class TokenNetwork:
                     total_deposit=total_deposit,
                     previous_total_deposit=our_details.deposit,
                     partner=partner,
-                    given_block_identifier=given_block_identifier,
                     log_details=log_details,
                 )
 
@@ -849,7 +847,6 @@ class TokenNetwork:
         total_deposit: TokenAmount,
         partner: Address,
         previous_total_deposit: TokenAmount,
-        given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
@@ -908,6 +905,7 @@ class TokenNetwork:
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
                 if receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
@@ -991,7 +989,7 @@ class TokenNetwork:
                     raise RaidenRecoverableError(msg)
 
                 has_sufficient_balance = (
-                    self.token.balance_of(self.node_address, given_block_identifier)
+                    self.token.balance_of(self.node_address, failed_at_blocknumber)
                     < amount_to_deposit
                 )
                 if not has_sufficient_balance:
@@ -1051,8 +1049,7 @@ class TokenNetwork:
                 block_identifier=failed_at_blockhash,
             )
             has_sufficient_balance = (
-                self.token.balance_of(self.node_address, given_block_identifier)
-                < amount_to_deposit
+                self.token.balance_of(self.node_address, failed_at_blocknumber) < amount_to_deposit
             )
             if allowance < amount_to_deposit:
                 msg = (
@@ -1093,7 +1090,7 @@ class TokenNetwork:
 
             total_channel_deposit = total_deposit + partner_details.deposit
 
-            network_balance = self.token.balance_of(Address(self.address), given_block_identifier)
+            network_balance = self.token.balance_of(Address(self.address), failed_at_blocknumber)
 
             # Deposit was prohibited because the channel is settled
             if channel_state == ChannelState.SETTLED:
