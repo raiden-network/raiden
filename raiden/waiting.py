@@ -7,11 +7,7 @@ from eth_utils import to_checksum_address
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.state import (
-    CHANNEL_AFTER_CLOSE_STATES,
-    CHANNEL_STATE_SETTLED,
-    NODE_NETWORK_REACHABLE,
-)
+from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES, NODE_NETWORK_REACHABLE, ChannelState
 from raiden.transfer.state_change import ContractReceiveChannelWithdraw
 from raiden.utils.typing import (
     Address,
@@ -89,7 +85,7 @@ def wait_for_newchannel(
         )
 
 
-def wait_for_participant_newbalance(
+def wait_for_participant_deposit(
     raiden: "RaidenService",
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
@@ -127,9 +123,7 @@ def wait_for_participant_newbalance(
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.debug(
-            "wait_for_participant_newbalance", current_balance=current_balance, **log_details
-        )
+        log.debug("wait_for_participant_deposit", current_balance=current_balance, **log_details)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
@@ -201,7 +195,7 @@ def wait_for_channel_in_states(
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
-    target_states: Sequence[str],
+    target_states: Sequence[ChannelState],
 ) -> None:
     """Wait until all channels are in `target_states`.
 
@@ -329,7 +323,7 @@ def wait_for_settle(
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,
-        target_states=(CHANNEL_STATE_SETTLED,),
+        target_states=(ChannelState.STATE_SETTLED,),
     )
 
 

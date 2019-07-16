@@ -22,7 +22,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
+    ChannelState,
     NettingChannelState,
     RouteState,
     message_identifier_from_prng,
@@ -117,7 +117,7 @@ def handle_block(
     events: List[Event] = list()
 
     if lock_has_expired and initiator_state.transfer_state != "transfer_expired":
-        is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
         if is_channel_open:
             expired_lock_events = channel.send_lock_expired(
                 channel_state=channel_state,
@@ -203,10 +203,10 @@ def try_new_route(
 
         assert isinstance(candidate_channel_state, NettingChannelState)
 
-        is_usable_route = channel.is_channel_usable(
-            candidate_channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+        is_channel_usable = channel.is_channel_usable_for_new_transfer(
+            channel_state=candidate_channel_state, transfer_amount=amount_with_fee
         )
-        if is_usable_route:
+        if is_channel_usable:
             channel_state = candidate_channel_state
             route_state = reachable_route_state
             break
@@ -380,7 +380,7 @@ def handle_offchain_secretreveal(
         transfer_secrethash=initiator_state.transfer_description.secrethash,
     )
     sent_by_partner = state_change.sender == channel_state.partner_state.address
-    is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+    is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
     if valid_reveal and is_channel_open and sent_by_partner:
         events = events_for_unlock_lock(
@@ -417,7 +417,7 @@ def handle_onchain_secretreveal(
     is_valid_secret = is_valid_secret_reveal(
         state_change=state_change, transfer_secrethash=secrethash
     )
-    is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+    is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
     is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration
 
     is_lock_unlocked = is_valid_secret and not is_lock_expired

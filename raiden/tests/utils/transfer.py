@@ -10,7 +10,10 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Message, Metadata, RouteMetadata, Unlock
+from raiden.messages.abstract import Message
+from raiden.messages.decode import balanceproof_from_envelope
+from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.transfers import LockedTransfer, LockExpired, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
@@ -20,11 +23,10 @@ from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
+    ChannelState,
     HashTimeLockState,
     NettingChannelState,
     PendingLocksState,
-    balanceproof_from_envelope,
     make_empty_pending_locks_state,
 )
 from raiden.utils import random_secret
@@ -325,8 +327,8 @@ def transfer_and_assert_path(
             f"{to_checksum_address(to_app.raiden.address)} must be open to be used for a "
             f"transfer"
         )
-        assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
-        assert channel.get_status(to_channel_state) == CHANNEL_STATE_OPENED, msg
+        assert channel.get_status(from_channel_state) == ChannelState.STATE_OPENED, msg
+        assert channel.get_status(to_channel_state) == ChannelState.STATE_OPENED, msg
 
         receiving.append((to_app, to_channel_state.identifier))
 

@@ -19,8 +19,7 @@ if TYPE_CHECKING:
         LockedTransferSignedState,
         LockedTransferUnsignedState,
     )
-    from raiden.messages import SignedBlindedBalanceProof  # noqa: F401
-    from raiden.messages import RequestMonitoring  # noqa: F401
+    from raiden.messages.monitoring_service import SignedBlindedBalanceProof  # noqa: F401
     from raiden.exceptions import RaidenUnrecoverableError, RaidenRecoverableError  # noqa: F401
 
 

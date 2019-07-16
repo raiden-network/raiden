@@ -322,12 +322,14 @@ def assert_channels(raiden_network, token_network_address, deposit):
         )
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
 @pytest.mark.parametrize("deposit", [5])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.flaky(max_runs=5)
 def test_stress(request, raiden_network, deposit, retry_timeout, token_addresses, port_generator):
 
     config_converter = LogLevelConfigType()

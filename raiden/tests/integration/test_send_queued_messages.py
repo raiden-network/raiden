@@ -22,6 +22,7 @@ from raiden.utils import BlockNumber, create_default_identifier
 from raiden.utils.typing import TokenAmount
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

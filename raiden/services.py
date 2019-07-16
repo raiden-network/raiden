@@ -5,7 +5,8 @@ from eth_utils import to_checksum_address
 
 from raiden import constants
 from raiden.constants import RoutingMode
-from raiden.messages import PFSCapacityUpdate, PFSFeeUpdate, RequestMonitoring
+from raiden.messages.monitoring_service import RequestMonitoring
+from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState

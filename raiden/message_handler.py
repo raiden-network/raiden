@@ -2,21 +2,18 @@ import structlog
 from eth_utils import to_hex
 
 from raiden.constants import ABSENT_SECRET
-from raiden.messages import (
-    Delivered,
+from raiden.messages.abstract import Message
+from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
+from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.transfers import (
     LockedTransfer,
     LockExpired,
-    Message,
-    Processed,
     RefundTransfer,
     RevealSecret,
     SecretRequest,
     Unlock,
-    WithdrawConfirmation,
-    WithdrawExpired,
-    WithdrawRequest,
-    lockedtransfersigned_from_message,
 )
+from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.raiden_service import RaidenService
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
@@ -28,7 +25,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
@@ -95,6 +91,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_withdrawrequest(raiden: RaidenService, message: WithdrawRequest):
+        assert message.sender, "message must be signed"
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
@@ -113,6 +110,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_withdraw_confirmation(raiden: RaidenService, message: WithdrawConfirmation):
+        assert message.sender, "message must be signed"
         withdraw = ReceiveWithdrawConfirmation(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
@@ -131,6 +129,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_withdraw_expired(raiden: RaidenService, message: WithdrawExpired):
+        assert message.sender, "message must be signed"
         withdraw_expired = ReceiveWithdrawExpired(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
@@ -149,6 +148,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
+        assert message.sender, "message must be signed"
         secret_request = ReceiveSecretRequest(
             payment_identifier=message.payment_identifier,
             amount=message.amount,
@@ -160,6 +160,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
+        assert message.sender, "message must be signed"
         state_change = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
         raiden.handle_and_track_state_changes([state_change])
 
@@ -243,10 +244,12 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_processed(raiden: RaidenService, message: Processed) -> None:
+        assert message.sender, "message must be signed"
         processed = ReceiveProcessed(message.sender, message.message_identifier)
         raiden.handle_and_track_state_changes([processed])
 
     @staticmethod
     def handle_message_delivered(raiden: RaidenService, message: Delivered) -> None:
+        assert message.sender, "message must be signed"
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
         raiden.handle_and_track_state_changes([delivered])

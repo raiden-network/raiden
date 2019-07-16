@@ -3,16 +3,11 @@ from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_CLOSING,
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
-    CHANNEL_STATE_SETTLING,
-    CHANNEL_STATE_UNUSABLE,
     NODE_NETWORK_UNKNOWN,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
+    ChannelState,
     NettingChannelState,
     PaymentNetworkState,
     QueueIdsToQueues,
@@ -261,7 +256,7 @@ def get_channelstate_for(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
         ]
-        states = filter_channels_by_status(channels, [CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         # If multiple channel states are found, return the last one.
         if states:
             channel_state = states[-1]
@@ -281,7 +276,7 @@ def get_channelstate_by_token_network_and_partner(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
         ]
-        states = filter_channels_by_status(channels, [CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         if states:
             channel_state = states[-1]
 
@@ -337,7 +332,7 @@ def get_channelstate_open(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_OPENED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_OPENED,
     )
 
 
@@ -351,7 +346,7 @@ def get_channelstate_closing(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_CLOSING,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSING,
     )
 
 
@@ -365,7 +360,7 @@ def get_channelstate_closed(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_CLOSED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSED,
     )
 
 
@@ -379,7 +374,7 @@ def get_channelstate_settling(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_SETTLING,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLING,
     )
 
 
@@ -393,7 +388,7 @@ def get_channelstate_settled(
         chain_state,
         payment_network_address,
         token_address,
-        lambda channel_state: channel.get_status(channel_state) == CHANNEL_STATE_SETTLED,
+        lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLED,
     )
 
 
@@ -495,7 +490,7 @@ def filter_channels_by_partneraddress(
             token_network.channelidentifiers_to_channels[channel_id]
             for channel_id in token_network.partneraddresses_to_channelidentifiers[partner]
         ]
-        states = filter_channels_by_status(channels, [CHANNEL_STATE_UNUSABLE])
+        states = filter_channels_by_status(channels, [ChannelState.STATE_UNUSABLE])
         # If multiple channel states are found, return the last one.
         if states:
             result.append(states[-1])
@@ -504,7 +499,7 @@ def filter_channels_by_partneraddress(
 
 
 def filter_channels_by_status(
-    channel_states: List[NettingChannelState], exclude_states: Optional[List[str]] = None
+    channel_states: List[NettingChannelState], exclude_states: Optional[List[ChannelState]] = None
 ) -> List[NettingChannelState]:
     """ Filter the list of channels by excluding ones
     for which the state exists in `exclude_states`. """

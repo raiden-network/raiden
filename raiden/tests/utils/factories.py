@@ -7,15 +7,9 @@ from hashlib import sha256
 from eth_utils import keccak, to_checksum_address
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
-from raiden.messages import (
-    Lock,
-    LockedTransfer,
-    LockExpired,
-    Metadata,
-    RefundTransfer,
-    RouteMetadata,
-    Unlock,
-)
+from raiden.messages.decode import balanceproof_from_envelope
+from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, RefundTransfer, Unlock
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -41,7 +35,6 @@ from raiden.transfer.state import (
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
-    balanceproof_from_envelope,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
@@ -1224,10 +1217,8 @@ def make_transfers_pair(
         assert lockedtransfer_event
 
         lock_timeout = lock_expiration - block_number
-        assert channel.is_channel_usable(
-            candidate_channel_state=channels[payee_index],
-            transfer_amount=amount,
-            lock_timeout=lock_timeout,
+        assert channel.is_channel_usable_for_mediation(
+            channel_state=channels[payee_index], transfer_amount=amount, lock_timeout=lock_timeout
         )
         sent_transfer = lockedtransfer_event.transfer
 

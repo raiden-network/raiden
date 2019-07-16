@@ -414,7 +414,7 @@ jobs:
           destination: synapse-logs
 
       - store_artifacts:
-          path: /tmp/eth/logs
+          path: /tmp/tests/logs
           destination: eth-logs
 
   finalize:
@@ -491,7 +491,7 @@ jobs:
           command: |
             source .circleci/get_archive_tag.sh
             make bundle-docker
-            echo raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-linux-<<parameters.architecture>>.txt
+            echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-${RELEASE_TYPE}-linux-<<parameters.architecture>>.txt
       - persist_to_workspace:
           root: "~"
           paths:
@@ -523,7 +523,7 @@ jobs:
           command: |
             pyinstaller --noconfirm --clean raiden.spec
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
-            echo raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-macOS-x86_64.txt
+            echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-${RELEASE_TYPE}-macOS-x86_64.txt
       - persist_to_workspace:
           root: "~"
           paths:

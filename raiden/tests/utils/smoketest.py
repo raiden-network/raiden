@@ -46,12 +46,13 @@ from raiden.tests.utils.eth_node import (
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterable, Port
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
@@ -272,6 +273,7 @@ def setup_raiden(
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
+        token_contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
@@ -401,7 +403,7 @@ def run_smoketest(
         )
         assert distributable == TEST_DEPOSIT_AMOUNT
         assert distributable == channel_state.our_state.contract_balance
-        assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        assert channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
         port_number = raiden_service.config["api_port"]
         response = requests.get(f"http://localhost:{port_number}/api/v1/channels")

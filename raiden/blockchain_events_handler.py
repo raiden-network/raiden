@@ -4,13 +4,13 @@ import gevent
 
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import PATH_FINDING_BROADCASTING_ROOM, RoutingMode
-from raiden.messages import PFSFeeUpdate
+from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.services import send_pfs_update
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (
     ActionChannelUpdateFee,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
     ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
 )
@@ -85,7 +85,7 @@ def after_new_channel_start_healthcheck(
 
 
 def after_new_deposit_join_network(
-    raiden: "RaidenService", state_change: ContractReceiveChannelNewBalance
+    raiden: "RaidenService", state_change: ContractReceiveChannelDeposit
 ) -> None:
     our_address = raiden.address
 
@@ -125,8 +125,8 @@ def after_blockchain_statechange(raiden: "RaidenService", state_change: StateCha
         assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
         after_new_route_join_network(raiden, state_change)
 
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
         after_new_deposit_join_network(raiden, state_change)
 
     elif type(state_change) == ActionChannelUpdateFee:

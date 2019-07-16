@@ -21,12 +21,18 @@ from raiden.tests.utils.smartcontracts import (
 from raiden.utils import privatekey_to_address, typing
 from raiden.utils.typing import Optional
 from raiden_contracts.constants import (
+    CONTRACT_HUMAN_STANDARD_TOKEN,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
 )
+
+
+@pytest.fixture
+def token_contract_name() -> str:
+    return CONTRACT_HUMAN_STANDARD_TOKEN
 
 
 @pytest.fixture(name="token_addresses")
@@ -38,6 +44,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
     token_network_registry_address,
     register_tokens,
     contract_manager,
+    token_contract_name,
 ) -> typing.List[typing.Address]:
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
@@ -57,6 +64,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
         deploy_service=deploy_service,
         participants=participants,
         contract_manager=contract_manager,
+        token_contract_name=token_contract_name,
     )
 
     if register_tokens:
@@ -227,7 +235,7 @@ def register_token_and_return_the_network_proxy(
 
 
 @pytest.fixture(name="token_proxy")
-def deploy_token_and_return_proxy(deploy_client, contract_manager):
+def deploy_token_and_return_proxy(deploy_client, contract_manager, token_contract_name):
     token_contract = deploy_token(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
@@ -235,6 +243,7 @@ def deploy_token_and_return_proxy(deploy_client, contract_manager):
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
+        token_contract_name=token_contract_name,
     )
 
     return Token(

@@ -1,5 +1,6 @@
 from eth_utils import denoms, to_hex
 
+import raiden_contracts.constants
 from raiden.constants import Environment
 from raiden.utils.typing import FeeAmount, NetworkTimeout, TokenAmount
 
@@ -7,6 +8,8 @@ CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
 GAS_LIMIT_HEX = to_hex(GAS_LIMIT)
 GAS_PRICE = denoms.shannon * 20  # pylint: disable=no-member
+
+DEFAULT_HTTP_SERVER_PORT = 5001
 
 DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF = 5
 DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.0
@@ -43,8 +46,8 @@ DEFAULT_PATHFINDING_IOU_TIMEOUT = 50000  # now the pfs has 200h to cash in
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"
 
-PRODUCTION_CONTRACT_VERSION = "0.18.0"
-DEVELOPMENT_CONTRACT_VERSION = "0.18.0"
+PRODUCTION_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
+DEVELOPMENT_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
 MIN_REI_THRESHOLD = 100
 

@@ -21,7 +21,7 @@ from raiden.constants import (
     SECRET_LENGTH,
     Environment,
 )
-from raiden.messages import LockedTransfer, Unlock
+from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
@@ -30,9 +30,10 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
+    CONTRACT_CUSTOM_TOKEN,
     CONTRACT_HUMAN_STANDARD_TOKEN,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -154,7 +155,9 @@ def test_payload_with_invalid_addresses(api_server_test_instance, rest_api_port_
         "http://localhost:{port}/api/v1/" "channels/ea674fdde714fd979de3edf0f56aa9716b898ec8"
     ).format(port=rest_api_port_number)
 
-    request = grequests.patch(url_without_prefix, json=dict(state="CHANNEL_STATE_SETTLED"))
+    request = grequests.patch(
+        url_without_prefix, json=dict(state=ChannelState.STATE_SETTLED.value)
+    )
     response = request.send().response
 
     assert_response_with_code(response, HTTPStatus.NOT_FOUND)
@@ -329,7 +332,12 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
-        {"balance": 0, "state": CHANNEL_STATE_OPENED, "channel_identifier": 1, "total_deposit": 0}
+        {
+            "balance": 0,
+            "state": ChannelState.STATE_OPENED.value,
+            "channel_identifier": 1,
+            "total_deposit": 0,
+        }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
 
@@ -357,7 +365,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     expected_response.update(
         {
             "balance": total_deposit,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.STATE_OPENED.value,
             "channel_identifier": second_channel_id,
             "token_network_address": token_network_address,
             "total_deposit": total_deposit,
@@ -410,7 +418,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_OPENED,
+        "state": ChannelState.STATE_OPENED.value,
         "balance": total_deposit,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
@@ -436,7 +444,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_OPENED,
+        "state": ChannelState.STATE_OPENED.value,
         "balance": total_deposit,
         "total_deposit": total_deposit,
         "token_network_address": token_network_address,
@@ -488,7 +496,7 @@ def test_api_open_close_and_settle_channel(
     expected_response.update(
         {
             "balance": balance,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.STATE_OPENED.value,
             "reveal_timeout": reveal_timeout,
             "channel_identifier": channel_identifier,
             "total_deposit": 0,
@@ -506,7 +514,7 @@ def test_api_open_close_and_settle_channel(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json={"state": CHANNEL_STATE_CLOSED},
+        json={"state": ChannelState.STATE_CLOSED.value},
     )
     response = request.send().response
     assert_proper_response(response)
@@ -517,7 +525,7 @@ def test_api_open_close_and_settle_channel(
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "state": CHANNEL_STATE_CLOSED,
+        "state": ChannelState.STATE_CLOSED.value,
         "balance": balance,
         "total_deposit": balance,
     }
@@ -550,7 +558,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     expected_response.update(
         {
             "balance": balance,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.STATE_OPENED.value,
             "reveal_timeout": reveal_timeout,
             "channel_identifier": channel_identifier,
             "total_deposit": 0,
@@ -567,7 +575,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json={"state": CHANNEL_STATE_CLOSED},
+        json={"state": ChannelState.STATE_CLOSED.value},
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
@@ -649,7 +657,7 @@ def test_api_channel_state_change_errors(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json=dict(state=CHANNEL_STATE_CLOSED, total_deposit=200),
+        json=dict(state=ChannelState.STATE_CLOSED.value, total_deposit=200),
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
@@ -673,7 +681,7 @@ def test_api_channel_state_change_errors(
             token_address=token_address,
             partner_address=partner_address,
         ),
-        json=dict(state=CHANNEL_STATE_CLOSED),
+        json=dict(state=ChannelState.STATE_CLOSED.value),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -1476,7 +1484,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     expected_response.update(
         {
             "balance": balance_working,
-            "state": CHANNEL_STATE_OPENED,
+            "state": ChannelState.STATE_OPENED.value,
             "channel_identifier": first_channel_identifier,
             "total_deposit": balance_working,
         }
@@ -1882,6 +1890,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     assert response.status_code == 404 and b"Channel" in response.content
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
 def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses):
@@ -1940,3 +1949,44 @@ def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses)
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("token_contract_name", [CONTRACT_CUSTOM_TOKEN])
+def test_api_testnet_token_mint(api_server_test_instance, token_addresses):
+    user_address = factories.make_checksum_address()
+    token_address = token_addresses[0]
+    url = api_url_for(api_server_test_instance, "tokensmintresource", token_address=token_address)
+
+    request = grequests.post(url, json=dict(to=user_address, value=1, contract_method="mintFor"))
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # mint method defaults to mintFor
+    request = grequests.post(url, json=dict(to=user_address, value=10))
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # fails because requested mint method is not there
+    request = grequests.post(url, json=dict(to=user_address, value=10, contract_method="mint"))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # fails because of invalid choice of mint method
+    request = grequests.post(
+        url, json=dict(to=user_address, value=10, contract_method="unknownMethod")
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # invalid due to negative value
+    request = grequests.post(url, json=dict(to=user_address, value=-1))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # invalid due to invalid address
+    request = grequests.post(url, json=dict(to=user_address[:-2], value=10))
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)

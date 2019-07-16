@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 import gevent
 
 from raiden.tests.utils.factories import make_chain_state
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, TransactionExecutionStatus
+from raiden.transfer.state import ChannelState, TransactionExecutionStatus
 from raiden.waiting import wait_for_channel_in_states
 
 
@@ -29,7 +29,7 @@ def test_wait_for_channel_in_states():
             token_address=container.token_address,
             channel_ids=channel_ids,
             retry_timeout=0.01,
-            target_states=[CHANNEL_STATE_CLOSED],
+            target_states=[ChannelState.STATE_CLOSED],
         )
 
     with patch("raiden.transfer.views.state_from_raiden", return_value=container.chain_state):

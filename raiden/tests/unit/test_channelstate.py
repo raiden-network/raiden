@@ -9,7 +9,8 @@ from typing import List
 import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
-from raiden.messages import Lock, Unlock
+from raiden.messages.decode import balanceproof_from_envelope
+from raiden.messages.transfers import Lock, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -54,7 +55,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSING,
+    ChannelState,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -62,10 +63,9 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
     TransactionExecutionStatus,
     UnlockPartialProofState,
-    balanceproof_from_envelope,
     make_empty_pending_locks_state,
     message_identifier_from_prng,
 )
@@ -74,7 +74,7 @@ from raiden.transfer.state_change import (
     ActionChannelWithdraw,
     Block,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
@@ -250,10 +250,10 @@ def test_channelstate_update_contract_balance():
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -294,10 +294,10 @@ def test_channelstate_decreasing_contract_balance():
     amount = 10
     balance1_new = our_model1.balance - amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -333,10 +333,10 @@ def test_channelstate_repeated_contract_balance():
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         our_model1.participant_address, balance1_new, deposit_block_number
     )
-    state_change = ContractReceiveChannelNewBalance(
+    state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -386,10 +386,10 @@ def test_deposit_must_wait_for_confirmation():
     # pylint: disable=E1101
     assert channel_state.partner_state.contract_balance == 0
 
-    deposit_transaction = TransactionChannelNewBalance(
+    deposit_transaction = TransactionChannelDeposit(
         channel_state.our_state.address, deposit_amount, block_number
     )
-    new_balance = ContractReceiveChannelNewBalance(
+    new_balance = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
@@ -1455,7 +1455,7 @@ def test_action_close_must_change_the_channel_state():
         block_hash=make_block_hash(),
         pseudo_random_generator=random.Random(),
     )
-    assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
+    assert channel.get_status(iteration.new_state) == ChannelState.STATE_CLOSING
 
 
 def test_update_must_be_called_if_close_lost_race():

@@ -12,7 +12,7 @@ from raiden.constants import (
     LOCKSROOT_OF_NO_LOCKS,
 )
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.messages import message_from_sendevent
+from raiden.messages.encode import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork

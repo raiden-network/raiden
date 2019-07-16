@@ -19,12 +19,16 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.messages import FeeScheduleState
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
-from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_HTTP_SERVER_PORT,
+    DEFAULT_MATRIX_KNOWN_SERVERS,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+)
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
     check_ethereum_has_accounts,
@@ -40,7 +44,16 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, ChainID, Endpoint, FeeAmount, Optional, PrivateKey, Tuple
+from raiden.utils.typing import (
+    Address,
+    ChainID,
+    Endpoint,
+    FeeAmount,
+    Optional,
+    Port,
+    PrivateKey,
+    Tuple,
+)
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
@@ -158,6 +171,9 @@ def run_app(
     address, privatekey_bin = get_account_and_private_key(account_manager, address, password_file)
 
     api_host, api_port = split_endpoint(api_address)
+
+    if not api_port:
+        api_port = Port(DEFAULT_HTTP_SERVER_PORT)
 
     config["console"] = console
     config["rpc"] = rpc

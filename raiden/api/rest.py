@@ -42,6 +42,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
+    MintTokenResource,
     PartnersResourceByTokenAddress,
     PaymentResource,
     PendingTransfersResource,
@@ -71,6 +72,7 @@ from raiden.exceptions import (
     InvalidSecretHash,
     InvalidSettleTimeout,
     InvalidToken,
+    MintFailed,
     PaymentConflict,
     SamePeerAddress,
     TokenNetworkDeprecated,
@@ -85,7 +87,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, NettingChannelState
+from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.utils import (
     Endpoint,
     create_default_identifier,
@@ -154,6 +156,7 @@ URLS_V1 = [
         ChannelBlockchainEventsResource,
     ),
     ("/_debug/raiden_events", RaidenInternalEventsResource),
+    ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
 
 
@@ -384,7 +387,10 @@ class APIServer(Runnable):  # pragma: no unittest
                     web3_host, web3_port = split_endpoint(web3)
                     if web3_host in ("localhost", "127.0.0.1"):
                         host, _ = split_endpoint(Endpoint(host_header))
-                        web3 = f"http://{host}:{web3_port}"
+                        web3_port_str = ""
+                        if web3_port:
+                            web3_port_str = f":{web3_port}"
+                        web3 = f"http://{host}{web3_port_str}"
                         config["web3"] = web3
 
                 response = jsonify(config)
@@ -536,6 +542,39 @@ class RestAPI:  # pragma: no unittest
         return api_response(
             result=dict(token_network_address=to_checksum_address(token_network_address)),
             status_code=HTTPStatus.CREATED,
+        )
+
+    def mint_token(
+        self,
+        token_address: typing.TokenAddress,
+        to: typing.Address,
+        value: typing.TokenAmount,
+        contract_method: str,
+    ):
+        if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
+            return api_error(
+                errors="Minting a token is currently disabled in the Ethereum mainnet",
+                status_code=HTTPStatus.NOT_IMPLEMENTED,
+            )
+
+        log.debug(
+            "Minting token",
+            node=to_checksum_address(self.raiden_api.address),
+            token_address=to_checksum_address(token_address),
+            to=to_checksum_address(to),
+            value=value,
+            contract_method=contract_method,
+        )
+
+        try:
+            tx_hash = self.raiden_api.mint_token(
+                token_address=token_address, to=to, value=value, contract_method=contract_method
+            )
+        except MintFailed as e:
+            return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
+
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(tx_hash))
         )
 
     def open(
@@ -1022,7 +1061,7 @@ class RestAPI:  # pragma: no unittest
             total_deposit=total_deposit,
         )
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Can't set total deposit on a closed channel",
                 status_code=HTTPStatus.CONFLICT,
@@ -1065,7 +1104,7 @@ class RestAPI:  # pragma: no unittest
             total_withdraw=total_withdraw,
         )
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
             )
@@ -1097,7 +1136,7 @@ class RestAPI:  # pragma: no unittest
             channel_identifier=channel_state.identifier,
         )
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
                 errors="Attempted to close an already closed channel",
                 status_code=HTTPStatus.CONFLICT,
@@ -1182,7 +1221,7 @@ class RestAPI:  # pragma: no unittest
         elif total_withdraw is not None:
             result = self._withdraw(registry_address, channel_state, total_withdraw)
 
-        elif state == CHANNEL_STATE_CLOSED:
+        elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)
 
         else:  # should never happen, channel_state is validated in the schema

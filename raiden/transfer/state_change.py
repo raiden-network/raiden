@@ -15,7 +15,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     PaymentNetworkState,
     TokenNetworkState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
 )
 from raiden.utils.typing import (
     Address,
@@ -196,11 +196,11 @@ class ActionNewTokenNetwork(StateChange):
 
 
 @dataclass
-class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
+class ContractReceiveChannelDeposit(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a deposit. """
 
     canonical_identifier: CanonicalIdentifier
-    deposit_transaction: TransactionChannelNewBalance
+    deposit_transaction: TransactionChannelDeposit
 
     @property
     def channel_identifier(self) -> ChannelID:

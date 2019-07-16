@@ -44,15 +44,10 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_CLOSING,
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
-    CHANNEL_STATE_SETTLING,
-    CHANNEL_STATE_UNUSABLE,
     CHANNEL_STATES_PRIOR_TO_CLOSED,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    ChannelState,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -60,7 +55,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
-    TransactionChannelNewBalance,
+    TransactionChannelDeposit,
     TransactionExecutionStatus,
     TransactionOrder,
     UnlockPartialProofState,
@@ -73,7 +68,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
@@ -171,32 +166,70 @@ def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockExpir
     return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
 
-def is_channel_usable(
-    candidate_channel_state: NettingChannelState,
+def is_channel_usable_for_mediation(
+    channel_state: NettingChannelState,
     transfer_amount: PaymentWithFeeAmount,
-    lock_timeout: BlockTimeout = None,
+    lock_timeout: BlockTimeout,
 ) -> bool:
-    pending_transfers = get_number_of_pending_transfers(candidate_channel_state.our_state)
-    distributable = get_distributable(
-        candidate_channel_state.our_state, candidate_channel_state.partner_state
-    )
+    """True if the channel can safely used to mediate a transfer for the given
+    parameters.
 
-    channel_usable = (
-        get_status(candidate_channel_state) == CHANNEL_STATE_OPENED
-        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
-        and transfer_amount <= distributable
-        and is_valid_amount(candidate_channel_state.our_state, transfer_amount)
-    )
+    This will make sure that:
 
-    lock_timeout_valid = True
-    if lock_timeout is not None:
-        lock_timeout_valid = (
-            lock_timeout > 0
-            and candidate_channel_state.settle_timeout >= lock_timeout
-            and candidate_channel_state.reveal_timeout < lock_timeout
-        )
+    - The channel has capacity.
+    - The number of locks can be claimed on-chain.
+    - The transfer amount does not overflow.
+    - The lock expiration is smaller than the settlement window.
+
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
+
+    The lock expiration has to be smaller than the channel's settlement window
+    because otherwise it is possible to employ attacks. Where an attacker open
+    two channels to the victim, with different settlement windows. The channel
+    with lower settlement is used to start a payment to the other channel, if
+    the lock's expiration is allowed to be larger than the settlement window,
+    then the attacker can close and settle the incoming channel before the lock
+    expires, and claim the lock on the outgoing channel by registering the
+    secret on-chain.
+    """
+
+    channel_usable = is_channel_usable_for_new_transfer(channel_state, transfer_amount)
+    lock_timeout_valid = (
+        lock_timeout > 0
+        and channel_state.settle_timeout >= lock_timeout
+        and channel_state.reveal_timeout < lock_timeout
+    )
 
     return channel_usable and lock_timeout_valid
+
+
+def is_channel_usable_for_new_transfer(
+    channel_state: NettingChannelState, transfer_amount: PaymentWithFeeAmount
+) -> bool:
+    """True if the channel be used to start a new transfer.
+
+    This will make sure that:
+
+    - The channel has capacity.
+    - The number of locks can be claimed on-chain.
+    - The transfer amount does not overflow.
+
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
+    """
+    pending_transfers = get_number_of_pending_transfers(channel_state.our_state)
+    distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
+
+    channel_usable = (
+        get_status(channel_state) == ChannelState.STATE_OPENED
+        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
+        and transfer_amount <= distributable
+        and is_valid_amount(channel_state.our_state, transfer_amount)
+    )
+    return channel_usable
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
@@ -320,11 +353,12 @@ def is_valid_channel_total_withdraw(channel_total_withdraw) -> bool:
     return channel_total_withdraw <= UINT256_MAX
 
 
-def is_valid_withdraw_request_signature(
-    withdraw_request: ReceiveWithdrawRequest
+def is_valid_withdraw(
+    withdraw_request: Union[
+        ReceiveWithdrawRequest, ReceiveWithdrawConfirmation, ReceiveWithdrawExpired
+    ]
 ) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawRequest message corresponds
-    to the data in the message itself.
+    """True if the signature of the message corresponds is valid.
 
     This predicate is intentionally only checking the signature against the
     message data, and not the expected data. Before this check the fields of
@@ -339,52 +373,6 @@ def is_valid_withdraw_request_signature(
 
     return is_valid_signature(
         data=packed, signature=withdraw_request.signature, sender_address=withdraw_request.sender
-    )
-
-
-def is_valid_withdraw_confirmation_signature(
-    withdraw_confirmation: ReceiveWithdrawConfirmation
-) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawConfirmation message
-    corresponds to the data in the message itself.
-
-    This predicate is intentionally only checking the signature against the
-    message data, and not the expected data. Before this check the fields of
-    the message must be validated.
-    """
-    packed = pack_withdraw(
-        canonical_identifier=withdraw_confirmation.canonical_identifier,
-        participant=withdraw_confirmation.participant,
-        total_withdraw=withdraw_confirmation.total_withdraw,
-        expiration_block=withdraw_confirmation.expiration,
-    )
-
-    return is_valid_signature(
-        data=packed,
-        signature=withdraw_confirmation.signature,
-        sender_address=withdraw_confirmation.sender,
-    )
-
-
-def is_valid_withdraw_expired_signature(
-    withdraw_expired: ReceiveWithdrawExpired
-) -> SuccessOrError:
-    """True if the signature of the ReceiveWithdrawExpired message corresponds
-    to the data in the message itself.
-
-    This predicate is intentionally only checking the signature against the
-    message data, and not the expected data. Before this check the fields of
-    the message must be validated.
-    """
-    packed = pack_withdraw(
-        canonical_identifier=withdraw_expired.canonical_identifier,
-        participant=withdraw_expired.participant,
-        total_withdraw=withdraw_expired.total_withdraw,
-        expiration_block=withdraw_expired.expiration,
-    )
-
-    return is_valid_signature(
-        data=packed, signature=withdraw_expired.signature, sender_address=withdraw_expired.sender
     )
 
 
@@ -503,7 +491,7 @@ def is_balance_proof_usable_onchain(
     # TODO: Accept unlock messages if the node has not yet sent a transaction
     # with the balance proof to the blockchain, this will save one call to
     # unlock on-chain for the non-closing party.
-    if get_status(channel_state) != CHANNEL_STATE_OPENED:
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
         # The channel must be opened, otherwise if receiver is the closer, the
         # balance proof cannot be used onchain.
         msg = f"The channel is already closed."
@@ -924,7 +912,7 @@ def is_valid_action_withdraw(
     )
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
-    if get_status(channel_state) != CHANNEL_STATE_OPENED:
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
         msg = f"Invalid withdraw, the channel is not opened"
         result = (False, msg)
     elif withdraw_amount <= 0:
@@ -950,7 +938,7 @@ def is_valid_withdraw_request(
     expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_request_signature(withdraw_request)
+    valid_signature, signature_msg = is_valid_withdraw(withdraw_request)
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
 
@@ -1016,7 +1004,7 @@ def is_valid_withdraw_confirmation(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_confirmation_signature(received_withdraw)
+    valid_signature, signature_msg = is_valid_withdraw(received_withdraw)
 
     if not withdraw_state:
         msg = (
@@ -1088,7 +1076,7 @@ def is_valid_withdraw_expired(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw_expired_signature(state_change)
+    valid_signature, signature_msg = is_valid_withdraw(state_change)
 
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
@@ -1313,7 +1301,7 @@ def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -
     return len(channel_end_state.pending_locks.locks)
 
 
-def get_status(channel_state: NettingChannelState) -> str:
+def get_status(channel_state: NettingChannelState) -> ChannelState:
     if channel_state.settle_transaction:
         finished_successfully = (
             channel_state.settle_transaction.result == TransactionExecutionStatus.SUCCESS
@@ -1321,11 +1309,11 @@ def get_status(channel_state: NettingChannelState) -> str:
         running = channel_state.settle_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = CHANNEL_STATE_SETTLED
+            result = ChannelState.STATE_SETTLED
         elif running:
-            result = CHANNEL_STATE_SETTLING
+            result = ChannelState.STATE_SETTLING
         else:
-            result = CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     elif channel_state.close_transaction:
         finished_successfully = (
@@ -1334,14 +1322,14 @@ def get_status(channel_state: NettingChannelState) -> str:
         running = channel_state.close_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = CHANNEL_STATE_CLOSED
+            result = ChannelState.STATE_CLOSED
         elif running:
-            result = CHANNEL_STATE_CLOSING
+            result = ChannelState.STATE_CLOSING
         else:
-            result = CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     else:
-        result = CHANNEL_STATE_OPENED
+        result = ChannelState.STATE_OPENED
 
     return result
 
@@ -1445,7 +1433,7 @@ def create_sendlockedtransfer(
     assert amount <= get_distributable(our_state, partner_state), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     lock = HashTimeLockState(amount=amount, expiration=expiration, secrethash=secrethash)
 
@@ -1511,7 +1499,7 @@ def create_unlock(
     assert is_lock_pending(our_state, lock.secrethash), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     our_balance_proof = our_state.balance_proof
     msg = "the lock is pending, it must be in the pending locks"
@@ -1603,7 +1591,7 @@ def send_refundtransfer(
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     send_mediated_transfer, pending_locks = create_sendlockedtransfer(
         channel_state=channel_state,
@@ -1771,7 +1759,7 @@ def send_lock_expired(
     pseudo_random_generator: random.Random,
 ) -> List[SendLockExpired]:
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     send_lock_expired, pending_locks = create_sendexpiredlock(
         sender_end_state=channel_state.our_state,
@@ -2275,7 +2263,7 @@ def handle_block(
 
     events: List[Event] = list()
 
-    if get_status(channel_state) == CHANNEL_STATE_OPENED:
+    if get_status(channel_state) == ChannelState.STATE_OPENED:
         expired_withdraws = send_expired_withdraws(
             channel_state=channel_state,
             block_number=block_number,
@@ -2283,7 +2271,7 @@ def handle_block(
         )
         events.extend(expired_withdraws)
 
-    if get_status(channel_state) == CHANNEL_STATE_CLOSED:
+    if get_status(channel_state) == ChannelState.STATE_CLOSED:
         msg = "channel get_status is STATE_CLOSED, but close_transaction is not set"
         assert channel_state.close_transaction, msg
         msg = "channel get_status is STATE_CLOSED, but close_transaction block number is missing"
@@ -2304,7 +2292,7 @@ def handle_block(
 
     while is_deposit_confirmed(channel_state, block_number):
         order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
-        apply_channel_newbalance(channel_state, order_deposit_transaction.transaction)
+        apply_channel_deposit(channel_state, order_deposit_transaction.transaction)
 
     return TransitionResult(channel_state, events)
 
@@ -2396,15 +2384,15 @@ def handle_channel_settled(
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_newbalance(
+def handle_channel_depsoit(
     channel_state: NettingChannelState,
-    state_change: ContractReceiveChannelNewBalance,
+    state_change: ContractReceiveChannelDeposit,
     block_number: BlockNumber,
 ) -> TransitionResult[NettingChannelState]:
     deposit_transaction = state_change.deposit_transaction
 
     if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
-        apply_channel_newbalance(channel_state, state_change.deposit_transaction)
+        apply_channel_deposit(channel_state, state_change.deposit_transaction)
     else:
         order = TransactionOrder(deposit_transaction.deposit_block_number, deposit_transaction)
         heapq.heappush(channel_state.deposit_transaction_queue, order)
@@ -2413,8 +2401,8 @@ def handle_channel_newbalance(
     return TransitionResult(channel_state, events)
 
 
-def apply_channel_newbalance(
-    channel_state: NettingChannelState, deposit_transaction: TransactionChannelNewBalance
+def apply_channel_deposit(
+    channel_state: NettingChannelState, deposit_transaction: TransactionChannelDeposit
 ) -> None:
     participant_address = deposit_transaction.participant_address
     contract_balance = Balance(deposit_transaction.contract_balance)
@@ -2458,7 +2446,7 @@ def handle_channel_batch_unlock(
     new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(channel_state) == CHANNEL_STATE_SETTLED:
+    if get_status(channel_state) == ChannelState.STATE_SETTLED:
 
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state
@@ -2535,9 +2523,9 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
         iteration = handle_channel_settled(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
-        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
+        iteration = handle_channel_depsoit(channel_state, state_change, block_number)
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)

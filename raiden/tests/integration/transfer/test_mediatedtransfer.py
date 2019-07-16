@@ -6,7 +6,7 @@ import pytest
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, RevealSecret, SecretRequest
+from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
@@ -15,7 +15,12 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, transfer, wait_assert
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    transfer,
+    transfer_and_assert_path,
+    wait_assert,
+)
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelUpdateFee
@@ -185,18 +190,18 @@ def run_test_mediated_transfer_with_entire_deposit(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
-    transfer(
-        initiator_app=app0,
-        target_app=app2,
+
+    transfer_and_assert_path(
+        path=raiden_network,
         token_address=token_address,
         amount=deposit,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 
-    transfer(
-        initiator_app=app2,
-        target_app=app0,
+    reverse_path = list(raiden_network[::-1])
+    transfer_and_assert_path(
+        path=reverse_path,
         token_address=token_address,
         amount=deposit * 2,
         identifier=2,

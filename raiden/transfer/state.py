@@ -2,8 +2,8 @@
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import Enum
 from random import Random
-from typing import TYPE_CHECKING, Tuple
 
 import networkx
 from eth_utils import to_checksum_address, to_hex
@@ -52,49 +52,35 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    Tuple,
     Union,
     WithdrawAmount,
     typecheck,
 )
 
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from messages import EnvelopeMessage
-
-
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
-CHANNEL_STATE_CLOSED = "closed"
-CHANNEL_STATE_CLOSING = "waiting_for_close"
-CHANNEL_STATE_OPENED = "opened"
-CHANNEL_STATE_SETTLED = "settled"
-CHANNEL_STATE_SETTLING = "waiting_for_settle"
-CHANNEL_STATE_UNUSABLE = "channel_unusable"
 
-CHANNEL_STATES_PRIOR_TO_CLOSED = (CHANNEL_STATE_OPENED, CHANNEL_STATE_CLOSING)
+class ChannelState(Enum):
+    STATE_CLOSED = "closed"
+    STATE_CLOSING = "waiting_for_close"
+    STATE_OPENED = "opened"
+    STATE_SETTLED = "settled"
+    STATE_SETTLING = "waiting_for_settle"
+    STATE_UNUSABLE = "channel_unusable"
 
-CHANNEL_AFTER_CLOSE_STATES = (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLING, CHANNEL_STATE_SETTLED)
+
+CHANNEL_STATES_PRIOR_TO_CLOSED = (ChannelState.STATE_OPENED, ChannelState.STATE_CLOSING)
+CHANNEL_STATES_UP_TO_CLOSED = CHANNEL_STATES_PRIOR_TO_CLOSED + (ChannelState.STATE_CLOSED,)
+CHANNEL_AFTER_CLOSE_STATES = (
+    ChannelState.STATE_CLOSED,
+    ChannelState.STATE_SETTLING,
+    ChannelState.STATE_SETTLED,
+)
 
 NODE_NETWORK_UNKNOWN = "unknown"
 NODE_NETWORK_UNREACHABLE = "unreachable"
 NODE_NETWORK_REACHABLE = "reachable"
-
-
-def balanceproof_from_envelope(envelope_message: "EnvelopeMessage",) -> "BalanceProofSignedState":
-    return BalanceProofSignedState(
-        nonce=envelope_message.nonce,
-        transferred_amount=envelope_message.transferred_amount,
-        locked_amount=envelope_message.locked_amount,
-        locksroot=envelope_message.locksroot,
-        message_hash=envelope_message.message_hash,
-        signature=envelope_message.signature,
-        sender=envelope_message.sender,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=envelope_message.chain_id,
-            token_network_address=envelope_message.token_network_address,
-            channel_identifier=envelope_message.channel_identifier,
-        ),
-    )
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -196,7 +182,7 @@ class HashTimeLockState(State):
         typecheck(self.expiration, T_BlockNumber)
         typecheck(self.secrethash, T_Secret)
 
-        from raiden.messages import Lock  # put here to avoid cyclic depenendcies
+        from raiden.messages.transfers import Lock  # put here to avoid cyclic depenendcies
 
         lock = Lock(amount=self.amount, expiration=self.expiration, secrethash=self.secrethash)
         self.encoded = EncodedData(lock.as_bytes)
@@ -265,7 +251,7 @@ def make_empty_pending_locks_state() -> PendingLocksState:
 
 
 @dataclass(order=True)
-class TransactionChannelNewBalance(State):
+class TransactionChannelDeposit(State):
     participant_address: Address
     contract_balance: TokenAmount
     deposit_block_number: BlockNumber
@@ -279,7 +265,7 @@ class TransactionChannelNewBalance(State):
 @dataclass(order=True)
 class TransactionOrder(State):
     block_number: BlockNumber
-    transaction: TransactionChannelNewBalance
+    transaction: TransactionChannelDeposit
 
 
 @dataclass

@@ -6,7 +6,7 @@ from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 
 
 def wait_for_transaction(receiver, registry_address, token_address, sender_address):
@@ -29,7 +29,7 @@ def wait_for_transaction(receiver, registry_address, token_address, sender_addre
 
 def is_channel_open_and_funded(channel_state):
     return (
-        channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        channel.get_status(channel_state) == ChannelState.STATE_OPENED
         and channel_state.our_state.contract_balance > 0
     )
 
@@ -63,10 +63,6 @@ def saturated_count(connection_managers, registry_address, token_address):
 # TODO: add test scenarios for
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels
-# - Check if this test needs to be adapted for the matrix transport
-#   layer when activating it again. It might as it depends on the
-#   raiden_network fixture.
-@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("number_of_nodes", [6])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])

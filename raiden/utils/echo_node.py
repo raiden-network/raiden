@@ -16,7 +16,7 @@ from raiden.api.python import RaidenAPI
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
 
 log = structlog.get_logger(__name__)
 
@@ -39,7 +39,7 @@ class EchoNode:  # pragma: no unittest
         open_channels = [
             channel_state
             for channel_state in existing_channels
-            if channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+            if channel.get_status(channel_state) == ChannelState.STATE_OPENED
         ]
 
         if len(open_channels) == 0:

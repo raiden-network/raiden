@@ -9,8 +9,8 @@ from raiden.transfer.state_change import (
     ActionChannelWithdraw,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveRouteClosed,
@@ -29,7 +29,7 @@ StateChangeWithChannelID = Union[
     ActionChannelUpdateFee,
     ActionChannelWithdraw,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
     ContractReceiveChannelWithdraw,
@@ -138,7 +138,7 @@ def handle_channelnew(
 
 def handle_balance(
     token_network_state: TokenNetworkState,
-    state_change: ContractReceiveChannelNewBalance,
+    state_change: ContractReceiveChannelDeposit,
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
@@ -387,8 +387,8 @@ def state_transition(
         iteration = handle_channelnew(
             token_network_state=token_network_state, state_change=state_change
         )
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
         iteration = handle_balance(
             token_network_state=token_network_state,
             state_change=state_change,

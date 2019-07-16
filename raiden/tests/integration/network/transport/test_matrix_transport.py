@@ -17,7 +17,10 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Delivered, PFSFeeUpdate, Processed, SecretRequest, ToDevice
+from raiden.messages.matrix import ToDevice
+from raiden.messages.path_finding_service import PFSFeeUpdate
+from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.transfers import SecretRequest
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -231,20 +234,22 @@ def test_sending_nonstring_body(  # pylint: disable=unused-argument
     assert not m._handle_message(room, event)
 
 
+@pytest.mark.parametrize(
+    "message_input", ['{"this": 1, "message": 5, "is": 3, "not_valid": 5}', "["]
+)
 def test_processing_invalid_message_json(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
+    mock_matrix, skip_userid_validation, message_input
 ):
     m = mock_matrix
-    invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
-    room, event = make_message(overwrite_data=invalid_message)
+    room, event = make_message(overwrite_data=message_input)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argument
+def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     m = mock_matrix
-    invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
+    invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
@@ -696,7 +701,7 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 2
     msg_data = json.loads(pfs_room.send_text.call_args[0][0])
-    assert msg_data["_type"] == "raiden.messages.PFSFeeUpdate"
+    assert msg_data["_type"] == "raiden.messages.path_finding_service.PFSFeeUpdate"
 
     transport.stop()
     transport.get()

@@ -164,27 +164,6 @@ def insecure_tls():
     make_requests_insecure()
 
 
-@pytest.hookimpl
-def pytest_configure():
-    """ Workaround ``func_only`` bug in ``pytest-timeout``.
-    A bug in the code handling the ``func_only`` option in ``pytest-timeout`` caused the setting
-    to be ignored on any test that set a custom timeout via a pytest marker.
-    See: https://bitbucket.org/pytest-dev/pytest-timeout/issues/36
-    """
-
-    import pytest_timeout
-
-    def _validate_func_only(func_only, where):
-        if where == "config file":
-            if func_only is None:
-                return False
-            if not isinstance(func_only, bool):
-                raise ValueError(f"Invalid func_only value {func_only} from {where}")
-        return func_only
-
-    pytest_timeout._validate_func_only = _validate_func_only
-
-
 def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 

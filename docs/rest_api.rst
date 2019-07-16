@@ -767,3 +767,54 @@ The format of ``log_time`` is ISO8601 with milliseconds.
   :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
+
+
+API endpoints for testing
+=========================
+
+.. http:post:: /api/(version)/_testing/tokens/(token_address)/mint
+
+   Mint tokens. This requires the token at ``token_address`` to implement a minting method with one of
+   the common interfaces:
+
+   - ``mint(address,uint256)``
+
+   - ``mintFor(uint256,address)``
+
+   - ``increaseSupply(uint256,address)``
+
+   Depending on the token, it may also be necessary to have minter privilege.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/_testing/tokens/0x782CfA3c74332B52c6f6F1758913815128828209/mint HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+         "to": "0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685",
+         "value": 1000,
+         "contract_method": "mintFor"
+      }
+
+   :reqjson address to: The address to assign the minted tokens to.
+   :reqjson int value: The amount of tokens to be minted.
+   :reqjson string contract_method: The name of the contract's minting method. Must be one of
+      ``mintFor``, ``mint`` or ``increaseSupply``. Defaults to ``mintFor``.
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0x90896386c5b218d772c05586bde5c37c9dc90db5de660bba5bd897705c976edb"
+      }
+
+   :statuscode 200: The transaction was successful.
+   :statuscode 400: Something went wrong.
+   :resjson string transaction_hash: The hash of the minting transaction.

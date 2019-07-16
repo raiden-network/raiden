@@ -73,10 +73,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
+    ChannelState,
     HashTimeLockState,
     HopState,
     NettingChannelState,
@@ -147,7 +146,7 @@ def test_is_safe_to_wait():
     assert not is_safe, "this is expiration must not be safe"
 
 
-def test_is_channel_usable():
+def test_is_channel_usable_for_mediation():
     """ Check rules that determine if a channel can be used for transfers """
     reveal_timeout = 30
     timeout_blocks = reveal_timeout + 10
@@ -168,25 +167,23 @@ def test_is_channel_usable():
     )
 
     # the first channel is usable
-    assert channel.is_channel_usable(
-        candidate_channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert channel.is_channel_usable_for_mediation(
+        channel_state=channels[0], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
     # a channel without capacity must be skipped
-    assert not channel.is_channel_usable(
-        candidate_channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert not channel.is_channel_usable_for_mediation(
+        channel_state=channels[1], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
     # channel should be usable, due to lock_timeout larger than channel.reveal_timeout
-    assert channel.is_channel_usable(
-        candidate_channel_state=channels[2],
-        transfer_amount=amount,
-        lock_timeout=timeout_blocks + 1,
+    assert channel.is_channel_usable_for_mediation(
+        channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks + 1
     )
 
     # channel should not be usable, when lock_timeout equal or greater than channel.reveal_timeout
-    assert not channel.is_channel_usable(
-        candidate_channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
+    assert not channel.is_channel_usable_for_mediation(
+        channel_state=channels[2], transfer_amount=amount, lock_timeout=timeout_blocks
     )
 
 
@@ -505,12 +502,12 @@ def test_events_for_balanceproof_channel_closed():
     """
     pseudo_random_generator = random.Random()
 
-    for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
+    for invalid_state in (ChannelState.STATE_CLOSED, ChannelState.STATE_SETTLED):
         setup = factories.make_transfers_pair(2)
         last_pair = setup.transfers_pair[-1]
         last_channel = mediator.get_payee_channel(setup.channel_map, last_pair)
 
-        if invalid_state == CHANNEL_STATE_CLOSED:
+        if invalid_state == ChannelState.STATE_CLOSED:
             channel.set_closed(last_channel, setup.block_number)
         else:
             channel.set_settled(last_channel, setup.block_number)

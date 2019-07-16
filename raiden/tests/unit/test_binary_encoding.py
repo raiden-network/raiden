@@ -4,7 +4,8 @@ import pytest
 
 from raiden import constants
 from raiden.exceptions import InvalidSignature
-from raiden.messages import Ping, Processed
+from raiden.messages.healthcheck import Ping
+from raiden.messages.synchronization import Processed
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner, recover
 

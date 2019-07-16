@@ -29,9 +29,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_OPENED,
     NODE_NETWORK_REACHABLE,
+    ChannelState,
     NettingChannelState,
     RouteState,
     message_identifier_from_prng,
@@ -378,11 +377,11 @@ def forward_transfer_pair(
         payer_transfer.lock, payer_channel, payee_channel
     )
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
-    if not channel.is_channel_usable(
-        candidate_channel_state=payee_channel,
-        transfer_amount=amount_after_fees,
-        lock_timeout=lock_timeout,
-    ):
+    safe_to_use_channel = channel.is_channel_usable_for_mediation(
+        channel_state=payee_channel, transfer_amount=amount_after_fees, lock_timeout=lock_timeout
+    )
+
+    if not safe_to_use_channel:
         return None, []
 
     assert payee_channel.settle_timeout >= lock_timeout
@@ -447,7 +446,7 @@ def backward_transfer_pair(
 
     # Ensure the refund transfer's lock has a safe expiration, otherwise don't
     # do anything and wait for the received lock to expire.
-    if channel.is_channel_usable(backward_channel, lock.amount, lock_timeout):
+    if channel.is_channel_usable_for_mediation(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
         backward_route_state = RouteState(
@@ -715,7 +714,7 @@ def events_for_balanceproof(
 
         payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
         payee_channel_open = (
-            payee_channel and channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
+            payee_channel and channel.get_status(payee_channel) == ChannelState.STATE_OPENED
         )
 
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
@@ -861,7 +860,7 @@ def events_for_onchain_secretreveal_if_closed(
     for pending_pair in get_pending_transfer_pairs(transfers_pair):
         payer_channel = get_payer_channel(channelmap, pending_pair)
         # Don't register the secret on-chain if the channel is open or settled
-        if payer_channel and channel.get_status(payer_channel) == CHANNEL_STATE_CLOSED:
+        if payer_channel and channel.get_status(payer_channel) == ChannelState.STATE_CLOSED:
             pending_pair.payer_state = "payer_waiting_secret_reveal"
 
             if not transaction_sent:
@@ -923,7 +922,7 @@ def events_to_remove_expired_locks(
                 lock_expiration_threshold=lock_expiration_threshold,
             )
 
-            is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+            is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
             if has_lock_expired and is_channel_open:
                 transfer_pair.payee_state = "payee_expired"
@@ -1415,7 +1414,7 @@ def handle_node_change_network_state(
     if not payee_channel or not payer_channel:
         return TransitionResult(mediator_state, list())
 
-    payee_channel_open = channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
+    payee_channel_open = channel.get_status(payee_channel) == ChannelState.STATE_OPENED
     if not payee_channel_open:
         return TransitionResult(mediator_state, list())
 

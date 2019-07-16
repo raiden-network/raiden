@@ -103,7 +103,7 @@ def calculate_imbalance_fees(channel_capacity: TokenAmount) -> List[Tuple[TokenA
         constant = 4 * MAX_IMBALANCE_FEE / channel_capacity ** 2
         inner = balance - (channel_capacity // 2)
 
-        return FeeAmount(constant * inner ** 2)
+        return FeeAmount(int(constant * inner ** 2))
 
     # Do not duplicate base points when not enough token are available
     num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity)

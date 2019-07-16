@@ -34,8 +34,8 @@ from gevent.event import Event
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
-from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
-from raiden.messages import Message, SignedMessage
+from raiden.exceptions import InvalidSignature, SerializationError, TransportError
+from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
@@ -560,17 +560,9 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             continue
         try:
             message = JSONSerializer.deserialize(line)
-        except (UnicodeDecodeError, json.JSONDecodeError) as ex:
+        except SerializationError as ex:
             log.warning(
-                "Can't parse Message data JSON",
-                message_data=line,
-                peer_address=to_checksum_address(peer_address),
-                _exc=ex,
-            )
-            continue
-        except InvalidProtocolMessage as ex:
-            log.warning(
-                "Message data JSON is not a valid Message",
+                "Not a valid Message",
                 message_data=line,
                 peer_address=to_checksum_address(peer_address),
                 _exc=ex,

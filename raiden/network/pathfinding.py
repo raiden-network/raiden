@@ -22,6 +22,7 @@ from web3 import Web3
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.utils import get_response_json
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -139,7 +140,7 @@ MAX_PATHS_QUERY_ATTEMPTS = 2
 def get_pfs_info(url: str) -> Optional[PFSInfo]:
     try:
         response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
-        infos = response.json()
+        infos = get_response_json(response)
 
         return PFSInfo(
             url=url,
@@ -419,7 +420,7 @@ def post_pfs_paths(
     if response.status_code != 200:
         info = {"http_error": response.status_code}
         try:
-            response_json = response.json()
+            response_json = get_response_json(response)
         except ValueError:
             raise ServiceRequestFailed(
                 "Pathfinding service returned error code (malformed json in response)", info
@@ -433,12 +434,12 @@ def post_pfs_paths(
         raise ServiceRequestFailed("Pathfinding service returned error code", info)
 
     try:
-        response_json = response.json()
+        response_json = get_response_json(response)
         return response_json["result"], UUID(response_json["feedback_token"])
     except KeyError:
         raise ServiceRequestFailed(
             "Answer from pathfinding service not understood ('result' field missing)",
-            dict(response=response.json()),
+            dict(response=get_response_json(response)),
         )
     except ValueError:
         raise ServiceRequestFailed(

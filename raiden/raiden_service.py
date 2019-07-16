@@ -36,13 +36,10 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.messages import (
-    LockedTransfer,
-    Message,
-    SignedMessage,
-    lockedtransfersigned_from_message,
-    message_from_sendevent,
-)
+from raiden.messages.abstract import Message, SignedMessage
+from raiden.messages.decode import lockedtransfersigned_from_message
+from raiden.messages.encode import message_from_sendevent
+from raiden.messages.transfers import LockedTransfer
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -165,6 +162,8 @@ def initiator_init(
 
 
 def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
+    assert transfer.sender, "transfer must be signed"
+
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_hop = HopState(
         transfer.sender,
@@ -189,6 +188,8 @@ def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionIn
 
 
 def target_init(transfer: LockedTransfer) -> ActionInitTarget:
+    assert transfer.sender, "transfer must be signed"
+
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_hop = HopState(
         node_address=transfer.sender,
@@ -860,8 +861,6 @@ class RaidenService(Runnable):
         )
 
         for queue_identifier, event_queue in events_queues.items():
-            self.start_health_check_for(queue_identifier.recipient)
-
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)

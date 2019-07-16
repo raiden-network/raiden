@@ -22,6 +22,7 @@ from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlre
 from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
 from raiden.settings import (
+    DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
@@ -353,7 +354,7 @@ def options(func):
             option(
                 "--api-address",
                 help='"host:port" for the RPC server to listen on.',
-                default="127.0.0.1:5001",
+                default=f"127.0.0.1:{DEFAULT_HTTP_SERVER_PORT}",
                 type=str,
                 show_default=True,
             ),

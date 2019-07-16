@@ -6,7 +6,7 @@ from eth_utils import to_checksum_address
 from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
-from raiden.messages import Message
+from raiden.messages.abstract import Message
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs

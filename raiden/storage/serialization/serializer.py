@@ -8,8 +8,12 @@ import importlib
 import json
 from copy import deepcopy
 from dataclasses import is_dataclass
+from json import JSONDecodeError
+from typing import Mapping
 
-# pylint: disable=unused-import
+from marshmallow import ValidationError
+
+from raiden.exceptions import SerializationError
 from raiden.storage.serialization.types import SchemaCache
 from raiden.utils.typing import Any
 
@@ -19,8 +23,8 @@ def _import_type(type_name):
 
     try:
         module = importlib.import_module(module_name, None)
-    except ModuleNotFoundError:
-        raise TypeError(f"Module {module_name} does not exist")
+    except ModuleNotFoundError as ex:
+        raise TypeError(f"Module {module_name} does not exist") from ex
 
     if not hasattr(module, klass_name):
         raise TypeError(f"Could not find {module_name}.{klass_name}")
@@ -44,16 +48,31 @@ class DictSerializer(SerializationBase):
         # Default, in case this is not a dataclass
         data = obj
         if is_dataclass(obj):
-            schema = SchemaCache.get_or_create_schema(obj.__class__)
-            data = schema.dump(obj)
+            try:
+                schema = SchemaCache.get_or_create_schema(obj.__class__)
+                data = schema.dump(obj)
+            except (TypeError, ValidationError) as ex:
+                raise SerializationError(f"Can't serialize: {data}") from ex
+        elif not isinstance(obj, Mapping):
+            raise SerializationError(f"Can only serialize dataclasses or dict-like objects: {obj}")
         return data
 
     @staticmethod
     def deserialize(data):
+        """ Deserialize a dict-like object.
+
+        If the key ``_type`` is present, import the target and deserialize via Marshmallow.
+        Raises ``SerializationError`` for invalid inputs.
+        """
+        if not isinstance(data, Mapping):
+            raise SerializationError(f"Can't deserialize non dict-like objects: {data}")
         if "_type" in data:
-            klass = _import_type(data["_type"])
-            schema = SchemaCache.get_or_create_schema(klass)
-            return schema.load(deepcopy(data))
+            try:
+                klass = _import_type(data["_type"])
+                schema = SchemaCache.get_or_create_schema(klass)
+                return schema.load(deepcopy(data))
+            except (ValueError, TypeError, ValidationError) as ex:
+                raise SerializationError(f"Can't deserialize: {data}") from ex
         return data
 
 
@@ -65,5 +84,13 @@ class JSONSerializer(SerializationBase):
 
     @staticmethod
     def deserialize(data):
-        data = DictSerializer.deserialize(json.loads(data))
+        """ Deserialize a JSON object.
+
+        Raises ``SerializationError`` for invalid inputs.
+        """
+        try:
+            decoded_json = json.loads(data)
+        except (UnicodeDecodeError, JSONDecodeError) as ex:
+            raise SerializationError(f"Can't decode invalid JSON: {data}") from ex
+        data = DictSerializer.deserialize(decoded_json)
         return data
