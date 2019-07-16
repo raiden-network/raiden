@@ -21,7 +21,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
 from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
-from raiden.utils.typing import Address, Dict, Iterable, List, Optional, TokenNetworkAddress
+from raiden.utils.typing import Address, Dict, Iterable, Optional, TokenNetworkAddress
 
 
 class Translator(dict):
