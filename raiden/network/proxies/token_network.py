@@ -397,6 +397,8 @@ class TokenNetwork:
             InvalidAddress: If either of the address is an invalid type or the
                 null address.
         """
+        raise RuntimeError("get_channel_identifier called")
+
         raise_if_invalid_address_pair(participant1, participant2)
 
         channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
