@@ -16,8 +16,8 @@ class RaidenRecoverableError(RaidenError):
     """Exception for recoverable errors.
 
     This base exception exists for code written in a EAFP style. It should be
-    inherited when exceptions are expected to happen and can handling them will
-    not leave the node is a undefined state.
+    inherited when exceptions are expected to happen and handling them will not
+    leave the node is a undefined state.
 
     Usage examples:
 
