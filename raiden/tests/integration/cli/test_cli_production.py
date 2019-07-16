@@ -20,15 +20,17 @@ pytestmark = [
     ),
 ]
 
+TIMEOUT = 120
 
-@pytest.mark.timeout(65)
+
+@pytest.mark.timeout(TIMEOUT)
 def test_cli_full_init(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     # expect the default mode
     expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("changed_args", [{"keystore_path": "."}])
 def test_cli_wrong_keystore_path(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -36,7 +38,7 @@ def test_cli_wrong_keystore_path(cli_args, raiden_spawner):
     child.expect("No Ethereum accounts found in the provided keystore directory")
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("removed_args", [["password_file"]])
 def test_cli_missing_password_file_enter_password(raiden_testchain, cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -49,14 +51,14 @@ def test_cli_missing_password_file_enter_password(raiden_testchain, cli_args, ra
     expect_cli_successful_connected(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("removed_args", [["data_dir"]])
 def test_cli_missing_data_dir(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("changed_args", [{"eth_rpc_endpoint": "http://8.8.8.8:2020"}])
 def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -65,7 +67,7 @@ def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
     child.expect(".*Could not contact the Ethereum node through JSON-RPC.")
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("changed_args", [{"network_id": "42"}])
 def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -73,7 +75,7 @@ def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
     child.expect("The configured network.*differs from the Ethereum client's network")
 
 
-@pytest.mark.timeout(45)
+@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize(
     "changed_args",
     [
