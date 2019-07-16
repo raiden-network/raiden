@@ -112,22 +112,47 @@ def test_get_matrix_userids_for_address():
         "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501",
     }
     assert storage.get_matrix_userids_and_addresses() == defaultdict(set)
-    assert storage.get_matrix_roomids_for_address(address) == {}
+    assert storage.get_matrix_roomids_for_address(address) == []
 
     storage.write_matrix_userids_for_address(
         address=address, user_ids=user_ids, timestamp=timestamp
     )
-    room_ids_to_aliases = {
-        "!EccQWEAMFrOhVqPgYt:localhost:8500": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8500",
-        "!lWOxcxArgnXltwsAaP:localhost:8501": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8501",
-    }
-    storage.write_matrix_roomids_for_address(
-        address=address, room_ids_to_aliases=room_ids_to_aliases, timestamp=timestamp
-    )
+    room_id = "!EccQWEAMFrOhVqPgYt:localhost:8500"
+    storage.write_matrix_roomid_for_address(address=address, room_id=room_id, timestamp=timestamp)
 
     stored_user_ids_for_address = storage.get_matrix_userids_and_addresses()
     stored_room_ids_to_aliases = storage.get_matrix_roomids_for_address(address)
 
     assert stored_user_ids_for_address[address] == set(user_ids)
-    assert stored_room_ids_to_aliases == room_ids_to_aliases
+    assert stored_room_ids_to_aliases == room_id
+    storage.database.close()
+
+
+def test_get_empty_rooms():
+    conn = make_db_connection()
+    storage = MatrixStorage(conn)
+    timestamp = datetime.utcnow()
+    address = make_address()
+
+    # satisfy foreign key constraint
+    user_ids = {
+        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500",
+        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501",
+    }
+    storage.write_matrix_userids_for_address(
+        address=address, user_ids=user_ids, timestamp=timestamp
+    )
+
+    assert storage.get_empty_rooms() == []
+    assert storage.get_matrix_roomids_for_address(address) == []
+    room_id = "!EccQWEAMFrOhVqPgYt:localhost:8500"
+    storage.write_matrix_roomid_for_address(address=address, room_id=room_id, timestamp=timestamp)
+    stored_room_ids_to_aliases = storage.get_matrix_roomids_for_address(address)
+    assert stored_room_ids_to_aliases == room_id
+    storage.write_matrix_roomid_for_address(
+        address=address, room_id=room_id, is_empty=True, timestamp=timestamp
+    )
+    empty_rooms = storage.get_empty_rooms()
+    assert empty_rooms == [room_id]
+
     storage.database.close()

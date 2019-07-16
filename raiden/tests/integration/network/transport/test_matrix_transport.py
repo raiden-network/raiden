@@ -127,7 +127,7 @@ def ping_pong_message_success(transport0, transport1):
     transport1._raiden_service.sign(pong_message)
     transport0.send_async(queueid1, ping_message)
 
-    with Timeout(20, exception=False):
+    with Timeout(40, exception=False):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
@@ -141,7 +141,7 @@ def ping_pong_message_success(transport0, transport1):
     transport1._raiden_service.sign(ping_message)
     transport1.send_async(queueid0, ping_message)
 
-    with Timeout(20, exception=False):
+    with Timeout(40, exception=False):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
@@ -999,7 +999,6 @@ def test_matrix_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport0, transport1)
 
 
-@pytest.mark.xfail(reason="XFail until raiden-network/raiden#4030 is fixed")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 def test_matrix_multi_user_roaming(matrix_transports):

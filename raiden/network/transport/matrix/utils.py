@@ -109,6 +109,8 @@ class UserAddressManager:
         self._stop_event = stop_event if stop_event else Event()
 
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
+        self._userid_to_roomid: Dict[str, str] = dict()
+        self._empty_roomids_to_user: Dict[str, bool] = dict()
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
 
@@ -252,6 +254,15 @@ class UserAddressManager:
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
 
+    def add_roomid_for_userid(self, user_id: str, room_id, is_empty=False):
+        if is_empty:
+            self._empty_roomids_to_user[user_id]: room_id
+        else:
+            self._userid_to_roomid[user_id] = room_id
+
+    def get_roomdid_for_userid(self, user_id: str) -> str:
+        return self._userid_to_roomid[user_id]
+
     @property
     def _user_id(self) -> str:
         user_id = getattr(self._client, "user_id", None)
@@ -275,36 +286,45 @@ class UserAddressManager:
         """Restores the mapping address: userids for all known addresses"""
         self._address_to_userids = address_to_userids
 
-
-def node_is_room_member(self, address: Address, room: Room) -> bool:
-    peer_ids = self.get_userids_for_address(address)
-    member_ids = {member.user_id for member in room.get_joined_members()}
-    node_is_member = bool(peer_ids & member_ids)
-    last_ex: Optional[Exception] = None
-    if not node_is_member:
-        log.debug(
-            "Waiting for peer to join from invite", peer_address=to_checksum_address(address)
-        )
-        retry_interval: float = 0.1
-        for _ in range(JOIN_RETRIES):
-            try:
-                member_ids = {
-                    member.user_id for member in room.get_joined_members(force_resync=True)
-                }
-            except MatrixRequestError as e:
-                last_ex = e
-            room_is_empty = not bool(peer_ids & member_ids)
-            if room_is_empty or last_ex:
-                if self._stop_event.wait(retry_interval):
+    def node_is_room_member(self, address: Address, room: Room) -> bool:
+        peer_ids = self.get_userids_for_address(address)
+        member_ids = {member.user_id for member in room.get_joined_members()}
+        node_is_member = bool(peer_ids & member_ids)
+        last_ex: Optional[Exception] = None
+        if not node_is_member:
+            log.debug(
+                "Waiting for peer to join from invite",
+                peer_address=to_checksum_address(address, room_id=room.room_id),
+            )
+            retry_interval: float = 0.1
+            for _ in range(7):
+                try:
+                    member_ids = {
+                        member.user_id for member in room.get_joined_members(force_resync=True)
+                    }
+                except MatrixRequestError as e:
+                    last_ex = e
+                node_is_member = bool(peer_ids & member_ids)
+                if not node_is_member or last_ex:
+                    if self._stop_event.wait(retry_interval):
+                        break
+                    retry_interval *= 2
+                    for peer_id in peer_ids:
+                        room.invite_user(peer_id)
+                else:
                     break
-                retry_interval = retry_interval * 2
-            else:
-                break
 
-    if last_ex:
-        raise last_ex
+        if last_ex:
+            raise last_ex
 
-    return node_is_member
+        if not node_is_member:
+            log.warning(
+                "Peer has not joined from invite yet, retrying invite later",
+                peer_address=to_checksum_address(address),
+                room_id=room.room_id,
+            )
+
+        return node_is_member
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:

@@ -116,10 +116,11 @@ CREATE TABLE IF NOT EXISTS matrix_user_ids (
     log_time TEXT
 );
 """
-DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES = """
-CREATE TABLE IF NOT EXISTS matrix_room_ids_and_aliases (
+DB_CREATE_MATRIX_ROOM_IDS = """
+CREATE TABLE IF NOT EXISTS matrix_room_ids (
     address BINARY PRIMARY KEY,
-    room_ids_to_aliases TEXT NOT NULL,
+    room_ids TEXT NOT NULL,
+    is_empty INTEGER,
     log_time TEXT,
     FOREIGN KEY(address) REFERENCES matrix_user_ids(address)
 );
@@ -132,5 +133,5 @@ BEGIN TRANSACTION;
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
-    DB_CREATE_MATRIX_USER_IDS, DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES
+    DB_CREATE_MATRIX_USER_IDS, DB_CREATE_MATRIX_ROOM_IDS
 )

@@ -882,19 +882,20 @@ class MatrixSQLiteStorage:
 
     def write_matrix_room_ids_for_address(self, room_id_data) -> None:
         cursor = self.conn.cursor()
-        cursor.execute(
-            "INSERT OR REPLACE INTO matrix_room_ids_and_aliases VALUES(?, ?, ?)", room_id_data
-        )
+        cursor.execute("INSERT OR REPLACE INTO matrix_room_ids VALUES(?, ?, ?, ?)", room_id_data)
         self.maybe_commit()
 
-    def get_matrix_room_ids_aliases_for_address(self, address) -> str:
+    def get_matrix_room_id_for_address(self, address) -> str:
         cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT room_ids_to_aliases FROM matrix_room_ids_and_aliases " "WHERE address = ?",
-            (address,),
-        )
+        cursor.execute("SELECT room_ids FROM matrix_room_ids WHERE address = ?", (address,))
         rows = cursor.fetchall()
-        return rows[0][0] if rows else "{}"
+        return rows[0][0] if rows else "[]"
+
+    def get_empty_rooms(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT room_ids FROM matrix_room_ids WHERE is_empty = ?", (1,))
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
 
     def write_matrix_user_ids_for_address(self, user_id_data: Tuple[Address, Any, str]) -> None:
         cursor = self.conn.cursor()
@@ -952,14 +953,15 @@ class MatrixStorage:
     def close(self) -> None:
         self.database.close()
 
-    def write_matrix_roomids_for_address(
-        self, address: Address, room_ids_to_aliases: Dict[str, Any], timestamp: datetime
+    def write_matrix_roomid_for_address(
+        self, address: Address, room_id: str, timestamp: datetime, is_empty: Optional[bool] = False
     ):
         """Save currently known matrix user_ids for an address"""
-        serialized_room_ids_to_aliases = self.serializer.serialize(room_ids_to_aliases)
+        serialized_room_ids = self.serializer.serialize(room_id)
         room_id_data = (
             address,
-            serialized_room_ids_to_aliases,
+            serialized_room_ids,
+            int(is_empty),
             timestamp.isoformat(timespec="milliseconds"),
         )
         return self.database.write_matrix_room_ids_for_address(room_id_data)
@@ -980,6 +982,10 @@ class MatrixStorage:
             returned_default_dict[address] = set(self.serializer.deserialize(user_ids))
         return returned_default_dict
 
-    def get_matrix_roomids_for_address(self, address: Address) -> List[str]:
-        room_ids_aliases = self.database.get_matrix_room_ids_aliases_for_address(address)
-        return self.serializer.deserialize(room_ids_aliases)
+    def get_matrix_roomids_for_address(self, address: Address) -> Optional[List[str]]:
+        room_id = self.database.get_matrix_room_id_for_address(address)
+        return self.serializer.deserialize(room_id) if room_id else None
+
+    def get_empty_rooms(self) -> List[str]:
+        empty_rooms = self.database.get_empty_rooms()
+        return [self.serializer.deserialize(empty_room) for empty_room in empty_rooms]
