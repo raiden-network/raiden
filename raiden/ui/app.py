@@ -92,6 +92,7 @@ def _setup_matrix(config: Dict, routing_mode: RoutingMode) -> MatrixTransport:
 
     matrix_config = MatrixConfiguration(
         available_servers=available_servers,
+        chosen_server=config_dict["server"],
         global_rooms=global_rooms,
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,

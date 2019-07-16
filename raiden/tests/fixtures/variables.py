@@ -307,11 +307,6 @@ def transport_protocol(transport):
 
 
 @pytest.fixture
-def number_of_transports():
-    return 1
-
-
-@pytest.fixture
 def skip_if_parity(blockchain_type):
     """Skip the test if it is run with a Parity node"""
     if blockchain_type == "parity":

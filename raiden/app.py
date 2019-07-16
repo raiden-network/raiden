@@ -38,6 +38,7 @@ log = structlog.get_logger(__name__)
 
 class MatrixConfiguration(NamedTuple):
     available_servers: List[MatrixURL]
+    chosen_server: Optional[MatrixURL]
     # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
     #       and fix the conditional in `raiden.ui.app:_setup_matrix`
     #       as well as the tests

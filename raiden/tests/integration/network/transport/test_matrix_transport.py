@@ -307,6 +307,7 @@ def test_matrix_message_retry(
 
     matrix_config = MatrixConfiguration(
         available_servers=[local_matrix_servers[0]],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms,
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,
@@ -373,7 +374,7 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    private_rooms, retry_interval, retries_before_backoff, global_rooms
+    private_rooms, retry_interval, retries_before_backoff, global_rooms, local_matrix_servers
 ):
     """join_global_room tries to join on all servers on available_servers config
 
@@ -383,6 +384,7 @@ def test_join_invalid_discovery(
     """
     matrix_config = MatrixConfiguration(
         available_servers=["http://invalid.server"],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms,
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,
@@ -446,6 +448,7 @@ def test_matrix_discovery_room_offline_server(
 
     matrix_config = MatrixConfiguration(
         available_servers=[local_matrix_servers[0], "https://localhost:1"],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms,
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,
@@ -467,6 +470,7 @@ def test_matrix_send_global(
 ):
     matrix_config = MatrixConfiguration(
         available_servers=[local_matrix_servers[0]],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms + [MONITORING_BROADCASTING_ROOM],
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,
@@ -514,6 +518,7 @@ def test_monitoring_global_messages(
     """
     matrix_config = MatrixConfiguration(
         available_servers=[local_matrix_servers[0]],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms + [MONITORING_BROADCASTING_ROOM],
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,
@@ -578,6 +583,7 @@ def test_pfs_global_messages(
     """
     matrix_config = MatrixConfiguration(
         available_servers=[local_matrix_servers[0]],
+        chosen_server=local_matrix_servers[0],
         global_rooms=global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
         retries_before_backoff=retries_before_backoff,
         retry_interval=retry_interval,

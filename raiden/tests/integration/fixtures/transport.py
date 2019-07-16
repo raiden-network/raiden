@@ -66,7 +66,8 @@ def matrix_transports(
         transports.append(
             MatrixTransport(
                 MatrixConfiguration(
-                    available_servers=[server],
+                    available_servers=local_matrix_servers,
+                    chosen_server=server,
                     global_rooms=global_rooms,
                     retries_before_backoff=retries_before_backoff,
                     retry_interval=retry_interval,
