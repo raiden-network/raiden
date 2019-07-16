@@ -145,7 +145,7 @@ def replay_wal(
     token_network_address: TokenNetworkAddress,
     partner_address: Address,
     translator: Optional[Translator] = None,
-):
+) -> None:
     all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     state_manager = StateManager(state_transition=node.state_transition, current_state=None)
