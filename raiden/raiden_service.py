@@ -2,7 +2,6 @@
 import os
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Tuple
 from uuid import UUID
 
 import filelock
@@ -83,11 +82,16 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Address,
+    Any,
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    Dict,
     FeeAmount,
+    Generic,
     InitiatorAddress,
+    List,
+    NamedTuple,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -95,6 +99,8 @@ from raiden.utils.typing import (
     SecretHash,
     TargetAddress,
     TokenNetworkAddress,
+    Tuple,
+    TypeVar,
     WithdrawAmount,
 )
 from raiden.utils.upgrades import UpgradeManager
@@ -225,7 +231,10 @@ class PaymentStatus(NamedTuple):
         return token_network_address == self.token_network_address and amount == self.amount
 
 
-class RaidenService(Runnable):
+T_Handler = TypeVar("T_Handler", bound=EventHandler)
+
+
+class RaidenService(Generic[T_Handler], Runnable):
     """ A Raiden node. """
 
     def __init__(
@@ -238,7 +247,7 @@ class RaidenService(Runnable):
         default_one_to_n_address: Optional[Address],
         default_msc_address: Address,
         transport,
-        raiden_event_handler: EventHandler,
+        raiden_event_handler: T_Handler,
         message_handler,
         routing_mode: RoutingMode,
         config: Dict[str, Any],

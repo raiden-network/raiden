@@ -22,8 +22,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     PRODUCTION_CONTRACT_VERSION,
 )
-from raiden.utils import typing
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, Any, BlockNumber, Dict, Optional
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
@@ -63,15 +62,19 @@ class App:  # pylint: disable=too-few-public-methods
         "max_imbalance_fee": DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
     }
 
+    config: Dict[str, Any]
+    user_deposit: Optional[UserDeposit]
+    raiden: RaidenService
+
     def __init__(
         self,
-        config: typing.Dict,
+        config: Dict,
         chain: BlockChainService,
-        query_start_block: typing.BlockNumber,
+        query_start_block: BlockNumber,
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
-        default_service_registry: typing.Optional[ServiceRegistry],
-        default_one_to_n_address: typing.Optional[Address],
+        default_service_registry: Optional[ServiceRegistry],
+        default_one_to_n_address: Optional[Address],
         default_msc_address: Address,
         transport,
         raiden_event_handler,

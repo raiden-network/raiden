@@ -29,7 +29,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.tests.utils.transfer import wait_assert
+from raiden.tests.utils.waiting import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData

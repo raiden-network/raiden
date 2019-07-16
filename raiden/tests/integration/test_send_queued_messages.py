@@ -18,7 +18,15 @@ from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
 from raiden.utils import BlockNumber, create_default_identifier
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import (
+    Balance,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+)
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -26,8 +34,11 @@ from raiden.utils.typing import TokenAmount
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.skip("Issue: #4312")
 def test_send_queued_messages(  # pylint: disable=unused-argument
-    raiden_network, deposit, token_addresses, network_wait
-):
+    raiden_network: List[App],
+    deposit: TokenAmount,
+    token_addresses: List[TokenAddress],
+    network_wait: float,
+) -> None:
     """Test re-sending of undelivered messages on node restart"""
     raise_on_failure(
         raiden_network,
@@ -39,7 +50,12 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     )
 
 
-def run_test_send_queued_messages(raiden_network, deposit, token_addresses, network_wait):
+def run_test_send_queued_messages(
+    raiden_network: List[App],
+    deposit: TokenAmount,
+    token_addresses: List[TokenAddress],
+    network_wait: float,
+) -> None:
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -47,10 +63,11 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
+    assert token_network_address, "Test setup failed"
 
     number_of_transfers = 7
     amount_per_transfer = 1
-    total_transferred_amount = amount_per_transfer * number_of_transfers
+    total_transferred_amount = TokenAmount(amount_per_transfer * number_of_transfers)
 
     # Make sure none of the transfers will be sent before the restart
     transfers = []
@@ -66,8 +83,8 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     for identifier, amount, secret, _ in transfers:
         app0.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
-            amount=amount,
-            target=app1.raiden.address,
+            amount=PaymentAmount(amount),
+            target=TargetAddress(app1.raiden.address),
             identifier=identifier,
             secret=secret,
         )
@@ -81,7 +98,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
@@ -132,10 +149,10 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     assert_synced_channel_state(
         token_network_address,
         app0_restart,
-        deposit - total_transferred_amount,
+        Balance(deposit - total_transferred_amount),
         [],
         app1,
-        deposit + total_transferred_amount,
+        Balance(deposit + total_transferred_amount),
         [],
     )
 
@@ -144,8 +161,8 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, network_wait
-):
+    raiden_network: List[App], token_addresses: List[TokenAddress], network_wait: float
+) -> None:
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport
     is started.
@@ -166,7 +183,9 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     )
 
 
-def run_test_payment_statuses_are_restored(raiden_network, token_addresses, network_wait):
+def run_test_payment_statuses_are_restored(
+    raiden_network: List[App], token_addresses: List[TokenAddress], network_wait: float
+) -> None:
     app0, app1 = raiden_network
 
     token_address = token_addresses[0]
@@ -175,6 +194,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, payment_network_address, token_address
     )
+    assert token_network_address, "Test setup failed"
 
     # make a few transfers from app0 to app1
     amount = 1
@@ -188,9 +208,9 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         identifier = identifier + 1
         payment_status = app0.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
-            amount=amount,
-            target=app1.raiden.address,
-            identifier=identifier,
+            amount=PaymentAmount(amount),
+            target=TargetAddress(app1.raiden.address),
+            identifier=PaymentID(identifier),
             secret=secret,
         )
         assert payment_status.payment_identifier == identifier
@@ -217,9 +237,9 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
 
     # Check that the payment statuses were restored properly after restart
     for identifier in range(spent_amount):
-        identifier = identifier + 1
+        identifier = PaymentID(identifier + 1)
         mapping = app0_restart.raiden.targets_to_identifiers_to_statuses
-        status = mapping[app1.raiden.address][identifier]
+        status = mapping[TargetAddress(app1.raiden.address)][identifier]
         assert status.amount == 1
         assert status.payment_identifier == identifier
         assert status.token_network_address == token_network_address
