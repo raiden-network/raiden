@@ -21,7 +21,17 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
 from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
-from raiden.utils.typing import Address, Dict, Iterable, Optional, TokenNetworkAddress
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChannelID,
+    Dict,
+    Iterable,
+    Nonce,
+    Optional,
+    SecretHash,
+    TokenNetworkAddress,
+)
 
 
 class Translator(dict):
@@ -83,7 +93,7 @@ class Translator(dict):
         return self._regex.sub(self, text)
 
 
-def state_change_contains_secrethash(obj, secrethash):
+def state_change_contains_secrethash(obj: Any, secrethash: SecretHash) -> bool:
     return (hasattr(obj, "secrethash") and obj.secrethash == secrethash) or (
         hasattr(obj, "transfer")
         and (
@@ -93,7 +103,9 @@ def state_change_contains_secrethash(obj, secrethash):
     )
 
 
-def state_change_with_nonce(obj, nonce, channel_identifier, sender):
+def state_change_with_nonce(
+    obj: Any, nonce: Nonce, channel_identifier: ChannelID, sender: Address
+) -> bool:
     return (
         hasattr(obj, "balance_proof")
         and obj.balance_proof.nonce == nonce
@@ -102,7 +114,7 @@ def state_change_with_nonce(obj, nonce, channel_identifier, sender):
     )
 
 
-def print_attributes(data, translator: Optional[Translator] = None) -> None:
+def print_attributes(data: Dict, translator: Optional[Translator] = None) -> None:
     if translator is None:
         trans = lambda s: s
     else:
