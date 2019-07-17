@@ -25,7 +25,7 @@ def test_transact_opcode(deploy_client):
 
 
 def test_transact_throws_opcode(deploy_client):
-    """ The receipt status field of a transaction that threw is 0x0 """
+    """ The receipt status field of a transaction that hit an assert or revert is 0x0 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
@@ -34,10 +34,13 @@ def test_transact_throws_opcode(deploy_client):
     # the gas estimation returns 0 here, so hardcode a value
     startgas = safe_gas_limit(22000)
 
-    transaction = contract_proxy.transact("fail", startgas)
+    transaction = contract_proxy.transact("fail_assert", startgas)
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction), "must not be empty"
+
+    transaction = contract_proxy.transact("fail_require", startgas)
+    deploy_client.poll(transaction)
 
 
 def test_transact_opcode_oog(deploy_client):

@@ -15,7 +15,12 @@ def test_estimate_gas_fail(deploy_client):
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     check_block = deploy_client.get_checking_block()
-    assert not contract_proxy.estimate_gas(check_block, "fail")
+
+    msg = "Estimate gas should return None if the transaction hit an assert"
+    assert contract_proxy.estimate_gas(check_block, "fail_assert") is None, msg
+
+    msg = "Estimate gas should return None if the transaction hit a revert."
+    assert contract_proxy.estimate_gas(check_block, "fail_require") is None, msg
 
 
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
