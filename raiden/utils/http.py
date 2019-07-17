@@ -125,9 +125,19 @@ class HTTPExecutor(MiHTTPExecutor):
         return self
 
     def kill(self):
+        STDOUT = subprocess.STDOUT  # pylint: disable=no-member
+
+        ps_fax = subprocess.check_output(["ps", "fax"], stderr=STDOUT)
+
         log.debug("Executor process: killing process", command=self.command)
+        log.debug("EXecutor process: current processes", ps_fax=ps_fax)
+
         super().kill()
+
+        ps_fax = subprocess.check_output(["ps", "fax"], stderr=STDOUT)
+
         log.debug("Executor process: process killed", command=self.command)
+        log.debug("EXecutor process: current processes", ps_fax=ps_fax)
 
     def wait_for(self, wait_for):
         log.debug(
