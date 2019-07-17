@@ -486,7 +486,9 @@ def run_private_blockchain(
         )
 
         if node.miner:
-            config["unlock"] = to_checksum_address(config["address"])
+            # Geth does not run with both an unlocked account and the HTTP
+            # interface
+            # config["unlock"] = to_checksum_address(config["address"])
             config["mine"] = True
             config["password"] = os.path.join(base_datadir, "pw")
 
