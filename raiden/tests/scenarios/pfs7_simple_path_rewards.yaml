@@ -50,7 +50,7 @@ scenario:
             - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: 100}
-            - assert_pfs_iou: {source: 2, amount: 0}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
 
       - parallel:
           name: "Deposit in the other directions"
@@ -68,8 +68,8 @@ scenario:
             - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 3, amount: 200}
-            - assert_pfs_iou: {source: 2, amount: 0}
-            - assert_pfs_iou: {source: 1, amount: 0}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
+            - assert_pfs_iou: {source: 1, iou_exists: false}
 
             # Perform a couple of more transfers
             - assert_pfs_iou: {source: 0, iou_exists: false}
@@ -78,8 +78,8 @@ scenario:
             - wait: 10
             - assert_pfs_history: {source: 0, target: 3, request_count: 1}
             - assert_pfs_iou: {source: 0, amount: 100}
-            - assert_pfs_iou: {source: 1, amount: 0}
-            - assert_pfs_iou: {source: 2, amount: 0}
+            - assert_pfs_iou: {source: 1, iou_exists: false}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
             - assert_pfs_iou: {source: 3, amount: 200}
 
             - assert_pfs_history: {source: 2, request_count: 0}
