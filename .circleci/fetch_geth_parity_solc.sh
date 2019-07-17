@@ -26,6 +26,15 @@ if [[ ! -x ${PARITY_PATH} ]]; then
   PARITY_URL_VAR="PARITY_URL_${OS_NAME}"
   curl -L ${!PARITY_URL_VAR} > ${PARITY_PATH}
   chmod 775 ${PARITY_PATH}
+
+  PARITY_SHA256_VAR="PARITY_SHA256_${OS_NAME}"
+  if [[ ! -n ${!PARITY_SHA256_VAR} ]]; then
+      COMPUTED_SHA256=$(sha256sum ${PARITY_PATH} | cut '-d ' -f1)
+
+      if [[ ${COMPUTED_SHA256} != ${!PARITY_SHA256_VAR} ]]; then
+          exit 1;
+      fi
+  fi
 fi
 ln -sf ${PARITY_PATH} ${LOCAL_BASE}/bin/parity
 
