@@ -124,6 +124,23 @@ class HTTPExecutor(MiHTTPExecutor):
             raise
         return self
 
+    def kill(self):
+        log.debug("Executor process: killing process", command=self.command)
+        super().kill()
+        log.debug("Executor process: process killed", command=self.command)
+
+    def wait_for(self, wait_for):
+        log.debug(
+            "Executor process: waiting", command=self.command, until=self._endtime, now=time.time()
+        )
+        super().wait_for(wait_for)
+        log.debug(
+            "Executor process: waiting ended",
+            command=self.command,
+            until=self._endtime,
+            now=time.time(),
+        )
+
     def running(self) -> bool:
         """ Include pre_start_check in running, so stop will wait for the underlying listener """
         return super().running() or self.pre_start_check()
