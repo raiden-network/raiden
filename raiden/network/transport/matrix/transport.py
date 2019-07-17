@@ -36,7 +36,6 @@ from raiden.network.transport.matrix.utils import (
     login_or_register,
     make_client,
     make_room_alias,
-    my_place_or_yours,
     validate_and_parse_message,
     validate_userid_signature,
 )
@@ -521,15 +520,14 @@ class MatrixTransport(Runnable):
             self.whitelist(node_address)
             self._address_mgr.add_userids_for_address(node_address, user_ids)
 
-            # Invite peer or wait for invite
-            room = self._get_room_for_address(node_address)
+            """room = self._get_room_for_address(node_address)
 
             if self.storage:
                 self.storage.write_matrix_userids_for_address(
                     node_address, user_ids, datetime.utcnow()
                 )
                 if room:
-                    self.storage.write_matrix_roomids_for_address(room.room_id)
+                    self.storage.write_matrix_roomids_for_address(room.room_id)"""
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
@@ -800,12 +798,13 @@ class MatrixTransport(Runnable):
         # room state may not populated yet, so we populate 'invite_only' from event
         room.invite_only = private_room
 
-        self._set_room_id_for_address(address=peer_address, room_id=room_id)
+        # self._set_room_id_for_address(address=peer_address, room_id=room_id)
 
+        # Memory updates
+        self._address_mgr.add_roomid_for_userid(sender, room.room_id)
+
+        # Storage writes
         if self.storage:
-            self.storage.write_matrix_userids_for_address(
-                peer_address, known_users_for_address, datetime.utcnow()
-            )
             self.storage.write_matrix_roomid_for_address(peer_address, room.room_id)
 
         self.log.debug(
@@ -853,6 +852,18 @@ class MatrixTransport(Runnable):
             return False
 
         # rooms we created and invited user, or were invited specifically by them
+        room_id, is_empty = self._address_mgr.get_roomdid_for_userid(sender_id)
+        if room_id and room.room_id != room_id:
+            self._address_mgr.add_roomid_for_userid(sender_id, room.room_id)
+            self.log.debug(
+                "Received message in unexpected room - new room_id added for user",
+                sender_id=sender_id,
+                sender_address=to_checksum_address(peer_address),
+                actual_id=room.room_id,
+                expected_room_id=room_id,
+            )
+        # Remove from room is empty dict
+
         room_ids = self._get_room_ids_for_address(peer_address)
 
         # TODO: Remove clause after `and` and check if things still don't hang
@@ -885,7 +896,7 @@ class MatrixTransport(Runnable):
                 known_user_rooms=room_ids,
                 room=room,
             )
-            self._set_room_id_for_address(peer_address, room.room_id)
+            # self._set_room_id_for_address(peer_address, room.room_id)
 
         is_peer_reachable = self._address_mgr.get_address_reachability(peer_address) is (
             AddressReachability.REACHABLE
@@ -1007,7 +1018,7 @@ class MatrixTransport(Runnable):
         assert address and self._address_mgr.is_address_known(address), msg
 
         # filter_private is done in _get_room_ids_for_address
-        room_ids = self._get_room_ids_for_address(address)
+        """room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
             # This loop is used to ignore any global rooms that may have 'polluted' the
             # user's room cache due to bug #3765
@@ -1018,17 +1029,39 @@ class MatrixTransport(Runnable):
                 if not self._is_room_global(room):
                     self.log.debug("Existing room", room=room, members=room.get_joined_members())
                     return room
-                self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
+                self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)"""
+
+        user_ids = self._address_mgr.get_userids_for_address(address)
+        for user_id in user_ids:
+            room_id, is_empty = self._address_mgr.get_roomdid_for_userid(user_id)
+            user_presence = self._address_mgr.get_userid_presence(user_id)
+            if room_id:
+                self.log.debug("Found existing room_id for user")
+                room = self._client.rooms[room_id]
+                if is_empty:
+                    is_empty = self._address_mgr.node_is_room_member(address, room)
+                    self._address_mgr.add_roomid_for_userid(
+                        user_id, room.room_id, is_empty=is_empty
+                    )
+                    if is_empty:
+                        self.log.debug("User has not joined after invite retry")
+
+                elif user_presence != UserPresence.ONLINE:
+                    self._address_mgr.node_is_room_member(address, room)
+
+                elif user_presence == UserPresence.ONLINE:
+                    self.log.debug(
+                        f'Existing room with id "{room_id}" for peer: "{to_checksum_address(address)}" with userid "{user_id}"'
+                    )
+                return room
+
+        # If this loop fails or we don't know a user_id, start room creation if it's our job to invite
 
         assert self._raiden_service is not None
+
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
-
-        # no room with expected name => create one and invite peer if it's our job to invite
-        if my_place_or_yours(self._our_address, address) == address:
-            self.log.warning("Waiting to be invited by partner", peer=address_hex)
-            return None
 
         self._address_mgr.populate_userids_for_address(address)
         peers = self._address_mgr.get_userids_for_address(address)
@@ -1041,19 +1074,18 @@ class MatrixTransport(Runnable):
         )
         room = self._get_a_room(invitees=peers, is_public=self._private_rooms, room_name=room_name)
 
-        if not self._address_mgr.node_is_room_member(address, room):
-            self._address_mgr.add_roomid_for_userid(address, room.room_id, is_empty=True)
-            self.storage.write_matrix_roomid_for_address(address, room.room_id, is_empty=True)
-            return room
-
+        is_empty = self._address_mgr.node_is_room_member(address, room)
+        # Memory updates
         self._address_mgr.add_userids_for_address(address, {user_id for user_id in peers})
+
+        # self._set_room_id_for_address(address, room.room_id)
+
+        # Storage writes
         if self.storage:
             self.storage.write_matrix_userids_for_address(
                 address, {user.user_id for user in peers}, datetime.utcnow()
             )
-            self.storage.write_matrix_roomid_for_address(address, room.room_id)
-
-        self._set_room_id_for_address(address, room.room_id)
+            self.storage.write_matrix_roomid_for_address(address, room.room_id, is_empty=is_empty)
 
         if not room.listeners:
             room.add_listener(self._handle_message, "m.room.message")

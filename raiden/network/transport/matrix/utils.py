@@ -109,8 +109,8 @@ class UserAddressManager:
         self._stop_event = stop_event if stop_event else Event()
 
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
-        self._userid_to_roomid: Dict[str, str] = dict()
-        self._empty_roomids_to_user: Dict[str, bool] = dict()
+        self._userids_to_roomids: Dict[str, str] = dict()
+        self._empty_roomids_to_userids: Dict[str, bool] = dict()
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
 
@@ -256,12 +256,17 @@ class UserAddressManager:
 
     def add_roomid_for_userid(self, user_id: str, room_id, is_empty=False):
         if is_empty:
-            self._empty_roomids_to_user[user_id]: room_id
+            self._empty_roomids_to_userids[user_id]: room_id
         else:
-            self._userid_to_roomid[user_id] = room_id
+            self._userids_to_roomids[user_id] = room_id
 
-    def get_roomdid_for_userid(self, user_id: str) -> str:
-        return self._userid_to_roomid[user_id]
+    def get_roomdid_for_userid(self, user_id: str):
+        if user_id in self._userids_to_roomids:
+            return self._userids_to_roomids[user_id], False
+        elif user_id in self._empty_roomids_to_userids:
+            return self._empty_roomids_to_userids[user_id], True
+        else:
+            return None, True
 
     @property
     def _user_id(self) -> str:
@@ -287,6 +292,7 @@ class UserAddressManager:
         self._address_to_userids = address_to_userids
 
     def node_is_room_member(self, address: Address, room: Room) -> bool:
+        self.refresh_address_presence(address)
         peer_ids = self.get_userids_for_address(address)
         member_ids = {member.user_id for member in room.get_joined_members()}
         node_is_member = bool(peer_ids & member_ids)
@@ -294,7 +300,8 @@ class UserAddressManager:
         if not node_is_member:
             log.debug(
                 "Waiting for peer to join from invite",
-                peer_address=to_checksum_address(address, room_id=room.room_id),
+                peer_address=to_checksum_address(address),
+                room_id=room.room_id,
             )
             retry_interval: float = 0.1
             for _ in range(7):
@@ -312,6 +319,8 @@ class UserAddressManager:
                     for peer_id in peer_ids:
                         room.invite_user(peer_id)
                 else:
+                    for user_id in peer_ids & member_ids:
+                        self.add_roomid_for_userid(user_id, room.room_id)
                     break
 
         if last_ex:
