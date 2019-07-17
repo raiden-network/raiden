@@ -17,6 +17,15 @@ if [[ ! -x ${GETH_PATH} ]]; then
   tar xzf geth.tar.gz
   cd geth*/
   install -m 755 geth ${GETH_PATH}
+
+  GETH_MD5_VAR="GETH_MD5_${OS_NAME}"
+  if [[ ! -n ${!GETH_MD5_VAR} ]]; then
+      COMPUTED_MD5=$(md5sum ${GETH_PATH} | cut '-d ' -f1)
+
+      if [[ ${COMPUTED_MD5} != ${!GETH_MD5_VAR} ]]; then
+          exit 1;
+      fi
+  fi
 fi
 ln -sf ${GETH_PATH} ${LOCAL_BASE}/bin/geth
 
