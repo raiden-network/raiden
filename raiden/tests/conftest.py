@@ -164,6 +164,25 @@ def insecure_tls():
     make_requests_insecure()
 
 
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_call(item):
+    """ More feedback for flaky tests.
+
+    In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
+    This doesn't work under xdist and will therefore show no output.
+    """
+    yield
+    is_xdist = "PYTEST_XDIST_WORKER" in os.environ
+    is_flaky_test = item.get_closest_marker("flaky") is not None
+    if is_flaky_test and not is_xdist:
+        if item.config.option.verbose > 0:
+            capmanager = item.config.pluginmanager.getplugin("capturemanager")
+            with capmanager.global_and_fixture_disabled():
+                item.config.pluginmanager.get_plugin("terminalreporter")._tw.write(
+                    "FLAKY ", yellow=True
+                )
+
+
 def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 
