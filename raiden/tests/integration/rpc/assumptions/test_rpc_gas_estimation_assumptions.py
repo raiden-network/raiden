@@ -1,5 +1,7 @@
+import pytest
 from eth_utils import to_checksum_address
 
+from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
 SSTORE_COST = 20000
@@ -40,3 +42,38 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
 
     startgas = contract_proxy.estimate_gas(block_identifier, "waste_storage", number_iterations)
     assert startgas is None, "estimate_gas must return empty if sending the transaction would fail"
+
+
+@pytest.mark.xfail(reason="The pending block is not taken into consideration")
+def test_estimate_gas_defaults_to_pending(deploy_client):
+    """Estimating gas without an explicit block identifier always return an
+    usable value.
+
+    This test makes sure that the gas estimation works as expected (IOW, it
+    will produce a value that can be used for start_gas and the transaction
+    will be mined).
+
+    This test was added because the clients Geth and Parity diverge in their
+    estimate_gas interface. Geth never accepts a block_identifier for
+    eth_estimateGas, and Parity rejects anything but `latest` if it is run with
+    `--pruning=fast`.
+    """
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+
+    first_gas = contract_proxy.estimate_gas("pending", "gas_increase_exponential")
+    assert first_gas, "gas estimation should not have failed"
+    first_tx = contract_proxy.transact("gas_increase_exponential", first_gas)
+
+    second_gas = contract_proxy.estimate_gas("pending", "gas_increase_exponential")
+    assert second_gas, "gas estimation should not have failed"
+    second_tx = contract_proxy.transact("gas_increase_exponential", second_gas)
+
+    deploy_client.poll(first_tx)
+    deploy_client.poll(second_tx)
+
+    first_receipt = deploy_client.get_transaction_receipt(first_tx)
+    second_receipt = deploy_client.get_transaction_receipt(second_tx)
+
+    assert second_receipt["gasLimit"] < deploy_client.get_block("latest")["gasLimit"]
+    assert first_receipt["status"] != RECEIPT_FAILURE_CODE
+    assert second_receipt["status"] != RECEIPT_FAILURE_CODE

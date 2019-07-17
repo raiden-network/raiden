@@ -15,6 +15,22 @@ contract RpcWithStorageTest {
         return 1;
     }
 
+    function gas_increase_exponential() public {
+        // This function will use exponentially more storage. Useful to test
+        // high variation in gas for consecutive transactions
+        uint256 value;
+        uint256 i;
+
+        data.length = (5 + data.length) ** 2;
+        value = data.length;
+
+        for (i=0; i<value; i++) {
+            data[i] = value;
+        }
+
+        emit RpcEvent(i);
+    }
+
     function waste_storage(uint256 iterations) public {
         uint256 i;
         for (i=0; i<iterations; i++) {
