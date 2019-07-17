@@ -84,5 +84,9 @@ def test_call_throws(deploy_client):
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
-    call = contract_proxy.contract.functions.fail().call
+
+    call = contract_proxy.contract.functions.fail_assert().call
+    assert call() == []
+
+    call = contract_proxy.contract.functions.fail_require().call
     assert call() == []
