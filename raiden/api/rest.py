@@ -20,7 +20,7 @@ from raiden_webui import RAIDEN_WEBUI_PATH
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
-from raiden.api.exceptions import ChannelNotFound, UnexistingChannel
+from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.api.objects import AddressList, PartnersPerTokenList
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -642,7 +642,7 @@ class RestAPI:  # pragma: no unittest
                 )
             except InsufficientFunds as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
-            except (UnexistingChannel, UnknownTokenAddress) as e:
+            except (NonexistingChannel, UnknownTokenAddress) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
             except (DepositOverLimit, DepositMismatch) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
@@ -1118,7 +1118,7 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_withdraw,
             )
-        except (UnexistingChannel, UnknownTokenAddress) as e:
+        except (NonexistingChannel, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
