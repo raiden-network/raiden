@@ -76,10 +76,11 @@ class HoldRaidenEventHandler(EventHandler):
         for pos, hold in enumerate(holds):
             if check_nested_attrs(event, hold.attributes):
                 msg = (
-                    "Same event emitted twice, should not happen. "
-                    "Either there is a bug in the state machine or "
-                    "the hold.attributes is too generic and multiple "
-                    "different events are matching."
+                    f"Matching event of type {event.__class__.__name__} emitted "
+                    f"twice, this should not happen. Either there is a bug in the "
+                    f"state machine or the hold.attributes is too generic and "
+                    f"multiple different events are matching. Event: {event} "
+                    f"Attributes: {hold.attributes}"
                 )
                 assert hold.event is None, msg
 
