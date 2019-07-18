@@ -35,6 +35,7 @@ dormant_signal=SIGUSR1
     --module pytest \
     raiden/tests \
     -vvvvvv \
+    --color=yes \
     --log-config='raiden:DEBUG' \
     --random \
     --junit-xml=${test_report_dir}/results.xml \
