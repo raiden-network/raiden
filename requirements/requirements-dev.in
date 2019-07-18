@@ -23,7 +23,6 @@ black==19.3b0
 # Testing
 pytest
 pytest-random
-pytest-timeout
 pytest-select
 pytest-xdist
 grequests
