@@ -14,13 +14,16 @@ mkdir -p ${test_report_dir}
 # Using 9min as the dormant timeout, CircleCI will kill the container after
 # 10min
 # https://support.circleci.com/hc/en-us/articles/360007188574-Build-has-hit-timeout-limit
-dormant_timeout=540
+#
+# This value should be larger than our tests timeout configuration, the default
+# is defined at setup.cfg under the section `[tool:pytest]`.
+dormant_timeout=570
 
 # This signal is installed in
 # raiden/tests/conftest.py::auto_enable_gevent_monitoring_signal
 dormant_signal=SIGUSR1
 
-./tools/kill_if_no_output.py
+./tools/kill_if_no_output.py \
     --dormant-timeout=${dormant_timeout} \
     --dormant-signal=${dormant_signal} \
     --kill-timeout=15 \
@@ -38,4 +41,4 @@ dormant_signal=SIGUSR1
     --blockchain-type=${blockchain_type} \
     --select-fail-on-missing \
     --select-from-file selected-tests.txt \
-    ${@}
+    "${@}"
