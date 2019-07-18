@@ -151,8 +151,8 @@ class ContractProxy:
     ) -> typing.Optional[int]:
         """Estimate the gas necessary to run the transaction.
 
-        Returns `None` transaction would fail because it hit an assert/revert,
-        or if the amount of gas requerid is larger than the block gas limit.
+        Returns `None` transaction would fail because it hit an assert/require,
+        or if the amount of gas required is larger than the block gas limit.
         """
 
         fn = getattr(self.contract.functions, function)
