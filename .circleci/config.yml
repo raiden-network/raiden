@@ -369,21 +369,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            mkdir -p test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>
-            coverage run \
-              --include="~/raiden/**/*" \
-              --parallel-mode \
-              --module pytest \
-              raiden/tests \
-              -vvvvvv \
-              --log-config='raiden:DEBUG' \
-              --random \
-              --junit-xml=test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>/results.xml \
-              --blockchain-type=<< parameters.blockchain-type >> \
-              --select-fail-on-missing \
-              --select-from-file selected-tests.txt \
-              << parameters.additional-args >>
-
+            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
       - run:
           name: Store coverage
           command: |
