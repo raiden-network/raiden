@@ -265,7 +265,7 @@ def run_test_transfer_to_unknownchannel(raiden_network, token_addresses):
     token_address = token_addresses[0]
     str_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
 
-    # Enforce sandwhich encoding. Calling `transfer` with a non binary address
+    # Enforce sandwich encoding. Calling `transfer` with a non binary address
     # raises an exception
     with pytest.raises(InvalidBinaryAddress):
         RaidenAPI(app0.raiden).transfer(

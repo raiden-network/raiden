@@ -7,8 +7,8 @@ class ChannelNotFound(RaidenValidationError):
     """
 
 
-class UnexistingChannel(RaidenValidationError):
-    """The request channel does not exist.
+class NonexistingChannel(RaidenValidationError):
+    """The requested channel does not exist.
 
     This exception can be raised for a few reasons:
 

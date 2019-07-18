@@ -4,7 +4,7 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.api.exceptions import ChannelNotFound, UnexistingChannel
+from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -507,7 +507,7 @@ class RaidenAPI:  # pragma: no unittest
             raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
-            raise UnexistingChannel("No channel with partner_address for the given token")
+            raise NonexistingChannel("No channel with partner_address for the given token")
 
         if total_withdraw <= channel_state.our_total_withdraw:
             raise WithdrawMismatch(f"Total withdraw {total_withdraw} did not increase")
@@ -583,7 +583,7 @@ class RaidenAPI:  # pragma: no unittest
             raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
-            raise UnexistingChannel("No channel with partner_address for the given token")
+            raise NonexistingChannel("No channel with partner_address for the given token")
 
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)

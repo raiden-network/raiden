@@ -92,7 +92,7 @@ class WithdrawMismatch(RaidenRecoverableError):
 
 
 class InvalidChecksummedAddress(RaidenError):
-    """Raised when the user provided address is not a str or the valus is not
+    """Raised when the user provided address is not a str or the value is not
     properly checksummed.
 
     Exception used to enforce the checksummed for external APIs. The address
@@ -104,7 +104,7 @@ class InvalidChecksummedAddress(RaidenError):
 class InvalidBinaryAddress(RaidenValidationError):
     """Raised when the address is not binary or it is not 20 bytes long.
 
-    Exception used to enforce the sandwhich encoding for python APIs. The
+    Exception used to enforce the sandwich encoding for python APIs. The
     internal address representation used by Raiden is binary, the binary
     address must be validated at the edges before calling internal functions.
     """
