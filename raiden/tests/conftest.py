@@ -201,20 +201,19 @@ def pytest_runtest_setup(item):
         else:
             timeout = marker.kwargs["timeout"]
 
-    if timeout is None or timeout <= 0:
-        return
+    if isinstance(timeout, (int, float)) and timeout > 0:
 
-    def handler(signum, frame):  # pylint: disable=unused-argument
-        gevent.util.print_run_info()
-        pytest.fail(f"Timeout >{timeout}s")
+        def handler(signum, frame):  # pylint: disable=unused-argument
+            gevent.util.print_run_info()
+            pytest.fail(f"Timeout >{timeout}s")
 
-    def cancel():
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        def cancel():
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
-    item.cancel_timeout = cancel
-    signal.signal(signal.SIGALRM, handler)
-    signal.setitimer(signal.ITIMER_REAL, timeout)
+        item.cancel_timeout = cancel
+        signal.signal(signal.SIGALRM, handler)
+        signal.setitimer(signal.ITIMER_REAL, timeout)
 
     yield
 
