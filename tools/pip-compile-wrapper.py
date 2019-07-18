@@ -282,15 +282,14 @@ def main() -> None:
     parser.add_argument("-v", "--verbose", action="store_true", default=False)
     parser.add_argument("-n", "--dry-run", action="store_true", default=False)
 
-    commands = parser.add_subparsers(title="Sub-commands")
-    compile_parser = commands.add_parser(
+    commands = parser.add_subparsers(title="Sub-commands", required=True, dest="command")
+    commands.add_parser(
         "compile",
         help=(
             "Compile source files. "
             "Keep current versions unless changed requirements force newer versions."
         ),
     )
-    compile_parser.set_defaults(command="compile")
 
     upgrade_parser = commands.add_parser(
         "upgrade",
@@ -300,7 +299,6 @@ def main() -> None:
         ),
     )
     upgrade_parser.add_argument("packages", metavar="package", nargs="*")
-    upgrade_parser.set_defaults(command="upgrade")
 
     parsed = parser.parse_args()
     _ensure_pip_tools()
