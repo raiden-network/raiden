@@ -3,6 +3,7 @@ from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 
+import signal  # isort:skip # noqa
 import pytest  # isort:skip
 
 # Execute these before the other imports because rewrites can't work after the
@@ -58,6 +59,10 @@ def pytest_addoption(parser):
         default=8500,
         type="int",
         help="Base port number to use for tests.",
+    )
+    parser.addoption("--timeout", type=float)
+    parser.addini(
+        "timeout", "Timeout in seconds before failing the test and printing the gevent stacks."
     )
 
 
@@ -181,6 +186,46 @@ def pytest_runtest_call(item):
                 item.config.pluginmanager.get_plugin("terminalreporter")._tw.write(
                     "FLAKY ", yellow=True
                 )
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_setup(item):
+    timeout = item.config.getvalue("timeout")
+    marker = item.get_closest_marker("timeout")
+
+    if marker is not None:
+        # This marker supports only one argument, it may be positional or
+        # keyword
+        if len(marker.args) == 1:
+            timeout = marker.args[0]
+        else:
+            timeout = marker.kwargs["timeout"]
+
+    if timeout is None or timeout <= 0:
+        return
+
+    def handler(signum, frame):  # pylint: disable=unused-argument
+        gevent.util.print_run_info()
+        pytest.fail(f"Timeout >{timeout}s")
+
+    def cancel():
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+
+    item.cancel_timeout = cancel
+    signal.signal(signal.SIGALRM, handler)
+    signal.setitimer(signal.ITIMER_REAL, timeout)
+
+    yield
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown(item):
+    yield
+
+    cancel = getattr(item, "cancel_timeout", None)
+    if cancel:
+        cancel()
 
 
 def pytest_generate_tests(metafunc):
