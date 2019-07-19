@@ -176,10 +176,13 @@ def pytest_runtest_call(item):
     In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
     This doesn't work under xdist and will therefore show no output.
     """
-    yield
+    outcome = yield
+    did_fail = isinstance(outcome._excinfo, tuple) and isinstance(
+        outcome._excinfo[1], BaseException
+    )
     is_xdist = "PYTEST_XDIST_WORKER" in os.environ
     is_flaky_test = item.get_closest_marker("flaky") is not None
-    if is_flaky_test and not is_xdist:
+    if did_fail and is_flaky_test and not is_xdist:
         if item.config.option.verbose > 0:
             capmanager = item.config.pluginmanager.getplugin("capturemanager")
             with capmanager.global_and_fixture_disabled():
