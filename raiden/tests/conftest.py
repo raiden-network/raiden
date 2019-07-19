@@ -193,9 +193,17 @@ def pytest_runtest_call(item):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_setup(item):
-    timeout = item.config.getvalue("timeout")
-    marker = item.get_closest_marker("timeout")
+    """ Limit the tests runtime
 
+    The timeout is read from the following places (last one takes precedence):
+    * setup.cfg (ini)
+    * commandline option (option)
+    * pytest timeout marker at the specific test (market)
+    """
+    timeout = int(item.config.getini("timeout"))
+    timeout = item.config.getoption("timeout", default=timeout)
+
+    marker = item.get_closest_marker("timeout")
     if marker is not None:
         # This marker supports only one argument, it may be positional or
         # keyword
