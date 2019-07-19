@@ -383,6 +383,7 @@ jobs:
               --select-fail-on-missing \
               --select-from-file selected-tests.txt \
               << parameters.additional-args >>
+          no_output_timeout: 15m
 
       - run:
           name: Store coverage
