@@ -2,8 +2,9 @@ from dataclasses import dataclass
 
 from eth_utils import to_canonical_address, to_checksum_address
 
+from raiden.blockchain.exceptions import UnknownRaidenEventType
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
-from raiden.exceptions import InvalidBlockNumberInput, UnknownEventType
+from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.utils.filters import (
@@ -161,7 +162,7 @@ def get_all_netting_channel_events(
     )
 
 
-def decode_event_to_internal(
+def decode_raiden_event_to_internal(
     abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
 ) -> DecodedEvent:
     """ Enforce the binary for internal usage. """
@@ -170,7 +171,7 @@ def decode_event_to_internal(
     decoded_event = decode_event(abi, log_event)
 
     if not decoded_event:
-        raise UnknownEventType()
+        raise UnknownRaidenEventType()
 
     # copy the attribute dict because that data structure is immutable
     data = dict(decoded_event)
@@ -235,7 +236,7 @@ class BlockchainEvents:
             assert isinstance(event_listener.filter, StatelessFilter)
 
             for log_event in event_listener.filter.get_new_entries(block_number):
-                yield decode_event_to_internal(event_listener.abi, self.chain_id, log_event)
+                yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:

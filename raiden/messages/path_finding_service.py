@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+import marshmallow.fields
 import rlp
 
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.abstract import SignedMessage
-from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -87,7 +87,10 @@ class PFSFeeUpdate(SignedMessage):
             (self.fee_schedule.flat, "uint256"),
             (self.fee_schedule.proportional, "uint256"),
             (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
-            (DictSerializer.serialize(self)["timestamp"], "string"),
+            (
+                marshmallow.fields.DateTime()._serialize(self.timestamp, "timestamp", self),
+                "string",
+            ),
         )
 
     @classmethod

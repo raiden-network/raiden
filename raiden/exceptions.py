@@ -44,10 +44,6 @@ class RaidenUnrecoverableError(RaidenError):
     """
 
 
-class UnknownEventType(RaidenError):
-    """Raised if decoding of an event failed."""
-
-
 class ChannelNotFound(RaidenError):
     """ Raised when a provided channel via the REST api is not found in the
     internal data structures"""

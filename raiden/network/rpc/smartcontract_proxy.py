@@ -149,9 +149,12 @@ class ContractProxy:
     def estimate_gas(
         self, block_identifier, function: str, *args, **kwargs
     ) -> typing.Optional[int]:
-        """Returns a gas estimate for the function with the given arguments or
-        None if the function call will fail due to Insufficient funds or
-        the logic in the called function."""
+        """Estimate the gas necessary to run the transaction.
+
+        Returns `None` transaction would fail because it hit an assert/require,
+        or if the amount of gas required is larger than the block gas limit.
+        """
+
         fn = getattr(self.contract.functions, function)
         address = to_checksum_address(self.jsonrpc_client.address)
         if self.jsonrpc_client.eth_node is constants.EthClient.GETH:

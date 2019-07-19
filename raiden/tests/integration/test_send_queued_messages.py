@@ -13,7 +13,6 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
@@ -177,26 +176,24 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         chain_state, payment_network_address, token_address
     )
 
-    raiden_event_handler = RaidenEventHandler()
-    app0.event_handler = HoldRaidenEventHandler(raiden_event_handler)
-    app0.event_handler.hold(SendSecretReveal, {})
-
     # make a few transfers from app0 to app1
     amount = 1
     spent_amount = TokenAmount(7)
 
     for identifier in range(spent_amount):
+        # Make sure the transfer is not completed
+        secret = make_secret(identifier)
+        app0.raiden.raiden_event_handler.hold(SendSecretReveal, {"secret": secret})
+
         identifier = identifier + 1
         payment_status = app0.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
             target=app1.raiden.address,
             identifier=identifier,
+            secret=secret,
         )
         assert payment_status.payment_identifier == identifier
-
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
@@ -208,8 +205,8 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_msc_address=app0.raiden.default_msc_address,
         transport=MatrixTransport(app0.raiden.config["transport"]["matrix"]),
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
+        raiden_event_handler=RaidenEventHandler(),
+        message_handler=MessageHandler(),
         routing_mode=RoutingMode.PRIVATE,
     )
     app0.stop()
