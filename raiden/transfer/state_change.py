@@ -10,6 +10,7 @@ from raiden.transfer.architecture import (
     StateChange,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
@@ -25,7 +26,6 @@ from raiden.utils.typing import (
     BlockNumber,
     ChainID,
     ChannelID,
-    FeeAmount,
     Locksroot,
     MessageID,
     Nonce,
@@ -128,9 +128,7 @@ class ActionChannelWithdraw(StateChange):
 @dataclass
 class ActionChannelUpdateFee(StateChange):
     canonical_identifier: CanonicalIdentifier
-    flat_fee: FeeAmount
-    proportional_fee: int  # as micros, e.g. 1% = 0.01e6
-    use_imbalance_penalty: bool
+    fee_schedule: FeeScheduleState
 
     @property
     def channel_identifier(self) -> ChannelID:
