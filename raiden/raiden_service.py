@@ -14,7 +14,10 @@ from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
 from raiden import constants, routing
-from raiden.blockchain.decode import blockchainevent_to_statechange
+from raiden.blockchain.decode import (
+    actionchannelupdatefee_from_channelstate,
+    blockchainevent_to_statechange,
+)
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
@@ -54,13 +57,9 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
-from raiden.transfer.channel import get_capacity
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.mediation_fee import (
-    FeeScheduleState,
-    calculate_imbalance_fees,
-)
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -71,7 +70,6 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
@@ -978,20 +976,9 @@ class RaidenService(Runnable):
                     proportional_fee=default_fee_schedule.proportional,
                 )
 
-                imbalance_penalty = (
-                    calculate_imbalance_fees(get_capacity(channel))
-                    if use_imbalance_penalty
-                    else None
+                state_change = actionchannelupdatefee_from_channelstate(
+                    channel, use_imbalance_penalty
                 )
-                state_change = ActionChannelUpdateFee(
-                    canonical_identifier=channel.canonical_identifier,
-                    fee_schedule=FeeScheduleState(
-                        flat=default_fee_schedule.flat,
-                        proportional=default_fee_schedule.proportional,
-                        imbalance_penalty=imbalance_penalty,
-                    ),
-                )
-
                 self.handle_and_track_state_changes([state_change])
 
     def sign(self, message: Message) -> None:
