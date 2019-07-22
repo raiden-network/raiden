@@ -34,7 +34,6 @@ from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
-from raiden.utils.debugging import enable_gevent_monitoring_signal
 
 
 def pytest_addoption(parser):
@@ -66,9 +65,15 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def auto_enable_gevent_monitoring_signal():
-    enable_gevent_monitoring_signal()
+@pytest.fixture(autouse=True)
+def auto_enable_gevent_monitoring_signal(capsys):
+    import gevent.util
+
+    def on_signal(signalnum, stack_frame):  # pylint: disable=unused-argument
+        with capsys.disabled():
+            gevent.util.print_run_info()
+
+    signal.signal(signal.SIGUSR1, on_signal)
 
 
 @pytest.fixture(scope="session", autouse=True)
