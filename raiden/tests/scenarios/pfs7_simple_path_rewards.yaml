@@ -35,9 +35,9 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
-            - open_channel: {from: 1, to: 2, total_deposit: 1000}
-            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000, expected_http_status: 201}
       - serial:
           name: "Check that no IOUs exist and create one"
           tasks:
@@ -47,7 +47,7 @@ scenario:
             # Node 3 cannot send tokens to Node 0 due to imbalanced channels
             # We expect the pfs not to send any route but to charge for the information
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 409}
-            - wait: 10
+            - wait_blocks: 1
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: 100}
             - assert_pfs_iou: {source: 2, iou_exists: false}
@@ -55,10 +55,9 @@ scenario:
       - parallel:
           name: "Deposit in the other directions"
           tasks:
-            - deposit: {from: 1, to: 0, total_deposit: 1000}
-            - deposit: {from: 2, to: 1, total_deposit: 1000}
-            - deposit: {from: 3, to: 2, total_deposit: 1000}
-
+            - deposit: {from: 1, to: 0, total_deposit: 1000, expected_http_status: 200}
+            - deposit: {from: 2, to: 1, total_deposit: 1000, expected_http_status: 200}
+            - deposit: {from: 3, to: 2, total_deposit: 1000, expected_http_status: 200}
       - serial:
           name: "Assert on all channel deposits"
           tasks:
@@ -75,8 +74,9 @@ scenario:
           tasks:
             # Now that there is a path with capacity the transfer should go through
             # and another IOU should exist
+            - wait_blocks: 1
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 200}
-            - wait: 10
+            - wait_blocks: 1
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 3, amount: 200}
             - assert_pfs_iou: {source: 2, iou_exists: false}
