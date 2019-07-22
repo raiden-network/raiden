@@ -22,7 +22,7 @@ from raiden.settings import (
     PRODUCTION_CONTRACT_VERSION,
 )
 from raiden.utils import typing
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, FeeAmount
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
@@ -59,6 +59,7 @@ class App:  # pylint: disable=too-few-public-methods
             "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
             "monitoring_enabled": False,
         },
+        "max_imbalance_fee": FeeAmount(0),
     }
 
     def __init__(

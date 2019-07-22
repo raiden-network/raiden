@@ -959,7 +959,6 @@ class RaidenService(Runnable):
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, payment_network_address=self.default_registry.address
         )
-        use_imbalance_penalty = self.config.get("use_imbalance_penalty", False)
 
         for token_address in token_addresses:
             channels = views.get_channelstate_open(
@@ -977,7 +976,7 @@ class RaidenService(Runnable):
                 )
 
                 state_change = actionchannelupdatefee_from_channelstate(
-                    channel, use_imbalance_penalty
+                    channel, self.config["max_imbalance_fee"]
                 )
                 self.handle_and_track_state_changes([state_change])
 
