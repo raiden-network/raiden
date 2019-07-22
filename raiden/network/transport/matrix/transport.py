@@ -395,6 +395,7 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
+        self._spawn(self._address_mgr.get_status_info())
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -1198,11 +1199,7 @@ class MatrixTransport(Runnable):
         address_hex: AddressHex = to_checksum_address(address)
         with self._account_data_lock:
             room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(address_hex)
-            self.log.debug(
-                "matrix get account data",
-                room_ids=room_ids,
-                for_address=to_checksum_address(address),
-            )
+            self.log.debug("Room ids for address", for_addres=address_hex, room_ids=room_ids)
             if not room_ids:  # None or empty
                 room_ids = list()
             if not isinstance(room_ids, list):  # old version, single room
