@@ -24,8 +24,8 @@ from raiden.waiting import wait_for_transfer_success
 @pytest.mark.skip("Issue: 3750")
 def test_event_transfer_received_success(token_addresses, raiden_chain):
     raise_on_failure(
-        raiden_chain,
-        run_test_event_transfer_received_success,
+        raiden_apps=raiden_chain,
+        test_function=run_test_event_transfer_received_success,
         token_addresses=token_addresses,
         raiden_chain=raiden_chain,
     )
@@ -74,24 +74,23 @@ def run_test_event_transfer_received_success(token_addresses, raiden_chain):
         )
 
 
-@pytest.mark.parametrize("number_of_nodes", [4])
+@pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
-@pytest.mark.flaky(max_runs=5)
-def test_echo_node_response(token_addresses, raiden_chain, network_wait):
+def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
     raise_on_failure(
-        raiden_chain,
-        run_test_echo_node_response,
+        raiden_apps=raiden_chain,
+        test_function=run_test_echo_node_response,
         token_addresses=token_addresses,
         raiden_chain=raiden_chain,
-        network_wait=network_wait,
+        retry_timeout=retry_timeout,
     )
 
 
-def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
-    app0, app1, app2, echo_app = raiden_chain
+def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
+    app0, app1, echo_app = raiden_chain
     token_address = token_addresses[0]
 
     echo_api = RaidenAPI(echo_app.raiden)
@@ -102,7 +101,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
 
     transfer_timeout = 10
 
-    for num, app in enumerate([app0, app1, app2]):
+    for num, app in enumerate([app0, app1]):
         amount = 1 + num
         identifier = 10 ** (num + 1)
         payment_status = RaidenAPI(app.raiden).transfer_async(
@@ -116,25 +115,26 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
         msg = (
             f"Transfer {identifier} from "
             f"{to_checksum_address(app.raiden.address)} to "
-            f"{to_checksum_address(echo_app.raiden.address)} timedout after "
+            f"{to_checksum_address(echo_app.raiden.address)} timed out after "
             f"{transfer_timeout}"
         )
         with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
             payment_status.payment_done.wait()
 
-        echo_identifier = identifier + 1
+        echo_identifier = identifier + amount
         msg = (
             f"Response transfer {echo_identifier} from echo node "
             f"{to_checksum_address(echo_app.raiden.address)} to "
-            f"{to_checksum_address(app.raiden.address)} timedout after "
+            f"{to_checksum_address(app.raiden.address)} timed out after "
             f"{transfer_timeout}"
         )
+
         with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
             wait_for_transfer_success(
                 raiden=app.raiden,
                 payment_identifier=echo_identifier,
                 amount=amount,
-                retry_timeout=network_wait,
+                retry_timeout=retry_timeout,
             )
 
     echo_node.stop()
@@ -148,8 +148,8 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
 @pytest.mark.skip("Issue: 3750")
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
-        raiden_chain,
-        run_test_echo_node_lottery,
+        raiden_apps=raiden_chain,
+        test_function=run_test_echo_node_lottery,
         token_addresses=token_addresses,
         raiden_chain=raiden_chain,
         network_wait=network_wait,
