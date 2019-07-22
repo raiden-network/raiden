@@ -2,7 +2,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
 from raiden.messages.transfers import Unlock
@@ -14,64 +14,6 @@ from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
 from raiden.waiting import wait_for_transfer_success
-
-
-@pytest.mark.parametrize("number_of_nodes", [4])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("reveal_timeout", [15])
-@pytest.mark.parametrize("settle_timeout", [120])
-@pytest.mark.skip("Issue: 3750")
-def test_event_transfer_received_success(token_addresses, raiden_chain):
-    raise_on_failure(
-        raiden_apps=raiden_chain,
-        test_function=run_test_event_transfer_received_success,
-        token_addresses=token_addresses,
-        raiden_chain=raiden_chain,
-    )
-
-
-def run_test_event_transfer_received_success(token_addresses, raiden_chain):
-    sender_apps = raiden_chain[:-1]
-    target_app = raiden_chain[-1]
-
-    token_address = token_addresses[0]
-    registry_address = target_app.raiden.default_registry.address
-    target_address = target_app.raiden.address
-
-    message_handler = WaitForMessage()
-    target_app.raiden.message_handler = message_handler
-
-    wait_for = list()
-    for amount, app in enumerate(sender_apps, 1):
-        secret = random_secret()
-
-        wait = message_handler.wait_for_message(Unlock, {"secret": secret})
-        wait_for.append((wait, app.raiden.address, amount))
-
-        RaidenAPI(app.raiden).transfer_async(
-            registry_address=registry_address,
-            token_address=token_address,
-            amount=amount,
-            identifier=amount,
-            target=target_address,
-            secret=to_hex(secret),
-            secrethash=to_hex(sha256(secret).digest()),
-        )
-
-    for wait, sender, amount in wait_for:
-        wait.wait()
-        assert search_for_item(
-            target_app.raiden.wal.storage.get_events(),
-            EventPaymentReceivedSuccess,
-            {
-                "amount": amount,
-                "identifier": amount,
-                "initiator": sender,
-                "payment_network_address": registry_address,
-                # 'token_network_address': ,
-            },
-        )
 
 
 @pytest.mark.parametrize("number_of_nodes", [3])
@@ -92,25 +34,37 @@ def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
     app0, app1, echo_app = raiden_chain
     token_address = token_addresses[0]
+    registry_address = echo_app.raiden.default_registry.address
 
     echo_api = RaidenAPI(echo_app.raiden)
     echo_node = EchoNode(echo_api, token_address)
+
+    message_handler = WaitForMessage()
+    echo_app.raiden.message_handler = message_handler
 
     echo_node.ready.wait(timeout=30)
     assert echo_node.ready.is_set()
 
     transfer_timeout = 10
 
+    wait_for = list()
     for num, app in enumerate([app0, app1]):
         amount = 1 + num
         identifier = 10 ** (num + 1)
+        secret = random_secret()
+
         payment_status = RaidenAPI(app.raiden).transfer_async(
-            registry_address=app.raiden.default_registry.address,
+            registry_address=registry_address,
             token_address=token_address,
             amount=amount,
             target=echo_app.raiden.address,
             identifier=identifier,
+            secret=secret,
+            secrethash=sha256(secret).digest(),
         )
+
+        wait = message_handler.wait_for_message(Unlock, {"secret": secret})
+        wait_for.append((wait, app.raiden.address, amount, identifier))
 
         msg = (
             f"Transfer {identifier} from "
@@ -136,6 +90,19 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
                 amount=amount,
                 retry_timeout=retry_timeout,
             )
+
+    for wait, sender, amount, ident in wait_for:
+        wait.wait()
+        assert search_for_item(
+            echo_app.raiden.wal.storage.get_events(),
+            EventPaymentReceivedSuccess,
+            {
+                "amount": amount,
+                "identifier": ident,
+                "initiator": sender,
+                "payment_network_address": registry_address,
+            },
+        )
 
     echo_node.stop()
 
