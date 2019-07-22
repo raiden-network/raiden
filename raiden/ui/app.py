@@ -188,7 +188,7 @@ def run_app(
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
     config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
-    config["use_imbalance_penalty"] = True
+    config["use_imbalance_penalty"] = rebalancing_fee
 
     setup_environment(config, environment_type)
 
