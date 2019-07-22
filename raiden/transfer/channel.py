@@ -34,7 +34,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     refund_from_sendmediated,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import calculate_imbalance_fees
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     LockedTransferUnsignedState,
@@ -1931,13 +1930,7 @@ def handle_action_update_fee(
     msg = "caller must make sure the ids match"
     assert channel_state.canonical_identifier == update_fee.canonical_identifier, msg
 
-    channel_state.fee_schedule.flat = update_fee.flat_fee
-    channel_state.fee_schedule.proportional = update_fee.proportional_fee
-
-    if update_fee.use_imbalance_penalty:
-        channel_state.fee_schedule.imbalance_penalty = calculate_imbalance_fees(
-            channel_capacity=get_capacity(channel_state)
-        )
+    channel_state.fee_schedule = update_fee.fee_schedule
 
     return TransitionResult(channel_state, list())
 

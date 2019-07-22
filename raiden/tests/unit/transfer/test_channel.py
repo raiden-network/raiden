@@ -24,6 +24,7 @@ from raiden.transfer.channel import (
     is_valid_balanceproof_signature,
     set_settled,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
@@ -329,9 +330,7 @@ def test_handle_action_set_fee():
     proportional_fee = 1000
     action = ActionChannelUpdateFee(
         canonical_identifier=state.canonical_identifier,
-        flat_fee=flat_fee,
-        proportional_fee=proportional_fee,
-        use_imbalance_penalty=False,
+        fee_schedule=FeeScheduleState(flat=flat_fee, proportional=proportional_fee),
     )
     result = handle_action_update_fee(state, action)
     assert result.new_state.fee_schedule.flat == flat_fee

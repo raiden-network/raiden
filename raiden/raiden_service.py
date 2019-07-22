@@ -54,9 +54,13 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
+from raiden.transfer.channel import get_capacity
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    FeeScheduleState,
+    calculate_imbalance_fees,
+)
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -429,7 +433,7 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
-        self._initialize_channel_fees(self.config.get("use_imbalance_penalty", False))
+        self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -947,7 +951,7 @@ class RaidenService(Runnable):
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
 
-    def _initialize_channel_fees(self, use_imbalance_penalty: bool) -> None:
+    def _initialize_channel_fees(self) -> None:
         """ Initializes the fees of all open channels to the latest set values.
 
         This includes a recalculation of the dynamic rebalancing fees.
@@ -957,6 +961,7 @@ class RaidenService(Runnable):
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, payment_network_address=self.default_registry.address
         )
+        use_imbalance_penalty = self.config.get("use_imbalance_penalty", False)
 
         for token_address in token_addresses:
             channels = views.get_channelstate_open(
@@ -973,11 +978,18 @@ class RaidenService(Runnable):
                     proportional_fee=default_fee_schedule.proportional,
                 )
 
+                imbalance_penalty = (
+                    calculate_imbalance_fees(get_capacity(channel))
+                    if use_imbalance_penalty
+                    else None
+                )
                 state_change = ActionChannelUpdateFee(
                     canonical_identifier=channel.canonical_identifier,
-                    flat_fee=default_fee_schedule.flat,
-                    proportional_fee=default_fee_schedule.proportional,
-                    use_imbalance_penalty=use_imbalance_penalty,
+                    fee_schedule=FeeScheduleState(
+                        flat=default_fee_schedule.flat,
+                        proportional=default_fee_schedule.proportional,
+                        imbalance_penalty=imbalance_penalty,
+                    ),
                 )
 
                 self.handle_and_track_state_changes([state_change])
