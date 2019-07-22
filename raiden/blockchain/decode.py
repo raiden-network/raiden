@@ -44,6 +44,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.typing import (
     BlockTimeout,
+    FeeAmount,
     List,
     Optional,
     PaymentNetworkAddress,
@@ -318,11 +319,9 @@ def contractreceivechannelbatchunlock_from_event(
 
 
 def actionchannelupdatefee_from_channelstate(
-    channel_state: NettingChannelState, use_imbalance_penalty: bool
+    channel_state: NettingChannelState, max_imbalance_fee: FeeAmount
 ) -> ActionChannelUpdateFee:
-    imbalance_penalty = (
-        calculate_imbalance_fees(get_capacity(channel_state)) if use_imbalance_penalty else None
-    )
+    imbalance_penalty = calculate_imbalance_fees(get_capacity(channel_state), max_imbalance_fee)
     return ActionChannelUpdateFee(
         canonical_identifier=channel_state.canonical_identifier,
         fee_schedule=replace(channel_state.fee_schedule, imbalance_penalty=imbalance_penalty),
@@ -369,9 +368,8 @@ def blockchainevent_to_statechange(
             chain_state, deposit.canonical_identifier
         )
         if channel_state is not None:
-            use_imbalance_penalty = raiden.config.get("use_imbalance_penalty", False)
             update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state, use_imbalance_penalty
+                channel_state, raiden.config["max_imbalance_fee"]
             )
             state_changes.append(update_fee)
 
@@ -383,9 +381,8 @@ def blockchainevent_to_statechange(
             chain_state, withdraw.canonical_identifier
         )
         if channel_state is not None:
-            use_imbalance_penalty = raiden.config.get("use_imbalance_penalty", False)
             update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state, use_imbalance_penalty
+                channel_state, raiden.config["max_imbalance_fee"]
             )
             state_changes.append(update_fee)
 

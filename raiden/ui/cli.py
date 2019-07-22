@@ -412,9 +412,9 @@ def options(func):
                 show_default=True,
             ),
             option(
-                "--rebalancing-fee/--no-rebalancing-fee",
-                help="Enables the rebalancing fee (Preview).",
-                default=False,
+                "--max-imbalance-fee",
+                help="Set the worst-case imbalance fee in wei of the mediated token. (Preview)",
+                default=FeeAmount(0),
                 show_default=True,
             ),
         ),
