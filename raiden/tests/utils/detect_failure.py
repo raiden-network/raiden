@@ -38,6 +38,6 @@ def raise_on_failure(raiden_apps, test_function, **kwargs):
             "Test stacktrace",
             test_traceback="".join(traceback.format_stack(test_greenlet.gr_frame)),
         )
-        log.exception("Pending greenlets", tracebacks="\n".join(gevent.util.format_run_info()))
+        log.debug("Pending greenlets", tracebacks="\n".join(gevent.util.format_run_info()))
 
         raise
