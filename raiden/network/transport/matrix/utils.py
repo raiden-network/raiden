@@ -251,8 +251,10 @@ class UserAddressManager:
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
 
-    def get_status_info(self):
-        user_ids_to_presence_for_known_addresses = {
+    def get_address_mgr_info(self):
+        if self._stop_event.ready():
+            return
+        addresses_uids_presence = {
             to_checksum_address(address): {
                 user_id: self._userid_to_presence[user_id].value
                 for user_id in self._address_to_userids[address]
@@ -261,11 +263,10 @@ class UserAddressManager:
         }
 
         log.debug(
-            "Matrix status info",
+            "Matrix address manager info",
+            addresses_uids_and_presence=addresses_uids_presence,
             current_user_id=self._user_id,
-            user_ids_and_presence_for_known_addresses=user_ids_to_presence_for_known_addresses,
         )
-        return
 
     @property
     def _user_id(self) -> str:
