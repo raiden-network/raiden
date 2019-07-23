@@ -283,9 +283,6 @@ class TokenNetwork:
 
             return channel_identifier
 
-        checking_block = self.client.get_checking_block()
-        return self.get_channel_identifier(self.node_address, partner, checking_block)
-
     def _new_netting_channel(
         self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
     ) -> ChannelID:
