@@ -17,6 +17,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
+    assert_transfer_happy_path_invariants,
     transfer,
     transfer_and_assert_path,
     wait_assert,
@@ -69,7 +70,7 @@ def run_test_mediated_transfer(
 
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app0,
             deposit - amount,
@@ -80,7 +81,7 @@ def run_test_mediated_transfer(
         )
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app1,
             deposit - amount,

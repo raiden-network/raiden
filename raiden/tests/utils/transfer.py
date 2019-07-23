@@ -17,7 +17,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.storage.wal import SavedState
-from raiden.tests.utils.events import raiden_state_changes_search_for_item
+from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
 from raiden.tests.utils.factories import (
     make_initiator_address,
     make_message_identifier,
@@ -777,6 +777,24 @@ def assert_synced_channel_state(
         channel1=channel1,
         balance1=balance1,
         pending_locks1=pending_locks1,
+    )
+
+
+def assert_transfer_happy_path_invariants(
+    token_network_address: TokenNetworkAddress,
+    app0: App,
+    balance0: Balance,
+    pending_locks0: List[HashTimeLockState],
+    app1: App,
+    balance1: Balance,
+    pending_locks1: List[HashTimeLockState],
+) -> None:
+    """ Channels are in synced states and no unlock failures have occurred. """
+    assert not has_unlock_failure(app0.raiden)
+    assert not has_unlock_failure(app1.raiden)
+
+    assert_synced_channel_state(
+        token_network_address, app0, balance0, pending_locks0, app1, balance1, pending_locks1
     )
 
 

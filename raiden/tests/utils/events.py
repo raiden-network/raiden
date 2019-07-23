@@ -139,8 +139,8 @@ def has_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> bo
 
 
 def has_unlock_failure(raiden: RaidenService) -> bool:
-    events = raiden.wal.storage.get_events()
-    return has_event_of_types(events, [EventUnlockFailed, EventUnlockClaimFailed])
+    events = raiden.wal.storage.get_events()  # type: ignore
+    return has_event_of_types(events, (EventUnlockFailed, EventUnlockClaimFailed))
 
 
 def wait_for_raiden_event(
