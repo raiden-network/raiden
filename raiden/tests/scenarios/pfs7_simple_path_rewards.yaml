@@ -15,7 +15,7 @@ token:
 
 nodes:
   mode: managed
-  count: 5
+  count: 4
   raiden_version: local
 
   default_options:
@@ -50,7 +50,7 @@ scenario:
             - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: 100}
-            - assert_pfs_iou: {source: 2, amount: 0}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
 
       - parallel:
           name: "Deposit in the other directions"
@@ -60,31 +60,41 @@ scenario:
             - deposit: {from: 3, to: 2, total_deposit: 1000}
 
       - serial:
+          name: "Assert on all channel deposits"
+          tasks:
+            - wait: 10
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000,  balance: 1000,  state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000,  balance: 1000,  state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000,  balance: 1000,  state: "opened"}
+
+      - serial:
           name: "More transfers and IOUs"
           tasks:
-            # Now that there is a path with capacity the transfer should go through 
+            # Now that there is a path with capacity the transfer should go through
             # and another IOU should exist
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 200}
             - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 3, amount: 200}
-            - assert_pfs_iou: {source: 2, amount: 100}
-            - assert_pfs_iou: {source: 1, amount: 0}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
+            - assert_pfs_iou: {source: 1, iou_exists: false}
+            - assert_pfs_iou: {source: 0, iou_exists: false}
 
             # Perform a couple of more transfers
-            - assert_pfs_iou: {source: 0, iou_exists: false}
             - assert_pfs_history: {source: 0, request_count: 0}
             - transfer: {from: 0, to: 3, amount: 100, expected_http_status: 200}
             - wait: 10
             - assert_pfs_history: {source: 0, target: 3, request_count: 1}
             - assert_pfs_iou: {source: 0, amount: 100}
-            - assert_pfs_iou: {source: 1, amount: 100}
-            - assert_pfs_iou: {source: 2, amount: 100}
+            - assert_pfs_iou: {source: 1, iou_exists: false}
+            - assert_pfs_iou: {source: 2, iou_exists: false}
             - assert_pfs_iou: {source: 3, amount: 200}
 
-            - assert_pfs_iou: {source: 2, amount: 100}
-            - assert_pfs_history: {source: 2, request_count: 1}
+
             - transfer: {from: 2, to: 0, amount: 100, expected_http_status: 200}
             - wait: 10
-            - assert_pfs_history: {source: 2, target: 0, request_count: 2}
-            - assert_pfs_iou: {source: 2, amount: 200}
+            - assert_pfs_history: {source: 2, target: 0, request_count: 1}
+            - assert_pfs_iou: {source: 2, amount: 100}

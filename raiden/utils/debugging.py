@@ -11,4 +11,7 @@ def enable_gevent_monitoring_signal():
     import gevent.util
     import signal
 
-    signal.signal(signal.SIGUSR1, gevent.util.print_run_info)
+    def on_signal(signalnum, stack_frame):  # pylint: disable=unused-argument
+        gevent.util.print_run_info()
+
+    signal.signal(signal.SIGUSR1, on_signal)

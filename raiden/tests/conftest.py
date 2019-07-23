@@ -34,7 +34,6 @@ from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
-from raiden.utils.debugging import enable_gevent_monitoring_signal
 
 
 def pytest_addoption(parser):
@@ -66,9 +65,15 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def auto_enable_gevent_monitoring_signal():
-    enable_gevent_monitoring_signal()
+@pytest.fixture(autouse=True)
+def auto_enable_gevent_monitoring_signal(capsys):
+    import gevent.util
+
+    def on_signal(signalnum, stack_frame):  # pylint: disable=unused-argument
+        with capsys.disabled():
+            gevent.util.print_run_info()
+
+    signal.signal(signal.SIGUSR1, on_signal)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -176,10 +181,13 @@ def pytest_runtest_call(item):
     In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
     This doesn't work under xdist and will therefore show no output.
     """
-    yield
+    outcome = yield
+    did_fail = isinstance(outcome._excinfo, tuple) and isinstance(
+        outcome._excinfo[1], BaseException
+    )
     is_xdist = "PYTEST_XDIST_WORKER" in os.environ
     is_flaky_test = item.get_closest_marker("flaky") is not None
-    if is_flaky_test and not is_xdist:
+    if did_fail and is_flaky_test and not is_xdist:
         if item.config.option.verbose > 0:
             capmanager = item.config.pluginmanager.getplugin("capturemanager")
             with capmanager.global_and_fixture_disabled():
@@ -190,9 +198,17 @@ def pytest_runtest_call(item):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_setup(item):
-    timeout = item.config.getvalue("timeout")
-    marker = item.get_closest_marker("timeout")
+    """ Limit the tests runtime
 
+    The timeout is read from the following places (last one takes precedence):
+    * setup.cfg (ini)
+    * commandline option (option)
+    * pytest timeout marker at the specific test (market)
+    """
+    timeout = int(item.config.getini("timeout"))
+    timeout = item.config.getoption("timeout", default=timeout)
+
+    marker = item.get_closest_marker("timeout")
     if marker is not None:
         # This marker supports only one argument, it may be positional or
         # keyword
