@@ -1,12 +1,12 @@
 from collections.abc import Mapping
-from typing import Type
 
 import gevent
 
 from raiden.raiden_service import RaidenService
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
-from raiden.utils.typing import Any, Iterable, List, Optional, TypeVar
+from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
+from raiden.utils.typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar
 
 NOVALUE = object()
 T = TypeVar("T")
@@ -127,6 +127,20 @@ def must_have_events(event_list: List[TM], *args) -> bool:
             return False
 
     return True
+
+
+def has_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> bool:
+    for event in events:
+        for event_type in event_types:
+            if isinstance(event, event_type):
+                return True
+    else:
+        return False
+
+
+def has_unlock_failure(raiden: RaidenService) -> bool:
+    events = raiden.wal.storage.get_events()
+    return has_event_of_types(events, [EventUnlockFailed, EventUnlockClaimFailed])
 
 
 def wait_for_raiden_event(
