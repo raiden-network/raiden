@@ -17,13 +17,13 @@ attrs==19.1.0             # via automat, black, flake8-bugbear, hypothesis, json
 automat==0.7.0            # via twisted
 autopep8==1.4.4
 babel==2.7.0
-bcrypt==3.1.6             # via matrix-synapse
+bcrypt==3.1.7             # via matrix-synapse
 black==19.3b0
 bleach==3.1.0             # via matrix-synapse, readme-renderer
 bump2version==0.5.10
 cachetools==3.1.1
 canonicaljson==1.1.4      # via matrix-synapse, signedjson
-certifi==2019.3.9
+certifi==2019.6.16
 cffi==1.12.3
 chardet==3.0.4
 click==7.0
@@ -33,11 +33,11 @@ colour==0.1.5
 constantly==15.1.0        # via twisted
 coverage==4.5.3
 cryptography==2.7         # via pyopenssl, pysaml2, service-identity
-cytoolz==0.9.0.1
+cytoolz==0.10.0
 daemonize==2.5.0          # via matrix-synapse
 decorator==4.4.0
 defusedxml==0.6.0         # via pysaml2
-docutils==0.14
+docutils==0.15.1.post1
 entrypoints==0.3          # via flake8
 eth-abi==1.3.0
 eth-account==0.3.0
@@ -47,30 +47,30 @@ eth-keys==0.2.4
 eth-rlp==0.1.2
 eth-typing==2.1.0
 eth-utils==1.4.1
-execnet==1.6.0            # via pytest-xdist
+execnet==1.6.1            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
 filelock==3.0.12
 flake8-bugbear==19.3.0
 flake8-tuple==0.4.0
-flake8==3.7.7
+flake8==3.7.8
 flaky==3.6.0
 flask-cors==3.0.8
 flask-restful==0.3.7
-flask==1.0.3
+flask==1.1.1
 frozendict==1.2           # via canonicaljson, matrix-synapse
 gevent==1.3.7
 greenlet==0.4.15
 grequests==0.3.0
 hexbytes==0.2.0
 hyperlink==19.0.0         # via twisted
-hypothesis==4.24.3
+hypothesis==4.31.0
 idna==2.8
 imagesize==1.1.0
 importlib-metadata==0.18  # via pluggy, pytest
 incremental==17.5.0       # via treq, twisted
 ipython-genutils==0.2.0
 ipython==4.2.1
-isort==4.3.20
+isort==4.3.21
 itsdangerous==1.1.0
 jinja2==2.10.1
 jsonschema==3.0.1         # via matrix-synapse
@@ -86,8 +86,8 @@ matrix-client==0.3.2
 matrix-synapse-ldap3==0.1.3  # via matrix-synapse
 matrix-synapse==0.33.9
 mccabe==0.6.1             # via flake8, pylint
-mirakuru==1.1.0
-more-itertools==7.0.0     # via pytest
+mirakuru==2.0.1
+more-itertools==7.2.0     # via pytest
 msgpack-python==0.5.6     # via matrix-synapse
 mypy-extensions==0.4.1
 mypy==0.720
@@ -98,9 +98,9 @@ packaging==19.0
 parsimonious==0.8.1
 pdbpp==0.10.0
 pexpect==4.7.0
-phonenumbers==8.10.13     # via matrix-synapse
+phonenumbers==8.10.15     # via matrix-synapse
 pickleshare==0.7.5
-pillow==6.0.0             # via matrix-synapse
+pillow==6.1.0             # via matrix-synapse
 pip-tools==3.8.0
 pluggy==0.12.0            # via pytest
 prometheus-client==0.3.1  # via matrix-synapse
@@ -123,21 +123,21 @@ pylint==2.3.1
 pymacaroons-pynacl==0.9.3  # via matrix-synapse
 pynacl==1.3.0             # via matrix-synapse, pymacaroons-pynacl, signedjson
 pyopenssl==19.0.0         # via matrix-synapse, pysaml2, twisted
-pyparsing==2.4.0
-pyrsistent==0.15.2        # via jsonschema
-pysaml2==4.7.0            # via matrix-synapse
+pyparsing==2.4.1.1
+pyrsistent==0.15.3        # via jsonschema
+pysaml2==4.8.0            # via matrix-synapse
 pysha3==1.0.2
 pytest-forked==1.0.2      # via pytest-xdist
 pytest-random==0.2
 pytest-select==0.1.2
-pytest-xdist==1.28.0
-pytest==4.6.3
+pytest-xdist==1.29.0
+pytest==5.0.1
 python-dateutil==2.8.0    # via pysaml2
-pytoml==0.1.20
+pytoml==0.1.21
 pytz==2019.1
 pyyaml==5.1.1             # via matrix-synapse
-raiden-contracts==0.26.0
-raiden-webui==0.8.0
+raiden-contracts==0.27.0
+raiden-webui==0.9.0
 readme-renderer==24.0
 releases==1.6.1
 requests==2.22.0
@@ -149,7 +149,7 @@ signedjson==1.0.0         # via matrix-synapse
 simplegeneric==0.8.1
 simplejson==3.16.0        # via canonicaljson
 six==1.12.0
-snowballstemmer==1.2.1
+snowballstemmer==1.9.0
 sortedcontainers==2.1.0   # via matrix-synapse
 sphinx-rtd-theme==0.4.3
 sphinx==1.7.9
@@ -159,7 +159,7 @@ sphinxcontrib-images==0.8.0
 sphinxcontrib-websupport==1.1.2
 structlog==19.1.0
 toml==0.10.0              # via black
-toolz==0.9.0
+toolz==0.10.0
 traitlets==4.3.2
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==19.2.1      # via matrix-synapse, matrix-synapse-ldap3, treq
@@ -170,14 +170,14 @@ unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3
 wcwidth==0.1.7            # via pytest
 web3==4.9.2
-webargs==5.3.1
+webargs==5.4.0
 webencodings==0.5.1       # via bleach
 websockets==6.0
-werkzeug==0.15.4
+werkzeug==0.15.5
 wheel==0.33.4
 wmctrl==0.3               # via pdbpp
-wrapt==1.11.1             # via astroid
-zipp==0.5.1               # via importlib-metadata
+wrapt==1.11.2             # via astroid
+zipp==0.5.2               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
