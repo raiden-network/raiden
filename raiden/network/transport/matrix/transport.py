@@ -395,7 +395,7 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
-        self._spawn(self._address_mgr.get_status_info())
+        self.schedule(self._address_mgr.get_status_info(), period=30)
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -470,6 +470,10 @@ class MatrixTransport(Runnable):
         greenlet.link_value(on_success)
         self.greenlets.append(greenlet)
         return greenlet
+
+    def schedule(self, func, period, func_args):
+        gevent.spawn_later(0, func, func_args)
+        gevent.spawn_later(period, self.schedule, period, func, func_args)
 
     def whitelist(self, address: Address):
         """Whitelist peer address to receive communications from
