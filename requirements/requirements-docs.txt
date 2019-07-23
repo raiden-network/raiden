@@ -7,22 +7,22 @@
 alabaster==0.7.12         # via sphinx
 astunparse==1.6.2         # via sphinxcontrib-httpexample
 babel==2.7.0              # via sphinx
-certifi==2019.3.9         # via requests
+certifi==2019.6.16        # via requests
 chardet==3.0.4            # via requests
-docutils==0.14            # via sphinx, sphinxcontrib-httpexample
+docutils==0.15.1.post1    # via sphinx, sphinxcontrib-httpexample
 idna==2.8                 # via requests
 imagesize==1.1.0          # via sphinx
 jinja2==2.10.1            # via sphinx
 markupsafe==1.1.1         # via jinja2
 packaging==19.0           # via sphinx
 pygments==2.4.2           # via sphinx
-pyparsing==2.4.0          # via packaging
+pyparsing==2.4.1.1        # via packaging
 pytz==2019.1              # via babel
 releases==1.6.1
 requests==2.22.0          # via sphinx, sphinxcontrib-images
 semantic-version==2.6.0   # via releases
 six==1.12.0               # via astunparse, packaging, sphinx, sphinxcontrib-httpdomain
-snowballstemmer==1.2.1    # via sphinx
+snowballstemmer==1.9.0    # via sphinx
 sphinx-rtd-theme==0.4.3
 sphinx==1.7.9
 sphinxcontrib-httpdomain==1.7.0
