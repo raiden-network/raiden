@@ -2,8 +2,10 @@ import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import (
+    EMPTY_ADDRESS,
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+    SECONDS_PER_DAY,
     UINT256_MAX,
     Environment,
 )
@@ -102,7 +104,16 @@ def maybe_deploy_service_registry_and_return_address(
         return None
     # Not sure what to put in the registration fee token for testing, so using
     # the same token we use for testing for now
-    constructor_arguments = (token_proxy.address,)
+    constructor_arguments = (
+        token_proxy.address,
+        EMPTY_ADDRESS,
+        int(500e18),
+        6,
+        5,
+        180 * SECONDS_PER_DAY,
+        1000,
+        200 * SECONDS_PER_DAY,
+    )
     address = deploy_contract_web3(
         contract_name=CONTRACT_SERVICE_REGISTRY,
         deploy_client=deploy_client,
