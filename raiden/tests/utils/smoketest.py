@@ -24,8 +24,10 @@ from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
+    EMPTY_ADDRESS,
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+    SECONDS_PER_DAY,
     UINT256_MAX,
     EthClient,
 )
@@ -128,7 +130,16 @@ def deploy_smoketest_contracts(
             contract_name=CONTRACT_SERVICE_REGISTRY,
             deploy_client=client,
             contract_manager=contract_manager,
-            constructor_arguments=(token_address,),
+            constructor_arguments=(
+                token_address,
+                EMPTY_ADDRESS,
+                int(500e18),
+                6,
+                5,
+                180 * SECONDS_PER_DAY,
+                1000,
+                200 * SECONDS_PER_DAY,
+            ),
         )
         addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
 
