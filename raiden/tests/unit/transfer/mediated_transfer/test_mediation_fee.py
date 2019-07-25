@@ -80,8 +80,15 @@ def test_rebalancing_fee_calculation():
 
     sample = calculate_imbalance_fees(TA(10), max_imbalance_fee)
     assert sample is not None
-    assert len(sample) == 10
+    assert len(sample) == 11
     assert max(x for x, _ in sample) == 10
     assert max(y for _, y in sample) == 10 ** 18
 
+    sample = calculate_imbalance_fees(TA(1), max_imbalance_fee)
+    assert sample is not None
+    assert len(sample) == 2
+    assert max(x for x, _ in sample) == 1
+    assert max(y for _, y in sample) == 10 ** 18
+
+    assert calculate_imbalance_fees(TA(0), max_imbalance_fee) is None
     assert calculate_imbalance_fees(TA(10), max_imbalance_fee=FA(0)) is None
