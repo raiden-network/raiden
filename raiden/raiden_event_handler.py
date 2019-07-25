@@ -355,14 +355,26 @@ class RaidenEventHandler(EventHandler):
         if balance_proof:
             nonce = balance_proof.nonce
             balance_hash = balance_proof.balance_hash
-            signature = balance_proof.signature
+            signature_in_proof = balance_proof.signature
             message_hash = balance_proof.message_hash
+            canonical_identifier = balance_proof.canonical_identifier
 
         else:
             nonce = Nonce(0)
             balance_hash = EMPTY_BALANCE_HASH
-            signature = EMPTY_SIGNATURE
+            signature_in_proof = EMPTY_SIGNATURE
             message_hash = EMPTY_MESSAGE_HASH
+            canonical_identifier = channel_close_event.canonical_identifier
+
+        closing_data = pack_balance_proof_update(
+            nonce=nonce,
+            balance_hash=balance_hash,
+            additional_hash=message_hash,
+            canonical_identifier=canonical_identifier,
+            partner_signature=signature_in_proof,
+        )
+
+        our_signature = raiden.signer.sign(data=closing_data)
 
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
@@ -376,7 +388,8 @@ class RaidenEventHandler(EventHandler):
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=message_hash,
-            signature=signature,
+            non_closing_signature=signature_in_proof,
+            closing_signature=our_signature,
             block_identifier=channel_close_event.triggered_by_block_hash,
         )
 

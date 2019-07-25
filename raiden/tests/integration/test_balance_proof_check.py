@@ -1,16 +1,20 @@
 import pytest
+from eth_utils import decode_hex, to_checksum_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
+from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
+from raiden.utils.signer import LocalSigner
+from raiden_contracts.constants import MessageTypeId
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -72,6 +76,17 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         contract_manager=app1.raiden.contract_manager,
         blockchain_service=app1.raiden.chain,
     )
+    empty_balance_proof = BalanceProof(
+        channel_identifier=channel_identifier,
+        token_network_address=to_checksum_address(token_network_contract.address),
+        nonce=0,
+        chain_id=chain_state.chain_id,
+        transferred_amount=0,
+    )
+    closing_data = empty_balance_proof.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+    ) + decode_hex(EMPTY_SIGNATURE)
+    closing_signature = LocalSigner(app1.privkey).sign(data=closing_data)
 
     # app1 closes the channel with an empty hash instead of the expected hash
     # of the transferred amount from app0
@@ -81,7 +96,8 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         balance_hash=EMPTY_HASH,
         nonce=0,
         additional_hash=EMPTY_HASH,
-        signature=EMPTY_SIGNATURE,
+        non_closing_signature=EMPTY_SIGNATURE,
+        closing_signature=closing_signature,
         given_block_identifier="latest",
     )
     waiting.wait_for_settle(
