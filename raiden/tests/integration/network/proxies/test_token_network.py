@@ -90,6 +90,7 @@ def test_token_network_proxy(
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+    c2_signer = LocalSigner(private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
@@ -192,6 +193,17 @@ def test_token_network_proxy(
             partner=c2_client.address,
         )
 
+    empty_balance_proof = BalanceProof(
+        channel_identifier=1,
+        token_network_address=c1_token_network_proxy.address,
+        nonce=0,
+        chain_id=chain_id,
+        transferred_amount=0,
+    )
+    closing_data = empty_balance_proof.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+    ) + decode_hex(EMPTY_SIGNATURE)
+
     msg = "Trying to close an inexisting channel must fail."
     match = "The channel was not open at the provided block"
     with pytest.raises(RaidenUnrecoverableError, message=msg, match=match):
@@ -201,7 +213,8 @@ def test_token_network_proxy(
             balance_hash=EMPTY_HASH,
             nonce=0,
             additional_hash=EMPTY_HASH,
-            signature=EMPTY_SIGNATURE,
+            non_closing_signature=EMPTY_SIGNATURE,
+            closing_signature=c1_signer.sign(data=closing_data),
             given_block_identifier="latest",
         )
 
@@ -295,8 +308,18 @@ def test_token_network_proxy(
         signature_number_bit_flipped.to_bytes(len(signature), "big"),
     ]
 
-    msg = "close must fail if the signature is invalid"
+    msg = "close must fail if the closing_signature is invalid"
     for invalid_signature in invalid_signatures:
+        balance_proof = BalanceProof(
+            channel_identifier=channel_identifier,
+            token_network_address=c2_token_network_proxy.address,
+            nonce=0,
+            chain_id=chain_id,
+            transferred_amount=0,
+        )
+        closing_data = balance_proof.serialize_bin(
+            msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+        ) + decode_hex(invalid_signature)
         with pytest.raises(RaidenUnrecoverableError, message=msg):
             c2_token_network_proxy.close(
                 channel_identifier=channel_identifier,
@@ -304,19 +327,24 @@ def test_token_network_proxy(
                 balance_hash=decode_hex(balance_proof.balance_hash),
                 nonce=balance_proof.nonce,
                 additional_hash=decode_hex(balance_proof.additional_hash),
-                signature=invalid_signature,
+                non_closing_signature=invalid_signature,
+                closing_signature=c2_signer.sign(data=closing_data),
                 given_block_identifier="latest",
             )
 
     blocknumber_prior_to_close = c2_client.block_number()
 
+    closing_data = balance_proof.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+    ) + decode_hex(balance_proof.signature)
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
         balance_hash=decode_hex(balance_proof.balance_hash),
         nonce=balance_proof.nonce,
         additional_hash=decode_hex(balance_proof.additional_hash),
-        signature=decode_hex(balance_proof.signature),
+        non_closing_signature=decode_hex(balance_proof.signature),
+        closing_signature=c2_signer.sign(data=closing_data),
         given_block_identifier="latest",
     )
     assert (
@@ -349,7 +377,8 @@ def test_token_network_proxy(
             balance_hash=decode_hex(balance_proof.balance_hash),
             nonce=balance_proof.nonce,
             additional_hash=decode_hex(balance_proof.additional_hash),
-            signature=decode_hex(balance_proof.signature),
+            non_closing_signature=decode_hex(balance_proof.signature),
+            closing_signature=c2_signer.sign(data=closing_data),
             given_block_identifier="latest",
         )
 
@@ -365,7 +394,8 @@ def test_token_network_proxy(
             balance_hash=decode_hex(balance_proof.balance_hash),
             nonce=balance_proof.nonce,
             additional_hash=decode_hex(balance_proof.additional_hash),
-            signature=decode_hex(balance_proof.signature),
+            non_closing_signature=decode_hex(balance_proof.signature),
+            closing_signature=c2_signer.sign(data=closing_data),
             given_block_identifier=blocknumber_prior_to_close,
         )
 
@@ -439,6 +469,7 @@ def test_token_network_proxy_update_transfer(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_signer = LocalSigner(private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
     c1_token_network_proxy = TokenNetwork(
@@ -522,13 +553,17 @@ def test_token_network_proxy_update_transfer(
         assert "not in a closed state" in str(exc)
 
     # close by c1
+    closing_data = balance_proof_c2.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+    ) + decode_hex(balance_proof_c2.signature)
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c2_client.address,
         balance_hash=decode_hex(balance_proof_c2.balance_hash),
         nonce=balance_proof_c2.nonce,
         additional_hash=decode_hex(balance_proof_c2.additional_hash),
-        signature=decode_hex(balance_proof_c2.signature),
+        non_closing_signature=decode_hex(balance_proof_c2.signature),
+        closing_signature=c1_signer.sign(data=closing_data),
         given_block_identifier="latest",
     )
 
@@ -742,13 +777,22 @@ def test_token_network_actions_at_pruned_blocks(
     non_closing_signature = LocalSigner(c2_client.privkey).sign(data=non_closing_data)
 
     # close channel with given block being pruned
+    empty_balance_proof = BalanceProof(
+        channel_identifier=channel_identifier,
+        token_network_address=c1_token_network_proxy.address,
+        nonce=0,
+        chain_id=chain_id,
+        transferred_amount=0,
+    )
+    closing_data = empty_balance_proof + decode_hex(EMPTY_SIGNATURE)
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c2_client.address,
         balance_hash=EMPTY_HASH,
         nonce=0,
         additional_hash=EMPTY_HASH,
-        signature=EMPTY_SIGNATURE,
+        non_closing_signature=EMPTY_SIGNATURE,
+        closing_signature=LocalSigner(c1_client.privkey).sign(data=closing_data),
         given_block_identifier=pruned_number,
     )
     close_pruned_number = c1_chain.block_number()
