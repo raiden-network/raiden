@@ -97,19 +97,22 @@ def calculate_imbalance_fees(
 ) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
     """ Calculates a quadratic rebalancing curve.
 
-    The penalty term takes the value `MAX_IMBALANCE_FEE` at the extrema.
+    The penalty term takes the value `max_imbalance_fee` at the extrema.
     """
     if max_imbalance_fee == 0:
         return None
 
-    def f(balance: TokenAmount) -> FeeAmount:
-        constant = 4 * max_imbalance_fee / channel_capacity ** 2
-        inner = balance - (channel_capacity // 2)
+    if channel_capacity == 0:
+        return None
 
-        return FeeAmount(int(constant * inner ** 2))
+    def f(balance: TokenAmount) -> FeeAmount:
+        constant = max_imbalance_fee / (channel_capacity / 2) ** 2
+        inner = balance - (channel_capacity / 2)
+
+        return FeeAmount(int(round(constant * inner ** 2)))
 
     # Do not duplicate base points when not enough token are available
-    num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity)
+    num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity + 1)
     x_values = linspace(TokenAmount(0), channel_capacity, num_base_points)
     y_values = [f(x) for x in x_values]
 
