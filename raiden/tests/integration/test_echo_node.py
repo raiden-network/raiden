@@ -2,6 +2,7 @@ from hashlib import sha256
 
 import gevent
 import pytest
+import structlog
 from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
@@ -10,11 +11,14 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
+from raiden.transfer.architecture import Event
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.typing import List, Optional
 from raiden.waiting import wait_for_transfer_success
+
+log = structlog.get_logger(__name__)
 
 
 @pytest.mark.parametrize("number_of_nodes", [3])
@@ -113,7 +117,6 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
-@pytest.mark.skip("Issue #3750")
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
         raiden_apps=raiden_chain,
@@ -158,7 +161,7 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     # Let 6 participants enter the pool
     amount = 7
     for num, app in enumerate([app0, app1, app2, app3, app4, app5]):
-        identifier = 10 ** (num + 1)
+        identifier = 100 * num
         transfer_and_await(
             app=app,
             token_address=token_address,
@@ -174,7 +177,7 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         token_address=token_address,
         target=echo_app.raiden.address,
         amount=amount,
-        identifier=10 ** 6,  # app5 used this identifier before
+        identifier=500,  # app5 used this identifier before
         timeout=transfer_timeout,
     )
 
@@ -195,7 +198,7 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         token_address=token_address,
         target=echo_app.raiden.address,
         amount=amount,
-        identifier=10 ** 7,
+        identifier=600,
         timeout=transfer_timeout,
     )
 
@@ -206,7 +209,7 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
             token_address=token_address
         )
 
-        def is_valid(event) -> bool:
+        def is_valid(event: Event) -> bool:
             return (
                 type(event) == EventPaymentReceivedSuccess
                 and event.initiator == echo_app.raiden.address
@@ -231,13 +234,21 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
 
             received_events.append(event)
 
+        log.debug(
+            "Checking number of received events",
+            received_events=received_events,
+            expected_size=size,
+            actual_size=len(received_events),
+            seen_transfers=echo_node.seen_transfers,
+            received_transfers=received_events,
+        )
         if len(received_events) == size:
             return received_events
 
         return None
 
     # wait for the expected echoed transfers to be handled
-    received = wait_until(lambda: received_events_when_len(2), network_wait)
+    received = wait_until(func=lambda: received_events_when_len(2), wait_for=network_wait)
     assert received
 
     received.sort(key=lambda transfer: transfer.amount)
