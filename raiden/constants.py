@@ -119,3 +119,7 @@ PATH_FINDING_BROADCASTING_ROOM = "path_finding"
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
+
+
+# Keep in sync with .circleci/config.yaml
+HIGHEST_SUPPORTED_GETH_VERSION = "1.8.22"
