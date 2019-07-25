@@ -16,7 +16,6 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
     assert_transfer_happy_path_invariants,
     transfer,
     transfer_and_assert_path,
@@ -212,11 +211,25 @@ def run_test_mediated_transfer_with_entire_deposit(
 
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state, token_network_address, app0, deposit * 2, [], app1, 0, []
+            assert_transfer_happy_path_invariants,
+            token_network_address,
+            app0,
+            deposit * 2,
+            [],
+            app1,
+            0,
+            [],
         )
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state, token_network_address, app1, deposit * 2, [], app2, 0, []
+            assert_transfer_happy_path_invariants,
+            token_network_address,
+            app1,
+            deposit * 2,
+            [],
+            app2,
+            0,
+            [],
         )
 
 
@@ -296,7 +309,7 @@ def run_test_mediated_transfer_messages_out_of_order(
     transfer_received.payment_done.wait()
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app0,
             deposit - amount,
@@ -308,7 +321,7 @@ def run_test_mediated_transfer_messages_out_of_order(
 
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app1,
             deposit - amount,
@@ -448,7 +461,7 @@ def run_test_mediated_transfer_with_allocated_fee(
 
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app0,
             deposit - amount - fee,
@@ -459,7 +472,7 @@ def run_test_mediated_transfer_with_allocated_fee(
         )
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app1,
             deposit - amount - fee,
@@ -496,7 +509,7 @@ def run_test_mediated_transfer_with_allocated_fee(
     # The fees have been consumed exclusively by app1
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app0,
             deposit - 2 * (amount + fee),
@@ -518,7 +531,7 @@ def run_test_mediated_transfer_with_allocated_fee(
     # app1 (provided we've set the fee of the channel)
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
+            assert_transfer_happy_path_invariants,
             token_network_address,
             app1,
             deposit - (amount * 2) - fee,
