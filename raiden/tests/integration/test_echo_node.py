@@ -113,6 +113,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.skip("Issue #3750")
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
         raiden_apps=raiden_chain,
