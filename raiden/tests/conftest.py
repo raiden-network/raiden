@@ -17,11 +17,13 @@ pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")  # isort:ski
 pytest.register_assert_rewrite("raiden.tests.utils.smoketest")  # isort:skip
 pytest.register_assert_rewrite("raiden.tests.utils.transfer")  # isort:skip
 
+import contextlib
 import datetime
 import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import gevent
@@ -174,30 +176,57 @@ def insecure_tls():
     make_requests_insecure()
 
 
-@pytest.hookimpl(hookwrapper=True, trylast=True)
-def pytest_runtest_call(item):
-    """ More feedback for flaky tests.
+@contextlib.contextmanager
+def run_with_timeoutfrom_from_item(item):
+    """Sets a timeout up to `item.timeout`, if the timeout is reached an
+    exception is raised, otherwise the amount of time used by the run is
+    deducted from the `item.timeout`.
 
-    In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
-    This doesn't work under xdist and will therefore show no output.
+    This is necessary because the Timeout exception should only be raised from
+    a few specific points in the test execution protocol. If an exception is
+    raised at the wrong steps it will crash the test executor.
+
+    The test protocol is defined by `pytest.runner:pytest_runtest_protocol`,
+    the protocol has three steps:
+
+    - setup
+    - call
+    - teardown
     """
-    outcome = yield
-    did_fail = isinstance(outcome._excinfo, tuple) and isinstance(
-        outcome._excinfo[1], BaseException
-    )
-    is_xdist = "PYTEST_XDIST_WORKER" in os.environ
-    is_flaky_test = item.get_closest_marker("flaky") is not None
-    if did_fail and is_flaky_test and not is_xdist:
-        if item.config.option.verbose > 0:
-            capmanager = item.config.pluginmanager.getplugin("capturemanager")
-            with capmanager.global_and_fixture_disabled():
-                item.config.pluginmanager.get_plugin("terminalreporter")._tw.write(
-                    "FLAKY ", yellow=True
-                )
+
+    def report():
+        gevent.util.print_run_info()
+        pytest.fail(f"Timeout >{item.total_timeout}s")
+
+    def handler(signum, frame):  # pylint: disable=unused-argument
+        report()
+
+    if hasattr(item, "remaining_timeout"):
+        remaining_timeout = item.remaining_timeout
+
+        if remaining_timeout <= 0:
+            report()
+
+        started_at = time.time()
+        signal.signal(signal.SIGALRM, handler)
+        signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
+
+    yield
+
+    if hasattr(item, "remaining_timeout"):
+        elpased = time.time() - started_at
+
+        # Ignore a timeout at the end of the protocol execution, this could be
+        # the pytest_runtest_teardown, and the test should not fail if it
+        # barely finished after the timeout.
+        item.remaining_timeout -= elpased
+
+        # Clear the timeout
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_setup(item):
+def set_item_timeout(item):
     """ Limit the tests runtime
 
     The timeout is read from the following places (last one takes precedence):
@@ -218,29 +247,56 @@ def pytest_runtest_setup(item):
             timeout = marker.kwargs["timeout"]
 
     if isinstance(timeout, (int, float)) and timeout > 0:
-
-        def handler(signum, frame):  # pylint: disable=unused-argument
-            gevent.util.print_run_info()
-            pytest.fail(f"Timeout >{timeout}s")
-
-        def cancel():
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, signal.SIG_DFL)
-
-        item.cancel_timeout = cancel
-        signal.signal(signal.SIGALRM, handler)
-        signal.setitimer(signal.ITIMER_REAL, timeout)
-
-    yield
+        item.total_timeout = timeout
+        item.remaining_timeout = timeout
 
 
-@pytest.hookimpl(hookwrapper=True)
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_setup(item):
+    set_item_timeout(item)
+
+    with run_with_timeoutfrom_from_item(item):
+        yield
+
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_call(item):
+    """ More feedback for flaky tests.
+
+    In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
+    This doesn't work under xdist and will therefore show no output.
+    """
+
+    # pytest_runtest_call is only called if the test setup finished
+    # succesfully, this means the code bellow may not be executed if the
+    # fixture setup has timedout already.
+    with run_with_timeoutfrom_from_item(item):
+        outcome = yield
+
+        did_fail = isinstance(outcome._excinfo, tuple) and isinstance(
+            outcome._excinfo[1], BaseException
+        )
+        is_xdist = "PYTEST_XDIST_WORKER" in os.environ
+        is_flaky_test = item.get_closest_marker("flaky") is not None
+
+        should_print = (
+            did_fail and item.config.option.verbose > 0 and is_flaky_test and not is_xdist
+        )
+
+        if should_print:
+            capmanager = item.config.pluginmanager.getplugin("capturemanager")
+            with capmanager.global_and_fixture_disabled():
+                item.config.pluginmanager.get_plugin("terminalreporter")._tw.write(
+                    "FLAKY ", yellow=True
+                )
+
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_runtest_teardown(item):
-    yield
-
-    cancel = getattr(item, "cancel_timeout", None)
-    if cancel:
-        cancel()
+    # The teardown must be executed to clear up the fixtures, even if the
+    # fixture setup itself failed.
+    with run_with_timeoutfrom_from_item(item):
+        yield
 
 
 def pytest_generate_tests(metafunc):
