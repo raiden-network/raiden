@@ -21,6 +21,7 @@ import contextlib
 import datetime
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import time
@@ -29,8 +30,9 @@ from pathlib import Path
 import gevent
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
+from pkg_resources import parse_version
 
-from raiden.constants import EthClient
+from raiden.constants import HIGHEST_SUPPORTED_GETH_VERSION, EthClient
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
@@ -105,6 +107,26 @@ def pytest_addoption(parser):
         "the no output timeout of the continuous integration."
     )
     parser.addini("timeout_limit_teardown", timeout_limit_teardown_help)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def check_geth_version_for_tests():
+    geth_version_string, _ = subprocess.Popen(
+        ["geth", "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
+    match = re.search("Version: (.*)-", geth_version_string.decode())
+    if match:
+        # Silently ignore unexpected output format from geth version
+        if len(match.groups()) == 1:
+            our_version = parse_version(match.groups()[0])
+            max_supported_version = parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
+
+            if our_version > max_supported_version:
+                sys.exit(
+                    f"You are trying to run tests with an unsupported GETH version. "
+                    f"Your Version: {our_version} "
+                    f"Max Supported Version {max_supported_version}"
+                )
 
 
 @pytest.fixture(autouse=True)
