@@ -185,17 +185,19 @@ class PaymentChannel:
         nonce: Nonce,
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
-        signature: Signature,
+        non_closing_signature: Signature,
+        closing_signature: Signature,
         block_identifier: BlockSpecification,
     ):
-        """ Closes the channel using the provided balance proof. """
+        """ Closes the channel using the provided balance proof, and our closing signature. """
         self.token_network.close(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
             balance_hash=balance_hash,
             nonce=nonce,
             additional_hash=additional_hash,
-            signature=signature,
+            non_closing_signature=non_closing_signature,
+            closing_signature=closing_signature,
             given_block_identifier=block_identifier,
         )
 

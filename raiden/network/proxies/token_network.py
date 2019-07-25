@@ -1428,7 +1428,8 @@ class TokenNetwork:
         balance_hash: BalanceHash,
         nonce: Nonce,
         additional_hash: AdditionalHash,
-        signature: Signature,
+        non_closing_signature: Signature,
+        closing_signature: Signature,
         given_block_identifier: BlockSpecification,
     ) -> None:
         """ Close the channel using the provided balance proof.
@@ -1447,12 +1448,28 @@ class TokenNetwork:
                 cannot be recovered.
         """
 
-        if signature != EMPTY_SIGNATURE:
-            canonical_identifier = CanonicalIdentifier(
-                chain_identifier=self.proxy.contract.functions.chain_id().call(),
-                token_network_address=self.address,
-                channel_identifier=channel_identifier,
-            )
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=self.proxy.contract.functions.chain_id().call(),
+            token_network_address=self.address,
+            channel_identifier=channel_identifier,
+        )
+
+        our_signed_data = pack_balance_proof_update(
+            nonce=nonce,
+            balance_hash=balance_hash,
+            additional_hash=additional_hash,
+            canonical_identifier=canonical_identifier,
+            partner_signature=non_closing_signature,
+        )
+        try:
+            our_recovered_address = recover(data=our_signed_data, signature=closing_signature)
+        except Exception:  # pylint: disable=broad-except
+            raise RaidenUnrecoverableError("Couldn't verify the closing signature")
+        else:
+            if our_recovered_address != self.node_address:
+                raise RaidenUnrecoverableError("Invalid closing signature")
+
+        if non_closing_signature != EMPTY_SIGNATURE:
             partner_signed_data = pack_balance_proof(
                 nonce=nonce,
                 balance_hash=balance_hash,
@@ -1460,7 +1477,9 @@ class TokenNetwork:
                 canonical_identifier=canonical_identifier,
             )
             try:
-                partner_recovered_address = recover(data=partner_signed_data, signature=signature)
+                partner_recovered_address = recover(
+                    data=partner_signed_data, signature=non_closing_signature
+                )
 
                 # InvalidSignature is raised by raiden.utils.signer.recover if signature
                 # is not bytes or has the incorrect length
@@ -1470,10 +1489,10 @@ class TokenNetwork:
                 #
                 # Exception is raised if the public key recovery failed.
             except Exception:  # pylint: disable=broad-except
-                raise RaidenUnrecoverableError("Couldn't verify the close signature")
+                raise RaidenUnrecoverableError("Couldn't verify the non-closing signature")
             else:
                 if partner_recovered_address != partner:
-                    raise RaidenUnrecoverableError("Invalid close proof signature")
+                    raise RaidenUnrecoverableError("Invalid non-closing signature")
 
         try:
             channel_onchain_detail = self._detail_channel(
@@ -1515,7 +1534,8 @@ class TokenNetwork:
             "nonce": nonce,
             "balance_hash": encode_hex(balance_hash),
             "additional_hash": encode_hex(additional_hash),
-            "signature": encode_hex(signature),
+            "non_closing_signature": encode_hex(non_closing_signature),
+            "closing_signature": encode_hex(closing_signature),
         }
 
         with log_transaction(log, "close", log_details):
@@ -1525,7 +1545,8 @@ class TokenNetwork:
                 balance_hash=balance_hash,
                 nonce=nonce,
                 additional_hash=additional_hash,
-                signature=signature,
+                non_closing_signature=non_closing_signature,
+                closing_signature=closing_signature,
                 log_details=log_details,
             )
 
@@ -1536,7 +1557,8 @@ class TokenNetwork:
         balance_hash: BalanceHash,
         nonce: Nonce,
         additional_hash: AdditionalHash,
-        signature: Signature,
+        non_closing_signature: Signature,
+        closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
         with self.channel_operations_lock[partner]:
@@ -1550,7 +1572,8 @@ class TokenNetwork:
                 balance_hash=balance_hash,
                 nonce=nonce,
                 additional_hash=additional_hash,
-                signature=signature,
+                non_closing_signature=non_closing_signature,
+                closing_signature=closing_signature,
             )
 
             if gas_limit:
@@ -1566,7 +1589,8 @@ class TokenNetwork:
                     balance_hash=balance_hash,
                     nonce=nonce,
                     additional_hash=additional_hash,
-                    signature=signature,
+                    non_closing_signature=non_closing_signature,
+                    closing_signature=closing_signature,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
