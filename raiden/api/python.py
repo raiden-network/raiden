@@ -26,8 +26,9 @@ from raiden.exceptions import (
 )
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
+from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import architecture, channel, views
-from raiden.transfer.architecture import TransferTask
+from raiden.transfer.architecture import Event, TransferTask
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
@@ -915,7 +916,7 @@ class RaidenAPI:  # pragma: no unittest
         target_address: Address = None,
         limit: int = None,
         offset: int = None,
-    ):
+    ) -> List[TimestampedEvent]:
         if token_address and not is_binary_address(token_address):
             raise InvalidAddress(
                 "Expected binary address format for token in get_raiden_events_payment_history"
@@ -955,7 +956,7 @@ class RaidenAPI:  # pragma: no unittest
         target_address: Address = None,
         limit: int = None,
         offset: int = None,
-    ):
+    ) -> List[Event]:
         timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
             token_address=token_address, target_address=target_address, limit=limit, offset=offset
         )
