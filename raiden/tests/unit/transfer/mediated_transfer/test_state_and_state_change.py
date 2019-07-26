@@ -9,8 +9,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
+    ActionTransferReroute,
     ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import HopState, RouteState
 
@@ -118,6 +118,4 @@ def test_invalid_instantiation_receive_transfer_refund(additional_args):
         ReceiveTransferRefund(transfer=wrong_type_transfer, **additional_args)
 
     with pytest.raises(ValueError):
-        ReceiveTransferRefundCancelRoute(
-            transfer=wrong_type_transfer, secret=secret, **additional_args
-        )
+        ActionTransferReroute(transfer=wrong_type_transfer, secret=secret, **additional_args)
