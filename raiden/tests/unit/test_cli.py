@@ -33,59 +33,81 @@ def test_cli_version(cli_runner):
 
 
 def test_check_json_rpc_geth():
-    g1, client = is_supported_client("Geth/v1.7.3-unstable-e9295163/linux-amd64/go1.9.1")
-    g2, _ = is_supported_client("Geth/v1.7.2-unstable-e9295163/linux-amd64/go1.9.1")
-    g3, _ = is_supported_client("Geth/v1.8.2-unstable-e9295163/linux-amd64/go1.9.1")
-    g4, _ = is_supported_client("Geth/v2.0.3-unstable-e9295163/linux-amd64/go1.9.1")
-    g5, _ = is_supported_client("Geth/v11.55.86-unstable-e9295163/linux-amd64/go1.9.1")
-    g6, _ = is_supported_client("Geth/v999.999.999-unstable-e9295163/linux-amd64/go1.9.1")
+    g1, client, v1 = is_supported_client("Geth/v1.7.3-unstable-e9295163/linux-amd64/go1.9.1")
+    g2, _, v2 = is_supported_client("Geth/v1.7.2-unstable-e9295163/linux-amd64/go1.9.1")
+    g3, _, v3 = is_supported_client("Geth/v1.8.2-unstable-e9295163/linux-amd64/go1.9.1")
+    g4, _, v4 = is_supported_client("Geth/v2.0.3-unstable-e9295163/linux-amd64/go1.9.1")
+    g5, _, v5 = is_supported_client("Geth/v11.55.86-unstable-e9295163/linux-amd64/go1.9.1")
+    g6, _, v6 = is_supported_client("Geth/v999.999.999-unstable-e9295163/linux-amd64/go1.9.1")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g4, g5, g6])
+    assert all([g1, g2, g3])
+    assert not any([g4, g5, g6])
+    assert v1 == "1.7.3"
+    assert v2 == "1.7.2"
+    assert v3 == "1.8.2"
+    assert v4 == "2.0.3"
+    assert v5 == "11.55.86"
+    assert v6 == "999.999.999"
 
-    b1, client = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
-    b2, _ = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")
-    b3, _ = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
-    b4, _ = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
-    assert not client
+    b1, client, v1 = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
+    b2, _, v2 = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")
+    b3, _, v3 = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
+    b4, _, _ = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
+    assert client is EthClient.GETH
     assert not any([b1, b2, b3, b4])
+    assert v1 == "1.7.1"
+    assert v2 == "0.7.1"
+    assert v3 == "0.0.0"
 
 
 def test_check_json_rpc_parity():
-    g1, client = is_supported_client(
+    g1, client, v1 = is_supported_client(
         "Parity//v1.7.6-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    g2, _ = is_supported_client(
+    g2, _, v2 = is_supported_client(
         "Parity//v1.7.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    g3, _ = is_supported_client(
+    g3, _, v3 = is_supported_client(
         "Parity//v1.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    g4, _ = is_supported_client(
+    g4, _, v4 = is_supported_client(
         "Parity//v2.9.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    g5, _ = is_supported_client(
+    g5, _, v5 = is_supported_client(
         "Parity//v23.94.75-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    g6, _ = is_supported_client(
+    g6, _, v6 = is_supported_client(
         "Parity//v99.994.975-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     assert client is EthClient.PARITY
-    assert all([g1, g2, g3, g4, g5, g6])
+    assert all([g1, g2, g3])
+    assert not any([g4, g5, g6])
+    assert v1 == "1.7.6"
+    assert v2 == "1.7.7"
+    assert v3 == "1.8.7"
+    assert v4 == "2.9.7"
+    assert v5 == "23.94.75"
+    assert v6 == "99.994.975"
 
-    b1, client = is_supported_client(
+    b1, client, v1 = is_supported_client(
         "Parity//v1.7.5-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    b2, _ = is_supported_client(
+    b2, _, v2 = is_supported_client(
         "Parity//v1.5.1-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    b3, _ = is_supported_client(
+    b3, _, v3 = is_supported_client(
         "Parity//v0.7.1-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    b4, _ = is_supported_client(
+    b4, _, v4 = is_supported_client(
         "Parity//v0.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    b5, _ = is_supported_client(
+    b5, _, v5 = is_supported_client(
         "Parity//v0.0.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    assert not client
+    assert client is EthClient.PARITY
     assert not any([b1, b2, b3, b4, b5])
+    assert v1 == "1.7.5"
+    assert v2 == "1.5.1"
+    assert v3 == "0.7.1"
+    assert v4 == "0.8.7"
+    assert v5 == "0.0.0"

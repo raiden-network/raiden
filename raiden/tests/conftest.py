@@ -32,12 +32,19 @@ from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_wi
 from _pytest.tmpdir import get_user
 from pkg_resources import parse_version
 
-from raiden.constants import HIGHEST_SUPPORTED_GETH_VERSION, EthClient
+from raiden.constants import (
+    HIGHEST_SUPPORTED_GETH_VERSION,
+    HIGHEST_SUPPORTED_PARITY_VERSION,
+    LOWEST_SUPPORTED_GETH_VERSION,
+    LOWEST_SUPPORTED_PARITY_VERSION,
+    EthClient,
+)
 from raiden.log_config import configure_logging
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.ethereum_clients import is_supported_client
 
 
 def pytest_addoption(parser):
@@ -110,23 +117,39 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def check_geth_version_for_tests():
+def check_geth_version_for_tests(blockchain_type):
+    if blockchain_type != "geth":
+        return
+
     geth_version_string, _ = subprocess.Popen(
         ["geth", "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
-    match = re.search("Version: (.*)-", geth_version_string.decode())
-    if match:
-        # Silently ignore unexpected output format from geth version
-        if len(match.groups()) == 1:
-            our_version = parse_version(match.groups()[0])
-            max_supported_version = parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
+    supported, _, our_version = is_supported_client(geth_version_string.decode())
+    if not supported:
+        sys.exit(
+            f"You are trying to run tests with an unsupported GETH version. "
+            f"Your Version: {our_version} "
+            f"Min Supported Version {LOWEST_SUPPORTED_GETH_VERSION} "
+            f"Max Supported Version {HIGHEST_SUPPORTED_GETH_VERSION}"
+        )
 
-            if our_version > max_supported_version:
-                sys.exit(
-                    f"You are trying to run tests with an unsupported GETH version. "
-                    f"Your Version: {our_version} "
-                    f"Max Supported Version {max_supported_version}"
-                )
+
+@pytest.fixture(autouse=True, scope="session")
+def check_parity_version_for_tests(blockchain_type):
+    if blockchain_type != "parity":
+        return
+
+    parity_version_string, _ = subprocess.Popen(
+        ["parity", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
+    supported, _, our_version = is_supported_client(parity_version_string.decode())
+    if not supported:
+        sys.exit(
+            f"You are trying to run tests with an unsupported PARITY version. "
+            f"Your Version: {our_version} "
+            f"Min Supported Version {LOWEST_SUPPORTED_PARITY_VERSION} "
+            f"Max Supported Version {HIGHEST_SUPPORTED_PARITY_VERSION}"
+        )
 
 
 @pytest.fixture(autouse=True)
