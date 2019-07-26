@@ -101,6 +101,9 @@ def deploy_service_registry_and_set_urls(
     pfs_address = get_random_pfs(c1_service_proxy, "latest")
     assert pfs_address is None
 
+    # XXX: how to mint tokens and approve the tokens?
+    # XXX: do I need to write a proxy of CustomToken?
+
     # Test that setting the urls works
     c1_service_proxy.set_url(urls[0])
     c2_service_proxy.set_url(urls[1])
