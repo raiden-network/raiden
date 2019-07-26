@@ -40,7 +40,7 @@ def test_service_registry_random_pfs(
         contract_manager=contract_manager,
         service_registry_address=service_registry_address,
     )
-    assert c1_service_proxy.service_count("latest") == 3
+    assert c1_service_proxy.ever_made_deposits_len("latest") == 3
 
     # Test that getting the url for each service address works
     for idx, address in enumerate(addresses):
@@ -50,10 +50,10 @@ def test_service_registry_random_pfs(
 
     # Test that get_service_address by index works
     for idx, address in enumerate(addresses):
-        assert c1_service_proxy.get_service_address("latest", idx) == address
+        assert c1_service_proxy.ever_made_deposits("latest", idx) == address
 
     # Test that getting the address for an index out of bounds returns None
-    assert not c1_service_proxy.get_service_address("latest", 9999)
+    assert not c1_service_proxy.ever_made_deposits("latest", 9999)
 
     # Test that getting a random service from the proxy works
     assert get_random_pfs(c1_service_proxy, "latest") in urls
