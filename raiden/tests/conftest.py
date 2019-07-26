@@ -64,16 +64,17 @@ def pytest_addoption(parser):
 
     timeout_limit_setup_and_call_help = (
         "This setting defines the maximum runtime for the setup *and* call "
-        "phases of a test. Tests are not allowed to mark themselves with a value "
-        "larger then this. This setting together with the timeout_limit_teardown "
-        "defines the total runtime for a single test, the total timeout must be "
-        "lower than the no output timeout of the continuous integration."
+        "phases of a test. Every tests will be allowed to use at most "
+        "`timeout_limit_setup_and_call` seconds to complete. This setting "
+        "together with the timeout_limit_teardown defines the total runtime for "
+        "a single test, the total timeout must be lower than the no output "
+        "timeout of the continuous integration."
     )
     parser.addini("timeout_limit_for_setup_and_call", timeout_limit_setup_and_call_help)
 
     timeout_limit_teardown_help = (
         "This setting defines the runtime for the teardown phase. It must be a "
-        "non-zero value to allow for proper cleanup of fixtures.  This setting "
+        "non-zero value to allow for proper cleanup of fixtures. This setting "
         "together with the timeout_limit_teardown defines the total runtime for "
         "a single test, the total timeout must be lower than the no output "
         "timeout of the continuous integration."
@@ -196,20 +197,10 @@ def timeout_for_setup_and_call(item):
     an exception is raised, otherwise the amount of time used by the run is
     deducted from the `item.remaining_timeout`.
 
-    This is necessary because the Timeout exception should only be raised from
-    a few specific points in the test execution protocol, listed bellow. If an
-    exception is raised at the wrong steps it will crash the test executor.
-
-    The test protocol is defined by `pytest.runner:pytest_runtest_protocol`,
-    has three steps were exceptions can safely be raised at:
-
-    - setup
-    - call
-    - teardown
-
-    This function is only used for setup and call, which share the timeout. The
-    teardown must have a separate timeout, because even if either the setup or
-    the call timedout the teardown must still be called to do fixture clean up.
+    This function is only used for setup and call, which share the same
+    timeout. The teardown must have a separate timeout, because even if either
+    the setup or the call timedout the teardown must still be called to do
+    fixture clean up.
     """
 
     def report():
@@ -220,45 +211,38 @@ def timeout_for_setup_and_call(item):
         report()
 
     # The handler must be installed before the timer is set, otherwise it is
-    # possible that the default handler is used, which is a no-op, effectively
-    # making the timeout into a noop. This would happen if the setup phase took
-    # almost the complete timeout to run, leaving just enough for the call to
-    # install the new timer and get the event.
+    # possible for the default handler is used, which would not raise our
+    # exception. This can happen if the setup phase uses most of the available
+    # time, leaving just enough for the call to install the new timer and get
+    # the event.
     signal.signal(signal.SIGALRM, handler)
 
-    # Negative values are invalid and will raise an exception. This is never a
-    # problem here because this function is only called from inside
-    # pytest_runtest_setup or pytest_runtest_call. The first
-    # pytest_runtest_setup itself validate the values, so on the first call it
-    # is know that the value is larger than 0. The second call wil not happen
-    # if the first timedout already, this is guaranteed by the check bellow,
-    # that asserts that after the setup phase the remaining timeout is larger
-    # than zero, otherwise an exception is raised.
+    # Negative values are invalid and will raise an exception.
+    #
+    # This is not a problem because:
+    # - pytest_runtest_setup is the first called, it follows the call to
+    # pytest_runtest_protocol, which validates and set the timeout values.
+    # - pytest_runtest_call is the second call, and it it will only if the
+    # setup was succesfull, i.e. a timeout did not happen. This implies that
+    # the remaining_timeout is positive.
     remaining_timeout = item.remaining_timeout
 
-    # The time is collected just before the signal is configured
     started_at = time.time()
     signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
 
     yield
 
-    # The teardown order is important, until the timer is unset it is still
-    # possible for it to be executed, to avoid calling the default handler
-    # instead of our handler, the timer must be disabled *before* the handler
-    # is unset.
+    # The timer must be disabled *before* the handler is unset, otherwise it is
+    # possible for a timeout event to be handled by the default handler.
     signal.setitimer(signal.ITIMER_REAL, 0)
-
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
-    # The runtime must be the first thing collected after the control is
-    # returned to this function
     elpased = time.time() - started_at
 
-    # Now compute the remaining_timeout. It is possible for the result to be
-    # negative, this can happen if the time.time clock and the clock used by
-    # the signal are different. The, to guarantee that on the next iteration
-    # this value is non-negative, raise an exception here if the
-    # remaining_timeout is over.
+    # It is possible for the result for elapsed to be negative, this can happen
+    # if the time.time clock and the clock used by the signal are different. To
+    # guarantee the next iteration will only have positive values, raise an
+    # exception, failling the setup and skiping the call.
     item.remaining_timeout -= elpased
     if item.remaining_timeout < 0:
         report()
@@ -334,7 +318,23 @@ def set_item_timeouts(item):
 
 @pytest.hookimpl()
 def pytest_runtest_protocol(item, nextitem):  # pylint:disable=unused-argument
+    # The timeouts cannot be configured in the pytest_runtest_setup, because if
+    # the required value is not set, an exception is raised, but then it is
+    # swallowed by the `CallInfo.from_call`
     set_item_timeouts(item)
+
+
+# Pytest's test protocol is defined by `pytest.runner:pytest_runtest_protocol`,
+# it has three steps were exceptions can safely be raised at:
+#
+# - setup
+# - call
+# - teardown
+#
+# Bellow one hook for each of the steps is used. This is necessary to guarantee
+# that a Timeout exception will be raised only inside these steps that handle
+# exceptions, otherwise the test executor could be killed by the timeout
+# exception.
 
 
 @pytest.hookimpl(hookwrapper=True, trylast=True)
@@ -349,7 +349,11 @@ def pytest_runtest_call(item):
     """ More feedback for flaky tests.
 
     In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
-    This doesn't work under xdist and will therefore show no output.
+
+    This doesn't when:
+
+    - Tests are executed under xdist.
+    - The fixture setup fails.
     """
 
     # pytest_runtest_call is only called if the test setup finished
