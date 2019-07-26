@@ -197,6 +197,7 @@ def test_token_network_proxy(
     empty_balance_proof = BalanceProof(
         channel_identifier=1,
         token_network_address=c1_token_network_proxy.address,
+        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,
