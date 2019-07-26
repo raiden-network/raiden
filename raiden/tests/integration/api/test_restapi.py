@@ -1892,7 +1892,6 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
-@pytest.mark.skip("Issue: #4344")
 def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses):
     _, app1 = raiden_network
     token_address = token_addresses[0]
