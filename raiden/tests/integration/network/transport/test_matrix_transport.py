@@ -467,6 +467,7 @@ def test_join_invalid_discovery(
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [3])
+@pytest.mark.skip("Issue: #4337")
 def test_matrix_cross_server_with_load_balance(matrix_transports):
     transport0, transport1, transport2 = matrix_transports
     received_messages0 = set()
@@ -719,6 +720,7 @@ def test_pfs_global_messages(
 )
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.skip("Issue: #4338")
 def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_rule):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
@@ -836,6 +838,7 @@ def test_matrix_invite_private_room_unhappy_case1(
 )
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.skip("Issue: #4336")
 def test_matrix_invite_private_room_unhappy_case_2(
     matrix_transports, expected_join_rule0, expected_join_rule1
 ):
@@ -1101,6 +1104,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
 @pytest.mark.parametrize("private_rooms", [[True, True]])
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.skip("Issue: #4379")
 def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     transport0, transport1 = matrix_transports
     received_messages0 = set()
