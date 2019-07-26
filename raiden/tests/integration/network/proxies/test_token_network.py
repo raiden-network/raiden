@@ -200,9 +200,10 @@ def test_token_network_proxy(
         chain_id=chain_id,
         transferred_amount=0,
     )
-    closing_data = empty_balance_proof.serialize_bin(
-        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
-    ) + decode_hex(EMPTY_SIGNATURE)
+    closing_data = (
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
+        + EMPTY_SIGNATURE
+    )
 
     msg = "Trying to close an inexisting channel must fail."
     match = "The channel was not open at the provided block"
@@ -784,7 +785,7 @@ def test_token_network_actions_at_pruned_blocks(
         chain_id=chain_id,
         transferred_amount=0,
     )
-    closing_data = empty_balance_proof + decode_hex(EMPTY_SIGNATURE)
+    closing_data = empty_balance_proof + EMPTY_SIGNATURE
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c2_client.address,
