@@ -413,10 +413,14 @@ def eth_run_nodes(
             log_path = eth_node_to_logpath(node_config, logdir)
             logfile = stack.enter_context(open(log_path, "w+"))
 
+            timeout = 10
+            sleep = 0.1
+
             executor = JSONRPCExecutor(
                 command=cmd,
                 url=f'http://127.0.0.1:{node_config["rpcport"]}',
-                timeout=10,
+                timeout=timeout,
+                sleep=sleep,
                 jsonrpc_method="eth_getBlockByNumber",
                 jsonrpc_params=["0x0", False],
                 result_validator=_validate_jsonrpc_result,
@@ -425,6 +429,23 @@ def eth_run_nodes(
 
             stack.enter_context(executor)
             executors.append(executor)
+
+            # The timeout_limit_teardown is necessary to prevent the build
+            # being killed because of the lack of output, at the same time the
+            # timeout must never happen, because if does, not all finalizers
+            # are executed, leaving dirty state behind and result in test
+            # flakiness.
+            #
+            # Because of this, this value is arbitrarily smaller than the
+            # teardown timeout, forcing the subprocess to be killed on a timely
+            # manner, which should allow the teardown to proceed and finish
+            # before the timeout elapses.
+            timeout = 0.5
+
+            # The timeout values for the startup and teardown must be
+            # different, however the library doesn't support it. So here we
+            # must poke at the private member and overwrite it.
+            executor._timeout = timeout
 
         yield executors
 
