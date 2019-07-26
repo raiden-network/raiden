@@ -13,7 +13,6 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -87,7 +86,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
         + EMPTY_SIGNATURE
     )
-    closing_signature = LocalSigner(app1.privkey).sign(data=closing_data)
+    closing_signature = app1.raiden.signer.sign(data=closing_data)
 
     # app1 closes the channel with an empty hash instead of the expected hash
     # of the transferred amount from app0

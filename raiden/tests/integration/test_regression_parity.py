@@ -78,7 +78,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
 
     closing_data = pack_balance_proof_update(
         nonce=balance_proof.nonce,
-        balance_hash=balance_proof.balacne_hash,
+        balance_hash=balance_proof.balance_hash,
         additional_hash=balance_proof.message_hash,
         canonical_identifier=balance_proof.canonical_identifier,
         partner_signature=balance_proof.signature,
