@@ -1583,6 +1583,7 @@ class TokenNetwork:
                     gas_limit,
                     channel_identifier=channel_identifier,
                     non_closing_participant=partner,
+                    closing_participant=self.node_address,
                     balance_hash=balance_hash,
                     nonce=nonce,
                     additional_hash=additional_hash,
