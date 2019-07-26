@@ -10,6 +10,7 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
+    DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
@@ -59,6 +60,7 @@ class App:  # pylint: disable=too-few-public-methods
             "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
             "monitoring_enabled": False,
         },
+        "max_imbalance_fee": DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
     }
 
     def __init__(

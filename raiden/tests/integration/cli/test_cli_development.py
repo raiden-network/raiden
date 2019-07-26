@@ -24,6 +24,7 @@ def test_cli_full_init_dev(cli_args, raiden_spawner):
 
 @pytest.mark.timeout(45)
 @pytest.mark.parametrize("removed_args", [["address"]])
+@pytest.mark.skip("Issue #4419")
 def test_cli_manual_account_selection(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     expect_cli_until_account_selection(child)

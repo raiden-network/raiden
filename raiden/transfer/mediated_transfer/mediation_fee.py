@@ -6,7 +6,6 @@ from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
 from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, TokenAmount
 
-MAX_IMBALANCE_FEE = 10 ** 18
 NUM_DISCRETISATION_POINTS = 21
 
 
@@ -93,20 +92,27 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
     return result
 
 
-def calculate_imbalance_fees(channel_capacity: TokenAmount) -> List[Tuple[TokenAmount, FeeAmount]]:
+def calculate_imbalance_fees(
+    channel_capacity: TokenAmount, max_imbalance_fee: FeeAmount
+) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
     """ Calculates a quadratic rebalancing curve.
 
-    The penalty term takes the value `MAX_IMBALANCE_FEE` at the extrema.
+    The penalty term takes the value `max_imbalance_fee` at the extrema.
     """
+    if max_imbalance_fee == 0:
+        return None
+
+    if channel_capacity == 0:
+        return None
 
     def f(balance: TokenAmount) -> FeeAmount:
-        constant = 4 * MAX_IMBALANCE_FEE / channel_capacity ** 2
-        inner = balance - (channel_capacity // 2)
+        constant = max_imbalance_fee / (channel_capacity / 2) ** 2
+        inner = balance - (channel_capacity / 2)
 
-        return FeeAmount(int(constant * inner ** 2))
+        return FeeAmount(int(round(constant * inner ** 2)))
 
     # Do not duplicate base points when not enough token are available
-    num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity)
+    num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity + 1)
     x_values = linspace(TokenAmount(0), channel_capacity, num_base_points)
     y_values = [f(x) for x in x_values]
 

@@ -22,6 +22,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelUpdateFee
 from raiden.utils import sha3
@@ -477,9 +478,7 @@ def run_test_mediated_transfer_with_allocated_fee(
     # Let app1 consume all of the allocated mediation fee
     action_update_fee = ActionChannelUpdateFee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
-        flat_fee=fee,
-        proportional_fee=0,
-        use_imbalance_penalty=False,
+        fee_schedule=FeeScheduleState(flat=fee),
     )
 
     app1.raiden.handle_state_changes(state_changes=[action_update_fee])
@@ -574,9 +573,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     # Let app1 consume all of the allocated mediation fee
     action_update_fee = ActionChannelUpdateFee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
-        flat_fee=FeeAmount(fee * 2),
-        proportional_fee=0,
-        use_imbalance_penalty=False,
+        fee_schedule=FeeScheduleState(flat=FeeAmount(fee * 2)),
     )
 
     app1.raiden.handle_state_changes(state_changes=[action_update_fee])

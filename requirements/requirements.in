@@ -26,6 +26,5 @@ raiden-contracts
 raiden-webui
 requests
 structlog
-typing-extensions
 web3
 webargs

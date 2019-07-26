@@ -14,7 +14,10 @@ from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
 from raiden import constants, routing
-from raiden.blockchain.decode import blockchainevent_to_statechange
+from raiden.blockchain.decode import (
+    actionchannelupdatefee_from_channelstate,
+    blockchainevent_to_statechange,
+)
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
@@ -67,7 +70,6 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
@@ -429,7 +431,7 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
-        self._initialize_channel_fees(self.config.get("use_imbalance_penalty", False))
+        self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -947,7 +949,7 @@ class RaidenService(Runnable):
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
 
-    def _initialize_channel_fees(self, use_imbalance_penalty: bool) -> None:
+    def _initialize_channel_fees(self) -> None:
         """ Initializes the fees of all open channels to the latest set values.
 
         This includes a recalculation of the dynamic rebalancing fees.
@@ -973,13 +975,9 @@ class RaidenService(Runnable):
                     proportional_fee=default_fee_schedule.proportional,
                 )
 
-                state_change = ActionChannelUpdateFee(
-                    canonical_identifier=channel.canonical_identifier,
-                    flat_fee=default_fee_schedule.flat,
-                    proportional_fee=default_fee_schedule.proportional,
-                    use_imbalance_penalty=use_imbalance_penalty,
+                state_change = actionchannelupdatefee_from_channelstate(
+                    channel, self.config["max_imbalance_fee"]
                 )
-
                 self.handle_and_track_state_changes([state_change])
 
     def sign(self, message: Message) -> None:

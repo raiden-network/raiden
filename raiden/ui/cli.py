@@ -23,6 +23,9 @@ from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
+    DEFAULT_MEDIATION_FLAT_FEE,
+    DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
+    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
@@ -400,21 +403,22 @@ def options(func):
             option(
                 "--flat-fee",
                 help=("Flat fee required for every mediation in wei of the mediated token."),
-                default=FeeAmount(0),
+                default=DEFAULT_MEDIATION_FLAT_FEE,
                 type=FeeAmount,
                 show_default=True,
             ),
             option(
                 "--proportional-fee",
                 help=("Mediation fee as ratio of mediated amount in parts-per-million (10^-6)."),
-                default=0,
+                default=DEFAULT_MEDIATION_PROPORTIONAL_FEE,
                 type=int,
                 show_default=True,
             ),
             option(
-                "--rebalancing-fee/--no-rebalancing-fee",
-                help="Enables the rebalancing fee (Preview).",
-                default=False,
+                "--max-imbalance-fee",
+                help="Set the worst-case imbalance fee in wei of the mediated token. (Preview)",
+                default=DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
+                type=FeeAmount,
                 show_default=True,
             ),
         ),
