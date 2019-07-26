@@ -201,7 +201,7 @@ def matrix_server_starter(
 
                 synapse_io = DEVNULL, log_file, STDOUT
 
-            timeout = 10
+            startup_timeout = 10
             sleep = 0.1
 
             executor = HTTPExecutor(
@@ -214,7 +214,7 @@ def matrix_server_starter(
                 ],
                 url=urljoin(server_url, "/_matrix/client/versions"),
                 method="GET",
-                timeout=timeout,
+                timeout=startup_timeout,
                 sleep=sleep,
                 cwd=config_file.parent,
                 verify_tls=False,
@@ -224,19 +224,19 @@ def matrix_server_starter(
 
             # The timeout_limit_teardown is necessary to prevent the build
             # being killed because of the lack of output, at the same time the
-            # timeout must never happen, because if does, not all finalizers
-            # are executed, leaving dirty state behind and result in test
+            # timeout must never happen, because if it does, not all finalizers
+            # are executed, leaving dirty state behind and resulting in test
             # flakiness.
             #
             # Because of this, this value is arbitrarily smaller than the
             # teardown timeout, forcing the subprocess to be killed on a timely
             # manner, which should allow the teardown to proceed and finish
             # before the timeout elapses.
-            timeout = 0.5
+            teardown_timeout = 0.5
 
             # The timeout values for the startup and teardown must be
             # different, however the library doesn't support it. So here we
             # must poke at the private member and overwrite it.
-            executor._timeout = timeout
+            executor._timeout = teardown_timeout
 
         yield server_urls
