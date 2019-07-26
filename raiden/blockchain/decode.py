@@ -1,3 +1,10 @@
+"""Module to map a blockchain event to a state change.
+
+All fuctions that map an event to a state change must be side-effect free. If
+any additional data is necessary, either from the database or the blockchain
+itself. an utility should be added to raiden.blockchain.state, and then called
+by blockchainevent_to_statechange.
+"""
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
@@ -345,7 +352,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state, chain_service, event
+            chain_state=chain_state, chain_service=chain_service, event=event
         )
 
         if new_channel_details is not None:
@@ -403,7 +410,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
-            chain_service, chain_state, event
+            chain_service=chain_service, chain_state=chain_state, event=event
         )
 
         if channel_settle_state:

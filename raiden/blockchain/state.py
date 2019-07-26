@@ -1,3 +1,10 @@
+"""This module is responsible to load additinal data necessary to instantiate
+the state changes.
+
+It is very important that every function here only fetch **confirmed** data,
+otherwise the node will be susceptible to races, which can crash the client in
+the best case, or be an attack vector in the worst case.
+"""
 from dataclasses import dataclass
 
 from eth_utils import to_checksum_address, to_hex
@@ -92,19 +99,21 @@ def get_contractreceivechannelsettled_data_from_event(
         # ChannelSettled event may have been pruned, because of this the
         # RPC call raised ValueError.
         #
-        # The solution is to query the channel's state from the latest block,
-        # this /may/ create a ContractReceiveChannelSettled with the wrong
-        # locksroot (i.e. not the locksroot used during the call to settle).
-        # However this is fine, because at this point the channel is settled,
-        # it is known that the locksroot can not be reverted without an unlock,
-        # and because the unlocks are fare it doesn't matter who called it,
-        # only if there are tokens locked in the settled channel.
+        # The solution is to query the channel's state from the latest
+        # *confirmed* block, this /may/ create a ContractReceiveChannelSettled
+        # with the wrong locksroot (i.e. not the locksroot used during the call
+        # to settle). However this is fine, because at this point the channel
+        # is settled, it is known that the locksroot can not be reverted
+        # without an unlock, and because the unlocks are fare it doesn't matter
+        # who called it, only if there are tokens locked in the settled
+        # channel.
+        confirmed_block = views.block_number(chain_state)
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             chain=chain_service,
             canonical_identifier=channel_state.canonical_identifier,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
-            block_identifier="latest",
+            block_identifier=confirmed_block,
         )
 
     return ChannelSettleState(canonical_identifier, our_locksroot, partner_locksroot)
@@ -221,8 +230,9 @@ def get_contractreceivechannelnew_data_from_event(
         # event may have been pruned, because of this the RPC call raised
         # ValueError.
         #
-        # To fix this the latest state of the channel is queried.
-        channel_details = channel_proxy.detail(block_identifier="latest")
+        # To fix this the latest **confirmed** state of the channel is queried.
+        confirmed_block = views.block_number(chain_state)
+        channel_details = channel_proxy.detail(block_identifier=confirmed_block)
 
     token_network_registry = views.get_token_network_registry_by_token_network_address(
         chain_state, token_network_address
