@@ -304,6 +304,7 @@ class MatrixTransport(Runnable):
         self._server_name = config.get("server_name", urlparse(self._server_url).netloc)
 
         self.greenlets: List[gevent.Greenlet] = list()
+        self.scheduled_greenlets: List[gevent.Greenlet] = list()
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
@@ -446,6 +447,8 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.OFFLINE.value)
         self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
+        # We have to kill the scheduled greenlets in order to timely shutdown
+        gevent.killall(self.scheduled_greenlets)
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets + [r.greenlet for r in self._address_to_retrier.values()])
 
@@ -477,20 +480,20 @@ class MatrixTransport(Runnable):
             return
 
         def on_success(greenlet):
-            if greenlet in self.greenlets:
-                self.greenlets.remove(greenlet)
+            if greenlet in self.scheduled_greenlets:
+                self.scheduled_greenlets.remove(greenlet)
 
         run_greenlet = gevent.spawn_later(0, func, *args, **kwargs)
         run_greenlet.link_exception(self.on_error)
         run_greenlet.link_value(on_success)
-        self.greenlets.append(run_greenlet)
+        self.scheduled_greenlets.append(run_greenlet)
 
         schedeule_greenlet = gevent.spawn_later(
             period, self._schedule, period=period, func=func, *args, **kwargs
         )
         schedeule_greenlet.link_exception(self.on_error)
         schedeule_greenlet.link_value(on_success)
-        self.greenlets.append(schedeule_greenlet)
+        self.scheduled_greenlets.append(schedeule_greenlet)
 
     def whitelist(self, address: Address):
         """Whitelist peer address to receive communications from
