@@ -129,7 +129,10 @@ def raiden_chain(
     exception = RuntimeError("`raiden_chain` fixture setup failed, nodes are unreachable")
     with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_channels(
-            app_channels, blockchain_services.deploy_registry.address, token_addresses, deposit
+            app_channels=app_channels,
+            payment_network_address=blockchain_services.deploy_registry.address,
+            token_addresses=token_addresses,
+            deposit=deposit,
         )
 
     yield raiden_apps
@@ -219,7 +222,10 @@ def raiden_network(
     exception = RuntimeError("`raiden_network` fixture setup failed, nodes are unreachable")
     with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_channels(
-            app_channels, blockchain_services.deploy_registry.address, token_addresses, deposit
+            app_channels=app_channels,
+            payment_network_address=blockchain_services.deploy_registry.address,
+            token_addresses=token_addresses,
+            deposit=deposit,
         )
 
     # Force blocknumber update

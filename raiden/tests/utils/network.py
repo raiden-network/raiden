@@ -483,7 +483,7 @@ def wait_for_alarm_start(
 def wait_for_usable_channel(
     app0: App,
     app1: App,
-    registry_address: PaymentNetworkAddress,
+    payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     our_deposit: TokenAmount,
     partner_deposit: TokenAmount,
@@ -495,30 +495,36 @@ def wait_for_usable_channel(
     is reachable.
     """
     waiting.wait_for_newchannel(
-        app0.raiden, registry_address, token_address, app1.raiden.address, retry_timeout
+        raiden=app0.raiden,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+        retry_timeout=retry_timeout,
     )
 
     waiting.wait_for_participant_deposit(
-        app0.raiden,
-        registry_address,
-        token_address,
-        app1.raiden.address,
-        app0.raiden.address,
-        our_deposit,
-        retry_timeout,
+        raiden=app0.raiden,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+        target_address=app0.raiden.address,
+        target_balance=our_deposit,
+        retry_timeout=retry_timeout,
     )
 
     waiting.wait_for_participant_deposit(
-        app0.raiden,
-        registry_address,
-        token_address,
-        app1.raiden.address,
-        app1.raiden.address,
-        partner_deposit,
-        retry_timeout,
+        raiden=app0.raiden,
+        payment_network_address=payment_network_address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+        target_address=app1.raiden.address,
+        target_balance=partner_deposit,
+        retry_timeout=retry_timeout,
     )
 
-    waiting.wait_for_healthy(app0.raiden, app1.raiden.address, retry_timeout)
+    waiting.wait_for_healthy(
+        raiden=app0.raiden, node_address=app1.raiden.address, retry_timeout=retry_timeout
+    )
 
 
 def wait_for_token_networks(
@@ -536,7 +542,7 @@ def wait_for_token_networks(
 
 def wait_for_channels(
     app_channels: AppChannels,
-    registry_address: PaymentNetworkAddress,
+    payment_network_address: PaymentNetworkAddress,
     token_addresses: List[TokenAddress],
     deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
@@ -545,8 +551,20 @@ def wait_for_channels(
     for app0, app1 in app_channels:
         for token_address in token_addresses:
             wait_for_usable_channel(
-                app0, app1, registry_address, token_address, deposit, deposit, retry_timeout
+                app0=app0,
+                app1=app1,
+                payment_network_address=payment_network_address,
+                token_address=token_address,
+                our_deposit=deposit,
+                partner_deposit=deposit,
+                retry_timeout=retry_timeout,
             )
             wait_for_usable_channel(
-                app1, app0, registry_address, token_address, deposit, deposit, retry_timeout
+                app1=app1,
+                app0=app0,
+                payment_network_address=payment_network_address,
+                token_address=token_address,
+                our_deposit=deposit,
+                partner_deposit=deposit,
+                retry_timeout=retry_timeout,
             )

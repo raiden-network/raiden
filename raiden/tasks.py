@@ -214,6 +214,7 @@ class AlarmTask(Runnable):
             latest_block_number=latest_block["number"],
             latest_gas_limit=latest_block["gasLimit"],
             latest_block_hash=to_hex(latest_block["hash"]),
+            node=to_checksum_address(self.chain.node_address),
         )
 
         self.known_block_number = known_block_number
@@ -240,6 +241,7 @@ class AlarmTask(Runnable):
                 old_block_number=latest_block["number"],
                 old_gas_limit=latest_block["gasLimit"],
                 old_block_hash=to_hex(latest_block["hash"]),
+                node=to_checksum_address(self.chain.node_address),
             )
         elif missed_blocks > 0:
             log_details = dict(
@@ -247,6 +249,7 @@ class AlarmTask(Runnable):
                 latest_block_number=latest_block_number,
                 latest_block_hash=to_hex(latest_block["hash"]),
                 latest_block_gas_limit=latest_block["gasLimit"],
+                node=to_checksum_address(self.chain.node_address),
             )
             if missed_blocks > 1:
                 log_details["num_missed_blocks"] = missed_blocks - 1
