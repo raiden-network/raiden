@@ -2377,7 +2377,7 @@ def handle_channel_settled(
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_depsoit(
+def handle_channel_deposit(
     channel_state: NettingChannelState,
     state_change: ContractReceiveChannelDeposit,
     block_number: BlockNumber,
@@ -2518,7 +2518,7 @@ def state_transition(
         iteration = handle_channel_settled(channel_state, state_change)
     elif type(state_change) == ContractReceiveChannelDeposit:
         assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
-        iteration = handle_channel_depsoit(channel_state, state_change, block_number)
+        iteration = handle_channel_deposit(channel_state, state_change, block_number)
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)
