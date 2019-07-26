@@ -62,22 +62,47 @@ def pytest_addoption(parser):
         help="Base port number to use for tests.",
     )
 
+    # The goal here is to ensure the test runner will print something to the
+    # stdout, this should be done frequently enough for the runner to /not/ get
+    # killed by the CI. The settings bellow are defined in such a way to
+    # guarantee that the test fails before the CI kill the runner.
+    #
+    # When something is printed depends on the verbosity used. If the tests are
+    # executed with verbosity zero (the default), the only phase that prints to
+    # the stdout is pytest_runtest_call.
+    #
+    # Consider the following:
+    #
+    # 1. test1.setup
+    # 2. test1.call
+    # 3. test1.teardown
+    # 4. test2.setup
+    # 5. test2.call
+    # 6. test2.teardown
+    #
+    # From the start of step 3 until the end of step 5 there will be no output,
+    # which is a full test cycle. Because of this, the settings bellow are
+    # define in terms of their addition being smaller than the CI settings.
+    #
+    # Higher verbosities change the analysis above, however this is set for the
+    # worst case.
+
     timeout_limit_setup_and_call_help = (
-        "This setting defines the maximum runtime for the setup *and* call "
+        "This setting defines the timeout in seconds for the setup *and* call "
         "phases of a test. Every test will be allowed to use at most "
-        "`timeout_limit_setup_and_call` seconds to complete. This setting "
-        "together with the timeout_limit_teardown defines the total runtime for "
-        "a single test. The total timeout must be lower than the no output "
-        "timeout of the continuous integration."
+        "`timeout_limit_setup_and_call` seconds to complete these phases. This "
+        "setting together with the timeout_limit_teardown defines the total "
+        "runtime for a single test. The total timeout must be lower than the no "
+        "output timeout of the continuous integration."
     )
     parser.addini("timeout_limit_for_setup_and_call", timeout_limit_setup_and_call_help)
 
     timeout_limit_teardown_help = (
-        "This setting defines the runtime for the teardown phase. It must be a "
-        "non-zero value to allow for proper cleanup of fixtures. This setting "
-        "together with the timeout_limit_setup_and_call defines the total "
-        "runtime for a single test. The total timeout must be lower than the "
-        "no output timeout of the continuous integration."
+        "This setting defines the timeout in seconds for the teardown phase. It "
+        "must be a non-zero value to allow for proper cleanup of fixtures. This "
+        "setting together with the timeout_limit_setup_and_call defines the "
+        "total runtime for a single test. The total timeout must be lower than "
+        "the no output timeout of the continuous integration."
     )
     parser.addini("timeout_limit_teardown", timeout_limit_teardown_help)
 
@@ -357,8 +382,8 @@ def pytest_runtest_call(item):
     """
 
     # pytest_runtest_call is only called if the test setup finished
-    # succesfully, this means the code below may not be executed if the
-    # fixture setup has timedout already.
+    # succesfully, this means the code below may not be executed if the fixture
+    # setup has timedout already.
     with timeout_for_setup_and_call(item):
         outcome = yield
 
