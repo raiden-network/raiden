@@ -83,7 +83,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
         canonical_identifier=balance_proof.canonical_identifier,
         partner_signature=balance_proof.signature,
     )
-    closing_signature = LocalSigner(app0.privkey).sign(data=closing_data)
+    closing_signature = LocalSigner(app0.raiden.private_key).sign(data=closing_data)
 
     channel.close(
         nonce=balance_proof.nonce,
