@@ -181,7 +181,7 @@ def get_random_pfs(
             addresses,
         )
     )
-    index = random.SystemRandom().randint(0, len(addresses_list))
+    index = random.SystemRandom().randint(0, len(addresses_list) - 1)
     address = addresses_list[index]
 
     # We are using the same blockhash for both blockchain queries so the address
