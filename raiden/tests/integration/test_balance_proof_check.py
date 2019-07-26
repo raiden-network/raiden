@@ -1,5 +1,5 @@
 import pytest
-from eth_utils import to_checksum_address, encode_hex
+from eth_utils import encode_hex, to_checksum_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI

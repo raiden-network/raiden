@@ -113,3 +113,5 @@ class ServiceRegistry:
             if receipt:
                 msg = f"URL {url} is invalid"
                 raise RaidenUnrecoverableError(msg)
+
+    # XXX: deposit function is missing
