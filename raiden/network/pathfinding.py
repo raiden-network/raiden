@@ -172,7 +172,7 @@ def get_random_pfs(
         service_registry.ever_made_deposits(block_identifier=block_identifier, index=idx)
         for idx in range(0, count)
     )
-    addresses_list = list(
+    address_list = list(
         filter(
             lambda addr: addr
             and service_registry.has_valid_registration(
@@ -181,8 +181,10 @@ def get_random_pfs(
             addresses,
         )
     )
-    index = random.SystemRandom().randint(0, len(addresses_list) - 1)
-    address = addresses_list[index]
+    if not address_list:
+        return None
+    index = random.SystemRandom().randint(0, len(address_list) - 1)
+    address = address_list[index]
 
     # We are using the same blockhash for both blockchain queries so the address
     # should exist for this query. Additionally at the moment there is no way for

@@ -56,7 +56,7 @@ def test_payment_channel_proxy_basics(
 
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_proxy_1.channel_identifier,
-        token_network_address=channel_proxy_1.token_network.address,
+        token_network_address=token_network_address,
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,
