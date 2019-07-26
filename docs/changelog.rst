@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 0.9.1 https://github.com/raiden-network/webui/releases/tag/v0.9.1
+
 * :release:`0.100.4 <2019-06-08>`
 * :feature:`4095` Prevent Raiden from sending IOU to PFS when fee is 0
 * :feature:`4088` Check PFS info about registry address, prevent use of a PFS that doesn't support the current network.
