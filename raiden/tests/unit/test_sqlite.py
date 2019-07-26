@@ -30,9 +30,9 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
+    ActionTransferReroute,
     ReceiveLockExpired,
     ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import BalanceProofUnsignedState, RouteState
 from raiden.transfer.state_change import Block, ReceiveUnlock
@@ -187,7 +187,7 @@ def test_get_state_change_with_balance_proof():
         sender=transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     transfer = make_signed_transfer_from_counter(counter)
-    transfer_refund_cancel_route = ReceiveTransferRefundCancelRoute(
+    transfer_reroute = ActionTransferReroute(
         transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,  # pylint: disable=no-member
@@ -219,7 +219,7 @@ def test_get_state_change_with_balance_proof():
         (lock_expired, lock_expired.balance_proof),
         (unlock, unlock.balance_proof),
         (transfer_refund, transfer_refund.transfer.balance_proof),
-        (transfer_refund_cancel_route, transfer_refund_cancel_route.transfer.balance_proof),
+        (transfer_reroute, transfer_reroute.transfer.balance_proof),
         (action_init_mediator, action_init_mediator.from_transfer.balance_proof),
         (action_init_target, action_init_target.transfer.balance_proof),
     ]

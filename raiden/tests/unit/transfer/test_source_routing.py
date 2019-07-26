@@ -10,8 +10,9 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
 from raiden.transfer.mediated_transfer.state_change import (
+    ActionTransferReroute,
+    ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.node import handle_init_initiator, state_transition
 from raiden.utils.signer import LocalSigner, recover
@@ -224,15 +225,22 @@ def test_initiator_skips_used_routes():
 
     assert role == "initiator", "Should keep initiator role"
 
-    refund_state_change = ReceiveTransferRefundCancelRoute(
+    failed_route_state_change = ReceiveTransferCancelRoute(
+        transfer=received_transfer,
+        balance_proof=received_transfer.balance_proof,
+        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
+
+    state_transition(chain_state=chain_state, state_change=failed_route_state_change)
+
+    reroute_state_change = ActionTransferReroute(
         transfer=received_transfer,
         balance_proof=received_transfer.balance_proof,
         sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
         secret=factories.make_secret(),
-        is_reroute_allowed=True,
     )
 
-    iteration = state_transition(chain_state=chain_state, state_change=refund_state_change)
+    iteration = state_transition(chain_state=chain_state, state_change=reroute_state_change)
 
     assert search_for_item(iteration.events, SendLockedTransfer, {}) is None
 

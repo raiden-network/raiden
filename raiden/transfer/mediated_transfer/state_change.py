@@ -76,6 +76,34 @@ class ActionInitTarget(BalanceProofStateChange):
 
 
 @dataclass
+class ActionTransferReroute(BalanceProofStateChange):
+    """ A transfer will be rerouted
+
+    Args:
+        transfer: the transfer being re-routed
+        secret: the new secret
+        secrethash: the new secrethash
+    """
+
+    transfer: LockedTransferSignedState
+    secret: Secret = field(repr=False)
+    secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        typecheck(self.transfer, LockedTransferSignedState)
+
+        self.secrethash = sha256_secrethash(self.secret)
+
+
+@dataclass
+class ReceiveTransferCancelRoute(BalanceProofStateChange):
+    """ A mediator sends us a refund due to a failed route """
+
+    transfer: LockedTransferSignedState
+
+
+@dataclass
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 

@@ -17,7 +17,7 @@ from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
-from raiden.transfer.mediated_transfer.state_change import ReceiveTransferRefundCancelRoute
+from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
 from raiden.utils import sha3
 
 # pylint: disable=too-many-locals
@@ -247,8 +247,8 @@ def test_regression_register_secret_once(secret_registry_address, deploy_service
     assert previous_nonce == deploy_service.client._available_nonce
 
 
-@pytest.mark.skip("issue #3915")
 @pytest.mark.parametrize("number_of_nodes", [5])
+@pytest.mark.parametrize("channels_per_node", [0])
 def test_regression_payment_complete_after_refund_to_the_initiator(
     raiden_network, token_addresses, settle_timeout, deposit
 ):
@@ -275,6 +275,7 @@ def run_regression_payment_complete_after_refund_to_the_initiator(
     #  0 -> 1 -> 2
     #  v         ^
     #  3 ------> 4
+
     app_channels = [(app0, app1), (app1, app2), (app0, app3), (app3, app4), (app4, app2)]
 
     open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
@@ -286,9 +287,9 @@ def run_regression_payment_complete_after_refund_to_the_initiator(
 
     # Send a transfer that will result in a refund app1->app0
     transfer(
-        initiator_app=app0, target_app=app2, token_address=token, amount=deposit, identifier=1
+        initiator_app=app0, target_app=app2, token_address=token, amount=deposit, identifier=2
     )
 
     assert raiden_state_changes_search_for_item(
-        raiden=app0, item_type=ReceiveTransferRefundCancelRoute, attributes={}
+        raiden=app0.raiden, item_type=ReceiveTransferCancelRoute, attributes={}
     )

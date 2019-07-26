@@ -1,3 +1,5 @@
+import copy
+
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -30,11 +32,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
+    ActionTransferReroute,
     ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
+    ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
@@ -679,6 +682,21 @@ def handle_init_target(
     )
 
 
+def handle_transfer_reroute(
+    chain_state: ChainState, state_change: ActionTransferReroute
+) -> TransitionResult[ChainState]:
+
+    new_secrethash = state_change.secrethash
+    current_payment_task = chain_state.payment_mapping.secrethashes_to_task[
+        state_change.transfer.lock.secrethash
+    ]
+    chain_state.payment_mapping.secrethashes_to_task.update(
+        {new_secrethash: copy.deepcopy(current_payment_task)}
+    )
+
+    return subdispatch_to_paymenttask(chain_state, state_change, new_secrethash)
+
+
 def handle_receive_withdraw_request(
     chain_state: ChainState, state_change: ReceiveWithdrawRequest
 ) -> TransitionResult[ChainState]:
@@ -728,8 +746,8 @@ def handle_receive_transfer_refund(
     )
 
 
-def handle_receive_transfer_refund_cancel_route(
-    chain_state: ChainState, state_change: ReceiveTransferRefundCancelRoute
+def handle_receive_transfer_cancelroute(
+    chain_state: ChainState, state_change: ReceiveTransferCancelRoute
 ) -> TransitionResult[ChainState]:
     return subdispatch_to_paymenttask(
         chain_state, state_change, state_change.transfer.lock.secrethash
@@ -816,6 +834,12 @@ def handle_state_change(
         elif type(state_change) == ActionUpdateTransportAuthData:
             assert isinstance(state_change, ActionUpdateTransportAuthData), MYPY_ANNOTATION
             iteration = handle_update_transport_authdata(chain_state, state_change)
+        elif type(state_change) == ReceiveTransferCancelRoute:
+            assert isinstance(state_change, ReceiveTransferCancelRoute), MYPY_ANNOTATION
+            iteration = handle_receive_transfer_cancelroute(chain_state, state_change)
+        elif type(state_change) == ActionTransferReroute:
+            assert isinstance(state_change, ActionTransferReroute), MYPY_ANNOTATION
+            iteration = handle_transfer_reroute(chain_state, state_change)
         elif type(state_change) == ContractReceiveNewPaymentNetwork:
             assert isinstance(state_change, ContractReceiveNewPaymentNetwork), MYPY_ANNOTATION
             iteration = handle_new_payment_network(chain_state, state_change)
@@ -858,9 +882,6 @@ def handle_state_change(
         elif type(state_change) == ReceiveSecretReveal:
             assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
             iteration = handle_secret_reveal(chain_state, state_change)
-        elif type(state_change) == ReceiveTransferRefundCancelRoute:
-            assert isinstance(state_change, ReceiveTransferRefundCancelRoute), MYPY_ANNOTATION
-            iteration = handle_receive_transfer_refund_cancel_route(chain_state, state_change)
         elif type(state_change) == ReceiveTransferRefund:
             assert isinstance(state_change, ReceiveTransferRefund), MYPY_ANNOTATION
             iteration = handle_receive_transfer_refund(chain_state, state_change)
