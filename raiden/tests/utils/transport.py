@@ -201,21 +201,42 @@ def matrix_server_starter(
 
                 synapse_io = DEVNULL, log_file, STDOUT
 
-            exit_stack.enter_context(
-                HTTPExecutor(
-                    [
-                        sys.executable,
-                        "-m",
-                        "synapse.app.homeserver",
-                        f"--server-name={server_name}",
-                        f"--config-path={config_file!s}",
-                    ],
-                    url=urljoin(server_url, "/_matrix/client/versions"),
-                    method="GET",
-                    timeout=30,
-                    cwd=config_file.parent,
-                    verify_tls=False,
-                    io=synapse_io,
-                )
+            timeout = 10
+            sleep = 0.1
+
+            executor = HTTPExecutor(
+                [
+                    sys.executable,
+                    "-m",
+                    "synapse.app.homeserver",
+                    f"--server-name={server_name}",
+                    f"--config-path={config_file!s}",
+                ],
+                url=urljoin(server_url, "/_matrix/client/versions"),
+                method="GET",
+                timeout=timeout,
+                sleep=sleep,
+                cwd=config_file.parent,
+                verify_tls=False,
+                io=synapse_io,
             )
+            exit_stack.enter_context(executor)
+
+            # The timeout_limit_teardown is necessary to prevent the build
+            # being killed because of the lack of output, at the same time the
+            # timeout must never happen, because if does, not all finalizers
+            # are executed, leaving dirty state behind and result in test
+            # flakiness.
+            #
+            # Because of this, this value is arbitrarily smaller than the
+            # teardown timeout, forcing the subprocess to be killed on a timely
+            # manner, which should allow the teardown to proceed and finish
+            # before the timeout elapses.
+            timeout = 0.5
+
+            # The timeout values for the startup and teardown must be
+            # different, however the library doesn't support it. So here we
+            # must poke at the private member and overwrite it.
+            executor._timeout = timeout
+
         yield server_urls
