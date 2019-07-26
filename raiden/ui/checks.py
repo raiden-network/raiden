@@ -7,7 +7,15 @@ from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
 from raiden.accounts import AccountManager
-from raiden.constants import SQLITE_MIN_REQUIRED_VERSION, Environment, RoutingMode
+from raiden.constants import (
+    HIGHEST_SUPPORTED_GETH_VERSION,
+    HIGHEST_SUPPORTED_PARITY_VERSION,
+    LOWEST_SUPPORTED_GETH_VERSION,
+    LOWEST_SUPPORTED_PARITY_VERSION,
+    SQLITE_MIN_REQUIRED_VERSION,
+    Environment,
+    RoutingMode,
+)
 from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -43,10 +51,13 @@ def check_ethereum_client_is_supported(web3: Web3) -> None:
             "and --jsonrpc-apis=eth,net,web3,parity for parity."
         )
 
-    supported, _ = is_supported_client(node_version)
+    supported, our_client, our_version = is_supported_client(node_version)
     if not supported:
         click.secho(
-            "You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2",
+            f"You need a Byzantium enabled ethereum node. Parity >= "
+            f"{LOWEST_SUPPORTED_PARITY_VERSION} <= {HIGHEST_SUPPORTED_PARITY_VERSION}"
+            f" or Geth >= {LOWEST_SUPPORTED_GETH_VERSION} <= {HIGHEST_SUPPORTED_GETH_VERSION}",
+            f" but you have {our_version} {our_client}",
             fg="red",
         )
         sys.exit(1)

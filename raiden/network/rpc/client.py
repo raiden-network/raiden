@@ -406,7 +406,10 @@ class JSONRPCClient:
         except ConnectTimeout:
             raise EthNodeCommunicationError("couldnt reach the ethereum node")
 
-        _, eth_node = is_supported_client(version)
+        supported, eth_node, _ = is_supported_client(version)
+
+        if not supported:
+            raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
 
         address = privatekey_to_address(privkey)
         address_checksumed = to_checksum_address(address)
@@ -432,9 +435,6 @@ class JSONRPCClient:
         elif eth_node is constants.EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(web3, address_checksumed)
-
-        else:
-            raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
 
         self.eth_node = eth_node
         self.privkey = privkey
