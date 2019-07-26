@@ -45,19 +45,27 @@ class ServiceRegistry:
         self.client = jsonrpc_client
         self.node_address = self.client.address
 
-    def service_count(self, block_identifier: BlockSpecification) -> int:
-        """Get the number of registered services"""
-        result = self.proxy.contract.functions.serviceCount().call(
+    def ever_made_deposits(
+        self, block_identifier: BlockSpecification, index: int
+    ) -> Optional[AddressHex]:
+        """Get one of the addresses that have ever made a deposit."""
+        result = self.proxy.contract.functions.ever_made_deposits(index).call(
             block_identifier=block_identifier
         )
         return result
 
-    def get_service_address(
-        self, block_identifier: BlockSpecification, index: int
-    ) -> Optional[AddressHex]:
-        """Gets the address of a service by index. If index is out of range return None"""
+    def ever_made_deposits_len(self, block_identifier: BlockSpecification) -> int:
+        """Get the number of addresses that have ever made a deposit"""
+        result = self.proxy.contract.functions.everMadeDepositsLen().call(
+            block_identifier=block_identifier
+        )
+        return result
+
+    def has_valid_registration(
+        self, block_identifier: BlockSpecification, address: AddressHex
+    ) -> Optional[bool]:
         try:
-            result = self.proxy.contract.functions.service_addresses(index).call(
+            result = self.proxy.contract.functions.hasValidRegistration(address).call(
                 block_identifier=block_identifier
             )
         except web3.exceptions.BadFunctionCallOutput:
