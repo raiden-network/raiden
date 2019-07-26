@@ -164,9 +164,17 @@ In order to use Raiden correctly and safely there are some things that need to b
 Firing it up
 =============
 
+To fire up Raiden you need at least
+ 1. a synced **Ethereum Node** - using geth, parity or infura
+ 2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
+ 3. the address of your favorite **pathfinding service** - local routing is possible but no recommended
 
-Using geth
-**********
+We will provide you with the necessary cli arguments step by step. Full example is at the end of the page.
+
+1. and 2. The synced Ethereum Node & Keystore
+*********************************************
+
+- **Using geth**
 
 Run the Ethereum client and let it sync::
 
@@ -181,10 +189,9 @@ If problems arise for above method, please see `the Ropsten README <https://gith
 
 Then launch Raiden with the default testnet keystore path::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --pathfinding-service-address $PFS_ADDRESS
 
-Using parity
-************
+- **Using parity**
 
 Run the client and let it sync::
 
@@ -198,24 +205,46 @@ Run the client and let it sync::
 After syncing the chain, an existing Ethereum account can be used or a new one can be generated using ``parity-ethkey``.
 After account creation, launch Raiden with the path of your keystore supplied::
 
-    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
+    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test --pathfinding-service-address $PFS_ADDRESS
 
 .. _using_rpc-endpoint:
 
-Using --eth-rpc-endpoint/Infura
-*******************************
+- **Using Infura**
 
 .. warning::
     Raiden may fail during restarts when Infura is used. This can happen because Raiden does not know about transactions in the memory pool and therefore new transactions might reuse these nonces. This will lead to a node crash.
 
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://mainnet.infura.io/v3/<yourToken>"
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>" --pathfinding-service-address $PFS_ADDRESS
 
 .. note::
     When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
 
 Select the desired Ethereum account when prompted, and type in the account's password.
+
+3. The Pathfinding Address
+***************************
+
+Raiden provides a pathfinding service for efficient transfer routing. The default option when starting the client is with the pathfinding service to be paid in RDN tokens.
+
+There are pathfinding services running on every testnet at the moment, some that charge fees and some that are for free.
+
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Testnet    | pfs with fees                                            | pfs without fees                                |
++============+==========================================================+=================================================+
+| Görli      | https://pfs-goerli-with-fee.services-dev.raiden.network  | https://pfs-goerli.services-dev.raiden.network  |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Ropsten    | https://pfs-ropsten-with-fee.services-dev.raiden.network | https://pfs-ropsten.services-dev.raiden.network |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Kovan      | https://pfs-kovan-with-fee.services-dev.raiden.network   | https://pfs-kovan.services-dev.raiden.network   |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Rinkeby    | https://pfs-rinkeby-with-fee.services-dev.raiden.network | https://pfs-rinkeby.services-dev.raiden.network |
++------------+----------------------------------------------------------+-------------------------------------------------+
+
+To start Raiden you need to provide a valid pathfinding service address, e.g. for Görli::
+
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>" --pathfinding-service-address "https://pfs-goerli.services-dev.raiden.network"
 
 
 Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface.
