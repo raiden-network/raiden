@@ -8,9 +8,11 @@ from raiden.exceptions import (
 )
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils import privatekey_to_address
-from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
+from raiden.utils.signer import LocalSigner
+from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId
 
 
 def test_payment_channel_proxy_basics(
@@ -52,11 +54,23 @@ def test_payment_channel_proxy_basics(
     assert len(channel_filter.get_all_entries()) == 2  # ChannelOpened, ChannelNewDeposit
     block_before_close = web3.eth.blockNumber
 
+    empty_balance_proof = BalanceProof(
+        channel_identifier=channel_proxy_1.channel_identifier,
+        token_network_address=channel_proxy_1.token_network.address,
+        nonce=0,
+        chain_id=chain_id,
+        transferred_amount=0,
+    )
+    closing_data = (
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
+        + EMPTY_SIGNATURE
+    )
     channel_proxy_1.close(
         nonce=0,
         balance_hash=EMPTY_HASH,
         additional_hash=EMPTY_HASH,
-        signature=EMPTY_SIGNATURE,
+        non_closing_signature=EMPTY_SIGNATURE,
+        closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
         block_identifier="latest",
     )
     assert channel_proxy_1.closed("latest") is True
