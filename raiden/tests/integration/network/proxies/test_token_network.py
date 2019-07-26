@@ -4,6 +4,7 @@ import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
 from raiden.constants import (
+    EMPTY_BALANCE_HASH,
     EMPTY_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
@@ -781,6 +782,7 @@ def test_token_network_actions_at_pruned_blocks(
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
         token_network_address=c1_token_network_proxy.address,
+        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,

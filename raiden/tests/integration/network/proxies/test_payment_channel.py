@@ -1,6 +1,7 @@
 import pytest
+from eth_utils import encode_hex
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.exceptions import (
     BrokenPreconditionError,
     RaidenRecoverableError,
@@ -57,6 +58,7 @@ def test_payment_channel_proxy_basics(
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_proxy_1.channel_identifier,
         token_network_address=token_network_address,
+        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,
