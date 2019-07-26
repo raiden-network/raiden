@@ -83,9 +83,10 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         chain_id=chain_state.chain_id,
         transferred_amount=0,
     )
-    closing_data = empty_balance_proof.serialize_bin(
-        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
-    ) + decode_hex(EMPTY_SIGNATURE)
+    closing_data = (
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
+        + EMPTY_SIGNATURE
+    )
     closing_signature = LocalSigner(app1.privkey).sign(data=closing_data)
 
     # app1 closes the channel with an empty hash instead of the expected hash
