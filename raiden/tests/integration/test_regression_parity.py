@@ -8,6 +8,8 @@ from raiden.tests.utils.transfer import TransferState, get_channelstate, transfe
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils import safe_gas_limit
+from raiden.utils.packing import pack_balance_proof_update
+from raiden.utils.signer import LocalSigner
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
@@ -74,11 +76,21 @@ def run_test_locksroot_loading_during_channel_settle_handling(
     balance_proof = channel_state.partner_state.balance_proof
     block_number = app0.raiden.chain.block_number()
 
+    closing_data = pack_balance_proof_update(
+        nonce=balance_proof.nonce,
+        balance_hash=balance_proof.balacne_hash,
+        additional_hash=balance_proof.message_hash,
+        canonical_identifier=balance_proof.canonical_identifier,
+        partner_signature=balance_proof.signature,
+    )
+    closing_signature = LocalSigner(app0.privkey).sign(data=closing_data)
+
     channel.close(
         nonce=balance_proof.nonce,
         balance_hash=balance_proof.balance_hash,
         additional_hash=balance_proof.message_hash,
-        signature=balance_proof.signature,
+        non_closing_signature=balance_proof.signature,
+        closing_signature=closing_signature,
         block_identifier=block_number,
     )
 
