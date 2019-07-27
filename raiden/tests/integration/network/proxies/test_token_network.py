@@ -320,9 +320,10 @@ def test_token_network_proxy(
             chain_id=chain_id,
             transferred_amount=0,
         )
-        closing_data = balance_proof.serialize_bin(
-            msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
-        ) + decode_hex(invalid_signature)
+        closing_data = (
+            balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
+            + invalid_signature
+        )
         with pytest.raises(RaidenUnrecoverableError, message=msg):
             c2_token_network_proxy.close(
                 channel_identifier=channel_identifier,
