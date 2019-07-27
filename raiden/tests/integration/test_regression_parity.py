@@ -9,7 +9,6 @@ from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof_update
-from raiden.utils.signer import LocalSigner
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
@@ -83,7 +82,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
         canonical_identifier=balance_proof.canonical_identifier,
         partner_signature=balance_proof.signature,
     )
-    closing_signature = LocalSigner(app0.raiden.private_key).sign(data=closing_data)
+    closing_signature = app0.raiden.signer.sign(data=closing_data)
 
     channel.close(
         nonce=balance_proof.nonce,
