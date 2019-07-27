@@ -23,7 +23,7 @@ from raiden.tests.utils.smartcontracts import (
 from raiden.utils import privatekey_to_address, typing
 from raiden.utils.typing import Optional
 from raiden_contracts.constants import (
-    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_CUSTOM_TOKEN,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -34,7 +34,7 @@ from raiden_contracts.constants import (
 
 @pytest.fixture
 def token_contract_name() -> str:
-    return CONTRACT_HUMAN_STANDARD_TOKEN
+    return CONTRACT_CUSTOM_TOKEN
 
 
 @pytest.fixture(name="token_addresses")

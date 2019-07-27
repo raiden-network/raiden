@@ -10,7 +10,7 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -27,7 +27,7 @@ class Token:
         contract_manager: ContractManager,
     ) -> None:
         contract = jsonrpc_client.new_contract(
-            contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
+            contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN),
             to_normalized_address(token_address),
         )
         proxy = ContractProxy(jsonrpc_client, contract)

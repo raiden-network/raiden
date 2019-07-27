@@ -1,6 +1,7 @@
 import os
 from typing import Any, List, Tuple
 
+from eth_utils import decode_hex
 from solc import compile_files
 
 from raiden.network.blockchain_service import BlockChainService
@@ -9,6 +10,7 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.contract_manager import ContractManager
@@ -85,7 +87,7 @@ def deploy_service_registry_and_set_urls(
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
     )
-    token_address = c1_service_proxy.token_address
+    token_address = decode_hex(c1_service_proxy.token_address(block_identifier="latest"))
     c1_token_proxy = Token(
         jsonrpc_client=c1_client, token_address=token_address, contract_manager=contract_manager
     )
@@ -114,16 +116,30 @@ def deploy_service_registry_and_set_urls(
 
     # Test that setting the urls works
     c1_price = c1_service_proxy.current_price(block_identifier="latest")
-    c1_token_proxy.proxy.transact("mint", 1000000, c1_price)
+    tx = c1_token_proxy.proxy.transact("mint", 1000000, c1_price)
+    c1_client.poll(tx)
+    assert not check_transaction_threw(c1_client, tx)
+    assert c1_token_proxy.balance_of(c1_client.address) > 0
     c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
+    c1_service_proxy.deposit(c1_price)
     c1_service_proxy.set_url(urls[0])
 
     c2_price = c2_service_proxy.current_price(block_identifier="latest")
-    c2_token_proxy.proxy.transact("mint", 1000000, c2_price)
+    tx = c2_token_proxy.proxy.transact("mint", 1000000, c2_price)
+    c2_client.poll(tx)
+    assert not check_transaction_threw(c2_client, tx)
+    assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
+    c2_service_proxy.deposit(c2_price)
     c2_service_proxy.set_url(urls[1])
 
     c3_price = c3_service_proxy.current_price(block_identifier="latest")
+    tx = c3_token_proxy.proxy.transact("mint", 1000000, c3_price)
+    c3_client.poll(tx)
+    assert not check_transaction_threw(c3_client, tx)
+    assert c3_token_proxy.balance_of(c3_client.address) > 0
+    c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
+    c3_service_proxy.deposit(c3_price)
     c3_token_proxy.proxy.transact("mint", 1000000, c3_price)
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.set_url(urls[2])
