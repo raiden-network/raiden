@@ -94,6 +94,19 @@ class ServiceRegistry:
     def token_address(self, block_identifier: BlockSpecification) -> AddressHex:
         return self.proxy.contract.functions.token().call(block_identifier=block_identifier)
 
+    def deposit(self, limit_amount: int) -> None:
+        """Makes a deposit to create or extend a registration"""
+        gas_limit = self.proxy.estimate_gas("latest", "deposit", limit_amount)
+        if not gas_limit:
+            msg = "ServiceRegistry.deposit transaction fails"
+            raise RaidenUnrecoverableError(msg)
+        transaction_hash = self.proxy.transact("deposit", gas_limit, limit_amount)
+        self.client.poll(transaction_hash)
+        receipt = check_transaction_threw(self.client, transaction_hash)
+        if receipt:
+            msg = "ServiceRegistry.deposit transaction failed"
+            raise RaidenUnrecoverableError(msg)
+
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
         log_details = {
@@ -124,5 +137,3 @@ class ServiceRegistry:
             if receipt:
                 msg = f"URL {url} is invalid"
                 raise RaidenUnrecoverableError(msg)
-
-    # XXX: deposit function is missing
