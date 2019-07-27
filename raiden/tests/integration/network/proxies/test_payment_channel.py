@@ -122,7 +122,8 @@ def test_payment_channel_proxy_basics(
             nonce=0,
             balance_hash=EMPTY_HASH,
             additional_hash=EMPTY_HASH,
-            signature=EMPTY_SIGNATURE,
+            non_closing_signature=EMPTY_SIGNATURE,
+            closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier=block_before_close,
         )
 
@@ -132,7 +133,8 @@ def test_payment_channel_proxy_basics(
             nonce=0,
             balance_hash=EMPTY_HASH,
             additional_hash=EMPTY_HASH,
-            signature=EMPTY_SIGNATURE,
+            non_closing_signature=EMPTY_SIGNATURE,
+            closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier="latest",
         )
 
