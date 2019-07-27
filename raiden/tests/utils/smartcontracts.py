@@ -6,6 +6,7 @@ from solc import compile_files
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
@@ -84,11 +85,18 @@ def deploy_service_registry_and_set_urls(
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
     )
+    token_address = c1_service_proxy.token_address
+    c1_token_proxy = Token(
+        jsonrpc_client=c1_client, token_address=token_address, contract_manager=contract_manager
+    )
     c2_client = JSONRPCClient(web3, private_keys[1])
     c2_service_proxy = ServiceRegistry(
         jsonrpc_client=c2_client,
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
+    )
+    c2_token_proxy = Token(
+        jsonrpc_client=c2_client, token_address=token_address, contract_manager=contract_manager
     )
     c3_client = JSONRPCClient(web3, private_keys[2])
     c3_service_proxy = ServiceRegistry(
@@ -96,17 +104,28 @@ def deploy_service_registry_and_set_urls(
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
     )
+    c3_token_proxy = Token(
+        jsonrpc_client=c3_client, token_address=token_address, contract_manager=contract_manager
+    )
 
     # Test that getting a random service for an empty registry returns None
     pfs_address = get_random_pfs(c1_service_proxy, "latest")
     assert pfs_address is None
 
-    # XXX: how to mint tokens and approve the tokens?
-    # XXX: do I need to write a proxy of CustomToken?
-
     # Test that setting the urls works
+    c1_price = c1_service_proxy.current_price(block_identifier="latest")
+    c1_token_proxy.proxy.transact("mint", 1000000, c1_price)
+    c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
     c1_service_proxy.set_url(urls[0])
+
+    c2_price = c2_service_proxy.current_price(block_identifier="latest")
+    c2_token_proxy.proxy.transact("mint", 1000000, c2_price)
+    c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
     c2_service_proxy.set_url(urls[1])
+
+    c3_price = c3_service_proxy.current_price(block_identifier="latest")
+    c3_token_proxy.proxy.transact("mint", 1000000, c3_price)
+    c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.set_url(urls[2])
 
     return c1_service_proxy, urls

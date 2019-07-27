@@ -86,6 +86,14 @@ class ServiceRegistry:
             return None
         return result
 
+    def current_price(self, block_identifier: BlockSpecification) -> int:
+        """Gets the currently required deposit amount."""
+
+        return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
+
+    def token_address(self, block_identifier: BlockSpecification) -> AddressHex:
+        return self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
         log_details = {
