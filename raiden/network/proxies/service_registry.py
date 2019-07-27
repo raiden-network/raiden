@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 import structlog
 import web3
 from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
@@ -49,10 +50,12 @@ class ServiceRegistry:
         self, block_identifier: BlockSpecification, index: int
     ) -> Optional[AddressHex]:
         """Get one of the addresses that have ever made a deposit."""
-        result = self.proxy.contract.functions.ever_made_deposits(index).call(
-            block_identifier=block_identifier
-        )
-        return result
+        try:
+            return self.proxy.contract.functions.ever_made_deposits(index).call(
+                block_identifier=block_identifier
+            )
+        except BadFunctionCallOutput:
+            return None
 
     def ever_made_deposits_len(self, block_identifier: BlockSpecification) -> int:
         """Get the number of addresses that have ever made a deposit"""
