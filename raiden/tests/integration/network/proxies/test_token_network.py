@@ -313,13 +313,6 @@ def test_token_network_proxy(
 
     msg = "close must fail if the closing_signature is invalid"
     for invalid_signature in invalid_signatures:
-        balance_proof = BalanceProof(
-            channel_identifier=channel_identifier,
-            token_network_address=c2_token_network_proxy.address,
-            nonce=0,
-            chain_id=chain_id,
-            transferred_amount=0,
-        )
         closing_data = (
             balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
             + invalid_signature
