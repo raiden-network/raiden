@@ -6,14 +6,34 @@ import gevent
 
 
 def unique_path(initial_path: str) -> str:
+    """Creates a new path name based on `initial_path`.
+
+    This is necessary to separate the logs of consecutive runs done by
+    pytest-flaky.
+
+    Because we use `tmpdir` to generate the `initial_path` on local runs, and
+    that fixture automatically creates the directories. We have to use a marker
+    inside the folder instead of the folder itself as a way of detecting if a
+    new path should be generated.
+    """
     proposed_path = initial_path
+    marker_path = os.path.join(proposed_path, "used")
 
     counter = count()
-    while os.path.exists(proposed_path):
+    while os.path.exists(marker_path):
         # Adding ## before the number to differenciate from the tests
         # parametrized arguments
         number = f"##{next(counter)}"
         proposed_path = f"{initial_path[:-len(number)]}{number}"
+        marker_path = os.path.join(proposed_path, "used")
+
+    # The folder may exist if it is the first run locally, so it is okay if the
+    # directory exists, otherwise create it.
+    os.makedirs(proposed_path, exist_ok=True)
+
+    # Create the empty marker file, this will force a new path on the next run.
+    with open(marker_path, "w"):
+        pass
 
     return proposed_path
 
