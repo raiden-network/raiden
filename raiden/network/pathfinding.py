@@ -172,15 +172,14 @@ def get_random_pfs(
         service_registry.ever_made_deposits(block_identifier=block_identifier, index=idx)
         for idx in range(0, count)
     )
-    address_list = list(
-        filter(
-            lambda addr: addr
-            and service_registry.has_valid_registration(
-                address=addr, block_identifier=block_identifier
-            ),
-            addresses,
+    address_list = [
+        addr
+        for addr in addresses
+        if addr
+        and service_registry.has_valid_registration(
+            address=addr, block_identifier=block_identifier
         )
-    )
+    ]
     if not address_list:
         return None
     index = random.SystemRandom().randint(0, len(address_list) - 1)
