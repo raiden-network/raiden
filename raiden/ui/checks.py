@@ -56,7 +56,7 @@ def check_ethereum_client_is_supported(web3: Web3) -> None:
         click.secho(
             f"You need a Byzantium enabled ethereum node. Parity >= "
             f"{LOWEST_SUPPORTED_PARITY_VERSION} <= {HIGHEST_SUPPORTED_PARITY_VERSION}"
-            f" or Geth >= {LOWEST_SUPPORTED_GETH_VERSION} <= {HIGHEST_SUPPORTED_GETH_VERSION}",
+            f" or Geth >= {LOWEST_SUPPORTED_GETH_VERSION} <= {HIGHEST_SUPPORTED_GETH_VERSION}"
             f" but you have {our_version} {our_client}",
             fg="red",
         )
