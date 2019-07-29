@@ -262,12 +262,6 @@ class TransactionChannelDeposit(State):
         typecheck(self.deposit_block_number, T_BlockNumber)
 
 
-@dataclass(order=True)
-class TransactionOrder(State):
-    block_number: BlockNumber
-    transaction: TransactionChannelDeposit
-
-
 @dataclass
 class ExpiredWithdrawState:
     total_withdraw: WithdrawAmount
@@ -353,7 +347,6 @@ class NettingChannelState(State):
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
-    deposit_transaction_queue: List[TransactionOrder] = field(repr=False, default_factory=list)
 
     def __post_init__(self) -> None:
         if self.reveal_timeout >= self.settle_timeout:

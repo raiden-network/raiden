@@ -1,5 +1,4 @@
 # pylint: disable=too-many-lines
-import heapq
 import random
 
 from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
@@ -54,9 +53,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
-    TransactionChannelDeposit,
     TransactionExecutionStatus,
-    TransactionOrder,
     UnlockPartialProofState,
     message_identifier_from_prng,
 )
@@ -239,18 +236,6 @@ def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -
         secrethash in end_state.secrethashes_to_lockedlocks
         or secrethash in end_state.secrethashes_to_unlockedlocks
         or secrethash in end_state.secrethashes_to_onchain_unlockedlocks
-    )
-
-
-def is_deposit_confirmed(channel_state: NettingChannelState, block_number: BlockNumber) -> bool:
-    """True if the block which mined the deposit transaction has been
-    confirmed.
-    """
-    if not channel_state.deposit_transaction_queue:
-        return False
-
-    return is_transaction_confirmed(
-        channel_state.deposit_transaction_queue[0].block_number, block_number
     )
 
 
@@ -2283,10 +2268,6 @@ def handle_block(
             )
             events.append(event)
 
-    while is_deposit_confirmed(channel_state, block_number):
-        order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
-        apply_channel_deposit(channel_state, order_deposit_transaction.transaction)
-
     return TransitionResult(channel_state, events)
 
 
@@ -2378,32 +2359,17 @@ def handle_channel_settled(
 
 
 def handle_channel_deposit(
-    channel_state: NettingChannelState,
-    state_change: ContractReceiveChannelDeposit,
-    block_number: BlockNumber,
+    channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
 ) -> TransitionResult[NettingChannelState]:
-    deposit_transaction = state_change.deposit_transaction
-
-    if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
-        apply_channel_deposit(channel_state, state_change.deposit_transaction)
-    else:
-        order = TransactionOrder(deposit_transaction.deposit_block_number, deposit_transaction)
-        heapq.heappush(channel_state.deposit_transaction_queue, order)
-
-    events: List[Event] = list()
-    return TransitionResult(channel_state, events)
-
-
-def apply_channel_deposit(
-    channel_state: NettingChannelState, deposit_transaction: TransactionChannelDeposit
-) -> None:
-    participant_address = deposit_transaction.participant_address
-    contract_balance = Balance(deposit_transaction.contract_balance)
+    participant_address = state_change.deposit_transaction.participant_address
+    contract_balance = Balance(state_change.deposit_transaction.contract_balance)
 
     if participant_address == channel_state.our_state.address:
         update_contract_balance(channel_state.our_state, contract_balance)
     elif participant_address == channel_state.partner_state.address:
         update_contract_balance(channel_state.partner_state, contract_balance)
+
+    return TransitionResult(channel_state, [])
 
 
 def handle_channel_withdraw(
@@ -2518,7 +2484,7 @@ def state_transition(
         iteration = handle_channel_settled(channel_state, state_change)
     elif type(state_change) == ContractReceiveChannelDeposit:
         assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
-        iteration = handle_channel_deposit(channel_state, state_change, block_number)
+        iteration = handle_channel_deposit(channel_state, state_change)
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)
