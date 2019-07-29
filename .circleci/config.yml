@@ -385,6 +385,10 @@ jobs:
         description: "number of containers to be used in parallel for this test"
         default: 1
         type: integer
+      pytest-parallelism:
+        description: "number of pytest processes run in parallel via pytest-xdist"
+        default: 1
+        type: integer
     executor:
       name: docker
       py-version: << parameters.py-version >>
@@ -415,7 +419,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" "<< parameters.test-type >>" << parameters.additional-args >>
+            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" "<< parameters.test-type >>" -n << parameters.pytest-parallelism >> << parameters.additional-args >>
 
       - save_cache:
           key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -755,9 +759,10 @@ workflows:
               py-version: ["3.7"]
               test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
-          resource: "medium+"
+          resource: "xlarge"
           transport-layer: "matrix"
-          parallelism: 25
+          parallelism: 5
+          pytest-parallelism: 8
           requires:
             - smoketest
             - test
@@ -949,9 +954,10 @@ workflows:
               py-version: ["3.7"]
               test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
-          resource: "medium+"
+          resource: "xlarge"
           transport-layer: "matrix"
-          parallelism: 25
+          parallelism: 5
+          pytest-parallelism: 8
           requires:
             - smoketest
             - test
