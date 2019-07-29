@@ -167,28 +167,28 @@ def get_random_pfs(
     Returns a tuple of the chosen services url and eth address.
     If there are no PFS in the given registry, it returns (None, None).
     """
-    count = service_registry.ever_made_deposits_len(block_identifier=block_identifier)
-    addresses = (
-        service_registry.ever_made_deposits(block_identifier=block_identifier, index=idx)
-        for idx in range(0, count)
+    number_of_addresses = service_registry.ever_made_deposits_len(
+        block_identifier=block_identifier
     )
-    address_list = [
-        addr
-        for addr in addresses
-        if addr
-        and service_registry.has_valid_registration(
-            address=addr, block_identifier=block_identifier
-        )
-    ]
-    if not address_list:
-        return None
-    index = random.SystemRandom().randint(0, len(address_list) - 1)
-    address = address_list[index]
+    indices_to_try = list(range(number_of_addresses))
+    random.shuffle(indices_to_try)
 
-    # We are using the same blockhash for both blockchain queries so the address
-    # should exist for this query. Additionally at the moment there is no way for
-    # services to be removed from the registry.
-    assert address, "address should exist for this index"
+    address = None
+    while indices_to_try:
+        index = indices_to_try.pop()
+        address = service_registry.ever_made_deposits(
+            block_identifier=block_identifier, index=index
+        )
+        if not address:
+            continue
+        is_valid = service_registry.has_valid_registration(
+            address=address, block_identifier=block_identifier
+        )
+        if not is_valid:
+            continue
+
+    if address is None:
+        return None
     url = service_registry.get_service_url(
         block_identifier=block_identifier, service_hex_address=address
     )
