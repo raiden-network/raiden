@@ -11,7 +11,6 @@ The ignored state changes will still be applied, but they will just not be print
 """
 import json
 import re
-from contextlib import closing
 from itertools import chain
 
 import click

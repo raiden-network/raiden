@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import simplejson as json
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
@@ -970,7 +971,7 @@ class MatrixStorage:
         self, address: Address, room_ids_to_aliases: Dict[str, Any], timestamp: datetime
     ):
         """Save currently known matrix user_ids for an address"""
-        serialized_room_ids_to_aliases = self.serializer.serialize(room_ids_to_aliases)
+        serialized_room_ids_to_aliases = json.dumps(room_ids_to_aliases)
         room_id_data = (
             address,
             serialized_room_ids_to_aliases,
@@ -982,18 +983,17 @@ class MatrixStorage:
         self, address: Address, user_ids: Set[str], timestamp: datetime
     ):
         """Save currently known matrix room_ids for an address. Assumes the caller has verified."""
-        serialized_userids = self.serializer.serialize(list(user_ids))
+        serialized_userids = json.dumps(list(user_ids))
         user_id_data = (address, serialized_userids, timestamp.isoformat(timespec="milliseconds"))
         return self.database.write_matrix_user_ids_for_address(user_id_data)
 
     def get_matrix_userids_and_addresses(self) -> defaultdict:
-        # Fixme: Type handling and conversion
         address_to_userids = self.database.get_matrix_address_to_userids()
         returned_default_dict: defaultdict = defaultdict(set)
         for address, user_ids in address_to_userids.items():
-            returned_default_dict[address] = set(self.serializer.deserialize(user_ids))
+            returned_default_dict[address] = set(json.loads(user_ids))
         return returned_default_dict
 
     def get_matrix_roomids_for_address(self, address: Address) -> List[str]:
         room_ids_aliases = self.database.get_matrix_room_ids_aliases_for_address(address)
-        return self.serializer.deserialize(room_ids_aliases)
+        return json.loads(room_ids_aliases)
