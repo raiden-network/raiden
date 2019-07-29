@@ -33,7 +33,7 @@ def test_service_registry_set_url(service_registry_address, private_keys, web3, 
 def test_service_registry_random_pfs(
     service_registry_address, private_keys, web3, contract_manager
 ):
-    addresses = [to_checksum_address(privatekey_to_address(key)) for key in private_keys]
+    addresses = [privatekey_to_address(key) for key in private_keys]
     c1_service_proxy, urls = deploy_service_registry_and_set_urls(
         private_keys=private_keys,
         web3=web3,
