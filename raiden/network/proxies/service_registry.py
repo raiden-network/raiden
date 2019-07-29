@@ -9,14 +9,7 @@ from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnr
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import (
-    Address,
-    AddressHex,
-    BlockSpecification,
-    Optional,
-    T_Address,
-    TokenAmount,
-)
+from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional, TokenAmount
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -65,7 +58,6 @@ class ServiceRegistry:
                     )
                 )
             )
-            assert isinstance(ret, T_Address)
             return ret
         except BadFunctionCallOutput:
             return None
@@ -81,7 +73,6 @@ class ServiceRegistry:
         self, block_identifier: BlockSpecification, address: Address
     ) -> Optional[bool]:
         try:
-            assert isinstance(address, T_Address)
             result = self.proxy.contract.functions.hasValidRegistration(address).call(
                 block_identifier=block_identifier
             )
@@ -104,8 +95,12 @@ class ServiceRegistry:
         """Gets the currently required deposit amount."""
         return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
 
-    def token_address(self, block_identifier: BlockSpecification) -> AddressHex:
-        return self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+    def token_address(self, block_identifier: BlockSpecification) -> Address:
+        return Address(
+            to_canonical_address(
+                self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+            )
+        )
 
     def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
