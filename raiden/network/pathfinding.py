@@ -190,7 +190,7 @@ def get_random_pfs(
     if address is None:
         return None
     url = service_registry.get_service_url(
-        block_identifier=block_identifier, service_hex_address=address
+        block_identifier=block_identifier, service_hex_address=to_canonical_address(address)
     )
     return url
 

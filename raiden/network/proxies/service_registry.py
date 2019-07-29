@@ -9,7 +9,14 @@ from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnr
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    AddressHex,
+    BlockSpecification,
+    Optional,
+    T_Address,
+    TokenAmount,
+)
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -48,12 +55,18 @@ class ServiceRegistry:
 
     def ever_made_deposits(
         self, block_identifier: BlockSpecification, index: int
-    ) -> Optional[AddressHex]:
+    ) -> Optional[Address]:
         """Get one of the addresses that have ever made a deposit."""
         try:
-            return self.proxy.contract.functions.ever_made_deposits(index).call(
-                block_identifier=block_identifier
+            ret = Address(
+                to_canonical_address(
+                    self.proxy.contract.functions.ever_made_deposits(index).call(
+                        block_identifier=block_identifier
+                    )
+                )
             )
+            assert isinstance(ret, T_Address)
+            return ret
         except BadFunctionCallOutput:
             return None
 
@@ -65,9 +78,10 @@ class ServiceRegistry:
         return result
 
     def has_valid_registration(
-        self, block_identifier: BlockSpecification, address: AddressHex
+        self, block_identifier: BlockSpecification, address: Address
     ) -> Optional[bool]:
         try:
+            assert isinstance(address, T_Address)
             result = self.proxy.contract.functions.hasValidRegistration(address).call(
                 block_identifier=block_identifier
             )
