@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 
 import gevent
 import structlog
-from eth_typing import ChecksumAddress
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import Semaphore
@@ -55,6 +54,7 @@ from raiden.transfer.state_change import (
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
+    AddressHex,
     Any,
     Callable,
     ChainID,
@@ -304,7 +304,6 @@ class MatrixTransport(Runnable):
         self._server_name = config.get("server_name", urlparse(self._server_url).netloc)
 
         self.greenlets: List[gevent.Greenlet] = list()
-        self.scheduled_greenlets: List[gevent.Greenlet] = list()
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
@@ -396,7 +395,7 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
-        self._schedule(30, self._address_mgr.get_address_mgr_info)
+        self._spawn(self._address_mgr.get_address_mgr_info)
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -446,9 +445,8 @@ class MatrixTransport(Runnable):
                 retrier.notify()
 
         self._client.set_presence_state(UserPresence.OFFLINE.value)
+
         self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
-        # We have to kill the scheduled greenlets in order to timely shutdown
-        gevent.killall(self.scheduled_greenlets)
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets + [r.greenlet for r in self._address_to_retrier.values()])
 
@@ -472,28 +470,6 @@ class MatrixTransport(Runnable):
         greenlet.link_value(on_success)
         self.greenlets.append(greenlet)
         return greenlet
-
-    def _schedule(self, period: float, func: Callable, *args, **kwargs):
-        """Spawns two greenlets: one to call func with args immediately,
-        another one to call this function again after period has passed."""
-        if self._stop_event.ready():
-            return
-
-        def on_success(greenlet):
-            if greenlet in self.scheduled_greenlets:
-                self.scheduled_greenlets.remove(greenlet)
-
-        run_greenlet = gevent.spawn_later(0, func, *args, **kwargs)
-        run_greenlet.link_exception(self.on_error)
-        run_greenlet.link_value(on_success)
-        self.scheduled_greenlets.append(run_greenlet)
-
-        schedeule_greenlet = gevent.spawn_later(
-            period, self._schedule, period=period, func=func, *args, **kwargs
-        )
-        schedeule_greenlet.link_exception(self.on_error)
-        schedeule_greenlet.link_value(on_success)
-        self.scheduled_greenlets.append(schedeule_greenlet)
 
     def whitelist(self, address: Address):
         """Whitelist peer address to receive communications from
@@ -1184,7 +1160,7 @@ class MatrixTransport(Runnable):
         If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
 
         assert not room_id or room_id in self._client.rooms, "Invalid room_id"
-        address_checksum: ChecksumAddress = to_checksum_address(address)
+        address_hex: AddressHex = to_checksum_address(address)
         # filter_private=False to preserve public rooms on the list, even if we require privacy
         room_ids = self._get_room_ids_for_address(address, filter_private=False)
 
@@ -1192,19 +1168,19 @@ class MatrixTransport(Runnable):
             # no need to deepcopy, we don't modify lists in-place
             # cast generic Dict[str, Any] to types we expect, to satisfy mypy, runtime no-op
             _address_to_room_ids = cast(
-                Dict[ChecksumAddress, List[_RoomID]],
+                Dict[AddressHex, List[_RoomID]],
                 self._client.account_data.get("network.raiden.rooms", {}).copy(),
             )
 
             changed = False
             if not room_id:  # falsy room_id => clear list
-                changed = address_checksum in _address_to_room_ids
-                _address_to_room_ids.pop(address_checksum, None)
+                changed = address_hex in _address_to_room_ids
+                _address_to_room_ids.pop(address_hex, None)
             else:
                 # push to front
                 room_ids = [room_id] + [r for r in room_ids if r != room_id]
-                if room_ids != _address_to_room_ids.get(address_checksum):
-                    _address_to_room_ids[address_checksum] = room_ids
+                if room_ids != _address_to_room_ids.get(address_hex):
+                    _address_to_room_ids[address_hex] = room_ids
                     changed = True
 
             if changed:
@@ -1220,12 +1196,10 @@ class MatrixTransport(Runnable):
         If filter_private=True, also filter out public rooms.
         If filter_private=None, filter according to self._private_rooms
         """
-        address_checksum: ChecksumAddress = to_checksum_address(address)
+        address_hex: AddressHex = to_checksum_address(address)
         with self._account_data_lock:
-            room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(
-                address_checksum
-            )
-            self.log.debug("Room ids for address", for_address=address_checksum, room_ids=room_ids)
+            room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(address_hex)
+            self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
             if not room_ids:  # None or empty
                 room_ids = list()
             if not isinstance(room_ids, list):  # old version, single room
@@ -1246,7 +1220,7 @@ class MatrixTransport(Runnable):
 
             return room_ids
 
-    def _leave_unused_rooms(self, _address_to_room_ids: Dict[ChecksumAddress, List[_RoomID]]):
+    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
         """
         Checks for rooms we've joined and which partner isn't health-checked and leave.
 
