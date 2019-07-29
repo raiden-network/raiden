@@ -373,13 +373,6 @@ def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Opt
     return None
 
 
-def is_transaction_confirmed(
-    transaction_block_number: BlockNumber, blockchain_block_number: BlockNumber
-) -> bool:
-    confirmation_block = transaction_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-    return blockchain_block_number > confirmation_block
-
-
 def is_balance_proof_safe_for_onchain_operations(balance_proof: BalanceProofSignedState,) -> bool:
     """ Check if the balance proof would overflow onchain. """
     total_amount = balance_proof.transferred_amount + balance_proof.locked_amount
