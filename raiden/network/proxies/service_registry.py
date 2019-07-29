@@ -9,7 +9,7 @@ from raiden.exceptions import BrokenPreconditionError, InvalidAddress, RaidenUnr
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional
+from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional, TokenAmount
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -86,7 +86,7 @@ class ServiceRegistry:
             return None
         return result
 
-    def current_price(self, block_identifier: BlockSpecification) -> int:
+    def current_price(self, block_identifier: BlockSpecification) -> TokenAmount:
         """Gets the currently required deposit amount."""
 
         return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
@@ -94,13 +94,15 @@ class ServiceRegistry:
     def token_address(self, block_identifier: BlockSpecification) -> AddressHex:
         return self.proxy.contract.functions.token().call(block_identifier=block_identifier)
 
-    def deposit(self, limit_amount: int) -> None:
+    def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
         gas_limit = self.proxy.estimate_gas("latest", "deposit", limit_amount)
         if not gas_limit:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
-        transaction_hash = self.proxy.transact("deposit", gas_limit, limit_amount)
+        transaction_hash = self.proxy.transact(
+            "deposit", gas_limit, limit_amount, block_identifier=block_identifier
+        )
         self.client.poll(transaction_hash)
         receipt = check_transaction_threw(self.client, transaction_hash)
         if receipt:

@@ -121,7 +121,7 @@ def deploy_service_registry_and_set_urls(
     assert not check_transaction_threw(c1_client, tx)
     assert c1_token_proxy.balance_of(c1_client.address) > 0
     c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
-    c1_service_proxy.deposit(c1_price)
+    c1_service_proxy.deposit(block_identifier="latest", limit_amount=c1_price)
     c1_service_proxy.set_url(urls[0])
 
     c2_price = c2_service_proxy.current_price(block_identifier="latest")
@@ -130,7 +130,7 @@ def deploy_service_registry_and_set_urls(
     assert not check_transaction_threw(c2_client, tx)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
-    c2_service_proxy.deposit(c2_price)
+    c2_service_proxy.deposit(block_identifier="latest", limit_amount=c2_price)
     c2_service_proxy.set_url(urls[1])
 
     c3_price = c3_service_proxy.current_price(block_identifier="latest")
@@ -139,7 +139,7 @@ def deploy_service_registry_and_set_urls(
     assert not check_transaction_threw(c3_client, tx)
     assert c3_token_proxy.balance_of(c3_client.address) > 0
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
-    c3_service_proxy.deposit(c3_price)
+    c3_service_proxy.deposit(block_identifier="latest", limit_amount=c3_price)
     c3_token_proxy.proxy.transact("mint", 1000000, c3_price)
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.set_url(urls[2])
