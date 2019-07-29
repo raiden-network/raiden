@@ -39,9 +39,9 @@ templates:
       type: string
 
   default-environment: &default-environment
-    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz'
-    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.22-7fa3509e.tar.gz'
-    GETH_VERSION: '1.8.22'
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.27-4bcc0a37.tar.gz'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.27-4bcc0a37.tar.gz'
+    GETH_VERSION: '1.8.27'
     PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-unknown-linux-gnu/parity'
     PARITY_SHA256_LINUX: '9c1934728da62b0246af5cc189fe760b77e60b6811da0dbb536d1958d92153ad'
     PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-apple-darwin/parity'
