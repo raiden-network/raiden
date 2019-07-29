@@ -68,13 +68,13 @@ def test_check_json_rpc_parity():
         "Parity//v1.7.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     g3, _, v3 = is_supported_client(
-        "Parity//v1.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+        "Parity/v1.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     g4, _, v4 = is_supported_client(
         "Parity//v2.9.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     g5, _, v5 = is_supported_client(
-        "Parity//v23.94.75-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+        "Parity/v23.94.75-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     g6, _, v6 = is_supported_client(
         "Parity//v99.994.975-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
@@ -93,13 +93,13 @@ def test_check_json_rpc_parity():
         "Parity//v1.7.5-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     b2, _, v2 = is_supported_client(
-        "Parity//v1.5.1-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+        "Parity/v1.5.1-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     b3, _, v3 = is_supported_client(
         "Parity//v0.7.1-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     b4, _, v4 = is_supported_client(
-        "Parity//v0.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+        "Parity/v0.8.7-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     b5, _, v5 = is_supported_client(
         "Parity//v0.0.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"

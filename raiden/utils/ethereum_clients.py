@@ -20,7 +20,8 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
     (supported_or_not, none_or_EthClient, none_or_our_version_str)
     """
     if client_version.startswith("Parity"):
-        matches = re.search(r"//v(\d+\.\d+\.\d+)", client_version)
+        # Parity has Parity// at web3.version.node and Parity/ prefix at parity --version
+        matches = re.search(r"/+v(\d+\.\d+\.\d+)", client_version)
         if matches is None:
             return False, None, None
         our_version = parse_version(matches.groups()[0])
