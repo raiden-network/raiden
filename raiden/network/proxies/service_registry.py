@@ -88,7 +88,6 @@ class ServiceRegistry:
 
     def current_price(self, block_identifier: BlockSpecification) -> TokenAmount:
         """Gets the currently required deposit amount."""
-
         return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
 
     def token_address(self, block_identifier: BlockSpecification) -> AddressHex:
@@ -96,13 +95,11 @@ class ServiceRegistry:
 
     def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
-        gas_limit = self.proxy.estimate_gas("latest", "deposit", limit_amount)
+        gas_limit = self.proxy.estimate_gas(block_identifier, "deposit", limit_amount)
         if not gas_limit:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
-        transaction_hash = self.proxy.transact(
-            "deposit", gas_limit, limit_amount, block_identifier=block_identifier
-        )
+        transaction_hash = self.proxy.transact("deposit", gas_limit, limit_amount)
         self.client.poll(transaction_hash)
         receipt = check_transaction_threw(self.client, transaction_hash)
         if receipt:
