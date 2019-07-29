@@ -48,7 +48,7 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import safe_gas_limit
-from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_withdraw
+from raiden.utils.packing import pack_balance_proof, pack_signed_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -1451,7 +1451,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
-        our_signed_data = pack_balance_proof_update(
+        our_signed_data = pack_signed_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -1700,7 +1700,7 @@ class TokenNetwork:
             canonical_identifier=canonical_identifier,
         )
 
-        our_signed_data = pack_balance_proof_update(
+        our_signed_data = pack_signed_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,

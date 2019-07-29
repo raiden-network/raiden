@@ -5,7 +5,7 @@ from raiden.messages.abstract import SignedMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
+from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
     AdditionalHash,
@@ -62,7 +62,7 @@ class SignedBlindedBalanceProof:
         )
 
     def _data_to_sign(self) -> bytes:
-        packed = pack_balance_proof_update(
+        packed = pack_signed_balance_proof(
             nonce=self.nonce,
             balance_hash=self.balance_hash,
             additional_hash=self.additional_hash,
@@ -166,7 +166,7 @@ class RequestMonitoring(SignedMessage):
                 channel_identifier=self.balance_proof.channel_identifier,
             ),
         )
-        blinded_data = pack_balance_proof_update(
+        blinded_data = pack_signed_balance_proof(
             nonce=self.balance_proof.nonce,
             balance_hash=self.balance_proof.balance_hash,
             additional_hash=self.balance_proof.additional_hash,

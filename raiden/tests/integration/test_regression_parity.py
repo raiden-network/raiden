@@ -8,7 +8,7 @@ from raiden.tests.utils.transfer import TransferState, get_channelstate, transfe
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils import safe_gas_limit
-from raiden.utils.packing import pack_balance_proof_update
+from raiden.utils.packing import pack_signed_balance_proof
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
@@ -75,7 +75,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
     balance_proof = channel_state.partner_state.balance_proof
     block_number = app0.raiden.chain.block_number()
 
-    closing_data = pack_balance_proof_update(
+    closing_data = pack_signed_balance_proof(
         nonce=balance_proof.nonce,
         balance_hash=balance_proof.balance_hash,
         additional_hash=balance_proof.message_hash,
