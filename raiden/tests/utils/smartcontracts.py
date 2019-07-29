@@ -1,7 +1,6 @@
 import os
 from typing import Any, List, Tuple
 
-from eth_utils import decode_hex
 from solc import compile_files
 
 from raiden.network.blockchain_service import BlockChainService
@@ -87,7 +86,7 @@ def deploy_service_registry_and_set_urls(
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
     )
-    token_address = decode_hex(c1_service_proxy.token_address(block_identifier="latest"))
+    token_address = c1_service_proxy.token_address(block_identifier="latest")
     c1_token_proxy = Token(
         jsonrpc_client=c1_client, token_address=token_address, contract_manager=contract_manager
     )
