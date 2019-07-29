@@ -30,7 +30,6 @@ from pathlib import Path
 import gevent
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
-from pkg_resources import parse_version
 
 from raiden.constants import (
     HIGHEST_SUPPORTED_GETH_VERSION,
