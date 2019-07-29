@@ -70,6 +70,7 @@ six==1.12.0               # via attrdict, flask-cors, flask-restful, marshmallow
 structlog==19.1.0
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
+typing-extensions==3.7.4  # via mypy
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 web3==4.9.2
