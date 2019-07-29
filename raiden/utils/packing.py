@@ -40,7 +40,7 @@ def pack_balance_proof(
     )
 
 
-def pack_balance_proof_update(
+def pack_signed_balance_proof(
     nonce: Nonce,
     balance_hash: BalanceHash,
     additional_hash: AdditionalHash,

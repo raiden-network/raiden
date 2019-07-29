@@ -19,7 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import sha3
-from raiden.utils.packing import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
+from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
 
 MSC_ADDRESS = bytes([1] * 20)
@@ -80,7 +80,7 @@ def test_request_monitoring() -> None:
 
     assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
 
-    blinded_data = pack_balance_proof_update(
+    blinded_data = pack_signed_balance_proof(
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,

@@ -65,7 +65,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
-from raiden.utils.packing import pack_balance_proof_update, pack_withdraw
+from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 
 if TYPE_CHECKING:
@@ -366,7 +366,7 @@ class RaidenEventHandler(EventHandler):
             message_hash = EMPTY_MESSAGE_HASH
             canonical_identifier = channel_close_event.canonical_identifier
 
-        closing_data = pack_balance_proof_update(
+        closing_data = pack_signed_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=message_hash,
@@ -403,7 +403,7 @@ class RaidenEventHandler(EventHandler):
             canonical_identifier = balance_proof.canonical_identifier
             channel = raiden.chain.payment_channel(canonical_identifier=canonical_identifier)
 
-            non_closing_data = pack_balance_proof_update(
+            non_closing_data = pack_signed_balance_proof(
                 nonce=balance_proof.nonce,
                 balance_hash=balance_proof.balance_hash,
                 additional_hash=balance_proof.message_hash,
