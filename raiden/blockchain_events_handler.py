@@ -3,8 +3,6 @@ from typing import TYPE_CHECKING
 import gevent
 
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import PATH_FINDING_BROADCASTING_ROOM, RoutingMode
-from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.services import send_pfs_update
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (
@@ -64,16 +62,6 @@ def after_local_fee_update_inform_the_pfs(
     )
 
 
-def after_new_channel_update_pfs_service(
-    raiden: "RaidenService", channelnew: ContractReceiveChannelNew
-) -> None:
-    """Inform the PFS of the fee schedule once a new channel is opened."""
-    if raiden.routing_mode != RoutingMode.PRIVATE:
-        fee_update = PFSFeeUpdate.from_channel_state(channelnew.channel_state)
-        fee_update.sign(raiden.signer)
-        raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
-
-
 def after_new_channel_start_healthcheck(
     raiden: "RaidenService", channelnew: ContractReceiveChannelNew
 ) -> None:
@@ -118,7 +106,6 @@ def after_blockchain_statechange(raiden: "RaidenService", state_change: StateCha
 
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
-        after_new_channel_update_pfs_service(raiden, state_change)
         after_new_channel_start_healthcheck(raiden, state_change)
 
     elif type(state_change) == ContractReceiveRouteNew:
