@@ -9,14 +9,14 @@ Because of this, the event itself must already be confirmed.
 
 If possible, the confirmed data should be retrievied from the same block at
 which the event was emitted. However, because of state pruning this is not
-always possible. If that block is pruned then the current confirmed block must
+always possible. If that block is pruned then the latest confirmed block must
 be used.
 
 Note that the latest confirmed block is *not necessarily* the same as the
 current block number in the state machine. The current block number in the
 ChainState is *a* confirmed block number, but not necessarily the latest. This
-distinction is important during restarts, where the Raiden node will have the
-latest known confirmed block in its state, which itself may be a pruned block.
+distinction is important during restarts, where the node's latest known block
+is from the latest run, and is not up-to-date, this block may be pruned aswell.
 """
 from dataclasses import dataclass
 
