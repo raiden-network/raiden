@@ -50,6 +50,7 @@ from raiden.transfer.state_change import (
     ContractReceiveUpdateTransfer,
 )
 from raiden.utils.typing import (
+    BlockNumber,
     BlockTimeout,
     FeeAmount,
     List,
@@ -336,7 +337,7 @@ def actionchannelupdatefee_from_channelstate(
 
 
 def blockchainevent_to_statechange(
-    raiden: "RaidenService", event: DecodedEvent
+    raiden: "RaidenService", event: DecodedEvent, latest_confirmed_block: BlockNumber
 ) -> List[StateChange]:  # pragma: no unittest
     msg = "The state of the node has to be primed before blockchain events can be processed."
     assert raiden.wal, msg
@@ -352,7 +353,10 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state=chain_state, chain_service=chain_service, event=event
+            chain_state=chain_state,
+            chain_service=chain_service,
+            event=event,
+            latest_confirmed_block=latest_confirmed_block,
         )
 
         if new_channel_details is not None:
@@ -410,7 +414,10 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
-            chain_service=chain_service, chain_state=chain_state, event=event
+            chain_service=chain_service,
+            chain_state=chain_state,
+            event=event,
+            latest_confirmed_block=latest_confirmed_block,
         )
 
         if channel_settle_state:

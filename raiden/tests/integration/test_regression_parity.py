@@ -1,6 +1,7 @@
 import pytest
 
 from raiden import waiting
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
@@ -12,10 +13,14 @@ from raiden.utils.packing import pack_signed_balance_proof
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
+# At least the confirmed block must be kept around, the additional blocks is to
+# given some room for the test to execute
+pruning_history = DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 5
+
 # set very low values to force the client to prune old state
 STATE_PRUNING = {
     "pruning": "fast",
-    "pruning-history": 1,
+    "pruning-history": pruning_history,
     "pruning-memory": 1,
     "cache-size-db": 1,
     "cache-size-blocks": 1,
@@ -118,8 +123,9 @@ def run_test_locksroot_loading_during_channel_settle_handling(
     for _ in range(10):
         send_transaction()
 
-    # The private chain used for tests has a very low pruning setting
-    pruned_after_blocks = 10
+    # Wait until the target block has be prunned, it has to be larger than
+    # pruning_history
+    pruned_after_blocks = pruning_history * 1.5
 
     waiting.wait_for_block(
         raiden=app1.raiden, block_number=close_block + pruned_after_blocks, retry_timeout=1

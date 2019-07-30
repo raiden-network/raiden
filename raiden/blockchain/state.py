@@ -1,9 +1,22 @@
 """This module is responsible to load additinal data necessary to instantiate
-the state changes.
+the ContractReceive* state changes, i.e. state changes for the blockchain
+events.
 
-It is very important that every function here only fetch **confirmed** data,
-otherwise the node will be susceptible to races, which can crash the client in
-the best case, or be an attack vector in the worst case.
+It is *very* important that every function here only fetch **confirmed** data,
+otherwise the node will be susceptible to races due to reorgs. These races can
+crash the client in the best case, or be an attack vector in the worst case.
+Because of this, the event itself must already be confirmed.
+
+If possible, the confirmed data should be retrievied from the same block at
+which the event was emitted. However, because of state pruning this is not
+always possible. If that block is pruned then the current confirmed block must
+be used.
+
+Note that the latest confirmed block is *not necessarily* the same as the
+current block number in the state machine. The current block number in the
+ChainState is *a* confirmed block number, but not necessarily the latest. This
+distinction is important during restarts, where the Raiden node will have the
+latest known confirmed block in its state, which itself may be a pruned block.
 """
 from dataclasses import dataclass
 
@@ -23,6 +36,7 @@ from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.typing import (
     Address,
     Balance,
+    BlockNumber,
     ChainID,
     Locksroot,
     Optional,
@@ -53,7 +67,10 @@ class NewChannelDetails:
 
 
 def get_contractreceivechannelsettled_data_from_event(
-    chain_service: BlockChainService, chain_state: ChainState, event: DecodedEvent
+    chain_service: BlockChainService,
+    chain_state: ChainState,
+    event: DecodedEvent,
+    latest_confirmed_block: BlockNumber,
 ) -> Optional[ChannelSettleState]:
     data = event.event_data
     token_network_address = TokenNetworkAddress(event.originating_contract)
@@ -107,13 +124,12 @@ def get_contractreceivechannelsettled_data_from_event(
         # without an unlock, and because the unlocks are fare it doesn't matter
         # who called it, only if there are tokens locked in the settled
         # channel.
-        confirmed_block = views.block_number(chain_state)
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             chain=chain_service,
             canonical_identifier=channel_state.canonical_identifier,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
-            block_identifier=confirmed_block,
+            block_identifier=latest_confirmed_block,
         )
 
     return ChannelSettleState(canonical_identifier, our_locksroot, partner_locksroot)
@@ -203,7 +219,10 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState, chain_service: BlockChainService, event: DecodedEvent
+    chain_state: ChainState,
+    chain_service: BlockChainService,
+    event: DecodedEvent,
+    latest_confirmed_block: BlockNumber,
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data
@@ -231,8 +250,7 @@ def get_contractreceivechannelnew_data_from_event(
         # ValueError.
         #
         # To fix this the latest **confirmed** state of the channel is queried.
-        confirmed_block = views.block_number(chain_state)
-        channel_details = channel_proxy.detail(block_identifier=confirmed_block)
+        channel_details = channel_proxy.detail(block_identifier=latest_confirmed_block)
 
     token_network_registry = views.get_token_network_registry_by_token_network_address(
         chain_state, token_network_address

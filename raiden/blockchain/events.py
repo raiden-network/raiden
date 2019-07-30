@@ -51,6 +51,14 @@ class EventListener:
 
 @dataclass(frozen=True)
 class DecodedEvent:
+    """A confirmed event with the data decoded to conform with Raiden's internals.
+
+    Raiden prefers bytes for addresses and hashes, and it uses snake_case as a
+    naming convention. Instances of this class are created at the edges of the
+    code base to conform with the internal data types, i.e. this type describes
+    is used at the IO boundaries to conform with the sandwich encoding.
+    """
+
     chain_id: ChainID
     block_number: BlockNumber
     block_hash: BlockHash
@@ -165,7 +173,13 @@ def get_all_netting_channel_events(
 def decode_raiden_event_to_internal(
     abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
 ) -> DecodedEvent:
-    """ Enforce the binary for internal usage. """
+    """Enforce the sandwhich encoding. Converts the JSON RPC/web3 data types
+    to the internal representation.
+
+    Note::
+
+        This function must only on confirmed data.
+    """
     # Note: All addresses inside the event_data must be decoded.
 
     decoded_event = decode_event(abi, log_event)
