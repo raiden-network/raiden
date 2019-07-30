@@ -213,7 +213,6 @@ def patched_get_for_succesful_pfs_info():
         "operator": "John Doe",
         "version": "0.0.1",
         "payment_address": "0x2222222222222222222222222222222222222222",
-        "settings": "",
     }
 
     response = Mock()

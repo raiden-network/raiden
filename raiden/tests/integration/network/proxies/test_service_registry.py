@@ -76,7 +76,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
         "version": "0.0.1",
-        "settings": "",
         "payment_address": "0x2222222222222222222222222222222222222222",
     }
 

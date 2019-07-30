@@ -360,7 +360,6 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
                 message="",
                 operator="",
                 version="",
-                settings="",
                 price=TokenAmount(0),
             ),
             maximum_fee=TokenAmount(100),
