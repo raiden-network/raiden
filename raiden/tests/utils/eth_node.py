@@ -114,6 +114,10 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     # dont use the '--dev' flag
     cmd.extend(
         [
+            # Geth does not normally allow running an unlocked account
+            # with the http interface. But since this a test blockchain we
+            # can override that
+            "--allow-insecure-unlock",
             "--nodiscover",
             "--rpc",
             "--rpcapi",
@@ -486,9 +490,7 @@ def run_private_blockchain(
         )
 
         if node.miner:
-            # Geth does not run with both an unlocked account and the HTTP
-            # interface
-            # config["unlock"] = to_checksum_address(config["address"])
+            config["unlock"] = to_checksum_address(config["address"])
             config["mine"] = True
             config["password"] = os.path.join(base_datadir, "pw")
 
