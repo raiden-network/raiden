@@ -5,6 +5,12 @@ Changelog
 * :release:`0.100.5.dev0 <2019-07-30>`
 * :feature:`4457` Raiden now checks the version of the ethereum node at startup and if it is not supported quits with an appropriate message.
 * :feature:`-` Update WebUI to version 0.9.1 https://github.com/raiden-network/webui/releases/tag/v0.9.1
+* :bug:`4446` Fix problems with the calculation of mediation fees
+* :bug:`4383` Fix locked transfer not being sent due to global queue handling.
+* :bug:`4378` Fix json decoding error that could lead to a crash.
+* :bug:`4373` Fix a deserialization error for imbalance penalty
+* :bug:`4377` The client now sends proper capacity updates to the PFS.
+* :bug:`4301` Providing an endpoint argument without a port no longer leads to a crash.
 
 * :release:`0.100.4 <2019-06-08>`
 * :feature:`4095` Prevent Raiden from sending IOU to PFS when fee is 0
