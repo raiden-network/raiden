@@ -16,6 +16,7 @@ from eth_utils import (
     to_canonical_address,
     to_checksum_address,
 )
+from gevent import sleep
 from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
 
@@ -346,6 +347,15 @@ def setup_raiden(
 
         one_to_n_contract_address = to_checksum_address(contract_addresses[CONTRACT_ONE_TO_N])
         args["one_to_n_contract_address"] = one_to_n_contract_address
+
+    # Wait until the secret registry is confirmed, otherwise the App
+    # inialization will fail, needed for the check
+    # `check_ethereum_confirmed_block_is_not_pruned`.
+    current_block = client.block_number()
+    target_block_number = current_block + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    while current_block < target_block_number:
+        current_block = client.block_number()
+        sleep(0.5)
 
     return {"args": args, "contract_addresses": contract_addresses, "token": token}
 

@@ -31,6 +31,7 @@ from raiden.settings import (
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
+    check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
     check_ethereum_network_id,
     check_sql_version,
@@ -219,6 +220,12 @@ def run_app(
         contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
+    )
+
+    check_ethereum_confirmed_block_is_not_pruned(
+        jsonrpc_client=rpc_client,
+        secret_registry=proxies.secret_registry,
+        confirmation_blocks=config["blockchain"]["confirmation_blocks"],
     )
 
     database_path = os.path.join(
