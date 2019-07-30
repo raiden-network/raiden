@@ -8,6 +8,7 @@ from web3 import Web3
 
 from raiden.accounts import AccountManager
 from raiden.constants import (
+    EMPTY_SECRETHASH,
     HIGHEST_SUPPORTED_GETH_VERSION,
     HIGHEST_SUPPORTED_PARITY_VERSION,
     LOWEST_SUPPORTED_GETH_VERSION,
@@ -18,7 +19,9 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
@@ -78,6 +81,52 @@ def check_account(account_manager: AccountManager, address_hex: Address) -> None
     if not account_manager.address_in_keystore(to_checksum_address(address_hex)):
         click.secho(
             f"Account '{address_hex}' could not be found on the system. Aborting ...", fg="red"
+        )
+        sys.exit(1)
+
+
+def check_ethereum_confirmed_block_is_not_pruned(
+    jsonrpc_client: JSONRPCClient, secret_registry: SecretRegistry, confirmation_blocks: int
+) -> None:
+    """Checks the Ethereum client is not pruning data to aggressively, because
+    in some circunstances it is necessary for a node to fetch additional data
+    from the smart contract.
+    """
+    unconfirmed_block_number = jsonrpc_client.block_number()
+
+    # This is a small error margin. It is possible during normal operation for:
+    #
+    # - AlarmTask sees a new block and calls RaidenService._callback_new_block
+    # - The service gets the current latest block number and computes the
+    #   confirmed block number.
+    # - The service fetchs every filter, this can take a while.
+    # - While the above is happening, it is possible for a `few_blocks` to be
+    #   mined.
+    # - The decode function is called, and tries to access what it thinks is
+    #   the latest_confirmed_block, but it is in reality `few_blocks` older.
+    #
+    # This value bellow is the expected drift, that allows the decode function
+    # mentioned above to work properly.
+    maximum_delay_to_process_a_block = 2
+
+    minimum_available_history = confirmation_blocks + maximum_delay_to_process_a_block
+    target_confirmed_block = unconfirmed_block_number - minimum_available_history
+
+    try:
+        # Using the secret registry is arbitrary, any proxy with an `eth_call`
+        # would work here.
+        secret_registry.get_secret_registration_block_by_secrethash(
+            EMPTY_SECRETHASH, block_identifier=target_confirmed_block
+        )
+    except ValueError:
+        # If this exception is raised the Ethereum node is too aggressive with
+        # the block pruning.
+        click.secho(
+            f"The ethereum client does not have the necessary data available. "
+            f"The client can not operate because the prunning strategy is too "
+            f"agressively. Please make sure that at very minimum "
+            f"{minimum_available_history} blocks of history are available.",
+            fg="red",
         )
         sys.exit(1)
 
