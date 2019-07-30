@@ -33,11 +33,10 @@ def raise_on_failure(raiden_apps, test_function, **kwargs):
         # test is waiting.
         #
         # This may print a duplicated stack trace, when the test fails.
-        log.exception("Test failed")
-        log.debug(
-            "Test stacktrace",
+        log.exception(
+            "Test failed",
             test_traceback="".join(traceback.format_stack(test_greenlet.gr_frame)),
+            all_tracebacks="\n".join(gevent.util.format_run_info()),
         )
-        log.exception("Pending greenlets", tracebacks="\n".join(gevent.util.format_run_info()))
 
         raise
