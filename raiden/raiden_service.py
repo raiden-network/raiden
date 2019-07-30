@@ -700,10 +700,12 @@ class RaidenService(Runnable):
 
             # Handle testing with private chains. The block number can be
             # smaller than confirmation_blocks
-            confirmed_block_number = max(
+            latest_confirmed_block_number = max(
                 GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
             )
-            confirmed_block = self.chain.client.web3.eth.getBlock(confirmed_block_number)
+            latest_confirmed_block = self.chain.client.web3.eth.getBlock(
+                latest_confirmed_block_number
+            )
 
             state_changes: List[StateChange] = list()
 
@@ -740,18 +742,20 @@ class RaidenService(Runnable):
             # imediately before the channel existed, this breaks a proxy
             # precondition which crashes the client.
             block_state_change = Block(
-                block_number=confirmed_block_number,
-                gas_limit=confirmed_block["gasLimit"],
-                block_hash=BlockHash(bytes(confirmed_block["hash"])),
+                block_number=latest_confirmed_block_number,
+                gas_limit=latest_confirmed_block["gasLimit"],
+                block_hash=BlockHash(bytes(latest_confirmed_block["hash"])),
             )
             state_changes.append(block_state_change)
 
             blockchain_events = self.blockchain_events.poll_blockchain_events(
-                confirmed_block_number
+                latest_confirmed_block_number
             )
 
             for event in blockchain_events:
-                state_changes.extend(blockchainevent_to_statechange(self, event))
+                state_changes.extend(
+                    blockchainevent_to_statechange(self, event, latest_confirmed_block_number)
+                )
 
             # It's important to /not/ block here, because this function can be
             # called from the alarm task greenlet, which should not starve.
