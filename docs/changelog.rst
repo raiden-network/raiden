@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :release:`0.100.5.dev0 <2019-07-30>`
+* :feature:`4457` Raiden now checks the version of the ethereum node at startup and if it is not supported quits with an appropriate message.
 * :feature:`-` Update WebUI to version 0.9.1 https://github.com/raiden-network/webui/releases/tag/v0.9.1
 
 * :release:`0.100.4 <2019-06-08>`
