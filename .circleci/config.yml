@@ -4,7 +4,7 @@ version: 2.1
 templates:
   filter-tag-templates: &only-tagged-version-filter
     tags:
-      only: /^v\d+\.\d+\.\d+(\-rc\d+)?$/
+      only: /^v\d+\.\d+\.\d+((:?\-|\.)?(rc|dev)\d*)?$/
     branches:
       ignore: /.*/
 
