@@ -570,10 +570,6 @@ jobs:
 
 
   deploy-digitalocean:
-    parameters:
-      release_type:
-        type: string
-        description: "Type of the release - one of (NIGHTLY, RC or RELEASE)"
       py-version:
         <<: *py-version-template
 
@@ -589,7 +585,7 @@ jobs:
       - run:
           name: upload-to-digitalocean
           command: |
-            export RELEASE_TYPE=<< parameters.release_type >>
+            .circleci/get_archive_tag.sh
             .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
 
   deploy-github-release:
@@ -826,7 +822,6 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-digitalocean:
-          release_type: "RELEASE"
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
@@ -997,7 +992,6 @@ workflows:
             - prepare-python-macos-3.7
 
       - deploy-digitalocean:
-          release_type: "NIGHTLY"
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
