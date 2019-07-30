@@ -124,7 +124,7 @@ EMPTY_ADDRESS = b"\0" * 20
 
 
 # Keep in sync with .circleci/config.yaml
-HIGHEST_SUPPORTED_GETH_VERSION = "1.9.0"
+HIGHEST_SUPPORTED_GETH_VERSION = "1.9.1"
 LOWEST_SUPPORTED_GETH_VERSION = "1.7.2"
 # this is the last stable version as of this comment
 HIGHEST_SUPPORTED_PARITY_VERSION = "2.5.5"
