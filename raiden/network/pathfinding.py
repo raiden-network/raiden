@@ -56,7 +56,6 @@ class PFSInfo:
     message: str
     operator: str
     version: str
-    settings: str
 
 
 @dataclass
@@ -153,7 +152,6 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
             message=infos["message"],
             operator=infos["operator"],
             version=infos["version"],
-            settings=infos["settings"],
         )
     except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError):
         return None

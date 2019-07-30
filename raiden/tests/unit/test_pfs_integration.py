@@ -112,7 +112,6 @@ PFS_CONFIG = PFSConfig(
         message="",
         operator="",
         version="",
-        settings="",
     ),
     maximum_fee=TokenAmount(100),
     iou_timeout=BlockNumber(100),
@@ -173,7 +172,6 @@ def test_get_pfs_info_success():
         assert pfs_info.message == "This is your favorite pathfinding service"
         assert pfs_info.operator == "John Doe"
         assert pfs_info.version == "0.0.1"
-        assert pfs_info.settings == ""
 
 
 def test_get_pfs_info_request_error():
@@ -924,7 +922,6 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             message="",
             operator="",
             version="",
-            settings="",
         ),
         maximum_fee=TokenAmount(100),
         iou_timeout=BlockNumber(100),
