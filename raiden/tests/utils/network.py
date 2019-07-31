@@ -6,10 +6,11 @@ from itertools import product
 import gevent
 import structlog
 from eth_utils import to_checksum_address
+from web3 import Web3
 
 from raiden import waiting
 from raiden.app import App
-from raiden.constants import RoutingMode
+from raiden.constants import Environment, RoutingMode
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
@@ -18,6 +19,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
+from raiden.tests.utils.transport import ParsedURL
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
@@ -25,17 +27,21 @@ from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import (
     Address,
     BlockTimeout,
+    ChainID,
     ChannelID,
     Iterable,
     List,
     Optional,
     PaymentNetworkAddress,
+    PrivateKey,
+    SecretRegistryAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
     Tuple,
 )
 from raiden.waiting import wait_for_payment_network
+from raiden_contracts.contract_manager import ContractManager
 
 AppChannels = Iterable[Tuple[App, App]]
 
@@ -308,26 +314,26 @@ def create_sequential_channels(raiden_apps: List[App], channels_per_node: int) -
 
 
 def create_apps(
-    chain_id,
-    contracts_path,
-    blockchain_services,
-    token_network_registry_address,
+    chain_id: ChainID,
+    contracts_path: str,
+    blockchain_services: BlockchainServices,
+    token_network_registry_address: PaymentNetworkAddress,
     one_to_n_address: Optional[Address],
-    secret_registry_address,
-    service_registry_address,
-    user_deposit_address,
-    monitoring_service_contract_address,
-    reveal_timeout,
-    settle_timeout,
-    database_basedir,
-    retry_interval,
-    retries_before_backoff,
-    environment_type,
-    unrecoverable_error_should_crash,
-    local_matrix_url=None,
-    private_rooms=None,
-    global_rooms=None,
-):
+    secret_registry_address: SecretRegistryAddress,
+    service_registry_address: Optional[Address],
+    user_deposit_address: Address,
+    monitoring_service_contract_address: Address,
+    reveal_timeout: BlockTimeout,
+    settle_timeout: BlockTimeout,
+    database_basedir: str,
+    retry_interval: float,
+    retries_before_backoff: int,
+    environment_type: Environment,
+    unrecoverable_error_should_crash: bool,
+    local_matrix_url: Optional[ParsedURL],
+    private_rooms: bool,
+    global_rooms: List[str],
+) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
     services = blockchain_services
@@ -351,8 +357,7 @@ def create_apps(
             "default_fee_schedule": FeeScheduleState(),
         }
 
-        use_matrix = local_matrix_url is not None
-        if use_matrix:
+        if local_matrix_url is not None:
             merge_dict(
                 config,
                 {
@@ -429,14 +434,14 @@ def parallel_start_apps(raiden_apps: List[App]) -> None:
 
 
 def jsonrpc_services(
-    deploy_service,
-    private_keys,
-    secret_registry_address,
-    service_registry_address,
-    token_network_registry_address,
-    web3,
-    contract_manager,
-):
+    deploy_service: BlockChainService,
+    private_keys: List[PrivateKey],
+    secret_registry_address: Address,
+    service_registry_address: Address,
+    token_network_registry_address: Address,
+    web3: Web3,
+    contract_manager: ContractManager,
+) -> BlockchainServices:
     secret_registry = deploy_service.secret_registry(secret_registry_address)
     service_registry = None
     if service_registry_address:
