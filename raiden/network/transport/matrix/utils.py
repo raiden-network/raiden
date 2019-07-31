@@ -202,14 +202,15 @@ class UserAddressManager:
 
         new_address_reachability = USER_PRESENCE_TO_ADDRESS_REACHABILITY[new_presence]
 
-        if new_address_reachability == self._address_to_reachability.get(address):
+        prev_addresss_reachability = self.get_address_reachability(address)
+        if new_address_reachability == prev_addresss_reachability:
             # Cached address reachability matches new state, do nothing
             return
         log.debug(
             "Changing address presence state",
             current_user=self._user_id,
             address=to_checksum_address(address),
-            prev_state=self._address_to_reachability.get(address),
+            prev_state=prev_addresss_reachability,
             state=new_address_reachability,
         )
         self._address_to_reachability[address] = new_address_reachability
@@ -241,7 +242,7 @@ class UserAddressManager:
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
-        if new_state == self._userid_to_presence.get(user_id):
+        if new_state == self.get_userid_presence(user_id):
             # Cached presence state matches, no action required
             return
 
@@ -255,8 +256,8 @@ class UserAddressManager:
         while not self._stop_event.ready():
             addresses_uids_presence = {
                 to_checksum_address(address): {
-                    user_id: self._userid_to_presence[user_id].value
-                    for user_id in self._address_to_userids[address]
+                    user_id: self.get_userid_presence(user_id).value
+                    for user_id in self.get_userids_for_address(address)
                 }
                 for address in self.known_addresses
             }

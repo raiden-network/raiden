@@ -253,13 +253,12 @@ def test_user_addr_mgr_fetch_presence(
 def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability, user_presence):
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
     # We have not provided or forced any explicit user presence,
-    # therefore the client will be queried
+    # therefore the client will be queried and return a 404 since we haven't setup a presence
     user_addr_mgr.refresh_address_presence(ADDR1)
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
     assert len(user_presence) == 0
-    assert len(address_reachability) == 1
-    assert address_reachability[ADDR1] is AddressReachability.UNKNOWN
+    assert len(address_reachability) == 0
 
 
 def test_user_addr_mgr_fetch_misc(
