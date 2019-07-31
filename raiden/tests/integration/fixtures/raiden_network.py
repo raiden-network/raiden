@@ -3,9 +3,11 @@ import os
 import gevent
 import pytest
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.app import App
+from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.tests.utils.network import (
     CHAIN,
+    BlockchainServices,
     create_all_channels_for_network,
     create_apps,
     create_network_channels,
@@ -16,9 +18,21 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
+from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.typing import (
+    Address,
+    BlockTimeout,
+    ChainID,
+    Iterable,
+    List,
+    Optional,
+    PaymentNetworkAddress,
+    TokenAddress,
+    TokenAmount,
+)
 
 
-def timeout(blockchain_type: str):
+def timeout(blockchain_type: str) -> float:
     """As parity nodes are slower, we need to set a longer timeout when
     waiting for onchain events to complete."""
     return 120 if blockchain_type == "parity" else 30
@@ -26,28 +40,28 @@ def timeout(blockchain_type: str):
 
 @pytest.fixture
 def raiden_chain(
-    token_addresses,
-    token_network_registry_address,
-    one_to_n_address,
-    channels_per_node,
-    deposit,
-    settle_timeout,
-    chain_id,
-    blockchain_services,
-    reveal_timeout,
-    retry_interval,
-    retries_before_backoff,
-    environment_type,
-    unrecoverable_error_should_crash,
-    local_matrix_servers,
-    private_rooms,
-    blockchain_type,
-    contracts_path,
-    user_deposit_address,
-    monitoring_service_contract_address,
-    global_rooms,
-    logs_storage,
-):
+    token_addresses: List[TokenAddress],
+    token_network_registry_address: PaymentNetworkAddress,
+    one_to_n_address: Address,
+    channels_per_node: int,
+    deposit: TokenAmount,
+    settle_timeout: BlockTimeout,
+    chain_id: ChainID,
+    blockchain_services: BlockchainServices,
+    reveal_timeout: BlockTimeout,
+    retry_interval: float,
+    retries_before_backoff: int,
+    environment_type: Environment,
+    unrecoverable_error_should_crash: bool,
+    local_matrix_servers: List[ParsedURL],
+    private_rooms: bool,
+    blockchain_type: str,
+    contracts_path: str,
+    user_deposit_address: Address,
+    monitoring_service_contract_address: Address,
+    global_rooms: List[str],
+    logs_storage: str,
+) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
         raise ValueError("raiden_chain only works with a single token")
@@ -59,7 +73,7 @@ def raiden_chain(
 
     base_datadir = os.path.join(logs_storage, "raiden_nodes")
 
-    service_registry_address = None
+    service_registry_address: Optional[Address] = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
     raiden_apps = create_apps(
@@ -124,34 +138,34 @@ def raiden_chain(
 
 
 @pytest.fixture
-def monitoring_service_contract_address():
-    return bytes([1] * 20)
+def monitoring_service_contract_address() -> Address:
+    return Address(bytes([1] * 20))
 
 
 @pytest.fixture
 def raiden_network(
-    token_addresses,
-    token_network_registry_address,
-    one_to_n_address,
-    channels_per_node,
-    deposit,
-    settle_timeout,
-    chain_id,
-    blockchain_services,
-    reveal_timeout,
-    retry_interval,
-    retries_before_backoff,
-    environment_type,
-    unrecoverable_error_should_crash,
-    local_matrix_servers,
-    private_rooms,
-    blockchain_type,
-    contracts_path,
-    user_deposit_address,
-    monitoring_service_contract_address,
-    global_rooms,
-    logs_storage,
-):
+    token_addresses: List[TokenAddress],
+    token_network_registry_address: PaymentNetworkAddress,
+    one_to_n_address: Address,
+    channels_per_node: int,
+    deposit: TokenAmount,
+    settle_timeout: BlockTimeout,
+    chain_id: ChainID,
+    blockchain_services: BlockchainServices,
+    reveal_timeout: BlockTimeout,
+    retry_interval: float,
+    retries_before_backoff: int,
+    environment_type: Environment,
+    unrecoverable_error_should_crash: bool,
+    local_matrix_servers: List[ParsedURL],
+    private_rooms: bool,
+    blockchain_type: str,
+    contracts_path: str,
+    user_deposit_address: Address,
+    monitoring_service_contract_address: Address,
+    global_rooms: List[str],
+    logs_storage: str,
+) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
