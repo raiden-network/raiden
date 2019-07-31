@@ -697,7 +697,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
     def handle_routefailed(
         raiden: "RaidenService", route_failed_event: EventRouteFailed
     ) -> None:  # pragma: no unittest
-        feedback_token = raiden.route_to_feeback_token.get(tuple(route_failed_event.route))
+        feedback_token = raiden.route_to_feedback_token.get(tuple(route_failed_event.route))
         pfs_config = raiden.config.get("pfs_config")
 
         if feedback_token and pfs_config:
