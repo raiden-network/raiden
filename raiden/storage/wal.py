@@ -8,7 +8,16 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, Generic, List, Optional, RaidenDBVersion, Tuple, TypeVar
+from raiden.utils.typing import (
+    Callable,
+    Generic,
+    List,
+    NamedTuple,
+    Optional,
+    RaidenDBVersion,
+    Tuple,
+    TypeVar,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -57,8 +66,19 @@ def restore_to_state_change(
 ST = TypeVar("ST", bound=State)
 
 
-class WriteAheadLog(Generic[ST]):
+class SavedState(NamedTuple):
+    """Saves the state the id of the state change that produced it.
+
+    This datastructure keeps the state and the state_change_id synchronized.
+    Having these values available is useful for debugging.
+    """
+
     state_change_id: StateChangeID
+    state: State
+
+
+class WriteAheadLog(Generic[ST]):
+    saved_state: SavedState
 
     def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
         self.state_manager = state_manager
@@ -82,9 +102,13 @@ class WriteAheadLog(Generic[ST]):
 
         with self._lock:
             all_state_change_ids = self.storage.write_state_changes(state_changes)
-            self.state_change_id = all_state_change_ids[-1]
 
             latest_state, all_events = self.state_manager.dispatch(state_changes)
+            latest_state_change_id = all_state_change_ids[-1]
+
+            # The update must be done with a single operation, to make sure
+            # that readers will have a consistent view of it.
+            self.saved_state = SavedState(latest_state_change_id, latest_state)
 
             event_data = list()
             flattened_events = list()
@@ -105,7 +129,7 @@ class WriteAheadLog(Generic[ST]):
         """
         with self._lock:
             current_state = self.state_manager.current_state
-            state_change_id = self.state_change_id
+            state_change_id = self.saved_state.state_change_id
 
             # otherwise no state change was dispatched
             if state_change_id and current_state is not None:
