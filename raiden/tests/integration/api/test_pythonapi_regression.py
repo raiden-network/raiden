@@ -23,7 +23,6 @@ def test_close_regression(raiden_network, deposit, token_addresses):
 
 def run_test_close_regression(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
-    registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
     api1 = RaidenAPI(app0.raiden)

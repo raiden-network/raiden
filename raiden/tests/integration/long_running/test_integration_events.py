@@ -291,11 +291,9 @@ def run_test_query_events(
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), registry_address, token_address
-    )
 
     token_network_address = app0.raiden.default_registry.get_token_network(token_address, "latest")
+
     assert token_network_address
     manager0 = app0.raiden.chain.token_network(token_network_address)
 
