@@ -307,7 +307,10 @@ PAGE_BEGIN = """\
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style>
 * {{
-    font-family: Helvetica, sans-serif
+    font-family: "Fira Code", "Anonymous Pro", "Inconsolata", Menlo, "Source Code Pro",
+        "Envy Code R", Hack, "Ubuntu Mono", "Droid Sans Mono", "Deja Vu Sans Mono", "Courier New",
+        Courier;
+    font-size: small;
 }}
 body {{
     background: #202020;
@@ -333,13 +336,17 @@ table tr td:first-child {{
     background-color: inherit;
     position: sticky;
     position: -webkit-sticky;
-    left: 0;
+    left: 8px;
 }}
 table td {{
     padding-right: 5px;
+    vertical-align: top;
 }}
 table tr:hover {{
-    background-color: #902020;
+    outline: 1px solid #d02020;
+}}
+table tr.highlight {{
+    outline: 1px solid #20d020;
 }}
 td.no, td.time * {{
     white-space: pre;
@@ -385,7 +392,7 @@ PAGE_END = """\
 """
 
 ROW_TEMPLATE = """
-<tr class="lvl-{record.level}">
+<tr class="lvl-{record.level} {additional_row_class}">
     <td class="no">{index}</td>
     <td><b style="color: {event_color}">{record.event}</b></td>
     <td class="time"><span title="{time_absolute}" style="{time_color}">{time_display}</span></td>
@@ -480,18 +487,26 @@ def render_fields(record: Record, sorted_known_fields: List[str]) -> List[str]:
 def parse_log(log_file: TextIO) -> Tuple[List[Record], CounterType[int]]:
     known_fields: CounterType[int] = Counter()
     log_records = []
+    last_ts = TIME_PAST
     for i, line in enumerate(log_file, start=1):
         try:
             line_dict = json.loads(line.strip())
         except JSONDecodeError as ex:
             click.secho(f"Error parsing line {i}: {ex}")
             continue
+
+        timestamp_str = line_dict.pop("timestamp", None)
+        if timestamp_str:
+            timestamp = last_ts = datetime.fromisoformat(timestamp_str)
+        else:
+            timestamp = last_ts
+
         log_records.append(
             Record(
                 line_dict.pop("event"),
-                datetime.fromisoformat(line_dict.pop("timestamp")),
-                line_dict.pop("logger"),
-                line_dict.pop("level"),
+                timestamp,
+                line_dict.pop("logger", "MISSING"),
+                line_dict.pop("level", "MISSING"),
                 line_dict,
             )
         )
@@ -505,13 +520,18 @@ def filter_records(
     log_records: Iterable[Record],
     *,
     drop_events: Set[str],
+    keep_events: Set[str],
     drop_loggers: Set[str],
     time_range: Tuple[datetime, datetime],
 ) -> Generator[Optional[Record], None, None]:
     time_from, time_to = time_range
     for record in log_records:
+        event_name = record.event.lower()
         drop = (
-            record.event.lower() in drop_events
+            (
+                (drop_events and event_name in drop_events)
+                or (keep_events and event_name not in keep_events)
+            )
             or record.logger in drop_loggers
             or record.timestamp < time_from
             or record.timestamp > time_to
@@ -558,11 +578,22 @@ def transform_records(
 
 
 def render(
-    name: str, log_records: Iterable[Record], known_fields: Counter, output: TextIO
+    name: str,
+    log_records: Iterable[Record],
+    known_fields: Counter,
+    output: TextIO,
+    wrap: bool = False,
+    show_time_diff: bool = True,
+    highlight_records: Optional[Iterable[int]] = (),
 ) -> None:
     sorted_known_fields = [name for name, count in known_fields.most_common()]
+    highlight_records_set = set(highlight_records) if highlight_records else set()
     prev_record = None
     output.write(PAGE_BEGIN.format(name=name, date=datetime.now()))
+    if wrap:
+        field_joiner = "<br/>"
+    else:
+        field_joiner = " "
     for i, record in enumerate(log_records):
         if record is None:
             # We still want to count dropped records
@@ -578,10 +609,13 @@ def render(
                 time_display=time_display,
                 time_color=time_color,
                 event_color=event_color,
-                fields=" ".join(rendered_fields),
+                fields=field_joiner.join(rendered_fields),
+                additional_row_class="highlight" if i in highlight_records_set else "",
             )
         )
-        prev_record = record
+        if show_time_diff:
+            # Without a previous record time diffing will not be applied
+            prev_record = record
     output.write(PAGE_END)
 
 
@@ -596,6 +630,15 @@ def render(
     help=(
         "Filter out log records with the given event. "
         "Case insensitive. Can be given multiple times."
+    ),
+)
+@click.option(
+    "--keep-event",
+    "keep_events",
+    multiple=True,
+    help=(
+        "Only keep log records with the given event. Case insensitive. "
+        "Can be given multiple times. Cannot be used together with with --drop-event."
     ),
 )
 @click.option(
@@ -634,13 +677,34 @@ def render(
         'Format: "[<from>]^[<to>]", both in ISO8601'
     ),
 )
+@click.option(
+    "--time-diff/--no-time-diff",
+    default=True,
+    help="Display log record timestamps relative to previous lines (absolute on hover)",
+    show_default=True,
+)
+@click.option(
+    "-w", "--wrap", is_flag=True, help="Wrap event details into multiple lines.", show_default=True
+)
+@click.option(
+    "-h",
+    "--highlight-record",
+    "highlight_records",
+    multiple=True,
+    type=int,
+    help="Highlight record with given number. Can be given multiple times.",
+)
 def main(
     log_file: TextIO,
     drop_events: List[str],
+    keep_events: List[str],
     drop_loggers: List[str],
     replacements: str,
     replacements_from_file: TextIO,
     time_range: str,
+    wrap: bool,
+    time_diff: bool,
+    highlight_records: List[int],
     output: TextIO,
 ) -> None:
     if replacements_from_file:
@@ -650,7 +714,10 @@ def main(
     try:
         replacements_dict = json.loads(replacements)
     except (JSONDecodeError, UnicodeDecodeError) as ex:
-        raise UsageError(f'Option "--replacements" contains invalid JSON: {ex}') from ex
+        raise UsageError(f"Option '--replacements' contains invalid JSON: {ex}") from ex
+
+    if drop_events and keep_events:
+        raise UsageError(f"Options '--keep-event' and '--drop-event' cannot be used together.")
 
     time_from, _, time_to = time_range.partition("^")
     time_range_dt = (
@@ -671,13 +738,17 @@ def main(
                 filter_records(
                     log_records_progr,
                     drop_events=set(d.lower() for d in drop_events),
+                    keep_events=set(k.lower() for k in keep_events),
                     drop_loggers=set(l.lower() for l in drop_loggers),
                     time_range=time_range_dt,
                 ),
-                replacements_dict,
+                replacements=replacements_dict,
             ),
-            known_fields,
-            output,
+            known_fields=known_fields,
+            output=output,
+            wrap=wrap,
+            show_time_diff=time_diff,
+            highlight_records=highlight_records,
         )
     click.secho(f"Output written to {click.style(output.name, fg='yellow')}", fg="green")
 
