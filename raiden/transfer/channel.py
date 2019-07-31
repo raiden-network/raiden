@@ -5,7 +5,7 @@ from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.transfer.architecture import Event, StateChange, TransitionResult
+from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -101,7 +101,6 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     Signature,
-    SuccessOrError,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -260,16 +259,14 @@ def is_lock_expired(
 
     secret_registered_on_chain = lock.secrethash in end_state.secrethashes_to_onchain_unlockedlocks
     if secret_registered_on_chain:
-        return (False, "lock has been unlocked on-chain")
+        return SuccessOrError("lock has been unlocked on-chain")
 
     if block_number < lock_expiration_threshold:
-        msg = (
+        return SuccessOrError(
             f"current block number ({block_number}) is not larger than "
             f"lock.expiration + confirmation blocks ({lock_expiration_threshold})"
         )
-        return (False, msg)
-
-    return (True, None)
+    return SuccessOrError()
 
 
 def is_transfer_expired(
@@ -278,13 +275,13 @@ def is_transfer_expired(
     block_number: BlockNumber,
 ) -> bool:
     lock_expiration_threshold = get_sender_expiration_threshold(transfer.lock.expiration)
-    has_lock_expired, _ = is_lock_expired(
+    has_lock_expired = is_lock_expired(
         end_state=affected_channel.our_state,
         lock=transfer.lock,
         block_number=block_number,
         lock_expiration_threshold=lock_expiration_threshold,
     )
-    return has_lock_expired
+    return has_lock_expired.ok
 
 
 def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
@@ -400,15 +397,13 @@ def is_valid_signature(
         # ValueError is raised if the PublicKey instantiation failed.
         # Exception is raised if the public key recovery failed.
     except Exception:  # pylint: disable=broad-except
-        msg = "Signature invalid, could not be recovered."
-        return (False, msg)
+        return SuccessOrError("Signature invalid, could not be recovered.")
 
     is_correct_sender = sender_address == signer_address
     if is_correct_sender:
-        return (True, None)
+        return SuccessOrError()
 
-    msg = "Signature was valid but the expected address does not match."
-    return (False, msg)
+    return SuccessOrError("Signature was valid but the expected address does not match.")
 
 
 def is_valid_balanceproof_signature(
@@ -459,11 +454,9 @@ def is_balance_proof_usable_onchain(
     """
     expected_nonce = get_next_nonce(sender_state)
 
-    balanceproof_signature_valid, signature_msg = is_valid_balanceproof_signature(
+    is_valid_signature = is_valid_balanceproof_signature(
         received_balance_proof, sender_state.address
     )
-
-    result: SuccessOrError
 
     # TODO: Accept unlock messages if the node has not yet sent a transaction
     # with the balance proof to the blockchain, this will save one call to
@@ -471,69 +464,56 @@ def is_balance_proof_usable_onchain(
     if get_status(channel_state) != ChannelState.STATE_OPENED:
         # The channel must be opened, otherwise if receiver is the closer, the
         # balance proof cannot be used onchain.
-        msg = f"The channel is already closed."
-        result = (False, msg)
+        return SuccessOrError("The channel is already closed.")
 
     elif received_balance_proof.channel_identifier != channel_state.identifier:
         # Informational message, the channel_identifier **validated by the
         # signature** must match for the balance_proof to be valid.
-        msg = (
+        return SuccessOrError(
             f"channel_identifier does not match. "
             f"expected: {channel_state.identifier} "
             f"got: {received_balance_proof.channel_identifier}."
         )
-        result = (False, msg)
 
     elif received_balance_proof.token_network_address != channel_state.token_network_address:
         # Informational message, the token_network_address **validated by
         # the signature** must match for the balance_proof to be valid.
-        msg = (
+        return SuccessOrError(
             f"token_network_address does not match. "
             f"expected: {channel_state.token_network_address} "
             f"got: {received_balance_proof.token_network_address}."
         )
-        result = (False, msg)
 
     elif received_balance_proof.chain_id != channel_state.chain_id:
         # Informational message, the chain_id **validated by the signature**
         # must match for the balance_proof to be valid.
-        msg = (
+        return SuccessOrError(
             f"chain_id does not match channel's "
             f"chain_id. expected: {channel_state.chain_id} "
             f"got: {received_balance_proof.chain_id}."
         )
-        result = (False, msg)
 
     elif not is_balance_proof_safe_for_onchain_operations(received_balance_proof):
         transferred_amount_after_unlock = (
             received_balance_proof.transferred_amount + received_balance_proof.locked_amount
         )
-        msg = (
+        return SuccessOrError(
             f"Balance proof total transferred amount would overflow onchain. "
             f"max: {UINT256_MAX} result would be: {transferred_amount_after_unlock}"
         )
 
-        result = (False, msg)
-
     elif received_balance_proof.nonce != expected_nonce:
         # The nonces must increase sequentially, otherwise there is a
         # synchronization problem.
-        msg = (
+        return SuccessOrError(
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {received_balance_proof.nonce}."
         )
 
-        result = (False, msg)
-
-    elif not balanceproof_signature_valid:
+    else:
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
-        result = (False, signature_msg)
-
-    else:
-        result = (True, None)
-
-    return result
+        return is_valid_signature
 
 
 def is_valid_lockedtransfer(
@@ -579,7 +559,7 @@ def is_valid_lock_expired(
     current_balance_proof = get_current_balanceproof(sender_state)
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
@@ -604,8 +584,8 @@ def is_valid_lock_expired(
         )
         result = (False, msg, None)
 
-    elif not is_balance_proof_usable:
-        msg = f"Invalid LockExpired message. {invalid_balance_proof_msg}"
+    elif not is_valid_balance_proof:
+        msg = f"Invalid LockExpired message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
     elif pending_locks is None:
@@ -614,15 +594,15 @@ def is_valid_lock_expired(
 
     else:
         locksroot_without_lock = compute_locksroot(pending_locks)
-        has_expired, lock_expired_message = is_lock_expired(
+        check_lock_expired = is_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
             lock_expiration_threshold=get_receiver_expiration_threshold(lock.expiration),
         )
 
-        if not has_expired:
-            msg = f"Invalid LockExpired message. {lock_expired_message}"
+        if not check_lock_expired:
+            msg = f"Invalid LockExpired message. {check_lock_expired.as_error_message}"
             result = (False, msg, None)
 
         elif received_balance_proof.locksroot != locksroot_without_lock:
@@ -676,7 +656,7 @@ def valid_lockedtransfer_check(
     distributable = get_distributable(sender_state, receiver_state)
     expected_locked_amount = current_locked_amount + lock.amount
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
@@ -684,8 +664,8 @@ def valid_lockedtransfer_check(
 
     result: PendingLocksStateOrError = (False, None, None)
 
-    if not is_balance_proof_usable:
-        msg = f"Invalid {message_name} message. {invalid_balance_proof_msg}"
+    if not is_valid_balance_proof:
+        msg = f"Invalid {message_name} message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
     elif pending_locks is None:
@@ -829,7 +809,7 @@ def is_valid_unlock(
     expected_transferred_amount = current_transferred_amount + TokenAmount(lock.amount)
     expected_locked_amount = current_locked_amount - lock.amount
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
@@ -837,8 +817,8 @@ def is_valid_unlock(
 
     result: PendingLocksStateOrError = (False, None, None)
 
-    if not is_balance_proof_usable:
-        msg = f"Invalid Unlock message. {invalid_balance_proof_msg}"
+    if not is_valid_balance_proof:
+        msg = f"Invalid Unlock message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
     elif received_balance_proof.locksroot != locksroot_without_lock:
@@ -880,8 +860,6 @@ def is_valid_unlock(
 def is_valid_action_withdraw(
     channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
 ) -> SuccessOrError:
-    result: SuccessOrError
-
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
@@ -890,32 +868,29 @@ def is_valid_action_withdraw(
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
     if get_status(channel_state) != ChannelState.STATE_OPENED:
-        msg = f"Invalid withdraw, the channel is not opened"
-        result = (False, msg)
+        return SuccessOrError("Invalid withdraw, the channel is not opened")
     elif withdraw_amount <= 0:
-        msg = f"Total withdraw {withdraw.total_withdraw} did not increase"
-        result = (False, msg)
+        return SuccessOrError(f"Total withdraw {withdraw.total_withdraw} did not increase")
     elif balance < withdraw_amount:
-        msg = f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
-        result = (False, msg)
+        return SuccessOrError(
+            f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
+        )
     elif withdraw_overflow:
-        msg = f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
-        result = (False, msg)
+        return SuccessOrError(
+            f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
+        )
     else:
-        result = (True, None)
-
-    return result
+        return SuccessOrError()
 
 
 def is_valid_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> SuccessOrError:
-    result: SuccessOrError
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
     balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
 
-    valid_signature, signature_msg = is_valid_withdraw(withdraw_request)
+    is_valid = is_valid_withdraw(withdraw_request)
 
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
 
@@ -928,43 +903,33 @@ def is_valid_withdraw_request(
     # flaw because the smart contract will not allow the withdraw to happen.
 
     if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
-        msg = f"Invalid canonical identifier provided in withdraw request"
-        result = (False, msg)
+        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
     elif withdraw_request.participant != channel_state.partner_state.address:
-        msg = f"Invalid participant, it must be the partner address"
-        result = (False, msg)
+        return SuccessOrError(f"Invalid participant, it must be the partner address")
     elif withdraw_request.sender != channel_state.partner_state.address:
-        msg = f"Invalid sender, withdraw request must be sent by the partner."
-        result = (False, msg)
+        return SuccessOrError(f"Invalid sender, withdraw request must be sent by the partner.")
     elif withdraw_amount <= 0:
-        msg = f"Total withdraw {withdraw_request.total_withdraw} did not increase"
-        result = (False, msg)
+        return SuccessOrError(f"Total withdraw {withdraw_request.total_withdraw} did not increase")
     elif balance < withdraw_amount:
-        msg = f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
-        result = (False, msg)
+        return SuccessOrError(
+            f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
+        )
     elif withdraw_request.nonce != expected_nonce:
-        msg = (
+        return SuccessOrError(
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {withdraw_request.nonce}."
         )
-        result = (False, msg)
     elif withdraw_overflow:
-        msg = f"The new total_withdraw {withdraw_request.total_withdraw} will cause an overflow"
-        result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
+        return SuccessOrError(
+            f"The new total_withdraw {withdraw_request.total_withdraw} will cause an overflow"
+        )
     else:
-        result = (True, None)
-
-    return result
+        return is_valid
 
 
 def is_valid_withdraw_confirmation(
     channel_state: NettingChannelState, received_withdraw: ReceiveWithdrawConfirmation
 ) -> SuccessOrError:
-
-    result: SuccessOrError
-
     withdraw_state: Optional[
         Union[ExpiredWithdrawState, PendingWithdrawState]
     ] = channel_state.our_state.withdraws_pending.get(received_withdraw.total_withdraw)
@@ -981,14 +946,13 @@ def is_valid_withdraw_confirmation(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw(received_withdraw)
+    is_valid = is_valid_withdraw(received_withdraw)
 
     if not withdraw_state:
-        msg = (
+        return SuccessOrError(
             f"Received withdraw confirmation {received_withdraw.total_withdraw} "
             f"was not found in withdraw states"
         )
-        return (False, msg)
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
         received_withdraw.total_withdraw + channel_state.partner_total_withdraw
@@ -1000,47 +964,40 @@ def is_valid_withdraw_confirmation(
     # wants to withdraw, it will have to request it again.
 
     if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
-        msg = f"Invalid canonical identifier provided in withdraw request"
-        result = (False, msg)
+        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
     elif received_withdraw.total_withdraw != channel_state.our_total_withdraw:
-        msg = (
+        return SuccessOrError(
             f"Total withdraw confirmation {received_withdraw.total_withdraw} "
             f"does not match our total withdraw {channel_state.our_total_withdraw}"
         )
-        result = (False, msg)
     elif received_withdraw.nonce != expected_nonce:
-        msg = (
+        return SuccessOrError(
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {received_withdraw.nonce}."
         )
-        result = (False, msg)
     elif received_withdraw.expiration != withdraw_state.expiration:
-        msg = (
+        return SuccessOrError(
             f"Invalid expiration {received_withdraw.expiration}, withdraw "
             f"confirmation must use the same confirmation as the request, "
             f"otherwise the signatures will not match on-chain."
         )
-        result = (False, msg)
     elif received_withdraw.participant != channel_state.our_state.address:
-        msg = (
+        return SuccessOrError(
             f"Invalid participant "
             f"{to_checksum_address(received_withdraw.participant)}, it must be the "
             f"same as the sender address "
             f"{to_checksum_address(channel_state.our_state.address)}"
         )
-        result = (False, msg)
     elif received_withdraw.sender != channel_state.partner_state.address:
-        msg = f"Invalid sender, withdraw confirmation must be sent by the partner."
-        result = (False, msg)
+        return SuccessOrError(
+            f"Invalid sender, withdraw confirmation must be sent by the partner."
+        )
     elif withdraw_overflow:
-        msg = f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
-        result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
+        return SuccessOrError(
+            f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
+        )
     else:
-        result = (True, None)
-
-    return result
+        return is_valid
 
 
 def is_valid_withdraw_expired(
@@ -1049,11 +1006,9 @@ def is_valid_withdraw_expired(
     withdraw_state: PendingWithdrawState,
     block_number: BlockNumber,
 ) -> SuccessOrError:
-    result: SuccessOrError
-
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    valid_signature, signature_msg = is_valid_withdraw(state_change)
+    is_valid = is_valid_withdraw(state_change)
 
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
@@ -1063,35 +1018,26 @@ def is_valid_withdraw_expired(
     )
 
     if not withdraw_expired:
-        msg = (
+        return SuccessOrError(
             f"WithdrawExpired for withdraw that has not yet expired {state_change.total_withdraw}."
         )
-        result = (False, msg)
     elif channel_state.canonical_identifier != state_change.canonical_identifier:
-        msg = f"Invalid canonical identifier provided in WithdrawExpire"
-        result = (False, msg)
+        return SuccessOrError(f"Invalid canonical identifier provided in WithdrawExpire")
     elif state_change.sender != channel_state.partner_state.address:
-        result = (False, "Expired withdraw not from partner.")
+        return SuccessOrError("Expired withdraw not from partner.")
     elif state_change.total_withdraw != withdraw_state.total_withdraw:
-        msg = (
+        return SuccessOrError(
             f"WithdrawExpired and local withdraw amounts do not match. Received "
             f"{state_change.total_withdraw}, local amount "
             f"{withdraw_state.total_withdraw}"
         )
-        result = (False, msg)
     elif state_change.nonce != expected_nonce:
-        msg = (
+        return SuccessOrError(
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {state_change.nonce}."
         )
-
-        result = (False, msg)
-    elif not valid_signature:
-        result = (False, signature_msg)
     else:
-        result = (True, None)
-
-    return result
+        return is_valid
 
 
 def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
@@ -1920,9 +1866,9 @@ def handle_action_withdraw(
     block_number: BlockNumber,
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
-    is_valid, msg = is_valid_action_withdraw(channel_state, action_withdraw)
+    is_valid_withdraw = is_valid_action_withdraw(channel_state, action_withdraw)
 
-    if is_valid:
+    if is_valid_withdraw:
         events = send_withdraw_request(
             channel_state=channel_state,
             total_withdraw=action_withdraw.total_withdraw,
@@ -1930,10 +1876,11 @@ def handle_action_withdraw(
             pseudo_random_generator=pseudo_random_generator,
         )
     else:
-        assert msg, "is_valid_action_withdraw should return error msg if not valid"
+        error_msg = is_valid_withdraw.as_error_message
+        assert error_msg, "is_valid_action_withdraw should return error msg if not valid"
         events = [
             EventInvalidActionWithdraw(
-                attempted_withdraw=action_withdraw.total_withdraw, reason=msg
+                attempted_withdraw=action_withdraw.total_withdraw, reason=error_msg
             )
         ]
 
@@ -1943,7 +1890,7 @@ def handle_action_withdraw(
 def handle_receive_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> TransitionResult[NettingChannelState]:
-    is_valid, msg = is_valid_withdraw_request(
+    is_valid = is_valid_withdraw_request(
         channel_state=channel_state, withdraw_request=withdraw_request
     )
     if is_valid:
@@ -1970,9 +1917,10 @@ def handle_receive_withdraw_request(
 
         events: List[Event] = [send_withdraw]
     else:
-        assert msg, "is_valid_withdraw_request should return error msg if not valid"
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_request should return error msg if not valid"
         invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
-            attempted_withdraw=withdraw_request.total_withdraw, reason=msg
+            attempted_withdraw=withdraw_request.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw_request]
 
@@ -1985,7 +1933,7 @@ def handle_receive_withdraw_confirmation(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[NettingChannelState]:
-    is_valid, msg = is_valid_withdraw_confirmation(
+    is_valid = is_valid_withdraw_confirmation(
         channel_state=channel_state, received_withdraw=withdraw
     )
 
@@ -2012,9 +1960,10 @@ def handle_receive_withdraw_confirmation(
             )
             events.append(withdraw_on_chain)
     else:
-        assert msg, "is_valid_withdraw_confirmation should return error msg if not valid"
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_confirmation should return error msg if not valid"
         invalid_withdraw = EventInvalidReceivedWithdraw(
-            attempted_withdraw=withdraw.total_withdraw, reason=msg
+            attempted_withdraw=withdraw.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw]
 
@@ -2047,7 +1996,7 @@ def handle_receive_withdraw_expired(
             ],
         )
 
-    is_valid, msg = is_valid_withdraw_expired(
+    is_valid = is_valid_withdraw_expired(
         channel_state=channel_state,
         state_change=withdraw_expired,
         withdraw_state=withdraw_state,
@@ -2065,9 +2014,10 @@ def handle_receive_withdraw_expired(
         )
         events = [send_processed]
     else:
-        assert msg, "is_valid_withdraw_expired should return error msg if not valid"
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_expired should return error msg if not valid"
         invalid_withdraw_expired = EventInvalidReceivedWithdrawExpired(
-            attempted_withdraw=withdraw_expired.total_withdraw, reason=msg
+            attempted_withdraw=withdraw_expired.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw_expired]
 

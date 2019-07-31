@@ -173,7 +173,7 @@ def subdispatch_to_all_initiatortransfer(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorPaymentState]:
-    events = list()
+    events: List[Event] = list()
     """ Copy and iterate over the list of keys because this loop
     will alter the `initiator_transfers` list and this is not
     allowed if iterating over the original list.

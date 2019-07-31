@@ -465,13 +465,11 @@ def test_regression_mediator_not_update_payer_state_twice():
     assert current_state.transfers_pair[0].payee_state == "payee_expired"
     assert not channel.is_secret_known(payer_channel.partner_state, secrethash)
 
-    safe_to_wait, _ = mediator.is_safe_to_wait(
+    assert mediator.is_safe_to_wait(
         lock_expiration=lock.expiration,
         reveal_timeout=payer_channel.reveal_timeout,
         block_number=lock.expiration + 10,
-    )
-
-    assert not safe_to_wait
+    ).fail
 
     iteration = mediator.state_transition(
         mediator_state=current_state,

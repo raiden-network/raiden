@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Any, Dict, List, NewType, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
@@ -156,9 +156,6 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
-
-# This should be changed to `Optional[str]`
-SuccessOrError = Tuple[bool, Optional[str]]
 
 BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 

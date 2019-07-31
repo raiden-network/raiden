@@ -65,7 +65,7 @@ def events_for_onchain_secretreveal(
     transfer = target_state.transfer
     expiration = transfer.lock.expiration
 
-    safe_to_wait, _ = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
+    safe_to_wait = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
     secret_known_offchain = channel.is_secret_known_offchain(
         channel_state.partner_state, transfer.lock.secrethash
     )
@@ -111,7 +111,7 @@ def handle_inittarget(
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(route, transfer)
 
-        safe_to_wait, _ = is_safe_to_wait(
+        safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
         )
 
@@ -269,7 +269,7 @@ def handle_block(
     lock = transfer.lock
 
     secret_known = channel.is_secret_known(channel_state.partner_state, lock.secrethash)
-    lock_has_expired, _ = channel.is_lock_expired(
+    lock_has_expired = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,

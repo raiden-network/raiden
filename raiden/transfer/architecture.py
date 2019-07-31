@@ -402,3 +402,30 @@ class BalanceProofSignedState(State):
     @property
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
+
+
+class SuccessOrError:
+    """Helper class to be used when you want to test a boolean
+
+    and also collect feedback when the test fails. Initialize with any
+    number of "error message" strings. The object will be considered
+    truthy if there are no error messages.
+    """
+
+    def __init__(self, *error_messages: str) -> None:
+        self.error_messages: List[str] = [msg for msg in error_messages]
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    @property
+    def ok(self) -> bool:
+        return not bool(self.error_messages)
+
+    @property
+    def fail(self) -> bool:
+        return not self.ok
+
+    @property
+    def as_error_message(self) -> str:
+        return " / ".join(self.error_messages)

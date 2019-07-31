@@ -107,7 +107,7 @@ def handle_block(
     lock_expiration_threshold = BlockExpiration(
         locked_lock.expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
     )
-    lock_has_expired, _ = channel.is_lock_expired(
+    lock_has_expired = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=locked_lock,
         block_number=state_change.block_number,
