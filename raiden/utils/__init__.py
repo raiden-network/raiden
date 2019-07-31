@@ -4,6 +4,7 @@ import random
 import re
 import sys
 import time
+from hashlib import sha256
 from itertools import zip_longest
 from typing import Any, Callable
 
@@ -40,6 +41,7 @@ from raiden.utils.typing import (
     PrivateKey,
     PublicKey,
     Secret,
+    SecretHash,
     T_BlockHash,
     T_BlockNumber,
     TokenAddress,
@@ -51,6 +53,11 @@ from raiden.utils.typing import (
 def random_secret() -> Secret:
     """ Return a random 32 byte secret"""
     return Secret(os.urandom(constants.SECRET_LENGTH))
+
+
+def sha256_secrethash(secret: Secret) -> SecretHash:
+    """Compute the secret hash using sha256."""
+    return SecretHash(sha256(secret).digest())
 
 
 def ishash(data: bytes) -> bool:

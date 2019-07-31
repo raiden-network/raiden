@@ -2,7 +2,6 @@
 import os
 import random
 from collections import defaultdict
-from hashlib import sha256
 from typing import Any, Dict, List, NamedTuple, Tuple
 from uuid import UUID
 
@@ -75,7 +74,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, random_secret
+from raiden.utils import create_default_identifier, lpex, random_secret, sha256_secrethash
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -1088,8 +1087,8 @@ class RaidenService(Runnable):
     ) -> PaymentStatus:
 
         if secrethash is None:
-            secrethash = SecretHash(sha256(secret).digest())
-        elif secrethash != sha256(secret).digest():
+            secrethash = sha256_secrethash(secret)
+        elif secrethash != sha256_secrethash(secret):
             raise InvalidSecretHash("provided secret and secret_hash do not match.")
 
         if len(secret) != SECRET_LENGTH:

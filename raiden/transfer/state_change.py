@@ -1,6 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
-from hashlib import sha256
 from random import Random
 
 from raiden.constants import EMPTY_SECRETHASH
@@ -18,6 +17,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionChannelDeposit,
 )
+from raiden.utils import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -382,7 +382,7 @@ class ReceiveUnlock(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = SecretHash(sha256(self.secret).digest())
+        self.secrethash = sha256_secrethash(self.secret)
 
 
 @dataclass

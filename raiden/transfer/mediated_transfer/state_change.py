@@ -1,6 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
-from hashlib import sha256
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
@@ -11,6 +10,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
+from raiden.utils import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
     List,
@@ -102,7 +102,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        self.secrethash = SecretHash(sha256(self.secret).digest())
+        self.secrethash = sha256_secrethash(self.secret)
 
 
 @dataclass
@@ -124,7 +124,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         super().__post_init__()
         typecheck(self.transfer, LockedTransferSignedState)
 
-        self.secrethash = SecretHash(sha256(self.secret).digest())
+        self.secrethash = sha256_secrethash(self.secret)
 
 
 @dataclass

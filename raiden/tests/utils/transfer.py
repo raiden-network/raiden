@@ -1,7 +1,6 @@
 """ Utilities to make and assert transfers. """
 import random
 from enum import Enum
-from hashlib import sha256
 
 import gevent
 from eth_utils import to_checksum_address
@@ -29,7 +28,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     make_empty_pending_locks_state,
 )
-from raiden.utils import random_secret
+from raiden.utils import random_secret, sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,
@@ -188,7 +187,7 @@ def _transfer_expired(
         timeout = 90
 
     secret = make_secret()
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
 
     wait_for_remove_expired_lock = target_app.raiden.message_handler.wait_for_message(
         LockExpired, {"secrethash": secrethash}
@@ -232,7 +231,7 @@ def _transfer_secret_not_requested(
         timeout = 10
 
     secret = make_secret()
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
 
     hold_secret_request = target_app.raiden.raiden_event_handler.hold(
         SendSecretRequest, {"secrethash": secrethash}
