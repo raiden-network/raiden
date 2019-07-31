@@ -9,10 +9,11 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages.abstract import Message
+from raiden.messages.abstract import SignedMessage
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import LockedTransfer, LockExpired, Unlock
+from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
@@ -20,7 +21,7 @@ from raiden.storage.restore import (
 from raiden.storage.wal import SavedState
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_address, make_secret
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
@@ -35,6 +36,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+<<<<<<< HEAD
+=======
+    ChainState,
+>>>>>>> Extended messages for failed test assertions
     ChannelState,
     HashTimeLockState,
     NettingChannelState,
@@ -46,23 +51,30 @@ from raiden.utils import random_secret
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
+    Address,
     Any,
     Balance,
     Callable,
     ChainID,
     FeeAmount,
-    Keccak256,
+    InitiatorAddress,
     List,
     LockedAmount,
+    MessageID,
     Nonce,
     Optional,
     PaymentAmount,
     PaymentID,
+    PaymentWithFeeAmount,
+    TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
     typecheck,
 )
+
+ZERO_FEE = FeeAmount(0)
+ZERO_LOCKED_AMOUNT = TokenAmount(0)
 
 
 class TransferState(Enum):
@@ -75,7 +87,7 @@ class TransferState(Enum):
     SECRET_REVEALED = "secret_revealed"
 
 
-def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
+def sign_and_inject(message: SignedMessage, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
     MessageHandler().on_message(app.raiden, message)
@@ -87,6 +99,7 @@ def get_channelstate(
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0), token_network_address, app1.raiden.address
     )
+    assert channel_state
     return channel_state
 
 
@@ -96,7 +109,7 @@ def transfer(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
 ) -> None:
@@ -145,7 +158,7 @@ def _transfer_unlocked(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
@@ -163,10 +176,11 @@ def _transfer_unlocked(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         fee=fee,
     )
@@ -186,7 +200,7 @@ def _transfer_expired(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert identifier is not None, "The identifier must be provided"
@@ -214,11 +228,12 @@ def _transfer_expired(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -239,7 +254,7 @@ def _transfer_secret_not_requested(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     if timeout is None:
@@ -248,6 +263,7 @@ def _transfer_secret_not_requested(
     secret = make_secret()
     secrethash = sha256_secrethash(secret)
 
+    assert isinstance(target_app.raiden.raiden_event_handler, HoldRaidenEventHandler)
     hold_secret_request = target_app.raiden.raiden_event_handler.hold(
         SendSecretRequest, {"secrethash": secrethash}
     )
@@ -258,11 +274,12 @@ def _transfer_secret_not_requested(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -277,7 +294,7 @@ def transfer_and_assert_path(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: float = 10,
 ) -> None:
     """ Nice to read shortcut to make successful LockedTransfer.
@@ -298,6 +315,7 @@ def transfer_and_assert_path(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
 
     for app in path:
         assert isinstance(app.raiden.message_handler, WaitForMessage)
@@ -364,7 +382,7 @@ def transfer_and_assert_path(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=last_app.raiden.address,
+        target=TargetAddress(last_app.raiden.address),
         identifier=identifier,
         secret=secret,
     )
@@ -382,8 +400,13 @@ def assert_deposit(
     token_network_address: TokenNetworkAddress,
     app0: App,
     app1: App,
+<<<<<<< HEAD
     saved_state0: SavedState,
     saved_state1: SavedState,
+=======
+    saved_state0: SavedState[ChainState],
+    saved_state1: SavedState[ChainState],
+>>>>>>> Extended messages for failed test assertions
 ) -> None:
     """Assert that app0 and app1 agree on app0's on-chain deposit.
 
@@ -403,21 +426,34 @@ def assert_deposit(
     channel0 = views.get_channelstate_by_token_network_and_partner(
         saved_state0.state, token_network_address, app1.raiden.address
     )
+<<<<<<< HEAD
     channel1 = views.get_channelstate_by_token_network_and_partner(
         saved_state1.state, token_network_address, app0.raiden.address
     )
 
     if channel0.our_state.contract_balance != channel1.partner_state.contract_balance:
+=======
+    assert channel0
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        saved_state1.state, token_network_address, app0.raiden.address
+    )
+    assert channel1
+
+    if channel0.our_state.contract_balance > channel1.partner_state.contract_balance:
+>>>>>>> Extended messages for failed test assertions
         # TODO: Only consider the records up to saved state's state_change_id.
         # ATM this has a race condition where this utility could be called
         # before the alarm task fetches the corresponding event but while it
         # runs it does fetch it.
 
+<<<<<<< HEAD
         # Any of the nodes may have seen the deposit first
         contract_balance = max(
             channel0.our_state.contract_balance, channel1.partner_state.contract_balance
         )
 
+=======
+>>>>>>> Extended messages for failed test assertions
         deposit_description = {
             "canonical_identifier": {
                 "chain_identifier": channel0.canonical_identifier.chain_identifier,
@@ -426,6 +462,7 @@ def assert_deposit(
             },
             "deposit_transaction": {
                 "participant_address": channel0.our_state.address,
+<<<<<<< HEAD
                 "contract_balance": contract_balance,
             },
         }
@@ -464,11 +501,36 @@ def assert_deposit(
                 "confirmed block"
             )
         elif is_partner_deposit_missed:
+=======
+                "contract_balance": channel0.our_state.contract_balance,
+            },
+        }
+
+        node0_deposit_event: Optional[ContractReceiveChannelDeposit]
+        node1_deposit_event: Optional[ContractReceiveChannelDeposit]
+
+        node0_deposit_event = raiden_events_search_for_item(  # type:ignore
+            app0.raiden, ContractReceiveChannelDeposit, deposit_description
+        )
+        node1_deposit_event = raiden_events_search_for_item(  # type:ignore
+            app1.raiden, ContractReceiveChannelDeposit, deposit_description
+        )
+
+        missed_deposit = (
+            node0_deposit_event is not None
+            and node0_deposit_event.deposit_transaction.deposit_block_number >= block_number1
+        )
+
+        if node1_deposit_event is not None:
+            msg = "Node1 has fetched and ignored the node0's deposits, this is likely a bug."
+        elif missed_deposit:
+>>>>>>> Extended messages for failed test assertions
             msg = (
                 "Node1's has a problem with its blockchain event filters, it "
                 "missed node0's deposit event even though it has seen a newer "
                 "confirmed block"
             )
+<<<<<<< HEAD
         elif not app1.raiden.alarm:
             msg = (
                 "Node1 has not seen the block at which node0's deposit happened "
@@ -479,15 +541,25 @@ def assert_deposit(
         elif not app0.raiden.alarm:
             msg = (
                 "Node0 has not seen the block at which node0's deposit happened "
+=======
+        elif not app0.raiden.alarm:
+            msg = (
+                "Node1 has not seen the block at which node0's deposit happened "
+>>>>>>> Extended messages for failed test assertions
                 "and the alarm task is not running. Either the test stopped "
                 "the node before it had time or the node got killed because of "
                 "another error."
             )
+<<<<<<< HEAD
         elif channel0.our_state.contract_balance > channel1.partner_state.contract_balance:
+=======
+        else:
+>>>>>>> Extended messages for failed test assertions
             msg = (
                 "Node1 has not yet seen the block at which node0's deposit "
                 "happened. The test is likely missing synchronization."
             )
+<<<<<<< HEAD
         elif channel1.our_state.contract_balance > channel0.partner_state.contract_balance:
             msg = (
                 "Node0 has not yet seen the block at which its deposit "
@@ -495,6 +567,7 @@ def assert_deposit(
             )
         else:
             raise RuntimeError("This should never happen, the checks above are complementary")
+=======
 
         msg = (
             f"{msg}. "
@@ -507,6 +580,153 @@ def assert_deposit(
         )
 
         raise AssertionError(msg)
+
+
+def assert_balance_proof(
+    token_network_address: TokenNetworkAddress,
+    app0: App,
+    app1: App,
+    saved_state0: SavedState,
+    saved_state1: SavedState,
+) -> None:
+    """Assert app0 and app1 agree on the latest balance proof from app0.
+
+    Notes:
+        - The other direction of the channel does not have to be synchronized,
+          it can be checked with another call.
+        - It is important to do the validation on a fixed  state, that is why
+          saved_state0 is used.
+    """
+    assert app0.raiden.address == saved_state0.state.our_address
+    assert app1.raiden.address == saved_state1.state.our_address
+
+    channel0 = views.get_channelstate_by_token_network_and_partner(
+        saved_state0.state, token_network_address, app1.raiden.address
+    )
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        saved_state1.state, token_network_address, app0.raiden.address
+    )
+
+    assert channel0
+    assert channel1
+
+    balanceproof0 = channel0.our_state.balance_proof
+    balanceproof1 = channel1.partner_state.balance_proof
+
+    assert isinstance(balanceproof0, BalanceProofUnsignedState)
+    assert isinstance(balanceproof1, BalanceProofSignedState)
+
+    if balanceproof0 is None:
+        msg = "Bug detected. The sender does not have a balance proof, but the recipient does."
+        assert balanceproof1 is None, msg
+
+        # nothing to compare
+        return
+
+    # Handle the case when the recipient didn't receive the message yet.
+    if balanceproof1 is not None:
+        nonce1 = balanceproof1.nonce
+    else:
+        nonce1 = 0
+
+    if balanceproof0.nonce > nonce1:
+        # TODO: Only consider the records up to saved state's state_change_id.
+        # ATM this has a race condition where this utility could be called
+        # before the alarm task fetches the corresponding event but while it
+        # runs it does fetch it.
+        sent_balance_proof = get_event_with_balance_proof_by_balance_hash(
+            storage=app0.raiden.storage,
+            canonical_identifier=balanceproof0.canonical_identifier,
+            balance_hash=balanceproof0.balance_hash,
+            recipient=app1.raiden.address,
+        )
+        received_balance_proof_record = get_state_change_with_balance_proof_by_locksroot(
+            storage=app1.raiden.storage,
+            canonical_identifier=balanceproof0.canonical_identifier,
+            locksroot=balanceproof0.locksroot,
+            sender=app0.raiden.address,
+        )
+
+        if received_balance_proof_record is not None:
+            errormsg: Optional[str] = None
+            received_balance_proof = received_balance_proof_record.data
+
+            if type(received_balance_proof) == ReceiveTransferRefund:
+                msg = (
+                    f"Node1 received a refund from node0 and rejected it. This "
+                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                )
+            elif isinstance(received_balance_proof, ReceiveUnlock):
+                is_valid, _, errormsg = channel.handle_unlock(
+                    channel_state=channel1, unlock=received_balance_proof
+                )
+            elif isinstance(received_balance_proof, ReceiveLockExpired):
+                is_valid, errormsg, _ = channel.is_valid_lock_expired(
+                    state_change=received_balance_proof,
+                    channel_state=channel1,
+                    sender_state=channel1.partner_state,
+                    receiver_state=channel1.our_state,
+                    block_number=saved_state1.state.block_number,
+                )
+            elif isinstance(received_balance_proof, ActionInitMediator):
+                is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.from_transfer
+                )
+            else:
+                assert isinstance(received_balance_proof, ActionInitTarget)
+                is_valid, _, errormsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.transfer
+                )
+
+            if errormsg:
+                if not is_valid:
+                    msg = (
+                        f"Node1 received the node0's message but rejected it. This "
+                        f"is likely a Raiden bug. reason={errormsg} "
+                        f"state_change={received_balance_proof}"
+                    )
+                else:
+                    msg = (
+                        f"Node1 received the node0's message at that time it "
+                        f"was rejected, this is likely a race condition, node1 "
+                        f"has to process the message again. reason={errormsg} "
+                        f"state_change={received_balance_proof}"
+                    )
+
+            else:
+                msg = (
+                    f"Node1 received the node0's message but rejected it. This "
+                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                )
+
+        elif sent_balance_proof is None:
+            msg = (
+                "Node0 did not send a message with the latest balanceproof, "
+                "this is likely a Raiden bug."
+            )
+        else:
+            msg = (
+                "Node0 sent the latest balanceproof but Node1 didn't receive, "
+                "likely the test is missing proper synchronization amongst the "
+                "nodes."
+            )
+>>>>>>> Extended messages for failed test assertions
+
+        msg = (
+            f"{msg}. "
+            f"node1={to_checksum_address(app1.raiden.address)} "
+            f"node0={to_checksum_address(app0.raiden.address)} "
+<<<<<<< HEAD
+            f"block_number0={block_number0} "
+            f"block_number1={block_number1} "
+=======
+>>>>>>> Extended messages for failed test assertions
+            f"state_change_id0={saved_state0.state_change_id} "
+            f"state_change_id1={saved_state1.state_change_id}."
+        )
+
+        raise AssertionError(msg)
+<<<<<<< HEAD
 
 
 def assert_balance_proof(
@@ -671,6 +891,31 @@ def assert_balance_proof(
         raise AssertionError(msg)
 
 
+=======
+
+    is_equal = (
+        balanceproof0.nonce == balanceproof1.nonce
+        and balanceproof0.transferred_amount == balanceproof1.transferred_amount
+        and balanceproof0.locked_amount == balanceproof1.locked_amount
+        and balanceproof0.locksroot == balanceproof1.locksroot
+        and balanceproof0.canonical_identifier == balanceproof1.canonical_identifier
+        and balanceproof0.balance_hash == balanceproof1.balance_hash
+    )
+
+    if not is_equal:
+        msg = (
+            f"The balance proof seems corrupted, the recipient has different "
+            f"values than the sender. "
+            f"node1={to_checksum_address(app1.raiden.address)} "
+            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"state_change_id0={saved_state0.state_change_id} "
+            f"state_change_id1={saved_state1.state_change_id}."
+        )
+
+        raise AssertionError(msg)
+
+
+>>>>>>> Extended messages for failed test assertions
 def assert_channel_values(
     channel0: NettingChannelState,
     balance0: Balance,
@@ -689,8 +934,8 @@ def assert_channel_values(
     partner_balance1 = channel.get_balance(channel1.partner_state, channel1.our_state)
     assert our_balance1 + partner_balance1 == total_token
 
-    locked_amount0 = sum(lock.amount for lock in pending_locks0)
-    locked_amount1 = sum(lock.amount for lock in pending_locks1)
+    locked_amount0 = LockedAmount(sum(lock.amount for lock in pending_locks0))
+    locked_amount1 = LockedAmount(sum(lock.amount for lock in pending_locks1))
 
     assert_balance(channel0, balance0, locked_amount0)
     assert_balance(channel1, balance1, locked_amount1)
@@ -718,6 +963,12 @@ def assert_synced_channel_state(
         This assert does not work for an intermediate state, where one message
         hasn't been delivered yet or has been completely lost.
     """
+<<<<<<< HEAD
+=======
+    assert app0.raiden.wal
+    assert app1.raiden.wal
+
+>>>>>>> Extended messages for failed test assertions
     saved_state0 = app0.raiden.wal.saved_state
     saved_state1 = app1.raiden.wal.saved_state
 
@@ -734,6 +985,12 @@ def assert_synced_channel_state(
         saved_state1.state, token_network_address, app0.raiden.address
     )
 
+<<<<<<< HEAD
+=======
+    assert channel0
+    assert channel1
+
+>>>>>>> Extended messages for failed test assertions
     assert_channel_values(
         channel0=channel0,
         balance0=balance0,
@@ -787,7 +1044,7 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = PendingLocksState(list(bytes(lock.encoded) for lock in pending_locks))
+        locks = PendingLocksState(list(lock.encoded for lock in pending_locks))
     else:
         locks = make_empty_pending_locks_state()
 
@@ -845,7 +1102,7 @@ def make_receive_transfer_mediated(
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
     pending_locks: PendingLocksState = None,
-    locked_amount: Optional[LockedAmount] = None,
+    locked_amount: Optional[PaymentWithFeeAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
 
@@ -858,7 +1115,7 @@ def make_receive_transfer_mediated(
 
     if pending_locks is None:
         locks = make_empty_pending_locks_state()
-        locks.locks.append(bytes(lock.encoded))
+        locks.locks.append(lock.encoded)
     else:
         assert bytes(lock.encoded) in pending_locks.locks
         locks = pending_locks
@@ -870,28 +1127,28 @@ def make_receive_transfer_mediated(
 
     locksroot = compute_locksroot(locks)
 
-    payment_identifier = nonce
-    transfer_target = make_address()
-    transfer_initiator = make_address()
+    payment_identifier = PaymentID(nonce)
+    transfer_target = TargetAddress(make_address())
+    transfer_initiator = InitiatorAddress(make_address())
     chain_id = chain_id or channel_state.chain_id
 
     transfer_metadata = Metadata(
-        routes=[RouteMetadata(route=[channel_state.our_state.address, transfer_target])]
+        routes=[RouteMetadata(route=[channel_state.our_state.address, Address(transfer_target)])]
     )
 
     mediated_transfer_msg = LockedTransfer(
         chain_id=chain_id,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=MessageID(random.randint(0, UINT64_MAX)),
         payment_identifier=payment_identifier,
         nonce=nonce,
         token_network_address=channel_state.token_network_address,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
+        locked_amount=TokenAmount(locked_amount),
         recipient=channel_state.partner_state.address,
         locksroot=locksroot,
-        lock=lock,
+        lock=Lock(lock.amount, lock.expiration, lock.secrethash),
         target=transfer_target,
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
@@ -908,9 +1165,9 @@ def make_receive_transfer_mediated(
         lock=lock,
         initiator=transfer_initiator,
         target=transfer_target,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=MessageID(random.randint(0, UINT64_MAX)),
         balance_proof=balance_proof,
-        routes=transfer_metadata.routes,
+        routes=[route.route for route in transfer_metadata.routes],
     )
 
     return receive_lockedtransfer
@@ -922,9 +1179,7 @@ def make_receive_expired_lock(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    pending_locks: List[Keccak256] = None,
-    locked_amount: LockedAmount = None,
-    chain_id: ChainID = None,
+    locked_amount: TokenAmount = ZERO_LOCKED_AMOUNT,
 ) -> ReceiveLockExpired:
 
     typecheck(lock, HashTimeLockState)
@@ -934,18 +1189,14 @@ def make_receive_expired_lock(
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError("Private key does not match any of the participants.")
 
-    if pending_locks is None:
-        pending_locks = make_empty_pending_locks_state()
-    else:
-        assert bytes(lock.encoded) not in pending_locks
-
+    pending_locks = make_empty_pending_locks_state()
     locksroot = compute_locksroot(pending_locks)
+    chain_id = channel_state.chain_id
 
-    chain_id = chain_id or channel_state.chain_id
     lock_expired_msg = LockExpired(
         chain_id=chain_id,
         nonce=nonce,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=MessageID(random.randint(0, UINT64_MAX)),
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
@@ -962,7 +1213,7 @@ def make_receive_expired_lock(
     receive_lockedtransfer = ReceiveLockExpired(
         balance_proof=balance_proof,
         secrethash=lock.secrethash,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=MessageID(random.randint(0, UINT64_MAX)),
         sender=balance_proof.sender,
     )
 
