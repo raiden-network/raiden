@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 from dataclasses import replace
 
-import pytest
+import pytest  # type: ignore
 
 from raiden.constants import (
     EMPTY_HASH,
@@ -114,36 +114,36 @@ def test_is_safe_to_wait():
     # expiration is in 30 blocks, 19 blocks safe for waiting
     block_number = 10
     reveal_timeout = 10
-    is_safe, msg = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert is_safe, msg
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number).ok
 
     # expiration is in 20 blocks, 10 blocks safe for waiting
     block_number = 20
     reveal_timeout = 10
-    is_safe, msg = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert is_safe, msg
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number).ok
 
     # expiration is in 11 blocks, 1 block safe for waiting
     block_number = 29
     reveal_timeout = 10
-    is_safe, msg = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert is_safe, msg
+    assert mediator.is_safe_to_wait(expiration, reveal_timeout, block_number).ok
 
     # at the block 30 it's not safe to wait anymore
     block_number = 30
     reveal_timeout = 10
-    is_safe, _ = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert not is_safe, "this is expiration must not be safe"
+    assert mediator.is_safe_to_wait(
+        expiration, reveal_timeout, block_number
+    ).fail, "this is expiration must not be safe"
 
     block_number = 40
     reveal_timeout = 10
-    is_safe, _ = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert not is_safe, "this is expiration must not be safe"
+    assert mediator.is_safe_to_wait(
+        expiration, reveal_timeout, block_number
+    ).fail, "this is expiration must not be safe"
 
     block_number = 50
     reveal_timeout = 10
-    is_safe, _ = mediator.is_safe_to_wait(expiration, reveal_timeout, block_number)
-    assert not is_safe, "this is expiration must not be safe"
+    assert mediator.is_safe_to_wait(
+        expiration, reveal_timeout, block_number
+    ).fail, "this is expiration must not be safe"
 
 
 def test_is_channel_usable_for_mediation():
@@ -1154,10 +1154,10 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     )
 
     attack_block_number = from_transfer.lock.expiration - attacked_channel.reveal_timeout
-    is_safe, _ = mediator.is_safe_to_wait(
+    is_safe = mediator.is_safe_to_wait(
         from_transfer.lock.expiration, attacked_channel.reveal_timeout, attack_block_number
     )
-    assert not is_safe
+    assert is_safe.fail
 
     # Wait until it's not safe to wait for the off-chain unlock for B-C (and expire C-A2)
     new_iteration = iteration

@@ -216,13 +216,15 @@ def test_channel_cleared_after_our_unlock():
 def test_is_balance_proof_usable_onchain_answer_is_false():
     channel_state = factories.make_channel_set(number_of_channels=1).channels[0]
     balance_proof_wrong_channel = factories.create(factories.BalanceProofSignedStateProperties())
-    result, msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=balance_proof_wrong_channel,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
     )
-    assert result is False, result
-    assert msg.startswith("channel_identifier does not match. "), msg
+    assert is_valid_balance_proof.fail
+
+    error_message = is_valid_balance_proof.as_error_message
+    assert error_message.startswith("channel_identifier does not match. "), error_message
 
     wrong_token_network_canonical_identifier = replace(
         channel_state.canonical_identifier, token_network_address=factories.make_address()
@@ -233,13 +235,14 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
             canonical_identifier=wrong_token_network_canonical_identifier
         )
     )
-    result, msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=balance_proof_wrong_token_network,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
     )
-    assert result is False, result
-    assert msg.startswith("token_network_address does not match. "), msg
+    assert is_valid_balance_proof.fail
+    error_message = is_valid_balance_proof.as_error_message
+    assert error_message.startswith("token_network_address does not match. "), error_message
 
     balance_proof_overflow = factories.create(
         factories.BalanceProofSignedStateProperties(
@@ -248,12 +251,14 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
             canonical_identifier=channel_state.canonical_identifier,
         )
     )
-    result, msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=balance_proof_overflow,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
     )
-    assert result is False, result
+    assert is_valid_balance_proof.fail
+
+    msg = is_valid_balance_proof.as_error_message
     assert msg.startswith("Balance proof total transferred amount would overflow "), msg
     assert str(factories.UINT256_MAX) in msg, msg
     assert str(factories.UINT256_MAX + 1) in msg, msg
@@ -261,14 +266,14 @@ def test_is_balance_proof_usable_onchain_answer_is_false():
 
 def test_is_valid_balanceproof_signature():
     balance_proof = factories.create(factories.BalanceProofSignedStateProperties())
-    valid, _ = is_valid_balanceproof_signature(balance_proof, factories.make_address())
+    valid = is_valid_balanceproof_signature(balance_proof, factories.make_address())
     assert not valid, "Address does not match."
 
     balance_proof = factories.create(
         factories.BalanceProofSignedStateProperties(signature=b"\0" * 65)
     )
-    valid, _ = is_valid_balanceproof_signature(balance_proof, factories.make_address())
-    assert not valid, "Invalid signature."
+    valid = is_valid_balanceproof_signature(balance_proof, factories.make_address())
+    assert not valid, f"Invalid signature check: {valid.as_error_message}"
 
 
 def test_get_secret():
