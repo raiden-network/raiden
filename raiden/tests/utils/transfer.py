@@ -13,6 +13,12 @@ from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import LockedTransfer, LockExpired, Unlock
+from raiden.storage.restore import (
+    get_event_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_locksroot,
+)
+from raiden.storage.wal import SavedState
+from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
@@ -20,14 +26,22 @@ from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
-from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitMediator,
+    ActionInitTarget,
+    ReceiveLockExpired,
+    ReceiveTransferRefund,
+)
 from raiden.transfer.state import (
+    BalanceProofSignedState,
+    BalanceProofUnsignedState,
     ChannelState,
     HashTimeLockState,
     NettingChannelState,
     PendingLocksState,
     make_empty_pending_locks_state,
 )
+from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
 from raiden.utils import random_secret
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
@@ -227,7 +241,7 @@ def _transfer_secret_not_requested(
     identifier: PaymentID,
     fee: FeeAmount = 0,
     timeout: Optional[float] = None,
-):
+) -> None:
     if timeout is None:
         timeout = 10
 
@@ -364,28 +378,253 @@ def transfer_and_assert_path(
         assert payment_status.payment_done.get(), msg
 
 
-def assert_synced_channel_state(
+def assert_deposit(
     token_network_address: TokenNetworkAddress,
     app0: App,
+    app1: App,
+    saved_state0: SavedState,
+    saved_state1: SavedState,
+) -> None:
+    """Assert that app0 and app1 agree on app0's on-chain deposit.
+
+    Notes:
+        - This does not check the deposit from app1. It can be done with a
+          second call to the function.
+        - The two apps don't have to be at the same view of the blockchain, i.e. app1
+          may have seen the latest block but app0 not.
+        - It is important to do the validation on a fixed  state, that is why
+          saved_state0 is used.
+    """
+    # Do not assert on the block number themselves, only useful to clarify the
+    # error messages
+    block_number0 = views.block_number(saved_state0.state)
+    block_number1 = views.block_number(saved_state1.state)
+
+    channel0 = views.get_channelstate_by_token_network_and_partner(
+        saved_state0.state, token_network_address, app1.raiden.address
+    )
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        saved_state1.state, token_network_address, app0.raiden.address
+    )
+
+    if channel0.our_state.contract_balance > channel1.partner_state.contract_balance:
+        # TODO: Only consider the records up to saved state's state_change_id.
+        # ATM this has a race condition where this utility could be called
+        # before the alarm task fetches the corresponding event but while it
+        # runs it does fetch it.
+
+        deposit_description = {
+            "canonical_identifier": {
+                "chain_identifier": channel0.canonical_identifier.chain_identifier,
+                "token_network_address": channel0.canonical_identifier.token_network_address,
+                "channel_identifier": channel0.canonical_identifier.channel_identifier,
+            },
+            "deposit_transaction": {
+                "participant_address": channel0.our_state.address,
+                "contract_balance": channel0.our_state.contract_balance,
+            },
+        }
+        node0_deposit_event = raiden_events_search_for_item(
+            app0.raiden, ContractReceiveChannelDeposit, deposit_description
+        )
+        node1_deposit_event = raiden_events_search_for_item(
+            app1.raiden, ContractReceiveChannelDeposit, deposit_description
+        )
+
+        if node1_deposit_event is not None:
+            msg = "Node1 has fetched and ignored the node0's deposits, this is likely a bug."
+        elif node0_deposit_event.deposit_transaction.deposit_block_number >= block_number1:
+            msg = (
+                "Node1's has a problem with its blockchain event filters, it "
+                "missed node0's deposit event even though it has seen a newer "
+                "confirmed block"
+            )
+        elif not app0.raiden.alarm:
+            msg = (
+                "Node1 has not seen the block at which node0's deposit happened "
+                "and the alarm task is not running. Either the test stopped "
+                "the node before it had time or the node got killed because of "
+                "another error."
+            )
+        else:
+            msg = (
+                "Node1 has not yet seen the block at which node0's deposit "
+                "happened. The test is likely missing synchronization."
+            )
+
+        msg = (
+            f"{msg}. "
+            f"node1={to_checksum_address(app1.raiden.address)} "
+            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"block_number0={block_number0} "
+            f"block_number1={block_number1} "
+            f"state_change_id0={saved_state0.state_change_id} "
+            f"state_change_id1={saved_state1.state_change_id}."
+        )
+
+        raise AssertionError(msg)
+
+
+def assert_balance_proof(
+    token_network_address: TokenNetworkAddress,
+    app0: App,
+    app1: App,
+    saved_state0: SavedState,
+    saved_state1: SavedState,
+) -> None:
+    """Assert app0 and app1 agree on the latest balance proof from app0.
+
+    Notes:
+        - The other direction of the channel does not have to be synchronized,
+          it can be checked with another call.
+        - It is important to do the validation on a fixed  state, that is why
+          saved_state0 is used.
+    """
+    assert app0.raiden.address == saved_state0.state.our_address
+    assert app1.raiden.address == saved_state1.state.our_address
+
+    channel0 = views.get_channelstate_by_token_network_and_partner(
+        saved_state0.state, token_network_address, app1.raiden.address
+    )
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        saved_state1.state, token_network_address, app0.raiden.address
+    )
+
+    balanceproof0: BalanceProofUnsignedState = channel0.our_state.balance_proof
+    balanceproof1: BalanceProofSignedState = channel1.partner_state.balance_proof
+
+    if balanceproof0 is None:
+        msg = "Bug detected. The sender does not have a balance proof, but the recipient does."
+        assert balanceproof1 is None, msg
+
+        # nothing to compare
+        return
+
+    # Handle the case when the recipient didn't receive the message yet.
+    if balanceproof1 is not None:
+        nonce1 = balanceproof1.nonce
+    else:
+        nonce1 = 0
+
+    if balanceproof0.nonce > nonce1:
+        # TODO: Only consider the records up to saved state's state_change_id.
+        # ATM this has a race condition where this utility could be called
+        # before the alarm task fetches the corresponding event but while it
+        # runs it does fetch it.
+        sent_balance_proof = get_event_with_balance_proof_by_balance_hash(
+            storage=app0.raiden.storage,
+            canonical_identifier=balanceproof0.canonical_identifier,
+            balance_hash=balanceproof0.balance_hash,
+            recipient=app1.raiden.address,
+        )
+        received_balance_proof = get_state_change_with_balance_proof_by_locksroot(
+            storage=app1.raiden.storage,
+            canonical_identifier=balanceproof0.canonical_identifier,
+            locksroot=balanceproof0.locksroot,
+            sender=app0.raiden.address,
+        )
+
+        if received_balance_proof is not None:
+            if type(received_balance_proof) == ReceiveTransferRefund:
+                msg = (
+                    f"Node1 received a refund from node0 and rejected it. This "
+                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                )
+            elif type(received_balance_proof) in (
+                ActionInitMediator,
+                ActionInitTarget,
+                ReceiveUnlock,
+                ReceiveLockExpired,
+            ):
+                if type(received_balance_proof) == ReceiveUnlock:
+                    is_valid, _, msg = channel.handle_unlock(
+                        channel_state=channel1, unlock=received_balance_proof
+                    )
+                elif type(received_balance_proof) == ReceiveLockExpired:
+                    is_valid, msg, _ = channel.is_valid_lock_expired(
+                        state_change=received_balance_proof,
+                        channel_state=channel1,
+                        sender_state=channel1.partner_state,
+                        receiver_state=channel1.our_state,
+                        block_number=saved_state1.state.block_number,
+                    )
+                else:
+                    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+                        channel_state=channel1,
+                        mediated_transfer=received_balance_proof.from_transfer,
+                    )
+
+                if not is_valid:
+                    msg = (
+                        f"Node1 received the node0's message but rejected it. This "
+                        f"is likely a Raiden bug. reason={msg} "
+                        f"state_change={received_balance_proof}"
+                    )
+                else:
+                    msg = (
+                        f"Node1 received the node0's message at that time it "
+                        f"was rejected, this is likely a race condition, node1 "
+                        f"has to process the message again. reason={msg} "
+                        f"state_change={received_balance_proof}"
+                    )
+            else:
+                msg = (
+                    f"Node1 received the node0's message but rejected it. This "
+                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                )
+
+        elif sent_balance_proof is None:
+            msg = (
+                "Node0 did not send a message with the latest balanceproof, "
+                "this is likely a Raiden bug."
+            )
+        else:
+            msg = (
+                "Node0 sent the latest balanceproof but Node1 didn't receive, "
+                "likely the test is missing proper synchronization amongst the "
+                "nodes."
+            )
+
+        msg = (
+            f"{msg}. "
+            f"node1={to_checksum_address(app1.raiden.address)} "
+            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"state_change_id0={saved_state0.state_change_id} "
+            f"state_change_id1={saved_state1.state_change_id}."
+        )
+
+        raise AssertionError(msg)
+
+    is_equal = (
+        balanceproof0.nonce == balanceproof1.nonce
+        and balanceproof0.transferred_amount == balanceproof1.transferred_amount
+        and balanceproof0.locked_amount == balanceproof1.locked_amount
+        and balanceproof0.locksroot == balanceproof1.locksroot
+        and balanceproof0.canonical_identifier == balanceproof1.canonical_identifier
+        and balanceproof0.balance_hash == balanceproof1.balance_hash
+    )
+
+    if not is_equal:
+        msg = (
+            f"The balance proof seems corrupted, the recipient has different "
+            f"values than the sender. "
+            f"node1={to_checksum_address(app1.raiden.address)} "
+            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"state_change_id0={saved_state0.state_change_id} "
+            f"state_change_id1={saved_state1.state_change_id}."
+        )
+
+        raise AssertionError(msg)
+
+
+def assert_channel_values(
+    channel0: NettingChannelState,
     balance0: Balance,
     pending_locks0: List[HashTimeLockState],
-    app1: App,
+    channel1: NettingChannelState,
     balance1: Balance,
     pending_locks1: List[HashTimeLockState],
 ) -> None:
-    """ Assert the values of two synced channels.
-
-    Note:
-        This assert does not work for an intermediate state, where one message
-        hasn't been delivered yet or has been completely lost."""
-    # pylint: disable=too-many-arguments
-
-    channel0 = get_channelstate(app0, app1, token_network_address)
-    channel1 = get_channelstate(app1, app0, token_network_address)
-
-    assert channel0.our_state.contract_balance == channel1.partner_state.contract_balance
-    assert channel0.partner_state.contract_balance == channel1.our_state.contract_balance
-
     total_token = channel0.our_state.contract_balance + channel1.our_state.contract_balance
 
     our_balance0 = channel.get_balance(channel0.our_state, channel0.partner_state)
@@ -408,6 +647,47 @@ def assert_synced_channel_state(
 
     assert_mirror(channel0, channel1)
     assert_mirror(channel1, channel0)
+
+
+def assert_synced_channel_state(
+    token_network_address: TokenNetworkAddress,
+    app0: App,
+    balance0: Balance,
+    pending_locks0: List[HashTimeLockState],
+    app1: App,
+    balance1: Balance,
+    pending_locks1: List[HashTimeLockState],
+) -> None:
+    """Compare channel's state from both nodes.
+
+    Note:
+        This assert does not work for an intermediate state, where one message
+        hasn't been delivered yet or has been completely lost.
+    """
+    saved_state0 = app0.raiden.wal.saved_state
+    saved_state1 = app1.raiden.wal.saved_state
+
+    assert_deposit(token_network_address, app0, app1, saved_state0, saved_state1)
+    assert_deposit(token_network_address, app1, app0, saved_state1, saved_state0)
+
+    assert_balance_proof(token_network_address, app1, app0, saved_state1, saved_state0)
+    assert_balance_proof(token_network_address, app0, app1, saved_state0, saved_state1)
+
+    channel0 = views.get_channelstate_by_token_network_and_partner(
+        saved_state0.state, token_network_address, app1.raiden.address
+    )
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        saved_state1.state, token_network_address, app0.raiden.address
+    )
+
+    assert_channel_values(
+        channel0=channel0,
+        balance0=balance0,
+        pending_locks0=pending_locks0,
+        channel1=channel1,
+        balance1=balance1,
+        pending_locks1=pending_locks1,
+    )
 
 
 def wait_assert(func: Callable, *args, **kwargs) -> None:
