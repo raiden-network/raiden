@@ -570,6 +570,7 @@ jobs:
 
 
   deploy-digitalocean:
+    parameters:
       py-version:
         <<: *py-version-template
 
