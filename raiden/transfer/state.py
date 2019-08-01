@@ -325,6 +325,9 @@ class NettingChannelEndState(State):
         if self.address == NULL_ADDRESS_BYTES:
             raise ValueError("address cannot be null.")
 
+        if self.contract_balance < 0:
+            raise ValueError("contract_balance cannot be negative.")
+
     @property
     def offchain_total_withdraw(self) -> WithdrawAmount:
         return max(self.withdraws_pending, default=WithdrawAmount(0))
