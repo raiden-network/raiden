@@ -14,7 +14,7 @@ WEI_TO_ETH = 10 ** 18
 
 @click.command()
 @click.option("--keystore-file", required=True, type=click.Path(exists=True, dir_okay=False))
-@click.password_option("--password", envvar="ACCOUNT_PASSWORD", required=True)  # type: ignore
+@click.password_option("--password", envvar="ACCOUNT_PASSWORD", confirmation_prompt=False)
 @click.option("--rpc-url", default="http://localhost:8545")
 @click.argument("eth-amount", type=int)
 @click.argument("targets_file", type=click.File())
