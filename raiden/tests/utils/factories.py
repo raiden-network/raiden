@@ -165,6 +165,10 @@ def make_20bytes() -> bytes:
     return bytes("".join(random.choice(string.printable) for _ in range(20)), encoding="utf-8")
 
 
+def make_locksroot() -> Locksroot:
+    return Locksroot(make_32bytes())
+
+
 def make_address() -> Address:
     return Address(make_20bytes())
 
@@ -189,6 +193,10 @@ def make_token_network_address() -> TokenNetworkAddress:
     return TokenNetworkAddress(make_address())
 
 
+def make_payment_network_address() -> PaymentNetworkAddress:
+    return PaymentNetworkAddress(make_address())
+
+
 def make_additional_hash() -> AdditionalHash:
     return AdditionalHash(make_32bytes())
 
@@ -207,10 +215,6 @@ def make_block_hash() -> BlockHash:
 
 def make_privatekey_bin() -> bin:
     return make_32bytes()
-
-
-def make_payment_network_address() -> PaymentNetworkAddress:
-    return PaymentNetworkAddress(make_address())
 
 
 def make_keccak_hash() -> Keccak256:
