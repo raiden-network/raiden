@@ -236,6 +236,12 @@ def make_secret_hash(i: int = EMPTY) -> SecretHash:
         return make_32bytes()
 
 
+def make_secret_with_hash(i: int = EMPTY) -> Tuple[Secret, SecretHash]:
+    secret = make_secret(i)
+    secrethash = sha256_secrethash(secret)
+    return secret, secrethash
+
+
 def make_lock() -> HashTimeLockState:
     return HashTimeLockState(
         amount=random.randint(0, UINT256_MAX),
