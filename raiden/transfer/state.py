@@ -341,21 +341,24 @@ class NettingChannelState(State):
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     fee_schedule: FeeScheduleState = field(repr=False)
-    our_state: NettingChannelEndState = field(repr=False)
-    partner_state: NettingChannelEndState = field(repr=False)
+    our_state: NettingChannelEndState
+    partner_state: NettingChannelEndState
     open_transaction: TransactionExecutionStatus
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
 
     def __post_init__(self) -> None:
-        if self.reveal_timeout >= self.settle_timeout:
-            raise ValueError("reveal_timeout must be smaller than settle_timeout")
-
         typecheck(self.reveal_timeout, int)
         typecheck(self.settle_timeout, int)
         typecheck(self.open_transaction, TransactionExecutionStatus)
         typecheck(self.canonical_identifier.channel_identifier, T_ChannelID)
+
+        if self.reveal_timeout >= self.settle_timeout:
+            raise ValueError("reveal_timeout must be smaller than settle_timeout")
+
+        if self.our_state.address == self.partner_state.address:
+            raise ValueError("it is illegal to open a channel with itself")
 
         if self.reveal_timeout <= 0:
             raise ValueError("reveal_timeout must be a positive integer")
