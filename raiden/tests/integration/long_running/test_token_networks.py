@@ -5,6 +5,7 @@ from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.transfer import has_unlock_failure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.utils.typing import PaymentAmount, TokenAmount
@@ -199,15 +200,19 @@ def run_test_participant_selection(raiden_network, token_addresses):
     with gevent.Timeout(30, exception=ValueError("partner not reachable")):
         waiting.wait_for_healthy(sender, receiver.address, PaymentAmount(1))
 
-    amount = PaymentAmount(1)
-    RaidenAPI(sender).transfer_and_wait(
-        registry_address, token_address, amount, receiver.address, transfer_timeout=10
-    )
+    try:
+        amount = PaymentAmount(1)
+        RaidenAPI(sender).transfer_and_wait(
+            registry_address, token_address, amount, receiver.address, transfer_timeout=10
+        )
 
-    with gevent.Timeout(
-        30, exception=ValueError("timeout while waiting for incoming transaction")
-    ):
-        wait_for_transaction(receiver, registry_address, token_address, sender.address)
+        with gevent.Timeout(
+            30, exception=ValueError("timeout while waiting for incoming transaction")
+        ):
+            wait_for_transaction(receiver, registry_address, token_address, sender.address)
+    finally:
+        for app in raiden_network:
+            assert not has_unlock_failure(app.raiden)
 
     # test `leave()` method
     connection_manager = connection_managers[0]

@@ -18,7 +18,7 @@ from raiden.tests.utils.events import (
 )
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
-from raiden.tests.utils.transfer import get_channelstate, transfer
+from raiden.tests.utils.transfer import get_channelstate, has_unlock_failure, transfer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
@@ -111,7 +111,11 @@ def run_test_regression_revealsecret_after_secret(
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount=1, target=app2.raiden.address, identifier=identifier
     )
-    assert payment_status.payment_done.wait()
+    try:
+        assert payment_status.payment_done.wait()
+    finally:
+        for app in raiden_network:
+            assert not has_unlock_failure(app.raiden)
 
     event = search_for_item(app1.raiden.wal.storage.get_events(), SendSecretReveal, {})
     assert event
