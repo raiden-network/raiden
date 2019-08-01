@@ -3,7 +3,7 @@ import pytest
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import transfer
+from raiden.tests.utils.transfer import has_unlock_failure, transfer
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
@@ -43,6 +43,7 @@ def run_test_mediated_transfer_events(
     )
 
     def test_initiator_events():
+        assert not has_unlock_failure(app0.raiden)
         initiator_events = app0.raiden.wal.storage.get_events()
         return search_for_item(initiator_events, SendSecretReveal, {}) and search_for_item(
             initiator_events, EventUnlockSuccess, {}
@@ -51,6 +52,7 @@ def run_test_mediated_transfer_events(
     assert wait_until(test_initiator_events, network_wait)
 
     def test_mediator_events():
+        assert not has_unlock_failure(app1.raiden)
         mediator_events = app1.raiden.wal.storage.get_events()
         return search_for_item(mediator_events, EventUnlockSuccess, {}) and search_for_item(
             mediator_events, EventUnlockClaimSuccess, {}
@@ -59,6 +61,7 @@ def run_test_mediated_transfer_events(
     assert wait_until(test_mediator_events, network_wait)
 
     def test_target_events():
+        assert not has_unlock_failure(app2.raiden)
         target_events = app2.raiden.wal.storage.get_events()
         return (
             search_for_item(target_events, SendSecretRequest, {})
