@@ -2371,11 +2371,84 @@ def handle_channel_batch_unlock(
 
 
 def sanity_check(channel_state: NettingChannelState) -> None:
+    """Some of the checks bellow are tautologies for the current version of the
+    codebase. However they are kept in there to check the constraints if/when
+    the code changes.
+    """
+    partner_state = channel_state.partner_state
+    our_state = channel_state.our_state
+
     previous = WithdrawAmount(0)
-    for total_withdraw, withdraw_state in channel_state.our_state.withdraws_pending.items():
+    for total_withdraw, withdraw_state in our_state.withdraws_pending.items():
         assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
         assert total_withdraw == withdraw_state.total_withdraw
         previous = withdraw_state.total_withdraw
+
+    our_balance = get_balance(our_state, partner_state)
+    partner_balance = get_balance(partner_state, our_state)
+
+    msg = (
+        "The balance can never be negative, that would be equivalent to a loan or a double spend."
+    )
+    assert our_balance >= 0, msg
+    assert partner_balance >= 0, msg
+
+    channel_capacity = get_capacity(channel_state)
+    msg = "The whole deposit of the channel has to be accounted for."
+    assert our_balance + partner_balance == channel_capacity, msg
+
+    our_locked = get_amount_locked(our_state)
+    partner_locked = get_amount_locked(partner_state)
+    (our_bp_locksroot, _, _, our_bp_locked_amount) = get_current_balanceproof(our_state)
+    (partner_bp_locksroot, _, _, partner_bp_locked_amount) = get_current_balanceproof(
+        partner_state
+    )
+
+    msg = (
+        "The sum of the lock's amounts, and the value of the balance proof "
+        "locked_amount must be equal, otherwise settle will not reserve the "
+        "proper amount of tokens."
+    )
+    assert partner_locked == partner_bp_locked_amount, msg
+    assert our_locked == our_bp_locked_amount, msg
+
+    our_distributable = get_distributable(our_state, partner_state)
+    partner_distributable = get_distributable(partner_state, our_state)
+
+    # Because of overflow checks, it is possible for the distributable amount
+    # to be lower than the available balance, therefore the sanity check has to
+    # be lower-than instead of equal-to
+    assert our_distributable + our_locked <= our_balance
+    assert partner_distributable + partner_locked <= partner_balance
+
+    our_locksroot = compute_locksroot(our_state.pending_locks)
+    partner_locksroot = compute_locksroot(partner_state.pending_locks)
+
+    msg = (
+        "The balance proof locks root must match the existing locks, otherwise "
+        "it is not possible to prove on-chain that a given lock was pending."
+    )
+    assert our_locksroot == our_bp_locksroot, msg
+    assert partner_locksroot == partner_bp_locksroot, msg
+
+    msg = "The lock mappings and the pending locks must be synchronized, otherwise there is a bug"
+    for lock in partner_state.secrethashes_to_lockedlocks.values():
+        assert lock.encoded in partner_state.pending_locks.locks, msg
+
+    for partial_unlock in partner_state.secrethashes_to_unlockedlocks.values():
+        assert partial_unlock.encoded in partner_state.pending_locks.locks, msg
+
+    for partial_unlock in partner_state.secrethashes_to_onchain_unlockedlocks.values():
+        assert partial_unlock.encoded in partner_state.pending_locks.locks, msg
+
+    for lock in our_state.secrethashes_to_lockedlocks.values():
+        assert lock.encoded in our_state.pending_locks.locks, msg
+
+    for partial_unlock in our_state.secrethashes_to_unlockedlocks.values():
+        assert partial_unlock.encoded in our_state.pending_locks.locks, msg
+
+    for partial_unlock in our_state.secrethashes_to_onchain_unlockedlocks.values():
+        assert partial_unlock.encoded in our_state.pending_locks.locks, msg
 
 
 def state_transition(

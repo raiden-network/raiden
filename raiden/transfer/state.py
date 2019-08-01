@@ -310,8 +310,8 @@ class NettingChannelEndState(State):
         repr=False, default_factory=dict
     )
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
-    #: A dictionary that maps secrethashes to lock states.
-    #: Used for calculating the locksroot.
+    #: A list of the pending locks, in order of insertion. Used for calculating
+    #: the locksroot.
     pending_locks: PendingLocksState = field(
         repr=False, default_factory=make_empty_pending_locks_state
     )
