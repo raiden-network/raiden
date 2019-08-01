@@ -13,7 +13,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import assert_synced_channel_state
+from raiden.tests.utils.transfer import assert_synced_channel_state, has_unlock_failure
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
@@ -106,28 +106,32 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     #     msg = "The secrethashes of the pending transfers must be in the queue after a restart."
     #     assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
 
-    exception = RuntimeError("Timeout while waiting for balance update for app0")
-    with gevent.Timeout(20, exception=exception):
-        waiting.wait_for_payment_balance(
-            raiden=app0_restart.raiden,
-            token_network_registry_address=token_network_registry_address,
-            token_address=token_address,
-            partner_address=app1.raiden.address,
-            target_address=app1.raiden.address,
-            target_balance=total_transferred_amount,
-            retry_timeout=network_wait,
-        )
-    exception = RuntimeError("Timeout while waiting for balance update for app1")
-    with gevent.Timeout(20, exception=exception):
-        waiting.wait_for_payment_balance(
-            raiden=app1.raiden,
-            token_network_registry_address=token_network_registry_address,
-            token_address=token_address,
-            partner_address=app0_restart.raiden.address,
-            target_address=app1.raiden.address,
-            target_balance=total_transferred_amount,
-            retry_timeout=network_wait,
-        )
+    try:
+        exception = RuntimeError("Timeout while waiting for balance update for app0")
+        with gevent.Timeout(20, exception=exception):
+            waiting.wait_for_payment_balance(
+                raiden=app0_restart.raiden,
+                token_network_registry_address=token_network_registry_address,
+                token_address=token_address,
+                partner_address=app1.raiden.address,
+                target_address=app1.raiden.address,
+                target_balance=total_transferred_amount,
+                retry_timeout=network_wait,
+            )
+        exception = RuntimeError("Timeout while waiting for balance update for app1")
+        with gevent.Timeout(20, exception=exception):
+            waiting.wait_for_payment_balance(
+                raiden=app1.raiden,
+                token_network_registry_address=token_network_registry_address,
+                token_address=token_address,
+                partner_address=app0_restart.raiden.address,
+                target_address=app1.raiden.address,
+                target_balance=total_transferred_amount,
+                retry_timeout=network_wait,
+            )
+    finally:
+        for app in raiden_network:
+            assert not has_unlock_failure(app.raiden)
 
     assert_synced_channel_state(
         token_network_address,
