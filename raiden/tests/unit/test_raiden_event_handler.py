@@ -13,7 +13,7 @@ from raiden.tests.utils.mocks import make_raiden_service_mock
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
-from raiden.utils.typing import ChannelID, Nonce, TokenAmount as TA, WithdrawAmount as WA
+from raiden.utils.typing import ChannelID, Nonce, TokenAmount, WithdrawAmount
 
 
 def test_handle_contract_send_channelunlock_already_unlocked():
@@ -47,14 +47,14 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     def detail_participants(  # pylint: disable=unused-argument
         _participant1, _participant2, _block_identifier, _channel_identifier
     ):
-        transferred_amount = TA(1)
-        locked_amount = TA(1)
+        transferred_amount = TokenAmount(1)
+        locked_amount = TokenAmount(1)
         locksroot = make_locksroot()
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         our_details = ParticipantDetails(
             address=raiden.address,
-            deposit=TA(5),
-            withdrawn=WA(0),
+            deposit=TokenAmount(5),
+            withdrawn=WithdrawAmount(0),
             is_closer=False,
             balance_hash=balance_hash,
             nonce=Nonce(1),
@@ -62,14 +62,14 @@ def test_handle_contract_send_channelunlock_already_unlocked():
             locked_amount=locked_amount,
         )
 
-        transferred_amount = TA(1)
-        locked_amount = TA(1)
+        transferred_amount = TokenAmount(1)
+        locked_amount = TokenAmount(1)
         # Let's mock here that partner locksroot is 0x0
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         partner_details = ParticipantDetails(
             address=participant,
-            deposit=TA(5),
-            withdrawn=WA(0),
+            deposit=TokenAmount(5),
+            withdrawn=WithdrawAmount(0),
             is_closer=True,
             balance_hash=balance_hash,
             nonce=Nonce(1),
