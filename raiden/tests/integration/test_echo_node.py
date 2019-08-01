@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 import gevent
 import pytest
 import structlog
@@ -9,13 +7,14 @@ from raiden.api.python import RaidenAPI
 from raiden.messages.transfers import Unlock
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.factories import make_secret_with_hash
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.events import EventPaymentReceivedSuccess
-from raiden.utils import random_secret, wait_until
+from raiden.utils import wait_until
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.typing import MYPY_ANNOTATION, List, Optional
-from raiden.waiting import wait_for_transfer_success
+from raiden.waiting import TransferWaitResult, wait_for_received_transfer_result
 
 log = structlog.get_logger(__name__)
 
@@ -55,7 +54,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
     for num, app in enumerate([app0, app1]):
         amount = 1 + num
         identifier = 10 ** (num + 1)
-        secret = random_secret()
+        secret, secrethash = make_secret_with_hash()
 
         payment_status = RaidenAPI(app.raiden).transfer_async(
             registry_address=registry_address,
@@ -64,7 +63,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
             target=echo_app.raiden.address,
             identifier=identifier,
             secret=secret,
-            secrethash=sha256(secret).digest(),
+            secrethash=secrethash,
         )
 
         wait = message_handler.wait_for_message(Unlock, {"secret": secret})
@@ -88,12 +87,14 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
         )
 
         with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
-            wait_for_transfer_success(
+            result = wait_for_received_transfer_result(
                 raiden=app.raiden,
                 payment_identifier=echo_identifier,
                 amount=amount,
                 retry_timeout=retry_timeout,
+                secrethash=secrethash,
             )
+            assert result == TransferWaitResult.UNLOCKED
 
     for wait, sender, amount, ident in wait_for:
         wait.wait()

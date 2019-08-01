@@ -32,7 +32,11 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
-from raiden.waiting import wait_for_token_network, wait_for_transfer_success
+from raiden.waiting import (
+    TransferWaitResult,
+    wait_for_received_transfer_result,
+    wait_for_token_network,
+)
 from raiden_contracts.constants import (
     CONTRACT_CUSTOM_TOKEN,
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -1554,6 +1558,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     app0, app1, app2 = raiden_network
     amount1 = 200
     identifier1 = 42
+    secret1, secrethash1 = factories.make_secret_with_hash()
     token_address = token_addresses[0]
 
     app0_address = app0.raiden.address
@@ -1571,13 +1576,14 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target1_address),
         ),
-        json={"amount": amount1, "identifier": identifier1},
+        json={"amount": amount1, "identifier": identifier1, "secret": to_hex(secret1)},
     )
     request.send()
 
     # app0 is sending some tokens to target 2
     identifier2 = 43
     amount2 = 123
+    secret2, secrethash2 = factories.make_secret_with_hash()
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -1585,13 +1591,14 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target2_address),
         ),
-        json={"amount": amount2, "identifier": identifier2},
+        json={"amount": amount2, "identifier": identifier2, "secret": to_hex(secret2)},
     )
     request.send()
 
     # target1 also sends some tokens to target 2
     identifier3 = 44
     amount3 = 5
+    secret3, secrethash3 = factories.make_secret_with_hash()
     request = grequests.post(
         api_url_for(
             app1_server,
@@ -1599,15 +1606,27 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target2_address),
         ),
-        json={"amount": amount3, "identifier": identifier3},
+        json={"amount": amount3, "identifier": identifier3, "secret": to_hex(secret3)},
     )
     request.send()
 
     exception = ValueError("Waiting for transfer received success in the WAL timed out")
     with gevent.Timeout(seconds=60, exception=exception):
-        wait_for_transfer_success(app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time)
-        wait_for_transfer_success(app2.raiden, identifier2, amount2, app2.raiden.alarm.sleep_time)
-        wait_for_transfer_success(app2.raiden, identifier3, amount3, app2.raiden.alarm.sleep_time)
+        result = wait_for_received_transfer_result(
+            app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time, secrethash1
+        )
+        msg = f"Unexpected transfer result: {str(result)}"
+        assert result == TransferWaitResult.UNLOCKED, msg
+        result = wait_for_received_transfer_result(
+            app2.raiden, identifier2, amount2, app2.raiden.alarm.sleep_time, secrethash2
+        )
+        msg = f"Unexpected transfer result: {str(result)}"
+        assert result == TransferWaitResult.UNLOCKED, msg
+        result = wait_for_received_transfer_result(
+            app2.raiden, identifier3, amount3, app2.raiden.alarm.sleep_time, secrethash3
+        )
+        msg = f"Unexpected transfer result: {str(result)}"
+        assert result == TransferWaitResult.UNLOCKED, msg
 
     # test endpoint without (partner and token) for sender
     request = grequests.get(api_url_for(api_server_test_instance, "paymentresource"))

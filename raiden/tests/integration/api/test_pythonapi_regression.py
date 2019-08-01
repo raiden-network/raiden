@@ -3,6 +3,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 
 
@@ -39,14 +40,21 @@ def run_test_close_regression(raiden_network, deposit, token_addresses):
     # Initialize app2 balance proof and close the channel
     amount = 10
     identifier = 42
+    secret, secrethash = factories.make_secret_with_hash()
     assert api1.transfer(
-        registry_address, token_address, amount, api2.address, identifier=identifier
+        registry_address, token_address, amount, api2.address, identifier=identifier, secret=secret
     )
     exception = ValueError("Waiting for transfer received success in the WAL timed out")
     with gevent.Timeout(seconds=5, exception=exception):
-        waiting.wait_for_transfer_success(
-            app1.raiden, identifier, amount, app1.raiden.alarm.sleep_time
+        result = waiting.wait_for_received_transfer_result(
+            raiden=app1.raiden,
+            payment_identifier=identifier,
+            amount=amount,
+            retry_timeout=app1.raiden.alarm.sleep_time,
+            secrethash=secrethash,
         )
+        msg = f"Unexpected transfer result: {str(result)}"
+        assert result == waiting.TransferWaitResult.UNLOCKED, msg
 
     api2.channel_close(registry_address, token_address, api1.address)
 
