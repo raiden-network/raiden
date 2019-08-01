@@ -5,7 +5,7 @@ from raiden.constants import EMPTY_SECRETHASH
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.utils import sha256_secrethash
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     BlockExpiration,

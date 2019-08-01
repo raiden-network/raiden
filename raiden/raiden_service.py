@@ -74,8 +74,9 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, random_secret, sha256_secrethash
+from raiden.utils import create_default_identifier, lpex, random_secret
 from raiden.utils.runnable import Runnable
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Address,

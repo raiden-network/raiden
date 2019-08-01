@@ -39,8 +39,9 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, random_secret, sha3, sha256_secrethash
+from raiden.utils import privatekey_to_address, random_secret, sha3
 from raiden.utils.packing import pack_balance_proof
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     AdditionalHash,

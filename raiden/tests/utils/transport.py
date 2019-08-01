@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import shutil
 import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
@@ -124,10 +123,8 @@ def generate_synapse_config() -> ContextManager:
     if _SYNAPSE_BASE_DIR_VAR_NAME in os.environ:
         synapse_base_dir = Path(os.environ[_SYNAPSE_BASE_DIR_VAR_NAME])
         synapse_base_dir.mkdir(parents=True, exist_ok=True)
-        delete_base_dir = False
     else:
         synapse_base_dir = Path(mkdtemp(prefix="pytest-synapse-"))
-        delete_base_dir = True
 
     def generate_config(port: int):
         server_dir = synapse_base_dir.joinpath(f"localhost-{port}")
@@ -160,11 +157,7 @@ def generate_synapse_config() -> ContextManager:
             )
         return server_name, config_file
 
-    try:
-        yield generate_config
-    finally:
-        if delete_base_dir:
-            shutil.rmtree(synapse_base_dir)
+    yield generate_config
 
 
 @contextmanager

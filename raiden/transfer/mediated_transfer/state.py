@@ -10,7 +10,7 @@ from raiden.transfer.state import (
     HopState,
     RouteState,
 )
-from raiden.utils import sha256_secrethash
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,

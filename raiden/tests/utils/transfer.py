@@ -28,7 +28,8 @@ from raiden.transfer.state import (
     PendingLocksState,
     make_empty_pending_locks_state,
 )
-from raiden.utils import random_secret, sha256_secrethash
+from raiden.utils import random_secret
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Any,

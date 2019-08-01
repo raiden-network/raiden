@@ -17,7 +17,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionChannelDeposit,
 )
-from raiden.utils import sha256_secrethash
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
