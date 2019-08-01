@@ -8,7 +8,13 @@ from random import Random
 import networkx
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
+from raiden.constants import (
+    EMPTY_SECRETHASH,
+    LOCKSROOT_OF_NO_LOCKS,
+    NULL_ADDRESS_BYTES,
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
@@ -315,6 +321,9 @@ class NettingChannelEndState(State):
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
+
+        if self.address == NULL_ADDRESS_BYTES:
+            raise ValueError("address cannot be null.")
 
     @property
     def offchain_total_withdraw(self) -> WithdrawAmount:
