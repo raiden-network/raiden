@@ -579,8 +579,7 @@ class JSONRPCClient:
             startgas=self._gas_estimate_correction(contract_transaction["gas"]),
         )
 
-        self.poll(transaction_hash)
-        receipt = self.get_transaction_receipt(transaction_hash)
+        receipt = self.poll(transaction_hash)
         contract_address = receipt["contractAddress"]
 
         deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
@@ -645,11 +644,13 @@ class JSONRPCClient:
             log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
             return tx_hash
 
-    def poll(self, transaction_hash: bytes):
+    def poll(self, transaction_hash: bytes) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is applied or rejected.
 
         Args:
             transaction_hash: Transaction hash that we are waiting for.
+
+        Returns the transaction receipt.
         """
         if len(transaction_hash) != 32:
             raise ValueError("transaction_hash must be a 32 byte hash")
@@ -666,26 +667,27 @@ class JSONRPCClient:
         last_result = None
 
         while True:
-            # Could return None for a short period of time, until the
-            # transaction is added to the pool
-            transaction = self.web3.eth.getTransaction(transaction_hash)
+            # Could return None until the transaction is mined
+            tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
 
             # if the transaction was added to the pool and then removed
-            if transaction is None and last_result is not None:
+            if tx_receipt is None and last_result is not None:
                 raise Exception("invalid transaction, check gas price")
 
             # the transaction was added to the pool and mined
-            if transaction and transaction["blockNumber"] is not None:
-                last_result = transaction
+            if tx_receipt:
+                if "blockNumber" not in tx_receipt:
+                    raise ValueError("Transaction receipt should always contain a block number")
+                last_result = tx_receipt
 
                 # this will wait for both APPLIED and REVERTED transactions
-                transaction_block = transaction["blockNumber"]
+                transaction_block = tx_receipt["blockNumber"]
                 confirmation_block = transaction_block + self.default_block_num_confirmations
 
                 block_number = self.block_number()
 
                 if block_number >= confirmation_block:
-                    return transaction
+                    return tx_receipt
 
             gevent.sleep(1.0)
 
