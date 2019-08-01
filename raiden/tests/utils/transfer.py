@@ -183,13 +183,17 @@ def _transfer_unlocked(
         fee=fee,
     )
 
-    with Timeout(seconds=timeout):
-        wait_for_unlock.get()
-        msg = (
-            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
-            f"to {to_checksum_address(target_app.raiden.address)} failed."
-        )
-        assert payment_status.payment_done.get(), msg
+    try:
+        with Timeout(seconds=timeout):
+            wait_for_unlock.get()
+            msg = (
+                f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
+                f"to {to_checksum_address(target_app.raiden.address)} failed."
+            )
+            assert payment_status.payment_done.get(), msg
+    finally:
+        assert not has_unlock_failure(initiator_app.raiden)
+        assert not has_unlock_failure(target_app.raiden)
 
 
 def _transfer_expired(
@@ -385,13 +389,17 @@ def transfer_and_assert_path(
         secret=secret,
     )
 
-    with Timeout(seconds=timeout):
-        gevent.wait(results)
-        msg = (
-            f"transfer from {to_checksum_address(first_app.raiden.address)} "
-            f"to {to_checksum_address(last_app.raiden.address)} failed."
-        )
-        assert payment_status.payment_done.get(), msg
+    try:
+        with Timeout(seconds=timeout):
+            gevent.wait(results)
+            msg = (
+                f"transfer from {to_checksum_address(first_app.raiden.address)} "
+                f"to {to_checksum_address(last_app.raiden.address)} failed."
+            )
+            assert payment_status.payment_done.get(), msg
+    finally:
+        for app in path:
+            assert not has_unlock_failure(app.raiden)
 
 
 def assert_deposit(
