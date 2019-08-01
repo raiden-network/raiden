@@ -1,5 +1,6 @@
 import json
 import random
+from collections import defaultdict
 from unittest.mock import Mock, PropertyMock, patch
 
 import requests
@@ -131,6 +132,7 @@ class MockRaidenService:
         self.default_registry.address = factories.make_address()
         self.default_one_to_n_address = factories.make_address()
 
+        self.targets_to_identifiers_to_statuses = defaultdict(dict)
         self.route_to_feedback_token = {}
 
         if state_transition is None:
@@ -171,7 +173,7 @@ def make_raiden_service_mock(
     channel_identifier: ChannelID,
     partner: Address,
 ):
-    raiden_service = MockRaidenService()
+    raiden_service = MockRaidenService(config={})
     chain_state = MockChainState()
     wal = Mock()
     wal.state_manager.current_state = chain_state
@@ -186,6 +188,7 @@ def make_raiden_service_mock(
     tokennetworkaddresses_to_tokennetworks[token_network_address] = token_network
 
     chain_state.identifiers_to_paymentnetworks = {payment_network_address: payment_network}
+
     return raiden_service
 
 
