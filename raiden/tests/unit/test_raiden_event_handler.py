@@ -44,9 +44,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     channel_state.our_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
     channel_state.partner_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
 
-    def detail_participants(  # pylint: disable=unused-argument
-        _participant1, _participant2, _block_identifier, _channel_identifier
-    ):
+    def detail_participants(_participant1, _participant2, _block_identifier, _channel_identifier):
         transferred_amount = TokenAmount(1)
         locked_amount = TokenAmount(1)
         locksroot = make_locksroot()
