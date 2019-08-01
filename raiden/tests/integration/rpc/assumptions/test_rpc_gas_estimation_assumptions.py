@@ -73,11 +73,8 @@ def test_estimate_gas_defaults_to_pending(deploy_client):
     assert second_gas, "gas estimation should not have failed"
     second_tx = contract_proxy.transact("gas_increase_exponential", second_gas)
 
-    deploy_client.poll(first_tx)
-    deploy_client.poll(second_tx)
-
-    first_receipt = deploy_client.get_transaction_receipt(first_tx)
-    second_receipt = deploy_client.get_transaction_receipt(second_tx)
+    first_receipt = deploy_client.poll(first_tx)
+    second_receipt = deploy_client.poll(second_tx)
 
     assert second_receipt["gasLimit"] < deploy_client.get_block("latest")["gasLimit"]
     assert first_receipt["status"] != RECEIPT_FAILURE_CODE

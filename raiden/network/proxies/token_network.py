@@ -341,9 +341,9 @@ class TokenNetwork:
                 settle_timeout=settle_timeout,
             )
             self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            if receipt_or_none:
-                failed_at_blockhash = encode_hex(receipt_or_none["blockHash"])
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            if failed_receipt:
+                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
                     participant2=partner,
@@ -892,18 +892,18 @@ class TokenNetwork:
                 partner=partner,
             )
             self.client.poll(transaction_hash)
-            receipt = check_transaction_threw(self.client, transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt:
+            if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
                 # - The account had enough tokens to deposit
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
-                failed_at_blockhash = encode_hex(receipt["blockHash"])
-                failed_at_blocknumber = receipt["blockNumber"]
+                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+                failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                if receipt["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"setTotalDeposit failed and all gas was used "
                         f"({gas_limit}). Estimate gas may have underestimated "
@@ -960,11 +960,11 @@ class TokenNetwork:
                     raise RaidenRecoverableError("Requested total deposit was already performed")
 
                 token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=receipt["blockHash"]
+                    block_identifier=failed_receipt["blockHash"]
                 )
 
                 network_balance = self.token.balance_of(
-                    address=Address(self.address), block_identifier=receipt["blockHash"]
+                    address=Address(self.address), block_identifier=failed_receipt["blockHash"]
                 )
 
                 if network_balance + deposit_amount > token_network_deposit_limit:
@@ -975,7 +975,7 @@ class TokenNetwork:
                     raise RaidenRecoverableError(msg)
 
                 channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=receipt["blockHash"]
+                    block_identifier=failed_receipt["blockHash"]
                 )
                 if total_deposit > channel_participant_deposit_limit:
                     msg = (
@@ -1326,18 +1326,18 @@ class TokenNetwork:
                 participant_signature=participant_signature,
             )
             self.client.poll(transaction_hash)
-            receipt = check_transaction_threw(self.client, transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt:
+            if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
                 # - The total withdraw amount increased.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
 
-                if receipt["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"update transfer failed and all gas was used "
                         f"({gas_limit}). Estimate gas may have underestimated "
@@ -1590,9 +1590,9 @@ class TokenNetwork:
                     closing_signature=closing_signature,
                 )
                 self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-                if receipt_or_none:
+                if failed_receipt:
                     # Because the gas estimation succeeded it is known that:
                     # - The channel existed.
                     # - The channel was at the state open.
@@ -1606,9 +1606,9 @@ class TokenNetwork:
 
                     # These checks do not have problems with race conditions because
                     # `poll`ing waits for the transaction to be confirmed.
-                    mining_block = int(receipt_or_none["blockNumber"])
+                    mining_block = int(failed_receipt["blockNumber"])
 
-                    if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                    if failed_receipt["cumulativeGasUsed"] == gas_limit:
                         msg = (
                             "update transfer failed and all gas was used. Estimate gas "
                             "may have underestimated update transfer, or succeeded even "
@@ -1849,9 +1849,9 @@ class TokenNetwork:
             )
 
             self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt_or_none:
+            if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel existed.
                 # - The channel was at the state closed.
@@ -1861,9 +1861,9 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = int(receipt_or_none["blockNumber"])
+                mining_block = int(failed_receipt["blockNumber"])
 
-                if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         "update transfer failed and all gas was used. Estimate gas "
                         "may have underestimated update transfer, or succeeded even "
@@ -2114,16 +2114,16 @@ class TokenNetwork:
             )
 
             self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt_or_none:
+            if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was settled.
                 # - The channel had pending locks on-chain for that participant.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"Unlock failed and all gas was used "
                         f"({gas_limit}). Estimate gas may have underestimated "
@@ -2353,11 +2353,11 @@ class TokenNetwork:
                 **kwargs,
             )
             self.client.poll(transaction_hash)
-            receipt = check_transaction_threw(self.client, transaction_hash)
+            failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
-            if receipt:
-                failed_at_blockhash = encode_hex(receipt["blockHash"])
-                failed_at_blocknumber = receipt["blockNumber"]
+            if failed_receipt:
+                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+                failed_at_blocknumber = failed_receipt["blockNumber"]
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",

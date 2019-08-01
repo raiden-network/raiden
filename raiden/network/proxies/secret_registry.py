@@ -172,8 +172,7 @@ class SecretRegistry:
                 transaction_hash = self.proxy.transact(
                     "registerSecretBatch", gas_limit, secrets_to_register
                 )
-                self.client.poll(transaction_hash)
-                receipt = self.client.get_transaction_receipt(transaction_hash)
+                receipt = self.client.poll(transaction_hash)
             except Exception as e:  # pylint: disable=broad-except
                 msg = f"Unexpected exception {e} at sending registerSecretBatch transaction."
 

@@ -162,12 +162,12 @@ class TokenNetworkRegistry:
                 )
 
                 self.client.poll(transaction_hash)
-                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                failed_receipt = check_transaction_threw(self.client, transaction_hash)
 
             transaction_executed = gas_limit is not None
-            if not transaction_executed or receipt_or_none:
+            if not transaction_executed or failed_receipt:
                 if transaction_executed:
-                    block = receipt_or_none["blockNumber"]
+                    block = failed_receipt["blockNumber"]
                 else:
                     block = checking_block
 
