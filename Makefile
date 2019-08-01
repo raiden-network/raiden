@@ -53,7 +53,7 @@ lint: mypy mypy-all isort black
 
 mypy:
 	mypy raiden
-	mypy tools/debugging
+	mypy tools
 
 mypy-all:
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
