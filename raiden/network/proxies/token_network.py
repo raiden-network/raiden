@@ -1590,7 +1590,6 @@ class TokenNetwork:
                     closing_signature=closing_signature,
                 )
                 receipt = self.client.poll(transaction_hash)
-
                 failed_receipt = check_transaction_threw(receipt=receipt)
 
                 if failed_receipt:
@@ -1607,7 +1606,7 @@ class TokenNetwork:
 
                     # These checks do not have problems with race conditions because
                     # `poll`ing waits for the transaction to be confirmed.
-                    mining_block = int(failed_receipt["blockNumber"])
+                    mining_block = failed_receipt["blockNumber"]
 
                     if failed_receipt["cumulativeGasUsed"] == gas_limit:
                         msg = (
@@ -1862,7 +1861,7 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = int(failed_receipt["blockNumber"])
+                mining_block = failed_receipt["blockNumber"]
 
                 if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
