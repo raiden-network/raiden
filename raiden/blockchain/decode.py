@@ -50,6 +50,7 @@ from raiden.transfer.state_change import (
     ContractReceiveUpdateTransfer,
 )
 from raiden.utils.typing import (
+    Balance,
     BlockNumber,
     BlockTimeout,
     FeeAmount,
@@ -128,12 +129,8 @@ def contractreceivechannelnew_from_event(
     identifier = args["channel_identifier"]
     token_network_address = TokenNetworkAddress(event.originating_contract)
 
-    our_state = NettingChannelEndState(
-        new_channel_details.our_address, new_channel_details.our_initial_balance
-    )
-    partner_state = NettingChannelEndState(
-        new_channel_details.partner_address, new_channel_details.partner_initial_balance
-    )
+    our_state = NettingChannelEndState(new_channel_details.our_address, Balance(0))
+    partner_state = NettingChannelEndState(new_channel_details.partner_address, Balance(0))
 
     open_transaction = TransactionExecutionStatus(
         None, block_number, TransactionExecutionStatus.SUCCESS
@@ -353,10 +350,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state=chain_state,
-            chain_service=chain_service,
-            event=event,
-            latest_confirmed_block=latest_confirmed_block,
+            chain_state=chain_state, event=event
         )
 
         if new_channel_details is not None:
