@@ -25,10 +25,10 @@ from eth_utils import to_checksum_address, to_hex
 from raiden.blockchain.events import DecodedEvent
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
+    order_locksroot,
 )
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer import views
@@ -65,15 +65,14 @@ class NewChannelDetails:
 
 
 def get_contractreceivechannelsettled_data_from_event(
-    chain_service: BlockChainService,
-    chain_state: ChainState,
-    event: DecodedEvent,
-    latest_confirmed_block: BlockNumber,
+    storage: SerializedSQLiteStorage, chain_state: ChainState, event: DecodedEvent
 ) -> Optional[ChannelSettleState]:
     data = event.event_data
     token_network_address = TokenNetworkAddress(event.originating_contract)
     channel_identifier = data["args"]["channel_identifier"]
-    block_hash = data["block_hash"]
+
+    participant1_locksroot = data["args"]["participant1_locksroot"]
+    participant2_locksroot = data["args"]["participant2_locksroot"]
 
     canonical_identifier = CanonicalIdentifier(
         chain_identifier=chain_state.chain_id,
@@ -96,41 +95,23 @@ def get_contractreceivechannelsettled_data_from_event(
     if not channel_state:
         return None
 
-    # Recover the locksroot from the blockchain to fix data races. Check
-    # get_onchain_locksroots for details.
-    try:
-        # First try to query the unblinded state. This way the
-        # ContractReceiveChannelSettled's locksroots will  match the values
-        # provided during settle.
-        our_locksroot, partner_locksroot = get_onchain_locksroots(
-            chain=chain_service,
-            canonical_identifier=channel_state.canonical_identifier,
-            participant1=channel_state.our_state.address,
-            participant2=channel_state.partner_state.address,
-            block_identifier=block_hash,
-        )
-    except ValueError:
-        # State pruning handling. The block which generate the
-        # ChannelSettled event may have been pruned, because of this the
-        # RPC call raised ValueError.
-        #
-        # The solution is to query the channel's state from the latest
-        # *confirmed* block, this /may/ create a ContractReceiveChannelSettled
-        # with the wrong locksroot (i.e. not the locksroot used during the call
-        # to settle). However this is fine, because at this point the channel
-        # is settled, it is known that the locksroot can not be reverted
-        # without an unlock, and because the unlocks are fair it doesn't matter
-        # who called it, only if there are tokens locked in the settled
-        # channel.
-        our_locksroot, partner_locksroot = get_onchain_locksroots(
-            chain=chain_service,
-            canonical_identifier=channel_state.canonical_identifier,
-            participant1=channel_state.our_state.address,
-            participant2=channel_state.partner_state.address,
-            block_identifier=latest_confirmed_block,
-        )
+    order = order_locksroot(
+        storage=storage,
+        latest_channel_state=channel_state,
+        locksroot1=participant1_locksroot,
+        locksroot2=participant2_locksroot,
+    )
 
-    return ChannelSettleState(canonical_identifier, our_locksroot, partner_locksroot)
+    if order is None:
+        msg = (
+            f"The channel {canonical_identifier} was settled with the "
+            f"locksroot {to_hex(participant1_locksroot)} and "
+            f"{to_hex(participant2_locksroot)} but the data is not available in "
+            f"the storage."
+        )
+        raise RaidenUnrecoverableError(msg)
+
+    return ChannelSettleState(canonical_identifier, order.our_locksroot, order.partner_locksroot)
 
 
 def get_contractreceiveupdatetransfer_data_from_event(

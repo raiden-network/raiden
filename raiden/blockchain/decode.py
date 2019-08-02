@@ -408,10 +408,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
-            chain_service=chain_service,
-            chain_state=chain_state,
-            event=event,
-            latest_confirmed_block=latest_confirmed_block,
+            storage=raiden.wal.storage, chain_state=chain_state, event=event
         )
 
         if channel_settle_state:
