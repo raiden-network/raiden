@@ -29,6 +29,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
+from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
@@ -271,11 +272,13 @@ def test_matrix_message_sync(matrix_transports):
     transport0.start(raiden_service0, message_handler, None)
     transport1.start(raiden_service1, message_handler, None)
 
-    gevent.sleep(1)
-
     latest_auth_data = f"{transport1._user_id}/{transport1._client.api.token}"
     update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
-    raiden_service1.handle_and_track_state_changes.assert_called_with([update_transport_auth_data])
+    with gevent.Timeout(2):
+        wait_assert(
+            raiden_service1.handle_and_track_state_changes.assert_called_with,
+            [update_transport_auth_data],
+        )
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
@@ -311,9 +314,9 @@ def test_matrix_message_sync(matrix_transports):
     # Should fetch the 5 messages sent while transport1 was offline
     transport1.start(transport1._raiden_service, message_handler, latest_auth_data)
 
-    gevent.sleep(2)
-
-    assert len(set(received_messages)) == 20
+    with gevent.Timeout(2):
+        while len(set(received_messages)) != 20:
+            gevent.sleep(0.1)
     for i in range(10, 15):
         assert any(getattr(m, "message_identifier", -1) == i for m in received_messages)
 
