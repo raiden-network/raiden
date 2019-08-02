@@ -846,7 +846,7 @@ def is_valid_unlock(
         # Unlock messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
-            "Invalid Unlock message. " "Balance proof's wrong locked_amount, expected: {} got: {}."
+            "Invalid Unlock message. Balance proof's wrong locked_amount, expected: {} got: {}."
         ).format(expected_locked_amount, received_balance_proof.locked_amount)
 
         result = (False, msg, None)

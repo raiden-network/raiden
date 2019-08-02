@@ -513,7 +513,7 @@ class ChainState(State):
 
     def __repr__(self):
         return (
-            "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
+            "ChainState(block_number={} block_hash={} networks={} qty_transfers={} chain_id={})"
         ).format(
             self.block_number,
             to_hex(self.block_hash),

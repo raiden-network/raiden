@@ -152,7 +152,7 @@ def test_payload_with_invalid_addresses(api_server_test_instance, rest_api_port_
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
     url_without_prefix = (
-        "http://localhost:{port}/api/v1/" "channels/ea674fdde714fd979de3edf0f56aa9716b898ec8"
+        "http://localhost:{port}/api/v1/channels/ea674fdde714fd979de3edf0f56aa9716b898ec8"
     ).format(port=rest_api_port_number)
 
     request = grequests.patch(

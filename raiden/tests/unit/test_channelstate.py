@@ -514,7 +514,7 @@ def test_channelstate_receive_lockedtransfer():
         sender=invalid_balance_proof.sender,
     )
     is_valid, _, _ = channel.handle_unlock(channel_state, invalid_unlock_state_change)
-    assert not is_valid, "Unlock message with chain_id different than the " "channel's should fail"
+    assert not is_valid, "Unlock message with chain_id different than the channel's should fail"
 
     is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
     assert is_valid, msg

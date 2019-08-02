@@ -137,9 +137,7 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
         def count_transactions(function_name, startgas, secrets):
             for secret in secrets:
                 count[secret] += 1
-                msg = (
-                    "All secrets must be registered, " "and they all must be registered only once"
-                )
+                msg = "All secrets must be registered, and they all must be registered only once"
                 assert count[secret] == 1, msg
 
             return transact(function_name, startgas, secrets)
@@ -178,5 +176,5 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
 
         gevent.joinall(greenlets, raise_error=True)
 
-        msg = "All secrets must be registered, " "and they all must be registered only once"
+        msg = "All secrets must be registered, and they all must be registered only once"
         assert all(count[secret] == 1 for secret in secrets), msg
