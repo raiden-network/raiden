@@ -341,9 +341,7 @@ class TokenNetwork:
                 settle_timeout=settle_timeout,
             )
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
             if failed_receipt:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
@@ -894,9 +892,7 @@ class TokenNetwork:
                 partner=partner,
             )
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -1330,9 +1326,7 @@ class TokenNetwork:
                 participant_signature=participant_signature,
             )
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -1596,9 +1590,8 @@ class TokenNetwork:
                     closing_signature=closing_signature,
                 )
                 receipt = self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(
-                    client=self.client, transaction_hash=transaction_hash, receipt=receipt
-                )
+
+                failed_receipt = check_transaction_threw(receipt=receipt)
 
                 if failed_receipt:
                     # Because the gas estimation succeeded it is known that:
@@ -1857,9 +1850,7 @@ class TokenNetwork:
             )
 
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -2124,9 +2115,7 @@ class TokenNetwork:
             )
 
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -2365,9 +2354,7 @@ class TokenNetwork:
                 **kwargs,
             )
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])

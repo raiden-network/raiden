@@ -277,9 +277,7 @@ class UserDeposit:
             )
 
             receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(
-                client=self.client, transaction_hash=transaction_hash, receipt=receipt
-            )
+            failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
                 failed_at_blocknumber = failed_receipt["blockNumber"]
