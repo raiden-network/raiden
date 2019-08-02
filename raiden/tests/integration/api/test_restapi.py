@@ -31,7 +31,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
-from raiden.waiting import wait_for_transfer_success
+from raiden.waiting import wait_for_token_network, wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_CUSTOM_TOKEN,
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -1234,7 +1234,9 @@ def test_get_token_network_for_token(
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
     token_network_address = get_json_response(register_response)["token_network_address"]
 
-    gevent.sleep(app0.raiden.alarm.sleep_time * 10)
+    wait_for_token_network(
+        app0.raiden, app0.raiden.default_registry.address, new_token_address, 0.1
+    )
 
     # now it should return the token address
     token_request = grequests.get(
