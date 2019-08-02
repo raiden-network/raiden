@@ -35,7 +35,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.typing import (
     Address,
-    Balance,
     BlockNumber,
     ChainID,
     Locksroot,
@@ -61,9 +60,7 @@ class NewChannelDetails:
     payment_network_address: PaymentNetworkAddress
     token_address: TokenAddress
     our_address: Address
-    our_initial_balance: Balance
     partner_address: Address
-    partner_initial_balance: Balance
 
 
 def get_contractreceivechannelsettled_data_from_event(
@@ -219,55 +216,40 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState,
-    chain_service: BlockChainService,
-    event: DecodedEvent,
-    latest_confirmed_block: BlockNumber,
+    chain_state: ChainState, event: DecodedEvent
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data
     args = data["args"]
-    block_hash = data["block_hash"]
     participant1 = args["participant1"]
     participant2 = args["participant2"]
 
-    is_participant = chain_state.our_address in (participant1, participant2)
-    if not is_participant:
+    our_address = chain_state.our_address
+
+    if our_address == participant1:
+        partner_address = participant2
+    elif our_address == participant2:
+        partner_address = participant1
+    else:
+        # Not a channel which this node is a participant
         return None
 
-    channel_proxy = chain_service.payment_channel(
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=event.chain_id,
-            token_network_address=token_network_address,
-            channel_identifier=args["channel_identifier"],
-        )
-    )
-    try:
-        channel_details = channel_proxy.detail(block_identifier=block_hash)
-    except ValueError:
-        # State pruning handling. The block which generate the ChannelNew
-        # event may have been pruned, because of this the RPC call raised
-        # ValueError.
-        #
-        # To fix this the latest **confirmed** state of the channel is queried.
-        channel_details = channel_proxy.detail(block_identifier=latest_confirmed_block)
-
-    token_network_registry = views.get_token_network_registry_by_token_network_address(
+    payment_network = views.get_token_network_registry_by_token_network_address(
         chain_state, token_network_address
     )
-    assert token_network_registry is not None, "Token network missing"
+    assert payment_network is not None, "Payment network missing"
 
-    our_details = channel_details.participants_data.our_details
-    partner_details = channel_details.participants_data.partner_details
+    token_network = views.get_token_network_by_address(
+        chain_state=chain_state, token_network_address=token_network_address
+    )
+    assert token_network is not None, "Token network missing"
 
     return NewChannelDetails(
         chain_id=event.chain_id,
-        payment_network_address=token_network_registry.address,
-        token_address=channel_details.token_address,
-        our_address=our_details.address,
-        our_initial_balance=Balance(our_details.deposit),
-        partner_address=partner_details.address,
-        partner_initial_balance=Balance(partner_details.deposit),
+        payment_network_address=payment_network.address,
+        token_address=token_network.token_address,
+        our_address=our_address,
+        partner_address=partner_address,
     )
 
 
