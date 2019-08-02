@@ -10,11 +10,13 @@ import gevent
 import structlog
 from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
+from pkg_resources import parse_version
 from web3 import Web3
 
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
+from raiden.utils.ethereum_clients import parse_geth_version
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.typing import (
     Address,
@@ -111,13 +113,19 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
             value = node[config]
             cmd.extend([f"--{config}", str(value)])
 
-    # dont use the '--dev' flag
+    # Add parameters that are only required in newer versions
+    geth_version_string, _ = subprocess.Popen(
+        ["geth", "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    ).communicate()
+    if parse_geth_version(geth_version_string.decode()) >= parse_version("1.9.0"):
+        # Geth does not normally allow running an unlocked account
+        # with the http interface. But since this a test blockchain we
+        # can override that.
+        cmd.append("--allow-insecure-unlock")
+
+    # don't use the '--dev' flag
     cmd.extend(
         [
-            # Geth does not normally allow running an unlocked account
-            # with the http interface. But since this a test blockchain we
-            # can override that
-            "--allow-insecure-unlock",
             "--nodiscover",
             "--rpc",
             "--rpcapi",
