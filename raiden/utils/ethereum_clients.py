@@ -12,6 +12,18 @@ from raiden.constants import (
 from raiden.utils.typing import Optional, Tuple
 
 
+def parse_geth_version(client_version: str) -> Optional[tuple]:
+    if client_version.startswith("Geth/"):
+        # then this is a geth client version from web3.version.node
+        matches = re.search(r"/v(\d+\.\d+\.\d+)", client_version)
+    else:
+        # result of `geth version`
+        matches = re.search("Version: (.*)-", client_version)
+    if matches is None:
+        return None
+    return parse_version(matches.groups()[0])
+
+
 def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient], Optional[str]]:
     """Takes a client version string either from web3.version.node or from
     `geth version` or `parity --version` and sees if it is supported.
@@ -30,19 +42,12 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
         ) and our_version <= parse_version(HIGHEST_SUPPORTED_PARITY_VERSION)
         return supported, EthClient.PARITY, str(our_version)
     elif client_version.startswith("Geth"):
-
-        if client_version.startswith("Geth/"):
-            # then this is a geth client version from web3.version.node
-            matches = re.search(r"/v(\d+\.\d+\.\d+)", client_version)
-        else:
-            # result of `geth version`
-            matches = re.search("Version: (.*)-", client_version)
-        if matches is None:
+        our_geth_version = parse_geth_version(client_version)
+        if our_geth_version is None:
             return False, None, None
-        our_version = parse_version(matches.groups()[0])
-        supported = our_version >= parse_version(
+        supported = our_geth_version >= parse_version(
             LOWEST_SUPPORTED_GETH_VERSION
-        ) and our_version <= parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
-        return supported, EthClient.GETH, str(our_version)
+        ) and our_geth_version <= parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
+        return supported, EthClient.GETH, str(our_geth_version)
 
     return False, None, None
