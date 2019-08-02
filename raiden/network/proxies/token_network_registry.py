@@ -162,9 +162,7 @@ class TokenNetworkRegistry:
                 )
 
                 receipt = self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(
-                    client=self.client, transaction_hash=transaction_hash, receipt=receipt
-                )
+                failed_receipt = check_transaction_threw(receipt=receipt)
 
             transaction_executed = gas_limit is not None
             if not transaction_executed or failed_receipt:
