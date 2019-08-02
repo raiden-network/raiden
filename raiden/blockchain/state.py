@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.blockchain.events import DecodedEvent
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import (
@@ -210,7 +211,8 @@ def get_contractreceivechannelbatchunlock_data_from_event(
         f"Can not resolve channel_id for unlock with locksroot {to_hex(locksroot)} and "
         f"partner {to_checksum_address(partner)}."
     )
-    assert canonical_identifier is not None, msg
+    if canonical_identifier is None:
+        raise RaidenUnrecoverableError(msg)
 
     return canonical_identifier
 
