@@ -15,10 +15,10 @@ from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
 from raiden.storage.serialization.types import SchemaCache
-from raiden.utils.typing import Any
+from raiden.utils.typing import Any, Dict
 
 
-def _import_type(type_name):
+def _import_type(type_name: str) -> type:
     module_name, _, klass_name = type_name.rpartition(".")
 
     try:
@@ -34,17 +34,21 @@ def _import_type(type_name):
 
 class SerializationBase:
     @staticmethod
-    def serialize(obj: Any):
+    def serialize(obj):
         raise NotImplementedError
 
     @staticmethod
-    def deserialize(data: str):
+    def deserialize(data):
         raise NotImplementedError
 
 
 class DictSerializer(SerializationBase):
+    # TODO: Fix the type annotation bellow.
+    # Any is too broad of a type, the real signature is `Union[Dict,
+    # Dataclass]`, however, there is no base class available from the
+    # dataclasses module that allows for such type annotation.
     @staticmethod
-    def serialize(obj):
+    def serialize(obj: Any) -> Dict:
         # Default, in case this is not a dataclass
         data = obj
         if is_dataclass(obj):
@@ -58,7 +62,7 @@ class DictSerializer(SerializationBase):
         return data
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data: Dict) -> Any:
         """ Deserialize a dict-like object.
 
         If the key ``_type`` is present, import the target and deserialize via Marshmallow.
@@ -78,12 +82,12 @@ class DictSerializer(SerializationBase):
 
 class JSONSerializer(SerializationBase):
     @staticmethod
-    def serialize(obj):
+    def serialize(obj: Any) -> str:
         data = DictSerializer.serialize(obj)
         return json.dumps(data)
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data: str) -> Any:
         """ Deserialize a JSON object.
 
         Raises ``SerializationError`` for invalid inputs.
