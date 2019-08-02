@@ -287,6 +287,11 @@ def wait_for_token_network(
     token_address: TokenAddress,
     retry_timeout: float,
 ) -> None:  # pragma: no unittest
+    """Wait until the token network is visible to the RaidenService.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(raiden), payment_network_address, token_address
     )
