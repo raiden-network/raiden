@@ -407,11 +407,16 @@ def assert_deposit(
         saved_state1.state, token_network_address, app0.raiden.address
     )
 
-    if channel0.our_state.contract_balance > channel1.partner_state.contract_balance:
+    if channel0.our_state.contract_balance != channel1.partner_state.contract_balance:
         # TODO: Only consider the records up to saved state's state_change_id.
         # ATM this has a race condition where this utility could be called
         # before the alarm task fetches the corresponding event but while it
         # runs it does fetch it.
+
+        # Any of the nodes may have seen the deposit first
+        contract_balance = max(
+            channel0.our_state.contract_balance, channel1.partner_state.contract_balance
+        )
 
         deposit_description = {
             "canonical_identifier": {
@@ -421,7 +426,7 @@ def assert_deposit(
             },
             "deposit_transaction": {
                 "participant_address": channel0.our_state.address,
-                "contract_balance": channel0.our_state.contract_balance,
+                "contract_balance": contract_balance,
             },
         }
         node0_deposit_event = raiden_events_search_for_item(
@@ -431,26 +436,65 @@ def assert_deposit(
             app1.raiden, ContractReceiveChannelDeposit, deposit_description
         )
 
-        if node1_deposit_event is not None:
+        is_partner_deposit_ignored = (
+            node1_deposit_event is not None
+            and channel1.partner_state.contract_balance != contract_balance
+        )
+        is_self_deposit_ignored = (
+            node0_deposit_event is not None
+            and channel0.partner_state.contract_balance != contract_balance
+        )
+        is_partner_deposit_missed = (
+            node0_deposit_event
+            and node0_deposit_event.deposit_transaction.deposit_block_number >= block_number1
+        )
+        is_self_deposit_missed = (
+            node1_deposit_event
+            and node1_deposit_event.deposit_transaction.deposit_block_number >= block_number1
+        )
+
+        if is_self_deposit_ignored:
+            msg = "Node0 has fetched and ignored the its deposits, this is likely a bug."
+        elif is_partner_deposit_ignored:
             msg = "Node1 has fetched and ignored the node0's deposits, this is likely a bug."
-        elif node0_deposit_event.deposit_transaction.deposit_block_number >= block_number1:
+        elif is_self_deposit_missed:
+            msg = (
+                "Node0's has a problem with its blockchain event filters, it "
+                "has not seen its deposit event even though it has seen a newer "
+                "confirmed block"
+            )
+        elif is_partner_deposit_missed:
             msg = (
                 "Node1's has a problem with its blockchain event filters, it "
                 "missed node0's deposit event even though it has seen a newer "
                 "confirmed block"
             )
-        elif not app0.raiden.alarm:
+        elif not app1.raiden.alarm:
             msg = (
                 "Node1 has not seen the block at which node0's deposit happened "
                 "and the alarm task is not running. Either the test stopped "
                 "the node before it had time or the node got killed because of "
                 "another error."
             )
-        else:
+        elif not app0.raiden.alarm:
+            msg = (
+                "Node0 has not seen the block at which node0's deposit happened "
+                "and the alarm task is not running. Either the test stopped "
+                "the node before it had time or the node got killed because of "
+                "another error."
+            )
+        elif channel0.our_state.contract_balance > channel1.partner_state.contract_balance:
             msg = (
                 "Node1 has not yet seen the block at which node0's deposit "
                 "happened. The test is likely missing synchronization."
             )
+        elif channel1.our_state.contract_balance > channel0.partner_state.contract_balance:
+            msg = (
+                "Node0 has not yet seen the block at which its deposit "
+                "happened. The test is likely missing synchronization."
+            )
+        else:
+            raise RuntimeError("This should never happen, the checks above are complementary")
 
         msg = (
             f"{msg}. "
