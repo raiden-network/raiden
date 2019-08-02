@@ -122,7 +122,7 @@ class SecretHashField(fields.Field):
         "missing_prefix": "Not a valid hex encoded value, must be 0x prefixed.",
         "invalid_data": "Not a valid hex formated string, contains invalid characters.",
         "invalid_size": (
-            f"Not a valid secrethash, decoded value is not {SECRETHASH_LENGTH} " f"bytes long."
+            f"Not a valid secrethash, decoded value is not {SECRETHASH_LENGTH} bytes long."
         ),
     }
 

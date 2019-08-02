@@ -344,9 +344,7 @@ class SQLiteStorage:
     def write_state_snapshot(self, snapshot: str, statechange_id: StateChangeID) -> SnapshotID:
         snapshot_id = self._ulid_factory(SnapshotID).new()
 
-        query = (
-            "INSERT INTO state_snapshot (" " identifier, statechange_id, data" ") VALUES(?, ?, ?)"
-        )
+        query = "INSERT INTO state_snapshot (identifier, statechange_id, data) VALUES(?, ?, ?)"
         self.conn.execute(query, (snapshot_id, statechange_id, snapshot))
         self.maybe_commit()
 

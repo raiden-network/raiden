@@ -480,7 +480,7 @@ def render_fields(record: Record, sorted_known_fields: List[str]) -> List[str]:
             continue
         field_value = record.fields[field_name]
         colorized_value = str(colorize_value(field_value, min_luminance=0.6))
-        rendered_fields.append(f'<span class="fn">{field_name}</span>' f"=" f"{colorized_value}")
+        rendered_fields.append(f'<span class="fn">{field_name}</span> = {colorized_value}')
     return rendered_fields
 
 

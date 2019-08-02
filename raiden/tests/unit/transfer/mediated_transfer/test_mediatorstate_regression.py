@@ -597,7 +597,5 @@ def test_regression_unavailable_nodes_must_be_properly_filtered():
     )
 
     send_transfer = search_for_item(initial_iteration.events, SendLockedTransfer, {})
-    msg = (
-        "All available routes are with unavailable nodes, therefore no send " "should be produced"
-    )
+    msg = "All available routes are with unavailable nodes, therefore no send should be produced"
     assert send_transfer is None, msg

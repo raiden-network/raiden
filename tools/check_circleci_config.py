@@ -43,7 +43,7 @@ def _check_workflows_align(config):
     )
     message = [
         _yellow(
-            "Mismatch in common items of workflow definitions 'raiden-default' and " "'nightly':\n"
+            "Mismatch in common items of workflow definitions 'raiden-default' and 'nightly':\n"
         )
     ]
     for line in job_diff:

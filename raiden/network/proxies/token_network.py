@@ -1125,9 +1125,7 @@ class TokenNetwork:
                 raise RaidenRecoverableError(msg)
 
             if network_balance + amount_to_deposit > token_network_deposit_limit:
-                msg = (
-                    f"Deposit of {amount_to_deposit} exceeded " f"the token network deposit limit."
-                )
+                msg = f"Deposit of {amount_to_deposit} exceeded the token network deposit limit."
                 raise RaidenRecoverableError(msg)
 
             raise RaidenRecoverableError("Deposit gas estimatation failed for unknown reasons")
@@ -1914,7 +1912,7 @@ class TokenNetwork:
                     #
                     # This is a race condition that cannot be prevented,
                     # therefore it is a recoverable error.
-                    msg = "update transfer was mined after the settlement " "window."
+                    msg = "update transfer was mined after the settlement window."
                     raise RaidenRecoverableError(msg)
 
                 partner_details = self._detail_participant(

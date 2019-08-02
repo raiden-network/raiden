@@ -94,7 +94,7 @@ class _RetryQueue(Runnable):
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
         super().__init__()
-        self.greenlet.name = f"RetryQueue " f"recipient:{to_checksum_address(self.receiver)}"
+        self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
 
     @property
     def log(self):
