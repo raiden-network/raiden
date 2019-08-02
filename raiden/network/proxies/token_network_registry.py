@@ -168,7 +168,7 @@ class TokenNetworkRegistry:
 
             transaction_executed = gas_limit is not None
             if not transaction_executed or failed_receipt:
-                if transaction_executed:
+                if failed_receipt:
                     block = failed_receipt["blockNumber"]
                 else:
                     block = checking_block
