@@ -3,7 +3,7 @@ import os
 import random
 from collections import defaultdict
 from hashlib import sha256
-from typing import Any, Dict, List, NamedTuple, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Tuple
 from uuid import UUID
 
 import filelock
@@ -52,7 +52,7 @@ from raiden.raiden_event_handler import EventHandler
 from raiden.services import update_services_from_balance_proof
 from raiden.settings import MEDIATION_FEE
 from raiden.storage import sqlite, wal
-from raiden.storage.serialization import JSONSerializer
+from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
@@ -102,13 +102,12 @@ StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
 
-def _redact_secret(data: Union[Dict, List],) -> Union[Dict, List]:
+def _redact_secret(data: Dict) -> Dict:
     """ Modify `data` in-place and replace keys named `secret`. """
+    if not isinstance(data, dict):
+        raise ValueError("data must be a dict.")
 
-    if isinstance(data, dict):
-        stack = [data]
-    else:
-        stack = []
+    stack = [data]
 
     while stack:
         current = stack.pop()
@@ -582,7 +581,7 @@ class RaidenService(Runnable):
             "State changes",
             node=to_checksum_address(self.address),
             state_changes=[
-                _redact_secret(JSONSerializer.serialize(state_change))
+                _redact_secret(DictSerializer.serialize(state_change))
                 for state_change in state_changes
             ],
         )
@@ -600,7 +599,7 @@ class RaidenService(Runnable):
             "Raiden events",
             node=to_checksum_address(self.address),
             raiden_events=[
-                _redact_secret(JSONSerializer.serialize(event)) for event in raiden_event_list
+                _redact_secret(DictSerializer.serialize(event)) for event in raiden_event_list
             ],
         )
 
