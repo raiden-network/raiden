@@ -228,8 +228,7 @@ class ConsoleTools:
         else:
             token_network_address = registry.add_token_without_limits(token_address=token_address)
 
-        # Register the channel manager with the raiden registry
-        waiting.wait_for_payment_network(
+        waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout
         )
 

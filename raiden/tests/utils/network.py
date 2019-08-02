@@ -40,7 +40,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     Tuple,
 )
-from raiden.waiting import wait_for_payment_network
+from raiden.waiting import wait_for_token_network
 from raiden_contracts.contract_manager import ContractManager
 
 AppChannels = Iterable[Tuple[App, App]]
@@ -529,7 +529,7 @@ def wait_for_token_networks(
 ) -> None:
     for token_address in token_addresses:
         for app in raiden_apps:
-            wait_for_payment_network(
+            wait_for_token_network(
                 app.raiden, token_network_registry_address, token_address, retry_timeout
             )
 
