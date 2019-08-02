@@ -15,6 +15,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
@@ -481,8 +482,8 @@ def wait_for_alarm_start(
 
 
 def wait_for_usable_channel(
-    app0: App,
-    app1: App,
+    raiden: RaidenService,
+    partner_address: Address,
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
     our_deposit: TokenAmount,
@@ -495,35 +496,37 @@ def wait_for_usable_channel(
     is reachable.
     """
     waiting.wait_for_newchannel(
-        raiden=app0.raiden,
+        raiden=raiden,
         payment_network_address=payment_network_address,
         token_address=token_address,
-        partner_address=app1.raiden.address,
+        partner_address=partner_address,
         retry_timeout=retry_timeout,
     )
 
+    # wait for our deposit
     waiting.wait_for_participant_deposit(
-        raiden=app0.raiden,
+        raiden=raiden,
         payment_network_address=payment_network_address,
         token_address=token_address,
-        partner_address=app1.raiden.address,
-        target_address=app0.raiden.address,
+        partner_address=partner_address,
+        target_address=raiden.address,
         target_balance=our_deposit,
         retry_timeout=retry_timeout,
     )
 
+    # wait for the partner deposit
     waiting.wait_for_participant_deposit(
-        raiden=app0.raiden,
+        raiden=raiden,
         payment_network_address=payment_network_address,
         token_address=token_address,
-        partner_address=app1.raiden.address,
-        target_address=app1.raiden.address,
+        partner_address=partner_address,
+        target_address=partner_address,
         target_balance=partner_deposit,
         retry_timeout=retry_timeout,
     )
 
     waiting.wait_for_healthy(
-        raiden=app0.raiden, node_address=app1.raiden.address, retry_timeout=retry_timeout
+        raiden=raiden, node_address=partner_address, retry_timeout=retry_timeout
     )
 
 
@@ -550,18 +553,20 @@ def wait_for_channels(
     """ Wait until all channels are usable from both directions. """
     for app0, app1 in app_channels:
         for token_address in token_addresses:
+            # app0 waits for the channel to be usable
             wait_for_usable_channel(
-                app0=app0,
-                app1=app1,
+                raiden=app0.raiden,
+                partner_address=app1.raiden.address,
                 payment_network_address=payment_network_address,
                 token_address=token_address,
                 our_deposit=deposit,
                 partner_deposit=deposit,
                 retry_timeout=retry_timeout,
             )
+            # app1 waits for the channel to be usable
             wait_for_usable_channel(
-                app1=app1,
-                app0=app0,
+                raiden=app1.raiden,
+                partner_address=app0.raiden.address,
                 payment_network_address=payment_network_address,
                 token_address=token_address,
                 our_deposit=deposit,
