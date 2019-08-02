@@ -318,14 +318,15 @@ def test_matrix_message_sync(matrix_transports):
         assert any(getattr(m, "message_identifier", -1) == i for m in received_messages)
 
 
-@pytest.mark.skipif(getattr(pytest, "config").getvalue("usepdb"), reason="test fails with pdb")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
-    raiden_chain, token_addresses
+    raiden_chain, token_addresses, request
 ):
     """Proxies exceptions must be forwarded by the transport."""
+    if request.config.option.usepdb:
+        pytest.skip("test fails with pdb")
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
