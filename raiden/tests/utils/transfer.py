@@ -566,13 +566,13 @@ def assert_balance_proof(
         # before the alarm task fetches the corresponding event but while it
         # runs it does fetch it.
         sent_balance_proof = get_event_with_balance_proof_by_balance_hash(
-            storage=app0.raiden.storage,
+            storage=app0.raiden.wal.storage,
             canonical_identifier=balanceproof0.canonical_identifier,
             balance_hash=balanceproof0.balance_hash,
             recipient=app1.raiden.address,
         )
         received_balance_proof = get_state_change_with_balance_proof_by_locksroot(
-            storage=app1.raiden.storage,
+            storage=app1.raiden.wal.storage,
             canonical_identifier=balanceproof0.canonical_identifier,
             locksroot=balanceproof0.locksroot,
             sender=app0.raiden.address,
