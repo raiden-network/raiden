@@ -340,8 +340,10 @@ class TokenNetwork:
                 participant2=partner,
                 settle_timeout=settle_timeout,
             )
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
             if failed_receipt:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
@@ -891,8 +893,10 @@ class TokenNetwork:
                 total_deposit=total_deposit,
                 partner=partner,
             )
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -1325,8 +1329,10 @@ class TokenNetwork:
                 partner_signature=partner_signature,
                 participant_signature=participant_signature,
             )
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -1589,8 +1595,10 @@ class TokenNetwork:
                     non_closing_signature=non_closing_signature,
                     closing_signature=closing_signature,
                 )
-                self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(self.client, transaction_hash)
+                receipt = self.client.poll(transaction_hash)
+                failed_receipt = check_transaction_threw(
+                    client=self.client, transaction_hash=transaction_hash, receipt=receipt
+                )
 
                 if failed_receipt:
                     # Because the gas estimation succeeded it is known that:
@@ -1848,8 +1856,10 @@ class TokenNetwork:
                 non_closing_signature=non_closing_signature,
             )
 
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -2113,8 +2123,10 @@ class TokenNetwork:
                 locks=leaves_packed,
             )
 
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
@@ -2352,8 +2364,10 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 **kwargs,
             )
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])

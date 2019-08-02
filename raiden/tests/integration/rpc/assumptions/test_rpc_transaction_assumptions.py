@@ -19,9 +19,14 @@ def test_transact_opcode(deploy_client):
     startgas = contract_proxy.estimate_gas(check_block, "ret") * 2
 
     transaction = contract_proxy.transact("ret", startgas)
-    deploy_client.poll(transaction)
+    receipt = deploy_client.poll(transaction)
 
-    assert check_transaction_threw(deploy_client, transaction) is None, "must be empty"
+    assert (
+        check_transaction_threw(
+            client=deploy_client, transaction_hash=transaction, receipt=receipt
+        )
+        is None
+    ), "must be empty"
 
 
 def test_transact_throws_opcode(deploy_client):
@@ -35,14 +40,18 @@ def test_transact_throws_opcode(deploy_client):
     startgas = safe_gas_limit(22000)
 
     transaction = contract_proxy.transact("fail_assert", startgas)
-    deploy_client.poll(transaction)
+    receipt = deploy_client.poll(transaction)
 
-    assert check_transaction_threw(deploy_client, transaction), "must not be empty"
+    assert check_transaction_threw(
+        client=deploy_client, transaction_hash=transaction, receipt=receipt
+    ), "must not be empty"
 
     transaction = contract_proxy.transact("fail_require", startgas)
-    deploy_client.poll(transaction)
+    receipt = deploy_client.poll(transaction)
 
-    assert check_transaction_threw(deploy_client, transaction), "must not be empty"
+    assert check_transaction_threw(
+        client=deploy_client, transaction_hash=transaction, receipt=receipt
+    ), "must not be empty"
 
 
 def test_transact_opcode_oog(deploy_client):
@@ -57,9 +66,11 @@ def test_transact_opcode_oog(deploy_client):
     startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "loop", 1000)) // 2
 
     transaction = contract_proxy.transact("loop", startgas, 1000)
-    deploy_client.poll(transaction)
+    receipt = deploy_client.poll(transaction)
 
-    assert check_transaction_threw(deploy_client, transaction), "must not be empty"
+    assert check_transaction_threw(
+        client=deploy_client, transaction_hash=transaction, receipt=receipt
+    ), "must not be empty"
 
 
 def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
