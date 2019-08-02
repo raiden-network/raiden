@@ -550,6 +550,16 @@ def assert_balance_proof(
     else:
         nonce1 = 0
 
+    if balanceproof0.nonce < nonce1:
+        msg = (
+            "This is a bug, it should never happen. The nonce updates **always**  "
+            "start with the owner of the channel's end. This means for a channel "
+            "A-B, only A can increase its nonce, same thing with B. At this "
+            "point, the assertion is failling because this rule was broken, and "
+            "the partner node has a larger nonce than the sending partner."
+        )
+        raise AssertionError(msg)
+
     if balanceproof0.nonce > nonce1:
         # TODO: Only consider the records up to saved state's state_change_id.
         # ATM this has a race condition where this utility could be called
