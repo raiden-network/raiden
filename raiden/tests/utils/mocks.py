@@ -131,6 +131,7 @@ class MockRaidenService:
         self.default_registry = Mock()
         self.default_registry.address = factories.make_address()
         self.default_one_to_n_address = factories.make_address()
+        self.default_msc_address = factories.make_address()
 
         self.targets_to_identifiers_to_statuses = defaultdict(dict)
         self.route_to_feedback_token = {}

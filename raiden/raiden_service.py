@@ -49,14 +49,17 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.raiden_event_handler import EventHandler
-from raiden.services import update_services_from_balance_proof
+from raiden.services import (
+    update_monitoring_service_from_balance_proof,
+    update_services_from_balance_proof,
+)
 from raiden.settings import MEDIATION_FEE
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import Event as RaidenEvent, StateChange
+from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -902,7 +905,8 @@ class RaidenService(Runnable):
         assert self.wal, msg
 
         current_balance_proofs = list(
-            views.detect_balance_proof_change(
+            balance_proof
+            for balance_proof in views.detect_balance_proof_change(
                 old_state=ChainState(
                     pseudo_random_generator=chain_state.pseudo_random_generator,
                     block_number=GENESIS_BLOCK_NUMBER,
@@ -912,6 +916,8 @@ class RaidenService(Runnable):
                 ),
                 current_state=chain_state,
             )
+            # only request monitoring for own BPs
+            if isinstance(balance_proof, BalanceProofSignedState)
         )
 
         log.debug(
@@ -921,7 +927,7 @@ class RaidenService(Runnable):
         )
 
         for balance_proof in current_balance_proofs:
-            update_services_from_balance_proof(self, chain_state, balance_proof)
+            update_monitoring_service_from_balance_proof(self, chain_state, balance_proof)
 
     def _initialize_whitelists(self, chain_state: ChainState) -> None:
         """ Whitelist neighbors and mediated transfer targets on transport """
