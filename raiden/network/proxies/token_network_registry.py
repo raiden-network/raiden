@@ -140,6 +140,7 @@ class TokenNetworkRegistry:
             "token_address": to_checksum_address(token_address),
         }
 
+        failed_receipt = None
         with log_transaction(log, "add_token", log_details):
             checking_block = self.client.get_checking_block()
             error_prefix = "Call to createERC20TokenNetwork will fail"
