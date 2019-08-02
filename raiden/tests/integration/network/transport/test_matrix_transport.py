@@ -400,8 +400,7 @@ def test_matrix_message_retry(
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_global(message)
 
-    gevent.sleep(1)
-
+    gevent.idle()
     assert transport._send_raw.call_count == 1
 
     # Receiver goes offline
@@ -409,13 +408,13 @@ def test_matrix_message_retry(
         partner_address
     ] = AddressReachability.UNREACHABLE
 
-    gevent.sleep(retry_interval)
-
-    transport.log.debug.assert_called_with(
-        "Partner not reachable. Skipping.",
-        partner=to_checksum_address(partner_address),
-        status=AddressReachability.UNREACHABLE,
-    )
+    with gevent.Timeout(retry_interval + 2):
+        wait_assert(
+            transport.log.debug.assert_called_with,
+            "Partner not reachable. Skipping.",
+            partner=to_checksum_address(partner_address),
+            status=AddressReachability.UNREACHABLE,
+        )
 
     # Retrier did not call send_raw given that the receiver is still offline
     assert transport._send_raw.call_count == 1
@@ -425,10 +424,10 @@ def test_matrix_message_retry(
         partner_address
     ] = AddressReachability.REACHABLE
 
-    gevent.sleep(retry_interval)
-
-    # Retrier now should have sent the message again
-    assert transport._send_raw.call_count == 2
+    # Retrier should send the message again
+    with gevent.Timeout(retry_interval + 2):
+        while transport._send_raw.call_count != 2:
+            gevent.sleep(0.1)
 
     transport.stop()
     transport.get()
@@ -521,10 +520,11 @@ def test_matrix_discovery_room_offline_server(
         }
     )
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
-    gevent.sleep(0.2)
 
     discovery_room_name = make_room_alias(transport.network_id, "discovery")
-    assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
+    with gevent.Timeout(1):
+        while not isinstance(transport._global_rooms.get(discovery_room_name), Room):
+            gevent.sleep(0.1)
 
     transport.stop()
     transport.get()
@@ -1035,7 +1035,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
 
     transport4.start(raiden_service1, message_handler1, "")
     transport4.start_health_check(raiden_service0.address)
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport0, transport4)
 
@@ -1044,7 +1043,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
 
     transport5.start(raiden_service1, message_handler1, "")
     transport5.start_health_check(raiden_service0.address)
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport0, transport5)
     # Node one switches to second server, Node two back to first
@@ -1053,7 +1051,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport1.start(raiden_service0, message_handler0, "")
     transport1.start_health_check(raiden_service1.address)
     transport3.start(raiden_service1, message_handler1, "")
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport1, transport3)
 
@@ -1061,7 +1058,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport3.stop()
 
     transport4.start(raiden_service1, message_handler1, "")
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport1, transport4)
 
@@ -1069,7 +1065,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport4.stop()
 
     transport5.start(raiden_service1, message_handler1, "")
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport1, transport5)
 
@@ -1080,7 +1075,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport2.start(raiden_service0, message_handler0, "")
     transport2.start_health_check(raiden_service1.address)
     transport3.start(raiden_service1, message_handler1, "")
-    gevent.sleep(0.5)
 
     assert ping_pong_message_success(transport2, transport3)
 
@@ -1089,7 +1083,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport3.stop()
     transport4.start(raiden_service1, message_handler1, "")
 
-    gevent.sleep(0.5)
     assert ping_pong_message_success(transport2, transport4)
 
     # Node two joins on third server
@@ -1097,7 +1090,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport4.stop()
     transport5.start(raiden_service1, message_handler1, "")
 
-    gevent.sleep(0.5)
     assert ping_pong_message_success(transport2, transport5)
 
 
@@ -1146,10 +1138,10 @@ def test_send_to_device(matrix_transports):
     message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)
-    gevent.sleep(0.5)
+
     transport1._receive_to_device.assert_not_called()
     message = ToDevice(message_identifier=1, signature=EMPTY_SIGNATURE)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)
-    gevent.sleep(0.5)
-    transport1._receive_to_device.assert_called()
+    with gevent.Timeout(2):
+        wait_assert(transport1._receive_to_device.assert_called)
