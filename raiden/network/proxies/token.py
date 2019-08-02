@@ -86,8 +86,10 @@ class Token:
                         "approve", gas_limit, to_checksum_address(allowed_address), allowance
                     )
 
-                    self.client.poll(transaction_hash)
-                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
+                    receipt = self.client.poll(transaction_hash)
+                    failed_receipt = check_transaction_threw(
+                        client=self.client, transaction_hash=transaction_hash, receipt=receipt
+                    )
 
                     if failed_receipt:
                         failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
@@ -198,9 +200,11 @@ class Token:
                         "transfer", gas_limit, to_checksum_address(to_address), amount
                     )
 
-                    self.client.poll(transaction_hash)
+                    receipt = self.client.poll(transaction_hash)
                     # TODO: check Transfer event (issue: #2598)
-                    failed_receipt = check_transaction_threw(self.client, transaction_hash)
+                    failed_receipt = check_transaction_threw(
+                        client=self.client, transaction_hash=transaction_hash, receipt=receipt
+                    )
 
                 if gas_limit is None or failed_receipt is not None:
                     if failed_receipt:

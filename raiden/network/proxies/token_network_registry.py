@@ -161,8 +161,10 @@ class TokenNetworkRegistry:
                     "createERC20TokenNetwork", gas_limit, **kwarguments
                 )
 
-                self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(self.client, transaction_hash)
+                receipt = self.client.poll(transaction_hash)
+                failed_receipt = check_transaction_threw(
+                    client=self.client, transaction_hash=transaction_hash, receipt=receipt
+                )
 
             transaction_executed = gas_limit is not None
             if not transaction_executed or failed_receipt:

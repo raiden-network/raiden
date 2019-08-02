@@ -276,8 +276,10 @@ class UserDeposit:
                 "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
             )
 
-            self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(self.client, transaction_hash)
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(
+                client=self.client, transaction_hash=transaction_hash, receipt=receipt
+            )
 
             if failed_receipt:
                 failed_at_blocknumber = failed_receipt["blockNumber"]
