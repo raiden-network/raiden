@@ -117,7 +117,7 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_2.opened("latest") is True
 
     msg = "The channel was already closed, the second call must fail"
-    with pytest.raises(RaidenRecoverableError, message=msg):
+    with pytest.raises(RaidenRecoverableError):
         channel_proxy_1.close(
             nonce=0,
             balance_hash=EMPTY_HASH,
@@ -126,9 +126,10 @@ def test_payment_channel_proxy_basics(
             closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier=block_before_close,
         )
+        pytest.fail(msg)
 
     msg = "The channel is not open at latest, this must raise"
-    with pytest.raises(RaidenUnrecoverableError, message=msg):
+    with pytest.raises(RaidenUnrecoverableError):
         channel_proxy_1.close(
             nonce=0,
             balance_hash=EMPTY_HASH,
@@ -137,10 +138,12 @@ def test_payment_channel_proxy_basics(
             closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier="latest",
         )
+        pytest.fail(msg)
 
     msg = (
         "The channel was not opened at the provided block (latest). "
         "This call should never have been attempted."
     )
-    with pytest.raises(BrokenPreconditionError, message=msg):
+    with pytest.raises(BrokenPreconditionError):
         channel_proxy_1.set_total_deposit(total_deposit=20, block_identifier="latest")
+        pytest.fail(msg)
