@@ -36,18 +36,22 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
         matches = re.search(r"/+v(\d+\.\d+\.\d+)", client_version)
         if matches is None:
             return False, None, None
-        our_version = parse_version(matches.groups()[0])
-        supported = our_version >= parse_version(
-            LOWEST_SUPPORTED_PARITY_VERSION
-        ) and our_version <= parse_version(HIGHEST_SUPPORTED_PARITY_VERSION)
-        return supported, EthClient.PARITY, str(our_version)
+        our_parity_version = parse_version(matches.groups()[0])
+        supported = (
+            parse_version(LOWEST_SUPPORTED_PARITY_VERSION)
+            <= our_parity_version
+            <= parse_version(HIGHEST_SUPPORTED_PARITY_VERSION)
+        )
+        return supported, EthClient.PARITY, str(our_parity_version)
     elif client_version.startswith("Geth"):
         our_geth_version = parse_geth_version(client_version)
         if our_geth_version is None:
             return False, None, None
-        supported = our_geth_version >= parse_version(
-            LOWEST_SUPPORTED_GETH_VERSION
-        ) and our_geth_version <= parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
+        supported = (
+            parse_version(LOWEST_SUPPORTED_GETH_VERSION)
+            <= our_geth_version
+            <= parse_version(HIGHEST_SUPPORTED_GETH_VERSION)
+        )
         return supported, EthClient.GETH, str(our_geth_version)
 
     return False, None, None
