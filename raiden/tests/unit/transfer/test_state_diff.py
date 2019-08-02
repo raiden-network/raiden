@@ -50,14 +50,16 @@ def test_detect_balance_proof_change():
     token_network_registry.tokennetworkaddresses_to_tokennetworks["a"] = token_network
     assert len(diff()) == 0
 
+    our_state = NettingChannelEndState(address=b"b", contract_balance=1)
+    partner_state = NettingChannelEndState(address=b"a", contract_balance=0)
     channel = NettingChannelState(
         canonical_identifier=factories.make_canonical_identifier(),
         token_address=b"a",
         token_network_registry_address=1,
         reveal_timeout=1,
         settle_timeout=2,
-        our_state=None,
-        partner_state=None,
+        our_state=our_state,
+        partner_state=partner_state,
         open_transaction=TransactionExecutionStatus(result="success"),
         settle_transaction=None,
         update_transaction=None,
@@ -66,9 +68,7 @@ def test_detect_balance_proof_change():
     )
     channel_copy = deepcopy(channel)
     token_network.channelidentifiers_to_channels["a"] = channel
-    our_state = NettingChannelEndState(address=b"b", contract_balance=1)
     our_state_copy = deepcopy(our_state)
-    partner_state = NettingChannelEndState(address=b"a", contract_balance=0)
     partner_state_copy = deepcopy(partner_state)
 
     channel.our_state = our_state

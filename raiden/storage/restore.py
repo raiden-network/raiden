@@ -243,7 +243,7 @@ def try_to_match_locksroots(
     our_locksroot = None
     partner_locksroot = None
 
-    if try_our_locksroot == EMPTY_HASH:
+    if try_our_locksroot in (EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS):
         our_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         event_record = get_event_with_balance_proof_by_locksroot(
@@ -256,7 +256,7 @@ def try_to_match_locksroots(
         if event_record is not None:
             our_locksroot = try_our_locksroot
 
-    if try_partner_locksroot == EMPTY_HASH:
+    if try_partner_locksroot in (EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS):
         partner_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         state_change_record = get_state_change_with_balance_proof_by_locksroot(
