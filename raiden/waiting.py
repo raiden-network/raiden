@@ -281,7 +281,7 @@ def wait_for_close(
     )
 
 
-def wait_for_payment_network(
+def wait_for_token_network(
     raiden: "RaidenService",
     payment_network_address: PaymentNetworkAddress,
     token_address: TokenAddress,
@@ -298,7 +298,7 @@ def wait_for_payment_network(
         assert raiden, ALARM_TASK_ERROR_MSG
         assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.debug("wait_for_payment_network", **log_details)
+        log.debug("wait_for_token_network", **log_details)
         gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
             views.state_from_raiden(raiden), payment_network_address, token_address
