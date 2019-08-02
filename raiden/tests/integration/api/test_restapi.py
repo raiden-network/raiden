@@ -1472,8 +1472,6 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
         "total_deposit": balance_working,
     }
 
-    gevent.sleep(2)
-
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
