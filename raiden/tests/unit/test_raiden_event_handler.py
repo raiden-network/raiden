@@ -1,5 +1,5 @@
 from unittest.mock import Mock, call, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, RoutingMode
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
@@ -8,6 +8,7 @@ from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
     make_canonical_identifier,
+    make_channel_identifier,
     make_locksroot,
     make_payment_id,
     make_payment_network_address,
@@ -15,17 +16,23 @@ from raiden.tests.utils.factories import (
     make_secret_hash,
     make_token_network_address,
 )
-from raiden.tests.utils.mocks import make_raiden_service_mock
+from raiden.tests.utils.mocks import MockRaidenService, make_raiden_service_mock
 from raiden.transfer.events import ContractSendChannelBatchUnlock, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import EventRouteFailed
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.typing import (
+    Address,
     ChannelID,
+    List,
     Nonce,
+    Optional,
     PaymentAmount,
+    PaymentNetworkAddress,
     TargetAddress,
     TokenAmount,
+    TokenNetworkAddress,
+    Tuple,
     WithdrawAmount,
 )
 
@@ -107,8 +114,17 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     )
 
 
-def test_pfs_handler_handle_routefailed_with_feedback_token():
-    channel_identifier = ChannelID(1)
+def setup_pfs_handler_test(
+    set_feedback_token: bool
+) -> Tuple[
+    MockRaidenService,
+    PFSFeedbackEventHandler,
+    PaymentNetworkAddress,
+    TokenNetworkAddress,
+    List[Address],
+    Optional[UUID],
+]:
+    channel_identifier = make_channel_identifier()
     payment_network_address = make_payment_network_address()
     token_network_address = make_token_network_address()
     participant = make_address()
@@ -119,30 +135,48 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
         partner=participant,
     )
 
-    route = [make_address(), make_address()]
-    feedback_uuid = uuid4()
+    default_handler = RaidenEventHandler()
+    pfs_handler = PFSFeedbackEventHandler(default_handler)
+
+    route = [make_address(), make_address(), make_address()]
 
     # Set PFS config and feedback token
     pfs_config = True  # just a truthy value
     raiden.config["pfs_config"] = pfs_config
-    raiden.route_to_feedback_token[tuple(route)] = feedback_uuid
+
+    feedback_uuid = None
+    if set_feedback_token:
+        feedback_uuid = uuid4()
+        raiden.route_to_feedback_token[tuple(route)] = feedback_uuid
+
+    return (
+        raiden,
+        pfs_handler,
+        payment_network_address,
+        token_network_address,
+        route,
+        feedback_uuid,
+    )
+
+
+def test_pfs_handler_handle_routefailed_with_feedback_token():
+    raiden, pfs_handler, _, token_network_address, route, feedback_uuid = setup_pfs_handler_test(
+        set_feedback_token=True
+    )
 
     route_failed_event = EventRouteFailed(
         secrethash=make_secret_hash(), route=route, token_network_address=token_network_address
     )
 
-    default_handler = RaidenEventHandler()
-    pfs_handler = PFSFeedbackEventHandler(default_handler)
-
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_event(  # type: ignore
             raiden=raiden,
             chain_state=raiden.wal.state_manager.current_state,
             event=route_failed_event,
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=pfs_config,
+        pfs_config=raiden.config["pfs_config"],
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         succesful=False,
@@ -152,32 +186,16 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
 
 
 def test_pfs_handler_handle_routefailed_without_feedback_token():
-    channel_identifier = ChannelID(1)
-    payment_network_address = make_payment_network_address()
-    token_network_address = make_token_network_address()
-    participant = make_address()
-    raiden = make_raiden_service_mock(
-        payment_network_address=payment_network_address,
-        token_network_address=token_network_address,
-        channel_identifier=channel_identifier,
-        partner=participant,
+    raiden, pfs_handler, _, token_network_address, route, _ = setup_pfs_handler_test(
+        set_feedback_token=False
     )
-
-    route = [make_address(), make_address()]
-
-    # Set PFS config but no feedback token
-    pfs_config = True  # just a truthy value
-    raiden.config["pfs_config"] = pfs_config
 
     route_failed_event = EventRouteFailed(
         secrethash=make_secret_hash(), route=route, token_network_address=token_network_address
     )
 
-    default_handler = RaidenEventHandler()
-    pfs_handler = PFSFeedbackEventHandler(default_handler)
-
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_event(  # type: ignore
             raiden=raiden,
             chain_state=raiden.wal.state_manager.current_state,
             event=route_failed_event,
@@ -186,30 +204,20 @@ def test_pfs_handler_handle_routefailed_without_feedback_token():
 
 
 def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
-    channel_identifier = ChannelID(1)
+    (
+        raiden,
+        pfs_handler,
+        payment_network_address,
+        token_network_address,
+        route,
+        feedback_uuid,
+    ) = setup_pfs_handler_test(set_feedback_token=True)
+
     payment_id = make_payment_id()
     amount = PaymentAmount(123)
-    payment_network_address = make_payment_network_address()
-    token_network_address = make_token_network_address()
-    participant = make_address()
-    raiden = make_raiden_service_mock(
-        payment_network_address=payment_network_address,
-        token_network_address=token_network_address,
-        channel_identifier=channel_identifier,
-        partner=participant,
-    )
-
-    target = make_address()
-    route = [make_address(), make_address(), target]
-    feedback_uuid = uuid4()
-
-    # Set PFS config and feedback token
-    pfs_config = True  # just a truthy value
-    raiden.config["pfs_config"] = pfs_config
-    raiden.route_to_feedback_token[tuple(route)] = feedback_uuid
-
-    # Set payment status
+    target = route[-1]
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
+
     route_failed_event = EventPaymentSentSuccess(
         payment_network_address=payment_network_address,
         token_network_address=token_network_address,
@@ -220,18 +228,15 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
         route=route,
     )
 
-    default_handler = RaidenEventHandler()
-    pfs_handler = PFSFeedbackEventHandler(default_handler)
-
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_event(  # type: ignore
             raiden=raiden,
             chain_state=raiden.wal.state_manager.current_state,
             event=route_failed_event,
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=pfs_config,
+        pfs_config=raiden.config["pfs_config"],
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         succesful=True,
@@ -241,28 +246,20 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
 
 
 def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
-    channel_identifier = ChannelID(1)
+    (
+        raiden,
+        pfs_handler,
+        payment_network_address,
+        token_network_address,
+        route,
+        _,
+    ) = setup_pfs_handler_test(set_feedback_token=False)
+
     payment_id = make_payment_id()
     amount = PaymentAmount(123)
-    payment_network_address = make_payment_network_address()
-    token_network_address = make_token_network_address()
-    participant = make_address()
-    raiden = make_raiden_service_mock(
-        payment_network_address=payment_network_address,
-        token_network_address=token_network_address,
-        channel_identifier=channel_identifier,
-        partner=participant,
-    )
-
-    target = make_address()
-    route = [make_address(), make_address(), target]
-
-    # Set PFS config, but not feedback token
-    pfs_config = True  # just a truthy value
-    raiden.config["pfs_config"] = pfs_config
-
-    # Set payment status
+    target = route[-1]
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
+
     route_failed_event = EventPaymentSentSuccess(
         payment_network_address=payment_network_address,
         token_network_address=token_network_address,
@@ -273,11 +270,8 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
         route=route,
     )
 
-    default_handler = RaidenEventHandler()
-    pfs_handler = PFSFeedbackEventHandler(default_handler)
-
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_event(  # type: ignore
             raiden=raiden,
             chain_state=raiden.wal.state_manager.current_state,
             event=route_failed_event,
