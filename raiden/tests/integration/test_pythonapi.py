@@ -184,8 +184,6 @@ def run_test_token_registered_race(raiden_chain, token_amount, retry_timeout, co
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
 
-    gevent.sleep(1)
-
     registry_address = app0.raiden.default_registry.address
     assert token_address not in api0.get_tokens_list(registry_address)
     assert token_address not in api1.get_tokens_list(registry_address)

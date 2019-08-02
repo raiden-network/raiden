@@ -801,8 +801,6 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
         secret=secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
-
     attack_channel = get_channelstate(app2, app1, token_network_address)
     attack_transfer = None  # TODO
     attack_contract = attack_channel.external_state.netting_channel.address

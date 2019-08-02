@@ -169,9 +169,6 @@ def run_test_refund_transfer(
         timeout=network_wait,
     )
 
-    # wait for the nodes to sync
-    gevent.sleep(1)
-
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
@@ -204,8 +201,6 @@ def run_test_refund_transfer(
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
-
-    gevent.sleep(0.2)
 
     # A lock structure with the correct amount
 
@@ -416,8 +411,6 @@ def run_test_different_view_of_last_bp_during_unlock(
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
-
-    gevent.sleep(0.2)
 
     # A lock structure with the correct amount
 
@@ -642,8 +635,6 @@ def run_test_refund_transfer_after_2nd_hop(
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
-
-    gevent.sleep(0.2)
 
     # Lock structures with the correct amount
 
