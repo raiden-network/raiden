@@ -737,7 +737,7 @@ class RaidenService(Runnable):
             # Example: The user creates a new channel with an initial deposit
             # of X tokens. This is done with two operations, the first is to
             # open the new channel, the second is to deposit the requested
-            # tokens in it. Once the node fetchs the event for the new channel,
+            # tokens in it. Once the node fetches the event for the new channel,
             # it will imediately request the deposit, which leaves a window for
             # a race condition. If the Block state change was not yet
             # processed, the block hash used as the trigerring block for the

@@ -1,8 +1,7 @@
-"""This module is responsible to load additinal data necessary to instantiate
-the ContractReceive* state changes, i.e. state changes for the blockchain
-events.
+"""Module for functions that load additional data necessary to instantiate the
+ContractReceive* state changes, i.e. state changes for the blockchain events.
 
-It is *very* important that every function here only fetch **confirmed** data,
+It is *very* important that every function here only fetches **confirmed** data,
 otherwise the node will be susceptible to races due to reorgs. These races can
 crash the client in the best case, or be an attack vector in the worst case.
 Because of this, the event itself must already be confirmed.
@@ -16,7 +15,8 @@ Note that the latest confirmed block is *not necessarily* the same as the
 current block number in the state machine. The current block number in the
 ChainState is *a* confirmed block number, but not necessarily the latest. This
 distinction is important during restarts, where the node's latest known block
-is from the latest run, and is not up-to-date, this block may be pruned aswell.
+is from the latest run, and is not up-to-date, this block may be pruned as
+well.
 """
 from dataclasses import dataclass
 
@@ -121,7 +121,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # with the wrong locksroot (i.e. not the locksroot used during the call
         # to settle). However this is fine, because at this point the channel
         # is settled, it is known that the locksroot can not be reverted
-        # without an unlock, and because the unlocks are fare it doesn't matter
+        # without an unlock, and because the unlocks are fair it doesn't matter
         # who called it, only if there are tokens locked in the settled
         # channel.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
