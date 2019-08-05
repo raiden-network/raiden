@@ -125,11 +125,11 @@ class TokenNetworkGraphState(State):
         repr=False, default_factory=dict
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         # pylint: disable=no-member
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TokenNetworkGraphState)
             and self.token_network_address == other.token_network_address
@@ -162,7 +162,7 @@ class RouteState(State):
         assert len(self.route) >= 1
         return self.route[1]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "RouteState ({}), channel_id: {}".format(
             " -> ".join(to_checksum_address(addr) for addr in self.route), self.forward_channel_id
         )
@@ -511,7 +511,7 @@ class ChainState(State):
         typecheck(self.block_hash, T_BlockHash)
         typecheck(self.chain_id, T_ChainID)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "ChainState(block_number={} block_hash={} networks={} qty_transfers={} chain_id={})"
         ).format(

@@ -54,7 +54,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
 
     balance_proof: BalanceProofSignedState
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         typecheck(self.balance_proof, BalanceProofSignedState)
 
 
