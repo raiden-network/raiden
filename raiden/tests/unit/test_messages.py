@@ -12,6 +12,7 @@ from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.tests import fixture_all_combinations
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveSecretRequest,
@@ -133,6 +134,15 @@ def test_fee_update():
     message.sign(signer)
 
     assert message == DictSerializer.deserialize(DictSerializer.serialize(message))
+
+
+def test_fee_schedule_state():
+    """ Don't serialize internal functions
+
+    Regression test for https://github.com/raiden-network/raiden/issues/4367
+    """
+    state = FeeScheduleState(imbalance_penalty=[])
+    assert "_penalty_func" not in DictSerializer.serialize(state)
 
 
 def test_tamper_request_monitoring():
