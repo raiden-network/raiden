@@ -247,6 +247,7 @@ def test_regression_register_secret_once(secret_registry_address, deploy_service
     assert previous_nonce == deploy_service.client._available_nonce
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4532")
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_regression_payment_complete_after_refund_to_the_initiator(
