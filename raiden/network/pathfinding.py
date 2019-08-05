@@ -23,7 +23,6 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingM
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
-from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -32,6 +31,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     ChainID,
     Dict,
+    FeeAmount,
     InitiatorAddress,
     List,
     Optional,
@@ -162,6 +162,7 @@ def get_valid_pfs_url(
     service_registry: ServiceRegistry,
     index_in_service_registry: int,
     block_identifier: BlockSpecification,
+    pathfinding_max_fee: FeeAmount,
 ) -> Optional[str]:
     """Returns the URL for the PFS identified by the given index
 
@@ -188,14 +189,16 @@ def get_valid_pfs_url(
         return None
 
     pfs_info = get_pfs_info(url)
-    if pfs_info is None or pfs_info.price > DEFAULT_PATHFINDING_MAX_FEE:
+    if pfs_info is None or pfs_info.price > pathfinding_max_fee:
         return None
 
     return url
 
 
 def get_random_pfs(
-    service_registry: ServiceRegistry, block_identifier: BlockSpecification
+    service_registry: ServiceRegistry,
+    block_identifier: BlockSpecification,
+    pathfinding_max_fee: FeeAmount,
 ) -> Optional[str]:
     """Selects a random PFS from service_registry.
 
@@ -210,7 +213,12 @@ def get_random_pfs(
 
     while indices_to_try:
         index = indices_to_try.pop()
-        url = get_valid_pfs_url(service_registry, index, block_identifier)
+        url = get_valid_pfs_url(
+            service_registry=service_registry,
+            index_in_service_registry=index,
+            block_identifier=block_identifier,
+            pathfinding_max_fee=pathfinding_max_fee,
+        )
         if url:
             return url
 
@@ -223,6 +231,7 @@ def configure_pfs_or_exit(
     service_registry: Optional[ServiceRegistry],
     node_network_id: ChainID,
     token_network_registry_address: Address,
+    pathfinding_max_fee: FeeAmount,
 ) -> PFSInfo:
     """
     Take in the given pfs_address argument, the service registry and find out a
@@ -240,7 +249,9 @@ def configure_pfs_or_exit(
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
         maybe_pfs_url = get_random_pfs(
-            service_registry=service_registry, block_identifier=block_hash
+            service_registry=service_registry,
+            block_identifier=block_hash,
+            pathfinding_max_fee=pathfinding_max_fee,
         )
         if maybe_pfs_url is None:
             click.secho(

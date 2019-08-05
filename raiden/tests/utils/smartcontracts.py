@@ -110,7 +110,7 @@ def deploy_service_registry_and_set_urls(
     )
 
     # Test that getting a random service for an empty registry returns None
-    pfs_address = get_random_pfs(c1_service_proxy, "latest")
+    pfs_address = get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=1)
     assert pfs_address is None
 
     # Test that setting the urls works
