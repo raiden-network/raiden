@@ -6,7 +6,8 @@ from eth_utils import is_canonical_address, is_same_address, to_checksum_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import BrokenPreconditionError
-from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs
+from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs, get_valid_pfs_url
+from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
@@ -55,8 +56,18 @@ def test_service_registry_random_pfs(
     # Test that getting the address for an index out of bounds returns None
     assert not c1_service_proxy.ever_made_deposits("latest", 9999)
 
-    # Test that getting a random service from the proxy works
-    assert get_random_pfs(c1_service_proxy, "latest") in urls
+    mock_get_pfs_info = Mock()
+    with patch("raiden.network.pathfinding.get_pfs_info", mock_get_pfs_info):
+        # Make sure that too expensive PFSes are not considered valid
+        mock_get_pfs_info.return_value.price = DEFAULT_PATHFINDING_MAX_FEE + 1
+        assert not get_valid_pfs_url(c1_service_proxy, 0, "latest")
+
+        # ...but cheaper ones are fine
+        mock_get_pfs_info.return_value.price = DEFAULT_PATHFINDING_MAX_FEE
+        assert get_valid_pfs_url(c1_service_proxy, 0, "latest") == urls[0]
+
+        # Test that getting a random service from the proxy works
+        assert get_random_pfs(c1_service_proxy, "latest") in urls
 
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
