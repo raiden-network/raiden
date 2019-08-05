@@ -57,17 +57,16 @@ def test_service_registry_random_pfs(
     assert not c1_service_proxy.ever_made_deposits("latest", 9999)
 
     mock_get_pfs_info = Mock()
+    mock_get_pfs_info.return_value.price = 100
     with patch("raiden.network.pathfinding.get_pfs_info", mock_get_pfs_info):
         # Make sure that too expensive PFSes are not considered valid
-        mock_get_pfs_info.return_value.price = DEFAULT_PATHFINDING_MAX_FEE + 1
-        assert not get_valid_pfs_url(c1_service_proxy, 0, "latest")
+        assert not get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=99)
 
-        # ...but cheaper ones are fine
-        mock_get_pfs_info.return_value.price = DEFAULT_PATHFINDING_MAX_FEE
-        assert get_valid_pfs_url(c1_service_proxy, 0, "latest") == urls[0]
+        # ...but ones with the expected price are fine
+        assert get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=100) == urls[0]
 
         # Test that getting a random service from the proxy works
-        assert get_random_pfs(c1_service_proxy, "latest") in urls
+        assert get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=100) in urls
 
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
@@ -100,6 +99,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             service_registry=service_proxy,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
 
     # With private routing configure pfs should raise assertion
@@ -110,6 +110,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             service_registry=service_proxy,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
 
     # Asking for auto address
@@ -120,6 +121,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             service_registry=service_proxy,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
     assert config.url in urls
     assert is_canonical_address(config.payment_address)
@@ -133,6 +135,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             service_registry=service_proxy,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
     assert config.url == given_address
     assert is_same_address(config.payment_address, json_data["payment_address"])
@@ -150,9 +153,10 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 service_registry=service_proxy,
                 node_network_id=chain_id,
                 token_network_registry_address=token_network_registry_address_test_default,
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
 
-    # Addresses of token network registries of pfs and client conflic, should exit the client
+    # Addresses of token network registries of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
 
     with pytest.raises(SystemExit):
@@ -163,9 +167,10 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 service_registry=Mock(),
                 node_network_id=chain_id,
                 token_network_registry_address="0x2222222222222222222222222222222222222221",
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
 
-    # ChainIDs of pfs and client conflic, should exit the client
+    # ChainIDs of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
 
     with pytest.raises(SystemExit):
@@ -176,4 +181,5 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 service_registry=Mock(),
                 node_network_id=chain_id + 1,
                 token_network_registry_address="0x2222222222222222222222222222222222222221",
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )

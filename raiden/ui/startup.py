@@ -221,6 +221,7 @@ def setup_proxies_or_exit(
             service_registry=service_registry,
             node_network_id=node_network_id,
             token_network_registry_address=Address(token_network_registry.address),
+            pathfinding_max_fee=config["services"]["pathfinding_max_fee"],
         )
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_info.payment_address is not None, msg
