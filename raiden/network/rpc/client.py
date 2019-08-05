@@ -645,45 +645,28 @@ class JSONRPCClient:
             return tx_hash
 
     def poll(self, transaction_hash: bytes) -> Dict[str, Any]:
-        """ Wait until the `transaction_hash` is applied or rejected.
+        """ Wait until the `transaction_hash` is mined.
 
         Args:
             transaction_hash: Transaction hash that we are waiting for.
-
-        Returns the transaction receipt.
         """
         if len(transaction_hash) != 32:
             raise ValueError("transaction_hash must be a 32 byte hash")
 
         transaction_hash = encode_hex(transaction_hash)
 
-        # used to check if the transaction was removed, this could happen
-        # if gas price is too low:
-        #
-        # > Transaction (acbca3d6) below gas price (tx=1 Wei ask=18
-        # > Shannon). All sequential txs from this address(7d0eae79)
-        # > will be ignored
-        #
-        last_result = None
-
         while True:
-            # Could return None until the transaction is mined
+            # Returns `None` while the transaction isn't yet mined. A
+            # transaction is not guaranteed to be mined until the confirmation
+            # block is reached, because of this it is possible for the receipt
+            # to be set on one interation and for it to disappear on another
+            # (assuming a properly chosen confirmation_block number).
             tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
 
-            # if the transaction was added to the pool and then removed
-            if tx_receipt is None and last_result is not None:
-                raise Exception("invalid transaction, check gas price")
-
-            # the transaction was added to the pool and mined
             if tx_receipt:
-                if "blockNumber" not in tx_receipt:
-                    raise ValueError("Transaction receipt should always contain a block number")
-                last_result = tx_receipt
-
-                # this will wait for both APPLIED and REVERTED transactions
-                transaction_block = tx_receipt["blockNumber"]
-                confirmation_block = transaction_block + self.default_block_num_confirmations
-
+                confirmation_block = (
+                    tx_receipt["blockNumber"] + self.default_block_num_confirmations
+                )
                 block_number = self.block_number()
 
                 if block_number >= confirmation_block:
