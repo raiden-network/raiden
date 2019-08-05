@@ -712,7 +712,7 @@ class RaidenService(Runnable):
 
             state_changes: List[StateChange] = list()
 
-            # On restarts the node has to pick up all events generate since the
+            # On restarts the node has to pick up all events generated since the
             # last run. To do this the node will set the filters' from_block to
             # the value of the latest block number known to have *all* events
             # processed.
@@ -720,7 +720,7 @@ class RaidenService(Runnable):
             # To guarantee the above the node must either:
             #
             # - Dispatch the state changes individually, leaving the Block
-            # state change last, so that it is know all the events for the
+            # state change last, so that it knows all the events for the
             # given block have been processed. On restarts this can result in
             # the same event being processed twice.
             # - Dispatch all the smart contract events together with the Block
@@ -738,11 +738,11 @@ class RaidenService(Runnable):
             # of X tokens. This is done with two operations, the first is to
             # open the new channel, the second is to deposit the requested
             # tokens in it. Once the node fetches the event for the new channel,
-            # it will imediately request the deposit, which leaves a window for
+            # it will immediately request the deposit, which leaves a window for
             # a race condition. If the Block state change was not yet
             # processed, the block hash used as the trigerring block for the
             # deposit will be off-by-one, and it will point to the block
-            # imediately before the channel existed, this breaks a proxy
+            # immediately before the channel existed. This breaks a proxy
             # precondition which crashes the client.
             block_state_change = Block(
                 block_number=latest_confirmed_block_number,
