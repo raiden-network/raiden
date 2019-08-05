@@ -88,7 +88,7 @@ def check_account(account_manager: AccountManager, address_hex: Address) -> None
 def check_ethereum_confirmed_block_is_not_pruned(
     jsonrpc_client: JSONRPCClient, secret_registry: SecretRegistry, confirmation_blocks: int
 ) -> None:
-    """Checks the Ethereum client is not pruning data to aggressively, because
+    """Checks the Ethereum client is not pruning data too aggressively, because
     in some circunstances it is necessary for a node to fetch additional data
     from the smart contract.
     """
@@ -99,7 +99,7 @@ def check_ethereum_confirmed_block_is_not_pruned(
     # - AlarmTask sees a new block and calls RaidenService._callback_new_block
     # - The service gets the current latest block number and computes the
     #   confirmed block number.
-    # - The service fetchs every filter, this can take a while.
+    # - The service fetches every filter, this can take a while.
     # - While the above is happening, it is possible for a `few_blocks` to be
     #   mined.
     # - The decode function is called, and tries to access what it thinks is
@@ -124,7 +124,7 @@ def check_ethereum_confirmed_block_is_not_pruned(
         click.secho(
             f"The ethereum client does not have the necessary data available. "
             f"The client can not operate because the prunning strategy is too "
-            f"agressively. Please make sure that at very minimum "
+            f"agressive. Please make sure that at very minimum "
             f"{minimum_available_history} blocks of history are available.",
             fg="red",
         )
