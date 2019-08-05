@@ -46,7 +46,7 @@ class FeeScheduleState(State):
     def __post_init__(self) -> None:
         self._update_penalty_func()
 
-    def _update_penalty_func(self):
+    def _update_penalty_func(self) -> None:
         if self.imbalance_penalty:
             assert isinstance(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))

@@ -311,7 +311,7 @@ def is_secret_known_onchain(end_state: NettingChannelEndState, secrethash: Secre
     return secrethash in end_state.secrethashes_to_onchain_unlockedlocks
 
 
-def is_valid_channel_total_withdraw(channel_total_withdraw) -> bool:
+def is_valid_channel_total_withdraw(channel_total_withdraw: TokenAmount) -> bool:
     """Sanity check for the channel's total withdraw.
 
     The channel's total deposit is:
@@ -863,7 +863,7 @@ def is_valid_action_withdraw(
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
-        withdraw.total_withdraw + channel_state.partner_total_withdraw
+        TokenAmount(withdraw.total_withdraw + channel_state.partner_total_withdraw)
     )
 
     withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
@@ -895,7 +895,7 @@ def is_valid_withdraw_request(
     withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
-        withdraw_request.total_withdraw + channel_state.our_total_withdraw
+        TokenAmount(withdraw_request.total_withdraw + channel_state.our_total_withdraw)
     )
 
     # The confirming node must accept an expired withdraw request. This is
@@ -955,7 +955,7 @@ def is_valid_withdraw_confirmation(
         )
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
-        received_withdraw.total_withdraw + channel_state.partner_total_withdraw
+        TokenAmount(received_withdraw.total_withdraw + channel_state.partner_total_withdraw)
     )
 
     # The requesting node must accept an confirmation for an expired withdraw

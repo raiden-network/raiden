@@ -99,7 +99,7 @@ def handle_channel_withdraw(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -303,7 +303,7 @@ def handle_receive_channel_withdraw_request(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -319,7 +319,7 @@ def handle_receive_channel_withdraw(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -335,7 +335,7 @@ def handle_receive_channel_withdraw_expired(
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,

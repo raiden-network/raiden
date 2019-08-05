@@ -15,6 +15,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    TYPE_CHECKING,
     Address,
     BlockNumber,
     Callable,
@@ -31,6 +32,10 @@ from raiden.utils.typing import (
     Tuple,
     Union,
 )
+
+if TYPE_CHECKING:
+    from raiden.app import App  # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
 # TODO: Either enforce immutability or make a copy of the values returned by
 #     the view functions
@@ -72,19 +77,21 @@ def count_token_network_channels(
     return count
 
 
-def state_from_raiden(raiden) -> ChainState:  # pragma: no unittest
-    return raiden.wal.state_manager.current_state
+def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unittest
+    assert raiden.wal, "raiden.wal not set"
+    # TODO: current_state should not be optional
+    return raiden.wal.state_manager.current_state  # type: ignore
 
 
-def state_from_app(app) -> ChainState:  # pragma: no unittest
-    return app.raiden.wal.state_manager.current_state
+def state_from_app(app: "App") -> ChainState:  # pragma: no unittest
+    return state_from_raiden(app.raiden)
 
 
 def get_pending_transactions(chain_state: ChainState) -> List[ContractSendEvent]:
     return chain_state.pending_transactions
 
 
-def get_all_messagequeues(chain_state: ChainState,) -> QueueIdsToQueues:
+def get_all_messagequeues(chain_state: ChainState) -> QueueIdsToQueues:
     return chain_state.queueids_to_queues
 
 

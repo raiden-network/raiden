@@ -599,6 +599,7 @@ class MatrixTransport(Runnable):
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
+        assert self._raiden_service, "_raiden_service not set"
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
 

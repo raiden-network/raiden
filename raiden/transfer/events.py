@@ -146,9 +146,9 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
 
     secret: Secret = field(repr=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         secrethash = sha256_secrethash(self.secret)
-        return ("ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})").format(
+        return "ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})".format(
             secrethash, to_hex(self.triggered_by_block_hash)
         )
 
@@ -219,7 +219,7 @@ class EventPaymentReceivedSuccess(Event):
     amount: TokenAmount
     initiator: InitiatorAddress
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.amount < 0:
             raise ValueError("transferred_amount cannot be negative")
 
