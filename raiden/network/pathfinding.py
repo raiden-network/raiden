@@ -23,6 +23,7 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingM
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
+from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -157,6 +158,42 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
         return None
 
 
+def get_valid_pfs_url(
+    service_registry: ServiceRegistry,
+    index_in_service_registry: int,
+    block_identifier: BlockSpecification,
+) -> Optional[str]:
+    """Returns the URL for the PFS identified by the given index
+
+    Checks validity of registration in the ServiceRegistry contract and
+    checks the price from the PFS' info endpoint.
+
+    Returns PFS URL or None (if any check fails).
+    """
+    address = service_registry.ever_made_deposits(
+        block_identifier=block_identifier, index=index_in_service_registry
+    )
+    if not address:
+        return None
+
+    if not service_registry.has_valid_registration(
+        address=address, block_identifier=block_identifier
+    ):
+        return None
+
+    url = service_registry.get_service_url(
+        block_identifier=block_identifier, service_hex_address=to_canonical_address(address)
+    )
+    if not url:
+        return None
+
+    pfs_info = get_pfs_info(url)
+    if pfs_info is None or pfs_info.price > DEFAULT_PATHFINDING_MAX_FEE:
+        return None
+
+    return url
+
+
 def get_random_pfs(
     service_registry: ServiceRegistry, block_identifier: BlockSpecification
 ) -> Optional[str]:
@@ -171,26 +208,13 @@ def get_random_pfs(
     indices_to_try = list(range(number_of_addresses))
     random.shuffle(indices_to_try)
 
-    address = None
     while indices_to_try:
         index = indices_to_try.pop()
-        address = service_registry.ever_made_deposits(
-            block_identifier=block_identifier, index=index
-        )
-        if not address:
-            continue
-        is_valid = service_registry.has_valid_registration(
-            address=address, block_identifier=block_identifier
-        )
-        if not is_valid:
-            continue
+        url = get_valid_pfs_url(service_registry, index, block_identifier)
+        if url:
+            return url
 
-    if address is None:
-        return None
-    url = service_registry.get_service_url(
-        block_identifier=block_identifier, service_hex_address=to_canonical_address(address)
-    )
-    return url
+    return None
 
 
 def configure_pfs_or_exit(
