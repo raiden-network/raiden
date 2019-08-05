@@ -657,7 +657,7 @@ class JSONRPCClient:
 
         transaction_hash = encode_hex(transaction_hash)
 
-        # used to check if the transaction was removed, this could happen
+        # Used to check if the transaction was removed, this could happen
         # if gas price is too low:
         #
         # > Transaction (acbca3d6) below gas price (tx=1 Wei ask=18
@@ -667,27 +667,43 @@ class JSONRPCClient:
         last_result = None
 
         while True:
-            # Could return None until the transaction is mined
-            tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
+            # Note: `eth_getTransaction` could return None for a short period
+            # of time, until the transaction is added to the pool.
+            transaction = self.web3.eth.getTransaction(transaction_hash)
 
-            # if the transaction was added to the pool and then removed
-            if tx_receipt is None and last_result is not None:
+            # If the transaction was added to the pool and then removed, this
+            # should not happen. Geth will handle the transactions received
+            # through the REST API differently, to make sure these transactions
+            # are not removed from the network the node will keep them around
+            # even under pressure in the transaction poll size.
+            if transaction is None and last_result is not None:
                 raise Exception("invalid transaction, check gas price")
 
-            # the transaction was added to the pool and mined
-            if tx_receipt:
-                if "blockNumber" not in tx_receipt:
-                    raise ValueError("Transaction receipt should always contain a block number")
-                last_result = tx_receipt
+            # Check the transaction was mined and properly handle re-orgs.
+            #
+            # On re-orgs, the following may happen:
+            #
+            # 1. The new block may also have the transaction mined
+            # 2. The new block may not have the transaction, and neither
+            #    any of the new blocks of the canonical chain.
+            # 3. The new block may not have the transaction, but a child
+            #    block may have it.
+            #
+            # Because of cases 2 and 3, it is possible to retrieve the
+            # transaction with a `blockNumber` and then on a next iteration for
+            # the transaction to not have a `blockNumber` anymore. To avoid
+            # this the application carefully chose the `confirmation_block`.
+            if transaction and transaction["blockNumber"] is not None:
+                last_result = transaction
 
                 # this will wait for both APPLIED and REVERTED transactions
-                transaction_block = tx_receipt["blockNumber"]
+                transaction_block = transaction["blockNumber"]
                 confirmation_block = transaction_block + self.default_block_num_confirmations
 
                 block_number = self.block_number()
 
                 if block_number >= confirmation_block:
-                    return tx_receipt
+                    return self.web3.eth.getTransactionReceipt(transaction_hash)
 
             gevent.sleep(1.0)
 
