@@ -6,6 +6,7 @@ from raiden.utils import safe_gas_limit
 pytestmark = pytest.mark.usefixtures("skip_if_not_geth")
 
 
+@pytest.mark.skip(reason="Flaky, see https://github.com/raiden-network/raiden/issues/4545")
 def test_geth_request_pruned_data_raises_an_exception(deploy_client, web3):
     """ Interacting with an old block identifier with a pruning client throws. """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
