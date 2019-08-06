@@ -879,7 +879,7 @@ def test_post_pfs_feedback(query_paths_args):
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
-            succesful=True,
+            successful=True,
         )
 
         assert feedback.called
@@ -897,7 +897,7 @@ def test_post_pfs_feedback(query_paths_args):
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
-            succesful=False,
+            successful=False,
         )
 
         assert feedback.called
@@ -915,7 +915,7 @@ def test_post_pfs_feedback(query_paths_args):
             token_network_address=token_network_address,
             route=route,
             token=feedback_token,
-            succesful=False,
+            successful=False,
         )
 
         assert not feedback.called

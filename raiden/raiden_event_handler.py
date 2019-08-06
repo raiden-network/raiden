@@ -713,7 +713,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
                 token_network_address=route_failed_event.token_network_address,
                 route=route_failed_event.route,
                 token=feedback_token,
-                succesful=False,
+                successful=False,
             )
 
     @staticmethod
@@ -737,5 +737,5 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
                 token_network_address=payment_sent_success_event.token_network_address,
                 route=payment_sent_success_event.route,
                 token=feedback_token,
-                succesful=True,
+                successful=True,
             )
