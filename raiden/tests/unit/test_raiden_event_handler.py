@@ -179,7 +179,7 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
         pfs_config=raiden.config["pfs_config"],
         route=route,
         routing_mode=RoutingMode.PRIVATE,
-        succesful=False,
+        successful=False,
         token=feedback_uuid,
         token_network_address=token_network_address,
     )
@@ -239,7 +239,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
         pfs_config=raiden.config["pfs_config"],
         route=route,
         routing_mode=RoutingMode.PRIVATE,
-        succesful=True,
+        successful=True,
         token=feedback_uuid,
         token_network_address=token_network_address,
     )

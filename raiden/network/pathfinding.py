@@ -575,7 +575,7 @@ def post_pfs_feedback(
     token_network_address: TokenNetworkAddress,
     route: List[Address],
     token: UUID,
-    succesful: bool,
+    successful: bool,
 ) -> None:
 
     feedback_disabled = routing_mode == RoutingMode.PRIVATE or pfs_config is None
@@ -583,7 +583,7 @@ def post_pfs_feedback(
         return
 
     hex_route = [to_checksum_address(address) for address in route]
-    payload = dict(token=token.hex, path=hex_route, success=succesful)
+    payload = dict(token=token.hex, path=hex_route, success=successful)
 
     log.info(
         "Sending routing feedback to Pathfinding Service",
