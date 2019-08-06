@@ -43,7 +43,7 @@ def state_transtion_acc(state, state_change):
 
 
 def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
-    serializer = JSONSerializer
+    serializer = JSONSerializer()
 
     state_manager = StateManager(state_transition, state)
     storage = SerializedSQLiteStorage(":memory:", serializer)

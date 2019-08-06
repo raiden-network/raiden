@@ -39,7 +39,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import BlockExpiration, TokenAmount
 
 
 def _channel_and_transfer(num_pending_locks):
@@ -345,7 +345,9 @@ def test_handle_action_set_fee():
 
 
 def make_hash_time_lock_state(amount) -> HashTimeLockState:
-    return HashTimeLockState(amount=amount, expiration=5, secrethash=factories.UNIT_SECRETHASH)
+    return HashTimeLockState(
+        amount=amount, expiration=BlockExpiration(5), secrethash=factories.UNIT_SECRETHASH
+    )
 
 
 def make_unlock_partial_proof_state(amount):

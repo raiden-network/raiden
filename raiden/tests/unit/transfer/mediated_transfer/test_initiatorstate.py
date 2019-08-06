@@ -62,7 +62,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
 )
 from raiden.utils import random_secret, sha3, typing
-from raiden.utils.typing import FeeAmount, NodeNetworkStateMap, PaymentAmount
+from raiden.utils.typing import BlockNumber, FeeAmount, NodeNetworkStateMap, PaymentAmount
 
 
 def get_transfer_at_index(
@@ -74,9 +74,9 @@ def get_transfer_at_index(
 
 def make_initiator_manager_state(
     channels: factories.ChannelSet,
+    pseudo_random_generator: random.Random,
     transfer_description: factories.TransferDescriptionWithSecretState = None,
-    pseudo_random_generator: random.Random = None,
-    block_number: typing.BlockNumber = 1,
+    block_number: BlockNumber = BlockNumber(1),  # noqa: B008
 ):
     init = ActionInitInitiator(
         transfer=transfer_description or factories.UNIT_TRANSFER_DESCRIPTION,
@@ -131,11 +131,15 @@ def setup_initiator_tests(
         factories.TransferDescriptionProperties(secret=UNIT_SECRET, allocated_fee=allocated_fee)
     )
     current_state = make_initiator_manager_state(
-        channels, transfer_description, prng, block_number
+        channels=channels,
+        transfer_description=transfer_description,
+        pseudo_random_generator=prng,
+        block_number=block_number,
     )
 
     initiator_state = get_transfer_at_index(current_state, 0)
     lock = channel.get_lock(channels[0].our_state, initiator_state.transfer_description.secrethash)
+    assert lock
     available_routes = channels.get_routes()
     setup = InitiatorSetup(
         current_state=current_state,
@@ -920,7 +924,10 @@ def test_initiator_lock_expired():
         )
     )
     current_state = make_initiator_manager_state(
-        channels, transfer_description, pseudo_random_generator, block_number
+        channels=channels,
+        transfer_description=transfer_description,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     initiator_state = get_transfer_at_index(current_state, 0)
@@ -981,19 +988,23 @@ def test_initiator_lock_expired():
 
     # Create 2 other transfers
     transfer2_state = make_initiator_manager_state(
-        channels,
-        factories.create(factories.TransferDescriptionProperties(payment_identifier="transfer2")),
-        pseudo_random_generator,
-        30,
+        channels=channels,
+        transfer_description=factories.create(
+            factories.TransferDescriptionProperties(payment_identifier="transfer2")
+        ),
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=30,
     )
     initiator2_state = get_transfer_at_index(transfer2_state, 0)
     transfer2_lock = initiator2_state.transfer.lock
 
     transfer3_state = make_initiator_manager_state(
-        channels,
-        factories.create(factories.TransferDescriptionProperties(payment_identifier="transfer3")),
-        pseudo_random_generator,
-        32,
+        channels=channels,
+        transfer_description=factories.create(
+            factories.TransferDescriptionProperties(payment_identifier="transfer3")
+        ),
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=32,
     )
 
     initiator3_state = get_transfer_at_index(transfer3_state, 0)

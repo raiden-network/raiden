@@ -3,7 +3,7 @@ import random
 from copy import deepcopy
 from dataclasses import replace
 
-import pytest  # type: ignore
+import pytest
 
 from raiden.constants import (
     EMPTY_HASH,

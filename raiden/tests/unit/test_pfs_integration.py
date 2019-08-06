@@ -83,12 +83,23 @@ def create_square_network_topology(
     # (2)  ----- 100 --->  (3) <-------100---
 
     routes = [
-        factories.RouteProperties(address1=our_address, address2=address1, capacity1to2=50),
-        factories.RouteProperties(address1=our_address, address2=address2, capacity1to2=100),
-        factories.RouteProperties(address1=address4, address2=address1, capacity1to2=50),
-        factories.RouteProperties(address1=address2, address2=address3, capacity1to2=100),
         factories.RouteProperties(
-            address1=address3, address2=address4, capacity1to2=100, capacity2to1=100
+            address1=our_address, address2=address1, capacity1to2=TokenAmount(50)
+        ),
+        factories.RouteProperties(
+            address1=our_address, address2=address2, capacity1to2=TokenAmount(100)
+        ),
+        factories.RouteProperties(
+            address1=address4, address2=address1, capacity1to2=TokenAmount(50)
+        ),
+        factories.RouteProperties(
+            address1=address2, address2=address3, capacity1to2=TokenAmount(100)
+        ),
+        factories.RouteProperties(
+            address1=address3,
+            address2=address4,
+            capacity1to2=TokenAmount(100),
+            capacity2to1=TokenAmount(100),
         ),
     ]
 
@@ -654,7 +665,7 @@ def test_update_iou():
 def assert_failed_pfs_request(
     paths_args: typing.Dict[str, typing.Any],
     responses: typing.List[typing.Dict],
-    status_codes: typing.List[int] = (400, 400),
+    status_codes: typing.Sequence[int] = (400, 400),
     expected_requests: int = MAX_PATHS_QUERY_ATTEMPTS,
     expected_get_iou_requests: int = None,
     expected_success: bool = False,

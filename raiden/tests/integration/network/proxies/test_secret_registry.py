@@ -11,6 +11,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
+from raiden.utils.typing import SecretHash
 
 
 def secret_registry_batch_happy_path(secret_registry_proxy):
@@ -46,9 +47,9 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     the SecretRegistered event.
     """
     secret = make_secret()
-    secrethash = sha256(secret).digest()
+    secrethash = SecretHash(sha256(secret).digest())
     secret_unregistered = make_secret()
-    secrethash_unregistered = sha256(secret_unregistered).digest()
+    secrethash_unregistered = SecretHash(sha256(secret_unregistered).digest())
 
     secret_registered_filter = secret_registry_proxy.secret_registered_filter()
 

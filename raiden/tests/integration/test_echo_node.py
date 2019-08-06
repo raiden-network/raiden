@@ -11,11 +11,10 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.transfer.architecture import Event
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import random_secret, wait_until
 from raiden.utils.echo_node import EchoNode
-from raiden.utils.typing import List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, List, Optional
 from raiden.waiting import wait_for_transfer_success
 
 log = structlog.get_logger(__name__)
@@ -209,18 +208,17 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         events = RaidenAPI(app.raiden).get_raiden_events_payment_history(
             token_address=token_address
         )
-
-        def is_valid(event: Event) -> bool:
-            return (
-                type(event) == EventPaymentReceivedSuccess
-                and event.initiator == echo_app.raiden.address
+        for event in events:
+            if not type(event) == EventPaymentReceivedSuccess:
+                continue
+            assert isinstance(event, EventPaymentReceivedSuccess), MYPY_ANNOTATION
+            if not (
+                event.initiator == echo_app.raiden.address
                 and event.identifier == sent_transfer.identifier + event.amount
-            )
+            ):
+                continue
 
-        received_events = [event for event in events if is_valid(event)]
-
-        if len(received_events) == 1:
-            return received_events[0]
+            return event
 
         return None
 

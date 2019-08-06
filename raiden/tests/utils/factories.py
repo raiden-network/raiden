@@ -273,7 +273,7 @@ UNIT_SETTLE_TIMEOUT = 50
 UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 UNIT_TRANSFER_FEE = 5
-UNIT_SECRET = b"secretsecretsecretsecretsecretse"
+UNIT_SECRET = Secret(b"secretsecretsecretsecretsecretse")
 UNIT_SECRETHASH = sha256_secrethash(UNIT_SECRET)
 UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
 UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
@@ -289,11 +289,11 @@ UNIT_OUR_ADDRESS = privatekey_to_address(UNIT_OUR_KEY)
 
 UNIT_PAYMENT_NETWORK_IDENTIFIER = b"paymentnetworkidentifier"
 UNIT_TRANSFER_IDENTIFIER = 37
-UNIT_TRANSFER_INITIATOR = b"initiatorinitiatorin"
-UNIT_TRANSFER_TARGET = b"targettargettargetta"
+UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
+UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
 UNIT_TRANSFER_PKEY_BIN = sha3(b"transfer pkey")
 UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
-UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b"transfer pkey"))
+UNIT_TRANSFER_SENDER = Address(privatekey_to_address(sha3(b"transfer pkey")))
 
 HOP1_KEY = b"11111111111111111111111111111111"
 HOP2_KEY = b"22222222222222222222222222222222"

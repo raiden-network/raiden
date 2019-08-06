@@ -38,9 +38,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NODE_NETWORK_UNREACHABLE, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import BlockExpiration
 
 LONG_EXPIRATION = factories.create_properties(
-    factories.LockedTransferSignedStateProperties(expiration=30)
+    factories.LockedTransferSignedStateProperties(expiration=BlockExpiration(30))
 )
 
 
