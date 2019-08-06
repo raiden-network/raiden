@@ -271,7 +271,7 @@ class ChannelStateSchema(BaseSchema):
 
     @staticmethod
     def get_balance(channel_state: NettingChannelState) -> int:
-        return channel.get_distributable(channel_state.our_state, channel_state.partner_state)
+        return channel.get_balance(channel_state.our_state, channel_state.partner_state)
 
     @staticmethod
     def get_state(channel_state: NettingChannelState) -> str:
