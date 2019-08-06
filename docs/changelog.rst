@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`4348` Fix wrong calculation of ``balance`` field of channel information when tokens are locked in payments
 * :bug:`4502` Fix a Raiden crash related to routing feedback
 
 * :release:`0.100.5-dev0 <2019-07-30>`
