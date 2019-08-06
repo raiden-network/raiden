@@ -116,7 +116,6 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
-@pytest.mark.skip("https://github.com/raiden-network/raiden/issues/3750")
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
         raiden_apps=raiden_chain,
@@ -156,7 +155,7 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     echo_node.ready.wait(timeout=30)
     assert echo_node.ready.is_set()
 
-    transfer_timeout = 10
+    transfer_timeout = 15
 
     # Let 6 participants enter the pool
     amount = 7
