@@ -232,7 +232,7 @@ def parity_generate_chain_spec(
     validators = {"list": [to_checksum_address(seal_account)]}
     extra_data = parity_extradata(genesis_description.random_marker)
 
-    chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
+    chain_spec: dict = PARITY_CHAIN_SPEC_STUB.copy()
     chain_spec["params"]["networkID"] = genesis_description.chain_id
     chain_spec["accounts"].update(alloc)
     chain_spec["engine"]["authorityRound"]["params"]["validators"] = validators
@@ -306,7 +306,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
 
 
 def eth_node_config(
-    miner_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Dict[str, Any]
+    miner_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Any
 ) -> Dict[str, Any]:
     address = privatekey_to_address(miner_pkey)
     pub = privatekey_to_publickey(miner_pkey).hex()
@@ -383,7 +383,7 @@ def eth_nodes_to_cmds(
             commandline = parity_to_cmd(config, datadir, chain_id, genesis_file, verbosity)
 
         else:
-            assert False, f"Invalid blockchain type {config.blockchain_type}"
+            assert False, f"Invalid blockchain type {config['blockchain_type']}"
 
         cmds.append(commandline)
 

@@ -1,7 +1,7 @@
 import json
 import warnings
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gevent
 import structlog
@@ -558,7 +558,7 @@ class JSONRPCClient:
         self,
         contract_name: str,
         contract: CompiledContract,
-        constructor_parameters: Tuple[Any, ...] = None,
+        constructor_parameters: Sequence = None,
     ) -> Tuple[ContractProxy, Dict]:
         """
         Deploy a single solidity contract without dependencies.

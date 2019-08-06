@@ -37,6 +37,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.utils import typing
+from raiden.utils.typing import TokenAmount
 
 
 def make_target_transfer(channel, amount=None, expiration=None, initiator=None, block_number=1):
@@ -114,12 +115,18 @@ def make_target_state(
 
 channel_properties = NettingChannelStateProperties(
     our_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
-    partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER, balance=3),
+    partner_state=NettingChannelEndStateProperties(
+        address=UNIT_TRANSFER_SENDER, balance=TokenAmount(3)
+    ),
 )
 
 channel_properties2 = NettingChannelStateProperties(
-    our_state=NettingChannelEndStateProperties(address=factories.make_address(), balance=100),
-    partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER, balance=130),
+    our_state=NettingChannelEndStateProperties(
+        address=factories.make_address(), balance=TokenAmount(100)
+    ),
+    partner_state=NettingChannelEndStateProperties(
+        address=UNIT_TRANSFER_SENDER, balance=TokenAmount(130)
+    ),
 )
 
 

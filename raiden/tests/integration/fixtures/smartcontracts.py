@@ -47,7 +47,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
     register_tokens,
     contract_manager,
     token_contract_name,
-) -> typing.List[typing.Address]:
+) -> typing.List[typing.TokenAddress]:
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
     potentially pre-registered with the raiden Registry.

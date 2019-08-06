@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import pytest
 from eth_utils import to_canonical_address
@@ -28,17 +28,17 @@ class DummyUser:
 class DummyMatrixClient:
     def __init__(self, user_id: str, user_directory_content: Optional[List[DummyUser]] = None):
         self.user_id = user_id
-        self._presence_callback = None
+        self._presence_callback: Optional[Callable] = None
         self._user_directory_content = user_directory_content if user_directory_content else []
         # This is only used in `get_user_presence()`
-        self._user_presence = {}
+        self._user_presence: Dict[str, str] = {}
 
     def add_presence_listener(self, callback: Callable):
         if self._presence_callback is not None:
             raise RuntimeError("Callback has already been registered")
         self._presence_callback = callback
 
-    def search_user_directory(self, term: str) -> List[DummyUser]:
+    def search_user_directory(self, term: str) -> Iterator[DummyUser]:
         for user in self._user_directory_content:
             if term in user.user_id:
                 yield user

@@ -28,7 +28,7 @@ MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the vari
 
 def typecheck(value: Any, expected: Type):
     if not isinstance(value, expected):
-        raise ValueError(f"Expected a value of type {expected}")
+        raise ValueError(f"Expected a value of type {expected}, got value of type {type(value)}")
 
 
 ABI = List[Dict[str, Any]]

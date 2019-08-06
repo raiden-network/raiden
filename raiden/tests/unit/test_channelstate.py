@@ -4,7 +4,6 @@ from collections import namedtuple
 from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
-from typing import List
 
 import pytest
 
@@ -1221,7 +1220,7 @@ def test_channelstate_unlock_without_locks():
     assert not iteration.events
 
 
-def pending_locks_from_packed_data(packed: bytes) -> List[HashTimeLockState]:
+def pending_locks_from_packed_data(packed: bytes) -> PendingLocksState:
     number_of_bytes = len(packed)
     locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
