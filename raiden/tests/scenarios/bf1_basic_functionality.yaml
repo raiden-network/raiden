@@ -11,8 +11,6 @@ settings:
       token:
         deposit: true
 
-token:
-
 nodes:
   mode: managed
   count: 5
@@ -112,7 +110,7 @@ scenario:
           name: "Make payments from C to E after withdraw"
           repeat: 10
           tasks:
-              - transfer: {from: 2, to: 4, amount: 1}
+            - transfer: {from: 2, to: 4, amount: 1}
       - parallel:
           name: "Assert after 10 payments from C to E"
           tasks:
@@ -157,8 +155,8 @@ scenario:
       - serial:
           name: "Stop node A and wait 10 blocks, then start it again"
           tasks:
-          stop_node: 0
-          wait_blocks: 10
+            - stop_node: 0
+            - wait_blocks: 10
           start_node: 0
       - serial:
           name: "Make 10 payments from A to D after restart"
