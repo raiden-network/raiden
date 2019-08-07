@@ -1,5 +1,5 @@
 import structlog
-from eth_utils import encode_hex, is_binary_address, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, is_binary_address, to_checksum_address
 from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
@@ -27,8 +27,7 @@ class Token:
         contract_manager: ContractManager,
     ) -> None:
         contract = jsonrpc_client.new_contract(
-            contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN),
-            to_normalized_address(token_address),
+            contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN), Address(token_address)
         )
         proxy = ContractProxy(jsonrpc_client, contract)
 

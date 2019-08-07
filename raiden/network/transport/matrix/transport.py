@@ -53,6 +53,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     AddressHex,
     Any,
@@ -843,6 +844,7 @@ class MatrixTransport(Runnable):
         return True
 
     def _receive_delivered(self, delivered: Delivered):
+        assert delivered.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "Delivered message received",
             sender=to_checksum_address(delivered.sender),
@@ -854,6 +856,7 @@ class MatrixTransport(Runnable):
 
     def _receive_message(self, message: Union[SignedRetrieableMessage, Processed]):
         assert self._raiden_service is not None
+        assert message.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "Message received",
             node=to_checksum_address(self._raiden_service.address),
@@ -877,6 +880,7 @@ class MatrixTransport(Runnable):
             self._raiden_service.on_message(message)
 
     def _receive_to_device(self, to_device: ToDevice):
+        assert to_device.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "ToDevice message received",
             sender=to_checksum_address(to_device.sender),

@@ -37,7 +37,15 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import BalanceProofUnsignedState, RouteState
 from raiden.transfer.state_change import Block, ReceiveUnlock
 from raiden.utils import sha3
-from raiden.utils.typing import BlockExpiration, BlockGasLimit, BlockNumber, MessageID, TokenAmount
+from raiden.utils.typing import (
+    AdditionalHash,
+    BlockExpiration,
+    BlockGasLimit,
+    BlockNumber,
+    Locksroot,
+    MessageID,
+    TokenAmount,
+)
 
 
 def make_signed_balance_proof_from_counter(counter):
@@ -54,8 +62,8 @@ def make_signed_balance_proof_from_counter(counter):
             canonical_identifier=factories.make_canonical_identifier(
                 token_network_address=factories.make_address(), channel_identifier=next(counter)
             ),
-            locksroot=sha3(lock.as_bytes),
-            message_hash=sha3(b""),
+            locksroot=Locksroot(sha3(lock.as_bytes)),
+            message_hash=AdditionalHash(sha3(b"")),
             sender=factories.HOP1,
             pkey=factories.HOP1_KEY,
         )
@@ -69,7 +77,7 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
         nonce=next(counter),
         transferred_amount=next(counter),
         locked_amount=next(counter),
-        locksroot=sha3(next(counter).to_bytes(1, "big")),
+        locksroot=Locksroot(sha3(next(counter).to_bytes(1, "big"))),
         canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=next(counter),
             token_network_address=factories.make_address(),

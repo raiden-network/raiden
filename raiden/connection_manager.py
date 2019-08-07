@@ -2,7 +2,7 @@ from random import shuffle
 
 import gevent
 import structlog
-from eth_utils import decode_hex, to_checksum_address
+from eth_utils import to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -67,8 +67,8 @@ class ConnectionManager:  # pragma: no unittest
 
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = "2" * 40
-    BOOTSTRAP_ADDR = decode_hex(BOOTSTRAP_ADDR_HEX)
+    BOOTSTRAP_ADDR_HEX = to_checksum_address("2" * 40)
+    BOOTSTRAP_ADDR = to_canonical_address(BOOTSTRAP_ADDR_HEX)
 
     def __init__(self, raiden, token_network_address: TokenNetworkAddress):
         self.raiden = raiden

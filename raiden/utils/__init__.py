@@ -10,7 +10,6 @@ from typing import Any, Callable
 import gevent
 from eth_keys import keys
 from eth_utils import (
-    add_0x_prefix,
     decode_hex,
     encode_hex,
     is_0x_prefixed,
@@ -72,16 +71,6 @@ def address_checksum_and_decode(addr: str) -> Address:
     addr_bytes = decode_hex(addr)
     assert len(addr_bytes) in (20, 0)
     return Address(addr_bytes)
-
-
-def data_encoder(data: bytes, length: int = 0) -> str:
-    data = remove_0x_prefix(encode_hex(data))
-    return add_0x_prefix(data.rjust(length * 2, b"0").decode())
-
-
-def data_decoder(data: str) -> bytes:
-    assert is_0x_prefixed(data)
-    return decode_hex(data)
 
 
 def pex(data: bytes) -> str:

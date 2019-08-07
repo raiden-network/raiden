@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import add_0x_prefix, decode_hex, encode_hex
+from eth_utils import decode_hex, encode_hex, to_checksum_address
 
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
@@ -53,7 +53,7 @@ def _find_keystoredir() -> Optional[str]:  # pragma: no cover
 class AccountManager:
     def __init__(self, keystore_path: str = None):
         self.keystore_path = keystore_path
-        self.accounts: Dict[str, Any] = {}
+        self.accounts: Dict[AddressHex, Any] = {}
         if self.keystore_path is None:
             self.keystore_path = _find_keystoredir()
         if self.keystore_path is not None:
@@ -75,7 +75,7 @@ class AccountManager:
                                 # we expect a dict in specific format.
                                 # Anything else is not a keyfile
                                 raise InvalidAccountFile(f"Invalid keystore file {fullpath}")
-                            address = add_0x_prefix(str(data["address"]).lower())
+                            address = to_checksum_address(data["address"])
                             self.accounts[address] = str(fullpath)
                     except OSError as ex:
                         msg = "Can not read account file (errno=%s)" % ex.errno
@@ -94,14 +94,8 @@ class AccountManager:
                                 msg = "The account file is not valid JSON format"
                             log.warning(msg, path=fullpath, ex=ex)
 
-    def address_in_keystore(self, address: Optional[AddressHex]) -> bool:
-        if address is None:
-            return False
-
-        address = add_0x_prefix(address)
-        assert isinstance(address, str)
-
-        return address.lower() in self.accounts
+    def address_in_keystore(self, address: AddressHex) -> bool:
+        return address in self.accounts
 
     def get_privkey(self, address: AddressHex, password: str) -> PrivateKey:
         """Find the keystore file for an account, unlock it and get the private key
@@ -114,8 +108,6 @@ class AccountManager:
         Returns
             The private key associated with the address
         """
-        address = add_0x_prefix(address).lower()
-
         if not self.address_in_keystore(address):
             raise ValueError("Keystore file not found for %s" % address)
 

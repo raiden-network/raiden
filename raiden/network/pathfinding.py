@@ -146,8 +146,8 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
             url=url,
             price=infos["price_info"],
             chain_id=infos["network_info"]["chain_id"],
-            token_network_registry_address=to_canonical_address(
-                infos["network_info"]["registry_address"]
+            token_network_registry_address=TokenNetworkAddress(
+                to_canonical_address(infos["network_info"]["registry_address"])
             ),
             payment_address=to_canonical_address(infos["payment_address"]),
             message=infos["message"],
@@ -183,7 +183,7 @@ def get_valid_pfs_url(
         return None
 
     url = service_registry.get_service_url(
-        block_identifier=block_identifier, service_hex_address=to_canonical_address(address)
+        block_identifier=block_identifier, service_hex_address=to_checksum_address(address)
     )
     if not url:
         return None
@@ -287,7 +287,8 @@ def configure_pfs_or_exit(
         sys.exit(1)
 
     if not is_same_address(
-        pathfinding_service_info.token_network_registry_address, token_network_registry_address
+        Address(pathfinding_service_info.token_network_registry_address),
+        token_network_registry_address,
     ):
         click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
         click.secho(

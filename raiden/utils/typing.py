@@ -1,6 +1,8 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
 
+from eth_typing import Address, ChecksumAddress
+
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
     ChainID,
@@ -35,10 +37,8 @@ ABI = List[Dict[str, Any]]
 BlockchainEvent = Dict[str, Any]
 
 T_Address = bytes
-Address = NewType("Address", T_Address)
 
-T_AddressHex = str
-AddressHex = NewType("AddressHex", T_AddressHex)
+AddressHex = ChecksumAddress
 
 # An absolute number of blocks
 T_BlockExpiration = int

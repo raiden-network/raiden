@@ -540,7 +540,7 @@ class JSONRPCClient:
 
         Args:
             contract_interface: The contract interface as defined by the json.
-            address: The contract's address.
+            contract_address: The contract's address.
         """
         return ContractProxy(
             self, contract=self.new_contract(contract_interface, contract_address)
@@ -595,7 +595,7 @@ class JSONRPCClient:
 
     def send_transaction(
         self, to: Address, startgas: int, value: int = 0, data: bytes = b""
-    ) -> bytes:
+    ) -> TransactionHash:
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -642,9 +642,9 @@ class JSONRPCClient:
             self._available_nonce += 1
 
             log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
-            return tx_hash
+            return TransactionHash(tx_hash)
 
-    def poll(self, transaction_hash: bytes) -> Dict[str, Any]:
+    def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined.
 
         Args:
@@ -653,7 +653,7 @@ class JSONRPCClient:
         if len(transaction_hash) != 32:
             raise ValueError("transaction_hash must be a 32 byte hash")
 
-        transaction_hash = encode_hex(transaction_hash)
+        transaction_hash_hex = encode_hex(transaction_hash)
 
         while True:
             # Returns `None` while the transaction isn't yet mined. A
@@ -661,7 +661,7 @@ class JSONRPCClient:
             # block is reached, because of this it is possible for the receipt
             # to be set on one interation and for it to disappear on another
             # (assuming a properly chosen confirmation_block number).
-            tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash)
+            tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash_hex)
 
             if tx_receipt:
                 confirmation_block = (

@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import to_canonical_address, to_normalized_address
+from eth_utils import to_canonical_address, to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
@@ -97,7 +97,7 @@ def get_account_and_private_key(
     if not address:
         address_hex = prompt_account(account_manager)
     else:
-        address_hex = to_normalized_address(address)
+        address_hex = to_checksum_address(address)
 
     if password_file:
         privatekey_bin = unlock_account_with_passwordfile(
@@ -294,7 +294,7 @@ def run_app(
         name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
         click.secho(
             f"FATAL: Another Raiden instance already running for account "
-            f"{to_normalized_address(address)} on network id {name_or_id}",
+            f"{to_checksum_address(address)} on network id {name_or_id}",
             fg="red",
         )
         sys.exit(1)

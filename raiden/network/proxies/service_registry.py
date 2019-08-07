@@ -9,7 +9,15 @@ from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    AddressHex,
+    Any,
+    BlockSpecification,
+    Dict,
+    Optional,
+    TokenAmount,
+)
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -117,7 +125,7 @@ class ServiceRegistry:
 
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
-        log_details = {
+        log_details: Dict[str, Any] = {
             "node": to_checksum_address(self.node_address),
             "contract": to_checksum_address(self.address),
             "url": url,

@@ -40,7 +40,7 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID
+from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -377,7 +377,7 @@ def login_or_register(
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
-    base_username = to_normalized_address(signer.address)
+    base_username = str(to_normalized_address(signer.address))
     _match_user = re.match(
         f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
     )
@@ -470,7 +470,9 @@ def validate_userid_signature(user: User) -> Optional[Address]:
 
     try:
         displayname = user.get_display_name()
-        recovered = recover(data=user.user_id.encode(), signature=decode_hex(displayname))
+        recovered = recover(
+            data=user.user_id.encode(), signature=Signature(decode_hex(displayname))
+        )
         if not (address and recovered and recovered == address):
             return None
     except (

@@ -5,7 +5,7 @@ import time
 
 import gevent
 import IPython
-from eth_utils import decode_hex, to_checksum_address
+from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
@@ -13,7 +13,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
-from raiden.utils import typing
+from raiden.utils import TokenAddress, typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
@@ -206,15 +206,14 @@ class ConsoleTools:
         """ Register a token with the raiden token manager.
 
         Args:
-            registry_address: registry address
-            token_address_hex (string): a hex encoded token address.
+            registry_address_hex: a hex encoded registry address.
+            token_address_hex: a hex encoded token address.
 
         Returns:
-
             The token network proxy.
         """
-        registry_address = decode_hex(registry_address_hex)
-        token_address = decode_hex(token_address_hex)
+        registry_address = to_canonical_address(registry_address_hex)
+        token_address = TokenAddress(to_canonical_address(token_address_hex))
 
         registry = self._raiden.chain.token_network_registry(registry_address)
         contracts_version = self._raiden.contract_manager.contracts_version
