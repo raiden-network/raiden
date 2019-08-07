@@ -9,14 +9,7 @@ from uuid import UUID
 import click
 import requests
 import structlog
-from eth_utils import (
-    decode_hex,
-    encode_hex,
-    is_same_address,
-    to_canonical_address,
-    to_checksum_address,
-    to_hex,
-)
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
@@ -36,6 +29,7 @@ from raiden.utils.typing import (
     List,
     Optional,
     PaymentAmount,
+    PaymentNetworkAddress,
     Signature,
     TargetAddress,
     TokenAmount,
@@ -52,7 +46,7 @@ class PFSInfo:
     url: str
     price: TokenAmount
     chain_id: ChainID
-    token_network_registry_address: TokenNetworkAddress
+    token_network_registry_address: PaymentNetworkAddress
     payment_address: Address
     message: str
     operator: str
@@ -146,7 +140,7 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
             url=url,
             price=infos["price_info"],
             chain_id=infos["network_info"]["chain_id"],
-            token_network_registry_address=TokenNetworkAddress(
+            token_network_registry_address=PaymentNetworkAddress(
                 to_canonical_address(infos["network_info"]["registry_address"])
             ),
             payment_address=to_canonical_address(infos["payment_address"]),
@@ -230,7 +224,7 @@ def configure_pfs_or_exit(
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
     node_network_id: ChainID,
-    token_network_registry_address: Address,
+    token_network_registry_address: PaymentNetworkAddress,
     pathfinding_max_fee: FeeAmount,
 ) -> PFSInfo:
     """
@@ -286,10 +280,7 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
 
-    if not is_same_address(
-        Address(pathfinding_service_info.token_network_registry_address),
-        token_network_registry_address,
-    ):
+    if pathfinding_service_info.token_network_registry_address != token_network_registry_address:
         click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
         click.secho(
             f"PFS is not operating on the same Token Network Registry "

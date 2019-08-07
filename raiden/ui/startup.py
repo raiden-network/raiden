@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address, ChainID
+from raiden.utils.typing import Address, ChainID, PaymentNetworkAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -110,7 +110,7 @@ class Proxies(NamedTuple):
 
 def setup_proxies_or_exit(
     config: Dict[str, Any],
-    tokennetwork_registry_contract_address: Address,
+    tokennetwork_registry_contract_address: PaymentNetworkAddress,
     secret_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,
@@ -150,10 +150,12 @@ def setup_proxies_or_exit(
     except ContractCodeMismatch as e:
         handle_contract_code_mismatch(e)
     except AddressWithoutCode:
-        handle_contract_no_code("token network registry", tokennetwork_registry_contract_address)
+        handle_contract_no_code(
+            "token network registry", Address(tokennetwork_registry_contract_address)
+        )
     except AddressWrongContract:
         handle_contract_wrong_address(
-            "token network registry", tokennetwork_registry_contract_address
+            "token network registry", Address(tokennetwork_registry_contract_address)
         )
 
     try:
@@ -220,7 +222,7 @@ def setup_proxies_or_exit(
             routing_mode=routing_mode,
             service_registry=service_registry,
             node_network_id=node_network_id,
-            token_network_registry_address=Address(token_network_registry.address),
+            token_network_registry_address=token_network_registry.address,
             pathfinding_max_fee=config["services"]["pathfinding_max_fee"],
         )
         msg = "Eth address of selected pathfinding service is unknown."

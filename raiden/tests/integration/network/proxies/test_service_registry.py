@@ -2,7 +2,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from eth_utils import is_canonical_address, is_same_address, to_checksum_address
+from eth_utils import (
+    is_canonical_address,
+    is_same_address,
+    to_canonical_address,
+    to_checksum_address,
+)
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import BrokenPreconditionError
@@ -12,9 +17,11 @@ from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
-from raiden.utils.typing import ChainID
+from raiden.utils.typing import ChainID, FeeAmount, PaymentNetworkAddress
 
-token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+token_network_registry_address_test_default = PaymentNetworkAddress(
+    to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
+)
 
 
 def test_service_registry_set_url(service_registry_address, private_keys, web3, contract_manager):
@@ -60,13 +67,20 @@ def test_service_registry_random_pfs(
     mock_get_pfs_info.return_value.price = 100
     with patch("raiden.network.pathfinding.get_pfs_info", mock_get_pfs_info):
         # Make sure that too expensive PFSes are not considered valid
-        assert not get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=99)
+        assert not get_valid_pfs_url(
+            c1_service_proxy, 0, "latest", pathfinding_max_fee=FeeAmount(99)
+        )
 
         # ...but ones with the expected price are fine
-        assert get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=100) == urls[0]
+        assert (
+            get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=FeeAmount(100))
+            == urls[0]
+        )
 
         # Test that getting a random service from the proxy works
-        assert get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=100) in urls
+        assert (
+            get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=FeeAmount(100)) in urls
+        )
 
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
@@ -81,7 +95,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "price_info": 0,
         "network_info": {
             "chain_id": chain_id,
-            "registry_address": token_network_registry_address_test_default,
+            "registry_address": to_checksum_address(token_network_registry_address_test_default),
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
@@ -166,7 +180,9 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),
                 node_network_id=chain_id,
-                token_network_registry_address="0x2222222222222222222222222222222222222221",
+                token_network_registry_address=PaymentNetworkAddress(
+                    to_canonical_address("0x2222222222222222222222222222222222222221")
+                ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
 
@@ -179,7 +195,9 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 pfs_url="adad",
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),
-                node_network_id=chain_id + 1,
-                token_network_registry_address="0x2222222222222222222222222222222222222221",
+                node_network_id=ChainID(chain_id + 1),
+                token_network_registry_address=PaymentNetworkAddress(
+                    to_canonical_address("0x2222222222222222222222222222222222222221")
+                ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )

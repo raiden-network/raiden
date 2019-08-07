@@ -240,7 +240,7 @@ class TokenNetwork:
                     participant2=partner,
                     block_identifier=given_block_identifier,
                 )
-                balance = self.token.balance_of(
+                network_total_deposit = self.token.balance_of(
                     address=Address(self.address), block_identifier=given_block_identifier
                 )
                 limit = self.token_network_deposit_limit(block_identifier=given_block_identifier)
@@ -256,7 +256,7 @@ class TokenNetwork:
                     raise BrokenPreconditionError(
                         "A channel with the given partner address already exists."
                     )
-                if balance >= limit:
+                if network_total_deposit >= limit:
                     raise BrokenPreconditionError(
                         "Cannot open another channel, token network deposit limit reached."
                     )
@@ -314,11 +314,11 @@ class TokenNetwork:
             if existing_channel_identifier is not None:
                 raise DuplicatedChannelError("Channel with given partner address already exists")
 
-            balance = self.token.balance_of(
+            network_total_deposit = self.token.balance_of(
                 address=Address(self.address), block_identifier=failed_at_blockhash
             )
             limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
-            if balance >= limit:
+            if network_total_deposit >= limit:
                 raise DepositOverLimit(
                     "Could open another channel, token network deposit limit has been reached."
                 )
@@ -355,11 +355,11 @@ class TokenNetwork:
                         "Channel with given partner address already exists"
                     )
 
-                balance = self.token.balance_of(
+                network_total_deposit = self.token.balance_of(
                     address=Address(self.address), block_identifier=failed_at_blockhash
                 )
                 limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
-                if balance >= limit:
+                if network_total_deposit >= limit:
                     raise DepositOverLimit(
                         "Could open another channel, token network deposit limit has been reached."
                     )
@@ -800,11 +800,11 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                network_balance = self.token.balance_of(
+                network_total_deposit = self.token.balance_of(
                     Address(self.address), given_block_identifier
                 )
 
-                if network_balance + amount_to_deposit > token_network_deposit_limit:
+                if network_total_deposit + amount_to_deposit > token_network_deposit_limit:
                     msg = (
                         f"Deposit of {amount_to_deposit} will have "
                         f"exceeded the token network deposit limit."
@@ -964,11 +964,11 @@ class TokenNetwork:
                     block_identifier=failed_receipt["blockHash"]
                 )
 
-                network_balance = self.token.balance_of(
+                network_total_deposit = self.token.balance_of(
                     address=Address(self.address), block_identifier=failed_receipt["blockHash"]
                 )
 
-                if network_balance + deposit_amount > token_network_deposit_limit:
+                if network_total_deposit + deposit_amount > token_network_deposit_limit:
                     msg = (
                         f"Deposit of {deposit_amount} would have "
                         f"exceeded the token network deposit limit."
@@ -1087,7 +1087,9 @@ class TokenNetwork:
 
             total_channel_deposit = total_deposit + partner_details.deposit
 
-            network_balance = self.token.balance_of(Address(self.address), failed_at_blocknumber)
+            network_total_deposit = self.token.balance_of(
+                Address(self.address), failed_at_blocknumber
+            )
 
             # Deposit was prohibited because the channel is settled
             if channel_state == ChannelState.SETTLED:
@@ -1125,7 +1127,7 @@ class TokenNetwork:
                 )
                 raise RaidenRecoverableError(msg)
 
-            if network_balance + amount_to_deposit > token_network_deposit_limit:
+            if network_total_deposit + amount_to_deposit > token_network_deposit_limit:
                 msg = f"Deposit of {amount_to_deposit} exceeded the token network deposit limit."
                 raise RaidenRecoverableError(msg)
 

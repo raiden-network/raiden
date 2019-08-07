@@ -2,13 +2,15 @@ from copy import deepcopy
 from typing import Any, Dict
 
 import pytest
+from eth_utils import to_canonical_address
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.factories import make_address, make_payment_network_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
+from raiden.utils.typing import PaymentNetworkAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -16,7 +18,9 @@ from raiden_contracts.constants import (
     CONTRACT_USER_DEPOSIT,
 )
 
-token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+token_network_registry_address_test_default = PaymentNetworkAddress(
+    to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
+)
 
 
 def test_check_network_id_raises_with_mismatching_ids():
@@ -272,7 +276,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         with patched_get_for_succesful_pfs_info():
             setup_proxies_or_exit(
                 config=config,
-                tokennetwork_registry_contract_address=make_address(),
+                tokennetwork_registry_contract_address=make_payment_network_address(),
                 secret_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,
