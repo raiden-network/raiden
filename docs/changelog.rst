@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 0.9.2 https://github.com/raiden-network/webui/releases/tag/v0.9.2
 * :bug:`4348` Fix wrong calculation of ``balance`` field of channel information when tokens are locked in payments
 * :bug:`4502` Fix a Raiden crash related to routing feedback
 
