@@ -18,7 +18,6 @@ from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import ChannelState, NettingChannelState
-from raiden.utils import data_decoder, data_encoder
 
 
 class InvalidEndpoint(NotFound):
@@ -77,16 +76,6 @@ class AddressField(fields.Field):
             self.fail("invalid_size")
 
         return value
-
-
-class DataField(fields.Field):
-    @staticmethod
-    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
-        return data_encoder(value)
-
-    @staticmethod
-    def _deserialize(value, attr, data, **kwargs):  # pylint: disable=unused-argument
-        return data_decoder(value)
 
 
 class SecretField(fields.Field):

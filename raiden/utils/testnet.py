@@ -1,12 +1,10 @@
 from enum import Enum
 
-from eth_utils import to_checksum_address
-
 from raiden.exceptions import MintFailed, RaidenError
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Any, List, TokenAddress, TransactionHash
+from raiden.utils.typing import Address, Any, List, TokenAddress, TransactionHash
 
 
 class MintingMethod(Enum):
@@ -48,7 +46,7 @@ _MINT_ABI = [
 
 def token_minting_proxy(client: JSONRPCClient, address: TokenAddress) -> ContractProxy:
     return client.new_contract_proxy(
-        contract_interface=_MINT_ABI, contract_address=to_checksum_address(address)
+        contract_interface=_MINT_ABI, contract_address=Address(address)
     )
 
 

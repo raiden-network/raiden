@@ -159,7 +159,9 @@ class TokenNetwork:
 
         # These are constants
         self._chain_id = proxy.contract.functions.chain_id().call()
-        self._token_address = to_canonical_address(proxy.contract.functions.token().call())
+        self._token_address = TokenAddress(
+            to_canonical_address(proxy.contract.functions.token().call())
+        )
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
         self.address = token_network_address
@@ -239,8 +241,7 @@ class TokenNetwork:
                     block_identifier=given_block_identifier,
                 )
                 balance = self.token.balance_of(
-                    address=to_checksum_address(self.address),
-                    block_identifier=given_block_identifier,
+                    address=Address(self.address), block_identifier=given_block_identifier
                 )
                 limit = self.token_network_deposit_limit(block_identifier=given_block_identifier)
                 safety_deprecation_switch = self.safety_deprecation_switch(given_block_identifier)
@@ -314,7 +315,7 @@ class TokenNetwork:
                 raise DuplicatedChannelError("Channel with given partner address already exists")
 
             balance = self.token.balance_of(
-                address=to_checksum_address(self.address), block_identifier=failed_at_blockhash
+                address=Address(self.address), block_identifier=failed_at_blockhash
             )
             limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
             if balance >= limit:
@@ -355,7 +356,7 @@ class TokenNetwork:
                     )
 
                 balance = self.token.balance_of(
-                    address=to_checksum_address(self.address), block_identifier=failed_at_blockhash
+                    address=Address(self.address), block_identifier=failed_at_blockhash
                 )
                 limit = self.token_network_deposit_limit(block_identifier=failed_at_blockhash)
                 if balance >= limit:

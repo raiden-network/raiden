@@ -17,7 +17,7 @@ from raiden.tests.utils.eth_node import (
 )
 from raiden.utils import privatekey_to_address, sha3
 from raiden.utils.http import JSONRPCExecutor
-from raiden.utils.typing import ChainID, List, Port, PrivateKey
+from raiden.utils.typing import ChainID, List, Port, PrivateKey, TokenAmount
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 NUM_GETH_NODES = 3
@@ -29,9 +29,11 @@ START_RPCPORT = 8101
 DEFAULT_ACCOUNTS_SEEDS = [
     "127.0.0.1:{}".format(START_PORT + i).encode() for i in range(NUM_RAIDEN_ACCOUNTS)
 ]
-DEFAULT_ACCOUNTS_KEYS: List[PrivateKey] = [keccak(seed) for seed in DEFAULT_ACCOUNTS_SEEDS]
+DEFAULT_ACCOUNTS_KEYS: List[PrivateKey] = [
+    PrivateKey(keccak(seed)) for seed in DEFAULT_ACCOUNTS_SEEDS
+]
 DEFAULT_ACCOUNTS = [
-    AccountDescription(privatekey_to_address(key), DEFAULT_BALANCE)
+    AccountDescription(privatekey_to_address(key), TokenAmount(DEFAULT_BALANCE))
     for key in DEFAULT_ACCOUNTS_KEYS
 ]
 
@@ -42,7 +44,7 @@ def main() -> None:
     geth_nodes = []
     for i in range(NUM_GETH_NODES):
         is_miner = i == 0
-        node_key = sha3(f"node:{i}".encode())
+        node_key = PrivateKey(sha3(f"node:{i}".encode()))
         p2p_port = Port(START_PORT + i)
         rpc_port = Port(START_RPCPORT + i)
 

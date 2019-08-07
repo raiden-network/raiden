@@ -36,11 +36,11 @@ def keystore_mock():
 def test_get_accounts(keystore_mock):
     account_manager = AccountManager(keystore_mock)
     expected_accounts = {
-        "0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645": os.path.join(
+        "0x0d5a0e4FECE4b84365b9B8DbA6e6D41348C73645": os.path.join(
             keystore_mock,
             "UTC--2016-10-26T16-55-53.551024336Z--0d5a0e4fece4b84365b9b8dba6e6d41348c73645",
         ),
-        "0x3593403033d18b82f7b4a0f18e1ed24623d23b20": os.path.join(
+        "0x3593403033d18b82f7b4a0F18e1ED24623D23b20": os.path.join(
             keystore_mock, "valid_keystorefile_with_unexpected_name"
         ),
     }
@@ -49,37 +49,28 @@ def test_get_accounts(keystore_mock):
 
 def test_get_account_in_keystore(keystore_mock):
     account_manager = AccountManager(keystore_mock)
-    assert account_manager.address_in_keystore("0d5a0e4fece4b84365b9b8dba6e6d41348c73645")
-    assert account_manager.address_in_keystore("0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645")
-    assert account_manager.address_in_keystore("0x0D5A0E4fece4b84365b9b8dba6e6d41348c73645")
-    assert account_manager.address_in_keystore("3593403033d18b82f7b4a0f18e1ed24623d23b20")
-    assert account_manager.address_in_keystore("0x3593403033d18b82f7b4a0f18e1ed24623d23b20")
-    assert not account_manager.address_in_keystore("a05934d3033d18b82f7b4adf18e1ed24e3d23b19")
+    assert account_manager.address_in_keystore("0x0d5a0e4FECE4b84365b9B8DbA6e6D41348C73645")
+    assert account_manager.address_in_keystore("0x3593403033d18b82f7b4a0F18e1ED24623D23b20")
+    assert not account_manager.address_in_keystore("0xa05934d3033D18b82F7b4AdF18E1eD24E3D23b19")
     assert not account_manager.address_in_keystore(None)
 
 
 def test_get_privkey(keystore_mock):
     account_manager = AccountManager(keystore_mock)
     assert "0xf696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605" == encode_hex(
-        account_manager.get_privkey("0d5a0e4fece4b84365b9b8dba6e6d41348c73645", "123")
-    )
-    assert "0xf696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605" == encode_hex(
-        account_manager.get_privkey("0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645", "123")
+        account_manager.get_privkey("0x0d5a0e4FECE4b84365b9B8DbA6e6D41348C73645", "123")
     )
     assert "0x36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5" == encode_hex(
-        account_manager.get_privkey("3593403033d18b82f7b4a0f18e1ed24623d23b20", "123")
-    )
-    assert "0x36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5" == encode_hex(
-        account_manager.get_privkey("0x3593403033d18b82f7b4a0f18e1ed24623d23b20", "123")
+        account_manager.get_privkey("0x3593403033d18b82f7b4a0F18e1ED24623D23b20", "123")
     )
 
     # failures
     with pytest.raises(ValueError) as exc:
-        account_manager.get_privkey("0x3593403033d18b82f7b4a0f18e1ed24623d23b20", "456")
+        account_manager.get_privkey("0x3593403033d18b82f7b4a0F18e1ED24623D23b20", "456")
     assert "MAC mismatch" in str(exc.value)
     with pytest.raises(ValueError) as exc:
-        account_manager.get_privkey("a05934d3033d18b82f7b4adf18e1ed24e3d23b19", "123")
-    assert "Keystore file not found for 0xa05934d3033d18b82f7b4adf18e1ed24e3d23b19" in str(
+        account_manager.get_privkey("0xa05934d3033D18b82F7b4AdF18E1eD24E3D23b19", "123")
+    assert "Keystore file not found for 0xa05934d3033D18b82F7b4AdF18E1eD24E3D23b19" in str(
         exc.value
     )
 
@@ -129,7 +120,7 @@ def test_unlock_account_with_passwordfile(keystore_mock):
     with open(password_file_path, "r") as password_file:
         privkey = unlock_account_with_passwordfile(
             account_manager=account_manager,
-            address_hex="0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645",
+            address_hex="0x0d5a0e4FECE4b84365b9B8DbA6e6D41348C73645",
             password_file=password_file,
         )
     assert privkey

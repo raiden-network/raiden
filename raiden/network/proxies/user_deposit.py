@@ -1,11 +1,5 @@
 import structlog
-from eth_utils import (
-    is_binary_address,
-    to_bytes,
-    to_canonical_address,
-    to_checksum_address,
-    to_normalized_address,
-)
+from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
@@ -67,15 +61,16 @@ class UserDeposit:
         self.blockchain_service = blockchain_service
 
         self.proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
-            to_normalized_address(user_deposit_address),
+            self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT), user_deposit_address
         )
 
         self.deposit_lock = RLock()
 
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
-        return to_canonical_address(
-            self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+        return TokenAddress(
+            to_canonical_address(
+                self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+            )
         )
 
     def get_total_deposit(
