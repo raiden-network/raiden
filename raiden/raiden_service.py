@@ -425,7 +425,7 @@ class RaidenService(Runnable):
         self._initialize_whitelists(chain_state)
         self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
-        self._initialize_ready_to_processed_events()
+        self._initialize_ready_to_process_events()
 
         # Start the side-effects:
         # - React to blockchain events
@@ -566,7 +566,7 @@ class RaidenService(Runnable):
         assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
         self.alarm.start()
 
-    def _initialize_ready_to_processed_events(self) -> None:
+    def _initialize_ready_to_process_events(self) -> None:
         assert not self.transport
         assert not self.alarm
 
