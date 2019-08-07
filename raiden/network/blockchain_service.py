@@ -37,7 +37,9 @@ class BlockChainService:
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
-        self.address_to_token_network_registry: Dict[Address, TokenNetworkRegistry] = dict()
+        self.address_to_token_network_registry: Dict[
+            PaymentNetworkAddress, TokenNetworkRegistry
+        ] = dict()
         self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
         self.address_to_service_registry: Dict[Address, ServiceRegistry] = dict()
         self.identifier_to_payment_channel: Dict[
@@ -140,7 +142,7 @@ class BlockChainService:
 
         return self.address_to_token[token_address]
 
-    def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
+    def token_network_registry(self, address: PaymentNetworkAddress) -> TokenNetworkRegistry:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 

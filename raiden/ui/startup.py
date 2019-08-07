@@ -141,7 +141,7 @@ def setup_proxies_or_exit(
     )
     try:
         if tokennetwork_registry_contract_address is not None:
-            registered_address: Address = Address(tokennetwork_registry_contract_address)
+            registered_address = tokennetwork_registry_contract_address
         else:
             registered_address = to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
