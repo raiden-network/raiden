@@ -415,17 +415,7 @@ class RaidenService(Runnable):
         self.install_all_blockchain_filters(
             self.default_registry, self.default_secret_registry, last_log_block_number
         )
-
-        # Complete the first_run of the alarm task and synchronize with the
-        # blockchain since the last run.
-        #
-        # Notes about setup order:
-        # - The filters must be polled after the node state has been primed,
-        # otherwise the state changes won't have effect.
-        # - The alarm must complete its first run before the transport is started,
-        #   to reject messages for closed/settled channels.
-        self.alarm.register_callback(self._callback_new_block)
-        self.alarm.first_run(last_log_block_number)
+        self._prepare_and_execute_alarm_first_run(from_block=last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
 
@@ -539,6 +529,32 @@ class RaidenService(Runnable):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
+    def _prepare_and_execute_alarm_first_run(self, from_block) -> None:
+        """Prepares the alarm task callback and executes its first run
+
+        Complete the first_run of the alarm task and synchronize with the
+        blockchain since the last run.
+
+         Notes about setup order:
+         - The filters must be polled after the node state has been primed,
+           otherwise the state changes won't have effect.
+         - The alarm must complete its first run before the transport is started,
+           to reject messages for closed/settled channels.
+        """
+        self.alarm.register_callback(self._callback_new_block)
+        self.alarm.first_run(from_block)
+        # The first run of the alarm task processes some state changes and may add
+        # new token network event filters when this is the first time Raiden runs.
+        # Here we poll for any new events that may exist after the addition of
+        # those event filters.
+        latest_block_num = self.chain.get_block(block_identifier="latest")["number"]
+        blockchain_events = self.blockchain_events.poll_blockchain_events(latest_block_num)
+
+        state_changes = []
+        for event in blockchain_events:
+            state_changes.extend(blockchainevent_to_statechange(self, event, from_block))
+        self.handle_and_track_state_changes(state_changes)
+
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
 
@@ -547,7 +563,7 @@ class RaidenService(Runnable):
             allowed, otherwise side-effects of blockchain events will be
             ignored.
         """
-        assert self.ready_to_process_events, f"Event procossing disable. node:{self!r}"
+        assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
         self.alarm.start()
 
     def _initialize_ready_to_processed_events(self) -> None:

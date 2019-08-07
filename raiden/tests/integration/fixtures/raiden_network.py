@@ -237,10 +237,11 @@ def raiden_network(
         with gevent.Timeout(seconds=5, exception=exception):
             wait_for_alarm_start(raiden_apps)
     else:
-        # simply wait for 5 blocks since we can't confirm channels have been made
-        # since raiden apps are not started
+        # simply wait for another confirmation blocks number since we can't
+        # confirm channels have been made through the raiden apps that are not started
+        target_block_number = confirmed_block + raiden_apps[0].raiden.confirmation_blocks + 1
         blockchain_services.deploy_service.wait_until_block(
-            target_block_number=confirmed_block + 5
+            target_block_number=target_block_number
         )
 
     yield raiden_apps
