@@ -47,7 +47,7 @@ eth-keyfile==0.5.1
 eth-keys==0.2.4
 eth-rlp==0.1.2
 eth-typing==2.1.0
-eth-utils==1.4.1
+eth-utils==1.6.4
 execnet==1.6.0
 fancycompleter==0.8
 filelock==3.0.12
