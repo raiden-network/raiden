@@ -133,36 +133,39 @@ def payment_channel_open_and_deposit(
         partner=app1.raiden.address, settle_timeout=settle_timeout, given_block_identifier="latest"
     )
     assert channel_identifier
-    canonical_identifier = CanonicalIdentifier(
-        chain_identifier=state_from_raiden(app0.raiden).chain_id,
-        token_network_address=token_network_proxy.address,
-        channel_identifier=channel_identifier,
-    )
 
-    for app in [app0, app1]:
-        # Use each app's own chain because of the private key / local signing
-        token = app.raiden.chain.token(token_address)
-        payment_channel_proxy = app.raiden.chain.payment_channel(
-            canonical_identifier=canonical_identifier
+    if deposit != 0:
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=state_from_raiden(app0.raiden).chain_id,
+            token_network_address=token_network_proxy.address,
+            channel_identifier=channel_identifier,
         )
+        for app in [app0, app1]:
+            # Use each app's own chain because of the private key / local signing
+            token = app.raiden.chain.token(token_address)
+            payment_channel_proxy = app.raiden.chain.payment_channel(
+                canonical_identifier=canonical_identifier
+            )
 
-        # This check can succeed and the deposit still fail, if channels are
-        # openned in parallel
-        previous_balance = token.balance_of(app.raiden.address)
-        assert previous_balance >= deposit
+            # This check can succeed and the deposit still fail, if channels are
+            # openned in parallel
+            previous_balance = token.balance_of(app.raiden.address)
+            assert previous_balance >= deposit
 
-        # the payment channel proxy will call approve
-        # token.approve(token_network_proxy.address, deposit)
-        payment_channel_proxy.set_total_deposit(total_deposit=deposit, block_identifier="latest")
+            # the payment channel proxy will call approve
+            # token.approve(token_network_proxy.address, deposit)
+            payment_channel_proxy.set_total_deposit(
+                total_deposit=deposit, block_identifier="latest"
+            )
 
-        # Balance must decrease by at least but not exactly `deposit` amount,
-        # because channels can be openned in parallel
-        new_balance = token.balance_of(app.raiden.address)
-        assert new_balance <= previous_balance - deposit
+            # Balance must decrease by at least but not exactly `deposit` amount,
+            # because channels can be openned in parallel
+            new_balance = token.balance_of(app.raiden.address)
+            assert new_balance <= previous_balance - deposit
 
-    check_channel(
-        app0, app1, token_network_proxy.address, channel_identifier, settle_timeout, deposit
-    )
+        check_channel(
+            app0, app1, token_network_proxy.address, channel_identifier, settle_timeout, deposit
+        )
 
 
 def create_all_channels_for_network(

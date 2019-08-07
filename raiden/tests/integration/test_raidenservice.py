@@ -1,7 +1,8 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
+from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
@@ -162,3 +163,42 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
     )
     app0_restart.start()
+
+
+@pytest.mark.parametrize("start_raiden_apps", [False])
+@pytest.mark.parametrize("deposit", [0])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_alarm_task_first_run_syncs_blockchain_events(raiden_network):
+    """
+    Test that the alarm tasks syncs blockchain events at the end of its first run
+
+    Test for https://github.com/raiden-network/raiden/issues/4498
+    """
+    # These apps have had channels created but are not yet started
+    app0, _ = raiden_network
+
+    original_first_run = app0.raiden.alarm.first_run
+
+    def first_run_with_check(block_number):
+        """
+        This function simply enhances the alarm task first run
+
+        The enhanced version has a check for channels being available right after
+        the first run of the alarm task
+        """
+        original_first_run(block_number)
+        channels = RaidenAPI(app0.raiden).get_channel_list(
+            registry_address=app0.raiden.default_registry.address
+        )
+        assert len(channels) != 0, "After the first alarm task run no channels are visible"
+
+    patched_first_run = patch.object(
+        app0.raiden.alarm, "first_run", side_effect=first_run_with_check
+    )
+    with patched_first_run:
+        app0.start()
+
+    # If all runs well and our first_run_with_check function runs then test passes
+    # since that means channels were queriable right after the first run of the
+    # alarm task
