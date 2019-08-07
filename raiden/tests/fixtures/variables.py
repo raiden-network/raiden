@@ -330,3 +330,9 @@ def skip_if_not_geth(blockchain_type):
     """Skip the test if it is run with a Geth node"""
     if blockchain_type != "geth":
         pytest.skip("This test works only with geth.")
+
+
+@pytest.fixture
+def start_raiden_apps():
+    """Determines if the raiden apps created at test setup should also be started"""
+    return True
