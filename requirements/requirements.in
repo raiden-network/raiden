@@ -3,7 +3,7 @@ coincurve
 colorama
 eth-keyfile
 eth-keys
-eth-utils<=1.4.1
+eth-utils
 filelock
 Flask
 Flask-Cors
