@@ -51,10 +51,14 @@ class EchoNode:  # pragma: no unittest
                     f"{to_checksum_address(self.api.raiden.address)} for token "
                     f"{to_checksum_address(self.token_address)}"
                 )
+
+            # Using the balance of the node as funds
+            funds = TokenAmount(token_proxy.balance_of(self.api.raiden.address))
+
             self.api.token_network_connect(
                 registry_address=self.api.raiden.default_registry.address,
                 token_address=self.token_address,
-                funds=token_proxy.balance_of(self.api.raiden.address),
+                funds=funds,
                 initial_channel_target=10,
                 joinable_funds_target=0.5,
             )

@@ -27,8 +27,8 @@ from raiden.exceptions import (
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.storage.utils import TimestampedEvent
-from raiden.transfer import architecture, channel, views
-from raiden.transfer.architecture import Event, TransferTask
+from raiden.transfer import channel, views
+from raiden.transfer.architecture import Event, StateChange, TransferTask
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
@@ -37,12 +37,14 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import BalanceProofSignedState, ChannelState, NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import typing
+from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     Any,
+    BlockNumber,
     BlockSpecification,
     BlockTimeout,
     ChannelID,
@@ -51,15 +53,24 @@ from raiden.utils.typing import (
     LockedTransferType,
     NetworkTimeout,
     Optional,
+    PaymentAmount,
     PaymentID,
     PaymentNetworkAddress,
     Secret,
     SecretHash,
+    T_Secret,
+    T_SecretHash,
+    TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TransactionHash,
     Tuple,
+    WithdrawAmount,
 )
+
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)
 
@@ -71,7 +82,7 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 
 def event_filter_for_payments(
-    event: architecture.Event,
+    event: Event,
     token_network_address: TokenNetworkAddress = None,
     partner_address: Address = None,
 ) -> bool:
@@ -160,7 +171,7 @@ def transfer_tasks_view(
 class RaidenAPI:  # pragma: no unittest
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, raiden):
+    def __init__(self, raiden: "RaidenService"):
         self.raiden = raiden
 
     @property
@@ -248,7 +259,7 @@ class RaidenAPI:  # pragma: no unittest
             #
             # To provide a consistent view to the user, wait one block, this
             # will guarantee that the events have been processed.
-            next_block = self.raiden.get_block_number() + 1
+            next_block = BlockNumber(self.raiden.get_block_number() + 1)
             waiting.wait_for_block(self.raiden, next_block, retry_timeout)
 
     def token_network_connect(
@@ -278,6 +289,12 @@ class RaidenAPI:  # pragma: no unittest
             payment_network_address=registry_address,
             token_address=token_address,
         )
+
+        if token_network_address is None:
+            raise UnknownTokenAddress(
+                "Token {to_checksum_address(token_address) is not registered "
+                "with the network {to_checksum_address(registry_address)}."
+            )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
             token_network_address
@@ -309,14 +326,17 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
-        if token_address not in self.get_tokens_list(registry_address):
-            raise UnknownTokenAddress("token_address unknown")
-
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_address=registry_address,
             token_address=token_address,
         )
+
+        if token_network_address is None:
+            raise UnknownTokenAddress(
+                "Token {to_checksum_address(token_address) is not registered "
+                "with the network {to_checksum_address(registry_address)}."
+            )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
             token_network_address
@@ -445,11 +465,11 @@ class RaidenAPI:  # pragma: no unittest
 
     def mint_token(
         self,
-        token_address: typing.TokenAddress,
-        to: typing.Address,
-        value: typing.TokenAmount,
+        token_address: TokenAddress,
+        to: Address,
+        value: TokenAmount,
         contract_method: MintingMethod,
-    ) -> typing.TransactionHash:
+    ) -> TransactionHash:
         """ Try to mint `value` units of the token at `token_address` and assign them to `to`,
         using the minting method named `contract_method`.
 
@@ -464,11 +484,11 @@ class RaidenAPI:  # pragma: no unittest
 
     def set_total_channel_withdraw(
         self,
-        registry_address: typing.PaymentNetworkAddress,
-        token_address: typing.TokenAddress,
-        partner_address: typing.Address,
-        total_withdraw: typing.WithdrawAmount,
-        retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+        registry_address: PaymentNetworkAddress,
+        token_address: TokenAddress,
+        partner_address: Address,
+        total_withdraw: WithdrawAmount,
+        retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ):
         """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
         given `token_address`.
@@ -589,6 +609,13 @@ class RaidenAPI:  # pragma: no unittest
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(token_address)
+
+        if token_network_address is None:
+            raise UnknownTokenAddress(
+                "Token {to_checksum_address(token_address) is not registered "
+                "with the network {to_checksum_address(registry_address)}."
+            )
+
         token_network_proxy = self.raiden.chain.token_network(token_network_address)
         channel_proxy = self.raiden.chain.payment_channel(
             canonical_identifier=channel_state.canonical_identifier
@@ -728,7 +755,7 @@ class RaidenAPI:  # pragma: no unittest
             partner_addresses=partner_addresses,
         )
 
-        close_state_changes = [
+        close_state_changes: List[StateChange] = [
             ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
             for channel_state in channels_to_close
         ]
@@ -840,8 +867,8 @@ class RaidenAPI:  # pragma: no unittest
         self,
         registry_address: PaymentNetworkAddress,
         token_address: TokenAddress,
-        amount: TokenAmount,
-        target: Address,
+        amount: PaymentAmount,
+        target: TargetAddress,
         identifier: PaymentID = None,
         transfer_timeout: int = None,
         secret: Secret = None,
@@ -866,8 +893,8 @@ class RaidenAPI:  # pragma: no unittest
         self,
         registry_address: PaymentNetworkAddress,
         token_address: TokenAddress,
-        amount: TokenAmount,
-        target: Address,
+        amount: PaymentAmount,
+        target: TargetAddress,
         identifier: PaymentID = None,
         secret: Secret = None,
         secrethash: SecretHash = None,
@@ -899,11 +926,14 @@ class RaidenAPI:  # pragma: no unittest
         if token_address not in valid_tokens:
             raise UnknownTokenAddress("Token address is not known.")
 
-        if secret is not None and not isinstance(secret, typing.T_Secret):
+        if secret is not None and not isinstance(secret, T_Secret):
             raise InvalidSecret("secret is not valid.")
 
-        if secrethash is not None and not isinstance(secrethash, typing.T_SecretHash):
+        if secrethash is not None and not isinstance(secrethash, T_SecretHash):
             raise InvalidSecretHash("secrethash is not valid.")
+
+        if identifier is None:
+            identifier = create_default_identifier()
 
         log.debug(
             "Initiating transfer",
@@ -919,6 +949,13 @@ class RaidenAPI:  # pragma: no unittest
             payment_network_address=payment_network_address,
             token_address=token_address,
         )
+
+        if token_network_address is None:
+            raise UnknownTokenAddress(
+                "Token {to_checksum_address(token_address) is not registered "
+                "with the network {to_checksum_address(registry_address)}."
+            )
+
         payment_status = self.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
@@ -955,6 +992,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_address=token_address,
             )
 
+        assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
         events = [
             event
             for event in self.raiden.wal.storage.get_events_with_timestamps(
@@ -983,6 +1021,7 @@ class RaidenAPI:  # pragma: no unittest
         return [event.wrapped_event for event in timestamped_events]
 
     def get_raiden_internal_events_with_timestamps(self, limit: int = None, offset: int = None):
+        assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
@@ -992,7 +1031,7 @@ class RaidenAPI:  # pragma: no unittest
         registry_address: PaymentNetworkAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> List[Dict]:
         events = blockchain_events.get_token_network_registry_events(
             chain=self.raiden.chain,
             token_network_registry_address=registry_address,
@@ -1009,7 +1048,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> List[Dict]:
         """Returns a list of blockchain events corresponding to the token_address."""
 
         if not is_binary_address(token_address):
@@ -1044,7 +1083,7 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address = None,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> List[Dict]:
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_channel"

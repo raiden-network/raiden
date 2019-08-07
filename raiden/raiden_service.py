@@ -77,7 +77,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, random_secret
+from raiden.utils import lpex, random_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
@@ -1124,9 +1124,6 @@ class RaidenService(Runnable):
             )
 
         self.start_health_check_for(Address(target))
-
-        if identifier is None:
-            identifier = create_default_identifier()
 
         with self.payment_identifier_lock:
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)

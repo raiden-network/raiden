@@ -124,7 +124,7 @@ def get_token_network_registry_events(
 
 def get_token_network_events(
     chain: BlockChainService,
-    token_network_address: Address,
+    token_network_address: TokenNetworkAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -135,7 +135,7 @@ def get_token_network_events(
     return get_contract_events(
         chain,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
+        Address(token_network_address),
         events,
         from_block,
         to_block,
