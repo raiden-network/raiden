@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
@@ -53,7 +53,7 @@ def _find_keystoredir() -> Optional[str]:  # pragma: no cover
 class AccountManager:
     def __init__(self, keystore_path: str = None):
         self.keystore_path = keystore_path
-        self.accounts: Dict[AddressHex, Any] = {}
+        self.accounts: Dict[AddressHex, str] = {}
         if self.keystore_path is None:
             self.keystore_path = _find_keystoredir()
         if self.keystore_path is not None:
