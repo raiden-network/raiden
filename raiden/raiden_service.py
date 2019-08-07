@@ -553,7 +553,8 @@ class RaidenService(Runnable):
         state_changes = []
         for event in blockchain_events:
             state_changes.extend(blockchainevent_to_statechange(self, event, from_block))
-        self.handle_and_track_state_changes(state_changes)
+        if state_changes:
+            self.handle_and_track_state_changes(state_changes)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
