@@ -178,23 +178,23 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network):
     # These apps have had channels created but are not yet started
     app0, _ = raiden_network
 
-    original_first_run = app0.raiden.alarm.first_run
+    original_first_run = app0.raiden._prepare_and_execute_alarm_first_run
 
-    def first_run_with_check(block_number):
+    def first_run_with_check(from_block):
         """
         This function simply enhances the alarm task first run
 
         The enhanced version has a check for channels being available right after
         the first run of the alarm task
         """
-        original_first_run(block_number)
+        original_first_run(from_block)
         channels = RaidenAPI(app0.raiden).get_channel_list(
             registry_address=app0.raiden.default_registry.address
         )
         assert len(channels) != 0, "After the first alarm task run no channels are visible"
 
     patched_first_run = patch.object(
-        app0.raiden.alarm, "first_run", side_effect=first_run_with_check
+        app0.raiden, "_prepare_and_execute_alarm_first_run", side_effect=first_run_with_check
     )
     with patched_first_run:
         app0.start()
