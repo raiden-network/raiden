@@ -61,7 +61,7 @@ ST = TypeVar("ST", bound=State)
 
 @dataclass(frozen=True)
 class SavedState(Generic[ST]):
-    """Saves the state the id of the state change that produced it.
+    """Saves the state and the id of the state change that produced it.
 
     This datastructure keeps the state and the state_change_id synchronized.
     Having these values available is useful for debugging.
