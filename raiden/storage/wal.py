@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import gevent.lock
 import structlog
 
@@ -8,16 +10,7 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import (
-    Callable,
-    Generic,
-    List,
-    NamedTuple,
-    Optional,
-    RaidenDBVersion,
-    Tuple,
-    TypeVar,
-)
+from raiden.utils.typing import Callable, Generic, List, Optional, RaidenDBVersion, Tuple, TypeVar
 
 log = structlog.get_logger(__name__)
 
@@ -66,7 +59,8 @@ def restore_to_state_change(
 ST = TypeVar("ST", bound=State)
 
 
-class SavedState(NamedTuple):
+@dataclass(frozen=True)
+class SavedState(Generic[ST]):
     """Saves the state the id of the state change that produced it.
 
     This datastructure keeps the state and the state_change_id synchronized.
@@ -74,11 +68,11 @@ class SavedState(NamedTuple):
     """
 
     state_change_id: StateChangeID
-    state: State
+    state: ST
 
 
 class WriteAheadLog(Generic[ST]):
-    saved_state: SavedState
+    saved_state: SavedState[ST]
 
     def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
         self.state_manager = state_manager
