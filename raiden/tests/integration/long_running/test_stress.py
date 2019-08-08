@@ -1,5 +1,7 @@
+import time
 from http import HTTPStatus
 from itertools import combinations, count
+from typing import Sequence
 
 import gevent
 import grequests
@@ -32,6 +34,15 @@ from raiden.utils.typing import (
 )
 
 log = structlog.get_logger(__name__)
+
+
+def iwait_and_get(items: Sequence[gevent.Greenlet]) -> None:
+    """ Iteratively wait and get on passed greenlets.
+
+    This ensures exceptions in the greenlets are re-raised as soon as possible.
+    """
+    for item in gevent.iwait(items):
+        item.get()
 
 
 def _url_for(apiserver: APIServer, endpoint: str, **kwargs) -> str:
@@ -142,14 +153,17 @@ def transfer_and_assert(
     log.debug("PAYMENT REQUEST", url=url, json=json)
 
     request = grequests.post(url, json=json)
-    response = request.send().response
 
-    assert (
-        getattr(request, "exception", None) is None
-        and response is not None
-        and response.status_code == HTTPStatus.OK
-        and response.headers["Content-Type"] == "application/json"
-    )
+    start = time.monotonic()
+    response = request.send().response
+    duration = time.monotonic() - start
+
+    log.debug("PAYMENT RESPONSE", url=url, json=json, response=response, duration=duration)
+
+    assert getattr(request, "exception", None) is None
+    assert response is not None
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["Content-Type"] == "application/json"
 
 
 def sequential_transfers(
@@ -222,7 +236,7 @@ def stress_send_parallel_transfers(
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
     # deplete the channels in one direction
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -237,7 +251,7 @@ def stress_send_parallel_transfers(
     )
 
     # deplete the channels in the backwards direction
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -252,7 +266,7 @@ def stress_send_parallel_transfers(
     )
 
     # reset the balances balances by sending the "extra" deposit forward
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -276,7 +290,7 @@ def stress_send_and_receive_parallel_transfers(
     """Send transfers of value one in parallel"""
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
-    foward_transfers = [
+    forward_transfers = [
         gevent.spawn(
             sequential_transfers,
             server_from=server_from,
@@ -300,7 +314,7 @@ def stress_send_and_receive_parallel_transfers(
         for server_to, server_from in pairs
     ]
 
-    gevent.wait(foward_transfers + backwards_transfers)
+    iwait_and_get(forward_transfers + backwards_transfers)
 
 
 def assert_channels(
