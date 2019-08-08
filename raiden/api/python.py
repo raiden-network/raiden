@@ -952,8 +952,8 @@ class RaidenAPI:  # pragma: no unittest
 
         if token_network_address is None:
             raise UnknownTokenAddress(
-                "Token {to_checksum_address(token_address) is not registered "
-                "with the network {to_checksum_address(registry_address)}."
+                f"Token {to_checksum_address(token_address)} is not registered "
+                f"with the network {to_checksum_address(registry_address)}."
             )
 
         payment_status = self.raiden.mediated_transfer_async(
