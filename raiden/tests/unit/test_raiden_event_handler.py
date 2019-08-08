@@ -1,9 +1,11 @@
+from typing import cast
 from unittest.mock import Mock, call, patch
 from uuid import UUID, uuid4
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, RoutingMode
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
 from raiden.raiden_event_handler import PFSFeedbackEventHandler, RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
@@ -16,9 +18,10 @@ from raiden.tests.utils.factories import (
     make_secret_hash,
     make_token_network_address,
 )
-from raiden.tests.utils.mocks import MockRaidenService, make_raiden_service_mock
+from raiden.tests.utils.mocks import make_raiden_service_mock
 from raiden.transfer.events import ContractSendChannelBatchUnlock, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import EventRouteFailed
+from raiden.transfer.state import ChainState
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.typing import (
@@ -117,7 +120,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 def setup_pfs_handler_test(
     set_feedback_token: bool
 ) -> Tuple[
-    MockRaidenService,
+    RaidenService,
     PFSFeedbackEventHandler,
     PaymentNetworkAddress,
     TokenNetworkAddress,
@@ -171,7 +174,7 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
         pfs_handler.on_raiden_event(
             raiden=raiden,
-            chain_state=raiden.wal.state_manager.current_state,
+            chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
             event=route_failed_event,
         )
     assert pfs_feedback_handler.called
@@ -197,7 +200,7 @@ def test_pfs_handler_handle_routefailed_without_feedback_token():
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
         pfs_handler.on_raiden_event(
             raiden=raiden,
-            chain_state=raiden.wal.state_manager.current_state,
+            chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
             event=route_failed_event,
         )
     assert not pfs_feedback_handler.called
@@ -215,7 +218,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
 
     payment_id = make_payment_id()
     amount = PaymentAmount(123)
-    target = route[-1]
+    target = TargetAddress(route[-1])
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
 
     route_failed_event = EventPaymentSentSuccess(
@@ -231,7 +234,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
         pfs_handler.on_raiden_event(
             raiden=raiden,
-            chain_state=raiden.wal.state_manager.current_state,
+            chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
             event=route_failed_event,
         )
     assert pfs_feedback_handler.called
@@ -257,7 +260,7 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
 
     payment_id = make_payment_id()
     amount = PaymentAmount(123)
-    target = route[-1]
+    target = TargetAddress(route[-1])
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
 
     route_failed_event = EventPaymentSentSuccess(
@@ -273,7 +276,7 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
         pfs_handler.on_raiden_event(
             raiden=raiden,
-            chain_state=raiden.wal.state_manager.current_state,
+            chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
             event=route_failed_event,
         )
     assert not pfs_feedback_handler.called
