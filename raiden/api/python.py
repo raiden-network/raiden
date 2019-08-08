@@ -292,8 +292,8 @@ class RaidenAPI:  # pragma: no unittest
 
         if token_network_address is None:
             raise UnknownTokenAddress(
-                "Token {to_checksum_address(token_address) is not registered "
-                "with the network {to_checksum_address(registry_address)}."
+                f"Token {to_checksum_address(token_address)} is not registered "
+                f"with the network {to_checksum_address(registry_address)}."
             )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
@@ -334,8 +334,8 @@ class RaidenAPI:  # pragma: no unittest
 
         if token_network_address is None:
             raise UnknownTokenAddress(
-                "Token {to_checksum_address(token_address) is not registered "
-                "with the network {to_checksum_address(registry_address)}."
+                f"Token {to_checksum_address(token_address)} is not registered "
+                f"with the network {to_checksum_address(registry_address)}."
             )
 
         connection_manager = self.raiden.connection_manager_for_token_network(
@@ -612,8 +612,8 @@ class RaidenAPI:  # pragma: no unittest
 
         if token_network_address is None:
             raise UnknownTokenAddress(
-                "Token {to_checksum_address(token_address) is not registered "
-                "with the network {to_checksum_address(registry_address)}."
+                f"Token {to_checksum_address(token_address)} is not registered "
+                f"with the network {to_checksum_address(registry_address)}."
             )
 
         token_network_proxy = self.raiden.chain.token_network(token_network_address)
