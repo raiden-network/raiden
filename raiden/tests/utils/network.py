@@ -439,7 +439,7 @@ def jsonrpc_services(
     private_keys: List[PrivateKey],
     secret_registry_address: Address,
     service_registry_address: Address,
-    token_network_registry_address: Address,
+    token_network_registry_address: PaymentNetworkAddress,
     web3: Web3,
     contract_manager: ContractManager,
 ) -> BlockchainServices:
