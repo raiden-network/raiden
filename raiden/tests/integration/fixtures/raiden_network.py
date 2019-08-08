@@ -200,14 +200,6 @@ def raiden_network(
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
     blockchain_services.deploy_service.wait_until_block(target_block_number=confirmed_block)
-    app_channels = create_network_channels(raiden_apps, channels_per_node)
-
-    create_all_channels_for_network(
-        app_channels=app_channels,
-        token_addresses=token_addresses,
-        channel_individual_deposit=deposit,
-        channel_settle_timeout=settle_timeout,
-    )
 
     if start_raiden_apps:
         parallel_start_apps(raiden_apps)
@@ -220,6 +212,16 @@ def raiden_network(
                 token_addresses=token_addresses,
             )
 
+    app_channels = create_network_channels(raiden_apps, channels_per_node)
+
+    create_all_channels_for_network(
+        app_channels=app_channels,
+        token_addresses=token_addresses,
+        channel_individual_deposit=deposit,
+        channel_settle_timeout=settle_timeout,
+    )
+
+    if start_raiden_apps:
         exception = RuntimeError("`raiden_network` fixture setup failed, nodes are unreachable")
         with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
             wait_for_channels(
