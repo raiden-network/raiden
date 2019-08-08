@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 This script is meant to be used as a template to step through a provided DB file
 for debugging a specific issue.
