@@ -96,7 +96,13 @@ old_report_mypy="${CACHE_DIR}/mypy"
 new_report_pylint=$(mktemp)
 new_report_mypy=$(mktemp)
 
-pylint --jobs=0 \
+if [[ ! -z ${CIRCLECI} ]]; then
+    JOBS=8
+else
+    JOBS=0
+fi
+
+pylint --jobs=${JOBS} \
     --load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker \
     raiden/ tools/scenario-player/ > ${new_report_pylint} || true
 
