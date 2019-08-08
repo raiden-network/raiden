@@ -42,14 +42,19 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
+# CircleCI always reports 36 CPUs, force tools to use the actual number
+JOBS_ARG=
+ifdef CIRCLECI
+JOBS_ARG=--jobs=8
+endif
 LINT_PATHS = raiden/ tools/ setup.py
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only
 lint: BLACK_CHECK_PARAMS := --check --diff
 lint: mypy mypy-all isort black
-	flake8 raiden/ tools/
-	pylint $(LINT_PATHS)
+	flake8 $(JOBS_ARG) $(LINT_PATHS)
+	pylint $(JOBS_ARG) $(LINT_PATHS)
 
 mypy:
 	mypy raiden
@@ -61,7 +66,7 @@ mypy-all:
 	mypy --config-file /dev/null raiden --ignore-missing-imports | grep error | wc -l
 
 isort:
-	isort $(ISORT_PARAMS) $(ISORT_CHECK_PARAMS)
+	isort $(JOBS_ARG) $(ISORT_PARAMS) $(ISORT_CHECK_PARAMS)
 
 black:
 	black $(BLACK_CHECK_PARAMS) $(LINT_PATHS)
