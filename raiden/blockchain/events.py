@@ -7,6 +7,8 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.utils.filters import (
     StatelessFilter,
     decode_event,
@@ -15,6 +17,7 @@ from raiden.utils.filters import (
 from raiden.utils.typing import (
     ABI,
     Address,
+    Any,
     BlockchainEvent,
     BlockHash,
     BlockNumber,
@@ -67,7 +70,7 @@ class DecodedEvent:
     event_data: BlockchainEvent
 
 
-def verify_block_number(number: BlockSpecification, argname: str):
+def verify_block_number(number: BlockSpecification, argname: str) -> None:
     if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
         raise InvalidBlockNumberInput(
             "Provided block number {} for {} is invalid. Has to be in the range "
@@ -252,14 +255,16 @@ class BlockchainEvents:
             for log_event in event_listener.filter.get_new_entries(block_number):
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
-    def uninstall_all_event_listeners(self):
+    def uninstall_all_event_listeners(self) -> None:
         for listener in self.event_listeners:
             if listener.filter.filter_id:
                 listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, eth_filter, abi):
+    def add_event_listener(
+        self, event_name: str, eth_filter: StatelessFilter, abi: List[Dict[str, Any]]
+    ) -> None:
         existing_listeners = [x.event_name for x in self.event_listeners]
         if event_name in existing_listeners:
             return
@@ -268,10 +273,10 @@ class BlockchainEvents:
 
     def add_token_network_registry_listener(
         self,
-        token_network_registry_proxy,
-        contract_manager,
+        token_network_registry_proxy: TokenNetworkRegistry,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = "latest",
-    ):
+    ) -> None:
         token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
         token_network_registry_address = token_network_registry_proxy.address
 
@@ -283,10 +288,10 @@ class BlockchainEvents:
 
     def add_token_network_listener(
         self,
-        token_network_proxy,
+        token_network_proxy: TokenNetwork,
         contract_manager: ContractManager,
         from_block: BlockSpecification = "latest",
-    ):
+    ) -> None:
         token_network_filter = token_network_proxy.all_events_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
 
@@ -301,7 +306,7 @@ class BlockchainEvents:
         secret_registry_proxy: SecretRegistry,
         contract_manager: ContractManager,
         from_block: BlockSpecification = "latest",
-    ):
+    ) -> None:
         secret_registry_filter = secret_registry_proxy.secret_registered_filter(
             from_block=from_block
         )
