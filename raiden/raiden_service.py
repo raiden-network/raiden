@@ -419,6 +419,7 @@ class RaidenService(Runnable):
 
         chain_state = views.state_from_raiden(self)
 
+        # This must happen after DB had been initialized and the alarm task's first run
         self._initialize_payment_statuses(chain_state)
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
@@ -541,6 +542,9 @@ class RaidenService(Runnable):
          - The alarm must complete its first run before the transport is started,
            to reject messages for closed/settled channels.
         """
+        assert not self.transport, f"Transport is running. node:{self!r}"
+        assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
+
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run(from_block)
         # The first run of the alarm task processes some state changes and may add
