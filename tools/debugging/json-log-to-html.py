@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Utility to format Raiden json logs into HTML.
 Colorizes log key-values according to their md5 hash to make debugging easier.
