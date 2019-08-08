@@ -543,7 +543,6 @@ class RaidenService(Runnable):
            to reject messages for closed/settled channels.
         """
         assert not self.transport, f"Transport is running. node:{self!r}"
-        assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
 
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run(from_block)
