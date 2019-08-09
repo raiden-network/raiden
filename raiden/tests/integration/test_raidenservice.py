@@ -169,7 +169,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_alarm_task_first_run_syncs_blockchain_events(raiden_network):
+def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain_services):
     """
     Test that the alarm tasks syncs blockchain events at the end of its first run
 
@@ -177,6 +177,14 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network):
     """
     # These apps have had channels created but are not yet started
     app0, _ = raiden_network
+
+    # Make sure we get into app0.start() with a confirmed block that contains
+    # the channel creation events
+    blockchain_services.deploy_service.wait_until_block(target_block_number=10)
+    target_block_num = (
+        blockchain_services.deploy_service.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    )
+    blockchain_services.deploy_service.wait_until_block(target_block_number=target_block_num)
 
     original_first_run = app0.raiden._prepare_and_execute_alarm_first_run
 

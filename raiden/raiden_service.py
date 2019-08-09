@@ -415,7 +415,7 @@ class RaidenService(Runnable):
         self.install_all_blockchain_filters(
             self.default_registry, self.default_secret_registry, last_log_block_number
         )
-        self._prepare_and_execute_alarm_first_run(from_block=last_log_block_number)
+        self._prepare_and_execute_alarm_first_run(last_log_block=last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
 
@@ -530,7 +530,7 @@ class RaidenService(Runnable):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
-    def _prepare_and_execute_alarm_first_run(self, from_block) -> None:
+    def _prepare_and_execute_alarm_first_run(self, last_log_block: BlockNumber) -> None:
         """Prepares the alarm task callback and executes its first run
 
         Complete the first_run of the alarm task and synchronize with the
@@ -545,19 +545,27 @@ class RaidenService(Runnable):
         assert not self.transport, f"Transport is running. node:{self!r}"
 
         self.alarm.register_callback(self._callback_new_block)
-        self.alarm.first_run(from_block)
+        self.alarm.first_run(last_log_block)
         # The first run of the alarm task processes some state changes and may add
         # new token network event filters when this is the first time Raiden runs.
         # Here we poll for any new events that may exist after the addition of
         # those event filters.
         latest_block_num = self.chain.get_block(block_identifier="latest")["number"]
-        blockchain_events = self.blockchain_events.poll_blockchain_events(latest_block_num)
+        latest_confirmed_block_num = max(
+            GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
+        )
+        latest_confirmed_block_num += 1
+
+        blockchain_events = self.blockchain_events.poll_blockchain_events(
+            latest_confirmed_block_num
+        )
 
         state_changes = []
         for event in blockchain_events:
-            state_changes.extend(blockchainevent_to_statechange(self, event, from_block))
-        if state_changes:
-            self.handle_and_track_state_changes(state_changes)
+            state_changes.extend(
+                blockchainevent_to_statechange(self, event, latest_confirmed_block_num)
+            )
+        self.handle_and_track_state_changes(state_changes)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
@@ -590,6 +598,9 @@ class RaidenService(Runnable):
         When the method is used the exceptions are tracked and re-raised in the
         raiden service thread.
         """
+        if len(state_changes) == 0:
+            return
+
         for greenlet in self.handle_state_changes(state_changes):
             self.add_pending_greenlet(greenlet)
 
