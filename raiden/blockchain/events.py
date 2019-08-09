@@ -3,17 +3,17 @@ from dataclasses import dataclass
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
+from raiden.blockchain.filters import (
+    StatelessFilter,
+    decode_event,
+    get_filter_args_for_all_events_from_channel,
+)
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.utils.filters import (
-    StatelessFilter,
-    decode_event,
-    get_filter_args_for_all_events_from_channel,
-)
 from raiden.utils.typing import (
     ABI,
     Address,

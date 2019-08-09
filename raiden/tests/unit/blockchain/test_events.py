@@ -3,9 +3,9 @@ from unittest.mock import Mock
 from hexbytes import HexBytes
 
 from raiden.blockchain.events import BlockchainEvents
+from raiden.blockchain.filters import StatelessFilter
 from raiden.tests.utils.events import check_dict_nested_attrs
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils.filters import StatelessFilter
 from raiden.utils.typing import BlockNumber
 
 

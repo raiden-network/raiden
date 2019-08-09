@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from eth_utils import decode_hex, to_hex
 from structlog import BoundLoggerBase
 
+from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
     Address,
     Any,

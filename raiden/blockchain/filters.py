@@ -10,6 +10,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.utils import block_specification_to_number
 from raiden.utils.typing import (
     ABI,
+    Any,
     BlockchainEvent,
     BlockNumber,
     BlockSpecification,
@@ -27,7 +28,7 @@ log = structlog.get_logger(__name__)
 # Helps against timeout errors that occur if you query a filter for
 # the mainnet from Genesis to latest head as we see in:
 # https://github.com/raiden-network/raiden/issues/3558
-FILTER_MAX_BLOCK_RANGE = 100000
+FILTER_MAX_BLOCK_RANGE = 100_000
 
 
 def get_filter_args_for_specific_event_from_channel(
@@ -37,7 +38,7 @@ def get_filter_args_for_specific_event_from_channel(
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
-):
+) -> Dict[str, Any]:
     """ Return the filter params for a specific event of a given channel. """
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
@@ -61,7 +62,7 @@ def get_filter_args_for_all_events_from_channel(
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
-) -> Dict:
+) -> Dict[str, Any]:
     """ Return the filter params for all events of a given channel. """
 
     event_filter_params = get_filter_args_for_specific_event_from_channel(
@@ -81,7 +82,7 @@ def get_filter_args_for_all_events_from_channel(
     return event_filter_params
 
 
-def decode_event(abi: ABI, log: BlockchainEvent):
+def decode_event(abi: ABI, log: BlockchainEvent) -> Dict[str, Any]:
     """ Helper function to unpack event data using a provided ABI
 
     Args:
@@ -108,13 +109,15 @@ class StatelessFilter(LogFilter):
     Pass latest block_number to get_(new|all)_entries to avoid querying it
     """
 
-    def __init__(self, web3: Web3, filter_params: dict):
+    def __init__(self, web3: Web3, filter_params: Dict[str, Any]) -> None:
         super().__init__(web3, filter_id=None)
         self.filter_params: Dict[str, BlockSpecification] = filter_params
         self._last_block: BlockNumber = BlockNumber(-1)
         self._lock = Semaphore()
 
-    def _do_get_new_entries(self, from_block: BlockSpecification, to_block: BlockSpecification):
+    def _do_get_new_entries(
+        self, from_block: BlockSpecification, to_block: BlockSpecification
+    ) -> List[BlockchainEvent]:
         filter_params = self.filter_params.copy()
         filter_params["fromBlock"] = from_block
         filter_params["toBlock"] = to_block
@@ -143,7 +146,7 @@ class StatelessFilter(LogFilter):
 
             return result
 
-    def get_all_entries(self, block_number: BlockNumber = None):
+    def get_all_entries(self, block_number: BlockNumber = None) -> List[BlockchainEvent]:
         with self._lock:
             filter_params = self.filter_params.copy()
             block_number = block_number or self.web3.eth.blockNumber

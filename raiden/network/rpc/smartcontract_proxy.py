@@ -7,6 +7,7 @@ from web3.contract import Contract
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 
 from raiden import constants
+from raiden.blockchain.filters import decode_event
 from raiden.constants import EthClient
 from raiden.exceptions import (
     InsufficientFunds,
@@ -14,7 +15,6 @@ from raiden.exceptions import (
     TransactionAlreadyPending,
 )
 from raiden.utils import typing
-from raiden.utils.filters import decode_event
 
 
 class ClientErrorInspectResult(Enum):
