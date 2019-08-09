@@ -28,7 +28,15 @@ from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils import sha3, wait_until
-from raiden.utils.typing import Address, BlockSpecification, ChannelID
+from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockSpecification,
+    ChannelID,
+    Secret,
+    TokenNetworkAddress,
+)
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -39,7 +47,7 @@ from raiden_contracts.contract_manager import ContractManager
 
 def get_netting_channel_closed_events(
     chain: BlockChainService,
-    token_network_address: Address,
+    token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -59,7 +67,7 @@ def get_netting_channel_closed_events(
     return get_contract_events(
         chain=chain,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        contract_address=token_network_address,
+        contract_address=Address(token_network_address),
         topics=topics,
         from_block=from_block,
         to_block=to_block,
@@ -68,7 +76,7 @@ def get_netting_channel_closed_events(
 
 def get_netting_channel_deposit_events(
     chain: BlockChainService,
-    token_network_address: Address,
+    token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -89,7 +97,7 @@ def get_netting_channel_deposit_events(
     return get_contract_events(
         chain,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
+        Address(token_network_address),
         topics,
         from_block,
         to_block,
@@ -98,7 +106,7 @@ def get_netting_channel_deposit_events(
 
 def get_netting_channel_settled_events(
     chain: BlockChainService,
-    token_network_address: Address,
+    token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -119,7 +127,7 @@ def get_netting_channel_settled_events(
     return get_contract_events(
         chain,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        token_network_address,
+        Address(token_network_address),
         topics,
         from_block,
         to_block,
@@ -213,6 +221,7 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     channel0 = get_channelstate(app0, app1, token_network_address)
     channel1 = get_channelstate(app1, app0, token_network_address)
@@ -283,6 +292,7 @@ def run_test_query_events(
     )
 
     token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    assert token_network_address
     manager0 = app0.raiden.chain.token_network(token_network_address)
 
     channelcount0 = views.total_token_network_channels(
@@ -363,7 +373,7 @@ def run_test_query_events(
     )
     assert channelcount0 + 1 == channelcount1
 
-    assert_synced_channel_state(token_network_address, app0, 0, [], app1, 0, [])
+    assert_synced_channel_state(token_network_address, app0, Balance(0), [], app1, Balance(0), [])
 
     RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address, token_address, app1.raiden.address, deposit
@@ -467,12 +477,13 @@ def run_test_secret_revealed_on_chain(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     amount = 10
     identifier = 1
     target = app2.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     # Reveal the secret, but do not unlock it off-chain
     app1_hold_event_handler = app1.raiden.raiden_event_handler
@@ -501,7 +512,7 @@ def run_test_secret_revealed_on_chain(
     # intercepting it and app2 has not received the updated balance proof
 
     # Close the channel. This must register the secret on chain
-    channel_close_event = ContractSendChannelClose(
+    channel_close_event = ContractSendChannelClose(  # type: ignore
         canonical_identifier=channel_state2_1.canonical_identifier,
         balance_proof=channel_state2_1.partner_state.balance_proof,
         triggered_by_block_hash=app0.raiden.chain.block_hash(),
@@ -554,7 +565,9 @@ def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state0, app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     token_network = views.get_token_network_by_address(chain_state0, token_network_address)
+    assert token_network
 
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
