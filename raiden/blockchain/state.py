@@ -237,7 +237,7 @@ def get_contractreceivechannelnew_data_from_event(
     token_network_registry = views.get_token_network_registry_by_token_network_address(
         chain_state, token_network_address
     )
-    assert token_network_registry is not None, "Payment network missing"
+    assert token_network_registry is not None, "Token network registry missing"
 
     token_network = views.get_token_network_by_address(
         chain_state=chain_state, token_network_address=token_network_address

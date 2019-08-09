@@ -483,8 +483,8 @@ class TokenNetworkRegistryState(State):
 @dataclass(repr=False)
 class ChainState(State):
     """ Umbrella object that stores the per blockchain state.
-    For each registry smart contract there must be a payment network. Within the
-    payment network the existing token networks and channels are registered.
+    For each registry smart contract there must be a token network registry. Within the
+    token network registry the existing token networks and channels are registered.
 
     TODO: Split the node specific attributes to a "NodeState" class
     """

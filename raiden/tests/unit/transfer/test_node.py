@@ -240,7 +240,7 @@ def test_maybe_add_tokennetwork_unknown_token_network_registry(chain_state, toke
         token_network_registry_address=token_network_registry_address,
         token_network_state=token_network,
     )
-    # new payment network should have been added to chain_state
+    # new token network registry should have been added to chain_state
     token_network_registry_state = chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry_address
     ]

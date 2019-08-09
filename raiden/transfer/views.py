@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
-    """ Return the identifiers for all nodes accross all payment networks which
+    """ Return the identifiers for all nodes accross all token network registries which
     have a channel open with this one.
     """
     addresses = set()
@@ -172,7 +172,7 @@ def get_token_network_address_by_token_address(
 def get_token_network_addresses(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenNetworkAddress]:
-    """ Return the list of token networks registered with the given payment network. """
+    """ Return the list of token networks registered with the given token network registry. """
     token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
@@ -187,7 +187,7 @@ def get_token_network_addresses(
 def get_token_identifiers(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenAddress]:
-    """ Return the list of tokens registered with the given payment network. """
+    """ Return the list of tokens registered with the given token network registry. """
     token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
