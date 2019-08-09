@@ -364,8 +364,14 @@ def test_handle_onchain_secretreveal():
     assert EMPTY_SECRET_SHA256 not in unlocked_onchain
 
     # now let's go for the actual secret
-    onchain_reveal.secret = UNIT_SECRET
-    onchain_reveal.secrethash = UNIT_SECRETHASH
+    onchain_reveal = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_address(),
+        secret_registry_address=factories.make_address(),
+        secrethash=UNIT_SECRETHASH,
+        secret=UNIT_SECRET,
+        block_number=block_number_prior_the_expiration,
+        block_hash=factories.make_block_hash(),
+    )
     onchain_secret_reveal_iteration = target.state_transition(
         target_state=offchain_secret_reveal_iteration.new_state,
         state_change=onchain_reveal,

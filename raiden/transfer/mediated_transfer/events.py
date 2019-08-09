@@ -31,13 +31,13 @@ def refund_from_sendmediated(
     )
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendLockExpired(SendMessageEvent):
     balance_proof: BalanceProofUnsignedState
     secrethash: SecretHash
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
 
@@ -52,7 +52,7 @@ class SendLockedTransfer(SendMessageEvent):
         return self.transfer.balance_proof
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendSecretReveal(SendMessageEvent):
     """ Sends a SecretReveal to another node.
 
@@ -87,10 +87,10 @@ class SendSecretReveal(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendBalanceProof(SendMessageEvent):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to claim it.
@@ -117,10 +117,10 @@ class SendBalanceProof(SendMessageEvent):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendSecretRequest(SendMessageEvent):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
@@ -132,7 +132,7 @@ class SendSecretRequest(SendMessageEvent):
     secrethash: SecretHash
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendRefundTransfer(SendMessageEvent):
     """ Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the recipient to
@@ -147,7 +147,7 @@ class SendRefundTransfer(SendMessageEvent):
         return self.transfer.balance_proof
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventUnlockSuccess(Event):
     """ Event emitted when a lock unlock succeded. """
 
@@ -155,7 +155,7 @@ class EventUnlockSuccess(Event):
     secrethash: SecretHash
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
 
@@ -164,7 +164,7 @@ class EventUnlockFailed(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventUnlockClaimSuccess(Event):
     """ Event emitted when a lock claim succeded. """
 
@@ -172,7 +172,7 @@ class EventUnlockClaimSuccess(Event):
     secrethash: SecretHash
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventUnlockClaimFailed(Event):
     """ Event emitted when a lock claim failed. """
 
@@ -181,7 +181,7 @@ class EventUnlockClaimFailed(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventUnexpectedSecretReveal(Event):
     """ Event emitted when an unexpected secret reveal message is received. """
 
@@ -189,7 +189,7 @@ class EventUnexpectedSecretReveal(Event):
     reason: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventRouteFailed(Event):
     """ Event emitted when a route failed.
     As a payment can try different routes to reach the intended target
