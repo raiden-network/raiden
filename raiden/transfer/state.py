@@ -494,7 +494,7 @@ class ChainState(State):
     block_hash: BlockHash
     our_address: Address
     chain_id: ChainID
-    identifiers_to_paymentnetworks: Dict[
+    identifiers_to_tokennetworkregistrys: Dict[
         TokenNetworkRegistryAddress, TokenNetworkRegistryState
     ] = field(repr=False, default_factory=dict)
     nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
@@ -502,7 +502,7 @@ class ChainState(State):
     pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
     last_transport_authdata: Optional[str] = field(repr=False, default=None)
-    tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
+    tokennetworkaddresses_to_tokennetworkregistryaddresses: Dict[
         TokenNetworkAddress, TokenNetworkRegistryAddress
     ] = field(repr=False, default_factory=dict)
 
@@ -518,7 +518,7 @@ class ChainState(State):
             self.block_number,
             to_hex(self.block_hash),
             # pylint: disable=E1101
-            lpex(self.identifiers_to_paymentnetworks.keys()),
+            lpex(self.identifiers_to_tokennetworkregistrys.keys()),
             # pylint: disable=E1101
             len(self.payment_mapping.secrethashes_to_task),
             self.chain_id,

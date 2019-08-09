@@ -100,13 +100,15 @@ TokenNetworkStateChange = Union[
 def get_token_network_by_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[TokenNetworkState]:
-    tn_registry_address = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
+    tn_registry_address = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses.get(
         token_network_address
     )
 
     tn_registry_state = None
     if tn_registry_address:
-        tn_registry_state = chain_state.identifiers_to_paymentnetworks.get(tn_registry_address)
+        tn_registry_state = chain_state.identifiers_to_tokennetworkregistrys.get(
+            tn_registry_address
+        )
 
     token_network_state = None
     if tn_registry_state:
@@ -125,7 +127,7 @@ def subdispatch_to_all_channels(
 ) -> TransitionResult[ChainState]:
     events = list()
 
-    for token_network_registry in chain_state.identifiers_to_paymentnetworks.values():
+    for token_network_registry in chain_state.identifiers_to_tokennetworkregistrys.values():
         for (
             token_network_state
         ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
@@ -428,7 +430,7 @@ def maybe_add_tokennetwork(
             token_network_registry_address, [token_network_state]
         )
 
-        ids_to_payments = chain_state.identifiers_to_paymentnetworks
+        ids_to_payments = chain_state.identifiers_to_tokennetworkregistrys
         ids_to_payments[token_network_registry_address] = token_network_registry_state
 
     if token_network_state_previous is None:
@@ -438,7 +440,7 @@ def maybe_add_tokennetwork(
         ids_to_tokens[token_network_address] = token_network_state
         addresses_to_ids[token_address] = token_network_address
 
-        mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
+        mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
         mapping[token_network_address] = token_network_registry_address
 
 
@@ -621,8 +623,8 @@ def handle_new_token_network_registry(
 
     token_network_registry = state_change.token_network_registry
     token_network_registry_address = TokenNetworkRegistryAddress(token_network_registry.address)
-    if token_network_registry_address not in chain_state.identifiers_to_paymentnetworks:
-        chain_state.identifiers_to_paymentnetworks[
+    if token_network_registry_address not in chain_state.identifiers_to_tokennetworkregistrys:
+        chain_state.identifiers_to_tokennetworkregistrys[
             token_network_registry_address
         ] = token_network_registry
 

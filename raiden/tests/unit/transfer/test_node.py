@@ -232,14 +232,16 @@ def test_maybe_add_tokennetwork_unknown_token_network_registry(chain_state, toke
         network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     msg = "test state invalid, token_network_registry already in chain_state"
-    assert token_network_registry_address not in chain_state.identifiers_to_paymentnetworks, msg
+    assert (
+        token_network_registry_address not in chain_state.identifiers_to_tokennetworkregistrys
+    ), msg
     maybe_add_tokennetwork(
         chain_state=chain_state,
         token_network_registry_address=token_network_registry_address,
         token_network_state=token_network,
     )
     # new payment network should have been added to chain_state
-    token_network_registry_state = chain_state.identifiers_to_paymentnetworks[
+    token_network_registry_state = chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry_address
     ]
     assert token_network_registry_state.address == token_network_registry_address
@@ -260,7 +262,7 @@ def test_handle_new_token_network(chain_state, token_network_address):
         chain_state=chain_state, state_change=state_change
     )
     new_chain_state = transition_result.new_state
-    token_network_registry = new_chain_state.identifiers_to_paymentnetworks[
+    token_network_registry = new_chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry_address
     ]
     assert token_network_registry.address == token_network_registry_address
@@ -319,10 +321,10 @@ def test_subdispatch_by_canonical_id(chain_state):
     token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
-    chain_state.identifiers_to_paymentnetworks[
+    chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry.address
     ] = token_network_registry
-    chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+    chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
         canonical_identifier.token_network_address
     ] = token_network_registry.address
     # dispatching a Block will be ignored
@@ -419,11 +421,11 @@ def test_handle_new_token_network_registry(chain_state, token_network_address):
         block_hash=make_block_hash(),
         block_number=1,
     )
-    assert token_network_registry.address not in chain_state.identifiers_to_paymentnetworks
+    assert token_network_registry.address not in chain_state.identifiers_to_tokennetworkregistrys
     transition_result = handle_new_token_network_registry(chain_state, state_change)
     assert transition_result.new_state == chain_state
     msg = "handle_new_token_network_registry did not add to chain_state mapping"
-    assert token_network_registry.address in chain_state.identifiers_to_paymentnetworks, msg
+    assert token_network_registry.address in chain_state.identifiers_to_tokennetworkregistrys, msg
 
 
 def test_inplace_delete_message_queue(chain_state):

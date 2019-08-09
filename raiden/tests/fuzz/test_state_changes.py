@@ -182,11 +182,11 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        self.chain_state.identifiers_to_paymentnetworks[
+        self.chain_state.identifiers_to_tokennetworkregistrys[
             self.token_network_registry_address
         ] = self.token_network_registry_state
 
-        self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+        self.chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
             self.token_network_address
         ] = self.token_network_registry_address
         channels = [

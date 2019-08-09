@@ -120,7 +120,7 @@ def test_get_transfer_secret_none_for_none_transfer_state(chain_state):
 
 
 def test_detect_balance_proof_chain_handles_attribute_error(chain_state):
-    chain_state.identifiers_to_paymentnetworks["123"] = None
+    chain_state.identifiers_to_tokennetworkregistrys["123"] = None
     changes_iterator = detect_balance_proof_change(old_state=object(), current_state=chain_state)
     assert len(list(changes_iterator)) == 0
 
@@ -422,7 +422,7 @@ def test_get_networks(chain_state, token_network_address):
     token_network_registry_empty = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[]
     )
-    chain_state.identifiers_to_paymentnetworks[
+    chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry_empty.address
     ] = token_network_registry_empty
     assert get_networks(
@@ -445,7 +445,7 @@ def test_get_networks(chain_state, token_network_address):
         token_network_registry_address=token_network_registry.address,
         token_address=token_address,
     ) == (None, None)
-    chain_state.identifiers_to_paymentnetworks[
+    chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry.address
     ] = token_network_registry
     assert get_networks(
