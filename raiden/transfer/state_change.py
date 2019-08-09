@@ -256,8 +256,8 @@ class ActionChangeNodeNetworkState(StateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
-    """ Registers a new payment network.
-    A payment network corresponds to a registry smart contract.
+    """ Registers a new token network registry.
+    A token network registry corresponds to a registry smart contract.
     """
 
     token_network_registry: TokenNetworkRegistryState
@@ -269,7 +269,7 @@ class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
-    """ A new token was registered with the payment network. """
+    """ A new token was registered with the token network registry. """
 
     token_network_registry_address: TokenNetworkRegistryAddress
     token_network: TokenNetworkState

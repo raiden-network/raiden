@@ -302,7 +302,7 @@ def transfer_and_assert_path(
     for app in path:
         assert isinstance(app.raiden.message_handler, WaitForMessage)
 
-        msg = "The apps must be on the same payment network"
+        msg = "The apps must be on the same token network registry"
         assert app.raiden.default_registry.address == token_network_registry_address, msg
 
         app_token_network_address = views.get_token_network_address_by_token_address(
