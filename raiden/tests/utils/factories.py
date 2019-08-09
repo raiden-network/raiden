@@ -287,7 +287,7 @@ UNIT_CANONICAL_ID = CanonicalIdentifier(
 UNIT_OUR_KEY = b"ourourourourourourourourourourou"
 UNIT_OUR_ADDRESS = privatekey_to_address(UNIT_OUR_KEY)
 
-UNIT_PAYMENT_NETWORK_IDENTIFIER = b"paymentnetworkidentifier"
+UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER = b"tokennetworkregistryidentifier"
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
 UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
@@ -469,7 +469,7 @@ class NettingChannelStateProperties(Properties):
 NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=CanonicalIdentifierProperties.DEFAULTS,
     token_address=UNIT_TOKEN_ADDRESS,
-    token_network_registry_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     fee_schedule=FeeScheduleStateProperties.DEFAULTS,
@@ -495,7 +495,7 @@ class TransferDescriptionProperties(Properties):
 
 
 TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
-    token_network_registry_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
@@ -1306,12 +1306,12 @@ def make_chain_state(
         our_address=our_address,
         chain_id=UNIT_CHAIN_ID,
     )
-    chain_state.identifiers_to_paymentnetworks[
+    chain_state.identifiers_to_tokennetworkregistrys[
         token_network_registry_address
     ] = TokenNetworkRegistryState(
         address=token_network_registry_address, token_network_list=[token_network]
     )
-    chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+    chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
         token_network_address
     ] = token_network_registry_address
 

@@ -36,7 +36,7 @@ def test_initiator_task_view():
     transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
-        token_network_registry_address=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
+        token_network_registry_address=factories.UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
         allocated_fee=0,
