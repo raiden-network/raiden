@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     ChannelID,
+    List,
     Locksroot,
     Nonce,
     Signature,
@@ -153,7 +154,9 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def set_total_deposit(self, total_deposit: TokenAmount, block_identifier: BlockSpecification):
+    def set_total_deposit(
+        self, total_deposit: TokenAmount, block_identifier: BlockSpecification
+    ) -> None:
         self.token_network.set_total_deposit(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
@@ -168,7 +171,7 @@ class PaymentChannel:
         partner_signature: Signature,
         expiration_block: BlockExpiration,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
@@ -188,7 +191,7 @@ class PaymentChannel:
         non_closing_signature: Signature,
         closing_signature: Signature,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ Closes the channel using the provided balance proof, and our closing signature. """
         self.token_network.close(
             channel_identifier=self.channel_identifier,
@@ -209,7 +212,7 @@ class PaymentChannel:
         partner_signature: Signature,
         signature: Signature,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
             channel_identifier=self.channel_identifier,
@@ -228,7 +231,7 @@ class PaymentChannel:
         receiver: Address,
         pending_locks: PendingLocksState,
         given_block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
             sender=sender,
@@ -246,7 +249,7 @@ class PaymentChannel:
         partner_locked_amount: TokenAmount,
         partner_locksroot: Locksroot,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ Settles the channel. """
         self.token_network.settle(
             channel_identifier=self.channel_identifier,
@@ -261,16 +264,19 @@ class PaymentChannel:
         )
 
     def all_events_filter(
-        self, from_block: BlockSpecification = None, to_block: BlockSpecification = None
+        self, from_block: BlockSpecification, to_block: BlockSpecification
     ) -> Filter:
 
-        channel_topics = [None, f"0x{self.channel_identifier:064x}"]  # event topic is any
+        channel_topics: List[Optional[str]] = [
+            None,  # event topic is any
+            f"0x{self.channel_identifier:064x}",
+        ]
 
         # This will match the events:
         # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,
         # NonClosingBalanceProofUpdated, ChannelSettled, ChannelUnlocked
         channel_filter = self.token_network.client.new_filter(
-            contract_address=self.token_network.address,
+            contract_address=Address(self.token_network.address),
             topics=channel_topics,
             from_block=from_block,
             to_block=to_block,

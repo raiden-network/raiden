@@ -3,12 +3,11 @@ from typing import List
 import gevent
 import structlog
 from eth_utils import (
+    decode_hex,
     encode_hex,
     event_abi_to_log_topic,
     is_binary_address,
-    to_bytes,
     to_checksum_address,
-    to_normalized_address,
 )
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
@@ -24,10 +23,11 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
 )
 from raiden.network.proxies.utils import log_transaction
-from raiden.network.rpc.client import StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.utils import safe_gas_limit
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
+    Address,
     Any,
     BlockNumber,
     BlockSpecification,
@@ -44,23 +44,28 @@ log = structlog.get_logger(__name__)
 
 
 class SecretRegistry:
-    def __init__(self, jsonrpc_client, secret_registry_address, contract_manager: ContractManager):
+    def __init__(
+        self,
+        jsonrpc_client: JSONRPCClient,
+        secret_registry_address: Address,
+        contract_manager: ContractManager,
+    ) -> None:
         if not is_binary_address(secret_registry_address):
             raise ValueError("Expected binary address format for secret registry")
 
         self.contract_manager = contract_manager
         check_address_has_code(
-            jsonrpc_client,
-            secret_registry_address,
-            CONTRACT_SECRET_REGISTRY,
-            expected_code=to_bytes(
-                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
+            client=jsonrpc_client,
+            address=secret_registry_address,
+            contract_name=CONTRACT_SECRET_REGISTRY,
+            expected_code=decode_hex(
+                contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
             ),
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-            to_normalized_address(secret_registry_address),
+            secret_registry_address,
         )
 
         # There should be only one smart contract deployed, to avoid race
@@ -77,10 +82,10 @@ class SecretRegistry:
         self.open_secret_transactions: Dict[Secret, AsyncResult] = dict()
         self._open_secret_transactions_lock = Semaphore()
 
-    def register_secret(self, secret: Secret):
+    def register_secret(self, secret: Secret) -> None:
         self.register_secret_batch([secret])
 
-    def register_secret_batch(self, secrets: List[Secret]):
+    def register_secret_batch(self, secrets: List[Secret]) -> None:
         """Register a batch of secrets. Check if they are already registered at
         the given block identifier."""
         secrets_to_register = list()
@@ -324,7 +329,7 @@ class SecretRegistry:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
         )
-        topics = [encode_hex(event_abi_to_log_topic(event_abi))]
+        topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
             self.address, topics=topics, from_block=from_block, to_block=to_block

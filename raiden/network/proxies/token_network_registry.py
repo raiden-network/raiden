@@ -1,21 +1,20 @@
-from typing import Optional
+from typing import Any, List, Optional
 
 import structlog
 from eth_utils import (
+    decode_hex,
     encode_hex,
     event_abi_to_log_topic,
     is_binary_address,
     is_same_address,
-    to_bytes,
     to_canonical_address,
     to_checksum_address,
-    to_normalized_address,
 )
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
 from raiden.exceptions import InvalidToken, RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
-from raiden.network.rpc.client import StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
@@ -44,11 +43,11 @@ log = structlog.get_logger(__name__)
 class TokenNetworkRegistry:
     def __init__(
         self,
-        jsonrpc_client,
+        jsonrpc_client: JSONRPCClient,
         registry_address: PaymentNetworkAddress,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
-    ):
+    ) -> None:
         if not is_binary_address(registry_address):
             raise ValueError("Expected binary address format for token network registry")
 
@@ -56,15 +55,15 @@ class TokenNetworkRegistry:
             client=jsonrpc_client,
             address=Address(registry_address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            expected_code=to_bytes(
-                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY)
+            expected_code=decode_hex(
+                contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY)
             ),
         )
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-            to_normalized_address(registry_address),
+            Address(registry_address),
         )
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
@@ -131,10 +130,10 @@ class TokenNetworkRegistry:
 
         if token_proxy.total_supply() == "":
             raise InvalidToken(
-                "Given token address does not follow the ERC20 standard (missing totalSupply()"
+                "Given token address does not follow the ERC20 standard (missing `totalSupply()`)"
             )
 
-        log_details = {
+        log_details: Dict[str, Any] = {
             "node": to_checksum_address(self.node_address),
             "contract": to_checksum_address(self.address),
             "token_address": to_checksum_address(token_address),
@@ -204,14 +203,17 @@ class TokenNetworkRegistry:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
         )
-        topics = [encode_hex(event_abi_to_log_topic(event_abi))]
+        topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         registry_address_bin = self.proxy.contract_address
         return self.client.new_filter(
-            registry_address_bin, topics=topics, from_block=from_block, to_block=to_block
+            contract_address=registry_address_bin,
+            topics=topics,
+            from_block=from_block,
+            to_block=to_block,
         )
 
-    def filter_token_added_events(self):
+    def filter_token_added_events(self) -> List[Dict[str, Any]]:
         filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(fromBlock=0)
         events = filter_.get_all_entries()
         if filter_.filter_id:

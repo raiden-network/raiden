@@ -1,5 +1,5 @@
 import structlog
-from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address, to_canonical_address, to_checksum_address
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
@@ -38,17 +38,15 @@ class UserDeposit:
         user_deposit_address: Address,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
-    ):
+    ) -> None:
         if not is_binary_address(user_deposit_address):
             raise ValueError("Expected binary address format for token nework")
 
         check_address_has_code(
-            jsonrpc_client,
-            Address(user_deposit_address),
-            CONTRACT_USER_DEPOSIT,
-            expected_code=to_bytes(
-                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT)
-            ),
+            client=jsonrpc_client,
+            address=Address(user_deposit_address),
+            contract_name=CONTRACT_USER_DEPOSIT,
+            expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT)),
         )
 
         self.client = jsonrpc_client
@@ -199,7 +197,7 @@ class UserDeposit:
         total_deposit: TokenAmount,
         amount_to_deposit: TokenAmount,
         log_details: Dict[str, Any],
-    ):
+    ) -> None:
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
         checking_block = self.client.get_checking_block()

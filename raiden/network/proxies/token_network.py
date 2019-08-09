@@ -2,13 +2,12 @@ from collections import defaultdict
 
 import structlog
 from eth_utils import (
+    decode_hex,
     encode_hex,
     is_binary_address,
-    to_bytes,
     to_canonical_address,
     to_checksum_address,
     to_hex,
-    to_normalized_address,
 )
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
@@ -40,7 +39,7 @@ from raiden.network.proxies.utils import (
     log_transaction,
     raise_on_call_returned_empty,
 )
-from raiden.network.rpc.client import StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -134,27 +133,25 @@ class ChannelDetails(NamedTuple):
 class TokenNetwork:
     def __init__(
         self,
-        jsonrpc_client,
+        jsonrpc_client: JSONRPCClient,
         token_network_address: TokenNetworkAddress,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
-    ):
+    ) -> None:
         if not is_binary_address(token_network_address):
             raise ValueError("Expected binary address format for token nework")
 
         check_address_has_code(
-            jsonrpc_client,
-            Address(token_network_address),
-            CONTRACT_TOKEN_NETWORK,
-            expected_code=to_bytes(
-                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
-            ),
+            client=jsonrpc_client,
+            address=Address(token_network_address),
+            contract_name=CONTRACT_TOKEN_NETWORK,
+            expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)),
         )
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            to_normalized_address(token_network_address),
+            Address(token_network_address),
         )
 
         # These are constants
@@ -1143,7 +1140,7 @@ class TokenNetwork:
         partner_signature: Signature,
         participant: Address,
         partner: Address,
-    ):
+    ) -> None:
         """ Set total token withdraw in the channel to total_withdraw.
 
         Raises:
@@ -2199,7 +2196,7 @@ class TokenNetwork:
         partner_locked_amount: TokenAmount,
         partner_locksroot: Locksroot,
         given_block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
@@ -2307,7 +2304,7 @@ class TokenNetwork:
         partner_locked_amount: TokenAmount,
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
-    ):
+    ) -> None:
         checking_block = self.client.get_checking_block()
 
         # The second participant transferred + locked amount must be higher
@@ -2529,9 +2526,9 @@ class TokenNetwork:
 
     def events_filter(
         self,
-        topics: List[str] = None,
-        from_block: BlockSpecification = None,
-        to_block: BlockSpecification = None,
+        topics: Optional[List[Optional[str]]],
+        from_block: BlockSpecification,
+        to_block: BlockSpecification,
     ) -> StatelessFilter:
         """ Install a new filter for an array of topics emitted by the contract.
 
@@ -2544,7 +2541,7 @@ class TokenNetwork:
             Filter: The filter instance.
         """
         return self.client.new_filter(
-            self.address, topics=topics, from_block=from_block, to_block=to_block
+            Address(self.address), topics=topics, from_block=from_block, to_block=to_block
         )
 
     def all_events_filter(

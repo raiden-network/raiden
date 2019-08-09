@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 import structlog
 import web3
-from eth_utils import is_binary_address, to_bytes, to_canonical_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address, to_canonical_address, to_checksum_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
@@ -36,11 +36,11 @@ class ServiceRegistry:
 
         self.contract_manager = contract_manager
         check_address_has_code(
-            jsonrpc_client,
-            service_registry_address,
-            CONTRACT_SERVICE_REGISTRY,
-            expected_code=to_bytes(
-                hexstr=contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY)
+            client=jsonrpc_client,
+            address=service_registry_address,
+            contract_name=CONTRACT_SERVICE_REGISTRY,
+            expected_code=decode_hex(
+                contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY)
             ),
         )
 

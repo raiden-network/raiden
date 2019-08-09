@@ -43,10 +43,14 @@ class Token:
 
         self.token_lock: RLock = RLock()
 
-    def allowance(self, owner: Address, spender: Address, block_identifier: BlockSpecification):
-        return self.proxy.contract.functions.allowance(
-            to_checksum_address(owner), to_checksum_address(spender)
-        ).call(block_identifier=block_identifier)
+    def allowance(
+        self, owner: Address, spender: Address, block_identifier: BlockSpecification
+    ) -> TokenAmount:
+        return TokenAmount(
+            self.proxy.contract.functions.allowance(
+                to_checksum_address(owner), to_checksum_address(spender)
+            ).call(block_identifier=block_identifier)
+        )
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
         """ Approve `allowed_address` to transfer up to `deposit` amount of token.
@@ -158,9 +162,11 @@ class Token:
             block_identifier=block_identifier
         )
 
-    def total_supply(self, block_identifier: BlockSpecification = "latest"):
+    def total_supply(self, block_identifier: BlockSpecification = "latest") -> TokenAmount:
         """ Return the total supply of the token at the given block identifier. """
-        return self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
+        return TokenAmount(
+            self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
+        )
 
     def transfer(self, to_address: Address, amount: TokenAmount) -> None:
         """ Transfer `amount` tokens to `to_address`.
