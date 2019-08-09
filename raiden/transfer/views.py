@@ -47,7 +47,7 @@ def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
     """
     addresses = set()
 
-    for token_network_registry in chain_state.identifiers_to_tokennetworkregistrys.values():
+    for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
         for (
             token_network
         ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
@@ -142,13 +142,13 @@ def get_our_deposits_for_token_network(
 def get_token_network_registry_address(
     chain_state: ChainState
 ) -> List[TokenNetworkRegistryAddress]:
-    return list(chain_state.identifiers_to_tokennetworkregistrys.keys())
+    return list(chain_state.identifiers_to_tokennetworkregistries.keys())
 
 
 def get_token_network_registry_by_token_network_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[TokenNetworkRegistryState]:
-    for token_network_registry in chain_state.identifiers_to_tokennetworkregistrys.values():
+    for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
         if token_network_address in token_network_registry.tokennetworkaddresses_to_tokennetworks:
             return token_network_registry
 
@@ -173,7 +173,7 @@ def get_token_network_addresses(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenNetworkAddress]:
     """ Return the list of token networks registered with the given payment network. """
-    token_network_registry = chain_state.identifiers_to_tokennetworkregistrys.get(
+    token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
 
@@ -188,7 +188,7 @@ def get_token_identifiers(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenAddress]:
     """ Return the list of tokens registered with the given payment network. """
-    token_network_registry = chain_state.identifiers_to_tokennetworkregistrys.get(
+    token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
 
@@ -222,7 +222,7 @@ def get_token_network_by_token_address(
     token_address: TokenAddress,
 ) -> Optional[TokenNetworkState]:
 
-    token_network_registry = chain_state.identifiers_to_tokennetworkregistrys.get(
+    token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
 
@@ -244,7 +244,7 @@ def get_token_network_by_address(
 ) -> Optional[TokenNetworkState]:
 
     token_network_state = None
-    for token_network_registry_state in chain_state.identifiers_to_tokennetworkregistrys.values():
+    for token_network_registry_state in chain_state.identifiers_to_tokennetworkregistries.values():
         networks_by_address = token_network_registry_state.tokennetworkaddresses_to_tokennetworks
         token_network_state = networks_by_address.get(token_network_address)
         if token_network_state:
@@ -476,7 +476,7 @@ def list_channelstate_for_tokennetwork(
 
 def list_all_channelstate(chain_state: ChainState) -> List[NettingChannelState]:
     result: List[NettingChannelState] = []
-    for token_network_registry in chain_state.identifiers_to_tokennetworkregistrys.values():
+    for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
         for (
             token_network
         ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
@@ -537,15 +537,15 @@ def detect_balance_proof_change(
     """ Compare two states for any received balance_proofs that are not in `old_state`. """
     if old_state == current_state:
         return
-    for token_network_registry_address in current_state.identifiers_to_tokennetworkregistrys:
+    for token_network_registry_address in current_state.identifiers_to_tokennetworkregistries:
         try:
-            old_registry = old_state.identifiers_to_tokennetworkregistrys.get(
+            old_registry = old_state.identifiers_to_tokennetworkregistries.get(
                 token_network_registry_address
             )
         except AttributeError:
             old_registry = None
 
-        current_registry = current_state.identifiers_to_tokennetworkregistrys[
+        current_registry = current_state.identifiers_to_tokennetworkregistries[
             token_network_registry_address
         ]
         if old_registry == current_registry:
@@ -610,7 +610,7 @@ def get_networks(
     token_address: TokenAddress,
 ) -> Tuple[Optional[TokenNetworkRegistryState], Optional[TokenNetworkState]]:
     token_network_state = None
-    tn_registry_state = chain_state.identifiers_to_tokennetworkregistrys.get(
+    tn_registry_state = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
 

@@ -1306,7 +1306,7 @@ def make_chain_state(
         our_address=our_address,
         chain_id=UNIT_CHAIN_ID,
     )
-    chain_state.identifiers_to_tokennetworkregistrys[
+    chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry_address
     ] = TokenNetworkRegistryState(
         address=token_network_registry_address, token_network_list=[token_network]
