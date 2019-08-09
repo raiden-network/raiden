@@ -543,6 +543,7 @@ class RaidenService(Runnable):
            to reject messages for closed/settled channels.
         """
         assert not self.transport, f"Transport is running. node:{self!r}"
+        assert self.wal, "The database must have been initialized. node:{self!r}"
 
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run(last_log_block)
@@ -554,7 +555,6 @@ class RaidenService(Runnable):
         latest_confirmed_block_num = max(
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )
-        latest_confirmed_block_num += 1
 
         blockchain_events = self.blockchain_events.poll_blockchain_events(
             latest_confirmed_block_num
