@@ -15,10 +15,10 @@ from raiden.utils.typing import (
     ChannelID,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkAddress,
     Sequence,
     TokenAddress,
     TokenAmount,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
 )
 
@@ -51,7 +51,7 @@ def wait_for_block(
 
 def wait_for_newchannel(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     retry_timeout: float,
@@ -87,7 +87,7 @@ def wait_for_newchannel(
 
 def wait_for_participant_deposit(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -136,7 +136,7 @@ def wait_for_participant_deposit(
 
 def wait_for_payment_balance(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -191,7 +191,7 @@ def wait_for_payment_balance(
 
 def wait_for_channel_in_states(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -261,7 +261,7 @@ def wait_for_channel_in_states(
 
 def wait_for_close(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -283,7 +283,7 @@ def wait_for_close(
 
 def wait_for_token_network(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     retry_timeout: float,
 ) -> None:  # pragma: no unittest
@@ -312,7 +312,7 @@ def wait_for_token_network(
 
 def wait_for_settle(
     raiden: "RaidenService",
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,

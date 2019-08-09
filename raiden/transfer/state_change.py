@@ -30,7 +30,6 @@ from raiden.utils.typing import (
     MessageID,
     Nonce,
     PaymentID,
-    PaymentNetworkAddress,
     Secret,
     SecretHash,
     SecretRegistryAddress,
@@ -43,6 +42,7 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
     typecheck,
 )
@@ -186,7 +186,7 @@ class ActionNewTokenNetwork(StateChange):
     A token network corresponds to a channel manager smart contract.
     """
 
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_network: TokenNetworkState
 
     def __post_init__(self) -> None:
@@ -271,7 +271,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     """ A new token was registered with the payment network. """
 
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_network: TokenNetworkState
 
     def __post_init__(self) -> None:

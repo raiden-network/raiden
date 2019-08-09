@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address, ChainID, PaymentNetworkAddress
+from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -110,7 +110,7 @@ class Proxies(NamedTuple):
 
 def setup_proxies_or_exit(
     config: Dict[str, Any],
-    tokennetwork_registry_contract_address: PaymentNetworkAddress,
+    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
     secret_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,

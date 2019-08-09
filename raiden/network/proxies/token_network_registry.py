@@ -22,11 +22,11 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
-    PaymentNetworkAddress,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
@@ -44,7 +44,7 @@ class TokenNetworkRegistry:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
     ) -> None:

@@ -39,9 +39,9 @@ from raiden.utils.typing import (
     ChainID,
     Locksroot,
     Optional,
-    PaymentNetworkAddress,
     TokenAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
 )
 
 
@@ -57,7 +57,7 @@ class ChannelSettleState:
 @dataclass(frozen=True)
 class NewChannelDetails:
     chain_id: ChainID
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_address: TokenAddress
     our_address: Address
     partner_address: Address

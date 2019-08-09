@@ -22,8 +22,8 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     Optional,
-    PaymentNetworkAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
 )
 
 
@@ -169,7 +169,7 @@ class MockRaidenService:
 
 
 def make_raiden_service_mock(
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     partner: Address,

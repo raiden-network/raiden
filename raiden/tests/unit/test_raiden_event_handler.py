@@ -31,10 +31,10 @@ from raiden.utils.typing import (
     Nonce,
     Optional,
     PaymentAmount,
-    PaymentNetworkAddress,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Tuple,
     WithdrawAmount,
 )
@@ -122,7 +122,7 @@ def setup_pfs_handler_test(
 ) -> Tuple[
     RaidenService,
     PFSFeedbackEventHandler,
-    PaymentNetworkAddress,
+    TokenNetworkRegistryAddress,
     TokenNetworkAddress,
     List[Address],
     Optional[UUID],

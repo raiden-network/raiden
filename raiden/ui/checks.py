@@ -26,7 +26,7 @@ from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import Address, ChainID, Dict, Optional, PaymentNetworkAddress
+from raiden.utils.typing import Address, ChainID, Dict, Optional, TokenNetworkRegistryAddress
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -174,7 +174,7 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
 def check_smart_contract_addresses(
     environment_type: Environment,
     node_network_id: ChainID,
-    tokennetwork_registry_contract_address: PaymentNetworkAddress,
+    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
     secret_registry_contract_address: Address,
     contracts: Dict[str, Address],
 ) -> None:

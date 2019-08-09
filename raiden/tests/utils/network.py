@@ -33,12 +33,12 @@ from raiden.utils.typing import (
     Iterable,
     List,
     Optional,
-    PaymentNetworkAddress,
     PrivateKey,
     SecretRegistryAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Tuple,
 )
 from raiden.waiting import wait_for_token_network
@@ -321,7 +321,7 @@ def create_apps(
     chain_id: ChainID,
     contracts_path: str,
     blockchain_services: BlockchainServices,
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[Address],
     secret_registry_address: SecretRegistryAddress,
     service_registry_address: Optional[Address],
@@ -442,7 +442,7 @@ def jsonrpc_services(
     private_keys: List[PrivateKey],
     secret_registry_address: Address,
     service_registry_address: Address,
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     web3: Web3,
     contract_manager: ContractManager,
 ) -> BlockchainServices:
@@ -487,7 +487,7 @@ def wait_for_alarm_start(
 def wait_for_usable_channel(
     raiden: RaidenService,
     partner_address: Address,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     our_deposit: TokenAmount,
     partner_deposit: TokenAmount,
@@ -535,7 +535,7 @@ def wait_for_usable_channel(
 
 def wait_for_token_networks(
     raiden_apps: List[App],
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_addresses: List[TokenAddress],
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
 ) -> None:
@@ -548,7 +548,7 @@ def wait_for_token_networks(
 
 def wait_for_channels(
     app_channels: AppChannels,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_addresses: List[TokenAddress],
     deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,

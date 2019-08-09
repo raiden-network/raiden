@@ -17,9 +17,9 @@ from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
-from raiden.utils.typing import ChainID, FeeAmount, PaymentNetworkAddress
+from raiden.utils.typing import ChainID, FeeAmount, TokenNetworkRegistryAddress
 
-token_network_registry_address_test_default = PaymentNetworkAddress(
+token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
 )
 
@@ -180,7 +180,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),
                 node_network_id=chain_id,
-                token_network_registry_address=PaymentNetworkAddress(
+                token_network_registry_address=TokenNetworkRegistryAddress(
                     to_canonical_address("0x2222222222222222222222222222222222222221")
                 ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
@@ -196,7 +196,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 routing_mode=RoutingMode.PFS,
                 service_registry=Mock(),
                 node_network_id=ChainID(chain_id + 1),
-                token_network_registry_address=PaymentNetworkAddress(
+                token_network_registry_address=TokenNetworkRegistryAddress(
                     to_canonical_address("0x2222222222222222222222222222222222222221")
                 ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,

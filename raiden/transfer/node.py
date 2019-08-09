@@ -76,9 +76,9 @@ from raiden.utils.typing import (
     ChannelID,
     List,
     Optional,
-    PaymentNetworkAddress,
     SecretHash,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Union,
 )
 
@@ -413,7 +413,7 @@ def subdispatch_targettask(
 
 def maybe_add_tokennetwork(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_network_state: TokenNetworkState,
 ) -> None:
     token_network_address = token_network_state.address
@@ -618,7 +618,7 @@ def handle_new_payment_network(
     events: List[Event] = list()
 
     payment_network = state_change.payment_network
-    payment_network_address = PaymentNetworkAddress(payment_network.address)
+    payment_network_address = TokenNetworkRegistryAddress(payment_network.address)
     if payment_network_address not in chain_state.identifiers_to_paymentnetworks:
         chain_state.identifiers_to_paymentnetworks[payment_network_address] = payment_network
 

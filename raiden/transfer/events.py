@@ -22,13 +22,13 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkAddress,
     Secret,
     SecretHash,
     Signature,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
 )
 
@@ -177,7 +177,7 @@ class EventPaymentSentSuccess(Event):
         successful but there is no knowledge about the global transfer.
     """
 
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
     amount: PaymentAmount
@@ -195,7 +195,7 @@ class EventPaymentSentFailed(Event):
         has failed, they may infer about lock successes and failures.
     """
 
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
     target: TargetAddress
@@ -213,7 +213,7 @@ class EventPaymentReceivedSuccess(Event):
         there is no correspoding `EventTransferReceivedFailed`.
     """
 
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
     amount: TokenAmount
