@@ -126,7 +126,7 @@ class TransferTask(State):
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class SendMessageEvent(Event):
     """ Marker used for events which represent off-chain protocol messages tied
     to a channel.
@@ -141,19 +141,20 @@ class SendMessageEvent(Event):
     queue_identifier: QueueIdentifier = field(init=False)
 
     def __post_init__(self) -> None:
-        self.queue_identifier = QueueIdentifier(
+        queue_identifier = QueueIdentifier(
             recipient=self.recipient, canonical_identifier=self.canonical_identifier
         )
+        object.__setattr__(self, "queue_identifier", queue_identifier)
 
 
-@dataclass
+@dataclass(frozen=True)
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
 
     sender: Address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
 
@@ -163,7 +164,7 @@ class ContractSendEvent(Event):
         typecheck(self.triggered_by_block_hash, T_BlockHash)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
@@ -172,7 +173,7 @@ class ContractSendExpirableEvent(ContractSendEvent):
     expiration: BlockExpiration
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
 

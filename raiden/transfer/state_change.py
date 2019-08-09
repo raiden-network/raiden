@@ -48,7 +48,7 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class BalanceProofStateChange(AuthenticatedSenderStateChange):
     """ Marker used for state changes which contain a balance proof. """
 
@@ -58,7 +58,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
         typecheck(self.balance_proof, BalanceProofSignedState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Block(StateChange):
     """ Transition used when a new block is mined.
     Args:
@@ -73,7 +73,7 @@ class Block(StateChange):
         typecheck(self.block_number, T_BlockNumber)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionUpdateTransportAuthData(StateChange):
     """ Holds the last "timestamp" at which we synced
     with the transport. The timestamp could be a date/time value
@@ -84,7 +84,7 @@ class ActionUpdateTransportAuthData(StateChange):
     auth_data: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
@@ -94,7 +94,7 @@ class ActionCancelPayment(StateChange):
     payment_identifier: PaymentID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChannelClose(StateChange):
     """ User is closing an existing channel. """
 
@@ -113,7 +113,7 @@ class ActionChannelClose(StateChange):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChannelWithdraw(StateChange):
     """ Withdraw funds from channel. """
 
@@ -125,7 +125,7 @@ class ActionChannelWithdraw(StateChange):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChannelUpdateFee(StateChange):
     canonical_identifier: CanonicalIdentifier
     fee_schedule: FeeScheduleState
@@ -135,7 +135,7 @@ class ActionChannelUpdateFee(StateChange):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
 
@@ -150,7 +150,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
         return self.channel_state.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelClosed(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was closed. """
 
@@ -166,7 +166,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitChain(StateChange):
     pseudo_random_generator: Random = field(compare=False)
     block_number: BlockNumber
@@ -180,7 +180,7 @@ class ActionInitChain(StateChange):
         typecheck(self.chain_id, int)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionNewTokenNetwork(StateChange):
     """ Registers a new token network.
     A token network corresponds to a channel manager smart contract.
@@ -193,7 +193,7 @@ class ActionNewTokenNetwork(StateChange):
         typecheck(self.token_network, TokenNetworkState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelDeposit(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a deposit. """
 
@@ -209,7 +209,7 @@ class ContractReceiveChannelDeposit(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelWithdraw(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a withdraw. """
 
@@ -226,7 +226,7 @@ class ContractReceiveChannelWithdraw(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelSettled(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was settled. """
 
@@ -243,7 +243,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
@@ -254,7 +254,7 @@ class ActionChangeNodeNetworkState(StateChange):
         typecheck(self.node_address, T_Address)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     """ Registers a new payment network.
     A payment network corresponds to a registry smart contract.
@@ -267,7 +267,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
         typecheck(self.payment_network, PaymentNetworkState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     """ A new token was registered with the payment network. """
 
@@ -279,7 +279,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
         typecheck(self.token_network, TokenNetworkState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveSecretReveal(ContractReceiveStateChange):
     """ A new secret was registered with the SecretRegistry contract. """
 
@@ -294,7 +294,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
         typecheck(self.secret, T_Secret)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     """ All the locks were claimed via the blockchain.
 
@@ -323,7 +323,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveRouteNew(ContractReceiveStateChange):
     """ New channel was created and this node is NOT a participant. """
 
@@ -345,7 +345,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveRouteClosed(ContractReceiveStateChange):
     """ A channel was closed and this node is NOT a participant. """
 
@@ -360,7 +360,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
     nonce: Nonce
@@ -374,7 +374,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveUnlock(BalanceProofStateChange):
     message_identifier: MessageID
     secret: Secret
@@ -382,22 +382,22 @@ class ReceiveUnlock(BalanceProofStateChange):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveDelivered(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveProcessed(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A Withdraw message received. """
 
@@ -418,7 +418,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
     """ A Withdraw message was received. """
 
@@ -439,7 +439,7 @@ class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     """ A WithdrawExpired message was received. """
 

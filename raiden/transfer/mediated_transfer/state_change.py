@@ -26,7 +26,7 @@ from raiden.utils.typing import (
 
 # Note: The init states must contain all the required data for trying doing
 # useful work, ie. there must /not/ be an event for requesting new data.
-@dataclass
+@dataclass(frozen=True)
 class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer. """
 
@@ -37,7 +37,7 @@ class ActionInitInitiator(StateChange):
         typecheck(self.transfer, TransferDescriptionWithSecretState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
@@ -57,7 +57,7 @@ class ActionInitMediator(BalanceProofStateChange):
         typecheck(self.from_transfer, LockedTransferSignedState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionInitTarget(BalanceProofStateChange):
     """ Initial state for a new target.
 
@@ -75,7 +75,7 @@ class ActionInitTarget(BalanceProofStateChange):
         typecheck(self.transfer, LockedTransferSignedState)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionTransferReroute(BalanceProofStateChange):
     """ A transfer will be rerouted
 
@@ -93,17 +93,17 @@ class ActionTransferReroute(BalanceProofStateChange):
         super().__post_init__()
         typecheck(self.transfer, LockedTransferSignedState)
 
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveTransferCancelRoute(BalanceProofStateChange):
     """ A mediator sends us a refund due to a failed route """
 
     transfer: LockedTransferSignedState
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 
@@ -111,7 +111,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
     message_identifier: MessageID
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
 
@@ -122,7 +122,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     revealsecret: Optional[SendSecretReveal] = field(default=None)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
@@ -130,10 +130,10 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
@@ -152,10 +152,10 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         super().__post_init__()
         typecheck(self.transfer, LockedTransferSignedState)
 
-        self.secrethash = sha256_secrethash(self.secret)
+        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
