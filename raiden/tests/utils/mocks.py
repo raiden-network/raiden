@@ -102,7 +102,7 @@ class MockTokenNetwork:
         self.partneraddresses_to_channelidentifiers = {}
 
 
-class MockPaymentNetwork:
+class MockTokenNetworkRegistry:
     def __init__(self):
         self.tokennetworkaddresses_to_tokennetworks = {}
 
@@ -184,7 +184,7 @@ def make_raiden_service_mock(
     token_network.channelidentifiers_to_channels[channel_identifier] = MockChannelState()
     token_network.partneraddresses_to_channelidentifiers[partner] = [channel_identifier]
 
-    token_network_registry = MockPaymentNetwork()
+    token_network_registry = MockTokenNetworkRegistry()
     tokennetworkaddresses_to_tokennetworks = (
         token_network_registry.tokennetworkaddresses_to_tokennetworks
     )

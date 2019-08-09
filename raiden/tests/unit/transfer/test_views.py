@@ -7,8 +7,8 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import (
-    PaymentNetworkState,
     TokenNetworkGraphState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
 )
@@ -419,7 +419,7 @@ def test_listings():
 def test_get_networks(chain_state, token_network_address):
     orig_chain_state = deepcopy(chain_state)
     token_address = factories.make_address()
-    token_network_registry_empty = PaymentNetworkState(
+    token_network_registry_empty = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[]
     )
     chain_state.identifiers_to_paymentnetworks[
@@ -437,7 +437,7 @@ def test_get_networks(chain_state, token_network_address):
         token_address=token_address,
         network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
-    token_network_registry = PaymentNetworkState(
+    token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
     assert get_networks(

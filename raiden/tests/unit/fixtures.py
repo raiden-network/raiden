@@ -6,8 +6,8 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer.state import (
     ChainState,
-    PaymentNetworkState,
     TokenNetworkGraphState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
 )
 
@@ -54,7 +54,7 @@ def chain_state(our_address):
 
 @pytest.fixture
 def token_network_registry_state(chain_state, token_network_registry_address):
-    token_network_registry = PaymentNetworkState(token_network_registry_address, [])
+    token_network_registry = TokenNetworkRegistryState(token_network_registry_address, [])
     chain_state.identifiers_to_paymentnetworks[
         token_network_registry_address
     ] = token_network_registry

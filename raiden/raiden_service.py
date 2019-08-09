@@ -69,13 +69,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, HopState, PaymentNetworkState
+from raiden.transfer.state import ChainState, HopState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
-    ContractReceiveNewPaymentNetwork,
+    ContractReceiveNewTokenNetworkRegistry,
 )
 from raiden.utils import lpex, random_secret
 from raiden.utils.runnable import Runnable
@@ -372,11 +372,11 @@ class RaidenService(Runnable):
                 our_address=self.chain.node_address,
                 chain_id=self.chain.network_id,
             )
-            token_network_registry = PaymentNetworkState(
+            token_network_registry = TokenNetworkRegistryState(
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
             )
-            new_network_state_change = ContractReceiveNewPaymentNetwork(
+            new_network_state_change = ContractReceiveNewTokenNetworkRegistry(
                 transaction_hash=constants.EMPTY_TRANSACTION_HASH,
                 token_network_registry=token_network_registry,
                 block_number=last_log_block_number,

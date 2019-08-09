@@ -431,7 +431,7 @@ def test_batch_query_state_changes():
             # Should be 5 of them
             ("_type", "raiden.transfer.state_change.ContractReceiveChannel%"),
             # Should be only 1
-            ("_type", "raiden.transfer.state_change.ContractReceiveNewPaymentNetwork"),
+            ("_type", "raiden.transfer.state_change.ContractReceiveNewTokenNetworkRegistry"),
         ],
         logical_and=False,
     )

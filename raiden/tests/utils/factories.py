@@ -30,9 +30,9 @@ from raiden.transfer.state import (
     HopState,
     NettingChannelEndState,
     NettingChannelState,
-    PaymentNetworkState,
     PendingLocksState,
     RouteState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
     message_identifier_from_prng,
@@ -1268,7 +1268,7 @@ def make_chain_state(
     """Factory for populating a complete `ChainState`.
 
     Sets up a `ChainState` instance with `number_of_channels` `NettingChannelState`s inside one
-    `TokenNetworkState` inside one `PaymentNetworkState`.
+    `TokenNetworkState` inside one `TokenNetworkRegistryState`.
 
     The returned container, `ContainerForChainStateTests`, provides direct access to the most used
     function parameters when traversing a `ChainState` (i.e. the `token_network_address` of the
@@ -1308,7 +1308,7 @@ def make_chain_state(
     )
     chain_state.identifiers_to_paymentnetworks[
         token_network_registry_address
-    ] = PaymentNetworkState(
+    ] = TokenNetworkRegistryState(
         address=token_network_registry_address, token_network_list=[token_network]
     )
     chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[

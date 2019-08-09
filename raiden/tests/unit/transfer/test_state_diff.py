@@ -7,8 +7,8 @@ from raiden.transfer.state import (
     ChainState,
     NettingChannelEndState,
     NettingChannelState,
-    PaymentNetworkState,
     TokenNetworkGraphState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
 )
@@ -38,7 +38,7 @@ def test_detect_balance_proof_change():
 
     assert len(diff()) == 0
 
-    token_network_registry = PaymentNetworkState(b"x", [])
+    token_network_registry = TokenNetworkRegistryState(b"x", [])
     token_network_registry_copy = deepcopy(token_network_registry)
     new.identifiers_to_paymentnetworks["a"] = token_network_registry
     assert len(diff()) == 0

@@ -50,5 +50,5 @@ Other State Machines to be Added
 * ...
 * ``TokenNetworkState``
 * ``PaymentMappingState``
-* ``PaymentNetworkState``
+* ``TokenNetworkRegistryState``
 * ``ChainState``
