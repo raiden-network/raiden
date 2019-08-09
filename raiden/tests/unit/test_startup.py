@@ -6,7 +6,7 @@ from eth_utils import to_canonical_address
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
-from raiden.tests.utils.factories import make_address, make_payment_network_address
+from raiden.tests.utils.factories import make_address, make_token_network_registry_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
@@ -276,7 +276,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         with patched_get_for_succesful_pfs_info():
             setup_proxies_or_exit(
                 config=config,
-                tokennetwork_registry_contract_address=make_payment_network_address(),
+                tokennetwork_registry_contract_address=make_token_network_registry_address(),
                 secret_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,

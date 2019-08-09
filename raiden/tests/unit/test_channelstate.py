@@ -28,10 +28,10 @@ from raiden.tests.utils.factories import (
     make_block_hash,
     make_canonical_identifier,
     make_lock,
-    make_payment_network_address,
     make_privkey_address,
     make_secret,
     make_signed_balance_proof_from_unsigned,
+    make_token_network_registry_address,
     make_transaction_hash,
     replace,
 )
@@ -664,7 +664,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 def test_invalid_timeouts():
     token_address = make_address()
     token_network_address = make_address()
-    payment_network_address = make_payment_network_address()
+    token_network_registry_address = make_token_network_registry_address()
     reveal_timeout = 5
     settle_timeout = 10
     identifier = make_address()
@@ -691,7 +691,7 @@ def test_invalid_timeouts():
                 token_network_address=token_network_address, channel_identifier=identifier
             ),
             token_address=token_address,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             reveal_timeout=large_reveal_timeout,
             settle_timeout=small_settle_timeout,
             our_state=our_state,
@@ -710,7 +710,7 @@ def test_invalid_timeouts():
                     token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
-                payment_network_address=payment_network_address,
+                token_network_registry_address=token_network_registry_address,
                 reveal_timeout=invalid_value,
                 settle_timeout=settle_timeout,
                 our_state=our_state,
@@ -727,7 +727,7 @@ def test_invalid_timeouts():
                     token_network_address=token_network_address, channel_identifier=identifier
                 ),
                 token_address=token_address,
-                payment_network_address=payment_network_address,
+                token_network_registry_address=token_network_registry_address,
                 reveal_timeout=reveal_timeout,
                 settle_timeout=invalid_value,
                 our_state=our_state,

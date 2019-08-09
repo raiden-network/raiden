@@ -37,7 +37,7 @@ def log_open_channels(raiden, registry_address, token_address, funds):  # pragma
     chain_state = views.state_from_raiden(raiden)
     open_channels = views.get_channelstate_open(
         chain_state=chain_state,
-        payment_network_address=registry_address,
+        token_network_registry_address=registry_address,
         token_address=token_address,
     )
 
@@ -171,7 +171,7 @@ class ConnectionManager:  # pragma: no unittest
 
             channels_to_close = views.get_channelstate_open(
                 chain_state=views.state_from_raiden(self.raiden),
-                payment_network_address=registry_address,
+                token_network_registry_address=registry_address,
                 token_address=self.token_address,
             )
 
@@ -278,7 +278,7 @@ class ConnectionManager:  # pragma: no unittest
         """ Search the token network for potential channel partners. """
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=self.registry_address,
+            token_network_registry_address=self.registry_address,
             token_address=self.token_address,
         )
         known = set(channel_state.partner_state.address for channel_state in open_channels)
@@ -355,7 +355,7 @@ class ConnectionManager:  # pragma: no unittest
 
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=self.registry_address,
+            token_network_registry_address=self.registry_address,
             token_address=self.token_address,
         )
         open_channels = [
@@ -453,7 +453,7 @@ class ConnectionManager:  # pragma: no unittest
             )
         open_channels = views.get_channelstate_open(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=self.registry_address,
+            token_network_registry_address=self.registry_address,
             token_address=self.token_address,
         )
         return (

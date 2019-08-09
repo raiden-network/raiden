@@ -51,7 +51,7 @@ def wait_for_block(
 
 def wait_for_newchannel(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     retry_timeout: float,
@@ -62,12 +62,15 @@ def wait_for_newchannel(
         This does not time out, use gevent.Timeout.
     """
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
+        views.state_from_raiden(raiden),
+        token_network_registry_address,
+        token_address,
+        partner_address,
     )
 
     log_details = {
         "node": to_checksum_address(raiden.address),
-        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_network_registry_address": to_checksum_address(token_network_registry_address),
         "token_address": to_checksum_address(token_address),
         "partner_address": to_checksum_address(partner_address),
     }
@@ -79,7 +82,7 @@ def wait_for_newchannel(
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
-            payment_network_address,
+            token_network_registry_address,
             token_address,
             partner_address,
         )
@@ -87,7 +90,7 @@ def wait_for_newchannel(
 
 def wait_for_participant_deposit(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -107,13 +110,16 @@ def wait_for_participant_deposit(
         raise ValueError("target_address must be one of the channel participants")
 
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
+        views.state_from_raiden(raiden),
+        token_network_registry_address,
+        token_address,
+        partner_address,
     )
     current_balance = balance(channel_state)
 
     log_details = {
         "node": to_checksum_address(raiden.address),
-        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_network_registry_address": to_checksum_address(token_network_registry_address),
         "token_address": to_checksum_address(token_address),
         "partner_address": to_checksum_address(partner_address),
         "target_address": to_checksum_address(target_address),
@@ -127,7 +133,7 @@ def wait_for_participant_deposit(
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
-            payment_network_address,
+            token_network_registry_address,
             token_address,
             partner_address,
         )
@@ -136,7 +142,7 @@ def wait_for_participant_deposit(
 
 def wait_for_payment_balance(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
     target_address: Address,
@@ -163,12 +169,15 @@ def wait_for_payment_balance(
         raise ValueError("target_address must be one of the channel participants")
 
     channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden), payment_network_address, token_address, partner_address
+        views.state_from_raiden(raiden),
+        token_network_registry_address,
+        token_address,
+        partner_address,
     )
     current_balance = balance(channel_state)
 
     log_details = {
-        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_network_registry_address": to_checksum_address(token_network_registry_address),
         "token_address": to_checksum_address(token_address),
         "partner_address": to_checksum_address(partner_address),
         "target_address": to_checksum_address(target_address),
@@ -182,7 +191,7 @@ def wait_for_payment_balance(
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden),
-            payment_network_address,
+            token_network_registry_address,
             token_address,
             partner_address,
         )
@@ -191,7 +200,7 @@ def wait_for_payment_balance(
 
 def wait_for_channel_in_states(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -201,7 +210,7 @@ def wait_for_channel_in_states(
 
     Raises:
         ValueError: If the token_address is not registered in the
-            payment_network.
+            token_network_registry.
 
     Note:
         This does not time out, use gevent.Timeout.
@@ -209,14 +218,14 @@ def wait_for_channel_in_states(
     chain_state = views.state_from_raiden(raiden)
     token_network = views.get_token_network_by_token_address(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
 
     if token_network is None:
         raise ValueError(
             f"The token {token_address} is not registered on "
-            f"the network {payment_network_address}."
+            f"the network {token_network_registry_address}."
         )
 
     token_network_address = token_network.address
@@ -231,7 +240,7 @@ def wait_for_channel_in_states(
     ]
 
     log_details = {
-        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_network_registry_address": to_checksum_address(token_network_registry_address),
         "token_address": to_checksum_address(token_address),
         "list_cannonical_ids": list_cannonical_ids,
         "target_states": target_states,
@@ -261,7 +270,7 @@ def wait_for_channel_in_states(
 
 def wait_for_close(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -273,7 +282,7 @@ def wait_for_close(
     """
     return wait_for_channel_in_states(
         raiden=raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,
@@ -283,7 +292,7 @@ def wait_for_close(
 
 def wait_for_token_network(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     retry_timeout: float,
 ) -> None:  # pragma: no unittest
@@ -293,10 +302,10 @@ def wait_for_token_network(
         This does not time out, use gevent.Timeout.
     """
     token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(raiden), payment_network_address, token_address
+        views.state_from_raiden(raiden), token_network_registry_address, token_address
     )
     log_details = {
-        "payment_network_address": to_checksum_address(payment_network_address),
+        "token_network_registry_address": to_checksum_address(token_network_registry_address),
         "token_address": to_checksum_address(token_address),
     }
     while token_network is None:
@@ -306,13 +315,13 @@ def wait_for_token_network(
         log.debug("wait_for_token_network", **log_details)
         gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
-            views.state_from_raiden(raiden), payment_network_address, token_address
+            views.state_from_raiden(raiden), token_network_registry_address, token_address
         )
 
 
 def wait_for_settle(
     raiden: "RaidenService",
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     channel_ids: List[ChannelID],
     retry_timeout: float,
@@ -324,7 +333,7 @@ def wait_for_settle(
     """
     return wait_for_channel_in_states(
         raiden=raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         channel_ids=channel_ids,
         retry_timeout=retry_timeout,

@@ -337,7 +337,7 @@ class NettingChannelState(State):
 
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
-    payment_network_address: TokenNetworkRegistryAddress = field(repr=False)
+    token_network_registry_address: TokenNetworkRegistryAddress = field(repr=False)
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     fee_schedule: FeeScheduleState = field(repr=False)

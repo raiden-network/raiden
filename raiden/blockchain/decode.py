@@ -88,7 +88,7 @@ def contractreceivenewtokennetwork_from_event(
     token_network_address = args["token_network_address"]
 
     return ContractReceiveNewTokenNetwork(
-        payment_network_address=TokenNetworkRegistryAddress(event.originating_contract),
+        token_network_registry_address=TokenNetworkRegistryAddress(event.originating_contract),
         token_network=TokenNetworkState(
             address=token_network_address,
             token_address=args["token_address"],
@@ -149,7 +149,7 @@ def contractreceivechannelnew_from_event(
             channel_identifier=identifier,
         ),
         token_address=new_channel_details.token_address,
-        payment_network_address=new_channel_details.payment_network_address,
+        token_network_registry_address=new_channel_details.token_network_registry_address,
         reveal_timeout=channel_config.reveal_timeout,
         settle_timeout=settle_timeout,
         fee_schedule=channel_config.fee_schedule,

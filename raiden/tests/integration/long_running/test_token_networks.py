@@ -119,7 +119,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
 
     token_network_registry_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
-        payment_network_address=registry_address,
+        token_network_registry_address=registry_address,
         token_address=token_address,
     )
     connection_managers = [
@@ -219,7 +219,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
 
     channels = views.list_channelstate_for_tokennetwork(
         chain_state=views.state_from_raiden(connection_manager.raiden),
-        payment_network_address=registry_address,
+        token_network_registry_address=registry_address,
         token_address=token_address,
     )
     channel_identifiers = [channel.identifier for channel in channels]
@@ -233,7 +233,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
     ):
         waiting.wait_for_settle(
             raiden=connection_manager.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             channel_ids=channel_identifiers,
             retry_timeout=0.1,

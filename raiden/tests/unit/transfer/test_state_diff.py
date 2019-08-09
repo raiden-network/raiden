@@ -38,22 +38,22 @@ def test_detect_balance_proof_change():
 
     assert len(diff()) == 0
 
-    payment_network = PaymentNetworkState(b"x", [])
-    payment_network_copy = deepcopy(payment_network)
-    new.identifiers_to_paymentnetworks["a"] = payment_network
+    token_network_registry = PaymentNetworkState(b"x", [])
+    token_network_registry_copy = deepcopy(token_network_registry)
+    new.identifiers_to_paymentnetworks["a"] = token_network_registry
     assert len(diff()) == 0
 
     token_network = TokenNetworkState(
         address=b"a", token_address=b"a", network_graph=TokenNetworkGraphState(b"a")
     )
     token_network_copy = deepcopy(token_network)
-    payment_network.tokennetworkaddresses_to_tokennetworks["a"] = token_network
+    token_network_registry.tokennetworkaddresses_to_tokennetworks["a"] = token_network
     assert len(diff()) == 0
 
     channel = NettingChannelState(
         canonical_identifier=factories.make_canonical_identifier(),
         token_address=b"a",
-        payment_network_address=1,
+        token_network_registry_address=1,
         reveal_timeout=1,
         settle_timeout=2,
         our_state=None,
@@ -79,10 +79,10 @@ def test_detect_balance_proof_change():
     partner_state.balance_proof = balance_proof
     assert len(diff()) == 1
 
-    old.identifiers_to_paymentnetworks["a"] = payment_network_copy
+    old.identifiers_to_paymentnetworks["a"] = token_network_registry_copy
     assert len(diff()) == 1
 
-    payment_network_copy.tokennetworkaddresses_to_tokennetworks["a"] = token_network_copy
+    token_network_registry_copy.tokennetworkaddresses_to_tokennetworks["a"] = token_network_copy
     assert len(diff()) == 1
 
     token_network_copy.channelidentifiers_to_channels["a"] = channel_copy

@@ -13,10 +13,10 @@ from raiden.tests.utils.factories import (
     make_channel_identifier,
     make_locksroot,
     make_payment_id,
-    make_payment_network_address,
     make_secret,
     make_secret_hash,
     make_token_network_address,
+    make_token_network_registry_address,
 )
 from raiden.tests.utils.mocks import make_raiden_service_mock
 from raiden.transfer.events import ContractSendChannelBatchUnlock, EventPaymentSentSuccess
@@ -48,11 +48,11 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     Regression test for https://github.com/raiden-network/raiden/issues/3152
     """
     channel_identifier = ChannelID(1)
-    payment_network_address = make_payment_network_address()
+    token_network_registry_address = make_token_network_registry_address()
     token_network_address = make_token_network_address()
     participant = make_address()
     raiden = make_raiden_service_mock(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         partner=participant,
@@ -128,11 +128,11 @@ def setup_pfs_handler_test(
     Optional[UUID],
 ]:
     channel_identifier = make_channel_identifier()
-    payment_network_address = make_payment_network_address()
+    token_network_registry_address = make_token_network_registry_address()
     token_network_address = make_token_network_address()
     participant = make_address()
     raiden = make_raiden_service_mock(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         partner=participant,
@@ -155,7 +155,7 @@ def setup_pfs_handler_test(
     return (
         raiden,
         pfs_handler,
-        payment_network_address,
+        token_network_registry_address,
         token_network_address,
         route,
         feedback_uuid,
@@ -210,7 +210,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
     (
         raiden,
         pfs_handler,
-        payment_network_address,
+        token_network_registry_address,
         token_network_address,
         route,
         feedback_uuid,
@@ -222,7 +222,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
 
     route_failed_event = EventPaymentSentSuccess(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         identifier=payment_id,
         amount=amount,
@@ -252,7 +252,7 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
     (
         raiden,
         pfs_handler,
-        payment_network_address,
+        token_network_registry_address,
         token_network_address,
         route,
         _,
@@ -264,7 +264,7 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
     raiden.targets_to_identifiers_to_statuses[target][payment_id] = Mock()
 
     route_failed_event = EventPaymentSentSuccess(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         identifier=payment_id,
         amount=amount,

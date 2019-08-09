@@ -487,7 +487,7 @@ def wait_for_alarm_start(
 def wait_for_usable_channel(
     raiden: RaidenService,
     partner_address: Address,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     our_deposit: TokenAmount,
     partner_deposit: TokenAmount,
@@ -500,7 +500,7 @@ def wait_for_usable_channel(
     """
     waiting.wait_for_newchannel(
         raiden=raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         partner_address=partner_address,
         retry_timeout=retry_timeout,
@@ -509,7 +509,7 @@ def wait_for_usable_channel(
     # wait for our deposit
     waiting.wait_for_participant_deposit(
         raiden=raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         partner_address=partner_address,
         target_address=raiden.address,
@@ -520,7 +520,7 @@ def wait_for_usable_channel(
     # wait for the partner deposit
     waiting.wait_for_participant_deposit(
         raiden=raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         partner_address=partner_address,
         target_address=partner_address,
@@ -548,7 +548,7 @@ def wait_for_token_networks(
 
 def wait_for_channels(
     app_channels: AppChannels,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_addresses: List[TokenAddress],
     deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
@@ -560,7 +560,7 @@ def wait_for_channels(
             wait_for_usable_channel(
                 raiden=app0.raiden,
                 partner_address=app1.raiden.address,
-                payment_network_address=payment_network_address,
+                token_network_registry_address=token_network_registry_address,
                 token_address=token_address,
                 our_deposit=deposit,
                 partner_deposit=deposit,
@@ -570,7 +570,7 @@ def wait_for_channels(
             wait_for_usable_channel(
                 raiden=app1.raiden,
                 partner_address=app0.raiden.address,
-                payment_network_address=payment_network_address,
+                token_network_registry_address=token_network_registry_address,
                 token_address=token_address,
                 our_deposit=deposit,
                 partner_deposit=deposit,

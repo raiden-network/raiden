@@ -105,7 +105,7 @@ class TransferDescriptionWithSecretState(State):
     additional secret that can be used with a hash-time-lock.
     """
 
-    payment_network_address: TokenNetworkRegistryAddress = field(repr=False)
+    token_network_registry_address: TokenNetworkRegistryAddress = field(repr=False)
     payment_identifier: PaymentID = field(repr=False)
     amount: PaymentAmount
     allocated_fee: FeeAmount

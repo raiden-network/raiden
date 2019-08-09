@@ -335,7 +335,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
     channel_state = views.get_channelstate_for(
         chain_state=views.state_from_app(app0),
-        payment_network_address=app0.raiden.default_registry.address,
+        token_network_registry_address=app0.raiden.default_registry.address,
         token_address=token_address,
         partner_address=app1.raiden.address,
     )
