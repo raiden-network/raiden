@@ -144,13 +144,13 @@ URLS_V1 = [
     ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
     ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
     (
-        "/_debug/blockchain_events/payment_networks/<hexaddress:token_address>/channels",
+        "/_debug/blockchain_events/token_network_registrys/<hexaddress:token_address>/channels",
         ChannelBlockchainEventsResource,
         "tokenchanneleventsresourceblockchain",
     ),
     (
         (
-            "/_debug/blockchain_events/payment_networks/"
+            "/_debug/blockchain_events/token_network_registrys/"
             "<hexaddress:token_address>/channels/<hexaddress:partner_address>"
         ),
         ChannelBlockchainEventsResource,
@@ -722,7 +722,7 @@ class RestAPI:  # pragma: no unittest
         for token in self.raiden_api.get_tokens_list(registry_address):
             token_network_address = views.get_token_network_address_by_token_address(
                 views.state_from_raiden(self.raiden_api.raiden),
-                payment_network_address=registry_address,
+                token_network_registry_address=registry_address,
                 token_address=token,
             )
 
@@ -735,7 +735,7 @@ class RestAPI:  # pragma: no unittest
 
             open_channels = views.get_channelstate_open(
                 chain_state=views.state_from_raiden(self.raiden_api.raiden),
-                payment_network_address=registry_address,
+                token_network_registry_address=registry_address,
                 token_address=token,
             )
             if connection_manager is not None and open_channels:

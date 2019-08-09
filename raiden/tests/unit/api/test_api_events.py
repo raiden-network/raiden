@@ -30,7 +30,7 @@ def test_get_contract_events_invalid_blocknumber():
 
 def test_v1_event_payment_sent_failed_schema():
     event = EventPaymentSentFailed(
-        payment_network_address=factories.make_payment_network_address(),
+        token_network_registry_address=factories.make_token_network_registry_address(),
         token_network_address=factories.make_address(),
         identifier=1,
         target=factories.make_address(),
@@ -50,11 +50,11 @@ def test_v1_event_payment_sent_failed_schema():
 def test_event_filter_for_payments():
     token_network_address = factories.make_address()
     secret = factories.make_secret()
-    payment_network_address = factories.make_payment_network_address()
+    token_network_registry_address = factories.make_token_network_registry_address()
     identifier = 1
     target = factories.make_address()
     event = EventPaymentSentSuccess(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         identifier=identifier,
         amount=5,
@@ -67,7 +67,7 @@ def test_event_filter_for_payments():
     assert not event_filter_for_payments(event, token_network_address, factories.make_address())
 
     event = EventPaymentReceivedSuccess(
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_network_address=token_network_address,
         identifier=identifier,
         amount=5,
@@ -78,7 +78,7 @@ def test_event_filter_for_payments():
     assert not event_filter_for_payments(event, token_network_address, factories.make_address())
 
     event = EventPaymentSentFailed(
-        payment_network_address=factories.make_payment_network_address(),
+        token_network_registry_address=factories.make_token_network_registry_address(),
         token_network_address=token_network_address,
         identifier=identifier,
         target=target,

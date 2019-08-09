@@ -47,8 +47,10 @@ def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
     """
     addresses = set()
 
-    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        for token_network in payment_network.tokennetworkaddresses_to_tokennetworks.values():
+    for token_network_registry in chain_state.identifiers_to_paymentnetworks.values():
+        for (
+            token_network
+        ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
             channel_states = token_network.channelidentifiers_to_channels.values()
             for channel_state in channel_states:
                 addresses.add(channel_state.partner_state.address)
@@ -62,11 +64,11 @@ def block_number(chain_state: ChainState) -> BlockNumber:
 
 def count_token_network_channels(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     if token_network is not None:
@@ -106,11 +108,11 @@ def get_node_network_status(chain_state: ChainState, node_address: Address) -> s
 
 def get_participants_addresses(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Set[Address]:
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     if token_network is not None:
@@ -123,10 +125,12 @@ def get_participants_addresses(
 
 def get_our_deposits_for_token_network(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
-    open_channels = get_channelstate_open(chain_state, payment_network_address, token_address)
+    open_channels = get_channelstate_open(
+        chain_state, token_network_registry_address, token_address
+    )
 
     total_deposit = 0
     for channel_state in open_channels:
@@ -135,27 +139,29 @@ def get_our_deposits_for_token_network(
     return total_deposit
 
 
-def get_payment_network_address(chain_state: ChainState) -> List[TokenNetworkRegistryAddress]:
+def get_token_network_registry_address(
+    chain_state: ChainState
+) -> List[TokenNetworkRegistryAddress]:
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
 def get_token_network_registry_by_token_network_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
 ) -> Optional[PaymentNetworkState]:
-    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        if token_network_address in payment_network.tokennetworkaddresses_to_tokennetworks:
-            return payment_network
+    for token_network_registry in chain_state.identifiers_to_paymentnetworks.values():
+        if token_network_address in token_network_registry.tokennetworkaddresses_to_tokennetworks:
+            return token_network_registry
 
     return None
 
 
 def get_token_network_address_by_token_address(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Optional[TokenNetworkAddress]:
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     token_network_address = getattr(token_network, "address", None)
@@ -164,43 +170,43 @@ def get_token_network_address_by_token_address(
 
 
 def get_token_network_addresses(
-    chain_state: ChainState, payment_network_address: TokenNetworkRegistryAddress
+    chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenNetworkAddress]:
     """ Return the list of token networks registered with the given payment network. """
-    payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
+    token_network_registry = chain_state.identifiers_to_paymentnetworks.get(
+        token_network_registry_address
+    )
 
-    if payment_network is not None:
-        return [
-            token_network.address
-            for token_network in payment_network.tokennetworkaddresses_to_tokennetworks.values()
-        ]
+    if token_network_registry is not None:
+        token_networks = token_network_registry.tokennetworkaddresses_to_tokennetworks.values()
+        return [token_network.address for token_network in token_networks]
 
     return list()
 
 
 def get_token_identifiers(
-    chain_state: ChainState, payment_network_address: TokenNetworkRegistryAddress
+    chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenAddress]:
     """ Return the list of tokens registered with the given payment network. """
-    payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
+    token_network_registry = chain_state.identifiers_to_paymentnetworks.get(
+        token_network_registry_address
+    )
 
-    if payment_network is not None:
-        return [
-            token_address
-            for token_address in payment_network.tokenaddresses_to_tokennetworkaddresses.keys()
-        ]
+    if token_network_registry is not None:
+        token_addresses = token_network_registry.tokenaddresses_to_tokennetworkaddresses.keys()
+        return [token_address for token_address in token_addresses]
 
     return list()
 
 
 def total_token_network_channels(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
 
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     result = 0
@@ -212,19 +218,21 @@ def total_token_network_channels(
 
 def get_token_network_by_token_address(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Optional[TokenNetworkState]:
 
-    payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
+    token_network_registry = chain_state.identifiers_to_paymentnetworks.get(
+        token_network_registry_address
+    )
 
-    if payment_network is not None:
-        token_network_address = payment_network.tokenaddresses_to_tokennetworkaddresses.get(
+    if token_network_registry is not None:
+        token_network_address = token_network_registry.tokenaddresses_to_tokennetworkaddresses.get(
             token_address
         )
 
         if token_network_address:
-            return payment_network.tokennetworkaddresses_to_tokennetworks.get(
+            return token_network_registry.tokennetworkaddresses_to_tokennetworks.get(
                 token_network_address
             )
 
@@ -236,10 +244,9 @@ def get_token_network_by_address(
 ) -> Optional[TokenNetworkState]:
 
     token_network_state = None
-    for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
-        token_network_state = payment_network_state.tokennetworkaddresses_to_tokennetworks.get(
-            token_network_address
-        )
+    for token_network_registry_state in chain_state.identifiers_to_paymentnetworks.values():
+        networks_by_address = token_network_registry_state.tokennetworkaddresses_to_tokennetworks
+        token_network_state = networks_by_address.get(token_network_address)
         if token_network_state:
             return token_network_state
 
@@ -248,13 +255,13 @@ def get_token_network_by_address(
 
 def get_channelstate_for(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     channel_state = None
@@ -309,13 +316,13 @@ def get_channelstate_by_canonical_identifier(
 
 def get_channelstate_filter(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     filter_fn: Callable,
 ) -> List[NettingChannelState]:
     """ Return the state of channels that match the condition in `filter_fn` """
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     result: List[NettingChannelState] = []
@@ -331,13 +338,13 @@ def get_channelstate_filter(
 
 def get_channelstate_open(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of open channels in a token network."""
     return get_channelstate_filter(
         chain_state,
-        payment_network_address,
+        token_network_registry_address,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_OPENED,
     )
@@ -345,13 +352,13 @@ def get_channelstate_open(
 
 def get_channelstate_closing(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of closing channels in a token network."""
     return get_channelstate_filter(
         chain_state,
-        payment_network_address,
+        token_network_registry_address,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSING,
     )
@@ -359,13 +366,13 @@ def get_channelstate_closing(
 
 def get_channelstate_closed(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of closed channels in a token network."""
     return get_channelstate_filter(
         chain_state,
-        payment_network_address,
+        token_network_registry_address,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_CLOSED,
     )
@@ -373,13 +380,13 @@ def get_channelstate_closed(
 
 def get_channelstate_settling(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of settling channels in a token network."""
     return get_channelstate_filter(
         chain_state,
-        payment_network_address,
+        token_network_registry_address,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLING,
     )
@@ -387,13 +394,13 @@ def get_channelstate_settling(
 
 def get_channelstate_settled(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of settled channels in a token network."""
     return get_channelstate_filter(
         chain_state,
-        payment_network_address,
+        token_network_registry_address,
         token_address,
         lambda channel_state: channel.get_status(channel_state) == ChannelState.STATE_SETTLED,
     )
@@ -451,12 +458,12 @@ def get_all_transfer_tasks(chain_state: ChainState) -> Dict[SecretHash, Transfer
 
 def list_channelstate_for_tokennetwork(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
 
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     if token_network:
@@ -469,8 +476,10 @@ def list_channelstate_for_tokennetwork(
 
 def list_all_channelstate(chain_state: ChainState) -> List[NettingChannelState]:
     result: List[NettingChannelState] = []
-    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        for token_network in payment_network.tokennetworkaddresses_to_tokennetworks.values():
+    for token_network_registry in chain_state.identifiers_to_paymentnetworks.values():
+        for (
+            token_network
+        ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(token_network.channelidentifiers_to_channels.values())
 
@@ -479,13 +488,13 @@ def list_all_channelstate(chain_state: ChainState) -> List[NettingChannelState]:
 
 def filter_channels_by_partneraddress(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_addresses: List[Address],
 ) -> List[NettingChannelState]:
 
     token_network = get_token_network_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     result: List[NettingChannelState] = []
@@ -528,31 +537,29 @@ def detect_balance_proof_change(
     """ Compare two states for any received balance_proofs that are not in `old_state`. """
     if old_state == current_state:
         return
-    for payment_network_address in current_state.identifiers_to_paymentnetworks:
+    for token_network_registry_address in current_state.identifiers_to_paymentnetworks:
         try:
-            old_payment_network = old_state.identifiers_to_paymentnetworks.get(
-                payment_network_address
+            old_registry = old_state.identifiers_to_paymentnetworks.get(
+                token_network_registry_address
             )
         except AttributeError:
-            old_payment_network = None
+            old_registry = None
 
-        current_payment_network = current_state.identifiers_to_paymentnetworks[
-            payment_network_address
+        current_registry = current_state.identifiers_to_paymentnetworks[
+            token_network_registry_address
         ]
-        if old_payment_network == current_payment_network:
+        if old_registry == current_registry:
             continue
 
-        for (
-            token_network_address
-        ) in current_payment_network.tokennetworkaddresses_to_tokennetworks:
-            if old_payment_network:
-                old_token_network = old_payment_network.tokennetworkaddresses_to_tokennetworks.get(
+        for token_network_address in current_registry.tokennetworkaddresses_to_tokennetworks:
+            if old_registry:
+                old_token_network = old_registry.tokennetworkaddresses_to_tokennetworks.get(
                     token_network_address
                 )
             else:
                 old_token_network = None
 
-            current_token_network = current_payment_network.tokennetworkaddresses_to_tokennetworks[
+            current_token_network = current_registry.tokennetworkaddresses_to_tokennetworks[
                 token_network_address
             ]
             if old_token_network == current_token_network:
@@ -599,20 +606,22 @@ def detect_balance_proof_change(
 
 def get_networks(
     chain_state: ChainState,
-    payment_network_address: TokenNetworkRegistryAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
     token_network_state = None
-    payment_network_state = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
+    tn_registry_state = chain_state.identifiers_to_paymentnetworks.get(
+        token_network_registry_address
+    )
 
-    if payment_network_state:
-        token_network_address = payment_network_state.tokenaddresses_to_tokennetworkaddresses.get(
+    if tn_registry_state:
+        token_network_address = tn_registry_state.tokenaddresses_to_tokennetworkaddresses.get(
             token_address
         )
 
         if token_network_address:
-            token_network_state = payment_network_state.tokennetworkaddresses_to_tokennetworks.get(
+            token_network_state = tn_registry_state.tokennetworkaddresses_to_tokennetworks.get(
                 token_network_address
             )
 
-    return payment_network_state, token_network_state
+    return tn_registry_state, token_network_state

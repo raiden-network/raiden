@@ -28,13 +28,13 @@ from raiden.transfer.views import (
 
 
 def test_filter_channels_by_partneraddress_empty(chain_state):
-    payment_network_address = factories.make_address()
+    token_network_registry_address = factories.make_address()
     token_address = factories.make_address()
     partner_addresses = [factories.make_address(), factories.make_address()]
     assert (
         filter_channels_by_partneraddress(
             chain_state=chain_state,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             token_address=token_address,
             partner_addresses=partner_addresses,
         )
@@ -57,7 +57,7 @@ def test_count_token_network_channels_no_token_network(chain_state):
     assert (
         count_token_network_channels(
             chain_state=chain_state,
-            payment_network_address=factories.make_address(),
+            token_network_registry_address=factories.make_address(),
             token_address=factories.make_address(),
         )
         == 0
@@ -68,7 +68,7 @@ def test_get_participants_addresses_no_token_network(chain_state):
     assert (
         get_participants_addresses(
             chain_state=chain_state,
-            payment_network_address=factories.make_address(),
+            token_network_registry_address=factories.make_address(),
             token_address=factories.make_address(),
         )
         == set()
@@ -84,19 +84,19 @@ def test_get_token_network_registry_by_token_network_address_is_none(chain_state
     )
 
 
-def test_get_token_network_addresses_empty_list_for_payment_network_none(chain_state):
+def test_get_token_network_addresses_empty_list_for_token_network_registry_none(chain_state):
     assert (
         get_token_network_addresses(
-            chain_state=chain_state, payment_network_address=factories.make_address()
+            chain_state=chain_state, token_network_registry_address=factories.make_address()
         )
         == list()
     )
 
 
-def test_token_identifiers_empty_list_for_payment_network_none(chain_state):
+def test_token_identifiers_empty_list_for_token_network_registry_none(chain_state):
     assert (
         get_token_identifiers(
-            chain_state=chain_state, payment_network_address=factories.make_address()
+            chain_state=chain_state, token_network_registry_address=factories.make_address()
         )
         == list()
     )
@@ -128,7 +128,7 @@ def test_detect_balance_proof_chain_handles_attribute_error(chain_state):
 def test_channelstate_filters():
     test_state = factories.make_chain_state(number_of_channels=5)
     chain_state = test_state.chain_state
-    payment_network_address = test_state.payment_network_address
+    token_network_registry_address = test_state.token_network_registry_address
     token_address = test_state.token_address
 
     channel_open, channel_closing, channel_closed, channel_settling, channel_settled = (
@@ -151,7 +151,7 @@ def test_channelstate_filters():
     assert (
         views.get_channelstate_open(
             chain_state=chain_state,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             token_address=unknown_token,
         )
         == []
@@ -159,35 +159,35 @@ def test_channelstate_filters():
 
     opened = views.get_channelstate_open(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert opened == [channel_open]
 
     closing = views.get_channelstate_closing(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert closing == [channel_closing]
 
     closed = views.get_channelstate_closed(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert closed == [channel_closed]
 
     settling = views.get_channelstate_settling(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert settling == [channel_settling]
 
     settled = views.get_channelstate_settled(
         chain_state=chain_state,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert settled == [channel_settled]
@@ -213,7 +213,7 @@ def test_get_our_capacity_for_token_network():
     assert (
         views.get_our_deposits_for_token_network(
             chain_state=chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=test_state.token_address,
         )
         == expected_sum
@@ -241,7 +241,7 @@ def test_get_channelstate_for():
     assert (
         views.get_channelstate_for(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=test_state.token_address,
             partner_address=partner_address,
         )
@@ -281,7 +281,7 @@ def test_filter_channels_by_partneraddress():
     assert (
         views.filter_channels_by_partneraddress(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=test_state.token_address,
             partner_addresses=partner_addresses,
         )
@@ -293,11 +293,11 @@ def test_total_token_network_channels():
     number_of_channels = 3
     test_state = factories.make_chain_state(number_of_channels=number_of_channels)
     unknown_token_address = factories.make_address()
-    unknown_payment_network_address = factories.make_address()
+    unknown_token_network_registry_address = factories.make_address()
     assert (
         views.total_token_network_channels(
             chain_state=test_state.chain_state,
-            payment_network_address=unknown_payment_network_address,
+            token_network_registry_address=unknown_token_network_registry_address,
             token_address=unknown_token_address,
         )
         == 0
@@ -305,7 +305,7 @@ def test_total_token_network_channels():
     assert (
         views.total_token_network_channels(
             chain_state=test_state.chain_state,
-            payment_network_address=unknown_payment_network_address,
+            token_network_registry_address=unknown_token_network_registry_address,
             token_address=test_state.token_address,
         )
         == 0
@@ -313,7 +313,7 @@ def test_total_token_network_channels():
     assert (
         views.total_token_network_channels(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=unknown_token_address,
         )
         == 0
@@ -321,7 +321,7 @@ def test_total_token_network_channels():
     assert (
         views.total_token_network_channels(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=test_state.token_address,
         )
         == number_of_channels
@@ -347,7 +347,7 @@ def test_get_token_network_registry_by_token_network_address():
             chain_state=test_state.chain_state,
             token_network_address=test_state.token_network_address,
         ).address
-        == test_state.payment_network_address
+        == test_state.token_network_registry_address
     )
 
 
@@ -356,7 +356,7 @@ def test_get_token_network_address_by_token_address():
     assert (
         views.get_token_network_address_by_token_address(
             chain_state=test_state.chain_state,
-            payment_network_address=factories.make_address(),
+            token_network_registry_address=factories.make_address(),
             token_address=factories.make_address(),
         )
         is None
@@ -364,7 +364,7 @@ def test_get_token_network_address_by_token_address():
     assert (
         views.get_token_network_address_by_token_address(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=factories.make_address(),
         )
         is None
@@ -372,7 +372,7 @@ def test_get_token_network_address_by_token_address():
     assert (
         views.get_token_network_address_by_token_address(
             chain_state=test_state.chain_state,
-            payment_network_address=factories.make_address(),
+            token_network_registry_address=factories.make_address(),
             token_address=test_state.token_address,
         )
         is None
@@ -380,7 +380,7 @@ def test_get_token_network_address_by_token_address():
     assert (
         views.get_token_network_address_by_token_address(
             chain_state=test_state.chain_state,
-            payment_network_address=test_state.payment_network_address,
+            token_network_registry_address=test_state.token_network_registry_address,
             token_address=test_state.token_address,
         )
         == test_state.token_network_address
@@ -391,43 +391,45 @@ def test_listings():
     test_state = factories.make_chain_state(number_of_channels=3)
     assert (
         views.get_token_network_addresses(
-            chain_state=test_state.chain_state, payment_network_address=factories.make_address()
+            chain_state=test_state.chain_state,
+            token_network_registry_address=factories.make_address(),
         )
         == []
     )
     assert views.get_token_network_addresses(
         chain_state=test_state.chain_state,
-        payment_network_address=test_state.payment_network_address,
+        token_network_registry_address=test_state.token_network_registry_address,
     ) == [test_state.token_network_address]
     assert (
         views.get_token_identifiers(
-            chain_state=test_state.chain_state, payment_network_address=factories.make_address()
+            chain_state=test_state.chain_state,
+            token_network_registry_address=factories.make_address(),
         )
         == []
     )
     assert views.get_token_identifiers(
         chain_state=test_state.chain_state,
-        payment_network_address=test_state.payment_network_address,
+        token_network_registry_address=test_state.token_network_registry_address,
     ) == [test_state.token_address]
-    assert views.get_payment_network_address(chain_state=test_state.chain_state) == [
-        test_state.payment_network_address
+    assert views.get_token_network_registry_address(chain_state=test_state.chain_state) == [
+        test_state.token_network_registry_address
     ]
 
 
 def test_get_networks(chain_state, token_network_address):
     orig_chain_state = deepcopy(chain_state)
     token_address = factories.make_address()
-    payment_network_empty = PaymentNetworkState(
+    token_network_registry_empty = PaymentNetworkState(
         address=factories.make_address(), token_network_list=[]
     )
     chain_state.identifiers_to_paymentnetworks[
-        payment_network_empty.address
-    ] = payment_network_empty
+        token_network_registry_empty.address
+    ] = token_network_registry_empty
     assert get_networks(
         chain_state=chain_state,
-        payment_network_address=payment_network_empty.address,
+        token_network_registry_address=token_network_registry_empty.address,
         token_address=token_address,
-    ) == (payment_network_empty, None)
+    ) == (token_network_registry_empty, None)
 
     chain_state = orig_chain_state
     token_network = TokenNetworkState(
@@ -435,17 +437,19 @@ def test_get_networks(chain_state, token_network_address):
         token_address=token_address,
         network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
-    payment_network = PaymentNetworkState(
+    token_network_registry = PaymentNetworkState(
         address=factories.make_address(), token_network_list=[token_network]
     )
     assert get_networks(
         chain_state=chain_state,
-        payment_network_address=payment_network.address,
+        token_network_registry_address=token_network_registry.address,
         token_address=token_address,
     ) == (None, None)
-    chain_state.identifiers_to_paymentnetworks[payment_network.address] = payment_network
+    chain_state.identifiers_to_paymentnetworks[
+        token_network_registry.address
+    ] = token_network_registry
     assert get_networks(
         chain_state=chain_state,
-        payment_network_address=payment_network.address,
+        token_network_registry_address=token_network_registry.address,
         token_address=token_address,
-    ) == (payment_network, token_network)
+    ) == (token_network_registry, token_network)

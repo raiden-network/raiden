@@ -134,7 +134,7 @@ def initiator_init(
     target_address: TargetAddress,
 ) -> ActionInitInitiator:
     transfer_state = TransferDescriptionWithSecretState(
-        payment_network_address=raiden.default_registry.address,
+        token_network_registry_address=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
         amount=transfer_amount,
         allocated_fee=transfer_fee,
@@ -372,13 +372,13 @@ class RaidenService(Runnable):
                 our_address=self.chain.node_address,
                 chain_id=self.chain.network_id,
             )
-            payment_network = PaymentNetworkState(
+            token_network_registry = PaymentNetworkState(
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
             )
             new_network_state_change = ContractReceiveNewPaymentNetwork(
                 transaction_hash=constants.EMPTY_TRANSACTION_HASH,
-                payment_network=payment_network,
+                token_network_registry=token_network_registry,
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
             )
@@ -395,7 +395,9 @@ class RaidenService(Runnable):
                 node=to_checksum_address(self.address),
             )
 
-            known_networks = views.get_payment_network_address(views.state_from_raiden(self))
+            known_networks = views.get_token_network_registry_address(
+                views.state_from_raiden(self)
+            )
             if known_networks and self.default_registry.address not in known_networks:
                 configured_registry = to_checksum_address(self.default_registry.address)
                 known_registries = lpex(known_networks)
@@ -997,13 +999,13 @@ class RaidenService(Runnable):
         chain_state = views.state_from_raiden(self)
         default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
         token_addresses = views.get_token_identifiers(
-            chain_state=chain_state, payment_network_address=self.default_registry.address
+            chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )
 
         for token_address in token_addresses:
             channels = views.get_channelstate_open(
                 chain_state=chain_state,
-                payment_network_address=self.default_registry.address,
+                token_network_registry_address=self.default_registry.address,
                 token_address=token_address,
             )
 

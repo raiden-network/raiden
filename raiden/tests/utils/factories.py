@@ -194,7 +194,7 @@ def make_token_network_address() -> TokenNetworkAddress:
     return TokenNetworkAddress(make_address())
 
 
-def make_payment_network_address() -> TokenNetworkRegistryAddress:
+def make_token_network_registry_address() -> TokenNetworkRegistryAddress:
     return TokenNetworkRegistryAddress(make_address())
 
 
@@ -450,7 +450,7 @@ FeeScheduleStateProperties.DEFAULTS = FeeScheduleStateProperties(flat=0, proport
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: TokenAddress = EMPTY
-    payment_network_address: TokenNetworkRegistryAddress = EMPTY
+    token_network_registry_address: TokenNetworkRegistryAddress = EMPTY
 
     reveal_timeout: BlockTimeout = EMPTY
     settle_timeout: BlockTimeout = EMPTY
@@ -469,7 +469,7 @@ class NettingChannelStateProperties(Properties):
 NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=CanonicalIdentifierProperties.DEFAULTS,
     token_address=UNIT_TOKEN_ADDRESS,
-    payment_network_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    token_network_registry_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     fee_schedule=FeeScheduleStateProperties.DEFAULTS,
@@ -483,7 +483,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
 
 @dataclass(frozen=True)
 class TransferDescriptionProperties(Properties):
-    payment_network_address: TokenNetworkRegistryAddress = EMPTY
+    token_network_registry_address: TokenNetworkRegistryAddress = EMPTY
     payment_identifier: PaymentID = EMPTY
     amount: TokenAmount = EMPTY
     token_network_address: TokenNetworkAddress = EMPTY
@@ -495,7 +495,7 @@ class TransferDescriptionProperties(Properties):
 
 
 TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
-    payment_network_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    token_network_registry_address=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
@@ -1244,7 +1244,7 @@ def make_transfers_pair(
 class ContainerForChainStateTests:
     chain_state: ChainState
     our_address: Address
-    payment_network_address: TokenNetworkRegistryAddress
+    token_network_registry_address: TokenNetworkRegistryAddress
     token_address: TokenAddress
     token_network_address: TokenNetworkAddress
     channel_set: ChannelSet
@@ -1296,7 +1296,7 @@ def make_chain_state(
             netting_channel.partner_state.address
         ].append(netting_channel.canonical_identifier.channel_identifier)
 
-    payment_network_address = make_address()
+    token_network_registry_address = make_address()
     our_address = channel_set.channels[0].our_state.address
 
     chain_state = ChainState(
@@ -1306,12 +1306,14 @@ def make_chain_state(
         our_address=our_address,
         chain_id=UNIT_CHAIN_ID,
     )
-    chain_state.identifiers_to_paymentnetworks[payment_network_address] = PaymentNetworkState(
-        address=payment_network_address, token_network_list=[token_network]
+    chain_state.identifiers_to_paymentnetworks[
+        token_network_registry_address
+    ] = PaymentNetworkState(
+        address=token_network_registry_address, token_network_list=[token_network]
     )
     chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
         token_network_address
-    ] = payment_network_address
+    ] = token_network_registry_address
 
     chain_state.nodeaddresses_to_networkstates = make_node_availability_map(
         [channel.partner_state.address for channel in channel_set.channels]
@@ -1319,7 +1321,7 @@ def make_chain_state(
     return ContainerForChainStateTests(
         chain_state=chain_state,
         our_address=our_address,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         token_network_address=token_network_address,
         channel_set=channel_set,

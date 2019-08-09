@@ -48,9 +48,9 @@ def run_test_failsfast_lockedtransfer_exceeding_distributable(
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    payment_network_address = app0.raiden.default_registry.address
+    token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_address, token_address
+        views.state_from_app(app0), token_network_registry_address, token_address
     )
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, deposit * 2, app1.raiden.address, identifier=1
@@ -79,9 +79,9 @@ def run_test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     app0, app1 = raiden_network
 
     amount = 10
-    payment_network_address = app0.raiden.default_registry.address
+    token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), payment_network_address, token_address
+        views.state_from_app(app0), token_network_registry_address, token_address
     )
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount, app1.raiden.address, identifier=1

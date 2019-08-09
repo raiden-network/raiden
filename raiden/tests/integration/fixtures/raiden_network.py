@@ -130,7 +130,7 @@ def raiden_chain(
     with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_channels(
             app_channels=app_channels,
-            payment_network_address=blockchain_services.deploy_registry.address,
+            token_network_registry_address=blockchain_services.deploy_registry.address,
             token_addresses=token_addresses,
             deposit=deposit,
         )
@@ -226,7 +226,7 @@ def raiden_network(
         with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
             wait_for_channels(
                 app_channels=app_channels,
-                payment_network_address=blockchain_services.deploy_registry.address,
+                token_network_registry_address=blockchain_services.deploy_registry.address,
                 token_addresses=token_addresses,
                 deposit=deposit,
             )

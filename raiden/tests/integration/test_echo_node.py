@@ -104,7 +104,7 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
                 "amount": amount,
                 "identifier": ident,
                 "initiator": sender,
-                "payment_network_address": registry_address,
+                "token_network_registry_address": registry_address,
             },
         )
 

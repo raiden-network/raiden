@@ -177,18 +177,18 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             network_graph=TokenNetworkGraphState(self.token_network_address),
         )
 
-        self.payment_network_address = factories.make_payment_network_address()
-        self.payment_network_state = PaymentNetworkState(
-            self.payment_network_address, [self.token_network_state]
+        self.token_network_registry_address = factories.make_token_network_registry_address()
+        self.token_network_registry_state = PaymentNetworkState(
+            self.token_network_registry_address, [self.token_network_state]
         )
 
         self.chain_state.identifiers_to_paymentnetworks[
-            self.payment_network_address
-        ] = self.payment_network_state
+            self.token_network_registry_address
+        ] = self.token_network_registry_state
 
         self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
             self.token_network_address
-        ] = self.payment_network_address
+        ] = self.token_network_registry_address
         channels = [
             self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
         ]
@@ -316,7 +316,7 @@ class InitiatorMixin:
         self.used_secrets.add(secret)
 
         return TransferDescriptionWithSecretState(
-            payment_network_address=self.payment_network_address,
+            token_network_registry_address=self.token_network_registry_address,
             payment_identifier=payment_id,
             amount=amount,
             allocated_fee=0,

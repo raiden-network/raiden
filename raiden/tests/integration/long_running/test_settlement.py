@@ -995,7 +995,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state=views.state_from_app(alice_app),
-        payment_network_address=alice_app.raiden.default_registry.address,
+        token_network_registry_address=alice_app.raiden.default_registry.address,
         token_address=token_address,
     )
     assert token_network_address
@@ -1083,7 +1083,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     with gevent.Timeout(timeout):
         waiting.wait_for_close(
             raiden=alice_app.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             channel_ids=[alice_bob_channel_state.identifier],
             retry_timeout=alice_app.raiden.alarm.sleep_time,
@@ -1113,7 +1113,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     with settle_timeout:
         waiting.wait_for_settle(
             raiden=alice_app.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             channel_ids=[alice_bob_channel_state.identifier],
             retry_timeout=alice_app.raiden.alarm.sleep_time,

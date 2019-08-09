@@ -644,7 +644,7 @@
         2,
         {
             "transaction_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "payment_network": {
+            "token_network_registry": {
                 "address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
                 "tokennetworks": [],
                 "_type": "raiden.transfer.state.PaymentNetworkState",
@@ -677,7 +677,7 @@
         5,
         {
             "transaction_hash": "0x7b671bf88558f7da9c76c5b89b2551b59d95f4f23ea50bad641931968aa82f84",
-            "payment_network_address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
+            "token_network_registry_address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
             "token_network": {
                 "address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
                 "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
@@ -787,7 +787,7 @@
                 "identifier": "1",
                 "chain_id": 337,
                 "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
-                "payment_network_address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
+                "token_network_registry_address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
                 "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
                 "reveal_timeout": "13",
                 "settle_timeout": "39",

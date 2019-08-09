@@ -217,7 +217,7 @@ def handle_cancelpayment(
             initiator_state.transfer_state = "transfer_cancelled"
 
             cancel = EventPaymentSentFailed(
-                payment_network_address=channel_state.payment_network_address,
+                token_network_registry_address=channel_state.token_network_registry_address,
                 token_network_address=channel_state.token_network_address,
                 identifier=transfer_description.payment_identifier,
                 target=transfer_description.target,
@@ -286,7 +286,7 @@ def handle_transferreroute(
 
     old_description = initiator_state.transfer_description
     transfer_description = TransferDescriptionWithSecretState(
-        payment_network_address=old_description.payment_network_address,
+        token_network_registry_address=old_description.token_network_registry_address,
         payment_identifier=old_description.payment_identifier,
         amount=old_description.amount,
         token_network_address=old_description.token_network_address,

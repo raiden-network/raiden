@@ -43,9 +43,9 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_address = app0.raiden.default_registry.address
+    token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     number_of_transfers = 7
@@ -110,7 +110,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     with gevent.Timeout(20, exception=exception):
         waiting.wait_for_payment_balance(
             raiden=app0_restart.raiden,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             token_address=token_address,
             partner_address=app1.raiden.address,
             target_address=app1.raiden.address,
@@ -121,7 +121,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     with gevent.Timeout(20, exception=exception):
         waiting.wait_for_payment_balance(
             raiden=app1.raiden,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             token_address=token_address,
             partner_address=app0_restart.raiden.address,
             target_address=app1.raiden.address,
@@ -171,9 +171,9 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
 
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_address = app0.raiden.default_registry.address
+    token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, payment_network_address, token_address
+        chain_state, token_network_registry_address, token_address
     )
 
     # make a few transfers from app0 to app1
@@ -229,7 +229,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
 
     waiting.wait_for_payment_balance(
         raiden=app1.raiden,
-        payment_network_address=payment_network_address,
+        token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         partner_address=app0_restart.raiden.address,
         target_address=app1.raiden.address,

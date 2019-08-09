@@ -57,7 +57,7 @@ class ChannelSettleState:
 @dataclass(frozen=True)
 class NewChannelDetails:
     chain_id: ChainID
-    payment_network_address: TokenNetworkRegistryAddress
+    token_network_registry_address: TokenNetworkRegistryAddress
     token_address: TokenAddress
     our_address: Address
     partner_address: Address
@@ -234,10 +234,10 @@ def get_contractreceivechannelnew_data_from_event(
         # Not a channel which this node is a participant
         return None
 
-    payment_network = views.get_token_network_registry_by_token_network_address(
+    token_network_registry = views.get_token_network_registry_by_token_network_address(
         chain_state, token_network_address
     )
-    assert payment_network is not None, "Payment network missing"
+    assert token_network_registry is not None, "Payment network missing"
 
     token_network = views.get_token_network_by_address(
         chain_state=chain_state, token_network_address=token_network_address
@@ -246,7 +246,7 @@ def get_contractreceivechannelnew_data_from_event(
 
     return NewChannelDetails(
         chain_id=event.chain_id,
-        payment_network_address=payment_network.address,
+        token_network_registry_address=token_network_registry.address,
         token_address=token_network.token_address,
         our_address=our_address,
         partner_address=partner_address,

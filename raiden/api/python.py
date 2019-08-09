@@ -286,7 +286,7 @@ class RaidenAPI:  # pragma: no unittest
 
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
         )
 
@@ -328,7 +328,7 @@ class RaidenAPI:  # pragma: no unittest
 
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
         )
 
@@ -446,7 +446,7 @@ class RaidenAPI:  # pragma: no unittest
 
         waiting.wait_for_newchannel(
             raiden=self.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
             retry_timeout=retry_timeout,
@@ -454,7 +454,7 @@ class RaidenAPI:  # pragma: no unittest
         chain_state = views.state_from_raiden(self.raiden)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
         )
@@ -509,7 +509,7 @@ class RaidenAPI:  # pragma: no unittest
         token_addresses = views.get_token_identifiers(chain_state, registry_address)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
         )
@@ -585,7 +585,7 @@ class RaidenAPI:  # pragma: no unittest
         token_addresses = views.get_token_identifiers(chain_state, registry_address)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
         )
@@ -692,7 +692,7 @@ class RaidenAPI:  # pragma: no unittest
         target_address = self.raiden.address
         waiting.wait_for_participant_deposit(
             raiden=self.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
             target_address=target_address,
@@ -742,7 +742,7 @@ class RaidenAPI:  # pragma: no unittest
 
         valid_tokens = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
         )
         if token_address not in valid_tokens:
             raise UnknownTokenAddress("Token address is not known.")
@@ -750,7 +750,7 @@ class RaidenAPI:  # pragma: no unittest
         chain_state = views.state_from_raiden(self.raiden)
         channels_to_close = views.filter_channels_by_partneraddress(
             chain_state=chain_state,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             partner_addresses=partner_addresses,
         )
@@ -767,7 +767,7 @@ class RaidenAPI:  # pragma: no unittest
 
         waiting.wait_for_close(
             raiden=self.raiden,
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             channel_ids=channel_ids,
             retry_timeout=retry_timeout,
@@ -814,7 +814,7 @@ class RaidenAPI:  # pragma: no unittest
         if token_address and partner_address:
             channel_state = views.get_channelstate_for(
                 chain_state=views.state_from_raiden(self.raiden),
-                payment_network_address=registry_address,
+                token_network_registry_address=registry_address,
                 token_address=token_address,
                 partner_address=partner_address,
             )
@@ -827,7 +827,7 @@ class RaidenAPI:  # pragma: no unittest
         elif token_address:
             result = views.list_channelstate_for_tokennetwork(
                 chain_state=views.state_from_raiden(self.raiden),
-                payment_network_address=registry_address,
+                token_network_registry_address=registry_address,
                 token_address=token_address,
             )
 
@@ -850,7 +850,7 @@ class RaidenAPI:  # pragma: no unittest
         """Returns a list of tokens the node knows about"""
         tokens_list = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
         )
         return tokens_list
 
@@ -859,7 +859,7 @@ class RaidenAPI:  # pragma: no unittest
     ) -> Optional[TokenNetworkAddress]:
         return views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
-            payment_network_address=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
         )
 
@@ -900,7 +900,7 @@ class RaidenAPI:  # pragma: no unittest
         secrethash: SecretHash = None,
     ):
         current_state = views.state_from_raiden(self.raiden)
-        payment_network_address = self.raiden.default_registry.address
+        token_network_registry_address = self.raiden.default_registry.address
 
         if not isinstance(amount, int):  # pragma: no unittest
             raise InvalidAmount("Amount not a number")
@@ -946,7 +946,7 @@ class RaidenAPI:  # pragma: no unittest
 
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state=current_state,
-            payment_network_address=payment_network_address,
+            token_network_registry_address=token_network_registry_address,
             token_address=token_address,
         )
 
@@ -988,7 +988,7 @@ class RaidenAPI:  # pragma: no unittest
         if token_address:
             token_network_address = views.get_token_network_address_by_token_address(
                 chain_state=views.state_from_raiden(self.raiden),
-                payment_network_address=self.raiden.default_registry.address,
+                token_network_registry_address=self.raiden.default_registry.address,
                 token_address=token_address,
             )
 

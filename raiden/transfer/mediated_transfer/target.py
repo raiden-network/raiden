@@ -232,7 +232,7 @@ def handle_unlock(
     if is_valid:
         transfer = target_state.transfer
         payment_received_success = EventPaymentReceivedSuccess(
-            payment_network_address=channel_state.payment_network_address,
+            token_network_registry_address=channel_state.token_network_registry_address,
             token_network_address=channel_state.token_network_address,
             identifier=transfer.payment_identifier,
             amount=TokenAmount(transfer.lock.amount),

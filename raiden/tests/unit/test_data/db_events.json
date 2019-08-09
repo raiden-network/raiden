@@ -13,7 +13,7 @@
         2,
         16,
         {
-            "payment_network_address": "0x8c4c928Af4153cA3bF36985e84736Fff65a8971b",
+            "token_network_registry_address": "0x8c4c928Af4153cA3bF36985e84736Fff65a8971b",
             "token_network_address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
             "identifier": 1,
             "amount": "55",
