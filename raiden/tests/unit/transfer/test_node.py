@@ -51,10 +51,10 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     ChannelState,
     HopState,
-    PaymentNetworkState,
     PendingLocksState,
     RouteState,
     TokenNetworkGraphState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
 )
 from raiden.transfer.state_change import (
@@ -64,7 +64,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
-    ContractReceiveNewPaymentNetwork,
+    ContractReceiveNewTokenNetworkRegistry,
     ReceiveDelivered,
     ReceiveProcessed,
 )
@@ -316,7 +316,7 @@ def test_subdispatch_by_canonical_id(chain_state):
     token_network.channelidentifiers_to_channels[
         canonical_identifier.channel_identifier
     ] = channel_state
-    token_network_registry = PaymentNetworkState(
+    token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
     chain_state.identifiers_to_paymentnetworks[
@@ -410,10 +410,10 @@ def test_handle_new_token_network_registry(chain_state, token_network_address):
         token_address=token_address,
         network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
-    token_network_registry = PaymentNetworkState(
+    token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
-    state_change = ContractReceiveNewPaymentNetwork(
+    state_change = ContractReceiveNewTokenNetworkRegistry(
         transaction_hash=factories.make_transaction_hash(),
         token_network_registry=token_network_registry,
         block_hash=make_block_hash(),

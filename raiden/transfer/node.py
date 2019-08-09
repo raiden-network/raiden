@@ -40,7 +40,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
+from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
@@ -56,8 +56,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
-    ContractReceiveNewPaymentNetwork,
     ContractReceiveNewTokenNetwork,
+    ContractReceiveNewTokenNetworkRegistry,
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
@@ -424,7 +424,7 @@ def maybe_add_tokennetwork(
     )
 
     if token_network_registry_state is None:
-        token_network_registry_state = PaymentNetworkState(
+        token_network_registry_state = TokenNetworkRegistryState(
             token_network_registry_address, [token_network_state]
         )
 
@@ -615,7 +615,7 @@ def handle_node_change_network_state(
 
 
 def handle_new_token_network_registry(
-    chain_state: ChainState, state_change: ContractReceiveNewPaymentNetwork
+    chain_state: ChainState, state_change: ContractReceiveNewTokenNetworkRegistry
 ) -> TransitionResult[ChainState]:
     events: List[Event] = list()
 
@@ -844,8 +844,10 @@ def handle_state_change(
         elif type(state_change) == ActionTransferReroute:
             assert isinstance(state_change, ActionTransferReroute), MYPY_ANNOTATION
             iteration = handle_transfer_reroute(chain_state, state_change)
-        elif type(state_change) == ContractReceiveNewPaymentNetwork:
-            assert isinstance(state_change, ContractReceiveNewPaymentNetwork), MYPY_ANNOTATION
+        elif type(state_change) == ContractReceiveNewTokenNetworkRegistry:
+            assert isinstance(
+                state_change, ContractReceiveNewTokenNetworkRegistry
+            ), MYPY_ANNOTATION
             iteration = handle_new_token_network_registry(chain_state, state_change)
         elif type(state_change) == ContractReceiveNewTokenNetwork:
             assert isinstance(state_change, ContractReceiveNewTokenNetwork), MYPY_ANNOTATION
@@ -954,7 +956,7 @@ def is_transaction_effect_satisfied(
     #
     #  - ContractReceiveChannelNew
     #  - ContractReceiveChannelDeposit
-    #  - ContractReceiveNewPaymentNetwork
+    #  - ContractReceiveNewTokenNetworkRegistry
     #  - ContractReceiveNewTokenNetwork
     #  - ContractReceiveRouteNew
     #

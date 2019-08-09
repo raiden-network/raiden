@@ -452,7 +452,7 @@ class TokenNetworkState(State):
 
 
 @dataclass
-class PaymentNetworkState(State):
+class TokenNetworkRegistryState(State):
     """ Corresponds to a registry smart contract. """
 
     address: TokenNetworkRegistryAddress
@@ -494,9 +494,9 @@ class ChainState(State):
     block_hash: BlockHash
     our_address: Address
     chain_id: ChainID
-    identifiers_to_paymentnetworks: Dict[TokenNetworkRegistryAddress, PaymentNetworkState] = field(
-        repr=False, default_factory=dict
-    )
+    identifiers_to_paymentnetworks: Dict[
+        TokenNetworkRegistryAddress, TokenNetworkRegistryState
+    ] = field(repr=False, default_factory=dict)
     nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
     payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
     pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)

@@ -647,11 +647,11 @@
             "token_network_registry": {
                 "address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
                 "tokennetworks": [],
-                "_type": "raiden.transfer.state.PaymentNetworkState",
+                "_type": "raiden.transfer.state.TokenNetworkRegistryState",
                 "_version": 0
             },
             "block_number": "0",
-            "_type": "raiden.transfer.state_change.ContractReceiveNewPaymentNetwork",
+            "_type": "raiden.transfer.state_change.ContractReceiveNewTokenNetworkRegistry",
             "_version": 0
         }
     ],

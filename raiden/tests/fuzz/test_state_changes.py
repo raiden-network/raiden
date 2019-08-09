@@ -41,8 +41,8 @@ from raiden.transfer.state import (
     ChainState,
     ChannelState,
     HashTimeLockState,
-    PaymentNetworkState,
     TokenNetworkGraphState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
     make_empty_pending_locks_state,
 )
@@ -178,7 +178,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         )
 
         self.token_network_registry_address = factories.make_token_network_registry_address()
-        self.token_network_registry_state = PaymentNetworkState(
+        self.token_network_registry_state = TokenNetworkRegistryState(
             self.token_network_registry_address, [self.token_network_state]
         )
 

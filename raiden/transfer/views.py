@@ -9,8 +9,8 @@ from raiden.transfer.state import (
     ChainState,
     ChannelState,
     NettingChannelState,
-    PaymentNetworkState,
     QueueIdsToQueues,
+    TokenNetworkRegistryState,
     TokenNetworkState,
 )
 from raiden.utils.typing import (
@@ -147,7 +147,7 @@ def get_token_network_registry_address(
 
 def get_token_network_registry_by_token_network_address(
     chain_state: ChainState, token_network_address: TokenNetworkAddress
-) -> Optional[PaymentNetworkState]:
+) -> Optional[TokenNetworkRegistryState]:
     for token_network_registry in chain_state.identifiers_to_paymentnetworks.values():
         if token_network_address in token_network_registry.tokennetworkaddresses_to_tokennetworks:
             return token_network_registry
@@ -608,7 +608,7 @@ def get_networks(
     chain_state: ChainState,
     token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
-) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
+) -> Tuple[Optional[TokenNetworkRegistryState], Optional[TokenNetworkState]]:
     token_network_state = None
     tn_registry_state = chain_state.identifiers_to_paymentnetworks.get(
         token_network_registry_address

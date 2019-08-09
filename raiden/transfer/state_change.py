@@ -13,7 +13,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
-    PaymentNetworkState,
+    TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionChannelDeposit,
 )
@@ -255,16 +255,16 @@ class ActionChangeNodeNetworkState(StateChange):
 
 
 @dataclass(frozen=True)
-class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
+class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
     """ Registers a new payment network.
     A payment network corresponds to a registry smart contract.
     """
 
-    token_network_registry: PaymentNetworkState
+    token_network_registry: TokenNetworkRegistryState
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        typecheck(self.token_network_registry, PaymentNetworkState)
+        typecheck(self.token_network_registry, TokenNetworkRegistryState)
 
 
 @dataclass(frozen=True)
