@@ -144,13 +144,13 @@ URLS_V1 = [
     ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
     ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
     (
-        "/_debug/blockchain_events/token_network_registrys/<hexaddress:token_address>/channels",
+        "/_debug/blockchain_events/token_network_registries/<hexaddress:token_address>/channels",
         ChannelBlockchainEventsResource,
         "tokenchanneleventsresourceblockchain",
     ),
     (
         (
-            "/_debug/blockchain_events/token_network_registrys/"
+            "/_debug/blockchain_events/token_network_registries/"
             "<hexaddress:token_address>/channels/<hexaddress:partner_address>"
         ),
         ChannelBlockchainEventsResource,

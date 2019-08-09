@@ -182,7 +182,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        self.chain_state.identifiers_to_tokennetworkregistrys[
+        self.chain_state.identifiers_to_tokennetworkregistries[
             self.token_network_registry_address
         ] = self.token_network_registry_state
 

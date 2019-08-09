@@ -40,7 +40,7 @@ def test_detect_balance_proof_change():
 
     token_network_registry = TokenNetworkRegistryState(b"x", [])
     token_network_registry_copy = deepcopy(token_network_registry)
-    new.identifiers_to_tokennetworkregistrys["a"] = token_network_registry
+    new.identifiers_to_tokennetworkregistries["a"] = token_network_registry
     assert len(diff()) == 0
 
     token_network = TokenNetworkState(
@@ -79,7 +79,7 @@ def test_detect_balance_proof_change():
     partner_state.balance_proof = balance_proof
     assert len(diff()) == 1
 
-    old.identifiers_to_tokennetworkregistrys["a"] = token_network_registry_copy
+    old.identifiers_to_tokennetworkregistries["a"] = token_network_registry_copy
     assert len(diff()) == 1
 
     token_network_registry_copy.tokennetworkaddresses_to_tokennetworks["a"] = token_network_copy

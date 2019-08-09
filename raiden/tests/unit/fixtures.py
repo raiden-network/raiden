@@ -55,7 +55,7 @@ def chain_state(our_address):
 @pytest.fixture
 def token_network_registry_state(chain_state, token_network_registry_address):
     token_network_registry = TokenNetworkRegistryState(token_network_registry_address, [])
-    chain_state.identifiers_to_tokennetworkregistrys[
+    chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry_address
     ] = token_network_registry
     return token_network_registry

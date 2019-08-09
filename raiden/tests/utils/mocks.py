@@ -109,7 +109,7 @@ class MockTokenNetworkRegistry:
 
 class MockChainState:
     def __init__(self):
-        self.identifiers_to_tokennetworkregistrys = {}
+        self.identifiers_to_tokennetworkregistries = {}
 
 
 class MockRaidenService:
@@ -190,7 +190,7 @@ def make_raiden_service_mock(
     )
     tokennetworkaddresses_to_tokennetworks[token_network_address] = token_network
 
-    chain_state.identifiers_to_tokennetworkregistrys = {
+    chain_state.identifiers_to_tokennetworkregistries = {
         token_network_registry_address: token_network_registry
     }
 
