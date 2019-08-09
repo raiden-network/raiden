@@ -677,7 +677,7 @@ class JSONRPCClient:
     def new_filter(
         self,
         contract_address: Address,
-        topics: List[str] = None,
+        topics: Optional[List[Optional[str]]],
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = "latest",
     ) -> StatelessFilter:
