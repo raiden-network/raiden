@@ -29,11 +29,11 @@ from raiden.utils.typing import (
     List,
     Optional,
     PaymentAmount,
-    PaymentNetworkAddress,
     Signature,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Tuple,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
@@ -46,7 +46,7 @@ class PFSInfo:
     url: str
     price: TokenAmount
     chain_id: ChainID
-    token_network_registry_address: PaymentNetworkAddress
+    token_network_registry_address: TokenNetworkRegistryAddress
     payment_address: Address
     message: str
     operator: str
@@ -140,7 +140,7 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
             url=url,
             price=infos["price_info"],
             chain_id=infos["network_info"]["chain_id"],
-            token_network_registry_address=PaymentNetworkAddress(
+            token_network_registry_address=TokenNetworkRegistryAddress(
                 to_canonical_address(infos["network_info"]["registry_address"])
             ),
             payment_address=to_canonical_address(infos["payment_address"]),
@@ -224,7 +224,7 @@ def configure_pfs_or_exit(
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
     node_network_id: ChainID,
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: FeeAmount,
 ) -> PFSInfo:
     """

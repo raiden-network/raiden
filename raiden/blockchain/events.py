@@ -28,8 +28,8 @@ from raiden.utils.typing import (
     Iterable,
     List,
     Optional,
-    PaymentNetworkAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     TransactionHash,
 )
 from raiden_contracts.constants import (
@@ -108,7 +108,7 @@ def get_contract_events(
 
 def get_token_network_registry_events(
     chain: BlockChainService,
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,

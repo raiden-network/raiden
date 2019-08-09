@@ -506,7 +506,9 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
 
     def register_token(
-        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
+        self,
+        registry_address: typing.TokenNetworkRegistryAddress,
+        token_address: typing.TokenAddress,
     ):
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
@@ -579,7 +581,7 @@ class RestAPI:  # pragma: no unittest
 
     def open(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         partner_address: typing.Address,
         token_address: typing.TokenAddress,
         settle_timeout: typing.BlockTimeout = None,
@@ -660,7 +662,7 @@ class RestAPI:  # pragma: no unittest
 
     def connect(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         token_address: typing.TokenAddress,
         funds: typing.TokenAmount,
         initial_channel_target: int = None,
@@ -691,7 +693,9 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
 
     def leave(
-        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
+        self,
+        registry_address: typing.TokenNetworkRegistryAddress,
+        token_address: typing.TokenAddress,
     ):
         log.debug(
             "Leaving token network",
@@ -705,7 +709,7 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=closed_channels)
 
-    def get_connection_managers_info(self, registry_address: typing.PaymentNetworkAddress):
+    def get_connection_managers_info(self, registry_address: typing.TokenNetworkRegistryAddress):
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
@@ -747,7 +751,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_channel_list(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         token_address: typing.TokenAddress = None,
         partner_address: typing.Address = None,
     ):
@@ -767,7 +771,7 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=result)
 
-    def get_tokens_list(self, registry_address: typing.PaymentNetworkAddress):
+    def get_tokens_list(self, registry_address: typing.TokenNetworkRegistryAddress):
         log.debug(
             "Getting token list",
             node=to_checksum_address(self.raiden_api.address),
@@ -780,7 +784,9 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=result)
 
     def get_token_network_for_token(
-        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
+        self,
+        registry_address: typing.TokenNetworkRegistryAddress,
+        token_address: typing.TokenAddress,
     ):
         log.debug(
             "Getting token network for token",
@@ -800,7 +806,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_blockchain_events_network(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: typing.BlockSpecification = "latest",
     ):
@@ -924,7 +930,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_channel(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
     ):
@@ -947,7 +953,9 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_partners_by_token(
-        self, registry_address: typing.PaymentNetworkAddress, token_address: typing.TokenAddress
+        self,
+        registry_address: typing.TokenNetworkRegistryAddress,
+        token_address: typing.TokenAddress,
     ):
         log.debug(
             "Getting partners by token",
@@ -982,7 +990,7 @@ class RestAPI:  # pragma: no unittest
 
     def initiate_payment(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         token_address: typing.TokenAddress,
         target_address: typing.Address,
         amount: typing.TokenAmount,
@@ -1051,7 +1059,7 @@ class RestAPI:  # pragma: no unittest
 
     def _deposit(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         total_deposit: typing.TokenAmount,
     ):
@@ -1094,7 +1102,7 @@ class RestAPI:  # pragma: no unittest
 
     def _withdraw(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         total_withdraw: typing.TokenAmount,
     ):
@@ -1131,7 +1139,9 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=result)
 
     def _close(
-        self, registry_address: typing.PaymentNetworkAddress, channel_state: NettingChannelState
+        self,
+        registry_address: typing.TokenNetworkRegistryAddress,
+        channel_state: NettingChannelState,
     ):
         log.debug(
             "Closing channel",
@@ -1162,7 +1172,7 @@ class RestAPI:  # pragma: no unittest
 
     def patch_channel(
         self,
-        registry_address: typing.PaymentNetworkAddress,
+        registry_address: typing.TokenNetworkRegistryAddress,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
         total_deposit: typing.TokenAmount = None,

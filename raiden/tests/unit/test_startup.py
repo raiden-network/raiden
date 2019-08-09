@@ -10,7 +10,7 @@ from raiden.tests.utils.factories import make_address, make_payment_network_addr
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils.typing import PaymentNetworkAddress
+from raiden.utils.typing import TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -18,7 +18,7 @@ from raiden_contracts.constants import (
     CONTRACT_USER_DEPOSIT,
 )
 
-token_network_registry_address_test_default = PaymentNetworkAddress(
+token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
 )
 

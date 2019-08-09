@@ -23,12 +23,12 @@ from raiden.utils.typing import (
     Iterator,
     List,
     Optional,
-    PaymentNetworkAddress,
     Secret,
     SecretHash,
     Set,
     TokenAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Tuple,
     Union,
 )
@@ -62,7 +62,7 @@ def block_number(chain_state: ChainState) -> BlockNumber:
 
 def count_token_network_channels(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
     token_network = get_token_network_by_token_address(
@@ -106,7 +106,7 @@ def get_node_network_status(chain_state: ChainState, node_address: Address) -> s
 
 def get_participants_addresses(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Set[Address]:
     token_network = get_token_network_by_token_address(
@@ -123,7 +123,7 @@ def get_participants_addresses(
 
 def get_our_deposits_for_token_network(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
     open_channels = get_channelstate_open(chain_state, payment_network_address, token_address)
@@ -135,7 +135,7 @@ def get_our_deposits_for_token_network(
     return total_deposit
 
 
-def get_payment_network_address(chain_state: ChainState) -> List[PaymentNetworkAddress]:
+def get_payment_network_address(chain_state: ChainState) -> List[TokenNetworkRegistryAddress]:
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
@@ -151,7 +151,7 @@ def get_token_network_registry_by_token_network_address(
 
 def get_token_network_address_by_token_address(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Optional[TokenNetworkAddress]:
     token_network = get_token_network_by_token_address(
@@ -164,7 +164,7 @@ def get_token_network_address_by_token_address(
 
 
 def get_token_network_addresses(
-    chain_state: ChainState, payment_network_address: PaymentNetworkAddress
+    chain_state: ChainState, payment_network_address: TokenNetworkRegistryAddress
 ) -> List[TokenNetworkAddress]:
     """ Return the list of token networks registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
@@ -179,7 +179,7 @@ def get_token_network_addresses(
 
 
 def get_token_identifiers(
-    chain_state: ChainState, payment_network_address: PaymentNetworkAddress
+    chain_state: ChainState, payment_network_address: TokenNetworkRegistryAddress
 ) -> List[TokenAddress]:
     """ Return the list of tokens registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_address)
@@ -195,7 +195,7 @@ def get_token_identifiers(
 
 def total_token_network_channels(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> int:
 
@@ -212,7 +212,7 @@ def total_token_network_channels(
 
 def get_token_network_by_token_address(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Optional[TokenNetworkState]:
 
@@ -248,7 +248,7 @@ def get_token_network_by_address(
 
 def get_channelstate_for(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_address: Address,
 ) -> Optional[NettingChannelState]:
@@ -309,7 +309,7 @@ def get_channelstate_by_canonical_identifier(
 
 def get_channelstate_filter(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     filter_fn: Callable,
 ) -> List[NettingChannelState]:
@@ -331,7 +331,7 @@ def get_channelstate_filter(
 
 def get_channelstate_open(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of open channels in a token network."""
@@ -345,7 +345,7 @@ def get_channelstate_open(
 
 def get_channelstate_closing(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of closing channels in a token network."""
@@ -359,7 +359,7 @@ def get_channelstate_closing(
 
 def get_channelstate_closed(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of closed channels in a token network."""
@@ -373,7 +373,7 @@ def get_channelstate_closed(
 
 def get_channelstate_settling(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of settling channels in a token network."""
@@ -387,7 +387,7 @@ def get_channelstate_settling(
 
 def get_channelstate_settled(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
     """Return the state of settled channels in a token network."""
@@ -451,7 +451,7 @@ def get_all_transfer_tasks(chain_state: ChainState) -> Dict[SecretHash, Transfer
 
 def list_channelstate_for_tokennetwork(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> List[NettingChannelState]:
 
@@ -479,7 +479,7 @@ def list_all_channelstate(chain_state: ChainState) -> List[NettingChannelState]:
 
 def filter_channels_by_partneraddress(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     partner_addresses: List[Address],
 ) -> List[NettingChannelState]:
@@ -599,7 +599,7 @@ def detect_balance_proof_change(
 
 def get_networks(
     chain_state: ChainState,
-    payment_network_address: PaymentNetworkAddress,
+    payment_network_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
     token_network_state = None

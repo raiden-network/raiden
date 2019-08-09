@@ -51,9 +51,9 @@ from raiden.utils.typing import (
     Endpoint,
     FeeAmount,
     Optional,
-    PaymentNetworkAddress,
     Port,
     PrivateKey,
+    TokenNetworkRegistryAddress,
     Tuple,
 )
 from raiden_contracts.constants import (
@@ -126,7 +126,7 @@ def run_app(
     keystore_path: str,
     gas_price: Callable,
     eth_rpc_endpoint: str,
-    tokennetwork_registry_contract_address: PaymentNetworkAddress,
+    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
     one_to_n_contract_address: Address,
     secret_registry_contract_address: Address,
     service_registry_contract_address: Address,

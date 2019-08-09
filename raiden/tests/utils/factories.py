@@ -68,7 +68,6 @@ from raiden.utils.typing import (
     Nonce,
     Optional,
     PaymentID,
-    PaymentNetworkAddress,
     Secret,
     SecretHash,
     Signature,
@@ -76,6 +75,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     TransactionHash,
     Tuple,
     Type,
@@ -194,8 +194,8 @@ def make_token_network_address() -> TokenNetworkAddress:
     return TokenNetworkAddress(make_address())
 
 
-def make_payment_network_address() -> PaymentNetworkAddress:
-    return PaymentNetworkAddress(make_address())
+def make_payment_network_address() -> TokenNetworkRegistryAddress:
+    return TokenNetworkRegistryAddress(make_address())
 
 
 def make_additional_hash() -> AdditionalHash:
@@ -450,7 +450,7 @@ FeeScheduleStateProperties.DEFAULTS = FeeScheduleStateProperties(flat=0, proport
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: TokenAddress = EMPTY
-    payment_network_address: PaymentNetworkAddress = EMPTY
+    payment_network_address: TokenNetworkRegistryAddress = EMPTY
 
     reveal_timeout: BlockTimeout = EMPTY
     settle_timeout: BlockTimeout = EMPTY
@@ -483,7 +483,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
 
 @dataclass(frozen=True)
 class TransferDescriptionProperties(Properties):
-    payment_network_address: PaymentNetworkAddress = EMPTY
+    payment_network_address: TokenNetworkRegistryAddress = EMPTY
     payment_identifier: PaymentID = EMPTY
     amount: TokenAmount = EMPTY
     token_network_address: TokenNetworkAddress = EMPTY
@@ -1244,7 +1244,7 @@ def make_transfers_pair(
 class ContainerForChainStateTests:
     chain_state: ChainState
     our_address: Address
-    payment_network_address: PaymentNetworkAddress
+    payment_network_address: TokenNetworkRegistryAddress
     token_address: TokenAddress
     token_network_address: TokenNetworkAddress
     channel_set: ChannelSet

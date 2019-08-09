@@ -37,7 +37,6 @@ from raiden.utils.typing import (
     MessageID,
     Nonce,
     Optional,
-    PaymentNetworkAddress,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -52,6 +51,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     Tuple,
     Union,
     WithdrawAmount,
@@ -337,7 +337,7 @@ class NettingChannelState(State):
 
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
-    payment_network_address: PaymentNetworkAddress = field(repr=False)
+    payment_network_address: TokenNetworkRegistryAddress = field(repr=False)
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     fee_schedule: FeeScheduleState = field(repr=False)
@@ -455,7 +455,7 @@ class TokenNetworkState(State):
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
 
-    address: PaymentNetworkAddress
+    address: TokenNetworkRegistryAddress
     token_network_list: List[TokenNetworkState]
     tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
         repr=False, default_factory=dict
@@ -494,7 +494,7 @@ class ChainState(State):
     block_hash: BlockHash
     our_address: Address
     chain_id: ChainID
-    identifiers_to_paymentnetworks: Dict[PaymentNetworkAddress, PaymentNetworkState] = field(
+    identifiers_to_paymentnetworks: Dict[TokenNetworkRegistryAddress, PaymentNetworkState] = field(
         repr=False, default_factory=dict
     )
     nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
@@ -503,7 +503,7 @@ class ChainState(State):
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
     last_transport_authdata: Optional[str] = field(repr=False, default=None)
     tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
-        TokenNetworkAddress, PaymentNetworkAddress
+        TokenNetworkAddress, TokenNetworkRegistryAddress
     ] = field(repr=False, default_factory=dict)
 
     def __post_init__(self) -> None:

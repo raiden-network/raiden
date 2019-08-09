@@ -109,8 +109,8 @@ LockedAmount = NewType("LockedAmount", T_LockedAmount)
 T_PaymentWithFeeAmount = int
 PaymentWithFeeAmount = NewType("PaymentWithFeeAmount", T_FeeAmount)
 
-T_PaymentNetworkAddress = bytes
-PaymentNetworkAddress = NewType("PaymentNetworkAddress", T_PaymentNetworkAddress)
+T_TokenNetworkRegistryAddress = bytes
+TokenNetworkRegistryAddress = NewType("TokenNetworkRegistryAddress", T_TokenNetworkRegistryAddress)
 
 T_RaidenProtocolVersion = int
 RaidenProtocolVersion = NewType("RaidenProtocolVersion", T_RaidenProtocolVersion)

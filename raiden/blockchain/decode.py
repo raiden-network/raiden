@@ -56,9 +56,9 @@ from raiden.utils.typing import (
     FeeAmount,
     List,
     Optional,
-    PaymentNetworkAddress,
     SecretRegistryAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
 )
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
@@ -88,7 +88,7 @@ def contractreceivenewtokennetwork_from_event(
     token_network_address = args["token_network_address"]
 
     return ContractReceiveNewTokenNetwork(
-        payment_network_address=PaymentNetworkAddress(event.originating_contract),
+        payment_network_address=TokenNetworkRegistryAddress(event.originating_contract),
         token_network=TokenNetworkState(
             address=token_network_address,
             token_address=args["token_address"],

@@ -55,7 +55,6 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
-    PaymentNetworkAddress,
     Secret,
     SecretHash,
     T_Secret,
@@ -64,6 +63,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     TransactionHash,
     Tuple,
     WithdrawAmount,
@@ -180,7 +180,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_channel(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
     ) -> NettingChannelState:
@@ -205,7 +205,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def token_network_register(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
@@ -264,7 +264,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def token_network_connect(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         funds: TokenAmount,
         initial_channel_target: int = 3,
@@ -318,7 +318,7 @@ class RaidenAPI:  # pragma: no unittest
         )
 
     def token_network_leave(
-        self, registry_address: PaymentNetworkAddress, token_address: TokenAddress
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> List[NettingChannelState]:
         """ Close all channels and wait for settlement. """
         if not is_binary_address(registry_address):
@@ -362,7 +362,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def channel_open(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
         settle_timeout: BlockTimeout = None,
@@ -484,7 +484,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def set_total_channel_withdraw(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
         total_withdraw: WithdrawAmount,
@@ -557,7 +557,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def set_total_channel_deposit(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
         total_deposit: TokenAmount,
@@ -702,7 +702,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def channel_close(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
@@ -721,7 +721,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def channel_batch_close(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_addresses: List[Address],
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
@@ -775,7 +775,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_channel_list(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress = None,
         partner_address: Address = None,
     ) -> List[NettingChannelState]:
@@ -846,7 +846,7 @@ class RaidenAPI:  # pragma: no unittest
         """ Returns the currently network status of `node_address`. """
         self.raiden.start_health_check_for(node_address)
 
-    def get_tokens_list(self, registry_address: PaymentNetworkAddress):
+    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress):
         """Returns a list of tokens the node knows about"""
         tokens_list = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
@@ -855,7 +855,7 @@ class RaidenAPI:  # pragma: no unittest
         return tokens_list
 
     def get_token_network_address_for_token_address(
-        self, registry_address: PaymentNetworkAddress, token_address: TokenAddress
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> Optional[TokenNetworkAddress]:
         return views.get_token_network_address_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
@@ -865,7 +865,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def transfer_and_wait(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         amount: PaymentAmount,
         target: TargetAddress,
@@ -891,7 +891,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def transfer_async(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         amount: PaymentAmount,
         target: TargetAddress,
@@ -1028,7 +1028,7 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_blockchain_events_network(
         self,
-        registry_address: PaymentNetworkAddress,
+        registry_address: TokenNetworkRegistryAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
     ) -> List[Dict]:

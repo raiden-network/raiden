@@ -26,9 +26,9 @@ from raiden.utils.typing import (
     Iterable,
     List,
     Optional,
-    PaymentNetworkAddress,
     TokenAddress,
     TokenAmount,
+    TokenNetworkRegistryAddress,
 )
 
 
@@ -41,7 +41,7 @@ def timeout(blockchain_type: str) -> float:
 @pytest.fixture
 def raiden_chain(
     token_addresses: List[TokenAddress],
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Address,
     channels_per_node: int,
     deposit: TokenAmount,
@@ -148,7 +148,7 @@ def monitoring_service_contract_address() -> Address:
 @pytest.fixture
 def raiden_network(
     token_addresses: List[TokenAddress],
-    token_network_registry_address: PaymentNetworkAddress,
+    token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Address,
     channels_per_node: int,
     deposit: TokenAmount,
