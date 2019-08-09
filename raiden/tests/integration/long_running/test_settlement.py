@@ -28,7 +28,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.timeout import BlockTimeout
+from raiden.utils.typing import BlockNumber, MessageID, PaymentAmount, PaymentID, Secret
 
 
 def wait_for_batch_unlock(app, token_network_address, receiver, sender):
@@ -67,9 +69,11 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     token_network = views.get_token_network_by_address(
         views.state_from_app(app0), token_network_address
     )
+    assert token_network
 
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
@@ -93,7 +97,8 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(app0.raiden), registry_address, token_address, app1.raiden.address
     )
-
+    assert channel_state
+    assert channel_state.close_transaction
     assert channel_state.close_transaction.finished_block_number
 
     waiting.wait_for_settle(
@@ -107,6 +112,7 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     token_network = views.get_token_network_by_address(
         views.state_from_app(app0), token_network_address
     )
+    assert token_network
 
     assert (
         channel_identifier
@@ -151,6 +157,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     hold_event_handler = bob_app.raiden.raiden_event_handler
     wait_message_handler = bob_app.raiden.message_handler
@@ -158,6 +165,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     token_network = views.get_token_network_by_address(
         views.state_from_app(alice_app), token_network_address
     )
+    assert token_network
 
     channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     channel_identifier = channel_state.identifier
@@ -171,9 +179,9 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     identifier = 1
     target = bob_app.raiden.address
     transfer_1_secret = factories.make_secret(0)
-    transfer_1_secrethash = sha256(transfer_1_secret).digest()
+    transfer_1_secrethash = sha256_secrethash(transfer_1_secret)
     transfer_2_secret = factories.make_secret(1)
-    transfer_2_secrethash = sha256(transfer_2_secret).digest()
+    transfer_2_secrethash = sha256_secrethash(transfer_2_secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_1_secrethash)
     transfer1_received = wait_message_handler.wait_for_message(
@@ -198,6 +206,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
+    assert lock
 
     # This is the current state of the protocol:
     #
@@ -280,6 +289,7 @@ def run_test_batch_unlock(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     hold_event_handler = bob_app.raiden.raiden_event_handler
 
@@ -289,6 +299,7 @@ def run_test_batch_unlock(
     token_network = views.get_token_network_by_address(
         views.state_from_app(alice_app), token_network_address
     )
+    assert token_network
 
     channel_identifier = get_channelstate(alice_app, bob_app, token_network_address).identifier
 
@@ -306,8 +317,8 @@ def run_test_batch_unlock(
     alice_to_bob_amount = 10
     identifier = 1
     target = bob_app.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -324,6 +335,7 @@ def run_test_batch_unlock(
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
+    assert lock
 
     # This is the current state of the protocol:
     #
@@ -345,6 +357,7 @@ def run_test_batch_unlock(
         canonical_identifier=alice_bob_channel_state.canonical_identifier,
         state_change_identifier=HIGH_STATECHANGE_ULID,
     )
+    assert restored_channel_state
 
     our_restored_balance_proof = restored_channel_state.our_state.balance_proof
     assert our_balance_proof == our_restored_balance_proof
@@ -374,6 +387,7 @@ def run_test_batch_unlock(
     token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
     )
+    assert token_network
 
     assert (
         channel_identifier
@@ -393,6 +407,7 @@ def run_test_batch_unlock(
     token_network = views.get_token_network_by_address(
         views.state_from_app(bob_app), token_network_address
     )
+    assert token_network
 
     assert (
         channel_identifier
@@ -431,6 +446,7 @@ def run_test_channel_withdraw(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     token_proxy = bob_app.raiden.chain.token(token_address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
@@ -508,6 +524,7 @@ def run_test_channel_withdraw_expired(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     # Prevent withdraw confirmation from being sent
     send_withdraw_confirmation_event = alice_app.raiden.raiden_event_handler.hold(
@@ -564,13 +581,15 @@ def run_test_channel_withdraw_expired(
     assert alice_bob_channel_state.partner_total_withdraw == total_withdraw
     assert alice_bob_channel_state.partner_state.withdraws_pending.get(total_withdraw) is not None
 
-    withdraw_expiration = bob_alice_channel_state.our_state.withdraws_pending.get(
+    withdraw_expiration = bob_alice_channel_state.our_state.withdraws_pending[
         total_withdraw
-    ).expiration
+    ].expiration
     expiration_threshold = channel.get_sender_expiration_threshold(withdraw_expiration)
 
     waiting.wait_for_block(
-        raiden=bob_app.raiden, block_number=expiration_threshold + 1, retry_timeout=retry_timeout
+        raiden=bob_app.raiden,
+        block_number=BlockNumber(expiration_threshold + 1),
+        retry_timeout=retry_timeout,
     )
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
@@ -604,10 +623,11 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    amount = 30
+    amount = PaymentAmount(30)
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     hold_event_handler = app1.raiden.raiden_event_handler
 
     address0 = app0.raiden.address
@@ -649,7 +669,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
         target_app=app1,
         token_address=token_address,
         amount=amount,
-        identifier=2,
+        identifier=PaymentID(2),
     )
 
     RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
@@ -711,8 +731,8 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     app1.raiden.message_handler = message_handler
 
     target = app1.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
     locked_transfer_received = message_handler.wait_for_message(LockedTransfer, {})
@@ -734,16 +754,18 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     app0.raiden.transport.stop()
 
     reveal_secret = RevealSecret(
-        message_identifier=random.randint(0, UINT64_MAX), secret=secret, signature=EMPTY_SIGNATURE
+        message_identifier=MessageID(random.randint(0, UINT64_MAX)),
+        secret=secret,
+        signature=EMPTY_SIGNATURE,
     )
     app0.raiden.sign(reveal_secret)
     message_handler.on_message(app1.raiden, reveal_secret)
 
     chain_state = views.state_from_app(app1)
 
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     target_task = chain_state.payment_mapping.secrethashes_to_task[secrethash]
-    lock_expiration = target_task.target_state.transfer.lock.expiration
+    lock_expiration = target_task.target_state.transfer.lock.expiration  # type: ignore
     app1.raiden.chain.wait_until_block(target_block_number=lock_expiration)
 
     assert app1.raiden.default_secret_registry.is_secret_registered(
@@ -782,6 +804,7 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token
     )
+    assert token_network_address
     hold_event_handler = app2.raiden.raiden_event_handler
 
     # the attacker owns app0 and app2 and creates a transfer through app1
@@ -803,14 +826,15 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     attack_channel = get_channelstate(app2, app1, token_network_address)
     attack_transfer = None  # TODO
-    attack_contract = attack_channel.external_state.netting_channel.address
-    hub_contract = get_channelstate(
+    attack_contract = attack_channel.external_state.netting_channel.address  # type: ignore
+    hub_contract = get_channelstate(  # type: ignore
         app1, app0, token_network_address
     ).external_state.netting_channel.address
 
     # start the settle counter
-    attack_balance_proof = attack_transfer.to_balanceproof()
-    attack_channel.netting_channel.channel_close(attack_balance_proof)
+    attack_balance_proof = attack_transfer.to_balanceproof()  # type: ignore
+    attack_channel.netting_channel.channel_close(attack_balance_proof)  # type: ignore
+    raise Exception("foo")
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
@@ -873,37 +897,38 @@ def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     channel0 = get_channelstate(app0, app1, token_network_address)
     token_proxy = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
-    amount0_1 = 10
+    amount0_1 = PaymentAmount(10)
     transfer(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
         amount=amount0_1,
-        identifier=1,
+        identifier=PaymentID(1),
     )
 
-    amount1_1 = 50
+    amount1_1 = PaymentAmount(50)
     transfer(
         initiator_app=app1,
         target_app=app0,
         token_address=token_address,
         amount=amount1_1,
-        identifier=2,
+        identifier=PaymentID(2),
     )
 
-    amount0_2 = 60
+    amount0_2 = PaymentAmount(60)
     transfer(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
         amount=amount0_2,
-        identifier=3,
+        identifier=PaymentID(3),
     )
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to
@@ -973,11 +998,13 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         payment_network_address=alice_app.raiden.default_registry.address,
         token_address=token_address,
     )
+    assert token_network_address
     timeout = 10
 
     token_network = views.get_token_network_by_address(
         chain_state=views.state_from_app(alice_app), token_network_address=token_network_address
     )
+    assert token_network
 
     channel_identifier = get_channelstate(alice_app, bob_app, token_network_address).identifier
 
@@ -989,11 +1016,11 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     alice_to_bob_amount = 10
     identifier = 1
 
-    alice_transfer_secret = sha3(alice_app.raiden.address)
-    alice_transfer_secrethash = sha256(alice_transfer_secret).digest()
+    alice_transfer_secret = Secret(sha3(alice_app.raiden.address))
+    alice_transfer_secrethash = sha256_secrethash(alice_transfer_secret)
 
-    bob_transfer_secret = sha3(bob_app.raiden.address)
-    bob_transfer_secrethash = sha256(bob_transfer_secret).digest()
+    bob_transfer_secret = Secret(sha3(bob_app.raiden.address))
+    bob_transfer_secrethash = sha256_secrethash(bob_transfer_secret)
 
     alice_transfer_hold = bob_app.raiden.raiden_event_handler.hold_secretrequest_for(
         secrethash=alice_transfer_secrethash
@@ -1026,6 +1053,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     alice_lock = channel.get_lock(alice_bob_channel_state.our_state, alice_transfer_secrethash)
     bob_lock = channel.get_lock(alice_bob_channel_state.partner_state, bob_transfer_secrethash)
+    assert alice_lock
+    assert bob_lock
 
     # This is the current state of protocol:
     #
@@ -1070,7 +1099,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
             }
         },
     )
-    settle_max_wait_block = (
+    assert isinstance(channel_closed, ContractReceiveChannelClosed)
+    settle_max_wait_block = BlockNumber(
         channel_closed.block_number + alice_bob_channel_state.settle_timeout * 2
     )
 
