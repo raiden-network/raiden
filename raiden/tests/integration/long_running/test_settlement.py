@@ -834,10 +834,10 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     # start the settle counter
     attack_balance_proof = attack_transfer.to_balanceproof()  # type: ignore
     attack_channel.netting_channel.channel_close(attack_balance_proof)  # type: ignore
-    raise Exception("foo")
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
+    assert attack_transfer
     app2.raiden.chain.wait_until_block(target_block_number=attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock

@@ -12,24 +12,26 @@ from raiden.utils.typing import ChannelID, TokenNetworkAddress
 
 @dataclass
 class InitiatorTask(TransferTask):
-    token_network_address: TokenNetworkAddress
     manager_state: InitiatorPaymentState = field(repr=False)
 
 
 @dataclass
 class MediatorTask(TransferTask):
-    token_network_address: TokenNetworkAddress
     mediator_state: MediatorTransferState = field(repr=False)
 
 
 @dataclass
 class TargetTask(TransferTask):
+    token_network_address: TokenNetworkAddress = field(init=False, repr=False)
     canonical_identifier: CanonicalIdentifier
     target_state: TargetTransferState = field(repr=False)
 
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.canonical_identifier.token_network_address
+    def __post_init__(self) -> None:
+        # Mypy does not allow overringing the `token_network_address` field
+        # with a property, right now (see
+        # https://github.com/python/mypy/issues/4125). So we use this
+        # combination of `init=False` and `__post_init__`.
+        self.token_network_address = self.canonical_identifier.token_network_address
 
     @property
     def channel_identifier(self) -> ChannelID:

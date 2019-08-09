@@ -121,9 +121,7 @@ class Event:
 
 @dataclass
 class TransferTask(State):
-    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
-    # of all transfer tasks like the `token_network_address` into the common subclass
-    pass
+    token_network_address: TokenNetworkAddress
 
 
 @dataclass
