@@ -1,11 +1,11 @@
 import pytest
 from eth_utils import to_bytes, to_int
 
-from raiden.tests.utils import factories
-from raiden.utils.filters import (
+from raiden.blockchain.filters import (
     get_filter_args_for_all_events_from_channel,
     get_filter_args_for_specific_event_from_channel,
 )
+from raiden.tests.utils import factories
 
 
 def test_get_filter_args(contract_manager):

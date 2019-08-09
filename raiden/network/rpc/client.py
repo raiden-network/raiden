@@ -19,6 +19,7 @@ from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
 from raiden import constants
+from raiden.blockchain.filters import StatelessFilter
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
@@ -34,7 +35,6 @@ from raiden.network.rpc.middleware import (
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import privatekey_to_address
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.filters import StatelessFilter
 from raiden.utils.typing import (
     ABI,
     Address,
