@@ -59,7 +59,8 @@ class UserDeposit:
         self.blockchain_service = blockchain_service
 
         self.proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT), user_deposit_address
+            abi=self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
+            contract_address=user_deposit_address,
         )
 
         self.deposit_lock = RLock()

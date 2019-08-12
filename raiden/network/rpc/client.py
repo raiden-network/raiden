@@ -535,16 +535,16 @@ class JSONRPCClient:
 
         return price
 
-    def new_contract_proxy(self, contract_interface, contract_address: Address) -> ContractProxy:
+    def new_contract_proxy(
+        self, abi: List[Dict[str, Any]], contract_address: Address
+    ) -> ContractProxy:
         """ Return a proxy for interacting with a smart contract.
 
         Args:
-            contract_interface: The contract interface as defined by the json.
+            abi: The contract interface as defined by the json.
             contract_address: The contract's address.
         """
-        return ContractProxy(
-            self, contract=self.new_contract(contract_interface, contract_address)
-        )
+        return ContractProxy(self, contract=self.new_contract(abi, contract_address))
 
     def new_contract(self, contract_interface: ABI, contract_address: Address):
         return self.web3.eth.contract(
@@ -591,7 +591,10 @@ class JSONRPCClient:
                 )
             )
 
-        return self.new_contract_proxy(contract["abi"], contract_address), receipt
+        return (
+            self.new_contract_proxy(abi=contract["abi"], contract_address=contract_address),
+            receipt,
+        )
 
     def send_transaction(
         self, to: Address, startgas: int, value: int = 0, data: bytes = b""
@@ -678,8 +681,8 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: Optional[List[Optional[str]]],
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = "latest",
+        from_block: BlockSpecification,
+        to_block: BlockSpecification,
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
         logs_blocks_sanity_check(from_block, to_block)

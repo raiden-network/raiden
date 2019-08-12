@@ -45,8 +45,8 @@ class ServiceRegistry:
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY),
-            to_canonical_address(service_registry_address),
+            abi=self.contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY),
+            contract_address=service_registry_address,
         )
 
         self.address = service_registry_address

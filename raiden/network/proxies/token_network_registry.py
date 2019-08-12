@@ -62,8 +62,8 @@ class TokenNetworkRegistry:
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-            Address(registry_address),
+            abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            contract_address=Address(registry_address),
         )
 
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)

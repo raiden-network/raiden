@@ -32,9 +32,7 @@ def deploy_token(
     )
 
     contract_abi = contract_manager.get_contract_abi(token_contract_name)
-    return deploy_client.new_contract_proxy(
-        contract_interface=contract_abi, contract_address=token_address
-    )
+    return deploy_client.new_contract_proxy(abi=contract_abi, contract_address=token_address)
 
 
 def deploy_tokens_and_fund_accounts(
