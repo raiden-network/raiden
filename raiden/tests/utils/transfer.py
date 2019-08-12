@@ -1,4 +1,5 @@
 """ Utilities to make and assert transfers. """
+from contextlib import contextmanager
 from enum import Enum
 
 import gevent
@@ -12,6 +13,7 @@ from raiden.messages.abstract import SignedMessage
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
@@ -101,6 +103,25 @@ def get_channelstate(
     return channel_state
 
 
+@contextmanager
+def watch_for_unlock_failures(*apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
+    """
+    Context manager to assure there are no failing unlocks during transfers in integration tests.
+    """
+
+    def watcher_function():
+        while True:
+            for app in apps:
+                assert not has_unlock_failure(app.raiden)
+            gevent.sleep(retry_timeout)
+
+    watcher = gevent.spawn(watcher_function)
+    try:
+        yield
+    finally:
+        gevent.kill(watcher)
+
+
 def transfer(
     initiator_app: App,
     target_app: App,
@@ -183,7 +204,7 @@ def _transfer_unlocked(
         fee=fee,
     )
 
-    try:
+    with watch_for_unlock_failures(initiator_app, target_app):
         with Timeout(seconds=timeout):
             wait_for_unlock.get()
             msg = (
@@ -191,9 +212,6 @@ def _transfer_unlocked(
                 f"to {to_checksum_address(target_app.raiden.address)} failed."
             )
             assert payment_status.payment_done.get(), msg
-    finally:
-        assert not has_unlock_failure(initiator_app.raiden)
-        assert not has_unlock_failure(target_app.raiden)
 
 
 def _transfer_expired(
@@ -389,7 +407,7 @@ def transfer_and_assert_path(
         secret=secret,
     )
 
-    try:
+    with watch_for_unlock_failures(*path):
         with Timeout(seconds=timeout):
             gevent.wait(results)
             msg = (
@@ -397,9 +415,6 @@ def transfer_and_assert_path(
                 f"to {to_checksum_address(last_app.raiden.address)} failed."
             )
             assert payment_status.payment_done.get(), msg
-    finally:
-        for app in path:
-            assert not has_unlock_failure(app.raiden)
 
 
 def assert_deposit(
