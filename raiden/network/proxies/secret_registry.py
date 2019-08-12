@@ -64,8 +64,8 @@ class SecretRegistry:
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-            secret_registry_address,
+            abi=self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
+            contract_address=secret_registry_address,
         )
 
         # There should be only one smart contract deployed, to avoid race
@@ -332,5 +332,5 @@ class SecretRegistry:
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
-            self.address, topics=topics, from_block=from_block, to_block=to_block
+            contract_address=self.address, topics=topics, from_block=from_block, to_block=to_block
         )

@@ -60,7 +60,6 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
-    List,
     Locksroot,
     NamedTuple,
     Nonce,
@@ -150,8 +149,8 @@ class TokenNetwork:
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            Address(token_network_address),
+            abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_address=Address(token_network_address),
         )
 
         # These are constants
@@ -2524,26 +2523,6 @@ class TokenNetwork:
 
             raise RaidenRecoverableError("Settle failed for an unknown reason")
 
-    def events_filter(
-        self,
-        topics: Optional[List[Optional[str]]],
-        from_block: BlockSpecification,
-        to_block: BlockSpecification,
-    ) -> StatelessFilter:
-        """ Install a new filter for an array of topics emitted by the contract.
-
-        Args:
-            topics: A list of event ids to filter for. Can also be None,
-                    in which case all events are queried.
-            from_block: The block number at which to start looking for events.
-            to_block: The block number at which to stop looking for events.
-        Return:
-            Filter: The filter instance.
-        """
-        return self.client.new_filter(
-            Address(self.address), topics=topics, from_block=from_block, to_block=to_block
-        )
-
     def all_events_filter(
         self,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -2558,7 +2537,12 @@ class TokenNetwork:
         Return:
             The filter instance.
         """
-        return self.events_filter(None, from_block, to_block)
+        return self.client.new_filter(
+            contract_address=Address(self.address),
+            topics=None,
+            from_block=from_block,
+            to_block=to_block,
+        )
 
     def _check_for_outdated_channel(
         self,

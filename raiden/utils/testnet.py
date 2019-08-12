@@ -45,9 +45,7 @@ _MINT_ABI = [
 
 
 def token_minting_proxy(client: JSONRPCClient, address: TokenAddress) -> ContractProxy:
-    return client.new_contract_proxy(
-        contract_interface=_MINT_ABI, contract_address=Address(address)
-    )
+    return client.new_contract_proxy(abi=_MINT_ABI, contract_address=Address(address))
 
 
 def call_minting_method(

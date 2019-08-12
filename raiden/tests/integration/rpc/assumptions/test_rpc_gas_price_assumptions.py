@@ -37,7 +37,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     second_client = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
     second_proxy = second_client.new_contract_proxy(
-        contract_proxy.contract.abi, contract_proxy.contract_address
+        abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
     )
 
     check_block = deploy_client.get_checking_block()
@@ -62,7 +62,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
     second_client = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
     second_proxy = second_client.new_contract_proxy(
-        contract_proxy.contract.abi, contract_proxy.contract_address
+        abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
     )
 
     check_block = deploy_client.get_checking_block()
