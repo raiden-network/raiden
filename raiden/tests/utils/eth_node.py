@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
-from typing import ContextManager
+from typing import ContextManager, Iterator
 
 import gevent
 import structlog
@@ -117,7 +117,17 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     geth_version_string, _ = subprocess.Popen(
         ["geth", "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
-    if parse_geth_version(geth_version_string.decode()) >= parse_version("1.9.0"):
+
+    geth_version_parse = parse_geth_version(geth_version_string.decode())
+
+    if geth_version_parse is None:
+        raise RuntimeError(
+            "Couldn't parse geth version, please double check the binary is "
+            "working properly, otherwise open a bug report to update the "
+            "version format."
+        )
+
+    if geth_version_parse >= parse_version("1.9.0"):
         # Geth does not normally allow running an unlocked account
         # with the http interface. But since this a test blockchain we
         # can override that.
@@ -204,9 +214,9 @@ def geth_keyfile(datadir: str, address: Address) -> str:
     keystore = geth_keystore(datadir)
     os.makedirs(keystore, exist_ok=True)
 
-    address = remove_0x_prefix(to_normalized_address(address))
+    address_hex = remove_0x_prefix(to_normalized_address(bytes(address)))
     broken_iso_8601 = datetime.now().isoformat().replace(":", "-")
-    account = f"UTC--{broken_iso_8601}000Z--{address}"
+    account = f"UTC--{broken_iso_8601}000Z--{address_hex}"
 
     return os.path.join(keystore, account)
 
@@ -400,7 +410,7 @@ def eth_run_nodes(
     random_marker: str,
     verbosity: str,
     logdir: str,
-) -> ContextManager[List[JSONRPCExecutor]]:
+) -> Iterator[List[JSONRPCExecutor]]:
     def _validate_jsonrpc_result(result):
         running_marker = result["extraData"][2 : len(random_marker) + 2]
         if running_marker != random_marker:
@@ -470,7 +480,7 @@ def run_private_blockchain(
     log_dir: str,
     verbosity: str,
     genesis_description: GenesisDescription,
-) -> ContextManager[List[JSONRPCExecutor]]:
+) -> Iterator[List[JSONRPCExecutor]]:
     """ Starts a private network with private_keys accounts funded.
 
     Args:

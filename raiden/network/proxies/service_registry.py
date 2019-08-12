@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     Dict,
     Optional,
+    TokenAddress,
     TokenAmount,
 )
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
@@ -103,8 +104,8 @@ class ServiceRegistry:
         """Gets the currently required deposit amount."""
         return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
 
-    def token_address(self, block_identifier: BlockSpecification) -> Address:
-        return Address(
+    def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
+        return TokenAddress(
             to_canonical_address(
                 self.proxy.contract.functions.token().call(block_identifier=block_identifier)
             )

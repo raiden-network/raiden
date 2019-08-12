@@ -17,6 +17,7 @@ from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError, TimeoutE
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
 T_IO_OR_INT = Union[IO, int]
+EXECUTOR_IO = Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]
 
 log = structlog.get_logger(__name__)
 
@@ -30,7 +31,7 @@ class HTTPExecutor(MiHTTPExecutor):
         url: str,
         status: str = r"^2\d\d$",
         method: str = "HEAD",
-        io: Optional[Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]] = None,
+        io: Optional[EXECUTOR_IO] = None,
         cwd: Union[str, PathLike] = None,
         verify_tls: bool = True,
         **kwargs,

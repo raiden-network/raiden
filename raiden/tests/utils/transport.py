@@ -8,20 +8,23 @@ from datetime import datetime
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import ContextManager, List
+from typing import Callable, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
 from gevent import subprocess
 from twisted.internet import defer
 
-from raiden.utils.http import HTTPExecutor
+from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
-_SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR", False)
+_SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
 _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath("synapse_config.yaml.template")
+
+SynapseConfig = Tuple[str, Path]
+SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
 class ParsedURL(str):
@@ -118,7 +121,7 @@ def make_requests_insecure():
 
 
 @contextmanager
-def generate_synapse_config() -> ContextManager:
+def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
     # Allows caching of self signed synapse certificates on CI systems
     if _SYNAPSE_BASE_DIR_VAR_NAME in os.environ:
         synapse_base_dir = Path(os.environ[_SYNAPSE_BASE_DIR_VAR_NAME])
@@ -126,7 +129,7 @@ def generate_synapse_config() -> ContextManager:
     else:
         synapse_base_dir = Path(mkdtemp(prefix="pytest-synapse-"))
 
-    def generate_config(port: int):
+    def generate_config(port: int) -> SynapseConfig:
         server_dir = synapse_base_dir.joinpath(f"localhost-{port}")
         server_dir.mkdir(parents=True, exist_ok=True)
 
@@ -165,21 +168,23 @@ def matrix_server_starter(
     free_port_generator: Iterable[Port],
     *,
     count: int = 1,
-    config_generator: ContextManager = None,
+    config_generator: SynapseConfigGenerator = None,
     log_context: str = None,
-) -> ContextManager[List[ParsedURL]]:
+) -> Iterator[List[ParsedURL]]:
     with ExitStack() as exit_stack:
+
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
+
         server_urls: List[ParsedURL] = []
         for _, port in zip(range(count), free_port_generator):
             server_name, config_file = config_generator(port)
             server_url = ParsedURL(f"https://{server_name}")
             server_urls.append(server_url)
 
-            synapse_io = DEVNULL
+            synapse_io: EXECUTOR_IO = DEVNULL
             # Used in CI to capture the logs for failure analysis
-            if _SYNAPSE_LOGS_PATH:
+            if _SYNAPSE_LOGS_PATH is not None:
                 log_file_path = Path(_SYNAPSE_LOGS_PATH).joinpath(f"{server_name}.log")
                 log_file_path.parent.mkdir(parents=True, exist_ok=True)
                 log_file = exit_stack.enter_context(log_file_path.open("at"))
