@@ -26,6 +26,7 @@ If you're looking for documentation relevant for building on top of Raiden:
 
     * Read the thorough guide to :doc:`get started with the Raiden API <api_walkthrough>`.
     * Checkout the complete :doc:`API documentation <rest_api>`.
+    * Read the document :doc:`How is Raiden Tested <testing>`.
 
 Contributing to Raiden?
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,4 +84,3 @@ Contents
   :caption: ADRs
 
   adr/overview
-
