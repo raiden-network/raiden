@@ -1,7 +1,11 @@
+Fixes: #<issue>
+
 ## Description
 
-Please, describe why the refactoring is necessary. What are its pros and cons
-in respect to the previous code, and other possible design choices.
+Please, describe what this PR does in detail:
+- If it's a bug fix, detail the root cause of the bug and how this PR fixes it.
+- If it's a new feature, describe the feature this PR is introducing and design decisions.
+- If it's a refactoring, describe why it is necessary. What are its pros and cons in respect to the previous code, and other possible design choices.
 
 ## PR review check list
 
@@ -16,10 +20,9 @@ Quality check list that cannot be automatically verified.
 - [ ] Compatibility
     - [ ] State changes are forward compatible
     - [ ] Transport messages are backwards and forward compatible
-- [ ] Tests for the new code
-    - [ ] Properly covers the new code
+- [ ] Regression test for the bug
+    - [ ] Properly covers the bug
     - [ ] If an integration test is used, it could not be written as a unit test
 - [ ] Commits
     - [ ] Have good messages
     - [ ] Squashed unecessary commits
-- [ ] Docummented the design choices
