@@ -223,8 +223,12 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
     )
     assert token_network_address
 
-    channel0 = get_channelstate(app0, app1, token_network_address)
-    channel1 = get_channelstate(app1, app0, token_network_address)
+    channel0 = views.get_channelstate_by_token_network_and_partner(
+        views.state_from_app(app0), token_network_address, app1.raiden.address
+    )
+    channel1 = views.get_channelstate_by_token_network_and_partner(
+        views.state_from_app(app0), token_network_address, app1.raiden.address
+    )
     assert channel0 is None
     assert channel1 is None
 
@@ -232,7 +236,7 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
-    assert_synced_channel_state(token_network_address, app0, 0, [], app1, 0, [])
+    assert_synced_channel_state(token_network_address, app0, Balance(0), [], app1, Balance(0), [])
 
     RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address, token_address, app1.raiden.address, deposit
@@ -240,7 +244,7 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
 
     wait_both_channel_deposit(app0, app1, registry_address, token_address, deposit, retry_timeout)
 
-    assert_synced_channel_state(token_network_address, app0, deposit, [], app1, 0, [])
+    assert_synced_channel_state(token_network_address, app0, deposit, [], app1, Balance(0), [])
 
     RaidenAPI(app1.raiden).set_total_channel_deposit(
         registry_address, token_address, app0.raiden.address, deposit

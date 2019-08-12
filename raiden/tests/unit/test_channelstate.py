@@ -85,6 +85,7 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import LockedAmount
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",
@@ -961,12 +962,12 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
     lock_expired = make_receive_expired_lock(
-        channel_state,
-        privkey2,
-        receive_lockedtransfer.balance_proof.nonce + 1,
-        transferred_amount,
-        lock,
-        locked_amount=0,
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=receive_lockedtransfer.balance_proof.nonce + 1,
+        transferred_amount=transferred_amount,
+        lock=lock,
+        locked_amount=LockedAmount(0),
     )
 
     is_valid, msg, _ = channel.is_valid_lock_expired(

@@ -1,5 +1,4 @@
 """ Utilities to make and assert transfers. """
-import random
 from enum import Enum
 
 import gevent
@@ -7,20 +6,25 @@ from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden.app import App
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE
 from raiden.message_handler import MessageHandler
-from raiden.messages.abstract import Message
+from raiden.messages.abstract import SignedMessage
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
-from raiden.messages.transfers import LockedTransfer, LockExpired, Unlock
+from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.storage.wal import SavedState
-from raiden.tests.utils.events import raiden_events_search_for_item
-from raiden.tests.utils.factories import make_address, make_secret
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.events import raiden_state_changes_search_for_item
+from raiden.tests.utils.factories import (
+    make_initiator_address,
+    make_message_identifier,
+    make_secret,
+    make_target_address,
+)
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
@@ -46,23 +50,29 @@ from raiden.utils import random_secret
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    Address,
     Any,
     Balance,
     Callable,
     ChainID,
     FeeAmount,
-    Keccak256,
     List,
     LockedAmount,
     Nonce,
     Optional,
     PaymentAmount,
     PaymentID,
+    PaymentWithFeeAmount,
+    TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    cast,
     typecheck,
 )
+
+ZERO_FEE = FeeAmount(0)
 
 
 class TransferState(Enum):
@@ -75,7 +85,7 @@ class TransferState(Enum):
     SECRET_REVEALED = "secret_revealed"
 
 
-def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
+def sign_and_inject(message: SignedMessage, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
     MessageHandler().on_message(app.raiden, message)
@@ -87,6 +97,7 @@ def get_channelstate(
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0), token_network_address, app1.raiden.address
     )
+    assert channel_state
     return channel_state
 
 
@@ -96,7 +107,7 @@ def transfer(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
 ) -> None:
@@ -145,7 +156,7 @@ def _transfer_unlocked(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
@@ -163,10 +174,11 @@ def _transfer_unlocked(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         fee=fee,
     )
@@ -186,7 +198,7 @@ def _transfer_expired(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert identifier is not None, "The identifier must be provided"
@@ -214,11 +226,12 @@ def _transfer_expired(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -239,7 +252,7 @@ def _transfer_secret_not_requested(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     if timeout is None:
@@ -248,6 +261,7 @@ def _transfer_secret_not_requested(
     secret = make_secret()
     secrethash = sha256_secrethash(secret)
 
+    assert isinstance(target_app.raiden.raiden_event_handler, HoldRaidenEventHandler)
     hold_secret_request = target_app.raiden.raiden_event_handler.hold(
         SendSecretRequest, {"secrethash": secrethash}
     )
@@ -258,11 +272,12 @@ def _transfer_secret_not_requested(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=target_app.raiden.address,
+        target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -277,7 +292,7 @@ def transfer_and_assert_path(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = 0,
+    fee: FeeAmount = ZERO_FEE,
     timeout: float = 10,
 ) -> None:
     """ Nice to read shortcut to make successful LockedTransfer.
@@ -298,6 +313,7 @@ def transfer_and_assert_path(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
 
     for app in path:
         assert isinstance(app.raiden.message_handler, WaitForMessage)
@@ -364,7 +380,7 @@ def transfer_and_assert_path(
         token_network_address=token_network_address,
         amount=amount,
         fee=fee,
-        target=last_app.raiden.address,
+        target=TargetAddress(last_app.raiden.address),
         identifier=identifier,
         secret=secret,
     )
@@ -407,6 +423,9 @@ def assert_deposit(
         saved_state1.state, token_network_address, app0.raiden.address
     )
 
+    assert channel0
+    assert channel1
+
     if channel0.our_state.contract_balance != channel1.partner_state.contract_balance:
         # TODO: Only consider the records up to saved state's state_change_id.
         # ATM this has a race condition where this utility could be called
@@ -429,10 +448,10 @@ def assert_deposit(
                 "contract_balance": contract_balance,
             },
         }
-        node0_deposit_event = raiden_events_search_for_item(
+        node0_deposit_event = raiden_state_changes_search_for_item(
             app0.raiden, ContractReceiveChannelDeposit, deposit_description
         )
-        node1_deposit_event = raiden_events_search_for_item(
+        node1_deposit_event = raiden_state_changes_search_for_item(
             app1.raiden, ContractReceiveChannelDeposit, deposit_description
         )
 
@@ -524,6 +543,9 @@ def assert_balance_proof(
         - It is important to do the validation on a fixed  state, that is why
           saved_state0 is used.
     """
+    assert app0.raiden.wal
+    assert app1.raiden.wal
+
     assert app0.raiden.address == saved_state0.state.our_address
     assert app1.raiden.address == saved_state1.state.our_address
 
@@ -534,8 +556,11 @@ def assert_balance_proof(
         saved_state1.state, token_network_address, app0.raiden.address
     )
 
-    balanceproof0: BalanceProofUnsignedState = channel0.our_state.balance_proof
-    balanceproof1: BalanceProofSignedState = channel1.partner_state.balance_proof
+    assert channel0
+    assert channel1
+
+    balanceproof0 = cast(BalanceProofUnsignedState, channel0.our_state.balance_proof)
+    balanceproof1 = cast(BalanceProofSignedState, channel1.partner_state.balance_proof)
 
     if balanceproof0 is None:
         msg = "Bug detected. The sender does not have a balance proof, but the recipient does."
@@ -591,11 +616,13 @@ def assert_balance_proof(
                 ReceiveLockExpired,
             ):
                 if type(received_balance_proof) == ReceiveUnlock:
-                    is_valid, _, msg = channel.handle_unlock(
+                    assert isinstance(received_balance_proof, ReceiveUnlock), MYPY_ANNOTATION
+                    is_valid, _, innermsg = channel.handle_unlock(
                         channel_state=channel1, unlock=received_balance_proof
                     )
                 elif type(received_balance_proof) == ReceiveLockExpired:
-                    is_valid, msg, _ = channel.is_valid_lock_expired(
+                    assert isinstance(received_balance_proof, ReceiveLockExpired), MYPY_ANNOTATION
+                    is_valid, innermsg, _ = channel.is_valid_lock_expired(
                         state_change=received_balance_proof,
                         channel_state=channel1,
                         sender_state=channel1.partner_state,
@@ -603,7 +630,10 @@ def assert_balance_proof(
                         block_number=saved_state1.state.block_number,
                     )
                 else:
-                    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+                    assert isinstance(
+                        received_balance_proof, (ActionInitMediator, ActionInitTarget)
+                    ), MYPY_ANNOTATION
+                    is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
                         channel_state=channel1,
                         mediated_transfer=received_balance_proof.from_transfer,
                     )
@@ -611,14 +641,14 @@ def assert_balance_proof(
                 if not is_valid:
                     msg = (
                         f"Node1 received the node0's message but rejected it. This "
-                        f"is likely a Raiden bug. reason={msg} "
+                        f"is likely a Raiden bug. reason={innermsg} "
                         f"state_change={received_balance_proof}"
                     )
                 else:
                     msg = (
                         f"Node1 received the node0's message at that time it "
                         f"was rejected, this is likely a race condition, node1 "
-                        f"has to process the message again. reason={msg} "
+                        f"has to process the message again. reason={innermsg} "
                         f"state_change={received_balance_proof}"
                     )
             else:
@@ -689,8 +719,8 @@ def assert_channel_values(
     partner_balance1 = channel.get_balance(channel1.partner_state, channel1.our_state)
     assert our_balance1 + partner_balance1 == total_token
 
-    locked_amount0 = sum(lock.amount for lock in pending_locks0)
-    locked_amount1 = sum(lock.amount for lock in pending_locks1)
+    locked_amount0 = LockedAmount(sum(lock.amount for lock in pending_locks0))
+    locked_amount1 = LockedAmount(sum(lock.amount for lock in pending_locks1))
 
     assert_balance(channel0, balance0, locked_amount0)
     assert_balance(channel1, balance1, locked_amount1)
@@ -718,6 +748,9 @@ def assert_synced_channel_state(
         This assert does not work for an intermediate state, where one message
         hasn't been delivered yet or has been completely lost.
     """
+    assert app0.raiden.wal
+    assert app1.raiden.wal
+
     saved_state0 = app0.raiden.wal.saved_state
     saved_state1 = app1.raiden.wal.saved_state
 
@@ -733,6 +766,9 @@ def assert_synced_channel_state(
     channel1 = views.get_channelstate_by_token_network_and_partner(
         saved_state1.state, token_network_address, app0.raiden.address
     )
+
+    assert channel0
+    assert channel1
 
     assert_channel_values(
         channel0=channel0,
@@ -787,7 +823,7 @@ def assert_locked(
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        locks = PendingLocksState(list(bytes(lock.encoded) for lock in pending_locks))
+        locks = PendingLocksState([lock.encoded for lock in pending_locks])
     else:
         locks = make_empty_pending_locks_state()
 
@@ -845,7 +881,7 @@ def make_receive_transfer_mediated(
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
     pending_locks: PendingLocksState = None,
-    locked_amount: Optional[LockedAmount] = None,
+    locked_amount: Optional[PaymentWithFeeAmount] = None,
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
 
@@ -858,7 +894,7 @@ def make_receive_transfer_mediated(
 
     if pending_locks is None:
         locks = make_empty_pending_locks_state()
-        locks.locks.append(bytes(lock.encoded))
+        locks.locks.append(lock.encoded)
     else:
         assert bytes(lock.encoded) in pending_locks.locks
         locks = pending_locks
@@ -870,28 +906,28 @@ def make_receive_transfer_mediated(
 
     locksroot = compute_locksroot(locks)
 
-    payment_identifier = nonce
-    transfer_target = make_address()
-    transfer_initiator = make_address()
+    payment_identifier = PaymentID(nonce)
+    transfer_target = make_target_address()
+    transfer_initiator = make_initiator_address()
     chain_id = chain_id or channel_state.chain_id
 
     transfer_metadata = Metadata(
-        routes=[RouteMetadata(route=[channel_state.our_state.address, transfer_target])]
+        routes=[RouteMetadata(route=[channel_state.our_state.address, Address(transfer_target)])]
     )
 
     mediated_transfer_msg = LockedTransfer(
         chain_id=chain_id,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
         nonce=nonce,
         token_network_address=channel_state.token_network_address,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
+        locked_amount=TokenAmount(locked_amount),
         recipient=channel_state.partner_state.address,
         locksroot=locksroot,
-        lock=lock,
+        lock=Lock(amount=lock.amount, expiration=lock.expiration, secrethash=lock.secrethash),
         target=transfer_target,
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
@@ -900,17 +936,15 @@ def make_receive_transfer_mediated(
     )
     mediated_transfer_msg.sign(signer)
 
-    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-
     receive_lockedtransfer = LockedTransferSignedState(
         payment_identifier=payment_identifier,
         token=channel_state.token_address,
         lock=lock,
         initiator=transfer_initiator,
         target=transfer_target,
-        message_identifier=random.randint(0, UINT64_MAX),
-        balance_proof=balance_proof,
-        routes=transfer_metadata.routes,
+        message_identifier=make_message_identifier(),
+        balance_proof=balanceproof_from_envelope(mediated_transfer_msg),
+        routes=[route_metadata.route for route_metadata in transfer_metadata.routes],
     )
 
     return receive_lockedtransfer
@@ -922,8 +956,8 @@ def make_receive_expired_lock(
     nonce: Nonce,
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
-    pending_locks: List[Keccak256] = None,
-    locked_amount: LockedAmount = None,
+    locked_amount: LockedAmount,
+    pending_locks: PendingLocksState = None,
     chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
 
@@ -937,7 +971,7 @@ def make_receive_expired_lock(
     if pending_locks is None:
         pending_locks = make_empty_pending_locks_state()
     else:
-        assert bytes(lock.encoded) not in pending_locks
+        assert lock.encoded not in pending_locks.locks
 
     locksroot = compute_locksroot(pending_locks)
 
@@ -945,9 +979,9 @@ def make_receive_expired_lock(
     lock_expired_msg = LockExpired(
         chain_id=chain_id,
         nonce=nonce,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
+        locked_amount=TokenAmount(locked_amount),
         locksroot=locksroot,
         channel_identifier=channel_state.identifier,
         token_network_address=channel_state.token_network_address,
@@ -962,7 +996,7 @@ def make_receive_expired_lock(
     receive_lockedtransfer = ReceiveLockExpired(
         balance_proof=balance_proof,
         secrethash=lock.secrethash,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         sender=balance_proof.sender,
     )
 
