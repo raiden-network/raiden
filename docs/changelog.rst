@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :release:`0.100.5-dev1 <2019-08-12>`
+* :release:`0.100.5a0 <2019-08-12>`
 * :feature:`-` Update WebUI to version 0.9.2 https://github.com/raiden-network/webui/releases/tag/v0.9.2
 * :bug:`4498` Raiden now waits for synchronization with the blockchain events before finishing its startup and opening the API.
 * :bug:`4348` Fix wrong calculation of ``balance`` field of channel information when tokens are locked in payments
