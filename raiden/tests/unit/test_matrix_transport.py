@@ -167,7 +167,7 @@ def test_sort_servers_closest(monkeypatch):
 
     server_count = 9
     sorted_servers = sort_servers_closest([f"https://server{i}.xyz" for i in range(server_count)])
-    rtts = [rtt for (_, rtt) in sorted_servers]
+    rtts = list(sorted_servers.values())
 
     assert len(sorted_servers) <= server_count
     assert all(rtts) and rtts == sorted(rtts)
