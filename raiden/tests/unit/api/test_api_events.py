@@ -62,9 +62,9 @@ def test_event_filter_for_payments():
         secret=secret,
         route=[],
     )
-    assert event_filter_for_payments(event, token_network_address, None)
-    assert event_filter_for_payments(event, token_network_address, target)
-    assert not event_filter_for_payments(event, token_network_address, factories.make_address())
+    assert event_filter_for_payments(event=event, partner_address=None)
+    assert event_filter_for_payments(event=event, partner_address=target)
+    assert not event_filter_for_payments(event=event, partner_address=factories.make_address())
 
     event = EventPaymentReceivedSuccess(
         token_network_registry_address=token_network_registry_address,
@@ -73,9 +73,9 @@ def test_event_filter_for_payments():
         amount=5,
         initiator=target,
     )
-    assert event_filter_for_payments(event, token_network_address, None)
-    assert event_filter_for_payments(event, token_network_address, target)
-    assert not event_filter_for_payments(event, token_network_address, factories.make_address())
+    assert event_filter_for_payments(event=event, partner_address=None)
+    assert event_filter_for_payments(event=event, partner_address=target)
+    assert not event_filter_for_payments(event=event, partner_address=factories.make_address())
 
     event = EventPaymentSentFailed(
         token_network_registry_address=factories.make_token_network_registry_address(),
@@ -84,6 +84,6 @@ def test_event_filter_for_payments():
         target=target,
         reason="whatever",
     )
-    assert event_filter_for_payments(event, token_network_address, None)
-    assert event_filter_for_payments(event, token_network_address, target)
-    assert not event_filter_for_payments(event, token_network_address, factories.make_address())
+    assert event_filter_for_payments(event=event, partner_address=None)
+    assert event_filter_for_payments(event=event, partner_address=target)
+    assert not event_filter_for_payments(event=event, partner_address=factories.make_address())
