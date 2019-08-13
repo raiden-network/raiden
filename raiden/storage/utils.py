@@ -58,7 +58,7 @@ DB_CREATE_STATE_CHANGES = """
 CREATE TABLE IF NOT EXISTS state_changes (
     identifier ULID PRIMARY KEY NOT NULL,
     data JSON,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    timestamp TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL
 );
 """
 
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS state_snapshot (
     identifier ULID PRIMARY KEY NOT NULL,
     statechange_id ULID NOT NULL,
     data JSON,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    timestamp TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL,
     FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)
 );
 """
@@ -77,14 +77,14 @@ CREATE TABLE IF NOT EXISTS state_events (
     identifier ULID PRIMARY KEY NOT NULL,
     source_statechange_id ULID NOT NULL,
     data JSON,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    timestamp TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL,
     FOREIGN KEY(source_statechange_id) REFERENCES state_changes(identifier)
 );
 """
 
 DB_CREATE_RUNS = """
 CREATE TABLE IF NOT EXISTS runs (
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP PRIMARY KEY NOT NULL,
+    started_at TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) PRIMARY KEY NOT NULL,
     raiden_version TEXT NOT NULL
 );
 """
