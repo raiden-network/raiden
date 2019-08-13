@@ -579,16 +579,19 @@ class SQLiteStorage:
             for entry in cursor
         ]
 
-    def _query_events(self, limit: int = None, offset: int = None) -> List[Tuple[str, datetime]]:
-        limit, offset = _sanitize_limit_and_offset(limit, offset)
-        cursor = self.conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT data, timestamp FROM state_events
-                ORDER BY identifier ASC LIMIT ? OFFSET ?
-            """,
-            (limit, offset),
+    def _query_events(
+        self,
+        limit: int = None,
+        offset: int = None,
+        filters: List[Tuple[str, Any]] = None,
+        logical_and: bool = True,
+    ) -> List[Tuple[str, datetime]]:
+        cursor = self._form_and_execute_json_query(
+            query="SELECT data, timestamp FROM state_events ",
+            limit=limit,
+            offset=offset,
+            filters=filters,
+            logical_and=logical_and,
         )
 
         return cursor.fetchall()
@@ -649,9 +652,16 @@ class SQLiteStorage:
         self.maybe_commit()
 
     def get_events_with_timestamps(
-        self, limit: int = None, offset: int = None
+        self,
+        limit: int = None,
+        offset: int = None,
+        filters: List[Tuple[str, Any]] = None,
+        logical_and: bool = True,
     ) -> List[TimestampedEvent]:
-        entries = self._query_events(limit, offset)
+        entries = self._query_events(
+            limit=limit, offset=offset, filters=filters, logical_and=logical_and
+        )
+
         return [TimestampedEvent(entry[0], entry[1]) for entry in entries]
 
     def get_events(self, limit: int = None, offset: int = None) -> List[str]:
@@ -839,9 +849,15 @@ class SerializedSQLiteStorage:
         ]
 
     def get_events_with_timestamps(
-        self, limit: int = None, offset: int = None
+        self,
+        limit: int = None,
+        offset: int = None,
+        filters: List[Tuple[str, Any]] = None,
+        logical_and: bool = True,
     ) -> List[TimestampedEvent]:
-        events = self.database.get_events_with_timestamps(limit, offset)
+        events = self.database.get_events_with_timestamps(
+            limit=limit, offset=offset, filters=filters, logical_and=logical_and
+        )
         return [
             TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
             for event in events

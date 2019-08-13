@@ -81,12 +81,8 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 )
 
 
-def event_filter_for_payments(
-    event: Event,
-    token_network_address: TokenNetworkAddress = None,
-    partner_address: Address = None,
-) -> bool:
-    """Filters out non payment history related events
+def event_filter_for_payments(event: Event, partner_address: Address = None) -> bool:
+    """Filters payment history related events depending on partner_address argument
 
     - If no other args are given, all payment related events match
     - If a token network identifier is given then only payment events for that match
@@ -94,11 +90,6 @@ def event_filter_for_payments(
       target matches it's returned. If it's a payment received and the initiator matches
       then it's returned.
     """
-    is_matching_event = isinstance(event, EVENTS_PAYMENT_HISTORY_RELATED) and (
-        token_network_address is None or token_network_address == event.token_network_address
-    )
-    if not is_matching_event:
-        return False
 
     sent_and_target_matches = isinstance(
         event, (EventPaymentSentFailed, EventPaymentSentSuccess)
@@ -984,25 +975,22 @@ class RaidenAPI:  # pragma: no unittest
                 "target_address in get_raiden_events_payment_history"
             )
 
-        token_network_address = None
-        if token_address:
-            token_network_address = views.get_token_network_address_by_token_address(
-                chain_state=views.state_from_raiden(self.raiden),
-                token_network_registry_address=self.raiden.default_registry.address,
-                token_address=token_address,
-            )
-
         assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
+        events = self.raiden.wal.storage.get_events_with_timestamps(
+            limit=limit,
+            offset=offset,
+            filters=[
+                ("_type", "raiden.transfer.events.EventPaymentReceivedSuccess"),
+                ("_type", "raiden.transfer.events.EventPaymentSentFailed"),
+                ("_type", "raiden.transfer.events.EventPaymentSentSuccess"),
+            ],
+            logical_and=False,
+        )
+
         events = [
-            event
-            for event in self.raiden.wal.storage.get_events_with_timestamps(
-                limit=limit, offset=offset
-            )
-            if event_filter_for_payments(
-                event=event.wrapped_event,
-                token_network_address=token_network_address,
-                partner_address=target_address,
-            )
+            e
+            for e in events
+            if event_filter_for_payments(event=e.wrapped_event, partner_address=target_address)
         ]
 
         return events
