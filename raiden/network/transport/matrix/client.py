@@ -296,13 +296,15 @@ class GMatrixClient(MatrixClient):
         if self.sync_thread:
             self.sync_thread.kill()
             log.debug("Waiting on sync greenlet", current_user=self.user_id)
-            exited = gevent.wait([self.sync_thread], timeout=SHUTDOWN_TIMEOUT)
+            exited = gevent.joinall({self.sync_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True)
             if not exited:
                 raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
         if self._handle_thread is not None:
             log.debug("Waiting on handle greenlet", current_user=self.user_id)
-            exited = gevent.wait([self._handle_thread], timeout=SHUTDOWN_TIMEOUT)
+            exited = gevent.joinall(
+                {self._handle_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True
+            )
             if not exited:
                 raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
             self._handle_thread.get()
@@ -507,9 +509,6 @@ class GMatrixClient(MatrixClient):
 
     def set_post_sync_hook(self, hook: Callable[[str], None]):
         self._post_hook_func = hook
-
-    def set_sync_token(self, sync_token: str) -> None:
-        self.sync_token = sync_token
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id

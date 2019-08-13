@@ -317,12 +317,15 @@ class MatrixTransport(Runnable):
         self._global_send_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
+        self._starting = False
 
         self._stop_event = Event()
         self._stop_event.set()
 
         self._global_send_event = Event()
         self._prioritize_global_messages = True
+
+        self._invite_queue: List[Tuple[_RoomID, dict]] = []
 
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
@@ -359,6 +362,7 @@ class MatrixTransport(Runnable):
             raise RuntimeError(f"{self!r} already started")
         self.log.debug("Matrix starting")
         self._stop_event.clear()
+        self._starting = True
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
@@ -416,11 +420,22 @@ class MatrixTransport(Runnable):
                 self.log.debug("Starting retrier", retrier=retrier)
                 retrier.start()
 
-        self.log.debug("Matrix started", config=self._config)
         super().start()  # start greenlet
+        self._starting = False
         self._started = True
 
         self.log.debug("Matrix started", config=self._config)
+
+        # Handle any delayed invites in the future
+        self._spawn_later(self._process_queued_invites, 1)
+
+    def _process_queued_invites(self):
+        if self._invite_queue:
+            self.log.debug("Processing queued invites", queued_invites=len(self._invite_queue))
+            for room_id, state in self._invite_queue:
+                self._handle_invite(room_id, state)
+            self._invite_queue.clear()
+
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         # dispatch auth data on first scheduling after start
@@ -477,18 +492,26 @@ class MatrixTransport(Runnable):
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
-    def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
+    def _spawn_later(self, func: Callable, delay: int, *args, **kwargs) -> gevent.Greenlet:
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
 
         def on_success(greenlet):
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 
-        greenlet = gevent.spawn(func, *args, **kwargs)
+        greenlet = gevent.Greenlet(func, *args, **kwargs)
         greenlet.link_exception(self.on_error)
         greenlet.link_value(on_success)
         self.greenlets.append(greenlet)
+        if delay:
+            greenlet.start_later(delay)
+        else:
+            greenlet.start()
         return greenlet
+
+    def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
+        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
+        return self._spawn_later(func, 0, *args, **kwargs)
 
     def whitelist(self, address: Address):
         """Whitelist peer address to receive communications from
@@ -611,7 +634,8 @@ class MatrixTransport(Runnable):
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
-        assert self._raiden_service, "_raiden_service not set"
+        assert self._raiden_service is not None, "_raiden_service not set"
+
         chain_state = views.state_from_raiden(self._raiden_service)
         return views.get_all_messagequeues(chain_state)
 
@@ -652,6 +676,11 @@ class MatrixTransport(Runnable):
     def _handle_invite(self, room_id: _RoomID, state: dict):
         """ Join rooms invited by whitelisted partners """
         if self._stop_event.ready():
+            return
+
+        if self._starting:
+            self.log.debug("Queueing invite", room_id=room_id)
+            self._invite_queue.append((room_id, state))
             return
 
         self.log.debug("Got invite", room_id=room_id)
@@ -905,12 +934,13 @@ class MatrixTransport(Runnable):
         if receiver not in self._address_to_retrier:
             retrier = _RetryQueue(transport=self, receiver=receiver)
             self._address_to_retrier[receiver] = retrier
-            retrier.greenlet.link_exception(self.on_error)
             # Always start the _RetryQueue, otherwise `stop` will block forever
             # waiting for the corresponding gevent.Greenlet to complete. This
             # has no negative side-effects if the transport has stopped because
             # the retrier itself checks the transport running state.
             retrier.start()
+            # ``Runnable.start()`` may re-create the internal greenlet
+            retrier.greenlet.link_exception(self.on_error)
         return self._address_to_retrier[receiver]
 
     def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message):
@@ -987,7 +1017,9 @@ class MatrixTransport(Runnable):
             )
             for _ in range(JOIN_RETRIES):
                 try:
-                    member_ids = {member.user_id for member in room.get_joined_members()}
+                    member_ids = {
+                        member.user_id for member in room.get_joined_members(force_resync=True)
+                    }
                 except MatrixRequestError as e:
                     last_ex = e
                 room_is_empty = not bool(peer_ids & member_ids)

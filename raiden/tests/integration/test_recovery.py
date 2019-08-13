@@ -43,7 +43,6 @@ def test_recovery_happy_case(
     # make a few transfers from app0 to app2
     amount = 1
     spent_amount = deposit - 2
-    identifier = 0
     for identifier in range(spent_amount):
         transfer_and_assert_path(
             path=raiden_network,
@@ -53,7 +52,6 @@ def test_recovery_happy_case(
             timeout=network_wait * number_of_nodes,
         )
 
-    app0.raiden.stop()
     app0.stop()
 
     waiting.wait_for_network_state(
