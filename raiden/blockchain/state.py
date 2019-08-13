@@ -24,7 +24,6 @@ from eth_utils import to_checksum_address, to_hex
 
 from raiden.blockchain.events import DecodedEvent
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.network.blockchain_service import BlockChainService
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
@@ -36,7 +35,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.typing import (
     Address,
-    BlockNumber,
     ChainID,
     Locksroot,
     Optional,
