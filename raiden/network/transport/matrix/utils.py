@@ -5,19 +5,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    KeysView,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterable, KeysView, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
 
 import gevent
@@ -391,7 +379,7 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
                 break
         else:
             raise TransportError("Could neither join nor create a global room")
-
+    log.debug("Joined global room", room=global_room)
     return global_room
 
 
@@ -530,7 +518,7 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     return address
 
 
-def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
+def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     """Sorts a list of servers by http round-trip time
 
     Params:
@@ -547,10 +535,10 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     )
     # these tasks should never raise, returns None on errors
     gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
-    sorted_servers: List[Tuple[str, float]] = sorted(
-        (job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1)
+    sorted_servers: Dict[str, float] = dict(
+        sorted((job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1))
     )
-    log.debug("Matrix homeserver RTT times", rtt_times=sorted_servers)
+    log.debug("Matrix homeserver RTTs", rtts=sorted_servers)
     return sorted_servers
 
 
@@ -564,17 +552,15 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
         GMatrixClient instance for one of the available servers
     """
     if len(servers) > 1:
-        sorted_servers = [server_url for (server_url, _) in sort_servers_closest(servers)]
-        log.info(
-            "Automatically selecting matrix homeserver based on RTT", sorted_servers=sorted_servers
-        )
+        sorted_servers = sort_servers_closest(servers)
+        log.debug("Selecting best matrix server", sorted_servers=sorted_servers)
     elif len(servers) == 1:
-        sorted_servers = servers
+        sorted_servers = {servers[0]: 0}
     else:
         raise TransportError("No valid servers list given")
 
     last_ex = None
-    for server_url in sorted_servers:
+    for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(server_url, *args, **kwargs)
         try:
             client.api._send("GET", "/versions", api_path="/_matrix/client")
@@ -582,6 +568,12 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
             log.warning("Selected server not usable", server_url=server_url, _exception=ex)
             last_ex = ex
         else:
+            log.info(
+                "Using Matrix server",
+                server_url=server_url,
+                server_ident=client.api.server_ident,
+                average_rtt=rtt,
+            )
             break
     else:
         raise TransportError(

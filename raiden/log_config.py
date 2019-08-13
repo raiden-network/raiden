@@ -12,6 +12,12 @@ from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tupl
 import gevent
 import structlog
 
+LOG_BLACKLIST = {
+    re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>",
+    re.compile(
+        r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"
+    ): r"\1/<redacted>",
+}
 DEFAULT_LOG_LEVEL = "INFO"
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
@@ -179,7 +185,7 @@ def configure_logging(
     else:
         formatter = "plain"
 
-    redact = redactor({re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>"})
+    redact = redactor(LOG_BLACKLIST)
     _wrap_tracebackexception_format(redact)
 
     handlers: Dict[str, Any] = dict()

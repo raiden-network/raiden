@@ -1138,6 +1138,16 @@ class RaidenService(Runnable):
         if len(secret) != SECRET_LENGTH:
             raise InvalidSecret("secret of invalid length.")
 
+        log.debug(
+            "Mediated transfer",
+            node=self.address,
+            target=target,
+            amount=amount,
+            identifier=identifier,
+            fee=fee,
+            token_network_address=token_network_address,
+        )
+
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
         # the secret is removed from the blockchain. The rationale here is that

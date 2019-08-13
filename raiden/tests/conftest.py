@@ -28,6 +28,7 @@ import time
 from pathlib import Path
 
 import gevent
+import structlog
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
 
@@ -45,6 +46,9 @@ from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
 from raiden.utils.ethereum_clients import is_supported_client
+
+
+log = structlog.get_logger()
 
 
 def pytest_addoption(parser):
@@ -239,6 +243,7 @@ def logging_level(request, logs_storage):
         cache_logger_on_first_use=False,
         debug_log_file_name=debug_path,
     )
+    log.info("Running test", nodeid=request.node.nodeid)
 
 
 @pytest.fixture(scope="session", autouse=True)

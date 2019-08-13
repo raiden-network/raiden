@@ -357,6 +357,7 @@ class MatrixTransport(Runnable):
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")
+        self.log.debug("Matrix starting")
         self._stop_event.clear()
         self._raiden_service = raiden_service
         self._message_handler = message_handler
@@ -381,7 +382,7 @@ class MatrixTransport(Runnable):
             transport_uuid=str(self._uuid),
         )
 
-        self.log.debug("Start: handle thread", handle_thread=self._client._handle_thread)
+        self.log.debug("Start: handle greenlet", handle_greenlet=self._client._handle_thread)
         if self._client._handle_thread:
             # wait on _handle_thread for initial sync
             # this is needed so the rooms are populated before we _inventory_rooms
@@ -419,6 +420,7 @@ class MatrixTransport(Runnable):
         super().start()  # start greenlet
         self._started = True
 
+        self.log.debug("Matrix started", config=self._config)
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
         # dispatch auth data on first scheduling after start
@@ -447,6 +449,7 @@ class MatrixTransport(Runnable):
         but it should raise any stop-time exception """
         if self._stop_event.ready():
             return
+        self.log.debug("Matrix stopping")
         self._stop_event.set()
         self._global_send_event.set()
 
@@ -459,7 +462,7 @@ class MatrixTransport(Runnable):
         self._address_to_retrier = {}
 
         self._address_mgr.stop()
-        self._client.stop_listener_thread()  # stop sync_thread, wait on client's greenlets
+        self._client.stop()  # stop sync_thread, wait on client's greenlets
 
         # wait on own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets)
@@ -978,7 +981,9 @@ class MatrixTransport(Runnable):
             last_ex: Optional[Exception] = None
             retry_interval = ROOM_JOIN_RETRY_INTERVAL
             self.log.debug(
-                "Waiting for peer to join from invite", peer_address=to_checksum_address(address)
+                "Waiting for peer to join from invite",
+                room=room,
+                peer_address=to_checksum_address(address),
             )
             for _ in range(JOIN_RETRIES):
                 try:
@@ -1000,6 +1005,7 @@ class MatrixTransport(Runnable):
                     # Inform the client, that currently no one listens:
                     self.log.error(
                         "Peer has not joined from invite yet, should join eventually",
+                        room=room,
                         peer_address=to_checksum_address(address),
                     )
 
@@ -1021,9 +1027,11 @@ class MatrixTransport(Runnable):
 
     def _get_private_room(self, invitees: List[User]):
         """ Create an anonymous, private room and invite peers """
-        return self._client.create_room(
+        room = self._client.create_room(
             None, invitees=[user.user_id for user in invitees], is_public=False
         )
+        self.log.debug("Creating private room", room=room, invitees=invitees)
+        return room
 
     def _get_public_room(self, room_name, invitees: List[User]):
         """ Obtain a public, canonically named (if possible) room and invite peers """
@@ -1055,7 +1063,7 @@ class MatrixTransport(Runnable):
                 self.log.debug("Inviting users", room=room, invitee_ids=users_to_invite)
                 for invitee_id in users_to_invite:
                     room.invite_user(invitee_id)
-                self.log.debug("Room joined successfully", room=room)
+                self.log.debug("Joined public room", room=room)
                 break
 
             # if can't, try creating it
