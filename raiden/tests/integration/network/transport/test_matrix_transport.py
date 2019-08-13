@@ -739,12 +739,6 @@ def test_matrix_invite_private_room_unhappy_case_1(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Issue raiden-network/raiden#4336. "
-        "The last loop times out because the invite isn't being seen after the restart."
-    )
-)
 @pytest.mark.parametrize(
     ("private_rooms", "expected_join_rule0", "expected_join_rule1"),
     [
@@ -819,12 +813,6 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Issue raiden-network/raiden#4336. "
-        "The last loop times out because the invite isn't being seen after the restart."
-    )
-)
 @pytest.mark.parametrize(
     "private_rooms, expected_join_rule",
     [
@@ -925,7 +913,6 @@ def test_matrix_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport0, transport1)
 
 
-@pytest.mark.xfail(reason="XFail until raiden-network/raiden#4030 is fixed")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 def test_matrix_multi_user_roaming(matrix_transports):
@@ -1036,9 +1023,10 @@ def test_matrix_multi_user_roaming(matrix_transports):
 
     # Node two switches to second server
     transport_rs1_0.stop()
-    wait_for_peer_unreachable(transport_rs1_0, raiden_service0.address)
+    wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
     transport_rs1_1.start(raiden_service1, message_handler1, "")
+    transport_rs1_1.start_health_check(raiden_service0.address)
 
     wait_for_peer_reachable(transport_rs0_2, raiden_service1.address)
     wait_for_peer_reachable(transport_rs1_1, raiden_service0.address)
@@ -1061,7 +1049,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
 @pytest.mark.parametrize("private_rooms", [[True, True]])
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
-@pytest.mark.skip("Issue: #4379")
 def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     transport0, transport1 = matrix_transports
     received_messages0 = set()

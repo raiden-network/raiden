@@ -220,6 +220,8 @@ class NodeRunner:
         finally:
             self._shutdown_hook()
 
+            app_.stop()
+
             def stop_task(task):
                 try:
                     if isinstance(task, Runnable):
