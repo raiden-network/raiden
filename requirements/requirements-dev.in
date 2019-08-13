@@ -28,7 +28,6 @@ pytest-xdist
 grequests
 pexpect
 hypothesis
-flaky
 
 # Debugging
 pdbpp
