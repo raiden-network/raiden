@@ -5,10 +5,12 @@ import gevent
 import structlog
 from eth_utils import to_checksum_address
 
+from raiden.storage.restore import get_state_change_with_transfer_by_secrethash
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
+from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES, NODE_NETWORK_REACHABLE, ChannelState
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
@@ -438,8 +440,17 @@ def wait_for_received_transfer_result(
                 and state_change.secrethash == secrethash
             )
             if registered_onchain:
-                result = TransferWaitResult.SECRET_REGISTERED_ONCHAIN
-                break
+                state_change_with_transfer = get_state_change_with_transfer_by_secrethash(
+                    raiden.wal.storage, secrethash
+                )
+                msg = "Expected ActionInitMediator/ActionInitTarget not found in state changes."
+                expected_types = (ActionInitMediator, ActionInitTarget)
+                assert isinstance(state_change_with_transfer, expected_types), msg
+                transfer = state_change_with_transfer.data.transfer
+
+                if raiden.get_block_number() <= transfer.lock.expiration:
+                    result = TransferWaitResult.SECRET_REGISTERED_ONCHAIN
+                    break
 
         log.debug("wait_for_transfer_result", **log_details)
         gevent.sleep(retry_timeout)
