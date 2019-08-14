@@ -24,7 +24,7 @@ A channel between two nodes is opened, a transfer is made. Then, node 1 goes off
 
 #### [ms3_simple_monitoring](./ms3_simple_monitoring.yaml)
 
-A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. Before the monitoring trigger block is passed node 1 gets back online. Node 1 calls the smart contract itself (REMARK: she does not call close) and therefore the MS does not get triggered.
+A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. Before the monitoring trigger block is passed node 1 gets back online. Node 1 calls the smart contract itself and therefore the MS does not get triggered.
 
 #### [pfs1_get_a_simple_path](./pfs1_get_a_simple_path.yaml)
 
