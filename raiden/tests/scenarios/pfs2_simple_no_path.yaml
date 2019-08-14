@@ -5,7 +5,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: https://pfs-goerli-with-fees.services-dev.raiden.network
     udc:
       enable: true
       token:
@@ -23,10 +23,10 @@ nodes:
     environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 10
+    pathfinding-max-fee: 100
 
-## This is the PFS1 scenario. It creates a network with topology A <-> B <-> C <-> D and checks
-## whether a path is returned.
+## This is the PFS2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
+## that no path is returned since there is no capacity in the direction from 3 to 0.
 
 scenario:
   serial:
@@ -40,11 +40,16 @@ scenario:
       - serial:
           name: "Test providing routes"
           tasks:
-            # Check that the PFS returns a path from A to D
-            - assert_pfs_routes: {from: 3, to: 0, amount: 10, expected_paths: 0}
+            # Check that the transfer fails, when there is no path from 3 to 0 
+            - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 409}
+
+            # Check that IOU is created despite no available path
+            - assert_pfs_history: {source: 3, target: 0, request_count: 1}
+            - assert_pfs_iou: {source: 3, amount: 100}
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
                 source: 3
                 request_count: 1
                 target: 0
+                routes_count: 0
