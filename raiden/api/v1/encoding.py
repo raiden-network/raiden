@@ -1,4 +1,6 @@
 import binascii
+import datetime
+from typing import Any, Optional
 
 from eth_utils import (
     is_0x_prefixed,
@@ -76,6 +78,16 @@ class AddressField(fields.Field):
             self.fail("invalid_size")
 
         return value
+
+
+class TimeStampField(fields.DateTime):
+    def _serialize(
+        self, value: Optional[datetime.datetime], attr: Any, obj: Any, **kwargs
+    ) -> Optional[str]:
+        return value and value.isoformat()
+
+    def _deserialize(self, value, attr, data, **kwargs) -> Optional[datetime.datetime]:
+        return value and datetime.datetime.fromisoformat(value)
 
 
 class SecretField(fields.Field):
@@ -350,7 +362,7 @@ class EventPaymentSentFailedSchema(BaseSchema):
     event = fields.Constant("EventPaymentSentFailed")
     reason = fields.Str()
     target = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "reason", "target", "log_time")
@@ -364,7 +376,7 @@ class EventPaymentSentSuccessSchema(BaseSchema):
     event = fields.Constant("EventPaymentSentSuccess")
     amount = fields.Integer()
     target = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "amount", "target", "identifier", "log_time")
@@ -378,7 +390,7 @@ class EventPaymentReceivedSuccessSchema(BaseSchema):
     event = fields.Constant("EventPaymentReceivedSuccess")
     amount = fields.Integer()
     initiator = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "amount", "initiator", "identifier", "log_time")

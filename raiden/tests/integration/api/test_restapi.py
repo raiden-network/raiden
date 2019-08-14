@@ -897,11 +897,7 @@ def test_api_timestamp_format(api_server_test_instance, raiden_network, token_ad
 
     log_timestamp_iso = log_date.isoformat()
 
-    # However, sqlite expects a space to separate date and time, so this fails...
-    # assert log_timestamp_iso == log_timestamp, "log_time is not a valid ISO8601 string"
-
-    # and this passes:
-    assert log_timestamp_iso.replace("T", " ") == log_timestamp, "log_time is not a timestamp"
+    assert log_timestamp_iso == log_timestamp, "log_time is not a valid ISO8601 string"
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
