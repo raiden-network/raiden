@@ -130,6 +130,7 @@ def test_token_network_proxy(
             participant2=to_checksum_address(c2_client.address),
             block_identifier="latest",
         )
+        pytest.fail(msg)
 
     msg = "Zero is not a valid channel_identifier identifier, an exception must be raised."
     with pytest.raises(InvalidChannelID):
@@ -281,6 +282,7 @@ def test_token_network_proxy(
             total_deposit=-1,
             partner=c2_client.address,
         )
+        pytest.fail(msg)
 
     msg = "set_total_deposit must fail with a zero amount"
     with pytest.raises(BrokenPreconditionError):
@@ -290,6 +292,7 @@ def test_token_network_proxy(
             total_deposit=0,
             partner=c2_client.address,
         )
+        pytest.fail(msg)
 
     c1_token_network_proxy.set_total_deposit(
         given_block_identifier="latest",
