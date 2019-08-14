@@ -41,8 +41,14 @@ def run_test_close_regression(raiden_network, deposit, token_addresses):
     amount = 10
     identifier = 42
     secret, secrethash = factories.make_secret_with_hash()
-    assert api1.transfer(
-        registry_address, token_address, amount, api2.address, identifier=identifier, secret=secret
+    assert api1.transfer_and_wait(
+        registry_address=registry_address,
+        token_address=token_address,
+        amount=amount,
+        target=api2.address,
+        identifier=identifier,
+        secret=secret,
+        transfer_timeout=10,
     )
     exception = ValueError("Waiting for transfer received success in the WAL timed out")
     with gevent.Timeout(seconds=5, exception=exception):
