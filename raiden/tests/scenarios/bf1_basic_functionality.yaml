@@ -25,6 +25,7 @@ nodes:
     routing-mode: pfs
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
+    enable-monitoring: true
 
 scenario:
   serial:
