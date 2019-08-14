@@ -28,6 +28,7 @@ from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import (
     Address,
+    BlockSpecification,
     BlockTimeout,
     ChainID,
     ChannelID,
@@ -126,9 +127,13 @@ def payment_channel_open_and_deposit(
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    confirmed_block_identifier = views.state_from_raiden(app0.raiden).block_hash
+    block_identifier: BlockSpecification
+    if app0.raiden.wal:
+        block_identifier = views.state_from_raiden(app0.raiden).block_hash
+    else:
+        block_identifier = "latest"
     token_network_address = app0.raiden.default_registry.get_token_network(
-        token_address=token_address, block_identifier=confirmed_block_identifier
+        token_address=token_address, block_identifier=block_identifier
     )
     assert token_network_address, "request a channel for an unregistered token"
     token_network_proxy = app0.raiden.chain.token_network(token_network_address)
@@ -136,7 +141,7 @@ def payment_channel_open_and_deposit(
     channel_identifier = token_network_proxy.new_netting_channel(
         partner=app1.raiden.address,
         settle_timeout=settle_timeout,
-        given_block_identifier=confirmed_block_identifier,
+        given_block_identifier=block_identifier,
     )
     assert channel_identifier
 
