@@ -2,7 +2,7 @@ import pytest
 from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
-from raiden.exceptions import DepositMismatch, UnknownTokenAddress
+from raiden.exceptions import DepositMismatch, TokenNotRegistered, UnknownTokenAddress
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.transfer import get_channelstate
@@ -21,6 +21,42 @@ def test_token_addresses(raiden_network, token_addresses):
         raiden_network=raiden_network,
         token_addresses=token_addresses,
     )
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+def test_channel_open_token_network_not_registered_in_confirmed_block(
+    raiden_network, token_addresses, retry_timeout
+):
+    """
+    Test that opening a channel via the API provides the confirmed block and not
+    the latest block. The discrepancy there lead to potential timing issues where
+    the token network was deployed for the state in the "latest" block but not yet
+    in the confirmed state and a BadFunctionCallOutput exception was thrown from web3.
+
+    Regression test for 4470
+    """
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+
+    api0 = RaidenAPI(app0.raiden)
+    # Emulate the confirmed block being a block where TokenNetwork for token_address
+    # has not yet been deployed
+    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.chain.get_block(0)["hash"]
+
+    msg = (
+        "Opening a channel with a confirmed block where the token network "
+        "has not yet been deployed should raise a TokenNotRegistered error"
+    )
+    with pytest.raises(TokenNotRegistered):
+        api0.channel_open(
+            registry_address=app0.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=app1.raiden.address,
+        )
+
+    pytest.fail(msg)
 
 
 def run_test_token_addresses(raiden_network, token_addresses):
