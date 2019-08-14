@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`4560` Formatting of timestamp fields on the API should follow ISO8601
 * :bug:`4561` Limit and offset should now work properly in the payment API event queries. 
 
 * :release:`0.100.5a0 <2019-08-12>`
