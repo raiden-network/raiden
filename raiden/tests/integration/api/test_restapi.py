@@ -1,3 +1,4 @@
+import datetime
 import json
 from hashlib import sha256
 from http import HTTPStatus
@@ -863,6 +864,44 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_api_timestamp_format(api_server_test_instance, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+
+    payment_url = api_url_for(
+        api_server_test_instance,
+        "token_target_paymentresource",
+        token_address=to_checksum_address(token_address),
+        target_address=to_checksum_address(target_address),
+    )
+
+    # Make payment
+    grequests.post(payment_url, json={"amount": amount, "identifier": identifier}).send()
+
+    json_response = get_json_response(grequests.get(payment_url).send().response)
+
+    assert len(json_response) == 1, "payment response had no event record"
+    event_data = json_response[0]
+    assert "log_time" in event_data, "missing log_time attribute from event record"
+    log_timestamp = event_data["log_time"]
+
+    # python (and javascript) can parse strings with either space or T as a separator of date
+    # and time and still treat it as a ISO8601 string
+    log_date = datetime.datetime.fromisoformat(log_timestamp)
+
+    log_timestamp_iso = log_date.isoformat()
+
+    # However, sqlite expects a space to separate date and time, so this fails...
+    # assert log_timestamp_iso == log_timestamp, "log_time is not a valid ISO8601 string"
+
+    # and this passes:
+    assert log_timestamp_iso.replace("T", " ") == log_timestamp, "log_time is not a timestamp"
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
