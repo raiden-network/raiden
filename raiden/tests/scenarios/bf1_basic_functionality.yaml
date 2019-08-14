@@ -10,6 +10,9 @@ settings:
       enable: true
       token:
         deposit: true
+        balance_per_node: 5000
+
+token:
 
 nodes:
   mode: managed
@@ -53,9 +56,9 @@ scenario:
             - deposit: {from: 1, to: 0, total_deposit: 1000}
             - deposit: {from: 2, to: 1, total_deposit: 1000}
             - deposit: {from: 3, to: 2, total_deposit: 1000}
-            # From D to E
+            # From 3 to 4
             - deposit: {from: 3, to: 4, total_deposit: 1000}
-            # From E to A
+            # From 4 to 0
             - deposit: {from: 4, to: 0, total_deposit: 1000}
       - parallel:
           name: "Assert after deposits"
@@ -66,32 +69,36 @@ scenario:
             - assert: {from: 4, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
             - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
       - parallel:
-          name: "Enable MSs between node E and D (will be used later in the scenario)"
+          name: "Enable MSs between node 4 and 3 (will be used later in the scenario)"
           tasks:
             - store_channel_info: {from: 4, to: 3, key: "MS Test Channel"}
       - serial:
-          name: "Make 10 transfers from D to A"
+          name: "Make 10 transfers from 3 to 0"
           repeat: 10
           tasks:
             - transfer: {from: 3, to: 0, amount: 1}
-      - parallel:
-          name: "Assert after 10 payments from D to A"
-          tasks:
-            - assert_sum: {node: 0, balance_sum: 5010}
-            - assert_sum: {node: 3, balance_sum: 4990}
       - serial:
-          name: "Make 10 transfers from B to E"
+          name: "Assert after 10 payments from 3 to 0"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 2010}
+            - assert_sum: {from: 3, balance_sum: 1990}
+      - serial:
+          name: "Make 10 transfers from 1 to 4"
           repeat: 10
           tasks:
             - transfer: {from: 1, to: 4, amount: 1}
-      - parallel:
-          name: "Assert after 10 payments from B to E"
+      - serial:
+          name: "Assert after 10 payments from 1 to 4"
           tasks:
-            - assert_sum: {node: 4, balance_sum: 5010}
-            - assert_sum: {node: 1, balance_sum: 4990}
+            - wait: 10
+            - assert_sum: {from: 1, balance_sum: 1990}
+            - assert_sum: {from: 4, balance_sum: 2010}
       - serial:
           name: "Check that IOUs exist after the payments"
           tasks:
+            # Add a wait until all ious are processed correctly
+            - wait: 10
             - assert_pfs_history: {source: 3, target: 0, request_count: 11}
             - assert_pfs_iou: {source: 3, amount: 1100}
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
@@ -99,96 +106,104 @@ scenario:
             # Make sure that a mediating node has not used the PFS
             - assert_pfs_iou: {source: 2, iou_exists: false}
       - serial:
-          name: "Withdraw 10% of the deposit of node C"
+          name: "Withdraw 10% of the deposit of node 2"
           tasks:
             - withdraw: {from: 2, to: 3, total_withdraw: 100, expected_http_status: 200}
       - parallel:
           name: "Assert after withdraw"
           tasks:
-            - assert: {from: 2, to: 3, total_deposit: 900, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1000, total_withdraw: 100, state: "opened"}
       - serial:
-          name: "Make payments from C to E after withdraw"
+          name: "Make payments from 2 to 4 after withdraw"
           repeat: 10
           tasks:
             - transfer: {from: 2, to: 4, amount: 1}
-      - parallel:
-          name: "Assert after 10 payments from C to E"
-          tasks:
-            - assert_sum: {node: 2, balance_sum: 4890}
-            - assert_sum: {node: 4, balance_sum: 5020}
       - serial:
-          name: "Make payments from A to C after withdraw"
-          repeat: 10
+          name: "Assert after 10 payments from 2 to 4"
           tasks:
-              - transfer: {from: 0, to: 2, amount: 1}
-      - parallel:
-          name: "Assert after 10 payments from A to C"
+            - wait: 10
+            - assert_sum: {from: 2, balance_sum: 1890}
+            - assert_sum: {from: 4, balance_sum: 2020}
+      - serial:
+          name: "Make payments from 0 to 2 after withdraw"
+          repeat: 5
           tasks:
-            - assert_sum: {node: 2, balance_sum: 4900}
-            - assert_sum: {node: 0, balance_sum: 5000}
-      - parallel:
-          name: "C deposits back the 10% it withdrew"
+            - transfer: {from: 0, to: 2, amount: 1}
+      - serial:
+          name: "Assert after 10 payments from 0 to 2"
           tasks:
-            - deposit: {from: 2, to: 3, total_deposit: 1000}
+            - wait: 10
+            - assert_sum: {from: 2, balance_sum: 1895}
+            - assert_sum: {from: 0, balance_sum: 2005}
       - parallel:
-          name: "Assert after deposit from C to D"
+          name: "2 deposits back the 10% it withdrew"
           tasks:
-            - assert: {from: 2, to: 3, total_deposit: 1000, state: "opened"}
+            - deposit: {from: 2, to: 3, total_deposit: 1100}
+      - serial:
+          name: "Assert after deposit from 2 to 3"
+          tasks:
+            - wait: 10
+            - assert: {from: 2, to: 3, total_deposit: 1100, total_withdraw: 100, state: "opened"}
       - parallel:
-          name: "B deposits and extra 10% in the channel with A"
+          name: "1 deposits extra 10% in the channel with 0"
           tasks:
             - deposit: {from: 1, to: 0, total_deposit: 1100}
-      - parallel:
-          name: "Assert after deposit from B to A"
+      - serial:
+          name: "Assert after deposit from 1 to 0"
           tasks:
+            - wait: 10
             - assert: {from: 1, to: 0, total_deposit: 1100, state: "opened"}
       - serial:
-          name: "Make 100 payments from A to D"
+          name: "Make 100 payments from 0 to 3"
           repeat: 100
           tasks:
-              - transfer: {from: 0, to: 3, amount: 1}
-      - parallel:
-          name: "Assert after 100 payments from A to D"
-          tasks:
-            - assert_sum: {node: 0, balance_sum: 4900}
-            - assert_sum: {node: 3, balance_sum: 5090}
+            - transfer: {from: 0, to: 3, amount: 1}
       - serial:
-          name: "Stop node A and wait 10 blocks, then start it again"
+          name: "Assert after 100 payments from 0 to 3"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 1905}
+            - assert_sum: {from: 3, balance_sum: 2090}
+      - serial:
+          name: "Stop node 0 and wait 10 blocks, then start it again"
           tasks:
             - stop_node: 0
             - wait_blocks: 10
-          start_node: 0
+            - start_node: 0
       - serial:
-          name: "Make 10 payments from A to D after restart"
+          name: "Make 10 payments from 0 to 3 after restart"
           repeat: 10
           tasks:
             - transfer: {from: 0, to: 3, amount: 1}
-      - parallel:
-          name: "Assert after 10 payments from A to D"
-          tasks:
-            - assert_sum: {node: 0, balance_sum: 4890}
-            - assert_sum: {node: 3, balance_sum: 5100}
       - serial:
-          name: "Close channel between A and E"
+          name: "Assert after 10 payments from 0 to 3"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 1895}
+            - assert_sum: {from: 3, balance_sum: 2100}
+      - serial:
+          name: "Close channel between 0 and 4"
           tasks:
             - close_channel: {from: 0, to: 4}
-      - parallel:
-          name: "Assert after closing channel between A and E"
+      - serial:
+          name: "Assert after closing channel between 0 and 4"
           tasks:
+            - wait: 10
             - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
             - assert: {from: 0, to: 4, state: "closed"}
       - serial:
-          name: "Make 100 payments from D to A"
+          name: "Make 100 payments from 3 to 0"
           repeat: 100
           tasks:
             - transfer: {from: 3, to: 0, amount: 1}
-      - parallel:
-          name: "Assert after 100 payments from D to A"
-          tasks:
-            - assert_sum: {node: 0, balance_sum: 5000}
-            - assert_sum: {node: 3, balance_sum: 4990}
       - serial:
-          name: "Close channel between E and D while E is offline"
+          name: "Assert after 100 payments from 3 to 0"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 1995}
+            - assert_sum: {from: 3, balance_sum: 2000}
+      - serial:
+          name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
             - stop_node: 4
             - close_channel: {from: 3, to: 4}
