@@ -23,8 +23,8 @@ nodes:
     environment-type: development
     enable-monitoring: true
 
-# This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline
-# and node 0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward
+# This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
+# and node0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward.
 
 scenario:
   serial:
