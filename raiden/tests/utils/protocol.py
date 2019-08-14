@@ -92,7 +92,7 @@ class HoldRaidenEventHandler(EventHandler):
                 )
                 raise RuntimeError(msg)
 
-        waitingholds = list(self.eventtype_to_waitingholds[event_type])
+        waitingholds = self.eventtype_to_waitingholds[event_type]
         for pos, waiting_hold in enumerate(waitingholds):
 
             # If it is a match:
