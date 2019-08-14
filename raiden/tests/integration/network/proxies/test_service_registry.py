@@ -9,7 +9,7 @@ from eth_utils import (
     to_checksum_address,
 )
 
-from raiden.constants import RoutingMode
+from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import BrokenPreconditionError
 from raiden.network.pathfinding import configure_pfs_or_exit, get_random_pfs, get_valid_pfs_url
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
@@ -108,6 +108,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # With local routing configure_pfs should raise assertion
     with pytest.raises(AssertionError):
         _ = configure_pfs_or_exit(
+            environment_type=Environment.PRODUCTION,
             pfs_url="",
             routing_mode=RoutingMode.LOCAL,
             service_registry=service_registry,
@@ -119,6 +120,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # With private routing configure_pfs should raise assertion
     with pytest.raises(AssertionError):
         _ = configure_pfs_or_exit(
+            environment_type=Environment.PRODUCTION,
             pfs_url="",
             routing_mode=RoutingMode.PRIVATE,
             service_registry=service_registry,
@@ -128,8 +130,11 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         )
 
     # Asking for auto address
-    with patch.object(requests, "get", return_value=response):
+    # To make this deterministic we need to patch the random selection function
+    patch_random = patch("raiden.network.pathfinding.get_random_pfs", return_value="http://foo")
+    with patch.object(requests, "get", return_value=response), patch_random:
         config = configure_pfs_or_exit(
+            environment_type=Environment.PRODUCTION,
             pfs_url="auto",
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
@@ -144,6 +149,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     given_address = "http://foo"
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
+            environment_type=Environment.PRODUCTION,
             pfs_url=given_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
@@ -155,11 +161,12 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     assert is_same_address(config.payment_address, json_data["payment_address"])
     assert config.price == json_data["price_info"]
 
-    # Configuring an address that doesn't match the registered url
+    # Configuring an address that doesn't match the registered url should error
     given_address = "http://ourgivenaddress"
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             configure_pfs_or_exit(
+                environment_type=Environment.PRODUCTION,
                 pfs_url=given_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
@@ -167,8 +174,20 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
+    # but work when in development mode
+    with patch.object(requests, "get", return_value=response):
+        config = configure_pfs_or_exit(
+            environment_type=Environment.DEVELOPMENT,
+            pfs_url=given_address,
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_registry,
+            node_network_id=chain_id,
+            token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+        )
+        assert config.url == given_address
 
-    # Configuring an pfs payment address that isn't registered
+    # Configuring an pfs payment address that isn't registered should error
     given_address = "http://foo"
     unregistered_json_data = json_data.copy()
     unregistered_json_data["payment_address"] = "0x2222222222222222222222222222222222222221"
@@ -176,6 +195,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=unregistered_response):
             configure_pfs_or_exit(
+                environment_type=Environment.PRODUCTION,
                 pfs_url=given_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
@@ -183,6 +203,18 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
+    # but work when in development mode
+    with patch.object(requests, "get", return_value=unregistered_response):
+        config = configure_pfs_or_exit(
+            environment_type=Environment.DEVELOPMENT,
+            pfs_url=given_address,
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_registry,
+            node_network_id=chain_id,
+            token_network_registry_address=token_network_registry_address_test_default,
+            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+        )
+        assert config.url == given_address
 
     # Bad address, should exit the program
     response = mocked_failed_response(error=requests.RequestException(), status_code=400)
@@ -191,6 +223,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         with patch.object(requests, "get", side_effect=requests.RequestException()):
             # Configuring a given address
             _ = configure_pfs_or_exit(
+                environment_type=Environment.PRODUCTION,
                 pfs_url=bad_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
@@ -204,6 +237,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             _ = configure_pfs_or_exit(
+                environment_type=Environment.PRODUCTION,
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
@@ -219,6 +253,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             configure_pfs_or_exit(
+                environment_type=Environment.PRODUCTION,
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,

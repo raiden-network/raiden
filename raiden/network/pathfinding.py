@@ -12,7 +12,7 @@ import structlog
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address, to_hex
 from web3 import Web3
 
-from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
+from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, Environment, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
@@ -220,9 +220,10 @@ def get_random_pfs(
 
 
 def configure_pfs_or_exit(
+    environment_type: Environment,
     pfs_url: str,
     routing_mode: RoutingMode,
-    service_registry: ServiceRegistry,
+    service_registry: Optional[ServiceRegistry],
     node_network_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: FeeAmount,
@@ -264,24 +265,27 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
 
-    pfs_registered = service_registry.has_valid_registration(
-        block_identifier=service_registry.client.get_confirmed_blockhash(),
-        service_address=pathfinding_service_info.payment_address,
-    )
-    registered_pfs_url = service_registry.get_service_url(
-        block_identifier=service_registry.client.get_confirmed_blockhash(),
-        service_address=pathfinding_service_info.payment_address,
-    )
-    pfs_url_matches = registered_pfs_url == pathfinding_service_info.url
-    if not (pfs_registered and pfs_url_matches):
-        click.secho(
-            f"The pathfinding service at {pfs_url} is not registered with the "
-            f"service registry at {to_checksum_address(service_registry.address)} or "
-            f"the registered URL ({registered_pfs_url}) doesn't match the given URL "
-            f"{pathfinding_service_info.url}. "
-            f"Raiden will shut down. Please try a registered PFS."
+    # Only check that PFS is registered in production mode
+    if environment_type == Environment.PRODUCTION:
+        assert service_registry, "Should not get here without a service registry"
+        pfs_registered = service_registry.has_valid_registration(
+            block_identifier=service_registry.client.get_confirmed_blockhash(),
+            service_address=pathfinding_service_info.payment_address,
         )
-        sys.exit(1)
+        registered_pfs_url = service_registry.get_service_url(
+            block_identifier=service_registry.client.get_confirmed_blockhash(),
+            service_address=pathfinding_service_info.payment_address,
+        )
+        pfs_url_matches = registered_pfs_url == pathfinding_service_info.url
+        if not (pfs_registered and pfs_url_matches):
+            click.secho(
+                f"The pathfinding service at {pfs_url} is not registered with the "
+                f"service registry at {to_checksum_address(service_registry.address)} or "
+                f"the registered URL ({registered_pfs_url}) doesn't match the given URL "
+                f"{pathfinding_service_info.url}. "
+                f"Raiden will shut down. Please try a registered PFS."
+            )
+            sys.exit(1)
 
     if pathfinding_service_info.price > 0 and not pathfinding_service_info.payment_address:
         click.secho(

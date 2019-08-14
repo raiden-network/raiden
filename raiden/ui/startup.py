@@ -13,12 +13,8 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, PRODUCTION_CONTRACT_VERSION
-from raiden.ui.checks import (
-    check_pfs_configuration,
-    check_raiden_environment,
-    check_smart_contract_addresses,
-)
-from raiden.utils.typing import MYPY_ANNOTATION, Address, ChainID, TokenNetworkRegistryAddress
+from raiden.ui.checks import check_raiden_environment, check_smart_contract_addresses
+from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -213,19 +209,12 @@ def setup_proxies_or_exit(
             handle_contract_wrong_address("secret registry", service_registry_contract_address)
 
     # By now these should be set or Raiden aborted
-    assert token_network_registry, MYPY_ANNOTATION
-    assert secret_registry, MYPY_ANNOTATION
-    assert service_registry, MYPY_ANNOTATION
+    assert token_network_registry, "TokenNetworkRegistry needs to be set"
+    assert secret_registry, "SecretRegistry needs to be set"
 
     if routing_mode == RoutingMode.PFS:
-        check_pfs_configuration(
-            routing_mode=routing_mode,
-            environment_type=environment_type,
-            service_registry=service_registry,
-            pathfinding_service_address=pathfinding_service_address,
-        )
-
         pfs_info = configure_pfs_or_exit(
+            environment_type=environment_type,
             pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
