@@ -214,7 +214,7 @@ def geth_keyfile(datadir: str, address: Address) -> str:
     keystore = geth_keystore(datadir)
     os.makedirs(keystore, exist_ok=True)
 
-    address_hex = remove_0x_prefix(to_normalized_address(bytes(address)))
+    address_hex = remove_0x_prefix(to_normalized_address(address))
     broken_iso_8601 = datetime.now().isoformat().replace(":", "-")
     account = f"UTC--{broken_iso_8601}000Z--{address_hex}"
 
