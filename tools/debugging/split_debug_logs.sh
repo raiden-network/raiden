@@ -3,8 +3,7 @@ set -e
 
 DEBUG_LOG_FILE=$1;
 OUTPUT_FOLDER=$2;
-FULL_PATH=`realpath $0`
-PWD=`dirname $FULL_PATH`
+PWD=`dirname $0`
 
 NODE_ADDRESS=`cat $DEBUG_LOG_FILE | jq .node | sort -u`
 
