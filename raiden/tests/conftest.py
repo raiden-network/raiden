@@ -47,7 +47,6 @@ from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
 from raiden.utils.ethereum_clients import is_supported_client
 
-
 log = structlog.get_logger()
 
 
