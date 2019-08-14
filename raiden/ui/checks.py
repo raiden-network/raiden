@@ -15,18 +15,16 @@ from raiden.constants import (
     LOWEST_SUPPORTED_PARITY_VERSION,
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
-    RoutingMode,
 )
 from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import Address, ChainID, Dict, Optional, TokenNetworkRegistryAddress
+from raiden.utils.typing import Address, ChainID, Dict, TokenNetworkRegistryAddress
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -191,30 +189,6 @@ def check_smart_contract_addresses(
             fg="red",
         )
         sys.exit(1)
-
-
-def check_pfs_configuration(
-    routing_mode: RoutingMode,
-    environment_type: Environment,
-    service_registry: Optional[ServiceRegistry],
-    pathfinding_service_address: str,
-) -> None:
-    if routing_mode == RoutingMode.PFS:
-        if environment_type == Environment.PRODUCTION:
-            click.secho(
-                "Requested production mode and PFS routing mode. This is not supported", fg="red"
-            )
-            sys.exit(1)
-
-        if not service_registry and not pathfinding_service_address:
-            click.secho(
-                "Requested PFS routing mode but no service registry or no specific pathfinding "
-                " service address is provided. Please provide it via either the "
-                "--service-registry-contract-address or the --pathfinding-service-address "
-                "argument",
-                fg="red",
-            )
-            sys.exit(1)
 
 
 def check_synced(blockchain_service: BlockChainService) -> None:
