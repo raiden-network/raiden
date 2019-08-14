@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
+from raiden.utils.typing import MYPY_ANNOTATION, Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -139,6 +139,8 @@ def setup_proxies_or_exit(
         secret_registry_contract_address=secret_registry_contract_address,
         contracts=contracts,
     )
+
+    token_network_registry = None
     try:
         if tokennetwork_registry_contract_address is not None:
             registered_address = tokennetwork_registry_contract_address
@@ -158,6 +160,7 @@ def setup_proxies_or_exit(
             "token network registry", Address(tokennetwork_registry_contract_address)
         )
 
+    secret_registry = None
     try:
         secret_registry = blockchain_service.secret_registry(
             secret_registry_contract_address
@@ -208,6 +211,11 @@ def setup_proxies_or_exit(
             handle_contract_no_code("service registry", service_registry_contract_address)
         except AddressWrongContract:
             handle_contract_wrong_address("secret registry", service_registry_contract_address)
+
+    # By now these should be set or Raiden aborted
+    assert token_network_registry, MYPY_ANNOTATION
+    assert secret_registry, MYPY_ANNOTATION
+    assert service_registry, MYPY_ANNOTATION
 
     if routing_mode == RoutingMode.PFS:
         check_pfs_configuration(

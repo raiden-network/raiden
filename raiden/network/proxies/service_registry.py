@@ -11,7 +11,6 @@ from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.typing import (
     Address,
-    AddressHex,
     Any,
     BlockSpecification,
     Dict,
@@ -79,10 +78,10 @@ class ServiceRegistry:
         return result
 
     def has_valid_registration(
-        self, block_identifier: BlockSpecification, address: Address
+        self, block_identifier: BlockSpecification, service_address: Address
     ) -> Optional[bool]:
         try:
-            result = self.proxy.contract.functions.hasValidRegistration(address).call(
+            result = self.proxy.contract.functions.hasValidRegistration(service_address).call(
                 block_identifier=block_identifier
             )
         except web3.exceptions.BadFunctionCallOutput:
@@ -90,10 +89,10 @@ class ServiceRegistry:
         return result
 
     def get_service_url(
-        self, block_identifier: BlockSpecification, service_hex_address: AddressHex
+        self, block_identifier: BlockSpecification, service_address: Address
     ) -> Optional[str]:
         """Gets the URL of a service by address. If does not exist return None"""
-        result = self.proxy.contract.functions.urls(service_hex_address).call(
+        result = self.proxy.contract.functions.urls(service_address).call(
             block_identifier=block_identifier
         )
         if result == "":

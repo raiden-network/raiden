@@ -54,7 +54,7 @@ def test_service_registry_random_pfs(
     for idx, address in enumerate(addresses):
         assert c1_service_proxy.get_service_url("latest", address) == urls[idx]
     # Test that getting the url for a non-existing service address returns None
-    assert c1_service_proxy.get_service_url("latest", to_checksum_address(HOP1)) is None
+    assert c1_service_proxy.get_service_url("latest", HOP1) is None
 
     # Test that get_service_address by index works
     for idx, address in enumerate(addresses):
@@ -85,7 +85,7 @@ def test_service_registry_random_pfs(
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
     chain_id = ChainID(int(web3.net.version))
-    service_proxy, urls = deploy_service_registry_and_set_urls(
+    service_registry, urls = deploy_service_registry_and_set_urls(
         private_keys=private_keys,
         web3=web3,
         contract_manager=contract_manager,
@@ -100,28 +100,28 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
         "version": "0.0.1",
-        "payment_address": "0x2222222222222222222222222222222222222222",
+        "payment_address": to_checksum_address(privatekey_to_address(private_keys[0])),
     }
 
     response = mocked_json_response(response_data=json_data)
 
-    # With local routing configure pfs should raise assertion
+    # With local routing configure_pfs should raise assertion
     with pytest.raises(AssertionError):
         _ = configure_pfs_or_exit(
             pfs_url="",
             routing_mode=RoutingMode.LOCAL,
-            service_registry=service_proxy,
+            service_registry=service_registry,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
 
-    # With private routing configure pfs should raise assertion
+    # With private routing configure_pfs should raise assertion
     with pytest.raises(AssertionError):
         _ = configure_pfs_or_exit(
             pfs_url="",
             routing_mode=RoutingMode.PRIVATE,
-            service_registry=service_proxy,
+            service_registry=service_registry,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
@@ -132,7 +132,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         config = configure_pfs_or_exit(
             pfs_url="auto",
             routing_mode=RoutingMode.PFS,
-            service_registry=service_proxy,
+            service_registry=service_registry,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
@@ -140,13 +140,13 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     assert config.url in urls
     assert is_canonical_address(config.payment_address)
 
-    # Configuring a given address
-    given_address = "http://ourgivenaddress"
+    # Configuring a valid given address
+    given_address = "http://foo"
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
             pfs_url=given_address,
             routing_mode=RoutingMode.PFS,
-            service_registry=service_proxy,
+            service_registry=service_registry,
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
@@ -154,6 +154,35 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     assert config.url == given_address
     assert is_same_address(config.payment_address, json_data["payment_address"])
     assert config.price == json_data["price_info"]
+
+    # Configuring an address that doesn't match the registered url
+    given_address = "http://ourgivenaddress"
+    with pytest.raises(SystemExit):
+        with patch.object(requests, "get", return_value=response):
+            configure_pfs_or_exit(
+                pfs_url=given_address,
+                routing_mode=RoutingMode.PFS,
+                service_registry=service_registry,
+                node_network_id=chain_id,
+                token_network_registry_address=token_network_registry_address_test_default,
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            )
+
+    # Configuring an pfs payment address that isn't registered
+    given_address = "http://foo"
+    unregistered_json_data = json_data.copy()
+    unregistered_json_data["payment_address"] = "0x2222222222222222222222222222222222222221"
+    unregistered_response = mocked_json_response(response_data=unregistered_json_data)
+    with pytest.raises(SystemExit):
+        with patch.object(requests, "get", return_value=unregistered_response):
+            configure_pfs_or_exit(
+                pfs_url=given_address,
+                routing_mode=RoutingMode.PFS,
+                service_registry=service_registry,
+                node_network_id=chain_id,
+                token_network_registry_address=token_network_registry_address_test_default,
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            )
 
     # Bad address, should exit the program
     response = mocked_failed_response(error=requests.RequestException(), status_code=400)
@@ -164,7 +193,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             _ = configure_pfs_or_exit(
                 pfs_url=bad_address,
                 routing_mode=RoutingMode.PFS,
-                service_registry=service_proxy,
+                service_registry=service_registry,
                 node_network_id=chain_id,
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
@@ -172,13 +201,12 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # Addresses of token network registries of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
-
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             _ = configure_pfs_or_exit(
-                pfs_url="adad",
+                pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
-                service_registry=Mock(),
+                service_registry=service_registry,
                 node_network_id=chain_id,
                 token_network_registry_address=TokenNetworkRegistryAddress(
                     to_canonical_address("0x2222222222222222222222222222222222222221")
@@ -188,16 +216,13 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # ChainIDs of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
-
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", return_value=response):
             configure_pfs_or_exit(
-                pfs_url="adad",
+                pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
-                service_registry=Mock(),
+                service_registry=service_registry,
                 node_network_id=ChainID(chain_id + 1),
-                token_network_registry_address=TokenNetworkRegistryAddress(
-                    to_canonical_address("0x2222222222222222222222222222222222222221")
-                ),
+                token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )

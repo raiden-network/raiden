@@ -172,12 +172,12 @@ def get_valid_pfs_url(
         return None
 
     if not service_registry.has_valid_registration(
-        address=address, block_identifier=block_identifier
+        service_address=address, block_identifier=block_identifier
     ):
         return None
 
     url = service_registry.get_service_url(
-        block_identifier=block_identifier, service_hex_address=to_checksum_address(address)
+        block_identifier=block_identifier, service_address=address
     )
     if not url:
         return None
@@ -222,7 +222,7 @@ def get_random_pfs(
 def configure_pfs_or_exit(
     pfs_url: str,
     routing_mode: RoutingMode,
-    service_registry: Optional[ServiceRegistry],
+    service_registry: ServiceRegistry,
     node_network_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: FeeAmount,
@@ -261,6 +261,25 @@ def configure_pfs_or_exit(
         click.secho(
             f"There is an error with the pathfinding service with address "
             f"{pfs_url}. Raiden will shut down."
+        )
+        sys.exit(1)
+
+    pfs_registered = service_registry.has_valid_registration(
+        block_identifier=service_registry.client.get_confirmed_blockhash(),
+        service_address=pathfinding_service_info.payment_address,
+    )
+    registered_pfs_url = service_registry.get_service_url(
+        block_identifier=service_registry.client.get_confirmed_blockhash(),
+        service_address=pathfinding_service_info.payment_address,
+    )
+    pfs_url_matches = registered_pfs_url == pathfinding_service_info.url
+    if not (pfs_registered and pfs_url_matches):
+        click.secho(
+            f"The pathfinding service at {pfs_url} is not registered with the "
+            f"service registry at {to_checksum_address(service_registry.address)} or "
+            f"the registered URL ({registered_pfs_url}) doesn't match the given URL "
+            f"{pathfinding_service_info.url}. "
+            f"Raiden will shut down. Please try a registered PFS."
         )
         sys.exit(1)
 
