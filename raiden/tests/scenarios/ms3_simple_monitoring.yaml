@@ -23,9 +23,9 @@ nodes:
     environment-type: development
     enable-monitoring: true
 
-# This is the MS3 scenario. A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline
-# and node 0 closes the channel. Before the monitoring trigger block is passed node1 gets back online.
-# Node1 should be able to call close itself and no reward for the ms
+# This is the MS3 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
+# and node0 closes the channel. Before the monitoring trigger block is passed node1 gets back online.
+# Node1 should be able to call close itself and there should be no reward for the ms
 
 scenario:
   serial:

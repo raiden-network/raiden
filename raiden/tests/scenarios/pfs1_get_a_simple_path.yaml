@@ -5,7 +5,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
     udc:
       enable: true
       token:
@@ -23,9 +23,9 @@ nodes:
     environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 10
+    pathfinding-max-fee: 100
 
-## This is the PFS1 scenario. It creates a network with topology A <-> B <-> C <-> D and checks
+## This is the PFS1 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and checks
 ## whether a path is returned.
 
 scenario:
@@ -47,8 +47,8 @@ scenario:
           name: "Test providing routes"
           tasks:
             - wait_blocks: 2
-            # Check that the PFS returns a path from A to D
-            - assert_pfs_routes: {from: 0, to: 3, amount: 10, expected_paths: 1}
+            # Check that the PFS returns a path from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:

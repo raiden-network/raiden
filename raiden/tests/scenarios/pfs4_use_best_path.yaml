@@ -5,7 +5,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: https://pfs-goerli-with-fees.services-dev.raiden.network
     udc:
       enable: true
       token:
@@ -22,11 +22,12 @@ nodes:
     gas-price: fast
     environment-type: development
     routing-mode: pfs
-    pathfinding-max-paths: 5
-    pathfinding-max-fee: 10
+    pathfinding-max-paths: 1
+    pathfinding-max-fee: 100
 
-## This is the PFS4 scenario. It creates a network with topology A <-> B <-> C <-> D and A <-> E <-> D
-## and checks whether the best path is the one used for the payment.
+## This is the PFS4 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 2
+## and checks whether the best path is the one used for the payment. 
+## Note that `max-paths` is set to 1 path.
 
 scenario:
   serial:
@@ -52,13 +53,17 @@ scenario:
       - serial:
           name: "Test providing routes"
           tasks:
-            # Check that the PFS returns two paths from A to D
-            - assert_pfs_routes: {from: 0, to: 3, amount: 10, max_paths: 1, expected_paths: 1}
+            # Check that a payment goes through
+            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+
+            # Check that IOU is created
+            - assert_pfs_iou: {source: 3, amount: 100}
 
             ## Check that the paths are indeed the expected ones
             - assert_pfs_history:
                 source: 0
                 request_count: 1
                 target: 3
+                routes_count: 1
                 expected_routes:
                   - [0, 4, 3]

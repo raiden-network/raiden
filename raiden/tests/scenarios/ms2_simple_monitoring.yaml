@@ -23,8 +23,8 @@ nodes:
     environment-type: development
     enable-monitoring: true
 
-# This is the MS2 scenario. A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline
-# and node 0 closes the channel. After the monitoring trigger block is passed node1 gets back online.
+# This is the MS2 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
+# and node0 closes the channel. After the monitoring trigger block is passed node1 gets back online.
 
 scenario:
   serial:
