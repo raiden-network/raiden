@@ -130,7 +130,7 @@ scenario:
           tasks:
             - transfer: {from: 0, to: 2, amount: 1}
       - serial:
-          name: "Assert after 10 payments from 0 to 2"
+          name: "Assert after 5 payments from 0 to 2"
           tasks:
             - wait: 10
             - assert_sum: {from: 2, balance_sum: 1895}
