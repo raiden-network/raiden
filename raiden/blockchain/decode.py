@@ -334,14 +334,15 @@ def actionchannelupdatefee_from_channelstate(
 
 
 def blockchainevent_to_statechange(
-    raiden: "RaidenService", event: DecodedEvent, latest_confirmed_block: BlockNumber
+    raiden: "RaidenService",
+    event: DecodedEvent,
+    latest_confirmed_block: BlockNumber,  # pylint: disable=unused-argument
 ) -> List[StateChange]:  # pragma: no unittest
     msg = "The state of the node has to be primed before blockchain events can be processed."
     assert raiden.wal, msg
 
     event_name = event.event_data["event"]
     chain_state = views.state_from_raiden(raiden)
-    chain_service = raiden.chain
 
     state_changes: List[StateChange] = []
 
