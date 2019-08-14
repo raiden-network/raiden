@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 from raiden.api.python import event_filter_for_payments
@@ -36,13 +38,17 @@ def test_v1_event_payment_sent_failed_schema():
         target=factories.make_address(),
         reason="whatever",
     )
-    log_time = "2018-09-07T20:02:35.000"
+    log_time = datetime.datetime.now()
 
     timestamped = TimestampedEvent(event, log_time)
 
     dumped = EventPaymentSentFailedSchema().dump(timestamped)
 
-    expected = {"event": "EventPaymentSentFailed", "log_time": log_time, "reason": "whatever"}
+    expected = {
+        "event": "EventPaymentSentFailed",
+        "log_time": log_time.isoformat(),
+        "reason": "whatever",
+    }
 
     assert all(dumped.get(key) == value for key, value in expected.items())
 
