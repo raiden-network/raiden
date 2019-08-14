@@ -21,6 +21,7 @@ from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transport import ParsedURL
+from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
@@ -125,12 +126,17 @@ def payment_channel_open_and_deposit(
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    confirmed_block_identifier = views.state_from_raiden(app0.raiden).block_hash
+    token_network_address = app0.raiden.default_registry.get_token_network(
+        token_address=token_address, block_identifier=confirmed_block_identifier
+    )
     assert token_network_address, "request a channel for an unregistered token"
     token_network_proxy = app0.raiden.chain.token_network(token_network_address)
 
     channel_identifier = token_network_proxy.new_netting_channel(
-        partner=app1.raiden.address, settle_timeout=settle_timeout, given_block_identifier="latest"
+        partner=app1.raiden.address,
+        settle_timeout=settle_timeout,
+        given_block_identifier=confirmed_block_identifier,
     )
     assert channel_identifier
 

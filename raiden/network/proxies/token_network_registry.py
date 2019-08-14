@@ -76,7 +76,7 @@ class TokenNetworkRegistry:
         self.node_address = self.client.address
 
     def get_token_network(
-        self, token_address: TokenAddress, block_identifier: BlockSpecification = "latest"
+        self, token_address: TokenAddress, block_identifier: BlockSpecification
     ) -> Optional[TokenNetworkAddress]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.

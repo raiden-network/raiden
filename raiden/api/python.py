@@ -383,26 +383,27 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for partner in channel open"
             )
 
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
         registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network_address = registry.get_token_network(token_address)
-
+        token_network_address = registry.get_token_network(
+            token_address=token_address, block_identifier=confirmed_block_identifier
+        )
         if token_network_address is None:
             raise TokenNotRegistered(
                 "Token network for token %s does not exist" % to_checksum_address(token_address)
             )
 
         token_network = self.raiden.chain.token_network(token_network_address)
-        given_block_identifier = views.state_from_raiden(self.raiden).block_hash
 
         duplicated_channel = self.is_already_existing_channel(
             token_network_address=token_network_address,
             partner_address=partner_address,
-            block_identifier=given_block_identifier,
+            block_identifier=confirmed_block_identifier,
         )
         if duplicated_channel:
             raise DuplicatedChannelError(
                 f"A channel with {partner_address} for token {token_address} already exists. "
-                f"(At block: {given_block_identifier})"
+                f"(At block: {confirmed_block_identifier})"
             )
 
         with self.raiden.gas_reserve_lock:
@@ -421,7 +422,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_network.new_netting_channel(
                     partner=partner_address,
                     settle_timeout=settle_timeout,
-                    given_block_identifier=given_block_identifier,
+                    given_block_identifier=confirmed_block_identifier,
                 )
             except DuplicatedChannelError:
                 log.info("partner opened channel first")
@@ -599,7 +600,10 @@ class RaidenAPI:  # pragma: no unittest
 
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
-        token_network_address = token_network_registry.get_token_network(token_address)
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token_network_address = token_network_registry.get_token_network(
+            token_address=token_address, block_identifier=confirmed_block_identifier
+        )
 
         if token_network_address is None:
             raise UnknownTokenAddress(
@@ -1044,7 +1048,10 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for token in get_blockchain_events_token_network"
             )
 
-        token_network_address = self.raiden.default_registry.get_token_network(token_address)
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token_network_address = self.raiden.default_registry.get_token_network(
+            token_address=token_address, block_identifier=confirmed_block_identifier
+        )
 
         if token_network_address is None:
             raise UnknownTokenAddress("Token address is not known.")
@@ -1076,7 +1083,10 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_channel"
             )
-        token_network_address = self.raiden.default_registry.get_token_network(token_address)
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token_network_address = self.raiden.default_registry.get_token_network(
+            token_address=token_address, block_identifier=confirmed_block_identifier
+        )
         if token_network_address is None:
             raise UnknownTokenAddress("Token address is not known.")
 
@@ -1125,9 +1135,12 @@ class RaidenAPI:  # pragma: no unittest
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
         channel_id = None
-
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
         if token_address is not None:
-            if self.raiden.default_registry.get_token_network(token_address) is None:
+            token_network = self.raiden.default_registry.get_token_network(
+                token_address=token_address, block_identifier=confirmed_block_identifier
+            )
+            if token_network is None:
                 raise UnknownTokenAddress(f"Token {token_address} not found.")
             if partner_address is not None:
                 partner_channel = self.get_channel(

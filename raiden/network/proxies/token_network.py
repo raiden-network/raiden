@@ -383,7 +383,7 @@ class TokenNetwork:
         Raises:
             RaidenRecoverableError: If there is not open channel among
                 `(participant1, participant2)`. Note this is the case even if
-                there is a channel is a settle state.
+                there is a channel in a settled state.
             BadFunctionCallOutput: If the `block_identifier` points to a block
                 prior to the deployment of the TokenNetwork.
             SamePeerAddress: If an both addresses are equal.
