@@ -6,9 +6,9 @@ The scenarios listed within this folder are getting executed nightly by the [sce
 
 The scenarios serve the following purpose
 
-- Full End-to-End Tests covering contracts, transport, Raiden client, blockchain, eth-client, monitoring service, pathfinding service and service contracts
+- Full end-to-end tests covering contracts, transport, Raiden client, blockchain, eth-client, monitoring service, pathfinding service and service contracts
 - Testing on a "dirty" blockchain
-- User Acceptance tests
+- User acceptance tests
 - Testing in a distributed environment
 - Understanding how Raiden and the Raiden Services can be used and interact
 
@@ -20,11 +20,11 @@ A channel between two nodes is opened, a transfer is made. Then, node 1 goes off
 
 #### [ms2_simple_monitoring](./ms2_simple_monitoring.yaml)
 
-A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. After the monitoring trigger block is passed node1 gets back online.
+A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. node 1 does not get back online in time and cannot update the channel info by herself. The monitoring services interferes and gets its reward. After the monitoring trigger block is passed node 1 gets back online.
 
 #### [ms3_simple_monitoring](./ms3_simple_monitoring.yaml)
 
-A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. Before the monitoring trigger block is passed node1 gets back online. Node1 should be able to call close itself and no reward for the MS.
+A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline and node 0 closes the channel. Before the monitoring trigger block is passed node 1 gets back online. Node 1 calls the smart contract itself (REMARK: she does not call close) and therefore the MS does not get triggered.
 
 #### [pfs1_get_a_simple_path](./pfs1_get_a_simple_path.yaml)
 
