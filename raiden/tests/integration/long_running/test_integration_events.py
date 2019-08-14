@@ -18,6 +18,7 @@ from raiden.blockchain.events import (
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
@@ -28,13 +29,11 @@ from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils import sha3, wait_until
-from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     Balance,
     BlockSpecification,
     ChannelID,
-    Secret,
     TokenNetworkAddress,
 )
 from raiden_contracts.constants import (
@@ -484,8 +483,7 @@ def run_test_secret_revealed_on_chain(
     amount = 10
     identifier = 1
     target = app2.raiden.address
-    secret = Secret(sha3(target))
-    secrethash = sha256_secrethash(secret)
+    secret, secrethash = factories.make_secret_with_hash()
 
     # Reveal the secret, but do not unlock it off-chain
     app1_hold_event_handler = app1.raiden.raiden_event_handler

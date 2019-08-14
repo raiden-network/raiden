@@ -210,9 +210,12 @@ def get_event_with_balance_proof_by_locksroot(
 def get_state_change_with_transfer_by_secrethash(
     storage: SerializedSQLiteStorage, secrethash: SecretHash
 ) -> Optional[StateChangeRecord]:
-    filters = [{"transfer.lock.secrethash": to_hex(secrethash)}]
+    filters = [
+        {"from_transfer.lock.secrethash": to_hex(secrethash)},
+        {"transfer.lock.secrethash": to_hex(secrethash)},
+    ]
     query = FilteredDBQuery(
-        filters=filters, main_operator=Operator.NONE, inner_operator=Operator.NONE
+        filters=filters, main_operator=Operator.OR, inner_operator=Operator.NONE
     )
     return storage.get_latest_state_change_by_data_field(query)
 
