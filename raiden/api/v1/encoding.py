@@ -84,10 +84,14 @@ class TimeStampField(fields.DateTime):
     def _serialize(
         self, value: Optional[datetime.datetime], attr: Any, obj: Any, **kwargs
     ) -> Optional[str]:
-        return value and value.isoformat()
+        if value is not None:
+            return value.isoformat()
+        return None
 
     def _deserialize(self, value, attr, data, **kwargs) -> Optional[datetime.datetime]:
-        return value and datetime.datetime.fromisoformat(value)
+        if value is not None:
+            return datetime.datetime.fromisoformat(value)
+        return None
 
 
 class SecretField(fields.Field):
