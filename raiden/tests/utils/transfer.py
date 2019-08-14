@@ -13,12 +13,14 @@ from raiden.messages.abstract import SignedMessage
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
+from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
+    get_state_change_with_transfer_by_secrethash,
 )
-from raiden.storage.wal import SavedState
+from raiden.storage.wal import SavedState, WriteAheadLog
 from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
 from raiden.tests.utils.factories import (
     make_initiator_address,
@@ -51,11 +53,13 @@ from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveU
 from raiden.utils import random_secret
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
+from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     Any,
     Balance,
+    BlockNumber,
     Callable,
     ChainID,
     FeeAmount,
@@ -66,6 +70,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     PaymentWithFeeAmount,
+    SecretHash,
     TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -1031,3 +1036,29 @@ def make_receive_expired_lock(
     )
 
     return receive_lockedtransfer
+
+
+def block_timeout_for_transfer_by_secrethash(
+    raiden: RaidenService, secrethash: SecretHash, error_message: str = None
+) -> BlockTimeout:
+    """
+    Return a BlockTimeout to wait until the transfer identified by `secrethash` expires.
+    """
+    default_error_message = "Timeout due to transfer expiration."
+
+    assert isinstance(raiden.wal, WriteAheadLog)
+    state_change = get_state_change_with_transfer_by_secrethash(raiden.wal.storage, secrethash)
+    assert state_change is not None, "Expected transfer not found in state changes."
+    if isinstance(state_change.data, ActionInitMediator):
+        expiration = state_change.data.from_transfer.lock.expiration
+    elif isinstance(state_change.data, ActionInitTarget):
+        expiration = state_change.data.transfer.lock.expiration
+    else:
+        assert False, "Unexpected state change found."
+
+    return BlockTimeout(
+        raiden=raiden,
+        exception_to_throw=ValueError(error_message or default_error_message),
+        block_number=BlockNumber(expiration),
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
+    )

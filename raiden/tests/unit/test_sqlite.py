@@ -12,6 +12,7 @@ from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
+    get_state_change_with_transfer_by_secrethash,
 )
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
@@ -34,7 +35,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import BalanceProofUnsignedState, RouteState
+from raiden.transfer.state import BalanceProofUnsignedState, HopState, RouteState
 from raiden.transfer.state_change import Block, ReceiveUnlock
 from raiden.utils import sha3
 from raiden.utils.typing import (
@@ -360,6 +361,60 @@ def test_get_event_with_balance_proof():
         assert event_record.data.balance_proof == event.balance_proof
 
     storage.close()
+
+
+def test_get_state_change_with_transfer_by_secrethash():
+    serializer = JSONSerializer()
+    storage = SerializedSQLiteStorage(":memory:", serializer)
+
+    mediator_secret, mediator_secrethash = factories.make_secret_with_hash()
+    channels = factories.mediator_make_channel_pair()
+    mediator_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            secret=mediator_secret,
+            target=channels.partner_address(1),
+            initiator=channels.partner_address(0),
+        )
+    )
+    mediator_state_change = factories.mediator_make_init_action(channels, mediator_transfer)
+
+    target_secret, target_secrethash = factories.make_secret_with_hash()
+    from_channel = factories.create(
+        factories.NettingChannelStateProperties(
+            partner_state=factories.NettingChannelEndStateProperties(
+                balance=100, address=factories.make_address()
+            )
+        )
+    )
+    target_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            secret=target_secret,
+            target=channels.our_address(0),
+            initiator=channels.partner_address(1),
+        )
+    )
+
+    target_state_change = ActionInitTarget(
+        from_hop=HopState(
+            node_address=from_channel.partner_state.address,
+            channel_identifier=from_channel.canonical_identifier.channel_identifier,
+        ),
+        transfer=target_transfer,
+        balance_proof=target_transfer.balance_proof,
+        sender=target_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
+
+    assert storage.count_state_changes() == 0
+    storage.write_state_changes([mediator_state_change, target_state_change])
+    assert storage.count_state_changes() == 2
+
+    restored = get_state_change_with_transfer_by_secrethash(storage, mediator_secrethash)
+    assert isinstance(restored.data, ActionInitMediator)
+    assert restored.data.from_transfer == mediator_transfer
+
+    restored = get_state_change_with_transfer_by_secrethash(storage, target_secrethash)
+    assert isinstance(restored.data, ActionInitTarget)
+    assert restored.data.transfer == target_transfer
 
 
 def test_log_run():
