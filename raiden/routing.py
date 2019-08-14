@@ -240,7 +240,7 @@ def get_best_routes_pfs(
     except ServiceRequestFailed as e:
         log_message = e.args[0]
         log_info = e.args[1] if len(e.args) > 1 else {}
-        log.warning(log_message, **log_info)
+        log.warning("An error with the path request occured", log_message=log_message, **log_info)
         return False, [], None
 
     paths = []
