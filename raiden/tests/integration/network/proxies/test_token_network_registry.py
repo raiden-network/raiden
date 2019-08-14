@@ -87,14 +87,15 @@ def test_token_network_registry(
     assert is_same_address(decoded_event["args"]["token_address"], test_token.contract.address)
     assert is_same_address(decoded_event["args"]["token_network_address"], token_network_address)
     # test other getters
-    assert token_network_registry_proxy.get_token_network(bad_token_address) is None
+    assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
     assert is_same_address(
-        token_network_registry_proxy.get_token_network(test_token_address), token_network_address
+        token_network_registry_proxy.get_token_network(test_token_address, "latest"),
+        token_network_address,
     )
 
     with pytest.raises(ValueError):
-        assert token_network_registry_proxy.get_token_network(None) is None
+        assert token_network_registry_proxy.get_token_network(None, "latest") is None
 
-    assert token_network_registry_proxy.get_token_network(bad_token_address) is None
-    assert token_network_registry_proxy.get_token_network(token_network_address) is None
-    assert token_network_registry_proxy.get_token_network(test_token_address) is not None
+    assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
+    assert token_network_registry_proxy.get_token_network(token_network_address, "latest") is None
+    assert token_network_registry_proxy.get_token_network(test_token_address, "latest") is not None

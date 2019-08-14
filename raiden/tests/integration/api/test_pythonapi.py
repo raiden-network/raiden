@@ -27,7 +27,7 @@ def test_token_addresses(raiden_network, token_addresses):
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_open_token_network_not_registered_in_confirmed_block(
-    raiden_network, token_addresses, retry_timeout
+    raiden_network, token_addresses
 ):
     """
     Test that opening a channel via the API provides the confirmed block and not
@@ -40,10 +40,26 @@ def test_channel_open_token_network_not_registered_in_confirmed_block(
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
+    # Find block where the token network was deployed
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+    )
+    last_number = app0.raiden.chain.block_number()
+
+    for block_number in range(last_number, 0, -1):
+        code = app0.raiden.chain.client.web3.eth.getCode(
+            to_checksum_address(token_network_address), block_number
+        )
+        if code == b"":
+            break
+    token_network_deploy_block_number = block_number + 1
+
     api0 = RaidenAPI(app0.raiden)
     # Emulate the confirmed block being a block where TokenNetwork for token_address
-    # has not yet been deployed
-    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.chain.get_block(0)["hash"]
+    # has not been deployed.
+    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.chain.get_block(
+        token_network_deploy_block_number - 1
+    )["hash"]
 
     msg = (
         "Opening a channel with a confirmed block where the token network "
@@ -56,7 +72,7 @@ def test_channel_open_token_network_not_registered_in_confirmed_block(
             partner_address=app1.raiden.address,
         )
 
-    pytest.fail(msg)
+        pytest.fail(msg)
 
 
 def run_test_token_addresses(raiden_network, token_addresses):

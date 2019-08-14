@@ -295,7 +295,7 @@ def run_test_query_events(
         views.state_from_app(app0), registry_address, token_address
     )
 
-    token_network_address = app0.raiden.default_registry.get_token_network(token_address)
+    token_network_address = app0.raiden.default_registry.get_token_network(token_address, "latest")
     assert token_network_address
     manager0 = app0.raiden.chain.token_network(token_network_address)
 
