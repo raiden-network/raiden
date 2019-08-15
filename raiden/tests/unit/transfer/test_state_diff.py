@@ -1,7 +1,13 @@
 import random
 from copy import deepcopy
 
-from raiden.tests.utils import factories
+from raiden.tests.utils.factories import (
+    create,
+    make_address,
+    make_block_hash,
+    make_canonical_identifier,
+)
+from raiden.transfer.architecture import BalanceProofUnsignedState
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     ChainState,
@@ -13,97 +19,199 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
 )
 from raiden.transfer.views import detect_balance_proof_change
+from raiden.utils.typing import Iterable
+
+MSG_NO_CHANGE = (
+    "The channels in old and new states have the same balance proofs, nothing "
+    "should be returned."
+)
+MSG_BALANCE_PROOF_SHOULD_BE_DETECTED = (
+    "There is a new balance proof in the new state, it must be returned."
+)
+
+
+def empty(iterator: Iterable) -> bool:
+    return len(list(iterator)) == 0
 
 
 def test_detect_balance_proof_change():
     prng = random.Random()
-    block_hash = factories.make_block_hash()
-    old = ChainState(
+
+    block_hash = make_block_hash()
+    our_address = make_address()
+    empty_chain = ChainState(
         pseudo_random_generator=prng,
         block_number=1,
         block_hash=block_hash,
-        our_address=2,
-        chain_id=3,
-    )
-    new = ChainState(
-        pseudo_random_generator=prng,
-        block_number=1,
-        block_hash=block_hash,
-        our_address=2,
+        our_address=our_address,
         chain_id=3,
     )
 
-    def diff():
-        return list(detect_balance_proof_change(old, new))
+    assert empty(detect_balance_proof_change(empty_chain, empty_chain)), MSG_NO_CHANGE
+    assert empty(detect_balance_proof_change(empty_chain, deepcopy(empty_chain))), MSG_NO_CHANGE
 
-    assert len(diff()) == 0
+    token_network_registry_address = make_address()
+    chain_with_registry_no_bp = deepcopy(empty_chain)
+    chain_with_registry_no_bp.identifiers_to_tokennetworkregistries[
+        token_network_registry_address
+    ] = TokenNetworkRegistryState(token_network_registry_address, [])
 
-    token_network_registry = TokenNetworkRegistryState(b"x", [])
-    token_network_registry_copy = deepcopy(token_network_registry)
-    new.identifiers_to_tokennetworkregistries["a"] = token_network_registry
-    assert len(diff()) == 0
+    assert empty(
+        detect_balance_proof_change(empty_chain, chain_with_registry_no_bp)
+    ), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, deepcopy(chain_with_registry_no_bp))
+    ), MSG_NO_CHANGE
 
-    token_network = TokenNetworkState(
-        address=b"a", token_address=b"a", network_graph=TokenNetworkGraphState(b"a")
+    token_network_address = make_address()
+    token_address = make_address()
+
+    chain_with_token_network_no_bp = deepcopy(chain_with_registry_no_bp)
+    chain_with_token_network_no_bp.identifiers_to_tokennetworkregistries[
+        token_network_registry_address
+    ].tokennetworkaddresses_to_tokennetworks[token_network_address] = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_address,
+        network_graph=TokenNetworkGraphState(token_network_address),
     )
-    token_network_copy = deepcopy(token_network)
-    token_network_registry.tokennetworkaddresses_to_tokennetworks["a"] = token_network
-    assert len(diff()) == 0
+    assert empty(
+        detect_balance_proof_change(empty_chain, chain_with_token_network_no_bp)
+    ), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, chain_with_token_network_no_bp)
+    ), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(
+            chain_with_token_network_no_bp, deepcopy(chain_with_token_network_no_bp)
+        )
+    ), MSG_NO_CHANGE
 
-    channel = NettingChannelState(
-        canonical_identifier=factories.make_canonical_identifier(),
-        token_address=b"a",
-        token_network_registry_address=1,
+    partner_address = make_address()
+    canonical_identifier = make_canonical_identifier()
+    channel_no_bp = NettingChannelState(
+        canonical_identifier=canonical_identifier,
+        token_address=token_address,
+        token_network_registry_address=token_network_registry_address,
         reveal_timeout=1,
         settle_timeout=2,
-        our_state=None,
-        partner_state=None,
+        our_state=NettingChannelEndState(address=our_address, contract_balance=1),
+        partner_state=NettingChannelEndState(address=partner_address, contract_balance=0),
         open_transaction=TransactionExecutionStatus(result="success"),
         settle_transaction=None,
         update_transaction=None,
         close_transaction=None,
         fee_schedule=FeeScheduleState(),
     )
-    channel_copy = deepcopy(channel)
-    token_network.channelidentifiers_to_channels["a"] = channel
-    our_state = NettingChannelEndState(address=b"b", contract_balance=1)
-    our_state_copy = deepcopy(our_state)
-    partner_state = NettingChannelEndState(address=b"a", contract_balance=0)
-    partner_state_copy = deepcopy(partner_state)
 
-    channel.our_state = our_state
-    channel.partner_state = partner_state
-    assert len(diff()) == 0
+    chain_with_channel_no_bp = deepcopy(chain_with_token_network_no_bp)
+    chain_with_token_network_no_bp.identifiers_to_tokennetworkregistries[
+        token_network_registry_address
+    ].tokennetworkaddresses_to_tokennetworks[token_network_address].channelidentifiers_to_channels[
+        canonical_identifier.channel_identifier
+    ] = channel_no_bp
 
-    balance_proof = object()
-    partner_state.balance_proof = balance_proof
-    assert len(diff()) == 1
+    assert empty(detect_balance_proof_change(empty_chain, chain_with_channel_no_bp)), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, chain_with_channel_no_bp)
+    ), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(chain_with_token_network_no_bp, chain_with_channel_no_bp)
+    ), MSG_NO_CHANGE
+    assert empty(
+        detect_balance_proof_change(chain_with_channel_no_bp, deepcopy(chain_with_channel_no_bp))
+    ), MSG_NO_CHANGE
 
-    old.identifiers_to_tokennetworkregistries["a"] = token_network_registry_copy
-    assert len(diff()) == 1
+    channel_with_sent_bp = deepcopy(channel_no_bp)
+    channel_with_sent_bp.our_state.balance_proof = create(BalanceProofUnsignedState)
 
-    token_network_registry_copy.tokennetworkaddresses_to_tokennetworks["a"] = token_network_copy
-    assert len(diff()) == 1
+    chain_with_sent_bp = deepcopy(chain_with_token_network_no_bp)
+    chain_with_sent_bp.identifiers_to_tokennetworkregistries[
+        token_network_registry_address
+    ].tokennetworkaddresses_to_tokennetworks[token_network_address].channelidentifiers_to_channels[
+        canonical_identifier.channel_identifier
+    ] = channel_with_sent_bp
 
-    token_network_copy.channelidentifiers_to_channels["a"] = channel_copy
-    channel_copy.partner_state = partner_state_copy
-    assert len(diff()) == 1
+    assert not empty(
+        detect_balance_proof_change(empty_chain, chain_with_sent_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, chain_with_sent_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_token_network_no_bp, chain_with_sent_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_channel_no_bp, chain_with_sent_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert empty(
+        detect_balance_proof_change(chain_with_sent_bp, deepcopy(chain_with_sent_bp))
+    ), MSG_NO_CHANGE
 
-    channel_copy.partner_state.balance_proof = balance_proof
-    assert len(diff()) == 0
+    channel_with_received_bp = deepcopy(channel_no_bp)
+    channel_with_received_bp.partner_state.balance_proof = create(BalanceProofUnsignedState)
 
-    channel_copy.partner_state.balance_proof = object()
-    assert len(diff()) == 1
-    assert diff() == [balance_proof]
+    chain_with_received_bp = deepcopy(chain_with_token_network_no_bp)
+    chain_with_received_bp.identifiers_to_tokennetworkregistries[
+        token_network_registry_address
+    ].tokennetworkaddresses_to_tokennetworks[token_network_address].channelidentifiers_to_channels[
+        canonical_identifier.channel_identifier
+    ] = channel_with_sent_bp
 
-    # check our_state BP changes
-    channel_copy.partner_state.balance_proof = balance_proof
-    assert len(diff()) == 0
+    # asserting with `channel_with_received_bp` and `channel_with_sent_bp`
+    # doesn't make sense, because one of the balance proofs would have to
+    # disappear (which is a bug)
+    assert not empty(
+        detect_balance_proof_change(empty_chain, chain_with_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, chain_with_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_token_network_no_bp, chain_with_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_channel_no_bp, chain_with_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert empty(
+        detect_balance_proof_change(chain_with_received_bp, deepcopy(chain_with_received_bp))
+    ), MSG_NO_CHANGE
 
-    channel.our_state.balance_proof = object()
-    channel_copy.our_state = our_state_copy
-    assert len(diff()) == 1
-    assert diff() == [channel.our_state.balance_proof]
+    chain_with_sent_and_received_bp = deepcopy(chain_with_token_network_no_bp)
+    ta_to_tn = chain_with_sent_and_received_bp.identifiers_to_tokennetworkregistries
+    channel_with_sent_and_recived_bp = (
+        ta_to_tn[token_network_registry_address]
+        .tokennetworkaddresses_to_tokennetworks[token_network_address]
+        .channelidentifiers_to_channels[canonical_identifier.channel_identifier]
+    )
+    channel_with_sent_and_recived_bp.partner_state.balance_proof = deepcopy(
+        channel_with_received_bp.partner_state.balance_proof
+    )
+    channel_with_sent_and_recived_bp.our_state.balance_proof = deepcopy(
+        channel_with_received_bp.our_state.balance_proof
+    )
 
-    channel_copy.our_state.balance_proof = channel.our_state.balance_proof
-    assert len(diff()) == 0
+    assert not empty(
+        detect_balance_proof_change(empty_chain, chain_with_sent_and_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_registry_no_bp, chain_with_sent_and_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(
+            chain_with_token_network_no_bp, chain_with_sent_and_received_bp
+        )
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_channel_no_bp, chain_with_sent_and_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_received_bp, chain_with_sent_and_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert not empty(
+        detect_balance_proof_change(chain_with_sent_bp, chain_with_sent_and_received_bp)
+    ), MSG_BALANCE_PROOF_SHOULD_BE_DETECTED
+    assert empty(
+        detect_balance_proof_change(
+            chain_with_sent_and_received_bp, deepcopy(chain_with_sent_and_received_bp)
+        )
+    ), MSG_NO_CHANGE
