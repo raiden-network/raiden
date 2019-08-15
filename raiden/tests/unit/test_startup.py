@@ -261,14 +261,21 @@ def test_setup_proxies_no_service_registry_but_pfs():
     assert proxies
 
 
-def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs():
+@pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT, Environment.PRODUCTION])
+def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs(environment_type):
     """
     Test that if pfs routing mode is requested and no address or service registry is given
     then the client exits with an error message
     """
 
     network_id = 42
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    config = {
+        "environment_type": environment_type,
+        "chain_id": network_id,
+        "services": dict(
+            pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
+        ),
+    }
     contracts = {}
     blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
