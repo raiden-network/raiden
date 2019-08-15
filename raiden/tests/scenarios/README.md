@@ -62,3 +62,9 @@ Note that `max-paths` is set to 1 path.
 
 It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and performs some transfers in order to check that IOUs are created for the PFS that provides the path.
 
+#### [pfs7_multiple_payments](./pfs7_multiple_payments.yaml)
+
+This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
+100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount
+of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
+should be used.
