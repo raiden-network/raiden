@@ -5,7 +5,7 @@ from hexbytes import HexBytes
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain.filters import StatelessFilter
 from raiden.tests.utils.events import check_dict_nested_attrs
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.factories import UNIT_CHAIN_ID, make_address
 from raiden.utils.typing import BlockNumber
 
 
@@ -64,7 +64,7 @@ def test_blockchain_events(contract_manager):
     abi = contract_manager.get_contract_abi("TokenNetwork")
 
     stateless_filter = StatelessFilter(
-        web3=stub_web3(event_logs), filter_params=dict(toBlock="pending")
+        make_address(), web3=stub_web3(event_logs), filter_params=dict(toBlock="pending")
     )
     blockchain_events.add_event_listener(event_name="Block", eth_filter=stateless_filter, abi=abi)
 

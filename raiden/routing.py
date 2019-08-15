@@ -43,6 +43,7 @@ def get_best_routes(
 
     log.debug(
         "Getting route for payment",
+        node=to_checksum_address(chain_state.our_address),
         source=to_checksum_address(from_address),
         target=to_checksum_address(to_address),
         amount=amount,
@@ -93,13 +94,17 @@ def get_best_routes(
 
         if pfs_answer_ok:
             log.info(
-                "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
+                "Received route(s) from PFS",
+                node=to_checksum_address(chain_state.our_address),
+                routes=pfs_routes,
+                feedback_token=pfs_feedback_token,
             )
             return pfs_routes, pfs_feedback_token
         else:
             log.warning(
                 "Request to Pathfinding Service was not successful, "
-                "falling back to internal routing."
+                "falling back to internal routing.",
+                node=to_checksum_address(chain_state.our_address),
             )
 
     return (
@@ -170,6 +175,7 @@ def get_best_routes_internal(
         if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
+                node=to_checksum_address(chain_state.our_address),
                 from_address=to_checksum_address(from_address),
                 partner_address=to_checksum_address(partner_address),
                 routing_source="Internal Routing",
@@ -198,6 +204,7 @@ def get_best_routes_internal(
     if not neighbors_heap:
         log.warning(
             "No routes available",
+            node=to_checksum_address(chain_state.our_address),
             from_address=to_checksum_address(from_address),
             to_address=to_checksum_address(to_address),
         )
@@ -240,7 +247,12 @@ def get_best_routes_pfs(
     except ServiceRequestFailed as e:
         log_message = e.args[0]
         log_info = e.args[1] if len(e.args) > 1 else {}
-        log.warning("An error with the path request occured", log_message=log_message, **log_info)
+        log.warning(
+            "An error with the path request occured",
+            node=to_checksum_address(chain_state.our_address),
+            log_message=log_message,
+            **log_info,
+        )
         return False, [], None
 
     paths = []
@@ -269,6 +281,7 @@ def get_best_routes_pfs(
         if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
+                node=to_checksum_address(chain_state.our_address),
                 from_address=to_checksum_address(from_address),
                 partner_address=to_checksum_address(partner_address),
                 routing_source="Pathfinding Service",

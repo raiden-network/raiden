@@ -687,6 +687,7 @@ class JSONRPCClient:
         """ Create a filter in the ethereum node. """
         logs_blocks_sanity_check(from_block, to_block)
         return StatelessFilter(
+            self.address,
             self.web3,
             {
                 "fromBlock": from_block,

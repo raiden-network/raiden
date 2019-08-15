@@ -62,7 +62,9 @@ class AccountManager:
                 files = os.listdir(self.keystore_path)
             except OSError as ex:
                 msg = "Unable to list the specified directory"
-                log.error("OsError", msg=msg, path=self.keystore_path, ex=ex)
+                log.error(  # pylint: disable=log-allow-no-node
+                    "OsError", msg=msg, path=self.keystore_path, ex=ex
+                )
                 return
 
             for f in files:

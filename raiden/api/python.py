@@ -425,14 +425,19 @@ class RaidenAPI:  # pragma: no unittest
                     given_block_identifier=confirmed_block_identifier,
                 )
             except DuplicatedChannelError:
-                log.info("partner opened channel first")
+                log.info(
+                    "partner opened channel first", node=to_checksum_address(self.raiden.address)
+                )
             except RaidenRecoverableError:
                 # The channel may have been created in the pending block.
                 duplicated_channel = self.is_already_existing_channel(
                     token_network_address=token_network_address, partner_address=partner_address
                 )
                 if duplicated_channel:
-                    log.info("partner opened channel first")
+                    log.info(
+                        "partner opened channel first",
+                        node=to_checksum_address(self.raiden.address),
+                    )
                 else:
                     raise
 
@@ -932,7 +937,7 @@ class RaidenAPI:  # pragma: no unittest
 
         log.debug(
             "Initiating transfer",
-            initiator=to_checksum_address(self.raiden.address),
+            node=to_checksum_address(self.raiden.address),
             target=to_checksum_address(target),
             token=to_checksum_address(token_address),
             amount=amount,

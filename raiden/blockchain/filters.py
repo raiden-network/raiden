@@ -10,6 +10,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.utils import block_specification_to_number
 from raiden.utils.typing import (
     ABI,
+    Address,
     Any,
     BlockchainEvent,
     BlockNumber,
@@ -109,8 +110,9 @@ class StatelessFilter(LogFilter):
     Pass latest block_number to get_(new|all)_entries to avoid querying it
     """
 
-    def __init__(self, web3: Web3, filter_params: Dict[str, Any]) -> None:
+    def __init__(self, node_address: Address, web3: Web3, filter_params: Dict[str, Any]) -> None:
         super().__init__(web3, filter_id=None)
+        self.node_address = node_address
         self.filter_params: Dict[str, BlockSpecification] = filter_params
         self._last_block: BlockNumber = BlockNumber(-1)
         self._lock = Semaphore()
@@ -122,7 +124,12 @@ class StatelessFilter(LogFilter):
         filter_params["fromBlock"] = from_block
         filter_params["toBlock"] = to_block
 
-        log.debug("Querying StatelessFilter", from_block=from_block, to_block=to_block)
+        log.debug(
+            "Querying StatelessFilter",
+            node=to_checksum_address(node_address),
+            from_block=from_block,
+            to_block=to_block,
+        )
         result = self.web3.eth.getLogs(filter_params)
         self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
         return result

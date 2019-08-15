@@ -9,6 +9,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 import structlog
+from eth_utils import to_checksum_address
 
 from raiden.blockchain.events import DecodedEvent
 from raiden.blockchain.state import (
@@ -419,7 +420,11 @@ def blockchainevent_to_statechange(
                 contractreceivechannelsettled_from_event(channel_settle_state, event)
             )
         else:
-            log.debug("Discarding settle event, we're not part of it", raiden_event=event)
+            log.debug(
+                "Discarding settle event, we're not part of it",
+                node=to_checksum_address(raiden.address),
+                raiden_event=event,
+            )
 
     elif event_name == EVENT_SECRET_REVEALED:
         state_changes.append(contractreceivesecretreveal_from_event(event))
@@ -434,9 +439,15 @@ def blockchainevent_to_statechange(
                 contractreceivechannelbatchunlock_from_event(canonical_identifier, event)
             )
         else:
-            log.debug("Discarding unlock event, we're not part of it", raiden_event=event)
+            log.debug(
+                "Discarding unlock event, we're not part of it",
+                node=to_checksum_address(raiden.address),
+                raiden_event=event,
+            )
 
     else:
-        log.error("Unknown event type", raiden_event=event)
+        log.error(
+            "Unknown event type", node=to_checksum_address(raiden.address), raiden_event=event
+        )
 
     return state_changes
