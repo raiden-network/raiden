@@ -5,13 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import requests
-from eth_utils import (
-    is_checksum_address,
-    is_hex,
-    is_hex_address,
-    to_canonical_address,
-    to_checksum_address,
-)
+from eth_utils import is_checksum_address, is_hex, is_hex_address, to_checksum_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
@@ -23,7 +17,6 @@ from raiden.network.pathfinding import (
     PFSError,
     PFSInfo,
     get_last_iou,
-    get_pfs_info,
     make_iou,
     post_pfs_feedback,
     query_paths,
@@ -31,11 +24,7 @@ from raiden.network.pathfinding import (
 )
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
-from raiden.tests.utils.mocks import (
-    mocked_failed_response,
-    mocked_json_response,
-    patched_get_for_succesful_pfs_info,
-)
+from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
@@ -168,28 +157,6 @@ def get_best_routes_with_iou_request_mocked(
         )
         assert_checksum_address_in_url(patched.call_args[0][0])
         return best_routes, feedback_token
-
-
-def test_get_pfs_info_success():
-    with patched_get_for_succesful_pfs_info():
-        pfs_info = get_pfs_info("url")
-
-        req_registry_address = to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
-
-        assert isinstance(pfs_info, PFSInfo)
-        assert pfs_info.price == 5
-        assert pfs_info.chain_id == 42
-        assert pfs_info.token_network_registry_address == req_registry_address
-        assert pfs_info.message == "This is your favorite pathfinding service"
-        assert pfs_info.operator == "John Doe"
-        assert pfs_info.version == "0.0.1"
-
-
-def test_get_pfs_info_request_error():
-    with patch.object(requests, "get", side_effect=requests.RequestException()):
-        pathfinding_service_info = get_pfs_info("url")
-
-    assert pathfinding_service_info is None
 
 
 @pytest.fixture
