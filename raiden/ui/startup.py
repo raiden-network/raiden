@@ -13,7 +13,11 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, PRODUCTION_CONTRACT_VERSION
-from raiden.ui.checks import check_raiden_environment, check_smart_contract_addresses
+from raiden.ui.checks import (
+    check_pfs_configuration,
+    check_raiden_environment,
+    check_smart_contract_addresses,
+)
 from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
@@ -213,6 +217,11 @@ def setup_proxies_or_exit(
     assert secret_registry, "SecretRegistry needs to be set"
 
     if routing_mode == RoutingMode.PFS:
+        check_pfs_configuration(
+            service_registry=service_registry,
+            pathfinding_service_address=pathfinding_service_address,
+        )
+
         pfs_info = configure_pfs_or_exit(
             environment_type=environment_type,
             pfs_url=pathfinding_service_address,
