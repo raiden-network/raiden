@@ -1,5 +1,6 @@
 import json
 from functools import partial
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -32,15 +33,17 @@ def test_cli_version(cli_runner):
     assert result.exit_code == 0
 
 
-def test_check_json_rpc_geth():
+def run_test_check_json_rpc_geth():
     g1, client, v1 = is_supported_client("Geth/v1.7.3-unstable-e9295163/linux-amd64/go1.9.1")
     g2, _, v2 = is_supported_client("Geth/v1.7.2-unstable-e9295163/linux-amd64/go1.9.1")
     g3, _, v3 = is_supported_client("Geth/v1.8.2-unstable-e9295163/linux-amd64/go1.9.1")
     g4, _, v4 = is_supported_client("Geth/v2.0.3-unstable-e9295163/linux-amd64/go1.9.1")
     g5, _, v5 = is_supported_client("Geth/v11.55.86-unstable-e9295163/linux-amd64/go1.9.1")
     g6, _, v6 = is_supported_client("Geth/v999.999.999-unstable-e9295163/linux-amd64/go1.9.1")
+    # Test that patch version upgrades are not triggering the non-supported check
+    g7, _, v7 = is_supported_client("Geth/v1.9.3-unstable-e9295163/linux-amd64/go1.9.1")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3])
+    assert all([g1, g2, g3, g7])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
@@ -48,6 +51,7 @@ def test_check_json_rpc_geth():
     assert v4 == "2.0.3"
     assert v5 == "11.55.86"
     assert v6 == "999.999.999"
+    assert v7 == "1.9.3"
 
     b1, client, v1 = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
     b2, _, v2 = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")
@@ -60,7 +64,13 @@ def test_check_json_rpc_geth():
     assert v3 == "0.0.0"
 
 
-def test_check_json_rpc_parity():
+def test_check_json_rpc_geth():
+    # Pin the highest supported version for the test purposes
+    with patch("raiden.utils.ethereum_clients.HIGHEST_SUPPORTED_GETH_VERSION", new="1.9.2"):
+        run_test_check_json_rpc_geth()
+
+
+def run_test_check_json_rpc_parity():
     g1, client, v1 = is_supported_client(
         "Parity//v1.7.6-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
@@ -79,8 +89,12 @@ def test_check_json_rpc_parity():
     g6, _, v6 = is_supported_client(
         "Parity//v99.994.975-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
+    # Test that patch version upgrades are not triggering the non-supported check
+    g7, _, v7 = is_supported_client(
+        "Parity//v2.5.8-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+    )
     assert client is EthClient.PARITY
-    assert all([g1, g2, g3])
+    assert all([g1, g2, g3, g7])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.6"
     assert v2 == "1.7.7"
@@ -88,6 +102,7 @@ def test_check_json_rpc_parity():
     assert v4 == "2.9.7"
     assert v5 == "23.94.75"
     assert v6 == "99.994.975"
+    assert v7 == "2.5.8"
 
     b1, client, v1 = is_supported_client(
         "Parity//v1.7.5-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
@@ -111,3 +126,9 @@ def test_check_json_rpc_parity():
     assert v3 == "0.7.1"
     assert v4 == "0.8.7"
     assert v5 == "0.0.0"
+
+
+def test_check_json_rpc_parity():
+    # Pin the highest supported version for the test purposes
+    with patch("raiden.utils.ethereum_clients.HIGHEST_SUPPORTED_PARITY_VERSION", new="2.5.5"):
+        run_test_check_json_rpc_parity()
