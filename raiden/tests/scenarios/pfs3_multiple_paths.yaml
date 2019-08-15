@@ -5,7 +5,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli-with-fees.services-dev.raiden.network
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
     udc:
       enable: true
       token:
@@ -56,13 +56,14 @@ scenario:
             - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
 
             # Check that IOU is created
-            - assert_pfs_iou: {source: 3, amount: 100}
+            - assert_pfs_iou: {source: 0, amount: 100}
 
             ## Check that the paths are indeed the expected ones
             - assert_pfs_history:
                 source: 0
                 request_count: 1
                 target: 3
+                routes_count: 2
                 expected_routes:
                   - [0, 4, 3]
                   - [0, 1, 2, 3]
