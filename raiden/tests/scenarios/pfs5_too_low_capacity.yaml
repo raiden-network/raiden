@@ -64,6 +64,8 @@ scenario:
             # should be used instead.
             - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
 
+            # Note: We might need a `wait` here in case the PFS doesn't register
+            #       capacity updates quick enough.
             # Check that the second IOU is created
             - assert_pfs_iou: {source: 0, amount: 200}
 

@@ -25,7 +25,7 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
 
-## This is the PFS7 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and
+## This is the PFS6 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and
 ## performs some transfers in order to check that IOUs are created for the PFS that provides
 ## the path.
 

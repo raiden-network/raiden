@@ -17,7 +17,7 @@ The scenarios serve the following purpose
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
-and node0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward.
+and node0 closes the channel. The asserts checks whether the monitoring service interferes and received its reward.
 
 #### [ms2_simple_monitoring](./ms2_simple_monitoring.yaml)
 
@@ -46,7 +46,7 @@ Note that `max-paths` is set to 1 path.
 
 #### [pfs5_too_low_capacity](./pfs5_too_low_capacity.yaml)
 
-It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 where 0 <-> 4 <-> 3 doesn't have enough capacity to make a second transfer and hence the other path is used for that transfer. This also checks that the PFS reacts correctly to the capacity update.
+It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3, where 0 <-> 4 <-> 3 doesn't have enough capacity to make a second transfer after one transfer is made and hence the other path is used for that transfer. This also checks that the PFS reacts correctly to the capacity update.
 Note that `max-paths` is set to 1 path.
 
 #### [pfs6_simple_path_rewards](./pfs6_simple_path_rewards.yaml)
