@@ -7,7 +7,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.pathfinding import PFSConfig, configure_pfs_or_exit
+from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -223,7 +223,6 @@ def setup_proxies_or_exit(
         )
 
         pfs_info = configure_pfs_or_exit(
-            environment_type=environment_type,
             pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
@@ -233,6 +232,10 @@ def setup_proxies_or_exit(
         )
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_info.payment_address is not None, msg
+
+        # Only check that PFS is registered in production mode
+        if environment_type == Environment.PRODUCTION:
+            check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
 
         config["pfs_config"] = PFSConfig(
             info=pfs_info,
