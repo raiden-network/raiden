@@ -8,6 +8,7 @@ from gevent.timeout import Timeout
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages.transfers import LockedTransfer, LockExpired, RevealSecret, Unlock
@@ -22,6 +23,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -49,6 +51,27 @@ def wait_for_batch_unlock(app, token_network_address, receiver, sender):
                 "sender": sender,
             },
         )
+
+
+def is_channel_registered(
+    node_app: App, partner_app: App, canonical_identifier: CanonicalIdentifier
+) -> bool:
+    """True if the `node_app` has a channel with `partner_app` in its state."""
+    token_network = views.get_token_network_by_address(
+        chain_state=views.state_from_app(node_app),
+        token_network_address=canonical_identifier.token_network_address,
+    )
+    assert token_network
+
+    is_in_channelid_map = (
+        canonical_identifier.channel_identifier in token_network.channelidentifiers_to_channels
+    )
+    is_in_partner_map = (
+        canonical_identifier.channel_identifier
+        in token_network.partneraddresses_to_channelidentifiers[partner_app.raiden.address]
+    )
+
+    return is_in_channelid_map and is_in_partner_map
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -264,30 +287,24 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_batch_unlock(
-    raiden_network, token_addresses, secret_registry_address, deposit, blockchain_type
-):
+def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
     raise_on_failure(
         raiden_network,
         run_test_batch_unlock,
         raiden_network=raiden_network,
         token_addresses=token_addresses,
         secret_registry_address=secret_registry_address,
-        blockchain_type=blockchain_type,
         deposit=deposit,
     )
 
 
-def run_test_batch_unlock(
-    raiden_network, token_addresses, secret_registry_address, deposit, blockchain_type
-):
+def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
-    registry_address = alice_app.raiden.default_registry.address
+    token_network_registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_proxy = alice_app.raiden.chain.token(token_address)
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
+        views.state_from_app(alice_app), token_network_registry_address, token_address
     )
     assert token_network_address
 
@@ -296,18 +313,14 @@ def run_test_batch_unlock(
     # Take a snapshot early on
     alice_app.raiden.wal.snapshot()
 
-    token_network = views.get_token_network_by_address(
-        views.state_from_app(alice_app), token_network_address
-    )
-    assert token_network
+    canonical_identifier = get_channelstate(
+        alice_app, bob_app, token_network_address
+    ).canonical_identifier
 
-    channel_identifier = get_channelstate(alice_app, bob_app, token_network_address).identifier
+    assert is_channel_registered(alice_app, bob_app, canonical_identifier)
+    assert is_channel_registered(bob_app, alice_app, canonical_identifier)
 
-    assert (
-        channel_identifier
-        in token_network.partneraddresses_to_channelidentifiers[bob_app.raiden.address]
-    )
-
+    token_proxy = alice_app.raiden.chain.token(token_address)
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
@@ -346,79 +359,112 @@ def run_test_batch_unlock(
         token_network_address, alice_app, deposit, [lock], bob_app, deposit, []
     )
 
-    # Take a snapshot early on
-    alice_app.raiden.wal.snapshot()
-
-    our_balance_proof = alice_bob_channel_state.our_state.balance_proof
-
     # Test WAL restore to return the latest channel state
+    alice_app.raiden.wal.snapshot()
+    our_balance_proof = alice_bob_channel_state.our_state.balance_proof
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app.raiden,
         canonical_identifier=alice_bob_channel_state.canonical_identifier,
         state_change_identifier=HIGH_STATECHANGE_ULID,
     )
     assert restored_channel_state
-
     our_restored_balance_proof = restored_channel_state.our_state.balance_proof
     assert our_balance_proof == our_restored_balance_proof
 
-    # A ChannelClose event will be generated, this will be polled by both apps
-    # and each must start a task for calling settle
+    # Close the channel before revealing the secret off-chain. This will leave
+    # a pending lock in the channel which has to be unlocked on-chain.
+    #
+    # The token network will emit a ChannelClose event, this will be polled by
+    # both apps and each must start a task for calling settle.
     RaidenAPI(bob_app.raiden).channel_close(
-        registry_address, token_address, alice_app.raiden.address
+        token_network_registry_address, token_address, alice_app.raiden.address
     )
 
+    # The secret has to be registered manually because Bob never learned the
+    # secret. The test is holding the SecretRequest to ensure the off-chain
+    # unlock will not happen and the channel is closed with a pending lock.
+    #
+    # Alternatives would be to hold the unlock messages, or to stop and restart
+    # the apps after the channel is closed.
     secret_registry_proxy = alice_app.raiden.chain.secret_registry(secret_registry_address)
     secret_registry_proxy.register_secret(secret=secret)
 
-    assert lock, "the lock must still be part of the node state"
-    msg = "the secret must be registered before the lock expires"
+    msg = (
+        "The lock must still be part of the node state for the test to proceed, "
+        "otherwise there is not unlock to be done."
+    )
+    assert lock, msg
+
+    msg = (
+        "The secret must be registered before the lock expires, in order for "
+        "the unlock to happen on-chain. Otherwise the test will fail on the "
+        "expected balances."
+    )
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
     assert lock.secrethash == sha256(secret).digest()
 
     waiting.wait_for_settle(
         alice_app.raiden,
-        registry_address,
+        token_network_registry_address,
         token_address,
         [alice_bob_channel_state.identifier],
         alice_app.raiden.alarm.sleep_time,
     )
 
-    token_network = views.get_token_network_by_address(
-        views.state_from_app(bob_app), token_network_address
-    )
-    assert token_network
+    msg = "The channel_state must not have been cleared, one of the ends has pending locks to do."
+    assert is_channel_registered(alice_app, bob_app, canonical_identifier), msg
+    assert is_channel_registered(bob_app, alice_app, canonical_identifier), msg
 
-    assert (
-        channel_identifier
-        in token_network.partneraddresses_to_channelidentifiers[alice_app.raiden.address]
+    msg = (
+        "Timeout while waiting for the unlock to be mined. This may happen if "
+        "transaction is rejected, not mined, or the node's alarm task is "
+        "not running."
     )
+    with gevent.Timeout(seconds=30, exception=AssertionError(msg)):
+        alice_address = alice_app.raiden.address
+        bob_address = bob_app.raiden.address
 
-    # Wait for both nodes to call batch unlock
-    timeout = 30 if blockchain_type == "parity" else 10
-    with gevent.Timeout(timeout):
+        # Alice waits for both unlocks
+        wait_for_batch_unlock(
+            app=alice_app,
+            token_network_address=token_network_address,
+            receiver=alice_address,
+            sender=bob_address,
+        )
+        wait_for_batch_unlock(
+            app=alice_app,
+            token_network_address=token_network_address,
+            receiver=bob_address,
+            sender=alice_address,
+        )
+
+        # Bob waits for both unlocks
         wait_for_batch_unlock(
             app=bob_app,
             token_network_address=token_network_address,
-            receiver=alice_bob_channel_state.partner_state.address,
-            sender=alice_bob_channel_state.our_state.address,
+            receiver=alice_address,
+            sender=bob_address,
+        )
+        wait_for_batch_unlock(
+            app=bob_app,
+            token_network_address=token_network_address,
+            receiver=bob_address,
+            sender=alice_address,
         )
 
-    token_network = views.get_token_network_by_address(
-        views.state_from_app(bob_app), token_network_address
+    msg = (
+        "The nodes have done the unlock, and both ends have seen it, now the "
+        "channel must be cleared"
     )
-    assert token_network
-
-    assert (
-        channel_identifier
-        not in token_network.partneraddresses_to_channelidentifiers[alice_app.raiden.address]
-    )
+    assert not is_channel_registered(alice_app, bob_app, canonical_identifier), msg
+    assert not is_channel_registered(bob_app, alice_app, canonical_identifier), msg
 
     alice_new_balance = alice_initial_balance + deposit - alice_to_bob_amount
     bob_new_balance = bob_initial_balance + deposit + alice_to_bob_amount
 
-    assert token_proxy.balance_of(alice_app.raiden.address) == alice_new_balance
-    assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance
+    msg = "Unexpected end balance after channel settlement with batch unlock."
+    assert token_proxy.balance_of(alice_app.raiden.address) == alice_new_balance, msg
+    assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance, msg
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
