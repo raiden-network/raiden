@@ -15,7 +15,12 @@ from raiden.storage.sqlite import (
 )
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
-from raiden.tests.utils import factories
+from raiden.tests.utils.factories import (
+    make_address,
+    make_canonical_identifier,
+    make_token_network_registry_address,
+    make_transaction_hash,
+)
 from raiden.transfer.architecture import State, StateChange, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
@@ -73,18 +78,16 @@ def test_write_read_log():
     wal = new_wal(state_transition_noop)
 
     block_number = 1337
-    block_hash = factories.make_transaction_hash()
+    block_hash = make_transaction_hash()
     block = Block(block_number=block_number, gas_limit=1, block_hash=block_hash)
     unlocked_amount = 10
     returned_amount = 5
-    participant = factories.make_address()
-    partner = factories.make_address()
+    participant = make_address()
+    partner = make_address()
     locksroot = sha3(b"test_write_read_log")
     contract_receive_unlock = ContractReceiveChannelBatchUnlock(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=factories.make_address()
-        ),
+        transaction_hash=make_transaction_hash(),
+        canonical_identifier=make_canonical_identifier(token_network_address=make_address()),
         receiver=participant,
         sender=partner,
         locksroot=locksroot,
@@ -127,11 +130,7 @@ def test_write_read_log():
 
 def test_timestamped_event():
     event = EventPaymentSentFailed(
-        factories.make_token_network_registry_address(),
-        factories.make_address(),
-        1,
-        factories.make_address(),
-        "whatever",
+        make_token_network_registry_address(), make_address(), 1, make_address(), "whatever"
     )
     log_time = "2018-09-07T20:02:35.000"
 
@@ -145,11 +144,7 @@ def test_write_read_events():
     wal = new_wal(state_transition_noop)
 
     event = EventPaymentSentFailed(
-        factories.make_token_network_registry_address(),
-        factories.make_address(),
-        1,
-        factories.make_address(),
-        "whatever",
+        make_token_network_registry_address(), make_address(), 1, make_address(), "whatever"
     )
 
     with pytest.raises(sqlite3.IntegrityError):
@@ -172,19 +167,20 @@ def test_write_read_events():
 def test_restore_without_snapshot():
     wal = new_wal(state_transition_noop)
 
-    block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block1])
 
-    block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block2])
 
-    block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block3])
 
     newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
+        node_address=make_address(),
     )
 
     aggregate = newwal.state_manager.current_state
@@ -194,15 +190,16 @@ def test_restore_without_snapshot():
 def test_restore_without_snapshot_in_batches():
     wal = new_wal(state_transition_noop)
 
-    block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
-    block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
-    block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
+    block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
+    block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block1, block2, block3])
 
     newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
+        node_address=make_address(),
     )
 
     aggregate = newwal.state_manager.current_state
@@ -212,15 +209,15 @@ def test_restore_without_snapshot_in_batches():
 def test_get_snapshot_before_state_change():
     wal = new_wal(state_transtion_acc)
 
-    block1 = Block(block_number=5, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block1])
     wal.snapshot()
 
-    block2 = Block(block_number=7, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block2])
     wal.snapshot()
 
-    block3 = Block(block_number=8, gas_limit=1, block_hash=factories.make_transaction_hash())
+    block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     wal.log_and_dispatch([block3])
     wal.snapshot()
 

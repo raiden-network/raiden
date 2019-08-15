@@ -1,3 +1,4 @@
+#!/bin/env python
 import json
 import sys
 

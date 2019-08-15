@@ -78,6 +78,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewTokenNetworkRegistry,
 )
 from raiden.utils import lpex, random_secret
+from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
@@ -103,24 +104,6 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
-
-
-def _redact_secret(data: Dict) -> Dict:
-    """ Modify `data` in-place and replace keys named `secret`. """
-    if not isinstance(data, dict):
-        raise ValueError("data must be a dict.")
-
-    stack = [data]
-
-    while stack:
-        current = stack.pop()
-
-        if "secret" in current:
-            current["secret"] = "<redacted>"
-        else:
-            stack.extend(value for value in current.values() if isinstance(value, dict))
-
-    return data
 
 
 def initiator_init(
@@ -350,6 +333,7 @@ class RaidenService(Runnable):
             transition_function=node.state_transition,
             storage=storage,
             state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
+            node_address=self.address,
         )
 
         if self.wal.state_manager.current_state is None:
@@ -617,7 +601,7 @@ class RaidenService(Runnable):
             "State changes",
             node=to_checksum_address(self.address),
             state_changes=[
-                _redact_secret(DictSerializer.serialize(state_change))
+                redact_secret(DictSerializer.serialize(state_change))
                 for state_change in state_changes
             ],
         )
@@ -635,7 +619,7 @@ class RaidenService(Runnable):
             "Raiden events",
             node=to_checksum_address(self.address),
             raiden_events=[
-                _redact_secret(DictSerializer.serialize(event)) for event in raiden_event_list
+                redact_secret(DictSerializer.serialize(event)) for event in raiden_event_list
             ],
         )
 

@@ -2,7 +2,9 @@ from dataclasses import dataclass
 
 import gevent.lock
 import structlog
+from eth_utils import to_checksum_address
 
+from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import (
     LOW_STATECHANGE_ULID,
     Range,
@@ -10,7 +12,17 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, Generic, List, Optional, RaidenDBVersion, Tuple, TypeVar
+from raiden.utils.logging import redact_secret
+from raiden.utils.typing import (
+    Address,
+    Callable,
+    Generic,
+    List,
+    Optional,
+    RaidenDBVersion,
+    Tuple,
+    TypeVar,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -19,6 +31,7 @@ def restore_to_state_change(
     transition_function: Callable,
     storage: SerializedSQLiteStorage,
     state_change_identifier: StateChangeID,
+    node_address: Address,
 ) -> "WriteAheadLog":
     chain_state: Optional[State]
     from_identifier: StateChangeID
@@ -32,6 +45,7 @@ def restore_to_state_change(
             "Restoring from snapshot",
             from_state_change_id=snapshot.state_change_identifier,
             to_state_change_id=state_change_identifier,
+            node=to_checksum_address(node_address),
         )
         from_identifier = snapshot.state_change_identifier
         chain_state = snapshot.data
@@ -39,6 +53,7 @@ def restore_to_state_change(
         log.debug(
             "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
+            node=to_checksum_address(node_address),
         )
         from_identifier = LOW_STATECHANGE_ULID
         chain_state = None
@@ -50,7 +65,14 @@ def restore_to_state_change(
         Range(from_identifier, state_change_identifier)
     )
     if unapplied_state_changes:
-        log.debug("Replaying state changes", state_changes=unapplied_state_changes)
+        log.debug(
+            "Replaying state changes",
+            replayed_state_changes=[
+                redact_secret(DictSerializer.serialize(state_change))
+                for state_change in unapplied_state_changes
+            ],
+            node=to_checksum_address(node_address),
+        )
         wal.state_manager.dispatch(unapplied_state_changes)
 
     return wal
