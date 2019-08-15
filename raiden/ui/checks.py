@@ -15,7 +15,6 @@ from raiden.constants import (
     LOWEST_SUPPORTED_PARITY_VERSION,
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
-    RoutingMode,
 )
 from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
