@@ -40,6 +40,7 @@ def channel_state_until_state_change(
         transition_function=node.state_transition,
         storage=raiden.wal.storage,
         state_change_identifier=state_change_identifier,
+        node_address=raiden.address,
     )
 
     msg = "There is a state change, therefore the state must not be None"
