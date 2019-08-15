@@ -131,7 +131,7 @@ class PFSError(IntEnum):
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
-def get_pfs_info(url: str) -> Optional[PFSInfo]:
+def get_pfs_info(url: str) -> PFSInfo:
     try:
         response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
         infos = get_response_json(response)
@@ -148,8 +148,8 @@ def get_pfs_info(url: str) -> Optional[PFSInfo]:
             operator=infos["operator"],
             version=infos["version"],
         )
-    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError):
-        return None
+    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError) as e:
+        raise ServiceRequestFailed(str(e)) from e
 
 
 def get_valid_pfs_url(
@@ -181,11 +181,12 @@ def get_valid_pfs_url(
     )
     if not url:
         return None
-
-    pfs_info = get_pfs_info(url)
-    if pfs_info is None or pfs_info.price > pathfinding_max_fee:
+    try:
+        pfs_info = get_pfs_info(url)
+    except ServiceRequestFailed:
         return None
-
+    if pfs_info.price > pathfinding_max_fee:
+        return None
     return url
 
 
@@ -256,11 +257,12 @@ def configure_pfs_or_exit(
         else:
             pfs_url = maybe_pfs_url
 
-    pathfinding_service_info = get_pfs_info(pfs_url)
-    if not pathfinding_service_info:
+    try:
+        pathfinding_service_info = get_pfs_info(pfs_url)
+    except ServiceRequestFailed as e:
         click.secho(
             f"There is an error with the pathfinding service with address "
-            f"{pfs_url}. Raiden will shut down."
+            f"{pfs_url}. Error Message: {str(e)}. Raiden will shut down."
         )
         sys.exit(1)
 
@@ -289,7 +291,6 @@ def configure_pfs_or_exit(
             f"Raiden will shut down. Please choose a different PFS."
         )
         sys.exit(1)
-
     click.secho(
         f"You have chosen the pathfinding service at {pfs_url}.\n"
         f"Operator: {pathfinding_service_info.operator}, "
@@ -583,8 +584,9 @@ def query_paths(
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
             elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                new_info = get_pfs_info(pfs_config.info.url)
-                if new_info is None:
+                try:
+                    new_info = get_pfs_info(pfs_config.info.url)
+                except ServiceRequestFailed:
                     raise ServiceRequestFailed("Could not get updated fees from PFS.")
                 if new_info.price > pfs_config.maximum_fee:
                     raise ServiceRequestFailed("PFS fees too high.")

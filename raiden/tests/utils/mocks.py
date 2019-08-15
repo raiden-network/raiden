@@ -1,9 +1,7 @@
 import json
 import random
 from collections import defaultdict
-from unittest.mock import Mock, PropertyMock, patch
-
-import requests
+from unittest.mock import Mock, PropertyMock
 
 from raiden.constants import RoutingMode
 from raiden.storage.serialization import JSONSerializer
@@ -207,27 +205,6 @@ def mocked_failed_response(error: Exception, status_code: int = 200) -> Mock:
 def mocked_json_response(response_data: Optional[Dict] = None, status_code: int = 200) -> Mock:
     data = response_data or {}
     return Mock(json=Mock(return_value=data), content=json.dumps(data), status_code=status_code)
-
-
-def patched_get_for_succesful_pfs_info():
-    token_network_registry_address_test_default = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
-    json_data = {
-        "price_info": 5,
-        "network_info": {
-            "chain_id": 42,
-            "registry_address": token_network_registry_address_test_default,
-        },
-        "message": "This is your favorite pathfinding service",
-        "operator": "John Doe",
-        "version": "0.0.1",
-        "payment_address": "0x2222222222222222222222222222222222222222",
-    }
-
-    response = Mock()
-    response.configure_mock(status_code=200, content=json.dumps(json_data))
-    response.json = Mock(return_value=json_data)
-    type(response).content = PropertyMock(return_value=json.dumps(json_data))
-    return patch.object(requests, "get", return_value=response)
 
 
 class MockEth:
