@@ -394,7 +394,6 @@ Querying Information About Channels and Tokens
             "token_network_address": "0x111157460c0F41EfD9107239B7864c062aA8B978",
             "transferred_amount": "331"
          }
-
       ]
 
    :statuscode 200: Successful query
@@ -580,7 +579,7 @@ Connection Management
               "channels": 3
           },
           "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": 49
+              "funds": 49,
               "sum_deposits": 31,
               "channels": 1
           }
@@ -757,7 +756,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
           {
               "event": "EventPaymentSentSuccess",
               "amount": 20,
-              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7"
+              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
               "identifier": 3,
               "log_time": "2018-10-30T07:10:13.122"
           }
