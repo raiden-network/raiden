@@ -208,8 +208,7 @@ def test_token_network_proxy(
         transferred_amount=0,
     )
     closing_data = (
-        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
-        + EMPTY_SIGNATURE
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
 
     msg = "Trying to close an inexisting channel must fail."
@@ -322,8 +321,7 @@ def test_token_network_proxy(
     msg = "close must fail if the closing_signature is invalid"
     for invalid_signature in invalid_signatures:
         closing_data = (
-            balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
-            + invalid_signature
+            balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + invalid_signature
         )
         with pytest.raises(RaidenUnrecoverableError):
             c2_token_network_proxy.close(
@@ -340,9 +338,9 @@ def test_token_network_proxy(
 
     blocknumber_prior_to_close = c2_client.block_number()
 
-    closing_data = balance_proof.serialize_bin(
-        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
-    ) + decode_hex(balance_proof.signature)
+    closing_data = balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + decode_hex(
+        balance_proof.signature
+    )
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
@@ -565,7 +563,7 @@ def test_token_network_proxy_update_transfer(
 
     # close by c1
     closing_data = balance_proof_c2.serialize_bin(
-        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
+        msg_type=MessageTypeId.BALANCE_PROOF
     ) + decode_hex(balance_proof_c2.signature)
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
@@ -797,8 +795,7 @@ def test_token_network_actions_at_pruned_blocks(
         transferred_amount=0,
     )
     closing_data = (
-        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
-        + EMPTY_SIGNATURE
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,

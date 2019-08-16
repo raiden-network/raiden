@@ -64,8 +64,7 @@ def test_payment_channel_proxy_basics(
         transferred_amount=0,
     )
     closing_data = (
-        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
-        + EMPTY_SIGNATURE
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
     channel_proxy_1.close(
         nonce=0,
