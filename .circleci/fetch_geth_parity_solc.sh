@@ -27,7 +27,7 @@ if [[ ! -x ${GETH_PATH} ]]; then
       fi
   fi
 fi
-ln -sf ${GETH_PATH} ${LOCAL_BASE}/bin/geth
+ln -sfn ${GETH_PATH} ${LOCAL_BASE}/bin/geth
 
 PARITY_PATH="${LOCAL_BASE}/bin/parity-${OS_NAME}-${PARITY_VERSION}"
 if [[ ! -x ${PARITY_PATH} ]]; then
@@ -45,7 +45,7 @@ if [[ ! -x ${PARITY_PATH} ]]; then
       fi
   fi
 fi
-ln -sf ${PARITY_PATH} ${LOCAL_BASE}/bin/parity
+ln -sfn ${PARITY_PATH} ${LOCAL_BASE}/bin/parity
 
 # Only deal with solc for Linux since it's only used for testing
 if [[ ${OS_NAME} != "LINUX" ]]; then
@@ -59,4 +59,4 @@ if [[ ! -x ${SOLC_PATH} ]]; then
   curl -L ${!SOLC_URL_VAR} > ${SOLC_PATH}
   chmod 775 ${SOLC_PATH}
 fi
-ln -sf ${SOLC_PATH} ${LOCAL_BASE}/bin/solc
+ln -sfn ${SOLC_PATH} ${LOCAL_BASE}/bin/solc
