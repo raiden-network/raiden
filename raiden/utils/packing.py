@@ -39,6 +39,7 @@ def pack_balance_proof(
 
 
 def pack_signed_balance_proof(
+    msg_type: MessageTypeId,
     nonce: Nonce,
     balance_hash: BalanceHash,
     additional_hash: AdditionalHash,
@@ -54,7 +55,7 @@ def pack_signed_balance_proof(
         token_network_address=to_checksum_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
-        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
+        msg_type=msg_type,
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=additional_hash,

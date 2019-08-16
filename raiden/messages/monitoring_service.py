@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     typecheck,
 )
+from raiden_contracts.constants import MessageTypeId
 
 
 @dataclass(repr=False, eq=False)
@@ -63,6 +64,7 @@ class SignedBlindedBalanceProof:
 
     def _data_to_sign(self) -> bytes:
         packed = pack_signed_balance_proof(
+            msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
             nonce=self.nonce,
             balance_hash=self.balance_hash,
             additional_hash=self.additional_hash,
@@ -167,6 +169,7 @@ class RequestMonitoring(SignedMessage):
             ),
         )
         blinded_data = pack_signed_balance_proof(
+            msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
             nonce=self.balance_proof.nonce,
             balance_hash=self.balance_proof.balance_hash,
             additional_hash=self.balance_proof.additional_hash,

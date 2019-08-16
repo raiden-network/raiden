@@ -23,6 +23,7 @@ from raiden.utils import sha3
 from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.typing import Address, TokenAmount
+from raiden_contracts.constants import MessageTypeId
 
 MSC_ADDRESS = Address(bytes([1] * 20))
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
@@ -89,6 +90,7 @@ def test_request_monitoring() -> None:
     assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
 
     blinded_data = pack_signed_balance_proof(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
