@@ -77,6 +77,7 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     ChannelInfoIndex,
     ChannelState,
+    MessageTypeId,
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
@@ -1448,6 +1449,7 @@ class TokenNetwork:
         )
 
         our_signed_data = pack_signed_balance_proof(
+            msg_type=MessageTypeId.BALANCE_PROOF,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
@@ -1697,6 +1699,7 @@ class TokenNetwork:
         )
 
         our_signed_data = pack_signed_balance_proof(
+            msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
