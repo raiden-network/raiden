@@ -1054,9 +1054,7 @@ class MatrixTransport(Runnable):
 
     def _get_private_room(self, invitees: List[User]):
         """ Create an anonymous, private room and invite peers """
-        room = self._client.create_room(
-            None, invitees=[user.user_id for user in invitees], is_public=False
-        )
+        room = self._client.create_room(None, invitees=[user.user_id for user in invitees])
         self.log.debug("Creating private room", room=room, invitees=invitees)
         return room
 

@@ -111,23 +111,27 @@ def test_get_matrix_userids_for_address():
         "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500",
         "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501",
     }
-    assert storage.get_matrix_userids_and_addresses() == defaultdict(set)
-    assert storage.get_matrix_roomids_for_address(address) == {}
+    room_ids_for_userids = {
+        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500": "!EccQWEAMFrOhVqPgYt:localhost:8500",
+        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501": "!EccQWEAMFrOhVqPgYt:localhost:8500",
+    }
+    assert storage.get_matrix_user_ids_for_addresses() == defaultdict(set)
+    assert storage.get_matrix_roomids_for_user_ids() == {}
 
-    storage.write_matrix_userids_for_address(
+    storage.write_matrix_user_ids_for_address(
         address=address, user_ids=user_ids, timestamp=timestamp
     )
-    room_ids_to_aliases = {
-        "!EccQWEAMFrOhVqPgYt:localhost:8500": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8500",
-        "!lWOxcxArgnXltwsAaP:localhost:8501": "#raiden_17_0x2af15b_0x7cfc0b:localhost:8501",
-    }
-    storage.write_matrix_roomids_for_address(
-        address=address, room_ids_to_aliases=room_ids_to_aliases, timestamp=timestamp
-    )
+    for user_id, room_id in room_ids_for_userids.items():
+        storage.write_matrix_room_id_for_user_id(
+            user_id,
+            room_id,
+            timestamp=timestamp,
+        )
 
-    stored_user_ids_for_address = storage.get_matrix_userids_and_addresses()
-    stored_room_ids_to_aliases = storage.get_matrix_roomids_for_address(address)
+    stored_user_ids_for_address = storage.get_matrix_user_ids_for_addresses()
+    stored_room_ids_for_userids = storage.get_matrix_roomids_for_user_ids()
 
     assert stored_user_ids_for_address[address] == set(user_ids)
-    assert stored_room_ids_to_aliases == room_ids_to_aliases
+    assert stored_room_ids_for_userids == room_ids_for_userids
+
     storage.database.close()

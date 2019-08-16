@@ -109,19 +109,23 @@ PRAGMA foreign_keys=on;
     DB_CREATE_RUNS,
 )
 
+
+"""1 to n: address: user_ids"""
 DB_CREATE_MATRIX_USER_IDS = """
-CREATE TABLE IF NOT EXISTS matrix_user_ids (
+CREATE TABLE IF NOT EXISTS matrix_user_ids_for_address (
     address BINARY PRIMARY KEY,
-    userids TEXT NOT NULL,
+    user_ids TEXT NOT NULL,
     log_time TEXT
 );
+
 """
-DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES = """
-CREATE TABLE IF NOT EXISTS matrix_room_ids_and_aliases (
-    address BINARY PRIMARY KEY,
-    room_ids_to_aliases TEXT NOT NULL,
-    log_time TEXT,
-    FOREIGN KEY(address) REFERENCES matrix_user_ids(address)
+
+"""1 to 1: user_id:room_id"""
+DB_CREATE_MATRIX_ROOM_IDS_FOR_USER_IDS = """
+CREATE TABLE IF NOT EXISTS matrix_room_ids_for_user_ids (
+    user_id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL,
+    log_time TEXT
 );
 """
 
@@ -132,5 +136,5 @@ BEGIN TRANSACTION;
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
-    DB_CREATE_MATRIX_USER_IDS, DB_CREATE_MATRIX_ROOM_IDS_AND_ALIASES
+    DB_CREATE_MATRIX_USER_IDS, DB_CREATE_MATRIX_ROOM_IDS_FOR_USER_IDS
 )
