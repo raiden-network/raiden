@@ -12,6 +12,7 @@ from raiden.utils.typing import (
     TokenAmount,
     WithdrawAmount,
 )
+from raiden_contracts.constants import MessageTypeId
 from raiden_contracts.utils import proofs
 
 
@@ -30,6 +31,7 @@ def pack_balance_proof(
         token_network_address=to_checksum_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
+        msg_type=MessageTypeId.BALANCE_PROOF,
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=additional_hash,
@@ -48,10 +50,11 @@ def pack_signed_balance_proof(
     Packs the given arguments in a byte array in the same configuration the
     contracts expect the signed data for updateNonClosingBalanceProof to have.
     """
-    return proofs.pack_balance_proof_update_message(
+    return proofs.pack_balance_proof_message(
         token_network_address=to_checksum_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=additional_hash,
