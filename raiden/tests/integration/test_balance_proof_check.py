@@ -84,8 +84,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         transferred_amount=0,
     )
     closing_data = (
-        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
-        + EMPTY_SIGNATURE
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
     closing_signature = app1.raiden.signer.sign(data=closing_data)
 
