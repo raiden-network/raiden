@@ -126,8 +126,9 @@ commands:
           name: Link platform local binaries
           command: |
             export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
-            [[ -d ~/.local-${OS_NAME} ]] && ln -s ~/.local-${OS_NAME} ~/.local || true
-            [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -s ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
+            rm -rf ~/.local
+            [[ -d ~/.local-${OS_NAME} ]] && ln -sfn ~/.local-${OS_NAME} ~/.local || true
+            [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -sfn ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
 
   prepare-system:
     steps:
@@ -138,7 +139,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v3-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -151,9 +152,9 @@ commands:
           command: |
             export LOCAL_BASE=~/.local-${OS_NAME}
             .circleci/fetch_geth_parity_solc.sh
-            ln -s ${LOCAL_BASE} ~/.local
+            ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v3-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-LINUX"
             - "~/.local-MACOS"
