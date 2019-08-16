@@ -152,13 +152,18 @@ def deploy_user_deposit_and_return_address(
 
 @pytest.fixture(name="one_to_n_address")
 def deploy_one_to_n_and_return_address(
-    user_deposit_address, deploy_client, contract_manager, environment_type, chain_id
+    user_deposit_address,
+    deploy_client,
+    contract_manager,
+    environment_type,
+    chain_id,
+    service_registry_address,
 ) -> typing.Optional[typing.Address]:
     """ Deploy OneToN contract and return the address """
     if environment_type != Environment.DEVELOPMENT:
         return None
 
-    constructor_arguments = [user_deposit_address, chain_id]
+    constructor_arguments = [user_deposit_address, chain_id, service_registry_address]
     one_to_n_address = deploy_contract_web3(
         contract_name=CONTRACT_ONE_TO_N,
         deploy_client=deploy_client,
