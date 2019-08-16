@@ -471,7 +471,7 @@ def test_matrix_send_global(
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
         transport.send_global(MONITORING_BROADCASTING_ROOM, message)
-    transport._spawn(transport._global_send_worker)
+    transport._schedule_new_greenlet(transport._global_send_worker)
 
     gevent.idle()
 
