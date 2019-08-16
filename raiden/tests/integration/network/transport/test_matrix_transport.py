@@ -22,9 +22,7 @@ from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias
-from raiden.network.transport.matrix.utils import UserAddressManager, make_room_alias
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
-from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import MatrixStorage
 from raiden.storage.utils import make_db_connection
 from raiden.tests.utils import factories
@@ -474,7 +472,7 @@ def test_matrix_send_global(
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
         transport.send_global(MONITORING_BROADCASTING_ROOM, message)
-    transport._spawn(transport._global_send_worker)
+    transport._schedule_new_greenlet(transport._global_send_worker)
 
     gevent.idle()
 
@@ -1147,14 +1145,6 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     )
 
     transport1.stop()
-
-    transport1._address_mgr = UserAddressManager(
-        client=transport1._client,
-        get_user_callable=transport1._get_user,
-        address_reachability_changed_callback=transport1._address_reachability_changed,
-        user_presence_changed_callback=transport1._user_presence_changed,
-        stop_event=transport1._stop_event,
-    )
 
     assert not (
         transport1._address_mgr.is_address_known(raiden_service0.address)

@@ -54,7 +54,7 @@ from raiden.services import (
 )
 from raiden.settings import MEDIATION_FEE
 from raiden.storage import sqlite, wal
-from raiden.storage.serialization import DictSerializer, JSONSerializer
+from raiden.storage.serialization import DictSerializer
 from raiden.storage.utils import make_db_connection
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask

@@ -417,7 +417,7 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
-        self._spawn(self._address_mgr.log_status_message)
+        self._schedule_new_greenlet(self._address_mgr.log_status_message)
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -434,7 +434,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix started", config=self._config)
 
         # Handle any delayed invites in the future
-        self._spawn_later(self._process_queued_invites, 1)
+        self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
 
     def _process_queued_invites(self):
         if self._invite_queue:
@@ -498,27 +498,6 @@ class MatrixTransport(Runnable):
         del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
-
-    def _spawn_later(self, func: Callable, delay: int, *args, **kwargs) -> gevent.Greenlet:
-        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
-
-        def on_success(greenlet):
-            if greenlet in self.greenlets:
-                self.greenlets.remove(greenlet)
-
-        greenlet = gevent.Greenlet(func, *args, **kwargs)
-        greenlet.link_exception(self.on_error)
-        greenlet.link_value(on_success)
-        self.greenlets.append(greenlet)
-        if delay:
-            greenlet.start_later(delay)
-        else:
-            greenlet.start()
-        return greenlet
-
-    def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
-        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
-        return self._spawn_later(func, 0, *args, **kwargs)
 
     def whitelist(self, address: Address):
         """Whitelist peer address to receive communications from
@@ -1146,7 +1125,7 @@ class MatrixTransport(Runnable):
     def _user_presence_changed(self, user: User, _presence: UserPresence):
         # maybe inviting user used to also possibly invite user's from presence changes
         assert self._raiden_service is not None  # make mypy happy
-        greenlet = self._spawn(self._maybe_invite_user, user)
+        greenlet = self._schedule_new_greenlet(self._maybe_invite_user, user)
         greenlet.name = (
             f"invite node:{to_checksum_address(self._raiden_service.address)} user:{user}"
         )
