@@ -288,6 +288,12 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
+    """Tests that batch unlock is properly called.
+
+    This test will start a single incomplete transfer, the secret will be
+    revealed *on-chain*. The node that receives the tokens has to call unlock,
+    the node that doesn't gain anything does nothing.
+    """
     raise_on_failure(
         raiden_network,
         run_test_batch_unlock,
@@ -299,8 +305,10 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
 
 def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
-    """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
+    alice_address = alice_app.raiden.address
+    bob_address = bob_app.raiden.address
+
     token_network_registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -329,8 +337,7 @@ def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_addre
 
     alice_to_bob_amount = 10
     identifier = 1
-    target = bob_app.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(sha3(bob_address))
     secrethash = sha256_secrethash(secret)
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -339,7 +346,7 @@ def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_addre
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         fee=0,
-        target=target,
+        target=bob_address,
         identifier=identifier,
         secret=secret,
     )
@@ -421,29 +428,12 @@ def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_addre
         "not running."
     )
     with gevent.Timeout(seconds=30, exception=AssertionError(msg)):
-        alice_address = alice_app.raiden.address
-        bob_address = bob_app.raiden.address
-
-        # Alice waits for both unlocks
-        wait_for_batch_unlock(
-            app=alice_app,
-            token_network_address=token_network_address,
-            receiver=alice_address,
-            sender=bob_address,
-        )
+        # Wait for both nodes (Bob and Alice) to see the on-chain unlock
         wait_for_batch_unlock(
             app=alice_app,
             token_network_address=token_network_address,
             receiver=bob_address,
             sender=alice_address,
-        )
-
-        # Bob waits for both unlocks
-        wait_for_batch_unlock(
-            app=bob_app,
-            token_network_address=token_network_address,
-            receiver=alice_address,
-            sender=bob_address,
         )
         wait_for_batch_unlock(
             app=bob_app,
