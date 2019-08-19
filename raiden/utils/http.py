@@ -136,14 +136,14 @@ class HTTPExecutor(MiHTTPExecutor):
         ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
 
         log.debug("Executor process: killing process", command=self.command)
-        log.debug("EXecutor process: current processes", ps_fax=ps_fax)
+        log.debug("Executor process: current processes", ps_fax=ps_fax)
 
         super().kill()
 
         ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
 
         log.debug("Executor process: process killed", command=self.command)
-        log.debug("EXecutor process: current processes", ps_fax=ps_fax)
+        log.debug("Executor process: current processes", ps_fax=ps_fax)
 
     def wait_for(self, wait_for):
         while self.check_timeout():
