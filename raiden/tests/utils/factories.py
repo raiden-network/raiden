@@ -94,7 +94,37 @@ def _partial_dict(full_dict: Dict[K, V], *args) -> Dict[K, V]:
 
 
 class Properties:
-    """ Base class for all properties classes. """
+    """
+    Base class for all properties classes.
+
+    Each properties class is a frozen dataclass used for creating a
+    specific type of object. It is called `TProperties`, where `T`
+    is the type of the object to be created, which is also specified
+    in the class variable `TARGET_TYPE`. An object of type `T` is
+    created by passing a `TProperties` instance to `create`.
+
+    When subclassing `Properties`, all fields should be given `EMPTY`
+    as a default value. The class variable `DEFAULTS` should be set to
+    a fully initialized instance of `TProperties`.
+
+    The advantage of this is that we can change defaults later: If
+    some test module needs many slightly varied instances of the same
+    object, it can define its own defaults instance and use it like
+    this:
+    ```
+    my_defaults = create_properties(custom_defaults)
+    # my_defaults is now a fully initialized version of
+    # custom_defaults, no EMPTY fields
+    ...
+    object1 = create(properties1, my_defaults)
+    object2 = create(properties2, my_defaults)
+    ...
+    ```
+
+    Fields in the default instance can be set to `GENERATE` to indicate
+    they should be generated (either randomly, like a secret, or from
+    the other fields, like a signature).
+    """
 
     DEFAULTS: ClassVar["Properties"] = None
     TARGET_TYPE: ClassVar[Type] = None
