@@ -486,7 +486,11 @@ class MatrixTransport(Runnable):
         self._client.api.session.close()
 
         self.log.debug("Matrix stopped", config=self._config)
-        del self.log
+        try:
+            del self.log
+        except AttributeError:
+            # During shutdown the log attribute may have already been collected
+            pass
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 

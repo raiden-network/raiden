@@ -913,6 +913,7 @@ def test_matrix_user_roaming(matrix_transports):
 
     transport0.start(raiden_service0, message_handler0, "")
     transport0.start_health_check(raiden_service1.address)
+
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not is_reachable(transport1, raiden_service0.address):
             gevent.sleep(0.1)
