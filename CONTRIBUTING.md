@@ -489,12 +489,13 @@ The parts of the test suite differ in scope:
 
 #### Fuzz tests
 
-By fuzz testing we mean model-based randomized testing using
-[hypothesis.stateful](https://hypothesis.readthedocs.io/en/latest/stateful.html)
-as our testing tool.
-The fuzz tests have the smallest scope, they are used only for the core state
-machine - nearly all tested operations consist in processing state changes
-through the central transition function (`raiden.node.state_transition`).
+The fuzz tests have the smallest scope, they only test the core state machine.
+They are a randomized, model-based test of the state machine using
+[hypothesis.stateful](https://hypothesis.readthedocs.io/en/latest/stateful.html).
+
+Every hypothesis rule defined for the fuzz test (i. e. every method decorated with
+`@rule`) performs exactly one state change (i. e, one call to the state machine's
+transition function, `raiden.node.state_transition`).
 
 #### Unit tests
 
@@ -503,11 +504,6 @@ changes, but they may also test just details of the state machine or other
 parts of the code such as the api. The central `RaidenService` class and
 the interaction with the transport layer and the smart contracts are not
 in the scope of the unit tests.
-
-Unit and fuzz tests use a shared set of factories, to be found in the
-`raiden.tests.unit.factories` module, to create any objects necessary for
-testing. Integration tests have their own fixtures module,
-`raiden.tests.integration.fixtures`, for the same purpose.
 
 #### Integration tests
 
@@ -520,6 +516,19 @@ As a general rule, a test should only be made an integration test if the
 tested actions touch the transport layer. An exception to this are the tests
 related to the smart contracts/smart contract proxies found in
 `raiden.tests.integration.contracts`.
+
+#### Test utilities
+
+The utilities in `raiden.tests.utils` are used by all parts of the test
+suite.
+
+In order to simplify the creation of objects for tests (some objects
+require more than ten initialization parameters), there is the extensive
+`raiden.tests.utils.factories` module. For each complicated object type
+there is a properties class which can be passed to a universal `create`
+function, which will fill in appropriate defaults for each unspecified
+parameter. See the documentation of
+`raiden.tests.utils.factories.Properties` for further details.
 
 ### Workflow
 
