@@ -803,7 +803,7 @@ def assert_synced_channel_state(
     )
 
 
-def assert_transfer_happy_path_invariants(
+def assert_succeeding_transfer_invariants(
     token_network_address: TokenNetworkAddress,
     app0: App,
     balance0: Balance,
