@@ -2097,7 +2097,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
             receiver=receiver,
             sender=sender,
-            locks=leaves_packed,
+            locks=encode_hex(leaves_packed),
         )
 
         if gas_limit:
