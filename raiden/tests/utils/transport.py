@@ -109,6 +109,39 @@ class EthAuthProvider:
         return config
 
 
+# Used from within synapse during tests
+class NoTLSFederationMonkeyPatchProvider:
+    """ Dummy auth provider that disables TLS on S2S federation.
+
+    This is used by the integration tests to avoid the need for tls certificates.
+    It's implemented as an auth provider since that's a handy way to inject code into the
+    synapse process.
+
+    It works by replacing ``synapse.crypto.context_factory.ClientTLSOptionsFactory`` with an
+    object that returns ``None`` when instantiated.
+    """
+
+    __version__ = "0.1"
+
+    class NoTLSFactory:
+        def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
+            return None
+
+    def __init__(self, config, account_handler):  # pylint: disable=unused-argument
+        pass
+
+    @defer.inlineCallbacks
+    def check_password(self, user_id, password):  # pylint: disable=unused-argument,no-self-use
+        defer.returnValue(False)
+
+    @staticmethod
+    def parse_config(config):
+        from synapse.crypto import context_factory
+
+        context_factory.ClientTLSOptionsFactory = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
+        return config
+
+
 def make_requests_insecure():
     """
     Prevent `requests` from performing TLS verification.
@@ -179,8 +212,16 @@ def matrix_server_starter(
         server_urls: List[ParsedURL] = []
         for _, port in zip(range(count), free_port_generator):
             server_name, config_file = config_generator(port)
-            server_url = ParsedURL(f"https://{server_name}")
+            server_url = ParsedURL(f"http://{server_name}")
             server_urls.append(server_url)
+
+            synapse_cmd = [
+                sys.executable,
+                "-m",
+                "synapse.app.homeserver",
+                f"--server-name={server_name}",
+                f"--config-path={config_file!s}",
+            ]
 
             synapse_io: EXECUTOR_IO = DEVNULL
             # Used in CI to capture the logs for failure analysis
@@ -195,6 +236,7 @@ def matrix_server_starter(
                     header = f"{header}: {log_context}"
                 header = f" {header} "
                 log_file.write(f"{header:=^100}\n")
+                log_file.write(f"Cmd: `{' '.join(synapse_cmd)}`\n")
                 log_file.flush()
 
                 synapse_io = DEVNULL, log_file, STDOUT
@@ -203,13 +245,7 @@ def matrix_server_starter(
             sleep = 0.1
 
             executor = HTTPExecutor(
-                [
-                    sys.executable,
-                    "-m",
-                    "synapse.app.homeserver",
-                    f"--server-name={server_name}",
-                    f"--config-path={config_file!s}",
-                ],
+                synapse_cmd,
                 url=urljoin(server_url, "/_matrix/client/versions"),
                 method="GET",
                 timeout=startup_timeout,

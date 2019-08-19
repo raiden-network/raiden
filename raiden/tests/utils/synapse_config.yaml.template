@@ -1,24 +1,23 @@
-tls_certificate_path: "{server_dir}/localhost:{port}.tls.crt"
-tls_private_key_path: "{server_dir}/localhost:{port}.tls.key"
-tls_dh_params_path: "{server_dir}/localhost:{port}.tls.dh"
-
-no_tls: false
+no_tls: true
+federation_verify_certificates: false
+accept_keys_insecurely: true
 tls_fingerprints: []
+trusted_key_servers: []
+
 server_name: "localhost:{port}"
-web_client: true
 
 soft_file_limit: 0
 
 listeners:
   - port: {port}
-    tls: true
+    tls: false
     bind_addresses: ['127.0.0.1']
     type: http
 
     x_forwarded: false
 
     resources:
-      - names: [client, webclient]  # changed
+      - names: [client]  # changed
         compress: true
       - names: [federation]
         compress: false
@@ -28,16 +27,37 @@ database:
   args:
     database: ":memory:"  # changed
 
+user_directory:
+  enabled: true
+  search_all_users: true
+
 event_cache_size: "10K"
 
-rc_messages_per_second: 200000  # changed
-rc_message_burst_count: 100000  # changed
+rc_message:
+  per_second:   50000  # changed
+  burst_count: 100000  # changed
 
-federation_rc_window_size: 1000
-federation_rc_sleep_limit: 10
-federation_rc_sleep_delay: 500
-federation_rc_reject_limit: 50
-federation_rc_concurrent: 3
+rc_registration:
+  per_second: 0.17
+  burst_count: 3
+
+rc_login:
+  address:
+    per_second: 100
+    burst_count: 100
+  account:
+    per_second: 100
+    burst_count: 100
+  failed_attempts:
+    per_second: 100
+    burst_count: 100
+
+rc_federation:
+  window_size: 1000
+  sleep_limit: 10
+  sleep_delay: 500
+  reject_limit: 50
+  concurrent: 3
 
 max_upload_size: "0M"  # changed
 max_image_pixels: "0M"  # changed
@@ -68,6 +88,9 @@ password_config:
 
 password_providers:
   - module: 'raiden.tests.utils.transport.EthAuthProvider'
+    config:
+      enabled: true
+  - module: 'raiden.tests.utils.transport.NoTLSFederationMonkeyPatchProvider'
     config:
       enabled: true
 

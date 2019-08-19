@@ -37,6 +37,7 @@ log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 10
 USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
+DISPLAY_NAME_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
 ROOM_NAME_SEPARATOR = "_"
 ROOM_NAME_PREFIX = "raiden"
 
@@ -481,9 +482,10 @@ def login_or_register(
     else:
         raise ValueError("Could not register or login!")
 
-    name = encode_hex(signer.sign(client.user_id.encode()))
+    signature_bytes = signer.sign(client.user_id.encode())
+    signature_hex = encode_hex(signature_bytes)
     user = client.get_user(client.user_id)
-    user.set_display_name(name)
+    user.set_display_name(signature_hex)
     log.debug(
         "Matrix user login", homeserver=server_name, server_url=server_url, username=username
     )
@@ -503,9 +505,11 @@ def validate_userid_signature(user: User) -> Optional[Address]:
 
     try:
         displayname = user.get_display_name()
-        recovered = recover(
-            data=user.user_id.encode(), signature=Signature(decode_hex(displayname))
-        )
+        if DISPLAY_NAME_HEX_RE.match(displayname):
+            signature_bytes = decode_hex(displayname)
+        else:
+            return None
+        recovered = recover(data=user.user_id.encode(), signature=Signature(signature_bytes))
         if not (address and recovered and recovered == address):
             return None
     except (
