@@ -108,12 +108,12 @@ def test_get_matrix_userids_for_address():
     timestamp = datetime.utcnow()
     address = make_address()
     user_ids = {
-        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500",
-        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501",
+        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:server0",
+        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:server1",
     }
     room_ids_for_userids = {
-        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:localhost:8500": "!EccQWEAMFrOhVqPgYt:localhost:8500",
-        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:localhost:8501": "!EccQWEAMFrOhVqPgYt:localhost:8500",
+        "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:server0": "!000000000000000000:server0",
+        "@0xc24acbf411290aff4e0294d956fb3e5f82af4d8e:server1": "!111111111111111111:server1",
     }
     assert storage.get_matrix_user_ids_for_addresses() == defaultdict(set)
     assert storage.get_matrix_roomids_for_user_ids() == {}
@@ -122,11 +122,7 @@ def test_get_matrix_userids_for_address():
         address=address, user_ids=user_ids, timestamp=timestamp
     )
     for user_id, room_id in room_ids_for_userids.items():
-        storage.write_matrix_room_id_for_user_id(
-            user_id,
-            room_id,
-            timestamp=timestamp,
-        )
+        storage.write_matrix_room_id_for_user_id(user_id, room_id, timestamp=timestamp)
 
     stored_user_ids_for_address = storage.get_matrix_user_ids_for_addresses()
     stored_room_ids_for_userids = storage.get_matrix_roomids_for_user_ids()

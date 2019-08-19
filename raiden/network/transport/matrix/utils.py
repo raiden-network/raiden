@@ -221,6 +221,31 @@ class UserAddressManager:
         self._address_to_reachability[address] = new_address_reachability
         self._address_reachability_changed_callback(address, new_address_reachability)
 
+    def add_room_id_for_user_id(self, user_id: str, room_id: str):
+        """ Add a ``room_id`` for the given ``user_id``."""
+        if self.get_room_id_for_user_id(user_id) == room_id:
+            self.log.error("Redundant room update for user_id", user_id=user_id, room_id=room_id)
+            return
+        elif self.room_known_for_user(user_id):
+            self.log.error(
+                "Duplicate rooms created for user_id",
+                user_id=user_id,
+                room_id_to_be_added=room_id,
+                known_roomd_id=self.get_room_id_for_user_id(user_id),
+            )
+            return
+        else:
+            self._room_ids_for_user_ids[user_id] = room_id
+
+    def get_room_id_for_user_id(self, user_id: str) -> str:
+        """ Return the unique user_id for a user_id. """
+        if not self.room_known_for_user(user_id):
+            return ""
+        return self._room_ids_for_user_ids[user_id]
+
+    def room_known_for_user(self, user_id: str):
+        return user_id in self._room_ids_for_user_ids
+
     def _presence_listener(self, event: Dict[str, Any]):
         """
         Update cached user presence state from Matrix presence events.
@@ -284,6 +309,7 @@ class UserAddressManager:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._room_ids_for_user_ids: Dict[str, str] = defaultdict(str)
 
     @property
     def _user_id(self) -> str:

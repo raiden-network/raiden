@@ -96,6 +96,8 @@ USER1_S1 = DummyUser(USER1_S1_ID)
 USER1_S2 = DummyUser(USER1_S2_ID)
 USER2_S1 = DummyUser(USER2_S1_ID)
 USER2_S2 = DummyUser(USER2_S2_ID)
+ROOM_ID_S1 = "!000000000000000000:server0"
+ROOM_ID_S2 = "!111111111111111111:server1"
 
 
 @pytest.fixture
@@ -321,3 +323,23 @@ def test_user_addr_mgr_populate_force(user_addr_mgr, force, result):
     user_addr_mgr.populate_userids_for_address(ADDR2, force=force)
 
     assert user_addr_mgr.get_userids_for_address(ADDR2) == result
+
+
+def test_user_addr_mgr_add_room_ids_get_room_ids(user_addr_mgr):
+    # Getting a room_id for a user_id which has not been added doesn't throw
+    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ""
+    user_addr_mgr.add_room_id_for_user_id(USER1_S1_ID, ROOM_ID_S1)
+
+    # Adding a room_id for a user_id works as expected
+    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ROOM_ID_S1
+    user_addr_mgr.add_room_id_for_user_id(USER1_S1_ID, ROOM_ID_S1)
+
+    # Adding a room_id for a user_id is idempotent
+    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ROOM_ID_S1
+
+    # Adding more than one room_id for a user_id does not work
+    user_addr_mgr.add_room_id_for_user_id(USER1_S1_ID, ROOM_ID_S2)
+    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ROOM_ID_S1
+
+    # Room_known_for_user helper does what it should
+    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID)

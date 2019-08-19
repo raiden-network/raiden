@@ -370,7 +370,7 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         if storage:
             self.storage = storage
-            stored_userids_and_addresses = self.storage.get_matrix_userids_and_addresses()
+            stored_userids_and_addresses = self.storage.get_matrix_user_ids_for_addresses()
             self._address_mgr.recover_userids(stored_userids_and_addresses)
         self._message_handler = message_handler
         prev_user_id: Optional[str]
@@ -530,7 +530,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.add_userids_for_address(node_address, user_ids)
 
             if self.storage:
-                self.storage.write_matrix_userids_for_address(
+                self.storage.write_matrix_user_ids_for_address(
                     node_address, user_ids, datetime.utcnow()
                 )
 
@@ -1034,7 +1034,7 @@ class MatrixTransport(Runnable):
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         if self.storage:
-            self.storage.write_matrix_userids_for_address(
+            self.storage.write_matrix_user_ids_for_address(
                 address, {user.user_id for user in peers}, datetime.utcnow()
             )
         self._set_room_id_for_address(address, room.room_id)
