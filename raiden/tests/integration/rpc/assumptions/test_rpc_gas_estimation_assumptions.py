@@ -23,9 +23,7 @@ def test_estimate_gas_fail(deploy_client):
     assert contract_proxy.estimate_gas(check_block, "fail_require") is None, msg
 
 
-def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
-    deploy_client, skip_if_not_geth  # pylint: disable=unused-argument
-):
+def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(deploy_client):
     """ Gas estimation fails if the transaction execution requires more gas
     then the block's gas limit.
     """
