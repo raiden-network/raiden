@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 import pytest
 import structlog
@@ -141,7 +140,7 @@ def test_redacted_traceback(capsys, tmpdir):
     try:
         assert False, f"Failed acessing /endpoint?accessToken={token}"
     except AssertionError:
-        traceback.print_exc()
+        logging.getLogger(__name__).error("AssertionError", exc_info=True)
 
     captured = capsys.readouterr()
 

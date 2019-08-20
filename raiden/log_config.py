@@ -1,4 +1,5 @@
 import datetime
+import linecache
 import logging
 import logging.config
 import logging.handlers
@@ -6,23 +7,44 @@ import os
 import re
 import sys
 from functools import wraps
-from traceback import TracebackException
-from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
+from traceback import walk_tb
+from types import TracebackType
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Iterator,
+    List,
+    NamedTuple,
+    Optional,
+    Pattern,
+    Set,
+    Tuple,
+)
 
 import gevent
 import structlog
 
-LOG_BLACKLIST = {
-    re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>",
-    re.compile(
-        r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"
-    ): r"\1/<redacted>",
-}
 DEFAULT_LOG_LEVEL = "INFO"
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
 
 _FIRST_PARTY_PACKAGES = frozenset(["raiden", "raiden_contracts"])
+
+
+class Redact(NamedTuple):
+    pattern: Pattern[str]
+    replace: str
+
+
+LOG_REDACT_PATTERNS = [
+    Redact(re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I), r"\1<redacted>"),
+    Redact(
+        re.compile(r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"),
+        r"\1/<redacted>",
+    ),
+]
 
 
 def _chain(first_func, *funcs) -> Callable:
@@ -119,36 +141,94 @@ def add_greenlet_name(
     return event_dict
 
 
-def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
-    """Returns a function which transforms a str, replacing all matches for its replacement"""
-
-    def processor_wrapper(msg: str) -> str:
-        for regex, repl in blacklist.items():
-            if repl is None:
-                repl = "<redacted>"
-            msg = regex.sub(repl, msg)
-        return msg
-
-    return processor_wrapper
+def redact_secret(original_line: str) -> str:
+    redacted = original_line
+    for redact in LOG_REDACT_PATTERNS:
+        redacted = redact.pattern.sub(redact.replace, redacted)
+    return redacted
 
 
-def _wrap_tracebackexception_format(redact: Callable[[str], str]):
-    """Monkey-patch TracebackException.format to redact printed lines.
+def format_traceback(exc_traceback: TracebackType) -> Iterator[str]:
+    for frame, lineno in walk_tb(exc_traceback):
+        filename = frame.f_code.co_filename
+        name = frame.f_code.co_name
+        line = linecache.getline(filename, lineno).strip()
 
-    Only the last call will be effective. Consecutive calls will overwrite the
-    previous monkey patches.
+        yield f'  File "{filename}", line {lineno}, in {name}\n' f"{line}\n"
+
+
+def format_exception_chain(
+    exc_value: BaseException, exc_traceback: Optional[TracebackType], seen: Set[int]
+) -> Iterator[str]:
+    """Recursively format the chain of exceptions for logging.
+
+    Notes:
+
+    - This does not include the stack locals for compactness;
+    - It uses the standard library `linecache` module, but it does not force a
+      cache reset, which saves a few system calls and won't may not show teh
+      wrong stack traces if the files are being edited;
+    - It does not handle exceptions traces larger than the stack depth;
+    - It does not handle SyntaxError specially.
     """
-    original_format = getattr(TracebackException, "_original", None)
-    if original_format is None:
-        original_format = TracebackException.format
-        setattr(TracebackException, "_original", original_format)  # noqa: B010
+    # To avoid infinite recursion each exception is processed only once
+    seen.add(id(exc_value))
 
-    @wraps(original_format)
-    def tracebackexception_format(self, *, chain=True):
-        for line in original_format(self, chain=chain):
-            yield redact(line)
+    cause: Optional[BaseException] = exc_value.__cause__
+    context: Optional[BaseException] = exc_value.__context__
+    suppress_context: bool = exc_value.__suppress_context__
 
-    setattr(TracebackException, "format", tracebackexception_format)  # noqa: B010
+    if cause is not None and id(cause) not in seen:
+        yield from format_exception_chain(cause, cause.__traceback__, seen)
+        yield "\nThe above exception was the direct cause of the following exception:\n\n"
+
+    if context is not None and id(context) not in seen and not suppress_context:
+        yield from format_exception_chain(context, context.__traceback__, seen)
+        yield "\nDuring handling of the above exception, another exception occurred:\n\n"
+
+    if exc_traceback is not None:
+        yield "Traceback (most recent call last):\n"
+        yield from format_traceback(exc_traceback)
+
+    exc_type = type(exc_value)
+
+    # The standard library handles all exceptions ... this is problematic for
+    # our codebase becase it can handle GreenletExits while formatting
+    # exceptions, so instead of using `BaseException` this is using `Exception`
+    try:
+        yield f"{exc_type.__qualname__}: {exc_value}"
+    except Exception:  # Formatting the exception itself can raise an exception
+        yield f"{exc_type.__qualname__}"
+
+
+def format_exception_and_redact_secrets(
+    logger, name, event_dict
+):  # pylint: disable=unused-argument
+    exc_value: Optional[BaseException] = None
+
+    # likely type of this key is `Union[bool, BaseException]`
+    log_exc_info = event_dict.pop("exc_info", None)
+
+    if log_exc_info:
+        if isinstance(log_exc_info, BaseException):
+            exc_value = log_exc_info
+            exc_traceback = log_exc_info.__traceback__
+        elif isinstance(log_exc_info, tuple):
+            _, exc_value, exc_traceback = log_exc_info
+        elif log_exc_info:  # assume bool
+            _, exc_value, exc_traceback = sys.exc_info()
+
+    if exc_value:
+        seen: Set[int] = set()
+        trace = format_exception_chain(exc_value, exc_traceback, seen)
+
+        formated_exception = "".join(redact_secret(line) for line in trace)
+        if formated_exception[-1:] == "\n":
+            formated_exception = formated_exception[:-1]
+
+        event_dict["exception"] = formated_exception
+
+    return event_dict
 
 
 def configure_logging(
@@ -175,7 +255,7 @@ def configure_logging(
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f"),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
+        format_exception_and_redact_secrets,
     ]
 
     if log_json:
@@ -184,9 +264,6 @@ def configure_logging(
         formatter = "colorized"
     else:
         formatter = "plain"
-
-    redact = redactor(LOG_BLACKLIST)
-    _wrap_tracebackexception_format(redact)
 
     handlers: Dict[str, Any] = dict()
     if log_file:
@@ -237,22 +314,24 @@ def configure_logging(
             "formatters": {
                 "plain": {
                     "()": structlog.stdlib.ProcessorFormatter,
-                    "processor": _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
+                    "processor": _chain(
+                        structlog.dev.ConsoleRenderer(colors=False), redact_secret
+                    ),
                     "foreign_pre_chain": processors,
                 },
                 "json": {
                     "()": structlog.stdlib.ProcessorFormatter,
-                    "processor": _chain(structlog.processors.JSONRenderer(), redact),
+                    "processor": _chain(structlog.processors.JSONRenderer(), redact_secret),
                     "foreign_pre_chain": processors,
                 },
                 "colorized": {
                     "()": structlog.stdlib.ProcessorFormatter,
-                    "processor": _chain(structlog.dev.ConsoleRenderer(colors=True), redact),
+                    "processor": _chain(structlog.dev.ConsoleRenderer(colors=True), redact_secret),
                     "foreign_pre_chain": processors,
                 },
                 "debug": {
                     "()": structlog.stdlib.ProcessorFormatter,
-                    "processor": _chain(structlog.processors.JSONRenderer(), redact),
+                    "processor": _chain(structlog.processors.JSONRenderer(), redact_secret),
                     "foreign_pre_chain": processors,
                 },
             },
