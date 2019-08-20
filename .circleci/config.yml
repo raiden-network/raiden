@@ -179,8 +179,8 @@ commands:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}-gg
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-gg
       - run:
           name: Creating virtualenv
           command: |
@@ -195,7 +195,7 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip config set global.progress_bar off
-            pip install -U 'pip<19.0.0' 'setuptools<41.0.1' wheel pip-tools
+            pip install -U 'pip<19.0.0' 'setuptools<41.1.0' wheel pip-tools
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
