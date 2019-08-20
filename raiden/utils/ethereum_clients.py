@@ -30,14 +30,14 @@ def support_check(
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
 ) -> bool:
-    if len(our_version._key[1]) < 2:
-        # This can happen since missing entry and 0 value are the same
-        our_minor_num = 0
-    else:
-        our_minor_num = our_version._key[1][1]
+
+    # TODO: Is there any better way to get major/minor/patch version from a Version object?
+    # Currently we use this private member which is not ideal. release is a tuple.
+    # Example: (1, 9, 0)
+    our_minor_num = our_version._version.release[1]
 
     highest_supported_version: Version = parse_version(highest_supported_version_string)
-    highest_supported_min_num = highest_supported_version._key[1][1]
+    highest_supported_min_num = highest_supported_version._version.release[1]
     if our_version < parse_version(lowest_supported_version_string):
         return False
 
