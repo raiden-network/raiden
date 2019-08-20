@@ -42,8 +42,9 @@ def run_test_check_json_rpc_geth():
     g6, _, v6 = is_supported_client("Geth/v999.999.999-unstable-e9295163/linux-amd64/go1.9.1")
     # Test that patch version upgrades are not triggering the non-supported check
     g7, _, v7 = is_supported_client("Geth/v1.9.3-unstable-e9295163/linux-amd64/go1.9.1")
+    g8, _, v8 = is_supported_client("Geth/v1.9.0-stable-52f24617/linux-amd64/go1.12.7")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g7])
+    assert all([g1, g2, g3, g7, g8])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
@@ -52,6 +53,7 @@ def run_test_check_json_rpc_geth():
     assert v5 == "11.55.86"
     assert v6 == "999.999.999"
     assert v7 == "1.9.3"
+    assert v8 == "1.9.0"
 
     b1, client, v1 = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
     b2, _, v2 = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")
@@ -93,8 +95,11 @@ def run_test_check_json_rpc_parity():
     g7, _, v7 = is_supported_client(
         "Parity//v2.5.8-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
+    g8, _, v8 = is_supported_client(
+        "Parity//v2.5.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
+    )
     assert client is EthClient.PARITY
-    assert all([g1, g2, g3, g7])
+    assert all([g1, g2, g3, g7, g8])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.6"
     assert v2 == "1.7.7"
@@ -103,6 +108,7 @@ def run_test_check_json_rpc_parity():
     assert v5 == "23.94.75"
     assert v6 == "99.994.975"
     assert v7 == "2.5.8"
+    assert v8 == "2.5.0"
 
     b1, client, v1 = is_supported_client(
         "Parity//v1.7.5-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
