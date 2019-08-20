@@ -1108,52 +1108,75 @@ def test_send_to_device(matrix_transports):
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
-@pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.parametrize("number_of_transports", [4])
 def test_matrix_userid_persistence(matrix_transports, tmp_path):
-    transport0, transport1 = matrix_transports
-    received_messages0 = set()
-    received_messages1 = set()
+    transport0, transport1, transport2, transport3 = matrix_transports
+    raiden_service0 = MockRaidenService()
+    raiden_service1 = MockRaidenService()
+    raiden_service2 = MockRaidenService()
+    raiden_service3 = MockRaidenService()
+    message_handler = MessageHandler(set())
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
-    raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1, tmp_path=tmp_path)
-    raiden_service2 = MockRaidenService(message_handler0)
-    raiden_service3 = MockRaidenService(message_handler1)
-    transport0.start(raiden_service0, message_handler0, "")  #
+    assert transport1._address_mgr.get_userids_for_address(raiden_service0.address) == set()
+    assert transport1._address_mgr.get_userids_for_address(raiden_service2.address) == set()
+    assert transport1._address_mgr.get_userids_for_address(raiden_service3.address) == set()
+
+    transport0.start(raiden_service0, message_handler, "")
+    transport2.start(raiden_service2, message_handler, "")
+    transport3.start(raiden_service3, message_handler, "")
+
     conn = make_db_connection()
-    transport1.start(raiden_service1, message_handler1, "", storage=MatrixStorage(conn))
 
+    transport1.start(raiden_service1, message_handler, "", storage=MatrixStorage(conn))
+    transport0.start_health_check(raiden_service1.address)
+    transport2.start_health_check(raiden_service1.address)
+    transport3.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
     transport1.start_health_check(raiden_service2.address)
     transport1.start_health_check(raiden_service3.address)
-
+    room_id0 = transport1._get_room_for_address(raiden_service0.address).room_id
+    room_id2 = transport1._get_room_for_address(raiden_service2.address).room_id
+    room_id3 = transport1._get_room_for_address(raiden_service3.address).room_id
     user_ids0 = transport1._address_mgr.get_userids_for_address(raiden_service0.address)
     user_ids2 = transport1._address_mgr.get_userids_for_address(raiden_service2.address)
     user_ids3 = transport1._address_mgr.get_userids_for_address(raiden_service3.address)
+    gevent.sleep(10)
+    # Check that user_ids and room_ids are available for all nodes
+    assert user_ids0 != set() and user_ids2 != set() and user_ids3 != set()
+    assert room_id0 and room_id2 and room_id3
 
-    assert (
-        transport1._address_mgr.is_address_known(raiden_service0.address)
-        and transport1._address_mgr.is_address_known(raiden_service2.address)
-        and transport1._address_mgr.is_address_known(raiden_service3.address)
-    )
-
+    # Check that user_ids and room_ids were normally processed by the _address_mgr
     assert (
         user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
         and user_ids2 == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
         and user_ids3 == transport1._address_mgr.get_userids_for_address(raiden_service3.address)
     )
 
+    assert (
+        room_id0 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids0)[0])
+        and room_id2 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids2)[0])
+        and room_id3 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids3)[0])
+    )
+
+    # Stop the transport
     transport1.stop()
 
-    assert not (
-        transport1._address_mgr.is_address_known(raiden_service0.address)
-        or transport1._address_mgr.is_address_known(raiden_service2.address)
-        or transport1._address_mgr.is_address_known(raiden_service3.address)
+    # Check that user_ids and room_ids were reset during stop
+    assert (
+        set() == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
+        and set() == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
+        and set() == transport1._address_mgr.get_userids_for_address(raiden_service3.address)
     )
 
-    transport1.start(raiden_service1, message_handler1, "", storage=MatrixStorage(conn))
+    assert (
+        "" == transport1._address_mgr.get_room_id_for_user_id(list(user_ids0)[0])
+        and "" == transport1._address_mgr.get_room_id_for_user_id(list(user_ids2)[0])
+        and "" == transport1._address_mgr.get_room_id_for_user_id(list(user_ids3)[0])
+    )
 
+    transport1.start(raiden_service1, message_handler, "", storage=MatrixStorage(conn))
+
+    # Check that user_ids and room_ids we're properly recovered during the restart
     assert (
         user_ids0 == transport1._address_mgr.get_userids_for_address(raiden_service0.address)
         and user_ids2 == transport1._address_mgr.get_userids_for_address(raiden_service2.address)
@@ -1161,7 +1184,7 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     )
 
     assert (
-        transport1._address_mgr.is_address_known(raiden_service0.address)
-        and transport1._address_mgr.is_address_known(raiden_service2.address)
-        and transport1._address_mgr.is_address_known(raiden_service3.address)
+        room_id0 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids0)[0])
+        and room_id2 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids2)[0])
+        and room_id3 == transport1._address_mgr.get_room_id_for_user_id(list(user_ids3)[0])
     )

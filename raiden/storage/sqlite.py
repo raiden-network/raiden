@@ -968,7 +968,7 @@ class MatrixStorage:
 
     def write_matrix_room_id_for_user_id(self, user_id: str, room_id: str, timestamp: datetime):
         # FIXME Docstrings
-        room_id_data = (user_id, room_id, timestamp.isoformat(timespec="milliseconds"))
+        room_id_data = (str(user_id), str(room_id), timestamp.isoformat(timespec="milliseconds"))
         return self.database.write_matrix_room_id_for_user_id(room_id_data)
 
     def write_matrix_user_ids_for_address(

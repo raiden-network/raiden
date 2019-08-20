@@ -1,7 +1,6 @@
 import json
 import time
 from collections import defaultdict
-from datetime import datetime
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -345,7 +344,6 @@ class MatrixTransport(Runnable):
         self._account_data_lock = Semaphore()
 
         self._message_handler: Optional[MessageHandler] = None
-        self.storage: Optional[MatrixStorage] = None
 
     def __repr__(self):
         if self._raiden_service is not None:
@@ -368,10 +366,6 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
-        if storage:
-            self.storage = storage
-            stored_userids_and_addresses = self.storage.get_matrix_user_ids_for_addresses()
-            self._address_mgr.recover_userids(stored_userids_and_addresses)
         self._message_handler = message_handler
         prev_user_id: Optional[str]
         prev_access_token: Optional[str]
@@ -380,7 +374,7 @@ class MatrixTransport(Runnable):
         else:
             prev_user_id = prev_access_token = None
 
-        self._address_mgr.start()
+        self._address_mgr.start(storage)
         login_or_register(
             client=self._client,
             signer=self._raiden_service.signer,
@@ -528,11 +522,6 @@ class MatrixTransport(Runnable):
                 if validate_userid_signature(user) == node_address
             }
             self._address_mgr.add_userids_for_address(node_address, user_ids)
-
-            if self.storage:
-                self.storage.write_matrix_user_ids_for_address(
-                    node_address, user_ids, datetime.utcnow()
-                )
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
@@ -1033,10 +1022,8 @@ class MatrixTransport(Runnable):
                     )
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
-        if self.storage:
-            self.storage.write_matrix_user_ids_for_address(
-                address, {user.user_id for user in peers}, datetime.utcnow()
-            )
+        for member_id in member_ids:
+            self._address_mgr.add_room_id_for_user_id(member_id, room.room_id)
         self._set_room_id_for_address(address, room.room_id)
 
         if not room.listeners:
@@ -1240,28 +1227,34 @@ class MatrixTransport(Runnable):
         If filter_private=None, filter according to self._private_rooms
         """
         address_hex: AddressHex = to_checksum_address(address)
-        with self._account_data_lock:
-            room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(address_hex)
-            self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
-            if not room_ids:  # None or empty
-                room_ids = list()
-            if not isinstance(room_ids, list):  # old version, single room
-                room_ids = [room_ids]
+        user_ids = self._address_mgr.get_userids_for_address(address)
+        room_ids = [
+            _RoomID(self._address_mgr.get_room_id_for_user_id(user_id)) for user_id in user_ids]
+        if not room_ids:
+            with self._account_data_lock:
+                room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(
+                    address_hex
+                )
+        self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
+        if not room_ids:  # None or empty
+            room_ids = list()
+        if not isinstance(room_ids, list):  # old version, single room
+            room_ids = [room_ids]
 
-            if filter_private is None:
-                filter_private = self._private_rooms
-            if not filter_private:
-                # existing rooms
-                room_ids = [room_id for room_id in room_ids if room_id in self._client.rooms]
-            else:
-                # existing and private rooms
-                room_ids = [
-                    room_id
-                    for room_id in room_ids
-                    if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
-                ]
+        if filter_private is None:
+            filter_private = self._private_rooms
+        if not filter_private:
+            # existing rooms
+            room_ids = [room_id for room_id in room_ids if room_id in self._client.rooms]
+        else:
+            # existing and private rooms
+            room_ids = [
+                room_id
+                for room_id in room_ids
+                if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
+            ]
 
-            return room_ids
+        return room_ids
 
     def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
         """

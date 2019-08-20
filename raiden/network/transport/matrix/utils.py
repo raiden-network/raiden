@@ -2,6 +2,7 @@ import json
 import re
 from binascii import Error as DecodeError
 from collections import defaultdict
+from datetime import datetime
 from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
@@ -28,6 +29,7 @@ from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.sqlite import MatrixStorage
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -101,14 +103,21 @@ class UserAddressManager:
         self._log_context = _log_context
         self._log = None
         self._listener_id = None
+        self.storage: Optional[MatrixStorage] = None
 
-    def start(self) -> None:
+    def start(self, storage: Optional[MatrixStorage] = None) -> None:
         """ Start listening for presence updates.
 
         Should be called before ``.login()`` is called on the underlying client. """
         assert self._listener_id is None, "UserAddressManager.start() called twice"
         self._stop_event.clear()
         self._listener_id = self._client.add_presence_listener(self._presence_listener)
+        if storage:
+            self.storage = storage
+            stored_userids_and_addresses = self.storage.get_matrix_user_ids_for_addresses()
+            stored_room_ids_for_user_ids = self.storage.get_matrix_roomids_for_user_ids()
+            self.recover_userids(stored_userids_and_addresses)
+            self.recover_room_ids(stored_room_ids_for_user_ids)
 
     def stop(self) -> None:
         """ Stop listening on presence updates. """
@@ -146,6 +155,8 @@ class UserAddressManager:
         Implicitly adds any addresses if they were unknown before.
         """
         self._address_to_userids[address].update(user_ids)
+        if self.storage:
+            self.storage.write_matrix_user_ids_for_address(address, user_ids, datetime.utcnow())
 
     def get_userids_for_address(self, address: Address) -> Set[str]:
         """ Return all known user ids for the given ``address``. """
@@ -225,7 +236,6 @@ class UserAddressManager:
         """ Add a ``room_id`` for the given ``user_id``."""
         if self.get_room_id_for_user_id(user_id) == room_id:
             self.log.error("Redundant room update for user_id", user_id=user_id, room_id=room_id)
-            return
         elif self.room_known_for_user(user_id):
             self.log.error(
                 "Duplicate rooms created for user_id",
@@ -233,9 +243,10 @@ class UserAddressManager:
                 room_id_to_be_added=room_id,
                 known_roomd_id=self.get_room_id_for_user_id(user_id),
             )
-            return
-        else:
-            self._room_ids_for_user_ids[user_id] = room_id
+
+        self._room_ids_for_user_ids[user_id] = room_id
+        if self.storage:
+            self.storage.write_matrix_room_id_for_user_id(user_id, room_id, datetime.utcnow())
 
     def get_room_id_for_user_id(self, user_id: str) -> str:
         """ Return the unique user_id for a user_id. """
@@ -243,7 +254,7 @@ class UserAddressManager:
             return ""
         return self._room_ids_for_user_ids[user_id]
 
-    def room_known_for_user(self, user_id: str):
+    def room_known_for_user(self, user_id: str) -> bool:
         return user_id in self._room_ids_for_user_ids
 
     def _presence_listener(self, event: Dict[str, Any]):
@@ -333,6 +344,9 @@ class UserAddressManager:
     def recover_userids(self, address_to_userids: defaultdict) -> None:
         """Restores the mapping address: userids for all known addresses"""
         self._address_to_userids = address_to_userids
+
+    def recover_room_ids(self, room_ids_for_user_ids: defaultdict) -> None:
+        self._room_ids_for_user_ids = room_ids_for_user_ids
 
     @property
     def log(self) -> BoundLoggerLazyProxy:
