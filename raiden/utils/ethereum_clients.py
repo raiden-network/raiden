@@ -30,11 +30,12 @@ def support_check(
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
 ) -> bool:
-    if len(our_version._key[1]) != 3:
-        # This can happen for versions such as 0.0.0
-        return False
+    if len(our_version._key[1]) < 2:
+        # This can happen since missing entry and 0 value are the same
+        our_minor_num = 0
+    else:
+        our_minor_num = our_version._key[1][1]
 
-    our_minor_num = our_version._key[1][1]
     highest_supported_version: Version = parse_version(highest_supported_version_string)
     highest_supported_min_num = highest_supported_version._key[1][1]
     if our_version < parse_version(lowest_supported_version_string):
