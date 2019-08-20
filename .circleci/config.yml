@@ -195,7 +195,7 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip config set global.progress_bar off
-            pip install -U 'pip<19.0.0' wheel pip-tools
+            pip install -U 'pip<19.0.0' 'setuptools<41.0.0' wheel pip-tools
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
