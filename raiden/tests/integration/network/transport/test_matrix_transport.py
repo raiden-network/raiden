@@ -836,8 +836,12 @@ def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_j
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
+    wait_for_peer_reachable(transport0, raiden_service1.address)
+    wait_for_peer_reachable(transport1, raiden_service0.address)
+
     assert is_reachable(transport1, raiden_service0.address)
     assert is_reachable(transport0, raiden_service1.address)
+
     transport1.stop()
 
     wait_for_peer_unreachable(transport0, raiden_service1.address)
