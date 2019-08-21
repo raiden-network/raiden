@@ -5,8 +5,8 @@ any additional data is necessary, either from the database or the blockchain
 itself. an utility should be added to raiden.blockchain.state, and then called
 by blockchainevent_to_statechange.
 """
-from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Dict
 
 import structlog
 
@@ -324,12 +324,20 @@ def contractreceivechannelbatchunlock_from_event(
 
 
 def actionchannelupdatefee_from_channelstate(
-    channel_state: NettingChannelState, max_imbalance_fee: FeeAmount
+    channel_state: NettingChannelState,
+    flat_fee: FeeAmount,
+    proportional_fee: int,
+    max_imbalance_fee: FeeAmount,
 ) -> ActionChannelUpdateFee:
-    imbalance_penalty = calculate_imbalance_fees(get_capacity(channel_state), max_imbalance_fee)
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=get_capacity(channel_state), max_imbalance_fee=max_imbalance_fee
+    )
+
     return ActionChannelUpdateFee(
         canonical_identifier=channel_state.canonical_identifier,
-        fee_schedule=replace(channel_state.fee_schedule, imbalance_penalty=imbalance_penalty),
+        fee_schedule=FeeScheduleState(
+            flat=flat_fee, proportional=proportional_fee, imbalance_penalty=imbalance_penalty
+        ),
     )
 
 
@@ -354,9 +362,18 @@ def blockchainevent_to_statechange(
         )
 
         if new_channel_details is not None:
+            default_fee_schedule: FeeScheduleState = raiden.config["default_fee_schedule"]
+            token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = raiden.config[
+                "flat_fees"
+            ]
             channel_config = ChannelConfig(
                 reveal_timeout=raiden.config["reveal_timeout"],
-                fee_schedule=replace(raiden.config["default_fee_schedule"]),
+                fee_schedule=FeeScheduleState(
+                    flat=token_network_to_flat_fee.get(
+                        new_channel_details.token_network_address, default_fee_schedule.flat
+                    ),
+                    proportional=default_fee_schedule.proportional,
+                ),
             )
             channel_new = contractreceivechannelnew_from_event(
                 new_channel_details, channel_config, event
@@ -374,7 +391,10 @@ def blockchainevent_to_statechange(
         )
         if channel_state is not None:
             update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state, raiden.config["max_imbalance_fee"]
+                channel_state=channel_state,
+                flat_fee=channel_state.fee_schedule.flat,
+                proportional_fee=channel_state.fee_schedule.proportional,
+                max_imbalance_fee=raiden.config["max_imbalance_fee"],
             )
             state_changes.append(update_fee)
 
@@ -387,7 +407,10 @@ def blockchainevent_to_statechange(
         )
         if channel_state is not None:
             update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state, raiden.config["max_imbalance_fee"]
+                channel_state=channel_state,
+                flat_fee=channel_state.fee_schedule.flat,
+                proportional_fee=channel_state.fee_schedule.proportional,
+                max_imbalance_fee=raiden.config["max_imbalance_fee"],
             )
             state_changes.append(update_fee)
 

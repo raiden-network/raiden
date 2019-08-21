@@ -26,6 +26,7 @@ from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, R
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
+    DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -53,6 +54,7 @@ from raiden.utils.typing import (
     Optional,
     Port,
     PrivateKey,
+    TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
 )
@@ -150,13 +152,12 @@ def run_app(
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
-    flat_fee: FeeAmount,
+    flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
     proportional_fee: int,
     max_imbalance_fee: FeeAmount,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
-
     from raiden.app import App
 
     if datadir is None:
@@ -170,12 +171,17 @@ def run_app(
     check_ethereum_client_is_supported(web3)
     check_ethereum_network_id(network_id, web3)
 
-    address, privatekey_bin = get_account_and_private_key(account_manager, address, password_file)
+    address, privatekey = get_account_and_private_key(account_manager, address, password_file)
 
     api_host, api_port = split_endpoint(api_address)
 
     if not api_port:
         api_port = Port(DEFAULT_HTTP_SERVER_PORT)
+
+    # Store the flat fee settings for the given token networks
+    token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = {
+        address: fee for address, fee in flat_fee
+    }
 
     config["console"] = console
     config["rpc"] = rpc
@@ -189,7 +195,10 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
-    config["default_fee_schedule"] = FeeScheduleState(flat=flat_fee, proportional=proportional_fee)
+    config["flat_fees"] = token_network_to_flat_fee
+    config["default_fee_schedule"] = FeeScheduleState(
+        flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=proportional_fee
+    )
     config["max_imbalance_fee"] = max_imbalance_fee
 
     setup_environment(config, environment_type)
@@ -197,8 +206,8 @@ def run_app(
     contracts = setup_contracts_or_exit(config, network_id)
 
     rpc_client = JSONRPCClient(
-        web3,
-        privatekey_bin,
+        web3=web3,
+        privkey=privatekey,
         gas_price_strategy=gas_price,
         block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
         uses_infura="infura.io" in eth_rpc_endpoint,
@@ -251,7 +260,7 @@ def run_app(
 
     event_handler: EventHandler = RaidenEventHandler()
 
-    # Only send feedback when PFS was used
+    # Only send feedback when PFS is used
     if routing_mode == RoutingMode.PFS:
         event_handler = PFSFeedbackEventHandler(event_handler)
 

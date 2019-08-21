@@ -370,6 +370,7 @@ def create_apps(
             "rpc": True,
             "console": False,
             "default_fee_schedule": FeeScheduleState(),
+            "flat_fees": {},
         }
 
         if local_matrix_url is not None:
