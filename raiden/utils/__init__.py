@@ -10,11 +10,11 @@ from typing import Any, Callable
 import gevent
 from eth_keys import keys
 from eth_utils import (
-    decode_hex,
     encode_hex,
     is_0x_prefixed,
     is_checksum_address,
     remove_0x_prefix,
+    to_canonical_address,
     to_checksum_address,
 )
 from web3 import Web3
@@ -68,9 +68,7 @@ def address_checksum_and_decode(addr: str) -> Address:
     if not is_checksum_address(addr):
         raise InvalidChecksummedAddress("Address must be EIP55 checksummed")
 
-    addr_bytes = decode_hex(addr)
-    assert len(addr_bytes) in (20, 0)
-    return Address(addr_bytes)
+    return to_canonical_address(addr)
 
 
 def pex(data: bytes) -> str:

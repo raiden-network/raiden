@@ -60,6 +60,7 @@ class NewChannelDetails:
     chain_id: ChainID
     token_network_registry_address: TokenNetworkRegistryAddress
     token_address: TokenAddress
+    token_network_address: TokenNetworkAddress
     our_address: Address
     partner_address: Address
 
@@ -250,6 +251,7 @@ def get_contractreceivechannelnew_data_from_event(
         chain_id=event.chain_id,
         token_network_registry_address=token_network_registry.address,
         token_address=token_network.token_address,
+        token_network_address=token_network_address,
         our_address=our_address,
         partner_address=partner_address,
     )

@@ -22,7 +22,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStora
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
-from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
+from raiden.utils import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
@@ -55,8 +55,8 @@ class Translator(dict):
         """
         try:
             addr = str(to_checksum_address(addr))
-            rxp = "(?:0x)?" + pex(address_checksum_and_decode(addr)) + f"(?:{addr.lower()[10:]})?"
-            self._extra_keys[pex(address_checksum_and_decode(addr))] = addr.lower()
+            rxp = "(?:0x)?" + pex(to_canonical_address(addr)) + f"(?:{addr.lower()[10:]})?"
+            self._extra_keys[pex(to_canonical_address(addr))] = addr.lower()
             self._extra_keys[addr[2:].lower()] = addr.lower()
         except ValueError:
             rxp = addr

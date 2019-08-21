@@ -982,6 +982,7 @@ class RaidenService(Runnable):
         """
         chain_state = views.state_from_raiden(self)
         default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
+        token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = self.config["flat_fees"]
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )
@@ -994,15 +995,24 @@ class RaidenService(Runnable):
             )
 
             for channel in channels:
+                # get the flat fee for this network if set, otherwise the default
+                flat_fee = token_network_to_flat_fee.get(
+                    channel.token_network_address, default_fee_schedule.flat
+                )
+                proportional_fee = default_fee_schedule.proportional
                 log.info(
                     "Updating channel fees",
                     channel=channel.canonical_identifier,
-                    flat_fee=default_fee_schedule.flat,
-                    proportional_fee=default_fee_schedule.proportional,
+                    flat_fee=flat_fee,
+                    proportional_fee=proportional_fee,
+                    max_imbalance_fee=self.config["max_imbalance_fee"],
                 )
 
                 state_change = actionchannelupdatefee_from_channelstate(
-                    channel, self.config["max_imbalance_fee"]
+                    channel_state=channel,
+                    flat_fee=flat_fee,
+                    proportional_fee=proportional_fee,
+                    max_imbalance_fee=self.config["max_imbalance_fee"],
                 )
                 self.handle_and_track_state_changes([state_change])
 
