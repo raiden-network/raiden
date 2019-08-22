@@ -21,6 +21,7 @@ from raiden.utils import get_system_spec
 from raiden.utils.typing import (
     Address,
     Any,
+    DefaultDict,
     Dict,
     Generic,
     Iterator,
@@ -40,6 +41,7 @@ StateChangeID = NewType("StateChangeID", ULID)
 SnapshotID = NewType("SnapshotID", ULID)
 EventID = NewType("EventID", ULID)
 ID = TypeVar("ID", StateChangeID, SnapshotID, EventID)
+_RoomID = NewType("_RoomID", str)
 
 
 @dataclass
@@ -896,29 +898,33 @@ class MatrixSQLiteStorage:
         self.conn = conn
         self.in_transaction = False
 
-    def write_matrix_room_id_for_user_id(self, room_id_data) -> None:
+    def write_matrix_room_id_for_user_id(self, user_id: str, room_id: _RoomID) -> None:
+        timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT OR REPLACE INTO matrix_room_ids_for_user_ids VALUES(?, ?, ?)", room_id_data
+            "INSERT OR REPLACE INTO matrix_room_ids_for_user_ids VALUES(?, ?, ?)",
+            (str(user_id), str(room_id), timestamp),
         )
         self.maybe_commit()
 
-    def get_matrix_room_ids_for_userids(self) -> Dict[str, str]:
+    def get_matrix_room_ids_for_userids(self) -> DefaultDict[str, str]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM matrix_room_ids_for_user_ids")
-        return {row[0]: row[1] for row in cursor.fetchall()}
+        return defaultdict(str, {row[0]: _RoomID(row[1]) for row in cursor.fetchall()})
 
-    def write_matrix_user_ids_for_address(self, user_id_data) -> None:
+    def write_matrix_user_ids_for_address(self, address: Address, user_ids: Set[str]) -> None:
+        timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT OR REPLACE INTO matrix_user_ids_for_address VALUES(?, ?, ?)", user_id_data
+            "INSERT OR REPLACE INTO matrix_user_ids_for_address VALUES(?, ?, ?)",
+            (address, json.dumps(list(user_ids)), timestamp),
         )
         self.maybe_commit()
 
-    def get_matrix_user_ids_for_addresses(self) -> Dict[Address, str]:
+    def get_matrix_user_ids_for_addresses(self) -> DefaultDict[Address, set]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT * FROM matrix_user_ids_for_address")
-        return {row[0]: row[1] for row in cursor.fetchall()}
+        return defaultdict(set, {row[0]: set(json.loads(row[1])) for row in cursor.fetchall()})
 
     def maybe_commit(self) -> None:
         if not self.in_transaction:
@@ -957,34 +963,20 @@ class MatrixSQLiteStorage:
 
 
 class MatrixStorage:
-    def __init__(
-        self, connection: sqlite3.Connection, serializer: SerializationBase = None
-    ) -> None:
+    def __init__(self, connection: sqlite3.Connection) -> None:
         self.database = MatrixSQLiteStorage(connection)
-        self.serializer = JSONSerializer() if not serializer else serializer
 
     def close(self) -> None:
         self.database.close()
 
-    def write_matrix_room_id_for_user_id(self, user_id: str, room_id: str, timestamp: datetime):
-        # FIXME Docstrings
-        room_id_data = (str(user_id), str(room_id), timestamp.isoformat(timespec="milliseconds"))
-        return self.database.write_matrix_room_id_for_user_id(room_id_data)
+    def write_matrix_room_id_for_user_id(self, user_id: str, room_id: _RoomID):
+        return self.database.write_matrix_room_id_for_user_id(user_id, room_id)
 
-    def write_matrix_user_ids_for_address(
-        self, address: Address, user_ids: Set[str], timestamp: datetime
-    ):
-        # FIXME Docstrings
-        serialized_user_ids = json.dumps(list(user_ids))
-        user_id_data = (address, serialized_user_ids, timestamp.isoformat(timespec="milliseconds"))
-        return self.database.write_matrix_user_ids_for_address(user_id_data)
+    def write_matrix_user_ids_for_address(self, address: Address, user_ids: Set[str]):
+        return self.database.write_matrix_user_ids_for_address(address, user_ids)
 
-    def get_matrix_user_ids_for_addresses(self) -> defaultdict:
-        address_to_user_ids = self.database.get_matrix_user_ids_for_addresses()
-        returned_default_dict: defaultdict = defaultdict(set)
-        for address, user_ids in address_to_user_ids.items():
-            returned_default_dict[address] = set(json.loads(user_ids))
-        return returned_default_dict
+    def get_matrix_user_ids_for_addresses(self) -> DefaultDict[Address, set]:
+        return self.database.get_matrix_user_ids_for_addresses()
 
-    def get_matrix_roomids_for_user_ids(self) -> Dict[str, str]:
+    def get_matrix_roomids_for_user_ids(self) -> DefaultDict[str, str]:
         return self.database.get_matrix_room_ids_for_userids()

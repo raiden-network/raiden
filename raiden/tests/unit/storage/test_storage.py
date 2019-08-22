@@ -1,6 +1,5 @@
 import os.path
 from collections import defaultdict
-from datetime import datetime
 from unittest.mock import patch
 
 import pytest
@@ -105,7 +104,6 @@ def test_regression_delete_should_not_commit_the_upgrade_transaction(tmp_path, m
 def test_get_matrix_userids_for_address():
     conn = make_db_connection()
     storage = MatrixStorage(conn)
-    timestamp = datetime.utcnow()
     address = make_address()
     user_ids = {
         "@0xdd2a8d3a434273289b4e9b0c20ad61b705d7d61f:server0",
@@ -118,11 +116,9 @@ def test_get_matrix_userids_for_address():
     assert storage.get_matrix_user_ids_for_addresses() == defaultdict(set)
     assert storage.get_matrix_roomids_for_user_ids() == {}
 
-    storage.write_matrix_user_ids_for_address(
-        address=address, user_ids=user_ids, timestamp=timestamp
-    )
+    storage.write_matrix_user_ids_for_address(address=address, user_ids=user_ids)
     for user_id, room_id in room_ids_for_userids.items():
-        storage.write_matrix_room_id_for_user_id(user_id, room_id, timestamp=timestamp)
+        storage.write_matrix_room_id_for_user_id(user_id, room_id)
 
     stored_user_ids_for_address = storage.get_matrix_user_ids_for_addresses()
     stored_room_ids_for_userids = storage.get_matrix_roomids_for_user_ids()

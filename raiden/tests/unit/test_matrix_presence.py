@@ -337,9 +337,5 @@ def test_user_addr_mgr_add_room_ids_get_room_ids(user_addr_mgr):
     # Adding a room_id for a user_id is idempotent
     assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ROOM_ID_S1
 
-    # Adding more than one room_id for a user_id does not work
-    user_addr_mgr.add_room_id_for_user_id(USER1_S1_ID, ROOM_ID_S2)
-    assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID) == ROOM_ID_S1
-
     # Room_known_for_user helper does what it should
     assert user_addr_mgr.get_room_id_for_user_id(USER1_S1_ID)

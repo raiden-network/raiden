@@ -23,8 +23,6 @@ from raiden.network.transport.matrix import AddressReachability, MatrixTransport
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
-from raiden.storage.sqlite import MatrixStorage
-from raiden.storage.utils import make_db_connection
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
@@ -838,12 +836,8 @@ def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_j
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
-    wait_for_peer_reachable(transport0, raiden_service1.address)
-    wait_for_peer_reachable(transport1, raiden_service0.address)
-
     assert is_reachable(transport1, raiden_service0.address)
     assert is_reachable(transport0, raiden_service1.address)
-
     transport1.stop()
 
     wait_for_peer_unreachable(transport0, raiden_service1.address)
@@ -1109,7 +1103,7 @@ def test_send_to_device(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [4])
-def test_matrix_userid_persistence(matrix_transports, tmp_path):
+def test_matrix_userid_persistence(matrix_transports):
     transport0, transport1, transport2, transport3 = matrix_transports
     raiden_service0 = MockRaidenService()
     raiden_service1 = MockRaidenService()
@@ -1125,9 +1119,7 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
     transport2.start(raiden_service2, message_handler, "")
     transport3.start(raiden_service3, message_handler, "")
 
-    conn = make_db_connection()
-
-    transport1.start(raiden_service1, message_handler, "", storage=MatrixStorage(conn))
+    transport1.start(raiden_service1, message_handler, "")
     transport0.start_health_check(raiden_service1.address)
     transport2.start_health_check(raiden_service1.address)
     transport3.start_health_check(raiden_service1.address)
@@ -1174,7 +1166,7 @@ def test_matrix_userid_persistence(matrix_transports, tmp_path):
         and "" == transport1._address_mgr.get_room_id_for_user_id(list(user_ids3)[0])
     )
 
-    transport1.start(raiden_service1, message_handler, "", storage=MatrixStorage(conn))
+    transport1.start(raiden_service1, message_handler, "")
 
     # Check that user_ids and room_ids we're properly recovered during the restart
     assert (
