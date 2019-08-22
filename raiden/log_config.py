@@ -48,7 +48,7 @@ LOG_REDACT_PATTERNS = [
 
 
 def _chain(first_func, *funcs) -> Callable:
-    """Chains a give number of functions.
+    """Chains a given number of functions.
     First function receives all args/kwargs. Its result is passed on as an argument
     to the second one and so on and so forth until all function arguments are used.
     The last result is then returned.
@@ -166,8 +166,8 @@ def format_exception_chain(
 
     - This does not include the stack locals for compactness;
     - It uses the standard library `linecache` module, but it does not force a
-      cache reset, which saves a few system calls and won't may not show teh
-      wrong stack traces if the files are being edited;
+      cache reset, which saves a few system calls and may not show the wrong
+      line of code in when the files are being edited;
     - It does not handle exceptions traces larger than the stack depth;
     - It does not handle SyntaxError specially.
     """
@@ -193,7 +193,7 @@ def format_exception_chain(
     exc_type = type(exc_value)
 
     # The standard library handles all exceptions ... this is problematic for
-    # our codebase becase it can handle GreenletExits while formatting
+    # our codebase because it can handle GreenletExits while formatting
     # exceptions, so instead of using `BaseException` this is using `Exception`
     try:
         yield f"{exc_type.__qualname__}: {exc_value}"
