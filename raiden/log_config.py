@@ -6,7 +6,6 @@ import os
 import re
 import sys
 from functools import wraps
-from traceback import TracebackException
 from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
 
 import gevent
@@ -132,25 +131,6 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     return processor_wrapper
 
 
-def _wrap_tracebackexception_format(redact: Callable[[str], str]):
-    """Monkey-patch TracebackException.format to redact printed lines.
-
-    Only the last call will be effective. Consecutive calls will overwrite the
-    previous monkey patches.
-    """
-    original_format = getattr(TracebackException, "_original", None)
-    if original_format is None:
-        original_format = TracebackException.format
-        setattr(TracebackException, "_original", original_format)  # noqa: B010
-
-    @wraps(original_format)
-    def tracebackexception_format(self, *, chain=True):
-        for line in original_format(self, chain=chain):
-            yield redact(line)
-
-    setattr(TracebackException, "format", tracebackexception_format)  # noqa: B010
-
-
 def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
@@ -186,7 +166,6 @@ def configure_logging(
         formatter = "plain"
 
     redact = redactor(LOG_BLACKLIST)
-    _wrap_tracebackexception_format(redact)
 
     handlers: Dict[str, Any] = dict()
     if log_file:
