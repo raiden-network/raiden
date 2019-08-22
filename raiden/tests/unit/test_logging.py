@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 import pytest
 import structlog
@@ -131,22 +130,6 @@ def test_redacted_request(capsys, tmpdir):
 
     assert token not in captured.err
     assert "access_token=<redacted>" in captured.err
-
-
-def test_redacted_traceback(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
-
-    token = "my_access_token123"
-
-    try:
-        assert False, f"Failed acessing /endpoint?accessToken={token}"
-    except AssertionError:
-        traceback.print_exc()
-
-    captured = capsys.readouterr()
-
-    assert token not in captured.err
-    assert "accessToken=<redacted>" in captured.err
 
 
 def test_redacted_state_change(capsys, tmpdir):
