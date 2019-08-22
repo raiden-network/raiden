@@ -7,7 +7,8 @@ from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.transfer import views
-from raiden.transfer.mediated_transfer import mediator
+from raiden.transfer.events import EventPaymentSentFailed
+from raiden.transfer.mediated_transfer import initiator_manager, mediator
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
 from raiden.transfer.mediated_transfer.state_change import (
     ActionTransferReroute,
@@ -150,6 +151,69 @@ def test_resolve_routes(netting_channel_state, chain_state, token_network_state)
     msg = "route resolved with wrong channel id"
     channel_id = netting_channel_state.canonical_identifier.channel_identifier
     assert route_states[0].forward_channel_id == channel_id, msg
+
+
+def test_initiator_accounts_for_fees_when_selecting_routes():
+    def make_mediated_transfer_state_change(
+        transfer_amount, allocated_fee_amount, channel_capacity
+    ):
+        transfer = factories.replace(
+            factories.UNIT_TRANSFER_DESCRIPTION,
+            amount=transfer_amount,
+            allocated_fee=allocated_fee_amount,
+        )
+        channel_set = factories.make_channel_set_from_amounts([channel_capacity])
+        mediating_channel = channel_set.channels[0]
+        pnrg = random.Random()
+
+        nodeaddresses_to_networkstates = {mediating_channel.partner_state.address: "reachable"}
+
+        channelidentifiers_to_channels = {mediating_channel.identifier: mediating_channel}
+
+        routes = [
+            [
+                factories.UNIT_OUR_ADDRESS,
+                mediating_channel.partner_state.address,
+                factories.UNIT_TRANSFER_TARGET,
+            ]
+        ]
+
+        init_action = factories.initiator_make_init_action(
+            channels=channel_set, routes=routes, transfer=transfer
+        )
+        return initiator_manager.handle_init(
+            payment_state=None,
+            state_change=init_action,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            pseudo_random_generator=pnrg,
+            block_number=1,
+        )
+
+    # This channel does not have enough balance to cover anything, it should fail
+    underfunded_channel = make_mediated_transfer_state_change(
+        transfer_amount=10, allocated_fee_amount=0, channel_capacity=9
+    )
+    assert search_for_item(underfunded_channel.events, EventPaymentSentFailed, {}) is not None
+
+    # This channel has enough balance to cover the transfer
+    funded_channel = make_mediated_transfer_state_change(
+        transfer_amount=10, allocated_fee_amount=2, channel_capacity=12
+    )
+    assert search_for_item(funded_channel.events, EventPaymentSentFailed, {}) is None
+
+    # This transfer is too costly for any channel due to fee allocation, it should fail
+    too_high_fee_transfer = make_mediated_transfer_state_change(
+        transfer_amount=10, allocated_fee_amount=2, channel_capacity=11
+    )
+    assert search_for_item(too_high_fee_transfer.events, EventPaymentSentFailed, {}) is not None
+
+    # This transfer can be mediated
+    no_fee_transfer = make_mediated_transfer_state_change(
+        transfer_amount=10, allocated_fee_amount=0, channel_capacity=10
+    )
+
+    assert search_for_item(no_fee_transfer.events, EventPaymentSentFailed, {}) is None
 
 
 def test_initiator_skips_used_routes():
