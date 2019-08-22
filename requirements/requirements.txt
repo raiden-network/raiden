@@ -59,7 +59,7 @@ pycryptodome==3.8.2       # via eth-hash, eth-keyfile
 pysha3==1.0.2
 pytoml==0.1.20
 pytz==2019.1              # via flask-restful
-raiden-contracts==0.30.0
+raiden-contracts==0.31.0
 raiden-webui==0.9.2
 requests==2.22.0
 rlp==1.1.0                # via eth-rlp, raiden-contracts
@@ -79,4 +79,4 @@ websockets==6.0           # via web3
 werkzeug==0.15.4          # via flask
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via ipython
+# setuptools==41.2.0        # via ipython

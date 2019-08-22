@@ -141,7 +141,7 @@ python-magic==0.4.15      # via s3cmd
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1
-raiden-contracts==0.30.0
+raiden-contracts==0.31.0
 raiden-webui==0.9.2
 readme-renderer==24.0
 releases==1.6.1
@@ -187,4 +187,4 @@ zipp==0.5.1
 zope.interface==4.6.0
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via ipython, jsonschema, pyhamcrest, pyinstaller, sphinx, zope.interface
+# setuptools==41.2.0        # via ipython, jsonschema, pyhamcrest, pyinstaller, sphinx, zope.interface
