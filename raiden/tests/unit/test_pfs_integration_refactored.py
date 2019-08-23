@@ -31,7 +31,7 @@ def test_get_pfs_info_success():
     response = Mock()
     response.configure_mock(status_code=200, content=json.dumps(info_data))
 
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(requests.Session, "get", return_value=response):
         pfs_info = get_pfs_info("url")
 
         req_registry_address = to_canonical_address(pfs_test_default_registry_address)
@@ -63,14 +63,14 @@ def test_get_pfs_info_error():
     response = Mock()
     response.configure_mock(status_code=200, content=str(incorrect_json_info_data))
 
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(requests.Session, "get", return_value=response):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
         assert "Expecting property name enclosed in double quotes:" in str(error.value)
 
     # test RequestException
-    with patch.object(requests, "get", side_effect=requests.RequestException()):
+    with patch.object(requests.Session, "get", side_effect=requests.RequestException()):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
@@ -85,7 +85,7 @@ def test_get_pfs_info_error():
     }
 
     response.configure_mock(status_code=200, content=json.dumps(incorrect_info_data))
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(requests.Session, "get", return_value=response):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 

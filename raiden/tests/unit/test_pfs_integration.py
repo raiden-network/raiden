@@ -790,7 +790,7 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
 
     # PFS fails to return info
     assert_failed_pfs_request(
-        query_paths_args, [insufficient_response], expected_requests=1, expected_get_iou_requests=2
+        query_paths_args, [insufficient_response], expected_requests=1, expected_get_iou_requests=1
     )
 
     # PFS has increased fees

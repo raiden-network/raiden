@@ -10,6 +10,8 @@ import click
 import requests
 import structlog
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address, to_hex
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
@@ -131,9 +133,28 @@ class PFSError(IntEnum):
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
+def requests_retry_session(
+    retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None
+):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
 def get_pfs_info(url: str) -> PFSInfo:
     try:
-        response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+        response = requests_retry_session().get(
+            f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT
+        )
         infos = get_response_json(response)
 
         return PFSInfo(
