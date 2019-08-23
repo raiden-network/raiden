@@ -7,6 +7,7 @@ from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.transfer import views
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator_manager, mediator
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
@@ -17,6 +18,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.node import handle_init_initiator, state_transition
 from raiden.utils.signer import LocalSigner, recover
+from raiden.utils.typing import BlockNumber, TokenAmount
 
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
@@ -154,9 +156,15 @@ def test_resolve_routes(netting_channel_state, chain_state, token_network_state)
 
 
 def test_initiator_accounts_for_fees_when_selecting_routes():
+    """
+    When introducing source routing, one issue was found regarding
+    checking if the channel had enough funds to cover both the transfer
+    as well as the mediator fees. This is a regression test
+    """
+
     def make_mediated_transfer_state_change(
-        transfer_amount, allocated_fee_amount, channel_capacity
-    ):
+        transfer_amount: int, allocated_fee_amount: int, channel_capacity: TokenAmount
+    ) -> TransitionResult:
         transfer = factories.replace(
             factories.UNIT_TRANSFER_DESCRIPTION,
             amount=transfer_amount,
@@ -187,33 +195,35 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pnrg,
-            block_number=1,
+            block_number=BlockNumber(1),
         )
 
     # This channel does not have enough balance to cover anything, it should fail
     underfunded_channel = make_mediated_transfer_state_change(
-        transfer_amount=10, allocated_fee_amount=0, channel_capacity=9
+        transfer_amount=10, allocated_fee_amount=0, channel_capacity=TokenAmount(9)
     )
     assert search_for_item(underfunded_channel.events, EventPaymentSentFailed, {}) is not None
 
     # This channel has enough balance to cover the transfer
     funded_channel = make_mediated_transfer_state_change(
-        transfer_amount=10, allocated_fee_amount=2, channel_capacity=12
+        transfer_amount=10, allocated_fee_amount=2, channel_capacity=TokenAmount(12)
     )
     assert search_for_item(funded_channel.events, EventPaymentSentFailed, {}) is None
+    assert search_for_item(funded_channel.events, SendLockedTransfer, {}) is not None
 
     # This transfer is too costly for any channel due to fee allocation, it should fail
     too_high_fee_transfer = make_mediated_transfer_state_change(
-        transfer_amount=10, allocated_fee_amount=2, channel_capacity=11
+        transfer_amount=10, allocated_fee_amount=2, channel_capacity=TokenAmount(11)
     )
     assert search_for_item(too_high_fee_transfer.events, EventPaymentSentFailed, {}) is not None
 
     # This transfer can be mediated
     no_fee_transfer = make_mediated_transfer_state_change(
-        transfer_amount=10, allocated_fee_amount=0, channel_capacity=10
+        transfer_amount=10, allocated_fee_amount=0, channel_capacity=TokenAmount(10)
     )
 
     assert search_for_item(no_fee_transfer.events, EventPaymentSentFailed, {}) is None
+    assert search_for_item(funded_channel.events, SendLockedTransfer, {}) is not None
 
 
 def test_initiator_skips_used_routes():
