@@ -217,6 +217,7 @@ class SQLiteStorage:
         sqlite3.register_converter("ULID", convert_ulid_identifier)
         conn.text_factory = str
         conn.execute("PRAGMA foreign_keys=ON")
+        database_path = "unknown"
 
         # Skip the acquire/release cycle for the exclusive write lock.
         # References:
@@ -229,11 +230,15 @@ class SQLiteStorage:
         # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
         # https://sqlite.org/pragma.html#pragma_journal_mode
         try:
+            for _id, name, filename in conn.execute("PRAGMA database_list"):
+                if name == "main" and filename is not None:
+                    database_path = filename
+                    break
             conn.execute("PRAGMA journal_mode=PERSIST")
         except sqlite3.DatabaseError:
             raise InvalidDBData(
-                # FIXME get db path
-                f"Existing DB was found to be corrupt at Raiden startup. "
+                f"Existing DB {database_path} was found to be corrupt at Raiden startup or "
+                f"provided file is not a database."
                 f"Manual user intervention required. Bailing."
             )
 
@@ -885,11 +890,16 @@ class MatrixSQLiteStorage:
     def __init__(self, conn: sqlite3.Connection):
         conn.execute("PRAGMA foreign_keys=ON")
         conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+        database_path = "unknown"
         try:
+            for _id, name, filename in conn.execute("PRAGMA database_list"):
+                if name == "main" and filename is not None:
+                    database_path = filename
+                    break
             conn.execute("PRAGMA journal_mode=PERSIST")
         except sqlite3.DatabaseError:
             raise InvalidDBData(
-                f"Existing MatrixDB was found to be corrupt at Raiden startup. "
+                f"Existing MatrixDB at {database_path} was found to be corrupt at Raiden startup. "
                 f"Manual user intervention required. Bailing."
             )
 

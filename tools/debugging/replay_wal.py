@@ -11,6 +11,7 @@ The ignored state changes will still be applied, but they will just not be print
 """
 import json
 import re
+from contextlib import closing
 from itertools import chain
 
 import click
@@ -207,13 +208,13 @@ def main(db_file, token_network_address, partner_address, names_translator):
 
     assert is_checksum_address(token_network_address), "token_network_address must be provided"
     assert is_checksum_address(partner_address), "partner_address must be provided"
-
-    replay_wal(
-        storage=SerializedSQLiteStorage(conn),
-        token_network_address=token_network_address,
-        partner_address=partner_address,
-        translator=translator,
-    )
+    with closing(SerializedSQLiteStorage(conn)) as storage:
+        replay_wal(
+            storage=storage,
+            token_network_address=token_network_address,
+            partner_address=partner_address,
+            translator=translator,
+        )
 
 
 if __name__ == "__main__":

@@ -1132,7 +1132,6 @@ def test_matrix_userid_persistence(matrix_transports):
     user_ids0 = transport1._address_mgr.get_userids_for_address(raiden_service0.address)
     user_ids2 = transport1._address_mgr.get_userids_for_address(raiden_service2.address)
     user_ids3 = transport1._address_mgr.get_userids_for_address(raiden_service3.address)
-    gevent.sleep(10)
     # Check that user_ids and room_ids are available for all nodes
     assert user_ids0 != set() and user_ids2 != set() and user_ids3 != set()
     assert room_id0 and room_id2 and room_id3

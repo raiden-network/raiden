@@ -12,7 +12,7 @@ from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state_change import ActionInitChain
-from raiden.utils import pex, privatekey_to_address
+from raiden.utils import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -111,14 +111,7 @@ class MockChainState:
 
 
 class MockRaidenService:
-    def __init__(
-        self,
-        message_handler=None,
-        state_transition=None,
-        private_key=None,
-        config=None,
-        tmp_path=None,
-    ):
+    def __init__(self, message_handler=None, state_transition=None, private_key=None, config=None):
         if private_key is None:
             self.privkey, self.address = factories.make_privkey_address()
         else:
@@ -140,16 +133,12 @@ class MockRaidenService:
 
         self.targets_to_identifiers_to_statuses = defaultdict(dict)
         self.route_to_feedback_token = {}
-        self.database_path = ":memory:"
 
         if state_transition is None:
             state_transition = node.state_transition
 
         state_manager = StateManager(state_transition, None)
-        if tmp_path:
-            self.database_path = f"{tmp_path}/mock_{pex(self.address)}.db"
-
-        self.conn = make_db_connection(self.database_path)
+        self.conn = make_db_connection()
         storage = SerializedSQLiteStorage(self.conn)
         self.wal = WriteAheadLog(state_manager, storage)
 
