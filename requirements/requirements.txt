@@ -24,7 +24,7 @@ eth-keys==0.2.4
 eth-rlp==0.1.2            # via eth-account
 eth-typing==2.1.0         # via eth-abi, eth-utils
 eth-utils==1.6.4
-filelock==3.0.12
+git+https://github.com/hackaugusto/py-filelock.git@master
 flask-cors==3.0.8
 flask-restful==0.3.7
 flask==1.0.3
@@ -79,4 +79,4 @@ websockets==6.0           # via web3
 werkzeug==0.15.4          # via flask
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via ipython
+# setuptools==41.2.0        # via ipython

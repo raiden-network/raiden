@@ -4,7 +4,6 @@ colorama
 eth-keyfile
 eth-keys
 eth-utils
-filelock
 Flask
 Flask-Cors
 Flask-RESTful
@@ -29,3 +28,7 @@ structlog
 web3
 webargs
 typing_extensions
+
+# Temporarily use the fork until the upstream merges the PR
+# https://github.com/benediktschmitt/py-filelock/pull/55
+git+https://github.com/hackaugusto/py-filelock.git@master

@@ -49,7 +49,7 @@ eth-typing==2.1.0
 eth-utils==1.6.4
 execnet==1.6.0            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
-filelock==3.0.12
+git+https://github.com/hackaugusto/py-filelock.git@master
 flake8-bugbear==19.3.0
 flake8-tuple==0.4.0
 flake8==3.7.7
@@ -180,4 +180,4 @@ zipp==0.5.1               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.0.1        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
+# setuptools==41.2.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
