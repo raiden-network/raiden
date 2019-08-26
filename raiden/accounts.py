@@ -7,6 +7,7 @@ import structlog
 from eth_keyfile import decode_keyfile_json
 from eth_utils import decode_hex, encode_hex, to_checksum_address
 
+from raiden.exceptions import RaidenError
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
 
@@ -17,6 +18,10 @@ class InvalidAccountFile(Exception):
     """ Thrown when a file is not a valid keystore account file """
 
     pass
+
+
+class KeystoreFileNotFound(RaidenError):
+    """ A keystore file for a user provided account could not be found. """
 
 
 def _find_datadir() -> Optional[str]:  # pragma: no cover
@@ -109,7 +114,7 @@ class AccountManager:
             The private key associated with the address
         """
         if not self.address_in_keystore(address):
-            raise ValueError("Keystore file not found for %s" % address)
+            raise KeystoreFileNotFound("Keystore file not found for %s" % address)
 
         with open(self.accounts[address]) as data_file:
             data = json.load(data_file)

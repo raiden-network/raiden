@@ -5,7 +5,7 @@ from typing import TextIO
 import click
 from eth_utils import to_checksum_address
 
-from raiden.accounts import AccountManager
+from raiden.accounts import AccountManager, KeystoreFileNotFound
 from raiden.utils.typing import AddressHex, PrivateKey
 
 
@@ -36,6 +36,9 @@ def unlock_account_with_passwordfile(
 
     try:
         return account_manager.get_privkey(address_hex, password.strip())
+    except KeystoreFileNotFound as e:
+        click.secho(str(e), fg="red")
+        sys.exit(1)
     except ValueError:
         click.secho(f"Incorrect password for {address_hex} in file. Aborting ...", fg="red")
         sys.exit(1)
