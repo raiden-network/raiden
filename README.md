@@ -43,10 +43,12 @@ If you didn't use Raiden before, you can
 * Look at the [documentation](https://raiden-network.readthedocs.io/en/stable/index.html)
 * Learn more by watching explanatory [videos](https://www.youtube.com/channel/UCoUP_hnjUddEvbxmtNCcApg)
 * Read the blog posts on [Medium](https://medium.com/@raiden_network)
+* Visit [Awesomen-Raiden](https://github.com/raiden-network/awesome-raiden) a curated list of resources, links, projects, tools and hacks
 
 ### Use Raiden
 
 If you want to use Raiden:
+* For a quick start use [the Raiden Wizard](https://github.com/raiden-network/raiden-installer#quick-start), which makes setting up a Raiden node as easy as 1-2-3.
 * [Install and fire up](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) a Raiden client.
 * Check out the [WebUI tutorial](https://raiden-network.readthedocs.io/en/stable/webui_tutorial.html) to quickly get started doing payments.
 * Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html).
@@ -76,7 +78,7 @@ The Raiden Network is getting created with a set of tools, which are maintained 
 
 - The [Raiden Explorer](https://github.com/raiden-network/explorer) visualizes the nodes of the Raiden Networks and shows more statistical information.
 
-- The [One-Click-Installer](https://github.com/raiden-network/raiden-installer) makes it easy to install a Raiden client and join the Raiden Network.
+- The [Raiden Wizard](https://github.com/raiden-network/raiden-installer) makes it easy to install a Raiden client and join the Raiden Network.
 
 - The [Scenario Player](https://github.com/raiden-network/scenario-player) is an integration testing tool for the Raiden contracts, the Raiden client and the services.
 
