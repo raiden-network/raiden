@@ -7,7 +7,7 @@ from raiden import constants
 from raiden.constants import RoutingMode
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
+from raiden.settings import MONITORING_REWARD
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -83,11 +83,11 @@ def update_monitoring_service_from_balance_proof(
         sender=channel_state.our_state, receiver=channel_state.partner_state
     )
 
-    if balance < MONITORING_MIN_CAPACITY:
+    if balance < MONITORING_REWARD:
         log.warn(
             f"Skipping update to Monitoring service. "
             f"Available balance of {balance} is less than configured "
-            f"minimum capacity of {MONITORING_MIN_CAPACITY}"
+            f"monitoring default fee {MONITORING_REWARD}"
         )
         return
 

@@ -8,7 +8,7 @@ import pytest
 from eth_keyfile.keyfile import decode_keyfile_json
 from eth_utils import decode_hex, encode_hex
 
-from raiden.accounts import Account, AccountManager
+from raiden.accounts import Account, AccountManager, KeystoreFileNotFound
 from raiden.ui.prompt import unlock_account_with_passwordfile
 from raiden.utils import get_project_root, privatekey_to_address, privatekey_to_publickey
 
@@ -68,7 +68,7 @@ def test_get_privkey(keystore_mock):
     with pytest.raises(ValueError) as exc:
         account_manager.get_privkey("0x3593403033d18b82f7b4a0F18e1ED24623D23b20", "456")
     assert "MAC mismatch" in str(exc.value)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(KeystoreFileNotFound) as exc:
         account_manager.get_privkey("0xa05934d3033D18b82F7b4AdF18E1eD24E3D23b19", "123")
     assert "Keystore file not found for 0xa05934d3033D18b82F7b4AdF18E1eD24E3D23b19" in str(
         exc.value
