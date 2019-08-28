@@ -134,7 +134,7 @@ class RaidenEventHandler(EventHandler):
             self.handle_send_balanceproof(raiden, event)
         elif type(event) == SendSecretRequest:
             assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
-            self.handle_send_secretrequest(raiden, event)
+            self.handle_send_secretrequest(raiden, chain_state, event)
         elif type(event) == SendRefundTransfer:
             assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
             self.handle_send_refundtransfer(raiden, event)
@@ -222,9 +222,9 @@ class RaidenEventHandler(EventHandler):
 
     @staticmethod
     def handle_send_secretrequest(
-        raiden: "RaidenService", secret_request_event: SendSecretRequest
+        raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
     ):  # pragma: no unittest
-        if reveal_secret_with_resolver(raiden, secret_request_event):
+        if reveal_secret_with_resolver(raiden, chain_state, secret_request_event):
             return
 
         secret_request_message = message_from_sendevent(secret_request_event)
