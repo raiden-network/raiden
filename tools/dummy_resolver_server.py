@@ -13,7 +13,7 @@ def resolve(request):
 
     preimage = None
 
-    if not "secrethash" in request:
+    if "secrethash" not in request:
         return preimage
 
     x_secret = "0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e"
