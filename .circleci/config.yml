@@ -180,6 +180,8 @@ commands:
       - restore_cache:
           keys:
           - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+# hack: solving a inter-PR cache problem
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-2uPiIM_pNv5neMjXtHsw_aV6BQGcFOekCBcy7TJEkhI=
           - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
