@@ -1,3 +1,4 @@
+import gevent
 import pytest
 
 from raiden import waiting
@@ -16,6 +17,7 @@ from raiden.tests.utils.transfer import (
     transfer_and_assert_path,
 )
 from raiden.transfer import views
+from raiden.transfer.events import ContractSendChannelWithdraw
 from raiden.transfer.state import NODE_NETWORK_UNREACHABLE
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -235,3 +237,80 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
         RANGE_ALL_STATE_CHANGES
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
+
+
+@pytest.mark.parametrize("deposit", [2])
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
+    raiden_network, token_addresses, network_wait, number_of_nodes, retry_timeout
+):
+    """ A test case related to https://github.com/raiden-network/raiden/issues/4639
+    Where a node sends a withdraw transaction, is stopped before the transaction is completed.
+    Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
+    execute the pending withdraw transaction and fails because the channel was closed.
+    Expected behaviour: Channel closed state change should cancel a withdraw transaction.
+    Actual behaviour: The channel closure isn't detected on recovery and
+    the on-chain transaction fails.
+    """
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+
+    # Prevent the withdraw transaction from being sent on-chain. This
+    # Will keep the transaction in the pending list
+    send_channel_withdraw_event = app0.raiden.raiden_event_handler.hold(
+        ContractSendChannelWithdraw, {}
+    )
+
+    channel_state = views.get_channelstate_for(
+        chain_state=views.state_from_app(app0),
+        token_network_registry_address=app0.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+    )
+    assert channel_state, "Channel does not exist"
+
+    app0.raiden.withdraw(canonical_identifier=channel_state.canonical_identifier, total_withdraw=1)
+
+    timeout = network_wait * number_of_nodes
+    with gevent.Timeout(seconds=timeout):
+        send_channel_withdraw_event.wait()
+
+    msg = "A withdraw transaction should be in the pending transactions list"
+    chain_state = views.state_from_app(app0)
+    assert search_for_item(
+        item_list=chain_state.pending_transactions,
+        item_type=ContractSendChannelWithdraw,
+        attributes={"total_withdraw": 1},
+    ), msg
+
+    app0.raiden.stop()
+    app0.stop()
+
+    app1_api = RaidenAPI(app1.raiden)
+    app1_api.channel_close(
+        registry_address=app0.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=app0.raiden.address,
+    )
+
+    waiting.wait_for_close(
+        raiden=app1.raiden,
+        token_network_registry_address=app1.raiden.default_registry.address,
+        token_address=token_address,
+        channel_ids=[channel_state.identifier],
+        retry_timeout=retry_timeout,
+    )
+
+    app0.raiden.start()
+
+    chain_state = views.state_from_app(app0)
+
+    msg = "The withdraw transaction should have been invalidated on restart."
+    assert (
+        search_for_item(
+            item_list=chain_state.pending_transactions,
+            item_type=ContractSendChannelWithdraw,
+            attributes={"total_withdraw": 1},
+        )
+        is None
+    ), msg
