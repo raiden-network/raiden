@@ -27,6 +27,8 @@ from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_MEDIATION_FLAT_FEE,
+    DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
+    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -259,6 +261,25 @@ def run_app(
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     event_handler: EventHandler = RaidenEventHandler()
+
+    # User should be told, if using Default fee settings, how to set fees
+    log.debug("Fee Settings", fee_schedule=config["default_fee_schedule"])
+
+    has_default_fees = (
+        len(config["flat_fees"]) == 0
+        and config["default_fee_schedule"]
+        == FeeScheduleState(
+            flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=DEFAULT_MEDIATION_PROPORTIONAL_FEE
+        )
+        and config["max_imbalance_fee"] == DEFAULT_MEDIATION_MAX_IMBALANCE_FEE
+    )
+    if has_default_fees:
+        click.secho(
+            "Default fee settings are used. "
+            "If you want use Raiden with mediation fees - flat, proportional and imbalance fees - "
+            "see https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up",  # noqa: E501
+            fg="yellow",
+        )
 
     # Only send feedback when PFS is used
     if routing_mode == RoutingMode.PFS:
