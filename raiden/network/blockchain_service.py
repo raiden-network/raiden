@@ -29,7 +29,12 @@ from raiden_contracts.contract_manager import ContractManager
 
 
 class BlockChainService:
-    """ Exposes the blockchain's state through JSON-RPC. """
+    """ Encapsulates access and creation of contract proxies.
+
+    This class keeps track of mapping between contract addresses and their internal
+    contract proxy counterparts. It also synchronizes creation of proxies, so that
+    a 1-to-1 relationship is kept.
+    """
 
     # pylint: disable=too-many-instance-attributes
 
