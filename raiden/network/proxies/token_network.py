@@ -1402,9 +1402,16 @@ class TokenNetwork:
                 block_identifier=failed_at_blockhash,
             )
 
-            if detail.state != ChannelState.OPENED:
+            if detail.state > ChannelState.OPENED:
                 msg = (
                     f"cannot call setTotalWithdraw on a channel that is not open. "
+                    f"current_state={detail.state}"
+                )
+                raise RaidenRecoverableError(msg)
+
+            if detail.state < ChannelState.OPENED:
+                msg = (
+                    f"cannot call setTotalWithdraw on a channel that does not exist. "
                     f"current_state={detail.state}"
                 )
                 raise RaidenUnrecoverableError(msg)
