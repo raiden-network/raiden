@@ -20,11 +20,12 @@ from raiden.constants import (
     SECURITY_EXPRESSION,
 )
 from raiden.exceptions import EthNodeCommunicationError
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
 from raiden.utils import gas_reserve, to_rdn
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Callable, List, Tuple
+from raiden.utils.typing import Any, BlockNumber, Callable, List, Optional, Tuple
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)
@@ -133,28 +134,27 @@ def check_network_id(network_id, web3: Web3):  # pragma: no unittest
 class AlarmTask(Runnable):
     """ Task to notify when a block is mined. """
 
-    def __init__(self, chain):
+    def __init__(self, chain: BlockChainService) -> None:
         super().__init__()
 
         self.callbacks: List[Callable] = list()
         self.chain = chain
-        self.chain_id = None
-        self.known_block_number = None
-        self._stop_event = None
+        self.known_block_number: Optional[BlockNumber] = None
+        self._stop_event: Optional[AsyncResult] = None
 
         # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.
         self.sleep_time = 0.5
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.chain.client.address)}>"
 
-    def start(self):
+    def start(self) -> None:
         log.debug("Alarm task started", node=to_checksum_address(self.chain.node_address))
         self._stop_event = AsyncResult()
         super().start()
 
-    def _run(self):  # pylint: disable=method-hidden
+    def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
         self.greenlet.name = (
             f"AlarmTask._run node:{to_checksum_address(self.chain.client.address)}"
         )
@@ -163,11 +163,11 @@ class AlarmTask(Runnable):
         finally:
             self.callbacks = list()
 
-    def is_primed(self):
+    def is_primed(self) -> bool:
         """True if the first_run has been called."""
-        return bool(self.chain_id and self.known_block_number is not None)
+        return self.known_block_number is not None
 
-    def register_callback(self, callback):
+    def register_callback(self, callback) -> None:
         """ Register a new callback.
 
         Note:
@@ -180,12 +180,12 @@ class AlarmTask(Runnable):
 
         self.callbacks.append(callback)
 
-    def remove_callback(self, callback):
+    def remove_callback(self, callback) -> None:
         """Remove callback from the list of callbacks if it exists"""
         if callback in self.callbacks:
             self.callbacks.remove(callback)
 
-    def loop_until_stop(self):
+    def loop_until_stop(self) -> None:
         # The AlarmTask must have completed its first_run() before starting
         # the background greenlet.
         #
@@ -195,7 +195,7 @@ class AlarmTask(Runnable):
         assert self.is_primed(), msg
 
         sleep_time = self.sleep_time
-        while self._stop_event.wait(sleep_time) is not True:
+        while self._stop_event and self._stop_event.wait(sleep_time) is not True:
             try:
                 latest_block = self.chain.get_block(block_identifier="latest")
             except JSONDecodeError as e:
@@ -203,7 +203,7 @@ class AlarmTask(Runnable):
 
             self._maybe_run_callbacks(latest_block)
 
-    def first_run(self, known_block_number):
+    def first_run(self, known_block_number: BlockNumber) -> None:
         """ Blocking call to update the local state, if necessary. """
         assert self.callbacks, "callbacks not set"
         latest_block = self.chain.get_block(block_identifier="latest")
@@ -218,10 +218,9 @@ class AlarmTask(Runnable):
         )
 
         self.known_block_number = known_block_number
-        self.chain_id = self.chain.network_id
         self._maybe_run_callbacks(latest_block)
 
-    def _maybe_run_callbacks(self, latest_block):
+    def _maybe_run_callbacks(self, latest_block) -> None:
         """ Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the
@@ -236,7 +235,7 @@ class AlarmTask(Runnable):
         if missed_blocks < 0:
             log.critical(
                 "Block number decreased",
-                chain_id=self.chain_id,
+                chain_id=self.chain.network_id,
                 known_block_number=self.known_block_number,
                 old_block_number=latest_block["number"],
                 old_gas_limit=latest_block["gasLimit"],
@@ -267,8 +266,9 @@ class AlarmTask(Runnable):
 
             self.known_block_number = latest_block_number
 
-    def stop(self):
-        self._stop_event.set(True)
+    def stop(self) -> Any:
+        if self._stop_event:
+            self._stop_event.set(True)
         log.debug("Alarm task stopped", node=to_checksum_address(self.chain.node_address))
         result = self.join()
         # Callbacks should be cleaned after join
