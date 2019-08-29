@@ -1,3 +1,4 @@
+from dataclasses import replace
 from unittest.mock import Mock, patch
 
 import pytest
@@ -15,15 +16,22 @@ from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_MEDIATION_FLAT_FEE,
+    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+)
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
+from raiden.transfer import views
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
 from raiden.utils import BlockNumber
-from raiden.utils.typing import PaymentAmount, PaymentID, Type
+from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, ProportionalFeeAmount, Type
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
@@ -210,3 +218,82 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     # If all runs well and our first_run_with_check function runs then test passes
     # since that means channels were queriable right after the first run of the
     # alarm task
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> None:
+    """
+    Test that the supplied fee settings are correctly forwarded to all
+    channels during node startup.
+    """
+    app0, app1 = raiden_network
+
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
+    )
+
+    def get_channel_state(app) -> NettingChannelState:
+        chain_state = views.state_from_app(app)
+        token_network_registry_address = app.raiden.default_registry.address
+        token_network_address = views.get_token_network_address_by_token_address(
+            chain_state, token_network_registry_address, token_address
+        )
+        assert token_network_address
+        channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state, token_network_address, app1.raiden.address
+        )
+        assert channel_state
+
+        return channel_state
+
+    # Check that the defaults are used
+    channel_state = get_channel_state(app0)
+    assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
+    assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
+    assert channel_state.fee_schedule.imbalance_penalty is None
+
+    orginal_config = app0.raiden.config.copy()
+
+    # Now restart app0, and set new flat fee for that token network
+    flat_fee = FeeAmount(100)
+    app0.stop()
+    app0.raiden.config = orginal_config.copy()
+    app0.raiden.config["flat_fees"] = {token_network_address: flat_fee}
+    app0.start()
+
+    channel_state = get_channel_state(app0)
+    assert channel_state.fee_schedule.flat == flat_fee
+    assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
+    assert channel_state.fee_schedule.imbalance_penalty is None
+
+    # Now restart app0, and set new proportional fee
+    prop_fee = ProportionalFeeAmount(123)
+    app0.stop()
+    app0.raiden.config = orginal_config.copy()
+    assert isinstance(app0.raiden.config["default_fee_schedule"], FeeScheduleState)
+    # We need to copy the default fee state here, otherwise it will propagate to
+    # the next assertions
+    app0.raiden.config["default_fee_schedule"] = replace(
+        app0.raiden.config["default_fee_schedule"]
+    )
+    app0.raiden.config["default_fee_schedule"].proportional = prop_fee
+    app0.start()
+
+    channel_state = get_channel_state(app0)
+    assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
+    assert channel_state.fee_schedule.proportional == prop_fee
+    assert channel_state.fee_schedule.imbalance_penalty is None
+
+    # Now restart app0, and set new proportional imbalance fee
+    app0.stop()
+    app0.raiden.config = orginal_config.copy()
+    app0.raiden.config["proportional_imbalance_fee"] = 42
+    app0.start()
+
+    channel_state = get_channel_state(app0)
+    assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
+    assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
+    assert channel_state.fee_schedule.imbalance_penalty is not None
