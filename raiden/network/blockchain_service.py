@@ -15,6 +15,7 @@ from raiden.utils.typing import (
     Address,
     BlockHash,
     BlockNumber,
+    BlockSpecification,
     ChainID,
     ChannelID,
     Dict,
@@ -75,7 +76,7 @@ class BlockChainService:
     def block_hash(self) -> BlockHash:
         return self.client.blockhash_from_blocknumber("latest")
 
-    def get_block(self, block_identifier):
+    def get_block(self, block_identifier: BlockSpecification):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
 
     def is_synced(self) -> bool:
@@ -110,13 +111,10 @@ class BlockChainService:
         else:
             interval = last_block_number - oldest
         assert interval > 0
-        last_timestamp = self.get_block_header(last_block_number)["timestamp"]
-        first_timestamp = self.get_block_header(last_block_number - interval)["timestamp"]
+        last_timestamp = self.get_block(last_block_number)["timestamp"]
+        first_timestamp = self.get_block(last_block_number - interval)["timestamp"]
         delta = last_timestamp - first_timestamp
         return delta / interval
-
-    def get_block_header(self, block_number: int):
-        return self.client.web3.eth.getBlock(block_number, False)
 
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1
