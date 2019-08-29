@@ -14,6 +14,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
     ContractSendSecretReveal,
     SendWithdrawRequest,
 )
@@ -1102,6 +1103,15 @@ def is_transaction_invalidated(transaction: ContractSendEvent, state_change: Sta
         and state_change.channel_identifier == transaction.channel_identifier
     )
     if is_our_failed_update_transfer:
+        return True
+
+    is_our_failed_withdraw = (
+        isinstance(state_change, ContractReceiveChannelClosed)
+        and isinstance(transaction, ContractSendChannelWithdraw)
+        and state_change.token_network_address == transaction.token_network_address
+        and state_change.channel_identifier == transaction.channel_identifier
+    )
+    if is_our_failed_withdraw:
         return True
 
     return False
