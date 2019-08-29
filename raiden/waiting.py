@@ -464,7 +464,7 @@ def wait_for_withdraw_complete(
     total_withdraw: WithdrawAmount,
     retry_timeout: float,
 ) -> None:
-    """Wait until a transfer with a specific identifier and amount
+    """Wait until a withdraw with a specific identifier and amount
     is seen in the WAL.
 
     Note:
