@@ -2,7 +2,6 @@ from hashlib import sha256
 from typing import List
 from unittest.mock import patch
 
-import gevent
 import pytest
 
 from raiden.app import App
@@ -21,6 +20,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
+    block_timeout_for_transfer_by_secrethash,
     transfer,
     transfer_and_assert_path,
     wait_assert,
@@ -62,7 +62,7 @@ def run_test_mediated_transfer(
     )
 
     amount = 10
-    transfer(
+    secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
         token_address=token_address,
@@ -71,7 +71,7 @@ def run_test_mediated_transfer(
         timeout=network_wait * number_of_nodes,
     )
 
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -82,7 +82,7 @@ def run_test_mediated_transfer(
             deposit + amount,
             [],
         )
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -195,7 +195,7 @@ def run_test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
-    transfer_and_assert_path(
+    secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
         amount=deposit,
@@ -212,7 +212,7 @@ def run_test_mediated_transfer_with_entire_deposit(
         timeout=network_wait * number_of_nodes,
     )
 
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -223,7 +223,7 @@ def run_test_mediated_transfer_with_entire_deposit(
             0,
             [],
         )
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -309,7 +309,7 @@ def run_test_mediated_transfer_messages_out_of_order(
     )
 
     transfer_received.payment_done.wait()
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -321,7 +321,7 @@ def run_test_mediated_transfer_messages_out_of_order(
             [],
         )
 
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,

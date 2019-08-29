@@ -1,6 +1,5 @@
 import random
 
-import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
@@ -17,6 +16,7 @@ from raiden.tests.utils.factories import (
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
+    block_timeout_for_transfer_by_secrethash,
     get_channelstate,
     sign_and_inject,
     transfer,
@@ -118,7 +118,7 @@ def run_test_receive_lockedtransfer_invalidnonce(
     channel0 = get_channelstate(app0, app1, token_network_address)
 
     amount = 10
-    transfer(
+    secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
         token_address=token_address,
@@ -155,7 +155,7 @@ def run_test_receive_lockedtransfer_invalidnonce(
 
     sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
 
-    with gevent.Timeout(network_wait):
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
