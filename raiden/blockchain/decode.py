@@ -56,6 +56,7 @@ from raiden.utils.typing import (
     FeeAmount,
     List,
     Optional,
+    RelativeFeeAmount,
     SecretRegistryAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
@@ -326,11 +327,12 @@ def contractreceivechannelbatchunlock_from_event(
 def actionchannelupdatefee_from_channelstate(
     channel_state: NettingChannelState,
     flat_fee: FeeAmount,
-    proportional_fee: int,
-    max_imbalance_fee: FeeAmount,
+    proportional_fee: RelativeFeeAmount,
+    proportional_imbalance_fee: RelativeFeeAmount,
 ) -> ActionChannelUpdateFee:
     imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=get_capacity(channel_state), max_imbalance_fee=max_imbalance_fee
+        channel_capacity=get_capacity(channel_state),
+        proportional_imbalance_fee=proportional_imbalance_fee,
     )
 
     return ActionChannelUpdateFee(
@@ -394,7 +396,7 @@ def blockchainevent_to_statechange(
                 channel_state=channel_state,
                 flat_fee=channel_state.fee_schedule.flat,
                 proportional_fee=channel_state.fee_schedule.proportional,
-                max_imbalance_fee=raiden.config["max_imbalance_fee"],
+                proportional_imbalance_fee=raiden.config["proportional_imbalance_fee"],
             )
             state_changes.append(update_fee)
 
@@ -410,7 +412,7 @@ def blockchainevent_to_statechange(
                 channel_state=channel_state,
                 flat_fee=channel_state.fee_schedule.flat,
                 proportional_fee=channel_state.fee_schedule.proportional,
-                max_imbalance_fee=raiden.config["max_imbalance_fee"],
+                proportional_imbalance_fee=raiden.config["proportional_imbalance_fee"],
             )
             state_changes.append(update_fee)
 

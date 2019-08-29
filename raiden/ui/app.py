@@ -56,6 +56,7 @@ from raiden.utils.typing import (
     Optional,
     Port,
     PrivateKey,
+    RelativeFeeAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
@@ -155,8 +156,8 @@ def run_app(
     routing_mode: RoutingMode,
     config: Dict[str, Any],
     flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
-    proportional_fee: int,
-    max_imbalance_fee: FeeAmount,
+    proportional_fee: RelativeFeeAmount,
+    proportional_imbalance_fee: RelativeFeeAmount,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -201,7 +202,7 @@ def run_app(
     config["default_fee_schedule"] = FeeScheduleState(
         flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=proportional_fee
     )
-    config["max_imbalance_fee"] = max_imbalance_fee
+    config["proportional_imbalance_fee"] = proportional_imbalance_fee
 
     setup_environment(config, environment_type)
 
