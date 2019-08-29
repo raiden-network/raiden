@@ -1005,14 +1005,14 @@ class RaidenService(Runnable):
                     channel=channel.canonical_identifier,
                     flat_fee=flat_fee,
                     proportional_fee=proportional_fee,
-                    max_imbalance_fee=self.config["max_imbalance_fee"],
+                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
                 )
 
                 state_change = actionchannelupdatefee_from_channelstate(
                     channel_state=channel,
                     flat_fee=flat_fee,
                     proportional_fee=proportional_fee,
-                    max_imbalance_fee=self.config["max_imbalance_fee"],
+                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
                 )
                 self.handle_and_track_state_changes([state_change])
 

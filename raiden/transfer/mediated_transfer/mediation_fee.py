@@ -4,7 +4,7 @@ from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
-from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, TokenAmount
+from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, RelativeFeeAmount, TokenAmount
 
 NUM_DISCRETISATION_POINTS = 21
 
@@ -39,7 +39,7 @@ T = TypeVar("T", bound="FeeScheduleState")
 class FeeScheduleState(State):
     # pylint: disable=not-an-iterable
     flat: FeeAmount = FeeAmount(0)
-    proportional: int = 0  # as micros, e.g. 1% = 0.01e6
+    proportional: RelativeFeeAmount = RelativeFeeAmount(0)  # as micros, e.g. 1% = 0.01e6
     imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None
     _penalty_func: Optional[Interpolate] = field(init=False, repr=False, default=None)
 
@@ -93,17 +93,23 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
 
 
 def calculate_imbalance_fees(
-    channel_capacity: TokenAmount, max_imbalance_fee: FeeAmount
+    channel_capacity: TokenAmount, proportional_imbalance_fee: RelativeFeeAmount
 ) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
     """ Calculates a quadratic rebalancing curve.
 
-    The penalty term takes the value `max_imbalance_fee` at the extrema.
+    The penalty term takes the following value at the extrema:
+        (channel_capacity / 2) * (proportional_imbalance_fee / int(1e6)
     """
-    if max_imbalance_fee == 0:
+    if proportional_imbalance_fee == 0:
         return None
 
     if channel_capacity == 0:
         return None
+
+    # calculate the maximum imbalance fee for the channel. As the imbalance penalty
+    # function is currently a quadratic function centered around the channel of both deposits,
+    # we have to divide by 2 here.
+    max_imbalance_fee = int(channel_capacity * proportional_imbalance_fee / int(1e6) / 2)
 
     def f(balance: TokenAmount) -> FeeAmount:
         constant = max_imbalance_fee / (channel_capacity / 2) ** 2

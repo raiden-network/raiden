@@ -23,8 +23,8 @@ from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
-    DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
+    DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
@@ -45,7 +45,6 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
-from raiden.utils.typing import FeeAmount
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -412,14 +411,17 @@ def options(func):
                 "--proportional-fee",
                 help="Mediation fee as ratio of mediated amount in parts-per-million (10^-6).",
                 default=DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-                type=int,
+                type=click.IntRange(min=0),
                 show_default=True,
             ),
             option(
-                "--max-imbalance-fee",
-                help="Set the worst-case imbalance fee in wei of the mediated token. (Preview)",
-                default=DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
-                type=FeeAmount,
+                "--proportional-imbalance-fee",
+                help=(
+                    "Set the worst-case imbalance fee relative to the channels capacity "
+                    "in parts-per-million (10^-6)."
+                ),
+                default=DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
+                type=click.IntRange(min=0),
                 show_default=True,
             ),
         ),

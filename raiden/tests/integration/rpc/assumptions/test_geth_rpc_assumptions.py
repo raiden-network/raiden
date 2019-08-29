@@ -1,7 +1,6 @@
 import gevent
 import pytest
 
-
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
 
