@@ -74,6 +74,14 @@ class ContractSendChannelWithdraw(ContractSendEvent):
     expiration: BlockExpiration
     partner_signature: Signature
 
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
 
 @dataclass(frozen=True)
 class ContractSendChannelClose(ContractSendEvent):
