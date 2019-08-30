@@ -27,7 +27,7 @@ from raiden.exceptions import InvalidSignature, SerializationError, TransportErr
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
-from raiden.storage.serialization import JSONSerializer
+from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -615,7 +615,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
         if not line:
             continue
         try:
-            message = JSONSerializer.deserialize(line)
+            message = MessageSerializer.deserialize(line)
         except SerializationError as ex:
             log.warning(
                 "Not a valid Message",
