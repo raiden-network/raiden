@@ -11,6 +11,7 @@ settings:
       token:
         deposit: true
         balance_per_node: 20000
+        min_balance: 20000
 
 token:
 
