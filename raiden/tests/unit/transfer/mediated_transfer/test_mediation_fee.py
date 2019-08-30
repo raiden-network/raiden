@@ -119,5 +119,23 @@ def test_rebalancing_fee_calculation():
     assert all(0 <= y <= 1 for _, y in sample)
     assert max(y for _, y in sample) == 1  # 100% of the 1 TokenAmount capacity
 
+    # test rounding of the max_balance_fee calculation
+    sample = calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(549_000))  # 54.9%
+    assert sample is not None
+    assert len(sample) == 11
+    assert all(0 <= x <= 10 for x, _ in sample)
+    assert max(x for x, _ in sample) == 10
+    assert all(0 <= y <= 5 for _, y in sample)
+    assert max(y for _, y in sample) == 5  # 5.49 is rounded to 5
+
+    sample = calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(550_000))  # 55%
+    assert sample is not None
+    assert len(sample) == 11
+    assert all(0 <= x <= 10 for x, _ in sample)
+    assert max(x for x, _ in sample) == 10
+    assert all(0 <= y <= 6 for _, y in sample)
+    assert max(y for _, y in sample) == 6  # 5.5 is rounded to 6
+
+    # test cases where no imbalance fee is created
     assert calculate_imbalance_fees(TokenAmount(0), ProportionalFeeAmount(1)) is None
     assert calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(0)) is None

@@ -1,6 +1,5 @@
 from bisect import bisect_right
 from dataclasses import dataclass, field, replace
-from math import floor
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
@@ -117,7 +116,7 @@ def calculate_imbalance_fees(
         return None
 
     # calculate the maximum imbalance fee for the channel
-    max_imbalance_fee = floor(channel_capacity * proportional_imbalance_fee / int(1e6))
+    max_imbalance_fee = round(channel_capacity * proportional_imbalance_fee / int(1e6))
 
     def f(balance: TokenAmount) -> FeeAmount:
         constant = max_imbalance_fee / (channel_capacity / 2) ** 2
