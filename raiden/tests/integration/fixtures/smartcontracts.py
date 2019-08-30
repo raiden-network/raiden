@@ -14,7 +14,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, MONITORING_REWARD
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
     deploy_token,
@@ -50,7 +50,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
 ) -> typing.List[typing.TokenAddress]:
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
-    potentially pre-registered with the raiden Registry.
+    potentially pre-registered with the Raiden Registry.
     The following arguments can control the behavior:
 
     Args:
@@ -144,7 +144,9 @@ def deploy_user_deposit_and_return_address(
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
         user_deposit.deposit(
-            beneficiary=transfer_to, total_deposit=100, given_block_identifier="latest"
+            beneficiary=transfer_to,
+            total_deposit=MONITORING_REWARD,
+            given_block_identifier="latest",
         )
 
     return user_deposit_address
@@ -255,7 +257,7 @@ def deploy_token_and_return_proxy(deploy_client, contract_manager, token_contrac
     token_contract = deploy_token(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        initial_amount=10000,
+        initial_amount=1000 * 10 ** 18,
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
