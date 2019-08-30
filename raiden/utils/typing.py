@@ -104,9 +104,9 @@ T_FeeAmount = int
 FeeAmount = NewType("FeeAmount", T_FeeAmount)
 
 # A proportional fee, unit is parts-per-million
-# So 1_000_000 means 100%
-T_RelativeFeeAmount = int
-RelativeFeeAmount = NewType("RelativeFeeAmount", T_RelativeFeeAmount)
+# 1_000_000 means 100%, 25_000 is 2.5%
+T_ProportionalFeeAmount = int
+ProportionalFeeAmount = NewType("ProportionalFeeAmount", T_ProportionalFeeAmount)
 
 T_LockedAmount = int
 LockedAmount = NewType("LockedAmount", T_LockedAmount)
