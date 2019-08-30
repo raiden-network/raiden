@@ -9,6 +9,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import Environment
 from raiden.exceptions import (
+    ChannelNotOpenError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -30,6 +31,7 @@ RECOVERABLE_ERRORS = (
     InsufficientFunds,
     RaidenRecoverableError,
     TransactionThrew,
+    ChannelNotOpenError,
 )
 
 
