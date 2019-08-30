@@ -1,5 +1,6 @@
 from bisect import bisect_right
 from dataclasses import dataclass, field, replace
+from math import floor
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
@@ -98,18 +99,19 @@ def calculate_imbalance_fees(
     """ Calculates a quadratic rebalancing curve.
 
     The penalty term takes the following value at the extrema:
-        (channel_capacity / 2) * (proportional_imbalance_fee / int(1e6)
+        channel_capacity * (proportional_imbalance_fee / 1_000_000)
     """
+    assert channel_capacity >= 0
+    assert proportional_imbalance_fee >= 0
+
     if proportional_imbalance_fee == 0:
         return None
 
     if channel_capacity == 0:
         return None
 
-    # calculate the maximum imbalance fee for the channel. As the imbalance penalty
-    # function is currently a quadratic function centered around the channel of both deposits,
-    # we have to divide by 2 here.
-    max_imbalance_fee = int(channel_capacity * proportional_imbalance_fee / int(1e6) / 2)
+    # calculate the maximum imbalance fee for the channel
+    max_imbalance_fee = floor(channel_capacity * proportional_imbalance_fee / int(1e6))
 
     def f(balance: TokenAmount) -> FeeAmount:
         constant = max_imbalance_fee / (channel_capacity / 2) ** 2
