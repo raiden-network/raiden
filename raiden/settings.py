@@ -2,7 +2,7 @@ from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
 from raiden.constants import Environment
-from raiden.utils.typing import FeeAmount, NetworkTimeout, RelativeFeeAmount, TokenAmount
+from raiden.utils.typing import FeeAmount, NetworkTimeout, ProportionalFeeAmount, TokenAmount
 
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
@@ -44,8 +44,8 @@ DEFAULT_PATHFINDING_MAX_FEE = 1000
 DEFAULT_PATHFINDING_IOU_TIMEOUT = 50000  # now the pfs has 200h to cash in
 
 DEFAULT_MEDIATION_FLAT_FEE = FeeAmount(0)
-DEFAULT_MEDIATION_PROPORTIONAL_FEE = RelativeFeeAmount(0)
-DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE = RelativeFeeAmount(0)
+DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(0)
+DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE = ProportionalFeeAmount(0)
 
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"

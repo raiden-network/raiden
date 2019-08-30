@@ -56,7 +56,7 @@ from raiden.utils.typing import (
     Optional,
     Port,
     PrivateKey,
-    RelativeFeeAmount,
+    ProportionalFeeAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
@@ -156,8 +156,8 @@ def run_app(
     routing_mode: RoutingMode,
     config: Dict[str, Any],
     flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
-    proportional_fee: RelativeFeeAmount,
-    proportional_imbalance_fee: RelativeFeeAmount,
+    proportional_fee: ProportionalFeeAmount,
+    proportional_imbalance_fee: ProportionalFeeAmount,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument

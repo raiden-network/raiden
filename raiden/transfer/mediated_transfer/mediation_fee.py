@@ -5,7 +5,13 @@ from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
-from raiden.utils.typing import Balance, FeeAmount, PaymentAmount, RelativeFeeAmount, TokenAmount
+from raiden.utils.typing import (
+    Balance,
+    FeeAmount,
+    PaymentAmount,
+    ProportionalFeeAmount,
+    TokenAmount,
+)
 
 NUM_DISCRETISATION_POINTS = 21
 
@@ -40,7 +46,7 @@ T = TypeVar("T", bound="FeeScheduleState")
 class FeeScheduleState(State):
     # pylint: disable=not-an-iterable
     flat: FeeAmount = FeeAmount(0)
-    proportional: RelativeFeeAmount = RelativeFeeAmount(0)  # as micros, e.g. 1% = 0.01e6
+    proportional: ProportionalFeeAmount = ProportionalFeeAmount(0)  # as micros, e.g. 1% = 0.01e6
     imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None
     _penalty_func: Optional[Interpolate] = field(init=False, repr=False, default=None)
 
@@ -94,7 +100,7 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
 
 
 def calculate_imbalance_fees(
-    channel_capacity: TokenAmount, proportional_imbalance_fee: RelativeFeeAmount
+    channel_capacity: TokenAmount, proportional_imbalance_fee: ProportionalFeeAmount
 ) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
     """ Calculates a quadratic rebalancing curve.
 

@@ -56,7 +56,7 @@ from raiden.utils.typing import (
     FeeAmount,
     List,
     Optional,
-    RelativeFeeAmount,
+    ProportionalFeeAmount,
     SecretRegistryAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
@@ -327,8 +327,8 @@ def contractreceivechannelbatchunlock_from_event(
 def actionchannelupdatefee_from_channelstate(
     channel_state: NettingChannelState,
     flat_fee: FeeAmount,
-    proportional_fee: RelativeFeeAmount,
-    proportional_imbalance_fee: RelativeFeeAmount,
+    proportional_fee: ProportionalFeeAmount,
+    proportional_imbalance_fee: ProportionalFeeAmount,
 ) -> ActionChannelUpdateFee:
     imbalance_penalty = calculate_imbalance_fees(
         channel_capacity=get_capacity(channel_state),
