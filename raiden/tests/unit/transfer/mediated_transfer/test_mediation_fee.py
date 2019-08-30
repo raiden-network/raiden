@@ -82,23 +82,24 @@ def test_rebalancing_fee_calculation():
     assert len(sample) == NUM_DISCRETISATION_POINTS
     assert all(0 <= x <= 200 for x, _ in sample)
     assert max(x for x, _ in sample) == 200
-    assert all(0 <= y <= 50 for _, y in sample)
-    assert max(y for _, y in sample) == 50  # 50% of the 100 TA per channel side
+    assert all(0 <= y <= 100 for _, y in sample)
+    assert max(y for _, y in sample) == 100  # 50% of the 200 TA capacity
 
     sample = calculate_imbalance_fees(TA(10), RFA(200_000))  # 20%
     assert sample is not None
     assert len(sample) == 11
     assert all(0 <= x <= 10 for x, _ in sample)
     assert max(x for x, _ in sample) == 10
-    assert all(0 <= y <= 1 for _, y in sample)
-    assert max(y for _, y in sample) == 1  # 20% of the 5 TA per channel side
+    assert all(0 <= y <= 2 for _, y in sample)
+    assert max(y for _, y in sample) == 2  # 20% of the 10 TA capacity
 
     sample = calculate_imbalance_fees(TA(1), RFA(1_000_000))  # 100%
     assert sample is not None
     assert len(sample) == 2
     assert all(0 <= x <= 1 for x, _ in sample)
     assert max(x for x, _ in sample) == 1
-    assert all(y == 0 for _, y in sample)
+    assert all(0 <= y <= 1 for _, y in sample)
+    assert max(y for _, y in sample) == 1  # 100% of the 1 TA capacity
 
-    assert calculate_imbalance_fees(TA(0), RFA(1_000_000)) is None
+    assert calculate_imbalance_fees(TA(0), RFA(1)) is None
     assert calculate_imbalance_fees(TA(10), RFA(0)) is None

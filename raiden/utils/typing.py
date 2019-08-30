@@ -103,6 +103,8 @@ PublicKey = NewType("PublicKey", T_PublicKey)
 T_FeeAmount = int
 FeeAmount = NewType("FeeAmount", T_FeeAmount)
 
+# A proportional fee, unit is parts-per-million
+# So 1_000_000 means 100%
 T_RelativeFeeAmount = int
 RelativeFeeAmount = NewType("RelativeFeeAmount", T_RelativeFeeAmount)
 
