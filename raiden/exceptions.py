@@ -189,8 +189,8 @@ class DuplicatedChannelError(RaidenRecoverableError):
     """Raised if someone tries to create a channel that already exists."""
 
 
-class ChannelNotOpenError(RaidenRecoverableError):
-    """Raised if someone tries to work on a channel that is no longer in an open state."""
+class UnexpectedChannelState(RaidenRecoverableError):
+    """Raised if an operation is attempted on a channel while it is in an unexpected state."""
 
 
 class ContractCodeMismatch(RaidenError):
