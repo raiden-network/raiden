@@ -411,7 +411,7 @@ def options(func):
                 "--proportional-fee",
                 help="Mediation fee as ratio of mediated amount in parts-per-million (10^-6).",
                 default=DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-                type=click.IntRange(min=0),
+                type=click.IntRange(min=0, max=10 ** 6),
                 show_default=True,
             ),
             option(
@@ -421,7 +421,7 @@ def options(func):
                     "in parts-per-million (10^-6)."
                 ),
                 default=DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
-                type=click.IntRange(min=0),
+                type=click.IntRange(min=0, max=10 ** 6),
                 show_default=True,
             ),
         ),
