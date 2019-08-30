@@ -27,8 +27,8 @@ from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_MEDIATION_FLAT_FEE,
-    DEFAULT_MEDIATION_MAX_IMBALANCE_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
+    DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -272,7 +272,7 @@ def run_app(
         == FeeScheduleState(
             flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=DEFAULT_MEDIATION_PROPORTIONAL_FEE
         )
-        and config["max_imbalance_fee"] == DEFAULT_MEDIATION_MAX_IMBALANCE_FEE
+        and config["proportional_imbalance_fee"] == DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
     )
     if has_default_fees:
         click.secho(
