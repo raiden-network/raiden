@@ -94,7 +94,6 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
 ):
     app0, app1 = raiden_network
     app0.config["services"]["monitoring_enabled"] = True
-
     # Send a transfer to make sure the state has a balance proof
     # to publish to the global matrix rooms
     token_address = token_addresses[0]
