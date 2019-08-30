@@ -17,6 +17,31 @@ from raiden.exceptions import SerializationError
 from raiden.storage.serialization.types import SchemaCache
 from raiden.utils.typing import Any, Dict
 
+MESSAGE_NAME_TO_QUALIFIED_NAME = {
+    "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
+    "SignedMessage": "raiden.messages.abstract.SignedMessage",
+    "SignedRetrieableMessage": "raiden.messages.abstract.SignedRetrieableMessage",
+    "Ping": "raiden.messages.healthcheck.Ping",
+    "Pong": "raiden.messages.healthcheck.Pong",
+    "ToDevice": "raiden.messages.matrix.ToDevice",
+    "RequestMonitoring": "raiden.messages.monitoring_service.RequestMonitoring",
+    "PFSCapacityUpdate": "raiden.messages.path_finding_service.PFSCapacityUpdate",
+    "PFSFeeUpdate": "raiden.messages.path_finding_service.PFSFeeUpdate",
+    "Delivered": "raiden.messages.synchronization.Delivered",
+    "EnvelopeMessage": "raiden.messages.transfers.EnvelopeMessage",
+    "SecretRequest": "raiden.messages.transfers.SecretRequest",
+    "RevealSecret": "raiden.messages.transfers.RevealSecret",
+    "Processed": "raiden.messages.synchronization.Processed",
+    "WithdrawRequest": "raiden.messages.withdraw.WithdrawRequest",
+    "WithdrawConfirmation": "raiden.messages.withdraw.WithdrawConfirmation",
+    "WithdrawExpired": "raiden.messages.withdraw.WithdrawExpired",
+    "Unlock": "raiden.messages.transfers.Unlock",
+    "LockedTransferBase": "raiden.messages.transfers.LockedTransferBase",
+    "LockExpired": "raiden.messages.transfers.LockExpired",
+    "LockedTransfer": "raiden.messages.transfers.LockedTransfer",
+    "RefundTransfer": "raiden.messages.transfers.RefundTransfer",
+}
+
 
 def _import_type(type_name: str) -> type:
     module_name, _, klass_name = type_name.rpartition(".")
@@ -48,7 +73,7 @@ class DictSerializer(SerializationBase):
     # Dataclass]`, however, there is no base class available from the
     # dataclasses module that allows for such type annotation.
     @staticmethod
-    def serialize(obj: Any) -> Dict:
+    def serialize(obj: Any, include_module: bool = True) -> Dict:
         # Default, in case this is not a dataclass
         data = obj
         if is_dataclass(obj):
@@ -59,6 +84,12 @@ class DictSerializer(SerializationBase):
                 raise SerializationError(f"Can't serialize: {data}") from ex
         elif not isinstance(obj, Mapping):
             raise SerializationError(f"Can only serialize dataclasses or dict-like objects: {obj}")
+
+        if not include_module:
+            # Only use 'Message' instead of `raiden.messages.Message` as _type.
+            # Used for Raiden protocol messages.
+            data["_type"] = data["_type"].split(".")[-1]
+
         return data
 
     @staticmethod
@@ -71,6 +102,14 @@ class DictSerializer(SerializationBase):
         if not isinstance(data, Mapping):
             raise SerializationError(f"Can't deserialize non dict-like objects: {data}")
         if "_type" in data:
+            if "." not in data["_type"]:
+                # When serializing Messages for external communication, we
+                # strip the module part of the name to not leak implementation
+                # details. We need to reconstruct them when loading a message.
+                try:
+                    data["_type"] = MESSAGE_NAME_TO_QUALIFIED_NAME[data["_type"]]
+                except KeyError as ex:
+                    raise SerializationError(f"Unknown type: {data['_type']}") from ex
             try:
                 klass = _import_type(data["_type"])
                 schema = SchemaCache.get_or_create_schema(klass)
@@ -82,8 +121,8 @@ class DictSerializer(SerializationBase):
 
 class JSONSerializer(SerializationBase):
     @staticmethod
-    def serialize(obj: Any) -> str:
-        data = DictSerializer.serialize(obj)
+    def serialize(obj: Any, include_module: bool = True) -> str:
+        data = DictSerializer.serialize(obj, include_module=include_module)
         return json.dumps(data)
 
     @staticmethod
