@@ -3,9 +3,9 @@ from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
-    ChannelNotOpenError,
     DepositMismatch,
     TokenNotRegistered,
+    UnexpectedChannelState,
     UnknownTokenAddress,
 )
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -210,7 +210,7 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
     )
     assert channel.get_status(channel12) == ChannelState.STATE_CLOSED
 
-    with pytest.raises(ChannelNotOpenError):
+    with pytest.raises(UnexpectedChannelState):
         api1.set_total_channel_deposit(
             registry_address, token_address, api2.address, deposit + 100
         )
