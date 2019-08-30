@@ -2,7 +2,12 @@ import pytest
 from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
-from raiden.exceptions import DepositMismatch, TokenNotRegistered, UnknownTokenAddress
+from raiden.exceptions import (
+    ChannelNotOpenError,
+    DepositMismatch,
+    TokenNotRegistered,
+    UnknownTokenAddress,
+)
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.transfer import get_channelstate
@@ -204,6 +209,11 @@ def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposi
         },
     )
     assert channel.get_status(channel12) == ChannelState.STATE_CLOSED
+
+    with pytest.raises(ChannelNotOpenError):
+        api1.set_total_channel_deposit(
+            registry_address, token_address, api2.address, deposit + 100
+        )
 
     assert wait_for_state_change(
         node1.raiden,
