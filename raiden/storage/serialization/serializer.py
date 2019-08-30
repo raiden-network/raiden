@@ -14,33 +14,8 @@ from typing import Mapping
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.types import SchemaCache
+from raiden.storage.serialization.types import MESSAGE_NAME_TO_QUALIFIED_NAME, SchemaCache
 from raiden.utils.typing import Any, Dict
-
-MESSAGE_NAME_TO_QUALIFIED_NAME = {
-    "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
-    "SignedMessage": "raiden.messages.abstract.SignedMessage",
-    "SignedRetrieableMessage": "raiden.messages.abstract.SignedRetrieableMessage",
-    "Ping": "raiden.messages.healthcheck.Ping",
-    "Pong": "raiden.messages.healthcheck.Pong",
-    "ToDevice": "raiden.messages.matrix.ToDevice",
-    "RequestMonitoring": "raiden.messages.monitoring_service.RequestMonitoring",
-    "PFSCapacityUpdate": "raiden.messages.path_finding_service.PFSCapacityUpdate",
-    "PFSFeeUpdate": "raiden.messages.path_finding_service.PFSFeeUpdate",
-    "Delivered": "raiden.messages.synchronization.Delivered",
-    "EnvelopeMessage": "raiden.messages.transfers.EnvelopeMessage",
-    "SecretRequest": "raiden.messages.transfers.SecretRequest",
-    "RevealSecret": "raiden.messages.transfers.RevealSecret",
-    "Processed": "raiden.messages.synchronization.Processed",
-    "WithdrawRequest": "raiden.messages.withdraw.WithdrawRequest",
-    "WithdrawConfirmation": "raiden.messages.withdraw.WithdrawConfirmation",
-    "WithdrawExpired": "raiden.messages.withdraw.WithdrawExpired",
-    "Unlock": "raiden.messages.transfers.Unlock",
-    "LockedTransferBase": "raiden.messages.transfers.LockedTransferBase",
-    "LockExpired": "raiden.messages.transfers.LockExpired",
-    "LockedTransfer": "raiden.messages.transfers.LockedTransfer",
-    "RefundTransfer": "raiden.messages.transfers.RefundTransfer",
-}
 
 
 def _import_type(type_name: str) -> type:
