@@ -59,6 +59,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
     APIServerPortInUseError,
+    ChannelNotOpenError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -646,7 +647,7 @@ class RestAPI:  # pragma: no unittest
                 return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
             except (NonexistingChannel, UnknownTokenAddress) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
-            except (DepositOverLimit, DepositMismatch) as e:
+            except (DepositOverLimit, DepositMismatch, ChannelNotOpenError) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         channel_state = views.get_channelstate_for(
@@ -1091,6 +1092,8 @@ class RestAPI:  # pragma: no unittest
         except DepositMismatch as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except TokenNetworkDeprecated as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except ChannelNotOpenError as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(

@@ -8,6 +8,7 @@ from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    ChannelNotOpenError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -571,6 +572,7 @@ class RaidenAPI:  # pragma: no unittest
             AddressWithoutCode: The channel was settled during the deposit
                 execution.
             DepositOverLimit: The total deposit amount is higher than the limit.
+            ChannelNotOpenError: The channel is no longer in an open state.
         """
         chain_state = views.state_from_raiden(self.raiden)
 
@@ -642,8 +644,7 @@ class RaidenAPI:  # pragma: no unittest
         is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
         if not is_channel_open:
-            msg = "Channel is not in an open state."
-            raise ValueError(msg)
+            raise ChannelNotOpenError("Channel is not in an open state.")
 
         if safety_deprecation_switch:
             msg = (
