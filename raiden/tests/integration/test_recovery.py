@@ -249,14 +249,14 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
     execute the pending withdraw transaction and fails because the channel was closed.
     Expected behaviour: Channel closed state change should cancel a withdraw transaction.
-    Actual behaviour: The channel closure isn't detected on recovery and
+    Buggy behaviour: The channel closure isn't detected on recovery and
     the on-chain transaction fails.
     """
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
     # Prevent the withdraw transaction from being sent on-chain. This
-    # Will keep the transaction in the pending list
+    # will keep the transaction in the pending list
     send_channel_withdraw_event = app0.raiden.raiden_event_handler.hold(
         ContractSendChannelWithdraw, {}
     )
