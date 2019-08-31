@@ -3,7 +3,12 @@ import random
 
 from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
 
-from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
+from raiden.constants import (
+    ABSENT_BLOCKTIMEOUT,
+    LOCKSROOT_OF_NO_LOCKS,
+    MAXIMUM_PENDING_TRANSFERS,
+    UINT256_MAX,
+)
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.events import (
@@ -122,7 +127,9 @@ class UnlockGain(NamedTuple):
 
 
 def get_safe_initial_expiration(
-    block_number: BlockNumber, reveal_timeout: BlockTimeout
+    block_number: BlockNumber,
+    reveal_timeout: BlockTimeout,
+    lock_timeout: BlockTimeout = ABSENT_BLOCKTIMEOUT,
 ) -> BlockExpiration:
     """ Returns the upper bound block expiration number used by the initiator
     of a transfer or a withdraw.
@@ -136,6 +143,9 @@ def get_safe_initial_expiration(
     reveal_timeout`, otherwise for off-chain transfers Raiden would be slower
     than blockchain.
     """
+    if lock_timeout:
+        return BlockExpiration(block_number + lock_timeout)
+
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
@@ -190,18 +200,18 @@ def is_channel_usable_for_mediation(
     secret on-chain.
     """
 
-    channel_usable = is_channel_usable_for_new_transfer(channel_state, transfer_amount)
-    lock_timeout_valid = (
-        lock_timeout > 0
-        and channel_state.settle_timeout >= lock_timeout
-        and channel_state.reveal_timeout < lock_timeout
+    channel_usable = is_channel_usable_for_new_transfer(
+        channel_state, transfer_amount, lock_timeout
     )
+    lock_timeout_valid = lock_timeout > 0
 
     return channel_usable and lock_timeout_valid
 
 
 def is_channel_usable_for_new_transfer(
-    channel_state: NettingChannelState, transfer_amount: PaymentWithFeeAmount
+    channel_state: NettingChannelState,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: BlockTimeout,
 ) -> bool:
     """True if the channel be used to start a new transfer.
 
@@ -217,12 +227,17 @@ def is_channel_usable_for_new_transfer(
     """
     pending_transfers = get_number_of_pending_transfers(channel_state.our_state)
     distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
+    lock_timeout_valid = lock_timeout == ABSENT_BLOCKTIMEOUT or (
+        channel_state.settle_timeout >= lock_timeout
+        and channel_state.reveal_timeout < lock_timeout
+    )
 
     channel_usable = (
         get_status(channel_state) == ChannelState.STATE_OPENED
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
+        and lock_timeout_valid
     )
     return channel_usable
 
@@ -1598,7 +1613,9 @@ def send_withdraw_request(
 
     nonce = get_next_nonce(channel_state.our_state)
     expiration = get_safe_initial_expiration(
-        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+        block_number=block_number,
+        reveal_timeout=channel_state.reveal_timeout,
+        lock_timeout=ABSENT_BLOCKTIMEOUT,
     )
     withdraw_state = PendingWithdrawState(
         total_withdraw=total_withdraw, nonce=nonce, expiration=expiration

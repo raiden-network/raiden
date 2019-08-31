@@ -9,6 +9,7 @@ from raiden.utils.typing import (
     BalanceHash,
     BlockHash,
     BlockNumber,
+    BlockTimeout,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -57,6 +58,7 @@ LOCKSROOT_OF_NO_LOCKS = Locksroot(keccak(b""))
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")
+ABSENT_BLOCKTIMEOUT = BlockTimeout(0)
 
 SECRET_LENGTH = 32
 SECRETHASH_LENGTH = 32

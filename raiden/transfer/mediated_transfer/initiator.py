@@ -204,7 +204,9 @@ def try_new_route(
         assert isinstance(candidate_channel_state, NettingChannelState)
 
         is_channel_usable = channel.is_channel_usable_for_new_transfer(
-            channel_state=candidate_channel_state, transfer_amount=amount_with_fee
+            channel_state=candidate_channel_state,
+            transfer_amount=amount_with_fee,
+            lock_timeout=transfer_description.locktimeout,
         )
         if is_channel_usable:
             channel_state = candidate_channel_state
@@ -265,7 +267,7 @@ def send_lockedtransfer(
     assert channel_state.token_network_address == transfer_description.token_network_address
 
     lock_expiration = channel.get_safe_initial_expiration(
-        block_number, channel_state.reveal_timeout
+        block_number, channel_state.reveal_timeout, transfer_description.locktimeout
     )
 
     # The payment amount and the fee amount must be included in the locked
