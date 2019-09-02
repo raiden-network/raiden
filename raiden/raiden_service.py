@@ -52,7 +52,7 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MEDIATION_FEE, MEDIATION_FEE_CONFIG_KEY, MediationFeeConfig
+from raiden.settings import MEDIATION_FEE, MediationFeeConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
@@ -980,7 +980,7 @@ class RaidenService(Runnable):
         This includes a recalculation of the dynamic rebalancing fees.
         """
         chain_state = views.state_from_raiden(self)
-        fee_config: MediationFeeConfig = self.config[MEDIATION_FEE_CONFIG_KEY]
+        fee_config: MediationFeeConfig = self.config["mediation_fees"]
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )

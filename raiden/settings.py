@@ -70,9 +70,6 @@ MONITORING_MIN_CAPACITY = TokenAmount(100)
 MEDIATION_FEE = FeeAmount(0)
 
 
-MEDIATION_FEE_CONFIG_KEY = "mediation_fees"
-
-
 @dataclass
 class MediationFeeConfig:
     token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = field(default_factory=dict)

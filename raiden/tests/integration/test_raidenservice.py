@@ -20,7 +20,6 @@ from raiden.settings import (
     DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    MEDIATION_FEE_CONFIG_KEY,
 )
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -260,7 +259,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     flat_fee = FeeAmount(100)
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config[MEDIATION_FEE_CONFIG_KEY].token_network_to_flat_fee = {
+    app0.raiden.config["mediation_fees"].token_network_to_flat_fee = {
         token_network_address: flat_fee
     }
     app0.start()
@@ -274,7 +273,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     prop_fee = ProportionalFeeAmount(123)
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config[MEDIATION_FEE_CONFIG_KEY].proportional_fee = prop_fee
+    app0.raiden.config["mediation_fees"].proportional_fee = prop_fee
     app0.start()
 
     channel_state = get_channel_state(app0)
@@ -285,7 +284,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config[MEDIATION_FEE_CONFIG_KEY].proportional_imbalance_fee = 42
+    app0.raiden.config["mediation_fees"].proportional_imbalance_fee = 42
     app0.start()
 
     channel_state = get_channel_state(app0)
