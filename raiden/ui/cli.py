@@ -28,8 +28,8 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
+    RAIDEN_CONTRACT_VERSION,
 )
-from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -613,7 +613,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             file=stdout,
         )
 
-    contracts_version = environment_type_to_contracts_version(environment_type)
+    contracts_version = RAIDEN_CONTRACT_VERSION
 
     try:
         free_port_generator = get_free_port()

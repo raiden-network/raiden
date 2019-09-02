@@ -26,7 +26,7 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.messages.monitoring_service import RequestMonitoring
-from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import Event, StateChange, TransferTask
@@ -224,19 +224,14 @@ class RaidenAPI:  # pragma: no unittest
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
-        contracts_version = self.raiden.contract_manager.contracts_version
-
         registry = self.raiden.chain.token_network_registry(registry_address)
 
         try:
-            if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
-                return registry.add_token_with_limits(
-                    token_address=token_address,
-                    channel_participant_deposit_limit=channel_participant_deposit_limit,
-                    token_network_deposit_limit=token_network_deposit_limit,
-                )
-            else:
-                return registry.add_token_without_limits(token_address=token_address)
+            return registry.add_token_with_limits(
+                token_address=token_address,
+                channel_participant_deposit_limit=channel_participant_deposit_limit,
+                token_network_deposit_limit=token_network_deposit_limit,
+            )
         except RaidenRecoverableError as e:
             if "Token already registered" in str(e):
                 raise AlreadyRegisteredTokenAddress("Token already registered")

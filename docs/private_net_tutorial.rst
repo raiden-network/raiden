@@ -112,13 +112,13 @@ Open a new console, and load the Python environment.
  $ source env/bin/activate
  (env) $
 
-In the ``raiden`` directory, figure out the value ``DEVELOPMENT_CONTRACT_VERSION``
+In the ``raiden`` directory, figure out the value ``RAIDEN_CONTRACT_VERSION``
 
 .. code:: bash
 
  (env) $ cd raiden
- (env) $ grep 'DEVELOPMENT_CONTRACT_VERSION = ' -r .
- ./raiden/settings.py:DEVELOPMENT_CONTRACT_VERSION = '0.10.1'
+ (env) $ grep 'RAIDEN_CONTRACT_VERSION = ' -r .
+ ./raiden/settings.py:RAIDEN_CONTRACT_VERSION = '0.10.1'
 
 Copy the shown version somewhere.
 

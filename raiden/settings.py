@@ -60,8 +60,7 @@ DEFAULT_MEDIATION_FEE_MARGIN: float = 0.05
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"
 
-PRODUCTION_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
-DEVELOPMENT_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
+RAIDEN_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
 MIN_REI_THRESHOLD = TokenAmount(55 * 10 ** 17)  # about 1.1$
 
