@@ -7,8 +7,8 @@ from raiden import constants
 from raiden.constants import RoutingMode
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
-from raiden.transfer import channel, views
+from raiden.settings import MONITORING_REWARD
+from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState
@@ -78,18 +78,6 @@ def update_monitoring_service_from_balance_proof(
         f"token_network_address: {to_checksum_address(new_balance_proof.token_network_address)}."
     )
     assert channel_state, msg
-
-    balance = channel.get_balance(
-        sender=channel_state.our_state, receiver=channel_state.partner_state
-    )
-
-    if balance < MONITORING_MIN_CAPACITY:
-        log.warn(
-            f"Skipping update to Monitoring service. "
-            f"Available balance of {balance} is less than configured "
-            f"minimum capacity of {MONITORING_MIN_CAPACITY}"
-        )
-        return
 
     assert raiden.user_deposit is not None
     rei_balance = raiden.user_deposit.effective_balance(raiden.address, "latest")
