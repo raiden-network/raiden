@@ -4,6 +4,8 @@ Raiden Network |capitalized_version| Documentation
 
 This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
+.. NOTE::
+      We are currently reworking our documentation for Raiden. While this is still an ongoing process you can already view the updated parts in this `new but incomplete version of the documentation <http://doc.raiden.network/>`_.
 What is the Raiden Network?
 ---------------------------
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
