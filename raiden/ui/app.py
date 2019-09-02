@@ -26,12 +26,12 @@ from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, R
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
-    DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    MEDIATION_FEE_CONFIG_KEY,
+    MediationFeeConfig,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
@@ -185,6 +185,11 @@ def run_app(
     token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = {
         address: fee for address, fee in flat_fee
     }
+    fee_config = MediationFeeConfig(
+        token_network_to_flat_fee=token_network_to_flat_fee,
+        proportional_fee=proportional_fee,
+        proportional_imbalance_fee=proportional_imbalance_fee,
+    )
 
     config["console"] = console
     config["rpc"] = rpc
@@ -198,11 +203,7 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
-    config["flat_fees"] = token_network_to_flat_fee
-    config["default_fee_schedule"] = FeeScheduleState(
-        flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=proportional_fee
-    )
-    config["proportional_imbalance_fee"] = proportional_imbalance_fee
+    config[MEDIATION_FEE_CONFIG_KEY] = fee_config
 
     setup_environment(config, environment_type)
 
@@ -263,16 +264,12 @@ def run_app(
 
     event_handler: EventHandler = RaidenEventHandler()
 
-    # User should be told, if using Default fee settings, how to set fees
-    log.debug("Fee Settings", fee_schedule=config["default_fee_schedule"])
-
+    # User should be told how to set fees, if using default fee settings
+    log.debug("Fee Settings", fee_settings=fee_config)
     has_default_fees = (
-        len(config["flat_fees"]) == 0
-        and config["default_fee_schedule"]
-        == FeeScheduleState(
-            flat=DEFAULT_MEDIATION_FLAT_FEE, proportional=DEFAULT_MEDIATION_PROPORTIONAL_FEE
-        )
-        and config["proportional_imbalance_fee"] == DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+        len(fee_config.token_network_to_flat_fee) == 0
+        and fee_config.proportional_fee == DEFAULT_MEDIATION_PROPORTIONAL_FEE
+        and fee_config.proportional_imbalance_fee == DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
     )
     if has_default_fees:
         click.secho(

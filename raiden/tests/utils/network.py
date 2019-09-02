@@ -16,14 +16,18 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEFAULT_RETRY_TIMEOUT,
+    MEDIATION_FEE_CONFIG_KEY,
+    MediationFeeConfig,
+)
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transport import ParsedURL
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict
 from raiden.utils.typing import (
@@ -369,8 +373,7 @@ def create_apps(
             "transport": {},
             "rpc": True,
             "console": False,
-            "default_fee_schedule": FeeScheduleState(),
-            "flat_fees": {},
+            MEDIATION_FEE_CONFIG_KEY: MediationFeeConfig(),
         }
 
         if local_matrix_url is not None:
