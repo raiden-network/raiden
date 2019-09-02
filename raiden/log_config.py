@@ -24,7 +24,7 @@ LOG_BACKUP_COUNT = 3
 _FIRST_PARTY_PACKAGES = frozenset(["raiden", "raiden_contracts"])
 
 
-def _chain(first_func, *funcs) -> Callable:
+def _chain(first_func: Callable, *funcs: Callable) -> Callable:
     """Chains a give number of functions.
     First function receives all args/kwargs. Its result is passed on as an argument
     to the second one and so on and so forth until all function arguments are used.
@@ -32,7 +32,7 @@ def _chain(first_func, *funcs) -> Callable:
     """
 
     @wraps(first_func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         result = first_func(*args, **kwargs)
         for func in funcs:
             result = func(result)
@@ -99,11 +99,11 @@ class LogFilter:
 
 
 class RaidenFilter(logging.Filter):
-    def __init__(self, log_level_config, name=""):
+    def __init__(self, log_level_config: Dict[str, str], name: str = ""):
         super().__init__(name)
         self._log_filter = LogFilter(log_level_config, default_level=DEFAULT_LOG_LEVEL)
 
-    def filter(self, record):
+    def filter(self, record: logging.LogRecord) -> int:
         return self._log_filter.should_log(record.name, record.levelname)
 
 
@@ -141,7 +141,7 @@ def configure_logging(
     cache_logger_on_first_use: bool = True,
     _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
     _debug_log_file_additional_level_filters: Dict[str, str] = None,
-):
+) -> None:
     structlog.reset_defaults()
 
     logger_level_config = logger_level_config or dict()

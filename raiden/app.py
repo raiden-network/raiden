@@ -3,11 +3,14 @@ from eth_utils import to_checksum_address
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
+from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.transport.matrix.transport import MatrixTransport
+from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
@@ -71,9 +74,9 @@ class App:  # pylint: disable=too-few-public-methods
         default_service_registry: typing.Optional[ServiceRegistry],
         default_one_to_n_address: typing.Optional[Address],
         default_msc_address: Address,
-        transport,
-        raiden_event_handler,
-        message_handler,
+        transport: MatrixTransport,
+        raiden_event_handler: EventHandler,
+        message_handler: MessageHandler,
         routing_mode: RoutingMode,
         user_deposit: UserDeposit = None,
     ):
@@ -116,16 +119,16 @@ class App:  # pylint: disable=too-few-public-methods
         self.user_deposit = user_deposit
         self.raiden = raiden
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{} {}>".format(self.__class__.__name__, to_checksum_address(self.raiden.address))
 
-    def start(self):
+    def start(self) -> None:
         """ Start the raiden app. """
         if self.raiden.stop_event.is_set():
             self.raiden.start()
             log.info("Raiden started", node=self.raiden.address)
 
-    def stop(self):
+    def stop(self) -> None:
         """ Stop the raiden app. """
         if not self.raiden.stop_event.is_set():
             self.raiden.stop()

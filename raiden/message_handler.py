@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import structlog
 from eth_utils import to_hex
 
@@ -14,7 +16,6 @@ from raiden.messages.transfers import (
     Unlock,
 )
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
-from raiden.raiden_service import RaidenService
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -37,11 +38,14 @@ from raiden.transfer.state_change import (
 from raiden.utils import random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, List
 
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
+
 log = structlog.get_logger(__name__)
 
 
 class MessageHandler:
-    def on_message(self, raiden: RaidenService, message: Message) -> None:
+    def on_message(self, raiden: "RaidenService", message: Message) -> None:
         # pylint: disable=unidiomatic-typecheck
 
         if type(message) == SecretRequest:
@@ -91,7 +95,7 @@ class MessageHandler:
             log.error(f"Unknown message cmdid {message.cmdid}")
 
     @staticmethod
-    def handle_message_withdrawrequest(raiden: RaidenService, message: WithdrawRequest):
+    def handle_message_withdrawrequest(raiden: "RaidenService", message: WithdrawRequest) -> None:
         assert message.sender, "message must be signed"
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
@@ -110,7 +114,9 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([withdraw_request])
 
     @staticmethod
-    def handle_message_withdraw_confirmation(raiden: RaidenService, message: WithdrawConfirmation):
+    def handle_message_withdraw_confirmation(
+        raiden: "RaidenService", message: WithdrawConfirmation
+    ) -> None:
         assert message.sender, "message must be signed"
         withdraw = ReceiveWithdrawConfirmation(
             canonical_identifier=CanonicalIdentifier(
@@ -129,7 +135,7 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([withdraw])
 
     @staticmethod
-    def handle_message_withdraw_expired(raiden: RaidenService, message: WithdrawExpired):
+    def handle_message_withdraw_expired(raiden: "RaidenService", message: WithdrawExpired) -> None:
         assert message.sender, "message must be signed"
         withdraw_expired = ReceiveWithdrawExpired(
             canonical_identifier=CanonicalIdentifier(
@@ -148,7 +154,7 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([withdraw_expired])
 
     @staticmethod
-    def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
+    def handle_message_secretrequest(raiden: "RaidenService", message: SecretRequest) -> None:
         assert message.sender, "message must be signed"
         secret_request = ReceiveSecretRequest(
             payment_identifier=message.payment_identifier,
@@ -160,13 +166,13 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([secret_request])
 
     @staticmethod
-    def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
+    def handle_message_revealsecret(raiden: "RaidenService", message: RevealSecret) -> None:
         assert message.sender, "message must be signed"
         state_change = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
         raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
-    def handle_message_unlock(raiden: RaidenService, message: Unlock) -> None:
+    def handle_message_unlock(raiden: "RaidenService", message: Unlock) -> None:
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveUnlock(
             message_identifier=message.message_identifier,
@@ -177,7 +183,7 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
-    def handle_message_lockexpired(raiden: RaidenService, message: LockExpired) -> None:
+    def handle_message_lockexpired(raiden: "RaidenService", message: LockExpired) -> None:
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveLockExpired(
             sender=balance_proof.sender,
@@ -188,7 +194,7 @@ class MessageHandler:
         raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
-    def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer) -> None:
+    def handle_message_refundtransfer(raiden: "RaidenService", message: RefundTransfer) -> None:
         chain_state = views.state_from_raiden(raiden)
         from_transfer = lockedtransfersigned_from_message(message=message)
 
@@ -236,7 +242,7 @@ class MessageHandler:
         raiden.handle_and_track_state_changes(state_changes)
 
     @staticmethod
-    def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer) -> None:
+    def handle_message_lockedtransfer(raiden: "RaidenService", message: LockedTransfer) -> None:
         secrethash = message.lock.secrethash
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
@@ -263,13 +269,13 @@ class MessageHandler:
             raiden.mediate_mediated_transfer(message)
 
     @staticmethod
-    def handle_message_processed(raiden: RaidenService, message: Processed) -> None:
+    def handle_message_processed(raiden: "RaidenService", message: Processed) -> None:
         assert message.sender, "message must be signed"
         processed = ReceiveProcessed(message.sender, message.message_identifier)
         raiden.handle_and_track_state_changes([processed])
 
     @staticmethod
-    def handle_message_delivered(raiden: RaidenService, message: Delivered) -> None:
+    def handle_message_delivered(raiden: "RaidenService", message: Delivered) -> None:
         assert message.sender, "message must be signed"
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
         raiden.handle_and_track_state_changes([delivered])

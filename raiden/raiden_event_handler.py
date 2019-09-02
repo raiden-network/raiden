@@ -111,14 +111,16 @@ def unlock(
 
 class EventHandler(ABC):
     @abstractmethod
-    def on_raiden_event(self, raiden: "RaidenService", chain_state: ChainState, event: Event):
+    def on_raiden_event(
+        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    ) -> None:
         pass
 
 
 class RaidenEventHandler(EventHandler):
     def on_raiden_event(
         self, raiden: "RaidenService", chain_state: ChainState, event: Event
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
             assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
@@ -189,7 +191,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_lockexpired(
         raiden: "RaidenService", send_lock_expired: SendLockExpired
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
         raiden.transport.send_async(send_lock_expired.queue_identifier, lock_expired_message)
@@ -197,7 +199,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_lockedtransfer(
         raiden: "RaidenService", send_locked_transfer: SendLockedTransfer
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
         raiden.transport.send_async(
@@ -207,7 +209,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_secretreveal(
         raiden: "RaidenService", reveal_secret_event: SendSecretReveal
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
         raiden.transport.send_async(reveal_secret_event.queue_identifier, reveal_secret_message)
@@ -215,7 +217,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_balanceproof(
         raiden: "RaidenService", balance_proof_event: SendBalanceProof
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
         raiden.transport.send_async(balance_proof_event.queue_identifier, unlock_message)
@@ -223,7 +225,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_secretrequest(
         raiden: "RaidenService", secret_request_event: SendSecretRequest
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, secret_request_event):
             return
 
@@ -234,7 +236,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_refundtransfer(
         raiden: "RaidenService", refund_transfer_event: SendRefundTransfer
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
         raiden.transport.send_async(
@@ -244,7 +246,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_withdrawrequest(
         raiden: "RaidenService", withdraw_request_event: SendWithdrawRequest
-    ):
+    ) -> None:
         withdraw_request_message = message_from_sendevent(withdraw_request_event)
         raiden.sign(withdraw_request_message)
         raiden.transport.send_async(
@@ -252,7 +254,9 @@ class RaidenEventHandler(EventHandler):
         )
 
     @staticmethod
-    def handle_send_withdraw(raiden: "RaidenService", withdraw_event: SendWithdrawConfirmation):
+    def handle_send_withdraw(
+        raiden: "RaidenService", withdraw_event: SendWithdrawConfirmation
+    ) -> None:
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
         raiden.transport.send_async(withdraw_event.queue_identifier, withdraw_message)
@@ -260,7 +264,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_withdrawexpired(
         raiden: "RaidenService", withdraw_expired_event: SendWithdrawExpired
-    ):
+    ) -> None:
         withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
         raiden.sign(withdraw_expired_message)
         raiden.transport.send_async(
@@ -270,7 +274,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_processed(
         raiden: "RaidenService", processed_event: SendProcessed
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
         raiden.transport.send_async(processed_event.queue_identifier, processed_message)
@@ -278,7 +282,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_paymentsentsuccess(
         raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         target = payment_sent_success_event.target
         payment_identifier = payment_sent_success_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(payment_identifier)
@@ -291,7 +295,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_paymentsentfailed(
         raiden: "RaidenService", payment_sent_failed_event: EventPaymentSentFailed
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         target = payment_sent_failed_event.target
         payment_identifier = payment_sent_failed_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
@@ -306,7 +310,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_unlockfailed(
         raiden: "RaidenService", unlock_failed_event: EventUnlockFailed
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         # pylint: disable=unused-argument
         log.error(
             "UnlockFailed!",
@@ -318,13 +322,13 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_secretreveal(
         raiden: "RaidenService", channel_reveal_secret_event: ContractSendSecretReveal
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
 
     @staticmethod
     def handle_contract_send_channelwithdraw(
         raiden: "RaidenService", channel_withdraw_event: ContractSendChannelWithdraw
-    ):
+    ) -> None:
         withdraw_confirmation_data = pack_withdraw(
             canonical_identifier=channel_withdraw_event.canonical_identifier,
             participant=raiden.address,
@@ -350,7 +354,7 @@ class RaidenEventHandler(EventHandler):
         raiden: "RaidenService",
         chain_state: ChainState,
         channel_close_event: ContractSendChannelClose,
-    ):
+    ) -> None:
         balance_proof = channel_close_event.balance_proof
 
         if balance_proof:
@@ -398,7 +402,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelupdate(
         raiden: "RaidenService", channel_update_event: ContractSendChannelUpdateTransfer
-    ):
+    ) -> None:
         balance_proof = channel_update_event.balance_proof
 
         if balance_proof:
@@ -429,7 +433,7 @@ class RaidenEventHandler(EventHandler):
         raiden: "RaidenService",
         chain_state: ChainState,
         channel_unlock_event: ContractSendChannelBatchUnlock,
-    ):
+    ) -> None:
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = channel_unlock_event.canonical_identifier
@@ -565,7 +569,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelsettle(
         raiden: "RaidenService", channel_settle_event: ContractSendChannelSettle
-    ):
+    ) -> None:
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = CanonicalIdentifier(

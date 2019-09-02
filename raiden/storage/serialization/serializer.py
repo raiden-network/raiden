@@ -34,11 +34,11 @@ def _import_type(type_name: str) -> type:
 
 class SerializationBase:
     @staticmethod
-    def serialize(obj):
+    def serialize(obj: Any) -> Any:
         raise NotImplementedError
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data: Any) -> Any:
         raise NotImplementedError
 
 
