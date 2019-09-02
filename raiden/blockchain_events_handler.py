@@ -99,7 +99,7 @@ def after_new_deposit_join_network(
         raiden.add_pending_greenlet(join_channel)
 
 
-def after_blockchain_statechange(raiden: "RaidenService", state_change: StateChange):
+def after_blockchain_statechange(raiden: "RaidenService", state_change: StateChange) -> None:
     if type(state_change) == ContractReceiveNewTokenNetwork:
         assert isinstance(state_change, ContractReceiveNewTokenNetwork), MYPY_ANNOTATION
         after_new_token_network_create_filter(raiden, state_change)

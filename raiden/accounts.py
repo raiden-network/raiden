@@ -9,7 +9,7 @@ from eth_utils import decode_hex, encode_hex, to_checksum_address
 
 from raiden.exceptions import RaidenError
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
+from raiden.utils.typing import Address, AddressHex, PrivateKey, PublicKey
 
 log = structlog.get_logger(__name__)
 
@@ -144,14 +144,14 @@ class Account:
         self._address = None
 
         try:
-            self._address = decode_hex(self.keystore["address"])
+            self._address = Address(decode_hex(self.keystore["address"]))
         except KeyError:
             pass
 
         if password is not None:
             self.unlock(password)
 
-    def unlock(self, password: str):
+    def unlock(self, password: str) -> None:
         """Unlock the account with a password.
 
         If the account is already unlocked, nothing happens, even if the password is wrong.
@@ -166,7 +166,7 @@ class Account:
             # get address such that it stays accessible after a subsequent lock
             self._fill_address()
 
-    def lock(self):
+    def lock(self) -> None:
         """Relock an unlocked account.
 
         This method sets `account.privkey` to `None` (unlike `account.address` which is preserved).
@@ -176,10 +176,11 @@ class Account:
         self._privkey = None
         self.locked = True
 
-    def _fill_address(self):
+    def _fill_address(self) -> None:
         if "address" in self.keystore:
-            self._address = decode_hex(self.keystore["address"])
+            self._address = Address(decode_hex(self.keystore["address"]))
         elif not self.locked:
+            assert self.privkey
             self._address = privatekey_to_address(self.privkey)
 
     @property
@@ -199,7 +200,7 @@ class Account:
         return None
 
     @property
-    def address(self):
+    def address(self) -> Optional[Address]:
         """The account's address or `None` if the address is not stored in the key file and cannot
         be reconstructed (because the account is locked)
         """
@@ -209,7 +210,7 @@ class Account:
         return self._address
 
     @property
-    def uuid(self):
+    def uuid(self) -> Optional[str]:
         """An optional unique identifier, formatted according to UUID version 4, or `None` if the
         account does not have an id
         """
@@ -219,14 +220,14 @@ class Account:
             return None
 
     @uuid.setter
-    def uuid(self, value):
+    def uuid(self, value: str) -> None:
         """Set the UUID. Set it to `None` in order to remove it."""
         if value is not None:
             self.keystore["id"] = value
         elif "id" in self.keystore:
             self.keystore.pop("id")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.address is not None:
             address = encode_hex(self.address)
         else:

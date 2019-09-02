@@ -19,14 +19,14 @@ class ULID:
 
     identifier: bytes
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         assert len(self.identifier) == 16, "id_ must be 16 bytes long"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"ULID<{self.identifier.hex()}>"
 
     @property
-    def timestamp(self):
+    def timestamp(self) -> int:
         """Aproximated timestamp of the database entry.
 
         There is no lower bound for the skew in time.

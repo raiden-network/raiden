@@ -38,6 +38,7 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
+from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.decode import lockedtransfersigned_from_message
 from raiden.messages.encode import message_from_sendevent
@@ -47,6 +48,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.services import (
     update_monitoring_service_from_balance_proof,
@@ -219,9 +221,9 @@ class RaidenService(Runnable):
         default_service_registry: Optional[ServiceRegistry],
         default_one_to_n_address: Optional[Address],
         default_msc_address: Address,
-        transport,
+        transport: MatrixTransport,
         raiden_event_handler: EventHandler,
-        message_handler,
+        message_handler: MessageHandler,
         routing_mode: RoutingMode,
         config: Dict[str, Any],
         user_deposit: UserDeposit = None,
@@ -1200,7 +1202,9 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_changes([init_target_statechange])
 
-    def withdraw(self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount):
+    def withdraw(
+        self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount
+    ) -> None:
         init_withdraw = ActionChannelWithdraw(
             canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
         )

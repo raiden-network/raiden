@@ -24,6 +24,7 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
         account = Account(json.load(keystore), password, keystore_file)
 
     assert account.privkey
+    assert account.address
     print("Using account:", to_checksum_address(account.address))
 
     client = JSONRPCClient(

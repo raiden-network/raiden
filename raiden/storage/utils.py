@@ -41,9 +41,11 @@ of the easy of conversion.
 """
 from collections import namedtuple
 
+from raiden.transfer.architecture import Event
+
 
 class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Event:
         return getattr(self.wrapped_event, item)
 
 

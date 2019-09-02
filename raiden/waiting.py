@@ -11,7 +11,12 @@ from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES, NODE_NETWORK_REACHABLE, ChannelState
+from raiden.transfer.state import (
+    CHANNEL_AFTER_CLOSE_STATES,
+    NODE_NETWORK_REACHABLE,
+    ChannelState,
+    NettingChannelEndState,
+)
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
@@ -163,11 +168,11 @@ def wait_for_payment_balance(
         This does not time out, use gevent.Timeout.
     """
 
-    def get_balance(end_state):
+    def get_balance(end_state: NettingChannelEndState) -> TokenAmount:
         if end_state.balance_proof:
             return end_state.balance_proof.transferred_amount
         else:
-            return 0
+            return TokenAmount(0)
 
     if target_address == raiden.address:
         balance = lambda channel_state: get_balance(channel_state.partner_state)

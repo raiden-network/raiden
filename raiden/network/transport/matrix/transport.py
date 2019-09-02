@@ -1,6 +1,7 @@
 import json
 import time
 from collections import defaultdict
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -38,7 +39,6 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.network.transport.utils import timeout_exponential_backoff
-from raiden.raiden_service import RaidenService
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
@@ -71,6 +71,9 @@ from raiden.utils.typing import (
     Union,
     cast,
 )
+
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)
 
@@ -283,7 +286,7 @@ class MatrixTransport(Runnable):
         super().__init__()
         self._uuid = uuid4()
         self._config = config
-        self._raiden_service: Optional[RaidenService] = None
+        self._raiden_service: Optional["RaidenService"] = None
 
         if config["server"] == "auto":
             available_servers = config["available_servers"]
@@ -354,7 +357,7 @@ class MatrixTransport(Runnable):
 
     def start(  # type: ignore
         self,
-        raiden_service: RaidenService,
+        raiden_service: "RaidenService",
         message_handler: MessageHandler,
         prev_auth_data: Optional[str],
     ):

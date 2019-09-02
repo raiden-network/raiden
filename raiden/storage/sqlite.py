@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from types import TracebackType
+from typing import Generator
 
 from typing_extensions import Literal
 
@@ -702,7 +704,7 @@ class SQLiteStorage:
             self.conn.commit()
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Generator[None, None, None]:
         cursor = self.conn.cursor()
         self.in_transaction = True
         try:
@@ -722,14 +724,19 @@ class SQLiteStorage:
         self.conn.close()
         del self.conn
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "conn"):
             raise RuntimeError("The database connection was not closed.")
 
-    def __enter__(self):
+    def __enter__(self) -> "SQLiteStorage":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):  # pylint: disable=unused-arguments
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:  # pylint: disable=unused-arguments
         self.close()
 
 

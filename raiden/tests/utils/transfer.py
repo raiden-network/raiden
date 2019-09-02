@@ -384,6 +384,7 @@ def transfer_and_assert_path(
 
         receiving.append((to_app, to_channel_state.identifier))
 
+    assert isinstance(app.raiden.message_handler, WaitForMessage)
     results = [
         app.raiden.message_handler.wait_for_message(
             Unlock,

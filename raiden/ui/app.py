@@ -257,7 +257,7 @@ def run_app(
     )
 
     if transport == "matrix":
-        transport = _setup_matrix(config, routing_mode)
+        matrix_transport = _setup_matrix(config, routing_mode)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
@@ -303,7 +303,7 @@ def run_app(
                 monitoring_service_contract_address
                 or contracts[CONTRACT_MONITORING_SERVICE]["address"]
             ),
-            transport=transport,
+            transport=matrix_transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,
             routing_mode=routing_mode,

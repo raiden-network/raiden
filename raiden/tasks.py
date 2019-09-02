@@ -1,5 +1,6 @@
 import re
 from json.decoder import JSONDecodeError
+from typing import TYPE_CHECKING, Dict
 
 import click
 import gevent
@@ -25,13 +26,16 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
 from raiden.utils import gas_reserve, to_rdn
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Any, BlockNumber, Callable, List, Optional, Tuple
+from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)
 
 
-def _do_check_version(current_version: Tuple[str, ...]):
+def _do_check_version(current_version: Tuple[str, ...]) -> bool:
     content = requests.get(LATEST).json()
     if "tag_name" not in content:
         # probably API rate limit exceeded
@@ -55,7 +59,7 @@ def _do_check_version(current_version: Tuple[str, ...]):
     return True
 
 
-def check_version(current_version: str):  # pragma: no unittest
+def check_version(current_version: str) -> None:  # pragma: no unittest
     """ Check periodically for a new release """
     app_version = parse_version(current_version)
     while True:
@@ -72,7 +76,7 @@ def check_version(current_version: str):  # pragma: no unittest
             gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
-def check_gas_reserve(raiden):  # pragma: no unittest
+def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
     """ Check periodically for gas reserve in the account """
     while True:
         has_enough_balance, estimated_required_balance = gas_reserve.has_enough_gas_reserve(
@@ -96,7 +100,9 @@ def check_gas_reserve(raiden):  # pragma: no unittest
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):  # pragma: no unittest
+def check_rdn_deposits(
+    raiden: "RaidenService", user_deposit_proxy: UserDeposit
+) -> None:  # pragma: no unittest
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
         rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
@@ -117,7 +123,7 @@ def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):  # pragma: no u
         gevent.sleep(CHECK_RDN_MIN_DEPOSIT_INTERVAL)
 
 
-def check_network_id(network_id, web3: Web3):  # pragma: no unittest
+def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
     """ Check periodically if the underlying ethereum client's network id has changed"""
     while True:
         current_id = int(web3.version.network)
@@ -167,7 +173,7 @@ class AlarmTask(Runnable):
         """True if the first_run has been called."""
         return self.known_block_number is not None
 
-    def register_callback(self, callback) -> None:
+    def register_callback(self, callback: Callable) -> None:
         """ Register a new callback.
 
         Note:
@@ -180,7 +186,7 @@ class AlarmTask(Runnable):
 
         self.callbacks.append(callback)
 
-    def remove_callback(self, callback) -> None:
+    def remove_callback(self, callback: Callable) -> None:
         """Remove callback from the list of callbacks if it exists"""
         if callback in self.callbacks:
             self.callbacks.remove(callback)
@@ -220,7 +226,7 @@ class AlarmTask(Runnable):
         self.known_block_number = known_block_number
         self._maybe_run_callbacks(latest_block)
 
-    def _maybe_run_callbacks(self, latest_block) -> None:
+    def _maybe_run_callbacks(self, latest_block: Dict[str, Any]) -> None:
         """ Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the
