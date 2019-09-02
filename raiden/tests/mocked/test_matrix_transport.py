@@ -7,7 +7,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import GMatrixClient, Room
-from raiden.storage.serialization import JSONSerializer
+from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.utils import Address
@@ -110,7 +110,7 @@ def make_message(sign=True, overwrite_data=None):
         )
         if sign:
             message.sign(LocalSigner(factories.HOP1_KEY))
-        data = JSONSerializer.serialize(message)
+        data = MessageSerializer.serialize(message)
     else:
         data = overwrite_data
 
@@ -135,7 +135,9 @@ def test_processing_invalid_json(  # pylint: disable=unused-argument
     assert not mock_matrix._handle_message(room, event)
 
 
-def test_non_signed_message_is_rejected(mock_matrix, skip_userid_validation):
+def test_non_signed_message_is_rejected(
+    mock_matrix, skip_userid_validation
+):  # pylint: disable=unused-argument
     room, event = make_message(sign=False)
     assert not mock_matrix._handle_message(room, event)
 
