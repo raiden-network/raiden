@@ -180,7 +180,7 @@ def get_all_netting_channel_events(
 def decode_raiden_event_to_internal(
     abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
 ) -> DecodedEvent:
-    """Enforce the sandwhich encoding. Converts the JSON RPC/web3 data types
+    """Enforce the sandwich encoding. Converts the JSON RPC/web3 data types
     to the internal representation.
 
     Note::
