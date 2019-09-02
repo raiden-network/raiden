@@ -1167,7 +1167,10 @@ def mediator_make_init_action(
 
 
 def initiator_make_init_action(
-    channels: ChannelSet, routes: List[List[Address]], transfer: TransferDescriptionWithSecretState
+    channels: ChannelSet,
+    routes: List[List[Address]],
+    transfer: TransferDescriptionWithSecretState,
+    estimated_fee: FeeAmount,
 ) -> ActionInitInitiator:
     def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
         for channel_state in channels.channels:
@@ -1179,7 +1182,7 @@ def initiator_make_init_action(
     assert len(forwards) == len(routes)
 
     route_states = [
-        RouteState(route=route, forward_channel_id=forwards[idx])
+        RouteState(route=route, forward_channel_id=forwards[idx], estimated_fee=estimated_fee)
         for idx, route in enumerate(routes)
     ]
 
