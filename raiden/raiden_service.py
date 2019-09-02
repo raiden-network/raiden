@@ -52,7 +52,7 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MEDIATION_FEE
+from raiden.settings import MEDIATION_FEE, MEDIATION_FEE_CONFIG_KEY, MediationFeeConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
@@ -61,7 +61,6 @@ from raiden.transfer import node, views
 from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -981,8 +980,7 @@ class RaidenService(Runnable):
         This includes a recalculation of the dynamic rebalancing fees.
         """
         chain_state = views.state_from_raiden(self)
-        default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
-        token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = self.config["flat_fees"]
+        fee_config: MediationFeeConfig = self.config[MEDIATION_FEE_CONFIG_KEY]
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )
@@ -996,23 +994,20 @@ class RaidenService(Runnable):
 
             for channel in channels:
                 # get the flat fee for this network if set, otherwise the default
-                flat_fee = token_network_to_flat_fee.get(
-                    channel.token_network_address, default_fee_schedule.flat
-                )
-                proportional_fee = default_fee_schedule.proportional
+                flat_fee = fee_config.get_flat_fee(channel.token_network_address)
                 log.info(
                     "Updating channel fees",
                     channel=channel.canonical_identifier,
                     flat_fee=flat_fee,
-                    proportional_fee=proportional_fee,
-                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
+                    proportional_fee=fee_config.proportional_fee,
+                    proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
 
                 state_change = actionchannelupdatefee_from_channelstate(
                     channel_state=channel,
                     flat_fee=flat_fee,
-                    proportional_fee=proportional_fee,
-                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
+                    proportional_fee=fee_config.proportional_fee,
+                    proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
                 self.handle_and_track_state_changes([state_change])
 

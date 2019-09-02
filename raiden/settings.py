@@ -1,8 +1,17 @@
+from dataclasses import dataclass, field
+
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
 from raiden.constants import Environment
-from raiden.utils.typing import FeeAmount, NetworkTimeout, ProportionalFeeAmount, TokenAmount
+from raiden.utils.typing import (
+    Dict,
+    FeeAmount,
+    NetworkTimeout,
+    ProportionalFeeAmount,
+    TokenAmount,
+    TokenNetworkAddress,
+)
 
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
@@ -59,3 +68,20 @@ MONITORING_REWARD = TokenAmount(1)
 MONITORING_MIN_CAPACITY = TokenAmount(100)
 
 MEDIATION_FEE = FeeAmount(0)
+
+
+MEDIATION_FEE_CONFIG_KEY = "mediation_fees"
+
+
+@dataclass
+class MediationFeeConfig:
+    token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = field(default_factory=dict)
+    proportional_fee: ProportionalFeeAmount = DEFAULT_MEDIATION_PROPORTIONAL_FEE
+    proportional_imbalance_fee: ProportionalFeeAmount = (
+        DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+    )
+
+    def get_flat_fee(self, token_network_address: TokenNetworkAddress) -> FeeAmount:
+        return self.token_network_to_flat_fee.get(  # pylint: disable=no-member
+            token_network_address, DEFAULT_MEDIATION_FLAT_FEE
+        )
