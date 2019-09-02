@@ -19,7 +19,6 @@ from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_RETRY_TIMEOUT,
-    MEDIATION_FEE_CONFIG_KEY,
     MediationFeeConfig,
 )
 from raiden.tests.utils.app import database_from_privatekey
@@ -373,7 +372,7 @@ def create_apps(
             "transport": {},
             "rpc": True,
             "console": False,
-            MEDIATION_FEE_CONFIG_KEY: MediationFeeConfig(),
+            "mediation_fees": MediationFeeConfig(),
         }
 
         if local_matrix_url is not None:

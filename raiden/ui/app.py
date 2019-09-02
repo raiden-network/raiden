@@ -29,7 +29,6 @@ from raiden.settings import (
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    MEDIATION_FEE_CONFIG_KEY,
     MediationFeeConfig,
 )
 from raiden.ui.checks import (
@@ -203,7 +202,7 @@ def run_app(
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
-    config[MEDIATION_FEE_CONFIG_KEY] = fee_config
+    config["mediation_fees"] = fee_config
 
     setup_environment(config, environment_type)
 
