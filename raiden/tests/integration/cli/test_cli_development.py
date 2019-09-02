@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.constants import Environment
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.integration.cli.util import (
     expect_cli_normal_startup,
     expect_cli_successful_connected,
@@ -10,7 +10,7 @@ from raiden.tests.integration.cli.util import (
 
 pytestmark = [
     pytest.mark.parametrize(
-        "cli_tests_contracts_version", [DEVELOPMENT_CONTRACT_VERSION], scope="module"
+        "cli_tests_contracts_version", [RAIDEN_CONTRACT_VERSION], scope="module"
     ),
     pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT.value], scope="module"),
 ]

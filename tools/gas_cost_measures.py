@@ -7,7 +7,7 @@ from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
 
 from raiden.constants import TRANSACTION_GAS_LIMIT_UPPER_BOUND
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.packing import pack_balance_proof
@@ -48,7 +48,7 @@ class ContractTester:
         else:
             self.accounts = self.tester.get_accounts()
         self.contract_manager = ContractManager(
-            contracts_precompiled_path(DEVELOPMENT_CONTRACT_VERSION)
+            contracts_precompiled_path(RAIDEN_CONTRACT_VERSION)
         )
         self.name_to_creation_hash: Dict[str, bytes] = dict()
         self.name_to_contract: Dict[str, str] = dict()

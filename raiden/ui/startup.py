@@ -12,7 +12,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, PRODUCTION_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.ui.checks import (
     check_pfs_configuration,
     check_raiden_environment,
@@ -30,15 +30,6 @@ from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployment_info,
 )
-
-
-def environment_type_to_contracts_version(environment_type: Environment) -> str:
-    if environment_type == Environment.DEVELOPMENT:
-        contracts_version = DEVELOPMENT_CONTRACT_VERSION
-    else:
-        contracts_version = PRODUCTION_CONTRACT_VERSION
-
-    return contracts_version
 
 
 def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
@@ -64,7 +55,7 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict
     check_raiden_environment(network_id, environment_type)
 
     contracts: Dict[str, Any] = dict()
-    contracts_version = environment_type_to_contracts_version(environment_type)
+    contracts_version = RAIDEN_CONTRACT_VERSION
 
     config["contracts_path"] = contracts_precompiled_path(contracts_version)
 

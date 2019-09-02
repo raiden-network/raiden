@@ -59,8 +59,7 @@ DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE = ProportionalFeeAmount(0)
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"
 
-PRODUCTION_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
-DEVELOPMENT_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
+RAIDEN_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
 MIN_REI_THRESHOLD = 100
 

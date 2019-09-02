@@ -19,7 +19,7 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-    PRODUCTION_CONTRACT_VERSION,
+    RAIDEN_CONTRACT_VERSION,
 )
 from raiden.utils import typing
 from raiden.utils.typing import Address
@@ -32,7 +32,7 @@ class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         "reveal_timeout": DEFAULT_REVEAL_TIMEOUT,
         "settle_timeout": DEFAULT_SETTLE_TIMEOUT,
-        "contracts_path": contracts_precompiled_path(PRODUCTION_CONTRACT_VERSION),
+        "contracts_path": contracts_precompiled_path(RAIDEN_CONTRACT_VERSION),
         "database_path": "",
         "transport_type": "matrix",
         "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},

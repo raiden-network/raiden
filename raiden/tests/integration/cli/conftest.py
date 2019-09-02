@@ -7,7 +7,7 @@ import pexpect
 import pytest
 
 from raiden.constants import Environment, EthClient
-from raiden.settings import PRODUCTION_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 from raiden.utils.typing import Any, ContextManager, Dict
@@ -15,7 +15,7 @@ from raiden.utils.typing import Any, ContextManager, Dict
 
 @pytest.fixture(scope="module")
 def cli_tests_contracts_version():
-    return PRODUCTION_CONTRACT_VERSION
+    return RAIDEN_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")

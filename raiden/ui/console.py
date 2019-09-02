@@ -12,7 +12,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils import TokenAddress, typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
@@ -216,17 +216,12 @@ class ConsoleTools:
         token_address = TokenAddress(to_canonical_address(token_address_hex))
 
         registry = self._raiden.chain.token_network_registry(registry_address)
-        contracts_version = self._raiden.contract_manager.contracts_version
 
-        if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
-            token_network_address = registry.add_token_with_limits(
-                token_address=token_address,
-                channel_participant_deposit_limit=UINT256_MAX,
-                token_network_deposit_limit=UINT256_MAX,
-            )
-        else:
-            token_network_address = registry.add_token_without_limits(token_address=token_address)
-
+        token_network_address = registry.add_token_with_limits(
+            token_address=token_address,
+            channel_participant_deposit_limit=UINT256_MAX,
+            token_network_deposit_limit=UINT256_MAX,
+        )
         waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout
         )
