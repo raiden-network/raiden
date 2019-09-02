@@ -18,7 +18,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.node import handle_init_initiator, state_transition
 from raiden.utils.signer import LocalSigner, recover
-from raiden.utils.typing import BlockNumber, TokenAmount
+from raiden.utils.typing import BlockNumber, FeeAmount, TokenAmount
 
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
@@ -163,12 +163,10 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
     """
 
     def make_mediated_transfer_state_change(
-        transfer_amount: int, allocated_fee_amount: int, channel_capacity: TokenAmount
+        transfer_amount: int, allocated_fee_amount: FeeAmount, channel_capacity: TokenAmount
     ) -> TransitionResult:
         transfer = factories.replace(
-            factories.UNIT_TRANSFER_DESCRIPTION,
-            amount=transfer_amount,
-            allocated_fee=allocated_fee_amount,
+            factories.UNIT_TRANSFER_DESCRIPTION, amount=transfer_amount, allocated_fee=0
         )
         channel_set = factories.make_channel_set_from_amounts([channel_capacity])
         mediating_channel = channel_set.channels[0]
@@ -187,7 +185,10 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
         ]
 
         init_action = factories.initiator_make_init_action(
-            channels=channel_set, routes=routes, transfer=transfer
+            channels=channel_set,
+            routes=routes,
+            transfer=transfer,
+            estimated_fee=allocated_fee_amount,
         )
         return initiator_manager.handle_init(
             payment_state=None,
@@ -256,7 +257,7 @@ def test_initiator_skips_used_routes():
         )
     )
     init_action = factories.initiator_make_init_action(
-        channels=channels, routes=routes, transfer=transfer
+        channels=channels, routes=routes, transfer=transfer, estimated_fee=0
     )
     transition_result = handle_init_initiator(
         chain_state=test_chain_state.chain_state, state_change=init_action

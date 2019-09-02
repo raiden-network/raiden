@@ -183,9 +183,6 @@ def try_new_route(
 
     initiator_state = None
     events: List[Event] = list()
-    amount_with_fee: PaymentWithFeeAmount = PaymentWithFeeAmount(
-        transfer_description.amount + transfer_description.allocated_fee
-    )
 
     channel_state = None
     route_state = None
@@ -202,6 +199,10 @@ def try_new_route(
         )
 
         assert isinstance(candidate_channel_state, NettingChannelState)
+
+        amount_with_fee: PaymentWithFeeAmount = PaymentWithFeeAmount(
+            transfer_description.amount + reachable_route_state.estimated_fee  # FIXME: add margin
+        )
 
         is_channel_usable = channel.is_channel_usable_for_new_transfer(
             channel_state=candidate_channel_state, transfer_amount=amount_with_fee

@@ -182,7 +182,7 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
                     to_checksum_address(address3),
                     to_checksum_address(address4),
                 ],
-                "fees": 0,
+                "estimated_fee": 0,
             }
         ],
         "feedback_token": DEFAULT_FEEDBACK_TOKEN.hex,
@@ -452,7 +452,7 @@ def test_routing_mocked_pfs_unavailable_peer(
                     to_checksum_address(address3),
                     to_checksum_address(address4),
                 ],
-                "fees": 0,
+                "estimated_fee": 0,
             }
         ],
         "feedback_token": DEFAULT_FEEDBACK_TOKEN.hex,

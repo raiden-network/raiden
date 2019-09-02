@@ -38,6 +38,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     EncodedData,
+    FeeAmount,
     List,
     Locksroot,
     MessageID,
@@ -162,6 +163,7 @@ class RouteState(State):
     # TODO: Add timestamp
     route: List[Address]
     forward_channel_id: ChannelID
+    estimated_fee: FeeAmount = FeeAmount(0)
 
     @property
     def next_hop_address(self) -> Address:
