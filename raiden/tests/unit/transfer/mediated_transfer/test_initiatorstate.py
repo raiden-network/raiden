@@ -18,6 +18,8 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
+    TransferDescriptionProperties,
+    create,
 )
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import assert_dropped
@@ -62,7 +64,13 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
 )
 from raiden.utils import random_secret, sha3, typing
-from raiden.utils.typing import BlockNumber, FeeAmount, NodeNetworkStateMap, PaymentAmount
+from raiden.utils.typing import (
+    BlockNumber,
+    ChannelID,
+    FeeAmount,
+    NodeNetworkStateMap,
+    PaymentAmount,
+)
 
 
 def get_transfer_at_index(
@@ -176,17 +184,20 @@ def test_next_route():
 
 
 def test_init_with_usable_routes():
+    flat_fee = FeeAmount(2)
     properties = factories.NettingChannelStateProperties(
-        our_state=factories.NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT)
+        our_state=factories.NettingChannelEndStateProperties(
+            balance=UNIT_TRANSFER_AMOUNT + flat_fee
+        )
     )
     channels = factories.make_channel_set([properties])
     pseudo_random_generator = random.Random()
 
-    init_state_change = ActionInitInitiator(
-        factories.UNIT_TRANSFER_DESCRIPTION, channels.get_routes()
-    )
+    transfer_description = create(TransferDescriptionProperties(secret=UNIT_SECRET))
+    routes = channels.get_routes(estimated_fee=flat_fee)
+    init_state_change = ActionInitInitiator(transfer=transfer_description, routes=routes)
 
-    block_number = 1
+    block_number = BlockNumber(1)
     transition = initiator_manager.state_transition(
         payment_state=None,
         state_change=init_state_change,
@@ -203,7 +214,7 @@ def test_init_with_usable_routes():
     assert len(payment_state.routes) == 1
 
     initiator_state = get_transfer_at_index(payment_state, 0)
-    assert initiator_state.transfer_description == factories.UNIT_TRANSFER_DESCRIPTION
+    assert initiator_state.transfer_description == transfer_description
 
     mediated_transfers = [e for e in transition.events if isinstance(e, SendLockedTransfer)]
     assert len(mediated_transfers) == 1, "mediated_transfer should /not/ split the transfer"
@@ -213,15 +224,16 @@ def test_init_with_usable_routes():
     expiration = channel.get_safe_initial_expiration(block_number, channels[0].reveal_timeout)
 
     assert transfer.balance_proof.token_network_address == channels[0].token_network_address
-    assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
+    assert transfer.balance_proof.locked_amount == transfer_description.amount + flat_fee
+    assert transfer.lock.amount == transfer_description.amount + flat_fee
     assert transfer.lock.expiration == expiration
-    assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
+    assert transfer.lock.secrethash == transfer_description.secrethash
     # pylint: disable=E1101
     assert send_mediated_transfer.recipient == channels[0].partner_state.address
 
 
 def test_init_without_routes():
-    block_number = 1
+    block_number = BlockNumber(1)
     routes = []
     pseudo_random_generator = random.Random()
 
@@ -1848,7 +1860,9 @@ def test_initiator_init():
 
     route_states = [
         RouteState(
-            route=[factories.make_address(), factories.make_address()], forward_channel_id=1
+            route=[factories.make_address(), factories.make_address()],
+            forward_channel_id=ChannelID(1),
+            estimated_fee=FeeAmount(123),
         )
     ]
     feedback_token = uuid.uuid4()
