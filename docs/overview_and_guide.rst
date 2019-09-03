@@ -14,7 +14,7 @@ Installation
 
 To install Raiden you can either:
 
-    * Use the `Raiden Wizard <http://doc.raiden.network/>`_
+    * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_
     * Download a self contained application bundle from the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_
 
 **If you're installing Raiden from the self contained application bundle the following sections will detail how to set up Raiden on various platforms.**
