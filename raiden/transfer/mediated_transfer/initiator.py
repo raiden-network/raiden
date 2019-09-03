@@ -36,14 +36,23 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelID,
     Dict,
+    FeeAmount,
     List,
     MessageID,
     NodeNetworkStateMap,
     Optional,
+    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
 )
+
+
+def calculate_safe_amount_with_fee(
+    payment_amount: PaymentAmount, estimated_fee: FeeAmount
+) -> PaymentWithFeeAmount:
+    fee_margin = round(max(estimated_fee, FeeAmount(0)) * 0.05)
+    return PaymentWithFeeAmount(payment_amount + estimated_fee + fee_margin)
 
 
 def events_for_unlock_lock(
@@ -200,8 +209,9 @@ def try_new_route(
 
         assert isinstance(candidate_channel_state, NettingChannelState)
 
-        amount_with_fee: PaymentWithFeeAmount = PaymentWithFeeAmount(
-            transfer_description.amount + reachable_route_state.estimated_fee  # FIXME: add margin
+        amount_with_fee = calculate_safe_amount_with_fee(
+            payment_amount=transfer_description.amount,
+            estimated_fee=reachable_route_state.estimated_fee,
         )
 
         is_channel_usable = channel.is_channel_usable_for_new_transfer(
@@ -272,8 +282,8 @@ def send_lockedtransfer(
     # The payment amount and the fee amount must be included in the locked
     # amount, as a guarantee to the mediator that the fee will be claimable
     # on-chain.
-    total_amount = PaymentWithFeeAmount(
-        transfer_description.amount + route_state.estimated_fee
+    total_amount = calculate_safe_amount_with_fee(
+        payment_amount=transfer_description.amount, estimated_fee=route_state.estimated_fee
     )
 
     lockedtransfer_event = channel.send_lockedtransfer(

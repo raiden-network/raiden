@@ -70,6 +70,7 @@ from raiden.utils.typing import (
     FeeAmount,
     NodeNetworkStateMap,
     PaymentAmount,
+    TokenAmount,
 )
 
 
@@ -184,16 +185,20 @@ def test_next_route():
 
 
 def test_init_with_usable_routes():
-    flat_fee = FeeAmount(2)
+    transfer_amount = TokenAmount(1000)
+    flat_fee = FeeAmount(20)
+    expected_fee_margin = 1  # 5% of 20
     properties = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties(
-            balance=UNIT_TRANSFER_AMOUNT + flat_fee
+            balance=TokenAmount(transfer_amount + flat_fee + expected_fee_margin)
         )
     )
     channels = factories.make_channel_set([properties])
     pseudo_random_generator = random.Random()
 
-    transfer_description = create(TransferDescriptionProperties(secret=UNIT_SECRET))
+    transfer_description = create(
+        TransferDescriptionProperties(secret=UNIT_SECRET, amount=transfer_amount)
+    )
     routes = channels.get_routes(estimated_fee=flat_fee)
     init_state_change = ActionInitInitiator(transfer=transfer_description, routes=routes)
 
@@ -224,8 +229,11 @@ def test_init_with_usable_routes():
     expiration = channel.get_safe_initial_expiration(block_number, channels[0].reveal_timeout)
 
     assert transfer.balance_proof.token_network_address == channels[0].token_network_address
-    assert transfer.balance_proof.locked_amount == transfer_description.amount + flat_fee
-    assert transfer.lock.amount == transfer_description.amount + flat_fee
+    assert (
+        transfer.balance_proof.locked_amount
+        == transfer_description.amount + flat_fee + expected_fee_margin
+    )
+    assert transfer.lock.amount == transfer_description.amount + flat_fee + expected_fee_margin
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == transfer_description.secrethash
     # pylint: disable=E1101
