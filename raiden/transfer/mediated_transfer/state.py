@@ -16,7 +16,6 @@ from raiden.utils.typing import (
     Address,
     ChannelID,
     Dict,
-    FeeAmount,
     InitiatorAddress,
     List,
     MessageID,
@@ -108,7 +107,6 @@ class TransferDescriptionWithSecretState(State):
     token_network_registry_address: TokenNetworkRegistryAddress = field(repr=False)
     payment_identifier: PaymentID = field(repr=False)
     amount: PaymentAmount
-    allocated_fee: FeeAmount  # FIXME
     token_network_address: TokenNetworkAddress
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress

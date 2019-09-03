@@ -67,8 +67,6 @@ MIN_REI_THRESHOLD = 100
 MONITORING_REWARD = TokenAmount(5 * 10 ** 18)  # about 1$
 MONITORING_MIN_CAPACITY = TokenAmount(100)
 
-MEDIATION_FEE = FeeAmount(0)
-
 
 @dataclass
 class MediationFeeConfig:

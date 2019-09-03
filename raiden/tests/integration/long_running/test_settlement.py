@@ -220,7 +220,6 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=transfer_1_secret,
@@ -271,7 +270,6 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=transfer_2_secret,
@@ -345,7 +343,6 @@ def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_addre
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=bob_address,
         identifier=identifier,
         secret=secret,
@@ -498,7 +495,6 @@ def run_test_channel_withdraw(
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -580,7 +576,6 @@ def run_test_channel_withdraw_expired(
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -685,7 +680,6 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -776,7 +770,6 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -1068,7 +1061,6 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=bob_app.raiden.address,
         identifier=identifier,
         secret=alice_transfer_secret,
@@ -1077,7 +1069,6 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     bob_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
-        fee=0,
         target=alice_app.raiden.address,
         identifier=identifier + 1,
         secret=bob_transfer_secret,

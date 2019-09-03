@@ -319,7 +319,6 @@ class InitiatorMixin:
             token_network_registry_address=self.token_network_registry_address,
             payment_identifier=payment_id,
             amount=amount,
-            allocated_fee=0,
             token_network_address=self.token_network_address,
             initiator=self.address,
             target=target,

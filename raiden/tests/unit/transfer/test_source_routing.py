@@ -165,9 +165,7 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
     def make_mediated_transfer_state_change(
         transfer_amount: int, allocated_fee_amount: FeeAmount, channel_capacity: TokenAmount
     ) -> TransitionResult:
-        transfer = factories.replace(
-            factories.UNIT_TRANSFER_DESCRIPTION, amount=transfer_amount, allocated_fee=0
-        )
+        transfer = factories.replace(factories.UNIT_TRANSFER_DESCRIPTION, amount=transfer_amount)
         channel_set = factories.make_channel_set_from_amounts([channel_capacity])
         mediating_channel = channel_set.channels[0]
         pnrg = random.Random()

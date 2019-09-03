@@ -128,7 +128,6 @@ def transfer(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
 ) -> None:
@@ -144,7 +143,6 @@ def transfer(
             token_address=token_address,
             amount=amount,
             identifier=identifier,
-            fee=fee,
             timeout=timeout,
         )
     elif transfer_state is TransferState.EXPIRED:
@@ -154,7 +152,6 @@ def transfer(
             token_address=token_address,
             amount=amount,
             identifier=identifier,
-            fee=fee,
             timeout=timeout,
         )
     elif transfer_state is TransferState.SECRET_NOT_REQUESTED:
@@ -164,7 +161,6 @@ def transfer(
             token_address=token_address,
             amount=amount,
             identifier=identifier,
-            fee=fee,
             timeout=timeout,
         )
     else:
@@ -177,7 +173,6 @@ def _transfer_unlocked(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
@@ -201,7 +196,6 @@ def _transfer_unlocked(
         amount=amount,
         target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
-        fee=fee,
     )
 
     with watch_for_unlock_failures(initiator_app, target_app):
@@ -220,7 +214,6 @@ def _transfer_expired(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     assert identifier is not None, "The identifier must be provided"
@@ -252,7 +245,6 @@ def _transfer_expired(
     payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=fee,
         target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
@@ -274,7 +266,6 @@ def _transfer_secret_not_requested(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = ZERO_FEE,
     timeout: Optional[float] = None,
 ) -> None:
     if timeout is None:
@@ -298,7 +289,6 @@ def _transfer_secret_not_requested(
     initiator_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=fee,
         target=TargetAddress(target_app.raiden.address),
         identifier=identifier,
         secret=secret,
@@ -314,7 +304,6 @@ def transfer_and_assert_path(
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
-    fee: FeeAmount = ZERO_FEE,
     timeout: float = 10,
 ) -> None:
     """ Nice to read shortcut to make successful LockedTransfer.
@@ -402,7 +391,6 @@ def transfer_and_assert_path(
     payment_status = first_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=fee,
         target=TargetAddress(last_app.raiden.address),
         identifier=identifier,
         secret=secret,

@@ -290,7 +290,6 @@ def handle_transferreroute(
         payment_identifier=old_description.payment_identifier,
         amount=old_description.amount,
         token_network_address=old_description.token_network_address,
-        allocated_fee=old_description.allocated_fee,
         initiator=old_description.initiator,
         target=old_description.target,
         secret=state_change.secret,

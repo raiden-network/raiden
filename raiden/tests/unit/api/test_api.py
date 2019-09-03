@@ -39,7 +39,6 @@ def test_initiator_task_view():
         token_network_registry_address=factories.UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
-        allocated_fee=0,
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         initiator=transfer.initiator,
         target=transfer.target,

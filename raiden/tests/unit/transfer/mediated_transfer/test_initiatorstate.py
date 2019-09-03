@@ -77,10 +77,11 @@ def make_initiator_manager_state(
     pseudo_random_generator: random.Random,
     transfer_description: factories.TransferDescriptionWithSecretState = None,
     block_number: BlockNumber = BlockNumber(1),  # noqa: B008
+    estimated_fee: FeeAmount = FeeAmount(0),  # noqa: B008
 ):
     init = ActionInitInitiator(
         transfer=transfer_description or factories.UNIT_TRANSFER_DESCRIPTION,
-        routes=channels.get_routes(),
+        routes=channels.get_routes(estimated_fee=estimated_fee),
     )
     initial_state = None
     iteration = initiator_manager.state_transition(
@@ -111,12 +112,10 @@ def setup_initiator_tests(
     our_address=EMPTY,
     partner_address=EMPTY,
     block_number=1,
-    allocated_fee=EMPTY,
+    allocated_fee=0,
 ) -> InitiatorSetup:
     """Commonly used setup code for initiator manager and channel"""
     prng = random.Random()
-
-    allocated_fee = factories.if_empty(allocated_fee, 0)
 
     properties = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties(
@@ -128,19 +127,20 @@ def setup_initiator_tests(
     )
     channels = factories.make_channel_set([properties])
     transfer_description = factories.create(
-        factories.TransferDescriptionProperties(secret=UNIT_SECRET, allocated_fee=allocated_fee)
+        factories.TransferDescriptionProperties(secret=UNIT_SECRET)
     )
     current_state = make_initiator_manager_state(
         channels=channels,
         transfer_description=transfer_description,
         pseudo_random_generator=prng,
         block_number=block_number,
+        estimated_fee=allocated_fee,
     )
 
     initiator_state = get_transfer_at_index(current_state, 0)
     lock = channel.get_lock(channels[0].our_state, initiator_state.transfer_description.secrethash)
     assert lock
-    available_routes = channels.get_routes()
+    available_routes = channels.get_routes(estimated_fee=allocated_fee)
     setup = InitiatorSetup(
         current_state=current_state,
         block_number=block_number,
@@ -1864,7 +1864,6 @@ def test_initiator_init():
             transfer_amount=PaymentAmount(100),
             transfer_secret=secret,
             transfer_secrethash=sha3(secret),
-            transfer_fee=FeeAmount(0),
             token_network_address=factories.make_token_network_address(),
             target_address=factories.make_address(),
         )
