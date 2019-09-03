@@ -273,7 +273,7 @@ def send_lockedtransfer(
     # amount, as a guarantee to the mediator that the fee will be claimable
     # on-chain.
     total_amount = PaymentWithFeeAmount(
-        transfer_description.amount + route_states[0].estimated_fee  # FIXME
+        transfer_description.amount + route_state.estimated_fee
     )
 
     lockedtransfer_event = channel.send_lockedtransfer(
