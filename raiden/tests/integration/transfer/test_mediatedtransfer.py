@@ -578,7 +578,6 @@ def run_test_mediated_transfer_with_allocated_and_taken_fee(
 
 
 # pylint: disable=unused-argument
-@pytest.mark.skip(reason="fee tests have to be updated")
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
@@ -636,14 +635,20 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         SecretRequest, {"secrethash": secrethash}
     )
 
-    app0.raiden.start_mediated_transfer_with_secret(
-        token_network_address=token_network_address,
-        amount=amount,
-        # fee=fee,
-        target=app2.raiden.address,
-        identifier=1,
-        secret=secret,
-    )
+    def get_best_routes_with_fees(*args, **kwargs):
+        routes = get_best_routes_internal(*args, **kwargs)
+        for r in routes:
+            r.estimated_fee = fee
+        return routes
+
+    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+        app0.raiden.start_mediated_transfer_with_secret(
+            token_network_address=token_network_address,
+            amount=amount,
+            target=app2.raiden.address,
+            identifier=1,
+            secret=secret,
+        )
 
     app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app0.raiden),
