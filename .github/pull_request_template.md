@@ -27,5 +27,9 @@ Quality check list that cannot be automatically verified.
     - Regression test for the bug
         - [ ] Properly covers the bug
         - [ ] If an integration test is used, it could not be written as a unit test
+- Documentation
+    - [ ] A new CLI flag was introduced, is there documentation that explains usage?
+- Specs
+    - [ ] If this is a protocol change, are the specs updated accordingly? If so, please link PR from the specs repo.
 - Is it a user facing feature/bug fix?
     - [ ] Changelog entry has been added
