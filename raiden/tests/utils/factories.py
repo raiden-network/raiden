@@ -526,7 +526,6 @@ class TransferDescriptionProperties(Properties):
     initiator: InitiatorAddress = EMPTY
     target: TargetAddress = EMPTY
     secret: Secret = EMPTY
-    allocated_fee: FeeAmount = EMPTY
     TARGET_TYPE = TransferDescriptionWithSecretState
 
 
@@ -538,7 +537,6 @@ TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
     initiator=UNIT_TRANSFER_INITIATOR,
     target=UNIT_TRANSFER_TARGET,
     secret=GENERATE,
-    allocated_fee=0,
 )
 
 
@@ -1068,18 +1066,24 @@ class ChannelSet:
     def get_hops(self, *args) -> List[HopState]:
         return [self.get_hop(index) for index in (args or range(len(self.channels)))]
 
-    def get_route(self, channel_index: int) -> RouteState:
+    def get_route(self, channel_index: int, estimated_fee: FeeAmount = 0) -> RouteState:
         """ Creates an *outbound* RouteState, based on channel our/partner addresses. """
 
         channel = self.channels[channel_index]
         route = [channel.our_state.address, channel.partner_state.address]
 
         return RouteState(
-            route=route, forward_channel_id=channel.canonical_identifier.channel_identifier
+            route=route,
+            forward_channel_id=channel.canonical_identifier.channel_identifier,
+            estimated_fee=estimated_fee,
         )
 
-    def get_routes(self, *args) -> List[RouteState]:
-        return [self.get_route(index) for index in (args or range(len(self.channels)))]
+    def get_routes(
+        self, *args, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008
+    ) -> List[RouteState]:
+        return [
+            self.get_route(index, estimated_fee) for index in (args or range(len(self.channels)))
+        ]
 
     def __getitem__(self, item: int) -> NettingChannelState:
         return self.channels[item]

@@ -54,7 +54,7 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MEDIATION_FEE, MediationFeeConfig
+from raiden.settings import MediationFeeConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
@@ -88,7 +88,6 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    FeeAmount,
     InitiatorAddress,
     Optional,
     PaymentAmount,
@@ -113,7 +112,6 @@ def initiator_init(
     transfer_amount: PaymentAmount,
     transfer_secret: Secret,
     transfer_secrethash: SecretHash,
-    transfer_fee: FeeAmount,
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
 ) -> ActionInitInitiator:
@@ -121,7 +119,6 @@ def initiator_init(
         token_network_registry_address=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
         amount=transfer_amount,
-        allocated_fee=transfer_fee,
         token_network_address=token_network_address,
         initiator=InitiatorAddress(raiden.address),
         target=target_address,
@@ -1078,7 +1075,6 @@ class RaidenService(Runnable):
         amount: PaymentAmount,
         target: TargetAddress,
         identifier: PaymentID,
-        fee: FeeAmount = MEDIATION_FEE,
         secret: Secret = None,
         secrethash: SecretHash = None,
     ) -> PaymentStatus:
@@ -1101,7 +1097,6 @@ class RaidenService(Runnable):
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
             amount=amount,
-            fee=fee,
             target=target,
             identifier=identifier,
             secret=secret,
@@ -1114,7 +1109,6 @@ class RaidenService(Runnable):
         self,
         token_network_address: TokenNetworkAddress,
         amount: PaymentAmount,
-        fee: FeeAmount,
         target: TargetAddress,
         identifier: PaymentID,
         secret: Secret,
@@ -1135,7 +1129,6 @@ class RaidenService(Runnable):
             target=target,
             amount=amount,
             identifier=identifier,
-            fee=fee,
             token_network_address=token_network_address,
         )
 
@@ -1182,7 +1175,6 @@ class RaidenService(Runnable):
             transfer_amount=amount,
             transfer_secret=secret,
             transfer_secrethash=secrethash,
-            transfer_fee=fee,
             token_network_address=token_network_address,
             target_address=target,
         )

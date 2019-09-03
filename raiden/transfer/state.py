@@ -171,8 +171,10 @@ class RouteState(State):
         return self.route[1]
 
     def __repr__(self) -> str:
-        return "RouteState ({}), channel_id: {}".format(
-            " -> ".join(to_checksum_address(addr) for addr in self.route), self.forward_channel_id
+        return "RouteState ({}), channel_id: {}, fee: {}".format(
+            " -> ".join(to_checksum_address(addr) for addr in self.route),
+            self.forward_channel_id,
+            self.estimated_fee,
         )
 
 

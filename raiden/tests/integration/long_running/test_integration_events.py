@@ -494,7 +494,6 @@ def run_test_secret_revealed_on_chain(
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -589,7 +588,6 @@ def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=payment_identifier,
         secret=secret,

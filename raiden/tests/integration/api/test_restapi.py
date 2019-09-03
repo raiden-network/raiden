@@ -1938,7 +1938,6 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     initiator.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target.raiden.address,
         identifier=identifier,
         secret=secret,
