@@ -8,6 +8,7 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
+from raiden.routing import get_best_routes_internal
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
@@ -406,7 +407,6 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         assert patched.call_count == 1
 
 
-@pytest.mark.skip(reason="fee tests have to be updated")
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [4])
 def test_mediated_transfer_with_allocated_fee(
@@ -415,13 +415,9 @@ def test_mediated_transfer_with_allocated_fee(
     """
     Tests the topology of:
     A -> B -> C -> D
-    Where C & D are mediators who gain tokens by mediating transfers.
-    The test checks that if no mediator sets the channel fee, then the fees
+    The test checks that if no mediator sets a mediation fee, then the fees
     sent by the initiator will be gained completely by the target as no fees
     will be deducted by the mediators.
-    However, if the mediator sets the fee, the channel's fee will be
-    deducted from received transfer's fee and the rest goes to
-    the mediators in the next hops and maybe eventually to the target.
     """
     raise_on_failure(
         raiden_network,
@@ -437,7 +433,7 @@ def test_mediated_transfer_with_allocated_fee(
 def run_test_mediated_transfer_with_allocated_fee(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
-    app0, app1, app2, _ = raiden_network
+    app0, app1, app2, app3 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     token_network_registry_address = app0.raiden.default_registry.address
@@ -448,14 +444,20 @@ def run_test_mediated_transfer_with_allocated_fee(
     amount = PaymentAmount(10)
     timeout = network_wait * number_of_nodes
 
-    transfer_and_assert_path(
-        path=raiden_network,
-        token_address=token_address,
-        amount=amount,
-        identifier=1,
-        # fee=fee,
-        timeout=timeout,
-    )
+    def get_best_routes_with_fees(*args, **kwargs):
+        routes = get_best_routes_internal(*args, **kwargs)
+        for r in routes:
+            r.estimated_fee = fee
+        return routes
+
+    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+        transfer_and_assert_path(
+            path=raiden_network,
+            token_address=token_address,
+            amount=amount,
+            identifier=1,
+            timeout=timeout,
+        )
     assert_synced_channel_state(
         token_network_address=token_network_address,
         app0=app0,
@@ -474,55 +476,103 @@ def run_test_mediated_transfer_with_allocated_fee(
         balance1=deposit + amount + fee,
         pending_locks1=[],
     )
+    assert_synced_channel_state(
+        token_network_address=token_network_address,
+        app0=app2,
+        balance0=deposit - amount - fee,
+        pending_locks0=[],
+        app1=app3,
+        balance1=deposit + amount + fee,
+        pending_locks1=[],
+    )
 
+
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [4])
+def test_mediated_transfer_with_allocated_and_taken_fee(
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+):
+    """
+    Tests the topology of:
+    A -> B -> C -> D
+    Only B has mediation fees activated and will get all fees sent by A.
+    """
+    raise_on_failure(
+        raiden_network,
+        run_test_mediated_transfer_with_allocated_and_taken_fee,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        deposit=deposit,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
+
+
+def run_test_mediated_transfer_with_allocated_and_taken_fee(
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+):
+    app0, app1, app2, app3 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
+    )
+    fee = FeeAmount(5)
+    amount = PaymentAmount(10)
+    timeout = network_wait * number_of_nodes
+
+    # Let app1 consume all of the allocated mediation fee
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
         token_network_address=token_network_address,
         partner_address=app2.raiden.address,
     )
-
-    # Let app1 consume all of the allocated mediation fee
     action_update_fee = ActionChannelUpdateFee(
         canonical_identifier=app1_app2_channel_state.canonical_identifier,
         fee_schedule=FeeScheduleState(flat=fee),
     )
-
     app1.raiden.handle_state_changes(state_changes=[action_update_fee])
 
-    # app2's poor soul gets no mediation fees on the second transfer.
-    # Only the first transfer had a fee which was paid to app2 though
-    # app2 doesn't set its fee but it would still receive the complete
-    # locked amount = transfer amount + fee.
-    # However app1 received from app0 two transfers
-    # which it sent to app2. The first transfer
-    # to app2 included the fee as it did not deduct
-    # any fee (the channel's fee was 0).
-    # The second transfer's fee was deducted by
-    # app1 (provided we've set the fee of the channel)
-    transfer_and_assert_path(
-        path=raiden_network,
-        token_address=token_address,
-        amount=amount,
-        identifier=2,
-        # fee=fee,
-        timeout=timeout,
-    )
+    def get_best_routes_with_fees(*args, **kwargs):
+        routes = get_best_routes_internal(*args, **kwargs)
+        for r in routes:
+            r.estimated_fee = fee
+        return routes
+
+    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+        transfer_and_assert_path(
+            path=raiden_network,
+            token_address=token_address,
+            amount=amount,
+            identifier=2,
+            timeout=timeout,
+        )
     assert_synced_channel_state(
         token_network_address=token_network_address,
         app0=app0,
-        balance0=deposit - 2 * (amount + fee),
+        balance0=deposit - amount - fee,
         pending_locks0=[],
         app1=app1,
-        balance1=deposit + 2 * (amount + fee),
+        balance1=deposit + amount + fee,
         pending_locks1=[],
     )
     assert_synced_channel_state(
         token_network_address=token_network_address,
         app0=app1,
-        balance0=deposit - (2 * amount) - fee,
+        balance0=deposit - amount,
         pending_locks0=[],
         app1=app2,
-        balance1=deposit + (2 * amount) + fee,
+        balance1=deposit + amount,
+        pending_locks1=[],
+    )
+    assert_synced_channel_state(
+        token_network_address=token_network_address,
+        app0=app2,
+        balance0=deposit - amount,
+        pending_locks0=[],
+        app1=app3,
+        balance1=deposit + amount,
         pending_locks1=[],
     )
 
