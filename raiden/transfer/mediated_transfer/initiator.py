@@ -1,7 +1,7 @@
 import random
 
 from raiden.constants import ABSENT_SECRET
-from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
@@ -51,7 +51,14 @@ from raiden.utils.typing import (
 def calculate_safe_amount_with_fee(
     payment_amount: PaymentAmount, estimated_fee: FeeAmount
 ) -> PaymentWithFeeAmount:
-    fee_margin = round(max(estimated_fee, FeeAmount(0)) * 0.05)
+    """ Calculates the total payment amount
+
+    This total amount consists of the payment amount, the estimated fees as well as a
+    small margin that is added to increase the likelyhood of payments succeeding in
+    conditions where channels are used for multiple payments.
+    """
+    # `max` is taken as `estimated_fee` can be negative
+    fee_margin = round(max(estimated_fee, FeeAmount(0)) * DEFAULT_MEDIATION_FEE_MARGIN)
     return PaymentWithFeeAmount(payment_amount + estimated_fee + fee_margin)
 
 

@@ -55,6 +55,7 @@ DEFAULT_PATHFINDING_IOU_TIMEOUT = 2 * 10 ** 5  # now the pfs has 200 000blocks (
 DEFAULT_MEDIATION_FLAT_FEE = FeeAmount(0)
 DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(0)
 DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE = ProportionalFeeAmount(0)
+DEFAULT_MEDIATION_FEE_MARGIN: float = 0.05
 
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"
