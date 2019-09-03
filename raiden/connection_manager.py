@@ -235,11 +235,11 @@ class ConnectionManager:  # pragma: no unittest
         # Wait for any pending operation in the channel to complete, before
         # deciding on the deposit
         with self.lock, token_network_proxy.channel_operations_lock[partner_address]:
-            channel_state = views.get_channelstate_for(  # type: ignore # FIXME: arg 2 looks wrong!
-                views.state_from_raiden(self.raiden),
-                self.token_network_address,
-                self.token_address,
-                partner_address,
+            channel_state = views.get_channelstate_for(
+                chain_state=views.state_from_raiden(self.raiden),
+                token_network_registry_address=self.registry_address,
+                token_address=self.token_address,
+                partner_address=partner_address,
             )
 
             if not channel_state:
