@@ -17,9 +17,10 @@ Whether you've just heard of Raiden for the first time or you're here looking fo
 
 New to Raiden?
 ~~~~~~~~~~~~~~
-If you're new to Raiden and just want to install and try it out:
+If you're new to Raiden and just want to install and try it out, you can either:
 
-    * :doc:`Install and fire up <overview_and_guide>` a Raiden client.
+    * Use the `Raiden Wizard <http://doc.raiden.network/>`_ for quickly installing and running a Raiden node.
+    * :doc:`Read about different options for installing and firing up <overview_and_guide>` a Raiden client.
     * Check out the :doc:`WebUI tutorial <webui_tutorial>` to quickly get started doing payments.
 
 Developing on Raiden?
