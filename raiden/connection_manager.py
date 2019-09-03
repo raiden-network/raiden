@@ -319,6 +319,11 @@ class ConnectionManager:  # pragma: no unittest
 
     def _join_partner(self, partner: Address) -> None:
         """ Ensure a channel exists with partner and is funded in our side """
+        log.info(
+            "Trying to join or fund channel with partner further",
+            node=to_checksum_address(self.raiden.address),
+            partner=to_checksum_address(partner),
+        )
         try:
             self.api.channel_open(self.registry_address, self.token_address, partner)
         except DuplicatedChannelError:
@@ -474,5 +479,5 @@ class ConnectionManager:  # pragma: no unittest
         )
         return (
             f"{self.__class__.__name__}(target={self.initial_channel_target} "
-            + f"channels={len(open_channels)}:{open_channels!r})"
+            + f"open_channels={len(open_channels)}:{open_channels!r})"
         )
