@@ -68,3 +68,19 @@ This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in 
 100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount
 of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
 should be used.
+
+#### [pfs8__mediator_goes_offline](./pfs8_mediator_goes_offline.yaml)
+
+This scenario aims to make sure that the PFS reacts correctly if a node along
+a path goes offline and thus provides a new path is one is available.
+A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
+Node0 will first make a payment to node3 through [0, 4, 3] and then node4 goes offline. It is
+then expected that the path [0, 1, 2, 3] is used instead.
+
+#### [pfs9_partial_withdraw](./pfs9_partial_withdraw.yaml)
+This scenario aims to make sure that the PFS reacts correctly to balance updates 
+after a partial withdraw takes place.
+A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
+Node0 will first make a payment to node3 through [0, 4, 3] and then node4 makes a partial withdraw
+results in not enough capacity for a second transfer to be routes through that path.
+The expected path for the second transfer is then [0, 1, 2, 3].
