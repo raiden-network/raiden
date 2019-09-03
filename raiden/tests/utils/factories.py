@@ -749,7 +749,13 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     if transfer.locksroot == LOCKSROOT_OF_NO_LOCKS:
         transfer = replace(transfer, locksroot=keccak(lock.encoded))
 
-    balance_proof = create(transfer.extract(BalanceProofProperties))
+    balance_proof_properties = transfer.extract(BalanceProofProperties)
+    if properties.transferred_amount == EMPTY:
+        balance_proof_properties = replace(balance_proof_properties, transferred_amount=0)
+    if properties.locked_amount == EMPTY:
+        balance_proof_properties = replace(balance_proof_properties, locked_amount=transfer.amount)
+    balance_proof = create(balance_proof_properties)
+
     netting_channel_state = create(
         NettingChannelStateProperties(canonical_identifier=balance_proof.canonical_identifier)
     )
@@ -828,6 +834,11 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params["metadata"] = Metadata(routes=[RouteMetadata(route=route) for route in routes])
 
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
+    if properties.locked_amount == EMPTY:
+        locked_transfer.locked_amount = transfer.amount
+    if properties.transferred_amount == EMPTY:
+        locked_transfer.transferred_amount = 0
+
     locked_transfer.sign(signer)
 
     assert locked_transfer.metadata
@@ -969,10 +980,14 @@ def make_signed_transfer_for(
             locksroot=locksroot,
             canonical_identifier=channel_state.canonical_identifier,
             locked_amount=properties.amount,
+            transferred_amount=0,
         )
     else:
         transfer_properties = LockedTransferUnsignedStateProperties(
-            locksroot=locksroot, canonical_identifier=channel_state.canonical_identifier
+            locksroot=locksroot,
+            canonical_identifier=channel_state.canonical_identifier,
+            locked_amount=properties.locked_amount,
+            transferred_amount=properties.transferred_amount,
         )
 
     transfer_properties.__dict__.pop("route_states", None)
