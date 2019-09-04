@@ -477,24 +477,42 @@ def channels_setup(amount, our_address, refund_address):
 
 
 def test_refund_transfer_with_reroute():
-    amount = UNIT_TRANSFER_AMOUNT
+    block_number = BlockNumber(10)
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
     prng = random.Random()
 
-    channels = channels_setup(amount, our_address, refund_address)
+    channels = channels_setup(TokenAmount(1000), our_address, refund_address)
 
-    block_number = 10
-    current_state = make_initiator_manager_state(
-        channels=channels, pseudo_random_generator=prng, block_number=block_number
+    fee_1 = 1
+    fee_3 = 3
+    routes = channels.get_routes()
+    routes[0].estimated_fee = fee_1  # this one will be tried first and fail
+    routes[1].estimated_fee = 2  # this one is not funded
+    routes[2].estimated_fee = fee_3  # this one will be tried after the first fail
+
+    init = ActionInitInitiator(transfer=factories.UNIT_TRANSFER_DESCRIPTION, routes=routes)
+    initial_state = None
+    iteration = initiator_manager.state_transition(
+        payment_state=initial_state,
+        state_change=init,
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=prng,
+        block_number=block_number,
     )
+    current_state = iteration.new_state
 
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
+    # Check that fees for route 1 have been set correctly
+    assert original_transfer.balance_proof.locked_amount == UNIT_TRANSFER_AMOUNT + fee_1
+    assert original_transfer.lock.amount == UNIT_TRANSFER_AMOUNT + fee_1
+
     refund_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
-            amount=amount,
+            amount=original_transfer.balance_proof.locked_amount,
             initiator=our_address,
             target=original_transfer.target,
             expiration=original_transfer.lock.expiration,
@@ -505,7 +523,6 @@ def test_refund_transfer_with_reroute():
         )
     )
 
-    # pylint: disable=E1101
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferCancelRoute(
@@ -546,10 +563,13 @@ def test_refund_transfer_with_reroute():
     )
 
     new_transfer = search_for_item(iteration.events, SendLockedTransfer, {})
-
     assert new_transfer, "No mediated transfer event emitted, should have tried a new route"
     msg = "the new transfer must use a new secret / secrethash"
     assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
+
+    # Check that fees for route 3 have been set correctly
+    assert new_transfer.transfer.balance_proof.locked_amount == UNIT_TRANSFER_AMOUNT + fee_3
+    assert new_transfer.transfer.lock.amount == UNIT_TRANSFER_AMOUNT + fee_3
 
     initiator_state = get_transfer_at_index(iteration.new_state, 0)
     assert initiator_state is not None
