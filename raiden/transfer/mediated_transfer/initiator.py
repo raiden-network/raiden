@@ -54,7 +54,7 @@ def calculate_safe_amount_with_fee(
     """ Calculates the total payment amount
 
     This total amount consists of the payment amount, the estimated fees as well as a
-    small margin that is added to increase the likelyhood of payments succeeding in
+    small margin that is added to increase the likelihood of payments succeeding in
     conditions where channels are used for multiple payments.
     """
     # `max` is taken as `estimated_fee` can be negative

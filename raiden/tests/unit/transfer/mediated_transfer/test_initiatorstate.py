@@ -9,6 +9,7 @@ import pytest
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.raiden_service import initiator_init
+from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -18,6 +19,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
+    ChannelSet,
     TransferDescriptionProperties,
     create,
 )
@@ -65,6 +67,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import random_secret, sha3, typing
 from raiden.utils.typing import (
+    Address,
     BlockNumber,
     ChannelID,
     FeeAmount,
@@ -187,7 +190,7 @@ def test_next_route():
 def test_init_with_usable_routes():
     transfer_amount = TokenAmount(1000)
     flat_fee = FeeAmount(20)
-    expected_fee_margin = 1  # 5% of 20
+    expected_fee_margin = int(flat_fee * DEFAULT_MEDIATION_FEE_MARGIN)  # == 1
     properties = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties(
             balance=TokenAmount(transfer_amount + flat_fee + expected_fee_margin)
@@ -462,7 +465,9 @@ def test_state_wait_unlock_invalid():
     assert iteration.new_state == before_state
 
 
-def channels_setup(amount, our_address, refund_address):
+def channels_setup(
+    amount: TokenAmount, our_address: Address, refund_address: Address
+) -> ChannelSet:
     funded = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
     broke = factories.replace(funded, balance=0)
     funded_partner = factories.replace(funded, address=refund_address)
@@ -477,21 +482,28 @@ def channels_setup(amount, our_address, refund_address):
 
 
 def test_refund_transfer_with_reroute():
+    transfer_amount = TokenAmount(1000)
     block_number = BlockNumber(10)
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
     prng = random.Random()
 
-    channels = channels_setup(TokenAmount(1000), our_address, refund_address)
+    transfer_description = create(
+        TransferDescriptionProperties(secret=UNIT_SECRET, amount=transfer_amount)
+    )
+    channels = channels_setup(TokenAmount(transfer_amount * 2), our_address, refund_address)
 
-    fee_1 = 1
-    fee_3 = 3
+    fee_1 = 20
+    expected_fee_margin_1 = int(fee_1 * DEFAULT_MEDIATION_FEE_MARGIN)
+    fee_3 = 40
+    expected_fee_margin_3 = int(fee_3 * DEFAULT_MEDIATION_FEE_MARGIN)
+
     routes = channels.get_routes()
     routes[0].estimated_fee = fee_1  # this one will be tried first and fail
-    routes[1].estimated_fee = 2  # this one is not funded
+    routes[1].estimated_fee = 30  # this one is not funded
     routes[2].estimated_fee = fee_3  # this one will be tried after the first fail
 
-    init = ActionInitInitiator(transfer=factories.UNIT_TRANSFER_DESCRIPTION, routes=routes)
+    init = ActionInitInitiator(transfer=transfer_description, routes=routes)
     initial_state = None
     iteration = initiator_manager.state_transition(
         payment_state=initial_state,
@@ -507,8 +519,11 @@ def test_refund_transfer_with_reroute():
     original_transfer = initiator_state.transfer
 
     # Check that fees for route 1 have been set correctly
-    assert original_transfer.balance_proof.locked_amount == UNIT_TRANSFER_AMOUNT + fee_1
-    assert original_transfer.lock.amount == UNIT_TRANSFER_AMOUNT + fee_1
+    assert (
+        original_transfer.balance_proof.locked_amount
+        == transfer_amount + fee_1 + expected_fee_margin_1
+    )
+    assert original_transfer.lock.amount == transfer_amount + fee_1 + expected_fee_margin_1
 
     refund_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
@@ -568,8 +583,11 @@ def test_refund_transfer_with_reroute():
     assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
 
     # Check that fees for route 3 have been set correctly
-    assert new_transfer.transfer.balance_proof.locked_amount == UNIT_TRANSFER_AMOUNT + fee_3
-    assert new_transfer.transfer.lock.amount == UNIT_TRANSFER_AMOUNT + fee_3
+    assert (
+        new_transfer.transfer.balance_proof.locked_amount
+        == transfer_amount + fee_3 + expected_fee_margin_3
+    )
+    assert new_transfer.transfer.lock.amount == transfer_amount + fee_3 + expected_fee_margin_3
 
     initiator_state = get_transfer_at_index(iteration.new_state, 0)
     assert initiator_state is not None
