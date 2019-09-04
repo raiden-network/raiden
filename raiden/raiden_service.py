@@ -1126,11 +1126,11 @@ class RaidenService(Runnable):
 
         if secrethash is None:
             secrethash = sha256_secrethash(secret)
-        elif secrethash != sha256_secrethash(secret):
-            raise InvalidSecretHash("provided secret and secret_hash do not match.")
-
-        if len(secret) != SECRET_LENGTH:
-            raise InvalidSecret("secret of invalid length.")
+        elif secret != ABSENT_SECRET:
+            if secrethash != sha256_secrethash(secret):
+                raise InvalidSecretHash("provided secret and secret_hash do not match.")
+            if len(secret) != SECRET_LENGTH:
+                raise InvalidSecret("secret of invalid length.")
 
         log.debug(
             "Mediated transfer",
