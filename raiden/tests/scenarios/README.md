@@ -36,6 +36,14 @@ A channel between two nodes is opened, a transfer is made. Then, node1 goes offl
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline and node0 closes the channel. Before the monitoring trigger block is passed node1 gets back online. Node1 calls the smart contract itself and therefore the MS does not get triggered.
 
+#### [ms4_udc_too_low](./ms4_udc_too_low.yaml)
+
+This scenario tests that the MS does not kick in, if the node requesting monitoring does
+not have enough funds deposited in the UDC. A channel is opened between node0 and node1.
+A couple of transfers take place and node1 then goes offline. Node0 calls close and node1
+stays offline. It is then expected that the MS does not kick in, since node1 does not have
+enough tokens deposited.
+
 #### [pfs1_get_a_simple_path](./pfs1_get_a_simple_path.yaml)
 
 It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and checks whether a path is returned.
@@ -69,7 +77,7 @@ This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in 
 of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
 should be used.
 
-#### [pfs8__mediator_goes_offline](./pfs8_mediator_goes_offline.yaml)
+#### [pfs8_mediator_goes_offline](./pfs8_mediator_goes_offline.yaml)
 
 This scenario aims to make sure that the PFS reacts correctly if a node along
 a path goes offline and thus provides a new path is one is available.
