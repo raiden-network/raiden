@@ -10,9 +10,9 @@ Flask-Cors
 Flask-RESTful
 gevent<1.4
 ipython<5.0.0
-marshmallow-dataclass==6.0.0rc4
-marshmallow-polyfield==5.7
-marshmallow==3.0.0rc8
+marshmallow-dataclass==6.0.0rc5
+marshmallow-polyfield
+marshmallow
 matrix-client==0.3.2
 mirakuru
 netifaces
