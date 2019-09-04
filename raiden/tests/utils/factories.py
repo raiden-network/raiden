@@ -1066,7 +1066,9 @@ class ChannelSet:
     def get_hops(self, *args) -> List[HopState]:
         return [self.get_hop(index) for index in (args or range(len(self.channels)))]
 
-    def get_route(self, channel_index: int, estimated_fee: FeeAmount = 0) -> RouteState:
+    def get_route(
+        self, channel_index: int, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008
+    ) -> RouteState:
         """ Creates an *outbound* RouteState, based on channel our/partner addresses. """
 
         channel = self.channels[channel_index]

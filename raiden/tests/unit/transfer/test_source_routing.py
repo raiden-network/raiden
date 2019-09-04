@@ -255,7 +255,7 @@ def test_initiator_skips_used_routes():
         )
     )
     init_action = factories.initiator_make_init_action(
-        channels=channels, routes=routes, transfer=transfer, estimated_fee=0
+        channels=channels, routes=routes, transfer=transfer, estimated_fee=FeeAmount(0)
     )
     transition_result = handle_init_initiator(
         chain_state=test_chain_state.chain_state, state_change=init_action

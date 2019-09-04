@@ -213,6 +213,7 @@ def get_best_routes_internal(
             RouteState(
                 route=complete_route,
                 forward_channel_id=neighbour.channelid,
+                # Internal routing doesn't know about fees, so set them to 0
                 estimated_fee=FeeAmount(0),
             )
         )
@@ -317,6 +318,7 @@ def resolve_routes(
                 RouteState(
                     route=route_metadata.route,
                     forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+                    # This is only used in the mediator, so fees are set to 0
                     estimated_fee=FeeAmount(0),
                 )
             )
