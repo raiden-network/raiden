@@ -50,8 +50,8 @@ If you haven't used Raiden before, you can
 ### Use Raiden
 
 If you want to use Raiden:
-* Install Raiden easily with the [Raiden Wizard](https://github.com/raiden-network/raiden-installer#quick-start)
-* [Install and fire up](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) a Raiden client
+* Install Raiden easily with the [Raiden Wizard](https://docs.raiden.network/quick-start)
+* Read [all installation options](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) for Raiden
 * Read the updated [WebUI tutorial](https://docs.raiden.network/the-raiden-web-interface) to quickly get started doing payments
 * Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html)
 
