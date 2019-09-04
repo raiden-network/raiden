@@ -23,6 +23,7 @@ from raiden.network.transport.matrix import AddressReachability, MatrixTransport
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
+from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
@@ -532,7 +533,7 @@ def test_monitoring_global_messages(
         lambda *a, **kw: channel_state,
     )
     monkeypatch.setattr(raiden.transfer.channel, "get_balance", lambda *a, **kw: 123)
-    raiden_service.user_deposit.effective_balance.return_value = 100
+    raiden_service.user_deposit.effective_balance.return_value = MONITORING_REWARD
 
     update_monitoring_service_from_balance_proof(
         raiden=raiden_service, chain_state=None, new_balance_proof=balance_proof
@@ -617,7 +618,7 @@ def test_pfs_global_messages(
             gevent.idle()
     assert pfs_room.send_text.call_count == 2
     msg_data = json.loads(pfs_room.send_text.call_args[0][0])
-    assert msg_data["_type"] == "raiden.messages.path_finding_service.PFSFeeUpdate"
+    assert msg_data["type"] == "PFSFeeUpdate"
 
     transport.stop()
     transport.get()

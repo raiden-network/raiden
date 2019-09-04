@@ -2,8 +2,11 @@
 Changelog
 =========
 
+* :feature:`4102` Display progress during syncing the blockchain.
+* :feature:`4654` Define imbalance fees relative to channel balance.
+* :feature:`4653` Allow setting per token network flat mediation fee from CLI.
 * :bug:`4685` Invalidate a withdraw transaction on restart if the channel is closed.
-* :bug:`4560` Formatting of timestamp fields on the API should follow ISO8601
+* :bug:`4560` Formatting of timestamp fields on the API should follow ISO8601.
 * :bug:`4561` Limit and offset should now work properly in the payment API event queries.
 
 * :release:`0.100.5a0 <2019-08-12>`

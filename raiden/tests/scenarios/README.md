@@ -14,6 +14,15 @@ The scenarios serve the following purpose
 
 ## Scenarios
 
+#### [bf1_basic_functionality](./bf1_basic_functionality.yaml)
+
+It creates a network with topology 0 <-> 1 <-> 2 <-> 3 <-> 4. From here the basic functionality of channels are tested.
+Payments without and with enough capacity are made. Several payments from different initiators and receivers are made.
+Checks to verify that the PFS works as intended take place. The partial withdraw and deposit functionality is tested.
+It is also tested that a node can be stopped and started again and that it still functions as expected after this.
+Several nodes perform up to 100 payments.
+In the end it is tested that channels can be closed and that the monitoring service correctly kicks in if a node is offline during closing.
+
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
@@ -53,3 +62,9 @@ Note that `max-paths` is set to 1 path.
 
 It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and performs some transfers in order to check that IOUs are created for the PFS that provides the path.
 
+#### [pfs7_multiple_payments](./pfs7_multiple_payments.yaml)
+
+This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
+100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount
+of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
+should be used.

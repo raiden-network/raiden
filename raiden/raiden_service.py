@@ -21,6 +21,7 @@ from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
+    ABSENT_BLOCKTIMEOUT,
     ABSENT_SECRET,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
@@ -52,7 +53,7 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MEDIATION_FEE
+from raiden.settings import MEDIATION_FEE, MediationFeeConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
@@ -61,7 +62,6 @@ from raiden.transfer import node, views
 from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -115,6 +115,7 @@ def initiator_init(
     transfer_fee: FeeAmount,
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
+    lock_timeout: BlockTimeout = ABSENT_BLOCKTIMEOUT,
 ) -> ActionInitInitiator:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
@@ -126,6 +127,7 @@ def initiator_init(
         target=target_address,
         secret=transfer_secret,
         secrethash=transfer_secrethash,
+        locktimeout=lock_timeout,
     )
 
     routes, feedback_token = routing.get_best_routes(
@@ -203,6 +205,7 @@ class PaymentStatus(NamedTuple):
     amount: PaymentAmount
     token_network_address: TokenNetworkAddress
     payment_done: AsyncResult
+    locktimeout: BlockTimeout
 
     def matches(self, token_network_address: TokenNetworkAddress, amount: PaymentAmount) -> bool:
         return token_network_address == self.token_network_address and amount == self.amount
@@ -858,6 +861,7 @@ class RaidenService(Runnable):
                     amount=transfer_description.amount,
                     token_network_address=balance_proof.token_network_address,
                     payment_done=AsyncResult(),
+                    locktimeout=initiator.transfer_description.locktimeout,
                 )
 
     def _initialize_messages_queues(self, chain_state: ChainState) -> None:
@@ -981,8 +985,7 @@ class RaidenService(Runnable):
         This includes a recalculation of the dynamic rebalancing fees.
         """
         chain_state = views.state_from_raiden(self)
-        default_fee_schedule: FeeScheduleState = self.config["default_fee_schedule"]
-        token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = self.config["flat_fees"]
+        fee_config: MediationFeeConfig = self.config["mediation_fees"]
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )
@@ -996,23 +999,20 @@ class RaidenService(Runnable):
 
             for channel in channels:
                 # get the flat fee for this network if set, otherwise the default
-                flat_fee = token_network_to_flat_fee.get(
-                    channel.token_network_address, default_fee_schedule.flat
-                )
-                proportional_fee = default_fee_schedule.proportional
+                flat_fee = fee_config.get_flat_fee(channel.token_network_address)
                 log.info(
                     "Updating channel fees",
                     channel=channel.canonical_identifier,
                     flat_fee=flat_fee,
-                    proportional_fee=proportional_fee,
-                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
+                    proportional_fee=fee_config.proportional_fee,
+                    proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
 
                 state_change = actionchannelupdatefee_from_channelstate(
                     channel_state=channel,
                     flat_fee=flat_fee,
-                    proportional_fee=proportional_fee,
-                    proportional_imbalance_fee=self.config["proportional_imbalance_fee"],
+                    proportional_fee=fee_config.proportional_fee,
+                    proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
                 self.handle_and_track_state_changes([state_change])
 
@@ -1084,6 +1084,7 @@ class RaidenService(Runnable):
         fee: FeeAmount = MEDIATION_FEE,
         secret: Secret = None,
         secrethash: SecretHash = None,
+        locktimeout: BlockTimeout = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -1101,6 +1102,9 @@ class RaidenService(Runnable):
             else:
                 secret = ABSENT_SECRET
 
+        if locktimeout is None:
+            locktimeout = ABSENT_BLOCKTIMEOUT
+
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
             amount=amount,
@@ -1109,6 +1113,7 @@ class RaidenService(Runnable):
             identifier=identifier,
             secret=secret,
             secrethash=secrethash,
+            locktimeout=locktimeout,
         )
 
         return payment_status
@@ -1122,6 +1127,7 @@ class RaidenService(Runnable):
         identifier: PaymentID,
         secret: Secret,
         secrethash: SecretHash = None,
+        locktimeout: BlockTimeout = ABSENT_BLOCKTIMEOUT,
     ) -> PaymentStatus:
 
         if secrethash is None:
@@ -1176,6 +1182,7 @@ class RaidenService(Runnable):
                 amount=amount,
                 token_network_address=token_network_address,
                 payment_done=AsyncResult(),
+                locktimeout=locktimeout,
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
@@ -1188,6 +1195,7 @@ class RaidenService(Runnable):
             transfer_fee=fee,
             token_network_address=token_network_address,
             target_address=target,
+            lock_timeout=locktimeout,
         )
 
         # Dispatch the state change even if there are no routes to create the

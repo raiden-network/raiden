@@ -6,7 +6,7 @@ itself. an utility should be added to raiden.blockchain.state, and then called
 by blockchainevent_to_statechange.
 """
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -21,6 +21,7 @@ from raiden.blockchain.state import (
     get_contractreceiveupdatetransfer_data_from_event,
 )
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
+from raiden.settings import MediationFeeConfig
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.channel import get_capacity
@@ -364,17 +365,13 @@ def blockchainevent_to_statechange(
         )
 
         if new_channel_details is not None:
-            default_fee_schedule: FeeScheduleState = raiden.config["default_fee_schedule"]
-            token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = raiden.config[
-                "flat_fees"
-            ]
+            fee_config: MediationFeeConfig = raiden.config["mediation_fees"]
             channel_config = ChannelConfig(
                 reveal_timeout=raiden.config["reveal_timeout"],
                 fee_schedule=FeeScheduleState(
-                    flat=token_network_to_flat_fee.get(
-                        new_channel_details.token_network_address, default_fee_schedule.flat
-                    ),
-                    proportional=default_fee_schedule.proportional,
+                    flat=fee_config.get_flat_fee(new_channel_details.token_network_address),
+                    proportional=fee_config.proportional_fee,
+                    # no need to set the imbalance fee here, will be set during deposit
                 ),
             )
             channel_new = contractreceivechannelnew_from_event(
@@ -392,11 +389,12 @@ def blockchainevent_to_statechange(
             chain_state, deposit.canonical_identifier
         )
         if channel_state is not None:
+            fee_config = raiden.config["mediation_fees"]
             update_fee = actionchannelupdatefee_from_channelstate(
                 channel_state=channel_state,
                 flat_fee=channel_state.fee_schedule.flat,
                 proportional_fee=channel_state.fee_schedule.proportional,
-                proportional_imbalance_fee=raiden.config["proportional_imbalance_fee"],
+                proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
             )
             state_changes.append(update_fee)
 
@@ -408,11 +406,12 @@ def blockchainevent_to_statechange(
             chain_state, withdraw.canonical_identifier
         )
         if channel_state is not None:
+            fee_config = raiden.config["mediation_fees"]
             update_fee = actionchannelupdatefee_from_channelstate(
                 channel_state=channel_state,
                 flat_fee=channel_state.fee_schedule.flat,
                 proportional_fee=channel_state.fee_schedule.proportional,
-                proportional_imbalance_fee=raiden.config["proportional_imbalance_fee"],
+                proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
             )
             state_changes.append(update_fee)
 

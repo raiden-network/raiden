@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime
 
+import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
@@ -40,6 +42,8 @@ from raiden_contracts.constants import (
     ChannelEvent,
 )
 from raiden_contracts.contract_manager import ContractManager
+
+log = structlog.get_logger(__name__)
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
@@ -176,7 +180,7 @@ def get_all_netting_channel_events(
 def decode_raiden_event_to_internal(
     abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
 ) -> DecodedEvent:
-    """Enforce the sandwhich encoding. Converts the JSON RPC/web3 data types
+    """Enforce the sandwich encoding. Converts the JSON RPC/web3 data types
     to the internal representation.
 
     Note::
@@ -245,14 +249,51 @@ class BlockchainEvents:
     def __init__(self, chain_id: ChainID):
         self.chain_id = chain_id
         self.event_listeners: List[EventListener] = list()
+        self.last_log_time: Optional[datetime] = None
+        self.last_log_block: BlockNumber = BlockNumber(0)
+
+    def _log_sync_progress(self, to_block: BlockNumber) -> None:
+        """
+        In case we have fallen far behind with synchronizing blockchain events,
+        display a sync progress message every few seconds.
+        """
+        log_later = (
+            self.last_log_time is not None
+            and (datetime.now() - self.last_log_time).total_seconds() < 5.0
+        )
+        if log_later:
+            return
+
+        if not self.event_listeners:
+            return
+        from_block = min(listener.filter.from_block_number() for listener in self.event_listeners)
+        blocks_to_sync = to_block - from_block
+        if blocks_to_sync <= 100:
+            return
+
+        if self.last_log_time is None:
+            self.last_log_time = datetime.now()
+            self.last_log_block = from_block
+            log.info("Synchronizing blockchain events", blocks_left=blocks_to_sync)
+        else:
+            now = datetime.now()
+            elapsed = (now - self.last_log_time).total_seconds()
+            blocks_per_second = (from_block - self.last_log_block) / elapsed
+            log.info(
+                "Synchronizing blockchain events",
+                blocks_left=blocks_to_sync,
+                blocks_per_second=blocks_per_second,
+            )
+            self.last_log_time = now
+            self.last_log_block = from_block
 
     def poll_blockchain_events(self, block_number: BlockNumber) -> Iterable[DecodedEvent]:
         """ Poll for new blockchain events up to `block_number`. """
-
         for event_listener in self.event_listeners:
             assert isinstance(event_listener.filter, StatelessFilter)
 
             for log_event in event_listener.filter.get_new_entries(block_number):
+                self._log_sync_progress(block_number)
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self) -> None:

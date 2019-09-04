@@ -127,13 +127,16 @@ class StatelessFilter(LogFilter):
         self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
         return result
 
+    def from_block_number(self) -> BlockNumber:
+        filter_from_number = block_specification_to_number(
+            block=self.filter_params.get("fromBlock", GENESIS_BLOCK_NUMBER), web3=self.web3
+        )
+        return BlockNumber(max(filter_from_number, self._last_block + 1))
+
     def get_new_entries(self, target_block_number: BlockNumber) -> List[BlockchainEvent]:
         with self._lock:
             result: List[BlockchainEvent] = []
-            filter_from_number = block_specification_to_number(
-                block=self.filter_params.get("fromBlock", GENESIS_BLOCK_NUMBER), web3=self.web3
-            )
-            from_block_number = max(filter_from_number, self._last_block + 1)
+            from_block_number = self.from_block_number()
 
             # Batch the filter queries in ranges of FILTER_MAX_BLOCK_RANGE
             # to avoid timeout problems
@@ -142,7 +145,7 @@ class StatelessFilter(LogFilter):
                 result.extend(
                     self._do_get_new_entries(from_block=from_block_number, to_block=to_block)
                 )
-                from_block_number += FILTER_MAX_BLOCK_RANGE
+                from_block_number += FILTER_MAX_BLOCK_RANGE  # type: ignore
 
             return result
 

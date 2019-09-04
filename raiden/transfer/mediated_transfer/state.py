@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
 
-from raiden.constants import EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import ABSENT_BLOCKTIMEOUT, EMPTY_SECRETHASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -14,6 +14,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    BlockTimeout,
     ChannelID,
     Dict,
     FeeAmount,
@@ -114,6 +115,7 @@ class TransferDescriptionWithSecretState(State):
     target: TargetAddress
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
+    locktimeout: BlockTimeout = field(default=ABSENT_BLOCKTIMEOUT)
 
     def __post_init__(self) -> None:
         if self.secrethash == EMPTY_SECRETHASH and self.secret:

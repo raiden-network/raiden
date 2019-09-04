@@ -1,0 +1,91 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+        balance_per_node: 20000
+        min_balance: 20000
+
+token:
+
+nodes:
+  mode: managed
+  count: 5
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+
+## This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
+## 100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount
+## of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
+## should be used.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 4, total_deposit: 1000}
+      - parallel:
+          name: "Deposit in the other directions"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1000}
+            - deposit: {from: 2, to: 1, total_deposit: 1000}
+            - deposit: {from: 3, to: 2, total_deposit: 1000}
+            - deposit: {from: 3, to: 4, total_deposit: 1000}
+            - deposit: {from: 4, to: 0, total_deposit: 1000}
+      - parallel:
+          name: "Assert after opening and depositing"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make 100 transfers from 0 to 3"
+          repeat: 100 
+          tasks:
+            # An amount is used that eventually cause one path to run out of capacity
+            # and must then use the other path instead.
+            - transfer: {from: 0, to: 3, amount: 15}
+      - serial:
+          name: "Assert after 100 payments from 0 to 3"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 500}
+            - assert_sum: {from: 3, balance_sum: 3500}
+      - serial:
+          name: "Check that IOUs exist after the payments"
+          tasks:
+            # Add a wait until all ious are processed correctly
+            - assert_pfs_iou: {source: 0, amount: 10000}
+            - assert_pfs_history:
+                source: 0
+                request_count: 100 
+                target: 3
+                expected_routes:
+                  - [0, 4, 3]
+                  - [0, 1, 2, 3]

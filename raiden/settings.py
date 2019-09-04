@@ -1,8 +1,17 @@
+from dataclasses import dataclass, field
+
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
 from raiden.constants import Environment
-from raiden.utils.typing import FeeAmount, NetworkTimeout, ProportionalFeeAmount, TokenAmount
+from raiden.utils.typing import (
+    Dict,
+    FeeAmount,
+    NetworkTimeout,
+    ProportionalFeeAmount,
+    TokenAmount,
+    TokenNetworkAddress,
+)
 
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
@@ -40,8 +49,8 @@ DEFAULT_CHANNEL_SYNC_TIMEOUT = 5
 DEFAULT_SHUTDOWN_TIMEOUT = 2
 
 DEFAULT_PATHFINDING_MAX_PATHS = 3
-DEFAULT_PATHFINDING_MAX_FEE = 1000
-DEFAULT_PATHFINDING_IOU_TIMEOUT = 50000  # now the pfs has 200h to cash in
+DEFAULT_PATHFINDING_MAX_FEE = TokenAmount(5 * 10 ** 16)  # about .01$
+DEFAULT_PATHFINDING_IOU_TIMEOUT = 2 * 10 ** 5  # now the pfs has 200 000blocks (40days) to cash in
 
 DEFAULT_MEDIATION_FLAT_FEE = FeeAmount(0)
 DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(0)
@@ -55,7 +64,21 @@ DEVELOPMENT_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
 MIN_REI_THRESHOLD = 100
 
-MONITORING_REWARD = TokenAmount(1)
+MONITORING_REWARD = TokenAmount(5 * 10 ** 18)  # about 1$
 MONITORING_MIN_CAPACITY = TokenAmount(100)
 
 MEDIATION_FEE = FeeAmount(0)
+
+
+@dataclass
+class MediationFeeConfig:
+    token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = field(default_factory=dict)
+    proportional_fee: ProportionalFeeAmount = DEFAULT_MEDIATION_PROPORTIONAL_FEE
+    proportional_imbalance_fee: ProportionalFeeAmount = (
+        DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+    )
+
+    def get_flat_fee(self, token_network_address: TokenNetworkAddress) -> FeeAmount:
+        return self.token_network_to_flat_fee.get(  # pylint: disable=no-member
+            token_network_address, DEFAULT_MEDIATION_FLAT_FEE
+        )

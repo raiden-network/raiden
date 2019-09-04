@@ -14,7 +14,7 @@ from typing import Mapping
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.types import SchemaCache
+from raiden.storage.serialization.types import MESSAGE_NAME_TO_QUALIFIED_NAME, SchemaCache
 from raiden.utils.typing import Any, Dict
 
 
@@ -59,6 +59,7 @@ class DictSerializer(SerializationBase):
                 raise SerializationError(f"Can't serialize: {data}") from ex
         elif not isinstance(obj, Mapping):
             raise SerializationError(f"Can only serialize dataclasses or dict-like objects: {obj}")
+
         return data
 
     @staticmethod
@@ -98,3 +99,43 @@ class JSONSerializer(SerializationBase):
             raise SerializationError(f"Can't decode invalid JSON: {data}") from ex
         data = DictSerializer.deserialize(decoded_json)
         return data
+
+
+class MessageSerializer(SerializationBase):
+    """ Serialize to JSON with adaptions for external messages
+
+    This serializer only includes the class name in the type. This is more
+    suitable for external Messages than including the complete module path as
+    JSONSerializer does.
+    The type is also saved in the `type` field (instead of `_type`), since we
+    can make sure that there are no name clashes for our Message objects.
+    """
+
+    @staticmethod
+    def serialize(obj: Any) -> str:
+        data = DictSerializer.serialize(obj)
+
+        # Only use 'Message' instead of `raiden.messages.Message` as type.
+        qualified_type = data.pop("_type")
+        data["type"] = qualified_type.split(".")[-1]
+
+        return json.dumps(data)
+
+    @staticmethod
+    def deserialize(data: str) -> Any:
+        try:
+            decoded_json = json.loads(data)
+        except (UnicodeDecodeError, JSONDecodeError) as ex:
+            raise SerializationError(f"Can't decode invalid JSON: {data}") from ex
+
+        try:
+            msg_type = decoded_json.pop("type")
+        except KeyError as ex:
+            raise SerializationError(f"No 'type' attribute in message") from ex
+
+        try:
+            decoded_json["_type"] = MESSAGE_NAME_TO_QUALIFIED_NAME[msg_type]
+        except KeyError as ex:
+            raise SerializationError(f"Unknown message type: {msg_type}") from ex
+
+        return DictSerializer.deserialize(decoded_json)

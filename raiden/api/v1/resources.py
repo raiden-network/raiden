@@ -209,7 +209,9 @@ class ConnectionsInfoResource(BaseResource):
 
 class PaymentResource(BaseResource):
 
-    post_schema = PaymentSchema(only=("amount", "identifier", "secret", "secret_hash"))
+    post_schema = PaymentSchema(
+        only=("amount", "identifier", "secret", "secret_hash", "lock_timeout")
+    )
     get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
@@ -233,6 +235,7 @@ class PaymentResource(BaseResource):
         identifier: typing.PaymentID,
         secret: typing.Secret,
         secret_hash: typing.SecretHash,
+        lock_timeout: typing.BlockTimeout,
     ):
         return self.rest_api.initiate_payment(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
@@ -242,6 +245,7 @@ class PaymentResource(BaseResource):
             identifier=identifier,
             secret=secret,
             secret_hash=secret_hash,
+            lock_timeout=lock_timeout,
         )
 
 

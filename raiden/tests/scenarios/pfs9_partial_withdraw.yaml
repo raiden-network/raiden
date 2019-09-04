@@ -1,0 +1,110 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+        balance_per_node: 5000
+
+token:
+
+nodes:
+  mode: managed
+  count: 5
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+
+## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates 
+## after a partial withdraw takes place.
+## A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
+## Node0 will first make a payment to node3 through [0, 4, 3] and then node4 makes a partial withdraw
+## results in not enough capacity for a second transfer to be routes through that path.
+## The expected path for the second transfer is then [0, 1, 2, 3].
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 4, total_deposit: 1000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1000}
+      - parallel:
+          name: "Deposit in the other directions"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1000}
+            - deposit: {from: 2, to: 1, total_deposit: 1000}
+            - deposit: {from: 3, to: 2, total_deposit: 1000}
+            - deposit: {from: 3, to: 4, total_deposit: 1000}
+            - deposit: {from: 4, to: 0, total_deposit: 1000}
+      - parallel:
+          name: "Assert after deposits"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make payment from 0 to 3"
+          tasks:
+            # Check that a payment is made with shortest path [0, 4, 3] from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 300, expected_http_status: 200}
+
+            # Check that IOU is created
+            - assert_pfs_iou: {source: 0, amount: 100}
+      - serial:
+          name: "Check that shortest path was used"
+          tasks:
+            ## Check that the paths are indeed the expected ones
+            - assert_pfs_history:
+                source: 0
+                request_count: 1
+                target: 3
+                routes_count: 1
+                expected_routes:
+                  - [0, 4, 3]
+      - serial:
+          name: "Partially withdraw 500 from node4 to node3"
+          tasks:
+            - withdraw: {from: 4, to: 3, total_withdraw: 500, expected_http_status: 200}
+      -serial:
+          name: "Make payment from 0 to 3 after node4 is stopped"
+          tasks:
+            # Check that a payment is made with the only path [0, 1, 2, 3] with enough capacity from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 300, expected_http_status: 200}
+
+            # Check that IOU is created
+            - assert_pfs_iou: {source: 0, amount: 200}
+      - serial:
+          name: "Check that the [0, 1, 2, 3] path was used"
+          tasks:
+            - assert_pfs_history:
+                source: 0
+                request_count: 2
+                target: 3
+                routes_count: 2
+                expected_routes:
+                  - [0, 4, 3] # TODO not sure this should be shown
+                  - [0, 1, 2, 3]
