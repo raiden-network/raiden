@@ -12,6 +12,7 @@ settings:
       token:
         deposit: true
         # MS reward is 5 * 10 ** 18 tokens, so less than that must be deposited
+        max_funding: 10000
 token:
 
 nodes:
