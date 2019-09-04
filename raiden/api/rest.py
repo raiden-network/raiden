@@ -9,7 +9,7 @@ import gevent
 import gevent.pool
 import structlog
 from eth_utils import encode_hex, to_checksum_address
-from flask import Flask, make_response, request, send_from_directory, url_for
+from flask import Flask, Response, make_response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
 from flask_restful import Api, abort
@@ -103,6 +103,8 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     Dict,
+    List,
+    Optional,
     PaymentAmount,
     PaymentID,
     Secret,
@@ -177,7 +179,7 @@ URLS_V1 = [
 ]
 
 
-def api_response(result, status_code=HTTPStatus.OK):
+def api_response(result: Any, status_code: HTTPStatus = HTTPStatus.OK) -> Response:
     if status_code == HTTPStatus.NO_CONTENT:
         assert not result, "Provided 204 response with non-zero length response"
         data = ""
@@ -191,7 +193,7 @@ def api_response(result, status_code=HTTPStatus.OK):
     return response
 
 
-def api_error(errors, status_code):
+def api_error(errors: Any, status_code: HTTPStatus) -> Response:
     assert status_code in ERROR_STATUS_CODES, "Programming error, unexpected error status code"
     log.error("Error processing request", errors=errors, status_code=status_code)
     response = make_response(
@@ -211,28 +213,28 @@ def handle_request_parsing_error(err, _req, _schema, _err_status_code, _err_head
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
 
 
-def endpoint_not_found(e):
+def endpoint_not_found(e) -> Response:
     errors = ["invalid endpoint"]
     if isinstance(e, InvalidEndpoint):
         errors.append(e.description)
     return api_error(errors, HTTPStatus.NOT_FOUND)
 
 
-def hexbytes_to_str(map_: Dict):
+def hexbytes_to_str(map_: Dict) -> None:
     """ Converts values that are of type `HexBytes` to strings. """
     for k, v in map_.items():
         if isinstance(v, HexBytes):
             map_[k] = encode_hex(v)
 
 
-def encode_byte_values(map_: Dict):
+def encode_byte_values(map_: Dict) -> None:
     """ Converts values that are of type `bytes` to strings. """
     for k, v in map_.items():
         if isinstance(v, bytes):
             map_[k] = encode_hex(v)
 
 
-def encode_object_to_str(map_: Dict):
+def encode_object_to_str(map_: Dict) -> None:
     for k, v in map_.items():
         if isinstance(v, int) or k == "args":
             continue
@@ -240,7 +242,7 @@ def encode_object_to_str(map_: Dict):
             map_[k] = repr(v)
 
 
-def normalize_events_list(old_list):
+def normalize_events_list(old_list: List) -> List:
     """Internally the `event_type` key is prefixed with underscore but the API
     returns an object without that prefix"""
     new_list = []
@@ -268,7 +270,7 @@ def normalize_events_list(old_list):
     return new_list
 
 
-def convert_to_serializable(event_list):
+def convert_to_serializable(event_list: List) -> List[Dict]:
     returned_events = []
     for event in event_list:
         new_event = {"event": type(event).__name__}
@@ -323,9 +325,9 @@ class APIServer(Runnable):  # pragma: no unittest
         self,
         rest_api: "RestAPI",
         config: Dict[str, Any],
-        cors_domain_list=None,
-        web_ui=False,
-        eth_rpc_endpoint=None,
+        cors_domain_list: List[str] = None,
+        web_ui: bool = False,
+        eth_rpc_endpoint: str = None,
     ) -> None:
         super().__init__()
         if rest_api.version != 1:
@@ -375,7 +377,7 @@ class APIServer(Runnable):  # pragma: no unittest
 
         self._is_raiden_running()
 
-    def _is_raiden_running(self):
+    def _is_raiden_running(self) -> None:
         # We cannot accept requests before the node has synchronized with the
         # blockchain, which is done during the call to RaidenService.start.
         # Otherwise there is no guarantee that the node is in a valid state and
@@ -422,7 +424,7 @@ class APIServer(Runnable):  # pragma: no unittest
             response = send_from_directory(self.flask_app.config["WEBUI_PATH"], "index.html")
         return response
 
-    def _run(self):
+    def _run(self) -> None:  # type: ignore
         try:
             # stop may have been executed before _run was scheduled, in this
             # case wsgiserver will be None
@@ -494,7 +496,7 @@ class APIServer(Runnable):  # pragma: no unittest
             node=to_checksum_address(self.rest_api.raiden_api.address),
         )
 
-    def unhandled_exception(self, exception: Exception):
+    def unhandled_exception(self, exception: Exception) -> Response:
         """ Flask.errorhandler when an exception wasn't correctly handled """
         log.critical(
             "Unhandled exception when processing endpoint request",
@@ -524,12 +526,12 @@ class RestAPI:  # pragma: no unittest
         self.received_success_payment_schema = EventPaymentReceivedSuccessSchema()
         self.failed_payment_schema = EventPaymentSentFailedSchema()
 
-    def get_our_address(self):
+    def get_our_address(self) -> Response:
         return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
 
     def register_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
-    ):
+    ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
                 errors="Registering a new token is currently disabled in the Ethereum mainnet",
@@ -572,7 +574,7 @@ class RestAPI:  # pragma: no unittest
         to: Address,
         value: TokenAmount,
         contract_method: MintingMethod,
-    ):
+    ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
                 errors="Minting a token is currently disabled in the Ethereum mainnet",
@@ -606,7 +608,7 @@ class RestAPI:  # pragma: no unittest
         token_address: TokenAddress,
         settle_timeout: BlockTimeout = None,
         total_deposit: TokenAmount = None,
-    ):
+    ) -> Response:
         log.debug(
             "Opening channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -687,7 +689,7 @@ class RestAPI:  # pragma: no unittest
         funds: TokenAmount,
         initial_channel_target: int = 3,
         joinable_funds_target: float = 0.4,
-    ):
+    ) -> Response:
         log.debug(
             "Connecting to token network",
             node=to_checksum_address(self.raiden_api.address),
@@ -712,7 +714,9 @@ class RestAPI:  # pragma: no unittest
 
         return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
 
-    def leave(self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress):
+    def leave(
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
+    ) -> Response:
         log.debug(
             "Leaving token network",
             node=to_checksum_address(self.raiden_api.address),
@@ -725,7 +729,7 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=closed_channels)
 
-    def get_connection_managers_info(self, registry_address: TokenNetworkRegistryAddress):
+    def get_connection_managers_info(self, registry_address: TokenNetworkRegistryAddress) -> Dict:
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
@@ -773,7 +777,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress = None,
         partner_address: Address = None,
-    ):
+    ) -> Response:
         log.debug(
             "Getting channel list",
             node=to_checksum_address(self.raiden_api.address),
@@ -790,7 +794,7 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=result)
 
-    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress):
+    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> Response:
         log.debug(
             "Getting token list",
             node=to_checksum_address(self.raiden_api.address),
@@ -804,7 +808,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_token_network_for_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
-    ):
+    ) -> Response:
         log.debug(
             "Getting token network for token",
             node=to_checksum_address(self.raiden_api.address),
@@ -826,7 +830,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> Response:
         log.debug(
             "Getting network events",
             node=to_checksum_address(self.raiden_api.address),
@@ -848,7 +852,7 @@ class RestAPI:  # pragma: no unittest
         token_address: TokenAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> Response:
         log.debug(
             "Getting token network blockchain events",
             node=to_checksum_address(self.raiden_api.address),
@@ -872,7 +876,7 @@ class RestAPI:  # pragma: no unittest
         target_address: Address = None,
         limit: int = None,
         offset: int = None,
-    ):
+    ) -> Response:
         log.debug(
             "Getting payment history",
             node=to_checksum_address(self.raiden_api.address),
@@ -909,7 +913,10 @@ class RestAPI:  # pragma: no unittest
             result.append(serialized_event)
         return api_response(result=result)
 
-    def get_raiden_internal_events_with_timestamps(self, limit, offset):
+    def get_raiden_internal_events_with_timestamps(
+        self, limit: Optional[int], offset: Optional[int]
+    ) -> List[str]:
+        assert self.raiden_api.raiden.wal
         return [
             str(e)
             for e in self.raiden_api.raiden.wal.storage.get_events_with_timestamps(
@@ -923,7 +930,7 @@ class RestAPI:  # pragma: no unittest
         partner_address: Address = None,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = "latest",
-    ):
+    ) -> Response:
         log.debug(
             "Getting channel blockchain events",
             node=to_checksum_address(self.raiden_api.address),
@@ -950,7 +957,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
-    ):
+    ) -> Response:
         log.debug(
             "Getting channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -971,7 +978,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_partners_by_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
-    ):
+    ) -> Response:
         log.debug(
             "Getting partners by token",
             node=to_checksum_address(self.raiden_api.address),
@@ -1012,7 +1019,7 @@ class RestAPI:  # pragma: no unittest
         identifier: PaymentID,
         secret: Secret,
         secret_hash: SecretHash,
-    ):
+    ) -> Response:
         log.debug(
             "Initiating payment",
             node=to_checksum_address(self.raiden_api.address),
@@ -1077,7 +1084,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         total_deposit: TokenAmount,
-    ):
+    ) -> Response:
         log.debug(
             "Depositing to channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -1122,7 +1129,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         total_withdraw: WithdrawAmount,
-    ):
+    ) -> Response:
         log.debug(
             "Withdrawing from channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -1157,7 +1164,7 @@ class RestAPI:  # pragma: no unittest
 
     def _close(
         self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
-    ):
+    ) -> Response:
         log.debug(
             "Closing channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -1193,7 +1200,7 @@ class RestAPI:  # pragma: no unittest
         total_deposit: TokenAmount = None,
         total_withdraw: WithdrawAmount = None,
         state: str = None,
-    ):
+    ) -> Response:
         log.debug(
             "Patching channel",
             node=to_checksum_address(self.raiden_api.address),
@@ -1260,7 +1267,9 @@ class RestAPI:  # pragma: no unittest
             )
         return result
 
-    def get_pending_transfers(self, token_address=None, partner_address=None):
+    def get_pending_transfers(
+        self, token_address: TokenAddress = None, partner_address: Address = None
+    ) -> Response:
         try:
             return api_response(
                 self.raiden_api.get_pending_transfers(
