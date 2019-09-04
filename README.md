@@ -23,12 +23,14 @@ The Raiden Network is an infrastructure layer on top of the Ethereum blockchain.
 [![Raiden in a Nutshell](https://user-images.githubusercontent.com/35398162/59496225-46c18300-8e91-11e9-9253-1465f5fd5985.PNG)](https://youtu.be/R1tIy1XgdPw)
 
 ## Table of Contents
+- [Table of Contents](#table-of-contents)
 - [Getting Started](#getting-started)
-  * [Learn about Raiden](#learn-about-raiden)
+  - [Learn about Raiden](#learn-about-raiden)
+  - [Use Raiden](#use-raiden)
 - [Specification](#specification)
 - [Repositories](#repositories)
-  * [Core](#core)
-  * [Tools](#tools)
+  - [Core](#core)
+  - [Tools](#tools)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
@@ -37,21 +39,21 @@ The Raiden Network is an infrastructure layer on top of the Ethereum blockchain.
 
 ### Learn about Raiden
 
-If you didn't use Raiden before, you can
+If you haven't used Raiden before, you can
 
 * Checkout the [developer portal](http://developer.raiden.network)
 * Look at the [documentation](https://raiden-network.readthedocs.io/en/stable/index.html)
 * Learn more by watching explanatory [videos](https://www.youtube.com/channel/UCoUP_hnjUddEvbxmtNCcApg)
 * Read the blog posts on [Medium](https://medium.com/@raiden_network)
-* Visit [Awesomen-Raiden](https://github.com/raiden-network/awesome-raiden) a curated list of resources, links, projects, tools and hacks
+* Visit [Awesome-Raiden](https://github.com/raiden-network/awesome-raiden), a curated list of resources, links, projects, tools and hacks
 
 ### Use Raiden
 
 If you want to use Raiden:
-* For a quick start use [the Raiden Wizard](https://github.com/raiden-network/raiden-installer#quick-start), which makes setting up a Raiden node as easy as 1-2-3.
-* [Install and fire up](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) a Raiden client.
-* Check out the [WebUI tutorial](https://raiden-network.readthedocs.io/en/stable/webui_tutorial.html) to quickly get started doing payments.
-* Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html).
+* Install Raiden easily with the [Raiden Wizard](https://github.com/raiden-network/raiden-installer#quick-start)
+* [Install and fire up](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) a Raiden client
+* Read the updated [WebUI tutorial](https://docs.raiden.network/the-raiden-web-interface) to quickly get started doing payments
+* Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html)
 
 ## Specification
 Read the [tentative specification for the Raiden Network](https://raiden-network-specification.readthedocs.io/en/latest/index.html) to understand in detail how Raiden works. It is maintained within [this repository](https://github.com/raiden-network/spec).
