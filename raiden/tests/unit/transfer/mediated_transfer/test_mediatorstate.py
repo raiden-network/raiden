@@ -439,7 +439,7 @@ def test_events_for_balanceproof():
     """
     pseudo_random_generator = random.Random()
 
-    setup = factories.make_transfers_pair(2, amount=10, block_number=1)
+    setup = factories.make_transfers_pair(2, amount=UNIT_TRANSFER_AMOUNT, block_number=1)
     last_pair = setup.transfers_pair[-1]
     last_pair.payee_state = "payee_secret_revealed"
 
@@ -1553,14 +1553,14 @@ def test_mediator_lock_expired_with_receive_lock_expired():
             "recipient": UNIT_TRANSFER_TARGET,
             "transfer": {
                 "lock": {
-                    "amount": 10,
+                    "amount": UNIT_TRANSFER_AMOUNT,
                     "expiration": expiration,
                     "secrethash": transfer.lock.secrethash,
                 },
                 "balance_proof": {
                     "nonce": 1,
                     "transferred_amount": 0,
-                    "locked_amount": 10,
+                    "locked_amount": UNIT_TRANSFER_AMOUNT,
                     # pylint: disable=no-member
                     "locksroot": transfer.balance_proof.locksroot,
                 },
@@ -2091,7 +2091,9 @@ def test_receive_unlock():
     assert search_for_item(iteration.events, EventInvalidReceivedUnlock, {}), msg
 
     sender_state = channels[0].partner_state
-    lock = HashTimeLockState(amount=10, expiration=10, secrethash=UNIT_SECRETHASH)
+    lock = HashTimeLockState(
+        amount=UNIT_TRANSFER_AMOUNT, expiration=10, secrethash=UNIT_SECRETHASH
+    )
     sender_state.secrethashes_to_lockedlocks[factories.UNIT_SECRETHASH] = lock
     sender_state.pending_locks = factories.make_pending_locks([lock])
     sender_state.balance_proof = factories.create(

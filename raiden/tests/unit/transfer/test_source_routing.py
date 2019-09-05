@@ -6,6 +6,7 @@ from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.factories import UNIT_TRANSFER_AMOUNT
 from raiden.transfer import views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
@@ -323,7 +324,7 @@ def test_mediator_skips_used_routes():
     block_number = 3
     defaults = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties.OUR_STATE,
-        partner_state=factories.NettingChannelEndStateProperties(balance=10),
+        partner_state=factories.NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT),
         open_transaction=factories.TransactionExecutionStatusProperties(
             started_block_number=1, finished_block_number=2, result="success"
         ),

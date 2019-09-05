@@ -150,6 +150,7 @@ def setup_initiator_tests(
     )
 
     initiator_state = get_transfer_at_index(current_state, 0)
+    assert initiator_state, "There should be an ininitial initiator state"
     lock = channel.get_lock(channels[0].our_state, initiator_state.transfer_description.secrethash)
     assert lock
     available_routes = channels.get_routes(estimated_fee=allocated_fee)
