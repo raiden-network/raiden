@@ -1365,6 +1365,7 @@ class TokenNetwork:
                 #   there is a race condition for multiple transactions #3890)
 
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+                failed_at_blocknumber = failed_receipt["blockNumber"]
 
                 if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
@@ -1377,6 +1378,12 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 # Query the current state to check for transaction races
+                detail = self._detail_channel(
+                    participant1=participant,
+                    participant2=partner,
+                    block_identifier=failed_at_blockhash,
+                    channel_identifier=channel_identifier,
+                )
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=participant,
@@ -1393,6 +1400,30 @@ class TokenNetwork:
                 total_withdraw_done = our_details.withdrawn >= total_withdraw
                 if total_withdraw_done:
                     raise RaidenRecoverableError("Requested total withdraw was already performed")
+
+                if detail.state > ChannelState.OPENED:
+                    msg = (
+                        f"setTotalWithdraw failed because the channel closed "
+                        f"before the transaction was mined. "
+                        f"current_state={detail.state}"
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                if detail.state < ChannelState.OPENED:
+                    msg = (
+                        f"setTotalWithdraw failed because the channel never "
+                        f"existed. current_state={detail.state}"
+                    )
+                    raise RaidenUnrecoverableError(msg)
+
+                if expiration_block < failed_at_blocknumber:
+                    msg = (
+                        f"setTotalWithdraw failed because the transaction was "
+                        f"mined after the withdraw expired "
+                        f"expiration_block={expiration_block} "
+                        f"transation_mined_at={failed_at_blocknumber}"
+                    )
+                    raise RaidenRecoverableError(msg)
 
                 total_channel_deposit = our_details.deposit + partner_details.deposit
                 total_channel_withdraw = total_withdraw + partner_details.withdrawn
