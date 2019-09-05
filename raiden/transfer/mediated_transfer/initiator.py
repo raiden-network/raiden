@@ -203,6 +203,7 @@ def try_new_route(
 
     initiator_state = None
     events: List[Event] = list()
+    route_fee_exceeds_max = False
 
     channel_state = None
     route_state = None
@@ -231,6 +232,7 @@ def try_new_route(
             transfer_description.amount * MAX_MEDIATION_FEE_PERC
         )
         if amount_with_fee > max_amount_limit:
+            route_fee_exceeds_max = True
             continue
 
         is_channel_usable = channel.is_channel_usable_for_new_transfer(
@@ -246,6 +248,9 @@ def try_new_route(
             reason = "there is no route available"
         else:
             reason = "none of the available routes could be used"
+
+        if route_fee_exceeds_max:
+            reason += " and at least one of them exceeded the maximum fee limit"
 
         transfer_failed = EventPaymentSentFailed(
             token_network_registry_address=transfer_description.token_network_registry_address,
