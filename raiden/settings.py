@@ -63,7 +63,7 @@ ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}
 PRODUCTION_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 DEVELOPMENT_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
-MIN_REI_THRESHOLD = 100
+MIN_REI_THRESHOLD = TokenAmount(55 * 10 ** 17)  # about 1.1$
 
 MONITORING_REWARD = TokenAmount(5 * 10 ** 18)  # about 1$
 MONITORING_MIN_CAPACITY = TokenAmount(100)
