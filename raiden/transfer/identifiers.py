@@ -44,6 +44,14 @@ class QueueIdentifier:
     recipient: Address
     canonical_identifier: CanonicalIdentifier
 
+    def __str__(self) -> str:
+        return (
+            "QueueIdentifier("
+            f"recipient={to_checksum_address(self.recipient)}, "
+            f"canonical_identifier={self.canonical_identifier}"
+            ")"
+        )
+
 
 CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
     ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
