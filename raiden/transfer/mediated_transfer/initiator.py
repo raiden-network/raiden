@@ -1,7 +1,11 @@
 import random
 
 from raiden.constants import ABSENT_SECRET
-from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+from raiden.settings import (
+    DEFAULT_MEDIATION_FEE_MARGIN,
+    DEFAULT_WAIT_BEFORE_LOCK_REMOVAL,
+    MAX_MEDIATION_FEE_PERC,
+)
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
@@ -220,6 +224,14 @@ def try_new_route(
             payment_amount=transfer_description.amount,
             estimated_fee=reachable_route_state.estimated_fee,
         )
+        # https://github.com/raiden-network/raiden/issues/4751
+        # If the transfer amount + fees exceeds a percentage of the
+        # initial amount then don't use this route
+        max_amount_limit = transfer_description.amount + int(
+            transfer_description.amount * MAX_MEDIATION_FEE_PERC
+        )
+        if amount_with_fee > max_amount_limit:
+            continue
 
         is_channel_usable = channel.is_channel_usable_for_new_transfer(
             channel_state=candidate_channel_state, transfer_amount=amount_with_fee
