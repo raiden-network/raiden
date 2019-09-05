@@ -1447,11 +1447,19 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
+            if expiration_block < failed_at_blocknumber:
+                msg = (
+                    f"setTotalWithdraw would have failed because current block is "
+                    f"higher than the withdraw expiration expiration_block={expiration_block} "
+                    f"transation_checked_at={failed_at_blocknumber}"
+                )
+                raise RaidenRecoverableError(msg)
+
             total_withdraw_done = our_details.withdrawn >= total_withdraw
             if total_withdraw_done:
                 raise RaidenRecoverableError("Requested total withdraw was already performed")
 
-            raise RaidenUnrecoverableError("unlock failed for an unknown reason")
+            raise RaidenUnrecoverableError("setTotalWithdraw failed for an unknown reason")
 
     def close(
         self,
