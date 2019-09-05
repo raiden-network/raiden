@@ -13,6 +13,7 @@ from raiden.tests.utils.factories import (
     UNIT_SECRET,
     UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
+    UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
@@ -192,7 +193,7 @@ def test_regression_send_refund():
                 "token": UNIT_TOKEN_ADDRESS,
                 "balance_proof": {
                     "transferred_amount": 0,
-                    "locked_amount": 10,
+                    "locked_amount": UNIT_TRANSFER_AMOUNT,
                     "locksroot": keccak(lock.encoded),
                     "token_network_address": token_network_address,
                     "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
@@ -296,7 +297,7 @@ def test_regression_mediator_task_no_routes():
             NettingChannelStateProperties(
                 our_state=NettingChannelEndStateProperties(balance=0),
                 partner_state=NettingChannelEndStateProperties(
-                    balance=10, address=HOP2, privatekey=HOP2_KEY
+                    balance=UNIT_TRANSFER_AMOUNT, address=HOP2, privatekey=HOP2_KEY
                 ),
             )
         ]
