@@ -116,7 +116,7 @@ def is_safe_to_wait(
 
 
 def is_send_transfer_almost_equal(
-    send_channel: NettingChannelState,
+    send_channel: NettingChannelState,  # pylint: disable=unused-argument
     send: LockedTransferUnsignedState,
     received: LockedTransferSignedState,
 ) -> bool:
@@ -127,8 +127,12 @@ def is_send_transfer_almost_equal(
         and isinstance(received, LockedTransferSignedState)
         and send.payment_identifier == received.payment_identifier
         and send.token == received.token
-        # FIXME: user proper fee calculation
-        and send.lock.amount == received.lock.amount - send_channel.fee_schedule.flat
+        # FIXME: Checking the transferred amount would make a lot of sense, but
+        #        this is hard to do precisely without larger changes to the
+        #        codebase. With the uncertainty about how we want to deal with
+        #        refunds and backtracking in the long term, this check is
+        #        skipped for now.
+        # and send.lock.amount == received.lock.amount - send_channel.fee_schedule.flat
         and send.lock.expiration == received.lock.expiration
         and send.lock.secrethash == received.lock.secrethash
         and send.initiator == received.initiator
