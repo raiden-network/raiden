@@ -333,12 +333,11 @@ def handle_secretrequest(
 
     already_received_secret_request = initiator_state.received_secret_request
 
-    # lock.amount includes the fees, transfer_description.amount is the actual
-    # payment amount, for the transfer to be valid and the unlock allowed the
-    # target must receive an amount between these values.
+    # transfer_description.amount is the actual payment amount without fees.
+    # For the transfer to be valid and the unlock allowed the target must
+    # receive at leat that amount.
     is_valid_secretrequest = (
-        state_change.amount <= lock.amount
-        and state_change.amount >= initiator_state.transfer_description.amount
+        state_change.amount >= initiator_state.transfer_description.amount
         and state_change.expiration == lock.expiration
         and initiator_state.transfer_description.secret != ABSENT_SECRET
     )
