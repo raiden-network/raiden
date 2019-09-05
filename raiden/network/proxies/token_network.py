@@ -168,7 +168,13 @@ class TokenNetwork:
 
         self.token: Token = blockchain_service.token(token_address=self.token_address())
 
-        # Forbids concurrent operations on the same channel
+        # Forbids concurrent operations on the same channel. This is important
+        # because some operations conflict with each other. E.g. deposit and
+        # close, in this case if the node is lucky the close will be performed
+        # before the deposit, and the deposit transactions will not be sent.
+        #
+        # Note: unlock doesn't have to be synchronized, after settlement is as
+        # the channel doesn't exist anymore.
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
         self.opening_channels_count = 0
 
@@ -229,6 +235,10 @@ class TokenNetwork:
             )
             raise InvalidSettleTimeout(msg)
 
+        # Currently only one channel per address pair is allowed. I.e. if the
+        # node sends two transactions to open a channel with the same partner
+        # in a row, the second transaction will fail. This lock prevents the
+        # second, wasteful transaction from happening.
         with self.channel_operations_lock[partner]:
             # check preconditions
             try:
@@ -713,14 +723,29 @@ class TokenNetwork:
             msg = f"Total deposit {total_deposit} is not in range [1, {UINT256_MAX}]"
             raise BrokenPreconditionError(msg)
 
-        # A node may be setting up multiple channels for the same token
-        # concurrently. Because each deposit changes the user balance this
-        # check must be serialized with the operation locks.
+        # `channel_operations_lock` is used to serialize conflicting channel
+        # operations. E.g. this deposit and a close.
         #
-        # The checks below are serialized with the deposit_lock to avoid sending invalid
-        # transactions on-chain (account without balance). The lock
-        # channel_operations_lock is not sufficient, as it allows two
-        # concurrent deposits for different channels.
+        # A channel deposit with the ERC20 standard has two requirements. First
+        # the user's account must have balance, second the token network must
+        # have an allowance at least as high as the value of the deposit; To
+        # prevent another thread from concurrently changing these values and
+        # invalidating the deposit, the token lock is acquired. This does not
+        # prevent conflicting operations from being requested, but it does
+        # enforces an order to make easier to reason about errors.
+        #
+        # The account balance is checked implicitly by the gas estimation. If
+        # there is not enough balance in the account either a require or assert
+        # is hit, which makes the gas estimation fail. However, this only works
+        # for transactions that have been mined, so there can not be two
+        # transactions in-flight that move tokens from the same address.
+        #
+        # The token network allowace is a bit trickier, because consecutive
+        # calls to approve are not idempotent. If two channels are being open
+        # at the same time, the transactions must not be ordered as `approve +
+        # approve + deposit + deposit`, since the second approve will overwrite
+        # the first and at least one of the deposits will fail. Because of
+        # this, the allowance can not change until the deposit is done.
         with self.channel_operations_lock[partner], self.token.token_lock:
             try:
                 channel_onchain_detail = self._detail_channel(
@@ -1152,6 +1177,8 @@ class TokenNetwork:
         if total_withdraw <= 0:
             raise ValueError("total_withdraw should be larger than zero.")
 
+        # `channel_operations_lock` is used to serialize conflicting channel
+        # operations. E.g. this withdraw and a close.
         with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
@@ -1563,6 +1590,8 @@ class TokenNetwork:
         closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
+        # `channel_operations_lock` is used to serialize conflicting channel
+        # operations. E.g. this close and a deposit or withdraw.
         with self.channel_operations_lock[partner]:
             checking_block = self.client.get_checking_block()
             gas_limit = self.proxy.estimate_gas(
@@ -2206,6 +2235,8 @@ class TokenNetwork:
         partner_locksroot: Locksroot,
         given_block_identifier: BlockSpecification,
     ) -> None:
+        # `channel_operations_lock` is used to serialize conflicting channel
+        # operations. E.g. this settle and a channel open.
         with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
