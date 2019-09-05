@@ -9,6 +9,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.exceptions import ServiceRequestFailed
 from raiden.messages.metadata import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_paths
+from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.typing import (
@@ -209,12 +210,15 @@ def get_best_routes_internal(
         # The complete route includes the initiator, add it to the beginning
         complete_route = [Address(from_address)] + neighbour.route
 
+        # https://github.com/raiden-network/raiden/issues/4751
+        # Internal routing doesn't know about fee so it should set a percentage per hop
+        estimated_fee = FeeAmount(int(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
+
         available_routes.append(
             RouteState(
                 route=complete_route,
                 forward_channel_id=neighbour.channelid,
-                # Internal routing doesn't know about fees, so set them to 0
-                estimated_fee=FeeAmount(0),
+                estimated_fee=estimated_fee,
             )
         )
 
