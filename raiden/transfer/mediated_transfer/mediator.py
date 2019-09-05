@@ -242,7 +242,7 @@ def get_lock_amount_after_fees(
     # fee_out should be calculated on the payment amount without any fees. But
     # we only have the amount including fee_out, so we use that as an
     # approximation.
-    fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
+    fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount))
     return PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
 
 

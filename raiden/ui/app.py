@@ -181,12 +181,16 @@ def run_app(
         api_port = Port(DEFAULT_HTTP_SERVER_PORT)
 
     # Store the flat fee settings for the given token networks
+    # The given flat fee is for the whole mediation, but that includes two channels.
+    # Therefore divide by 2 here.
     token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = {
-        address: fee for address, fee in flat_fee
+        address: FeeAmount(fee // 2) for address, fee in flat_fee
     }
+    # Given prop. fee also counts per mediation, therefore divide by 2 as well
+    # Division is fine here, as the prop. fees are applied independently, not subsequently
     fee_config = MediationFeeConfig(
         token_network_to_flat_fee=token_network_to_flat_fee,
-        proportional_fee=proportional_fee,
+        proportional_fee=ProportionalFeeAmount(proportional_fee // 2),
         proportional_imbalance_fee=proportional_imbalance_fee,
     )
 
