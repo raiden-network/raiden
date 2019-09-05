@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from eth_utils import to_checksum_address
+
 from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.utils.typing import (
     Address,
@@ -26,6 +28,15 @@ class CanonicalIdentifier:
 
         if self.channel_identifier < 0 or self.channel_identifier > UINT256_MAX:
             raise ValueError("channel id is invalid")
+
+    def __str__(self) -> str:
+        return (
+            "CanonicalIdentifier("
+            f"chain_identifier={self.chain_identifier}, "
+            f"token_network_address={to_checksum_address(self.token_network_address)}, "
+            f"channel_identifier={self.channel_identifier}"
+            ")"
+        )
 
 
 @dataclass(frozen=True)
