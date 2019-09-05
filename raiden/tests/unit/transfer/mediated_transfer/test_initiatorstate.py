@@ -9,7 +9,7 @@ import pytest
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.raiden_service import initiator_init
-from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN
+from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, MAX_MEDIATION_FEE_PERC
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -242,6 +242,42 @@ def test_init_with_usable_routes():
     assert transfer.lock.secrethash == transfer_description.secrethash
     # pylint: disable=E1101
     assert send_mediated_transfer.recipient == channels[0].partner_state.address
+
+
+def test_init_with_fees_more_than_max_limit():
+    transfer_amount = TokenAmount(100)
+    flat_fee = FeeAmount(int(transfer_amount + MAX_MEDIATION_FEE_PERC * transfer_amount))
+    expected_fee_margin = int(flat_fee * DEFAULT_MEDIATION_FEE_MARGIN)  # == 1
+    properties = factories.NettingChannelStateProperties(
+        our_state=factories.NettingChannelEndStateProperties(
+            balance=TokenAmount(transfer_amount + flat_fee + expected_fee_margin)
+        )
+    )
+    channels = factories.make_channel_set([properties])
+    pseudo_random_generator = random.Random()
+
+    transfer_description = create(
+        TransferDescriptionProperties(secret=UNIT_SECRET, amount=transfer_amount)
+    )
+    routes = channels.get_routes(estimated_fee=flat_fee)
+    init_state_change = ActionInitInitiator(transfer=transfer_description, routes=routes)
+
+    block_number = BlockNumber(1)
+    transition = initiator_manager.state_transition(
+        payment_state=None,
+        state_change=init_state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+    assert transition.new_state is None
+    assert isinstance(transition.events[0], EventPaymentSentFailed)
+    reason_msg = (
+        "none of the available routes could be used and at least one of them "
+        "exceeded the maximum fee limit"
+    )
+    assert transition.events[0].reason == reason_msg
 
 
 def test_init_without_routes():
