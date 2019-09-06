@@ -719,7 +719,7 @@ class TokenNetwork:
         """
         typecheck(total_deposit, int)
 
-        if total_deposit <= 0 and total_deposit >= UINT256_MAX:
+        if total_deposit <= 0 and total_deposit > UINT256_MAX:
             msg = f"Total deposit {total_deposit} is not in range [1, {UINT256_MAX}]"
             raise BrokenPreconditionError(msg)
 
@@ -812,7 +812,7 @@ class TokenNetwork:
                     raise BrokenPreconditionError(msg)
 
                 total_channel_deposit = total_deposit + partner_details.deposit
-                if total_channel_deposit >= UINT256_MAX:
+                if total_channel_deposit > UINT256_MAX:
                     raise BrokenPreconditionError("Deposit overflow")
 
                 if total_deposit > channel_participant_deposit_limit:
@@ -975,7 +975,7 @@ class TokenNetwork:
                 # This must not crash the client, because it is not a Raiden bug,
                 # and otherwise this could be an attack vector.
                 total_channel_deposit = total_deposit + partner_details.deposit
-                if total_channel_deposit >= UINT256_MAX:
+                if total_channel_deposit > UINT256_MAX:
                     raise RaidenRecoverableError("Deposit overflow")
 
                 total_deposit_done = our_details.deposit >= total_deposit
