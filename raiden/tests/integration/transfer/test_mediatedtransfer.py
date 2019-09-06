@@ -1,4 +1,5 @@
 from hashlib import sha256
+from math import ceil
 from typing import List
 from unittest.mock import patch
 
@@ -10,7 +11,11 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_MEDIATION_FEE_MARGIN,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -195,10 +200,20 @@ def run_test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
+    # calculate the amount to send so that including fees it covers the entire deposit
+    amount = ceil(
+        deposit
+        / (
+            1
+            + INTERNAL_ROUTING_DEFAULT_FEE_PERC
+            + INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
+        )
+    )
+
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=deposit,
+        amount=amount,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
@@ -207,7 +222,7 @@ def run_test_mediated_transfer_with_entire_deposit(
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
-        amount=deposit * 2,
+        amount=amount * 2,
         identifier=2,
         timeout=network_wait * number_of_nodes,
     )
@@ -442,7 +457,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         chain_state, token_network_registry_address, token_address
     )
     fee = FeeAmount(5)
-    amount = PaymentAmount(10)
+    amount = PaymentAmount(100)
 
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
