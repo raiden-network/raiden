@@ -409,7 +409,7 @@ def test_token_network_proxy(
         pytest.fail(msg)
 
     msg = "depositing to a closed channel must fail"
-    match = "Channel is already closed"
+    match = "closed"
     with pytest.raises(RaidenRecoverableError, match=match):
         c2_token_network_proxy.set_total_deposit(
             given_block_identifier=blocknumber_prior_to_close,
