@@ -227,7 +227,7 @@ class TokenNetwork:
 
         timeout_min = self.settlement_timeout_min()
         timeout_max = self.settlement_timeout_max()
-        invalid_timeout = settle_timeout < timeout_min or settle_timeout > timeout_max
+        invalid_timeout = settle_timeout <= timeout_min or settle_timeout >= timeout_max
         if invalid_timeout:
             msg = (
                 f"settle_timeout must be in range [{timeout_min}, "
