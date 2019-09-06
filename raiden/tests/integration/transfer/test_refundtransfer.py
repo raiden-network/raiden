@@ -17,6 +17,8 @@ from raiden.tests.utils.protocol import (
 )
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
+    calculate_amount_to_drain_channel,
+    calculate_fee_for_amount,
     get_channelstate,
     transfer,
     wait_assert,
@@ -60,7 +62,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     )
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
-    exhaust_amount = deposit
+    exhaust_amount = calculate_amount_to_drain_channel(deposit)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -70,6 +72,8 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     )
 
     refund_amount = deposit // 2
+    refund_fees = calculate_fee_for_amount(refund_amount)
+    refund_amount_with_fees = refund_amount + refund_fees
     identifier = 1
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, refund_amount, app2.raiden.address, identifier
@@ -81,7 +85,9 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     # Since the refund is not unlocked both channels have the corresponding
     # amount locked (issue #1091)
     send_lockedtransfer = raiden_events_search_for_item(
-        app0.raiden, SendLockedTransfer, {"transfer": {"lock": {"amount": refund_amount}}}
+        app0.raiden,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": refund_amount_with_fees}}},
     )
     assert send_lockedtransfer
 
@@ -100,7 +106,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
             [send_refundtransfer.transfer.lock],
         )
 
-    # This channel was exhausted to force the refund transfer
+    # This channel was exhausted to force the refund transfer except for the fees
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state, token_network_address, app1, 0, [], app2, deposit * 2, []
@@ -160,6 +166,7 @@ def run_test_refund_transfer(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
+    amount_drain_with_fees = amount_drain + calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -185,10 +192,10 @@ def run_test_refund_transfer(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain_with_fees,
             [],
             app2,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain_with_fees,
             [],
         )
 
@@ -196,6 +203,7 @@ def run_test_refund_transfer(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
+    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(amount_refund)
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
@@ -205,7 +213,9 @@ def run_test_refund_transfer(
     # A lock structure with the correct amount
 
     send_locked = raiden_events_search_for_item(
-        app0.raiden, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund}}}
+        app0.raiden,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
     secrethash = send_locked.transfer.lock.secrethash
@@ -237,10 +247,10 @@ def run_test_refund_transfer(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain_with_fees,
             [],
             app2,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain_with_fees,
             [],
         )
 
@@ -370,6 +380,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
+    fee_app1_app2 = calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -395,10 +406,10 @@ def run_test_different_view_of_last_bp_during_unlock(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain - fee_app1_app2,
             [],
             app2,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain + fee_app1_app2,
             [],
         )
 
@@ -406,6 +417,7 @@ def run_test_different_view_of_last_bp_during_unlock(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
+    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(50)
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
@@ -415,7 +427,9 @@ def run_test_different_view_of_last_bp_during_unlock(
     # A lock structure with the correct amount
 
     send_locked = raiden_events_search_for_item(
-        app0.raiden, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund}}}
+        app0.raiden,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
     secrethash = send_locked.transfer.lock.secrethash
@@ -447,10 +461,10 @@ def run_test_different_view_of_last_bp_during_unlock(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain - fee_app1_app2,
             [],
             app2,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain + fee_app1_app2,
             [],
         )
 
@@ -518,7 +532,7 @@ def run_test_different_view_of_last_bp_during_unlock(
             {"receiver": app0.raiden.address},
             retry_timeout,
         )
-    assert unlock_app0.returned_tokens == 50
+    assert unlock_app0.returned_tokens == amount_refund_with_fees
     with gevent.Timeout(timeout):
         unlock_app1 = wait_for_state_change(
             app1.raiden,
@@ -526,7 +540,7 @@ def run_test_different_view_of_last_bp_during_unlock(
             {"receiver": app1.raiden.address},
             retry_timeout,
         )
-    assert unlock_app1.returned_tokens == 50
+    assert unlock_app1.returned_tokens == amount_refund_with_fees
     final_balance0 = token_proxy.balance_of(app0.raiden.address)
     final_balance1 = token_proxy.balance_of(app1.raiden.address)
 
@@ -582,6 +596,7 @@ def run_test_refund_transfer_after_2nd_hop(
     # drain the channel app2 -> app3
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
+    amount_drain_with_fees = amount_drain + calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app2,
         target_app=app3,
@@ -618,10 +633,10 @@ def run_test_refund_transfer_after_2nd_hop(
             assert_synced_channel_state,
             token_network_address,
             app2,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain_with_fees,
             [],
             app3,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain_with_fees,
             [],
         )
 
@@ -630,6 +645,7 @@ def run_test_refund_transfer_after_2nd_hop(
     # app2 -> app1 -> app0
     identifier_refund = 3
     amount_refund = 50
+    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(amount_refund)
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app3.raiden.address, identifier_refund
     )
@@ -639,7 +655,9 @@ def run_test_refund_transfer_after_2nd_hop(
     # Lock structures with the correct amount
 
     send_locked1 = raiden_events_search_for_item(
-        app0.raiden, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund}}}
+        app0.raiden,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked1
 
@@ -652,7 +670,9 @@ def run_test_refund_transfer_after_2nd_hop(
     assert lock1.secrethash == refund_lock1.secrethash
 
     send_locked2 = raiden_events_search_for_item(
-        app1.raiden, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund}}}
+        app1.raiden,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked2
 
@@ -693,9 +713,9 @@ def run_test_refund_transfer_after_2nd_hop(
             assert_synced_channel_state,
             token_network_address,
             app2,
-            deposit - amount_path - amount_drain,
+            deposit - amount_path - amount_drain_with_fees,
             [],
             app3,
-            deposit + amount_path + amount_drain,
+            deposit + amount_path + amount_drain_with_fees,
             [],
         )
