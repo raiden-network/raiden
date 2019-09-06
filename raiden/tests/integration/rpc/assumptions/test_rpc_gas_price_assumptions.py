@@ -1,22 +1,24 @@
 import pytest
 from eth_utils import to_checksum_address
+from web3 import Web3
 
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
+from raiden.utils.typing import Callable, Dict, GasPrice
 
 
-def make_fixed_gas_price_strategy(gas_price):
-    def fixed_gas_price_strategy(_web3, _transaction_params):
+def make_fixed_gas_price_strategy(gas_price: GasPrice) -> Callable:
+    def fixed_gas_price_strategy(_web3: Web3, _transaction_params: Dict) -> GasPrice:
         return gas_price
 
     return fixed_gas_price_strategy
 
 
-def make_decreasing_gas_price_strategy(gas_price):
+def make_decreasing_gas_price_strategy(gas_price: GasPrice) -> Callable:
     # this is a really hacky way to create decreasing numbers
-    def increasing_gas_price_strategy(web3, _transaction_params):
+    def increasing_gas_price_strategy(web3: Web3, _transaction_params: Dict) -> GasPrice:
         old_counter = getattr(web3, "counter", gas_price)
         web3.counter = old_counter - 1
         return old_counter
@@ -24,9 +26,9 @@ def make_decreasing_gas_price_strategy(gas_price):
     return increasing_gas_price_strategy
 
 
-def test_duplicated_transaction_same_gas_price_raises(deploy_client):
+def test_duplicated_transaction_same_gas_price_raises(deploy_client: JSONRPCClient) -> None:
     """ If the same transaction is sent twice a JSON RPC error is raised. """
-    gas_price = 2000000000
+    gas_price = GasPrice(2000000000)
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
     deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
@@ -50,9 +52,9 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
         second_proxy.transact("ret", startgas)
 
 
-def test_duplicated_transaction_different_gas_price_raises(deploy_client):
+def test_duplicated_transaction_different_gas_price_raises(deploy_client: JSONRPCClient) -> None:
     """ If the same transaction is sent twice a JSON RPC error is raised. """
-    gas_price = 2000000000
+    gas_price = GasPrice(2000000000)
     deploy_client.web3.eth.setGasPriceStrategy(make_decreasing_gas_price_strategy(gas_price))
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 

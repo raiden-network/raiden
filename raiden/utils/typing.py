@@ -47,6 +47,9 @@ BlockExpiration = NewType("BlockExpiration", T_BlockExpiration)
 T_Balance = int
 Balance = NewType("Balance", T_Balance)
 
+T_GasPrice = int
+GasPrice = NewType("GasPrice", T_GasPrice)
+
 T_BalanceHash = bytes
 BalanceHash = NewType("BalanceHash", T_BalanceHash)
 
