@@ -15,6 +15,11 @@ from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.settings import (
+    DEFAULT_MEDIATION_FEE_MARGIN,
+    DEFAULT_RETRY_TIMEOUT,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
@@ -1067,4 +1072,20 @@ def block_timeout_for_transfer_by_secrethash(
         exception_to_throw=ValueError(error_message or default_error_message),
         block_number=BlockNumber(expiration),
         retry_timeout=DEFAULT_RETRY_TIMEOUT,
+
+def calculate_amount_to_drain_channel(deposit: int) -> int:
+    # calculate the amount to send so that including fees it covers the entire deposit
+    denominator = (
+        1
+        + INTERNAL_ROUTING_DEFAULT_FEE_PERC
+        + INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
+    )
+    amount = round(deposit / denominator)
+    return amount
+
+
+def calculate_fee_for_amount(amount: int) -> int:
+    return round(
+        amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC
+        + amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
     )

@@ -1,5 +1,4 @@
 from hashlib import sha256
-from math import ceil
 from typing import List
 from unittest.mock import patch
 
@@ -11,11 +10,7 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import (
-    DEFAULT_MEDIATION_FEE_MARGIN,
-    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
-)
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -26,6 +21,7 @@ from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     block_timeout_for_transfer_by_secrethash,
+    calculate_amount_to_drain_channel,
     transfer,
     transfer_and_assert_path,
     wait_assert,
@@ -200,15 +196,7 @@ def run_test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
-    # calculate the amount to send so that including fees it covers the entire deposit
-    amount = ceil(
-        deposit
-        / (
-            1
-            + INTERNAL_ROUTING_DEFAULT_FEE_PERC
-            + INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
-        )
-    )
+    amount = calculate_amount_to_drain_channel(deposit)
 
     secrethash = transfer_and_assert_path(
         path=raiden_network,
