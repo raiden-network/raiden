@@ -192,7 +192,7 @@ def token_amount(number_of_nodes):
 @pytest.fixture
 def network_wait():
     """Time in seconds used to wait for network events."""
-    return 10.0
+    return 0.3
 
 
 @pytest.fixture
