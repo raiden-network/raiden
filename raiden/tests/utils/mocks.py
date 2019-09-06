@@ -16,10 +16,12 @@ from raiden.utils import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     BlockSpecification,
     ChannelID,
     Dict,
     Optional,
+    TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
 )
@@ -29,7 +31,7 @@ from raiden_contracts.utils.type_aliases import ChainID
 class MockJSONRPCClient:
     def __init__(self, address: Address):
         # To be manually set by each test
-        self.balances_mapping: Dict[Address, int] = {}
+        self.balances_mapping: Dict[Address, TokenAmount] = {}
         self.chain_id = ChainID(17)
         self.address = address
 
@@ -97,18 +99,18 @@ class MockChannelState:
 
 class MockTokenNetwork:
     def __init__(self):
-        self.channelidentifiers_to_channels = {}
-        self.partneraddresses_to_channelidentifiers = {}
+        self.channelidentifiers_to_channels: dict = {}
+        self.partneraddresses_to_channelidentifiers: dict = {}
 
 
 class MockTokenNetworkRegistry:
     def __init__(self):
-        self.tokennetworkaddresses_to_tokennetworks = {}
+        self.tokennetworkaddresses_to_tokennetworks: dict = {}
 
 
 class MockChainState:
     def __init__(self):
-        self.identifiers_to_tokennetworkregistries = {}
+        self.identifiers_to_tokennetworkregistries: dict = {}
 
 
 class MockRaidenService:
@@ -133,20 +135,20 @@ class MockRaidenService:
         self.default_one_to_n_address = factories.make_address()
         self.default_msc_address = factories.make_address()
 
-        self.targets_to_identifiers_to_statuses = defaultdict(dict)
-        self.route_to_feedback_token = {}
+        self.targets_to_identifiers_to_statuses: Dict[Address, dict] = defaultdict(dict)
+        self.route_to_feedback_token: dict = {}
 
         if state_transition is None:
             state_transition = node.state_transition
 
-        serializer = JSONSerializer
+        serializer = JSONSerializer()
         state_manager = StateManager(state_transition, None)
         storage = SerializedSQLiteStorage(":memory:", serializer)
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(
             pseudo_random_generator=random.Random(),
-            block_number=0,
+            block_number=BlockNumber(0),
             block_hash=factories.make_block_hash(),
             our_address=self.rpc_client.address,
             chain_id=self.rpc_client.chain_id,

@@ -33,6 +33,9 @@ UINT64_MAX = 2 ** 64 - 1
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
+RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = TokenAmount(int(0.075 * 10 ** 18))
+RED_EYES_PER_TOKEN_NETWORK_LIMIT = TokenAmount(int(250 * 10 ** 18))
+
 GENESIS_BLOCK_NUMBER = BlockNumber(0)
 
 # Relevant forks:
