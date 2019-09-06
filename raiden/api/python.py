@@ -391,6 +391,18 @@ class RaidenAPI:  # pragma: no unittest
 
         token_network = self.raiden.chain.token_network(token_network_address)
 
+        safety_deprecation_switch = token_network.safety_deprecation_switch(
+            block_identifier=confirmed_block_identifier
+        )
+
+        if safety_deprecation_switch:
+            msg = (
+                "This token_network has been deprecated. New channels cannot be "
+                "open for this network, usage of the newly deployed token "
+                "network contract is highly encouraged."
+            )
+            raise TokenNetworkDeprecated(msg)
+
         duplicated_channel = self.is_already_existing_channel(
             token_network_address=token_network_address,
             partner_address=partner_address,
