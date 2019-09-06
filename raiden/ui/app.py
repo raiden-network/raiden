@@ -1,6 +1,5 @@
 import os
 import sys
-from math import sqrt
 from typing import Any, Callable, Dict, TextIO
 from urllib.parse import urlparse
 
@@ -30,7 +29,6 @@ from raiden.settings import (
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    MediationFeeConfig,
 )
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
@@ -48,6 +46,7 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
+from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (
     Address,
     ChainID,
@@ -126,37 +125,6 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     return f"http://{eth_rpc_endpoint}"
 
 
-def prepare_mediation_fee_config(
-    flat_fees: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
-    proportional_fee: ProportionalFeeAmount,
-    proportional_imbalance_fee: ProportionalFeeAmount,
-) -> MediationFeeConfig:
-    """ Converts the mediation fee CLI args to proper per-channel
-    mediation fees. """
-    # Store the flat fee settings for the given token networks
-    # The given flat fee is for the whole mediation, but that includes two channels.
-    # Therefore divide by 2 here.
-    token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = {
-        address: FeeAmount(fee // 2) for address, fee in flat_fees
-    }
-    # Given prop. fee also counts per mediation, therefore it needs to be adjusted on
-    # a per-channel basis:
-    # x * (1 - p) * (1 - p) = x * (1 - q)
-    # where
-    #    x = payment amount
-    #    q = cli proportional fee
-    #    p = per channel proportional fee
-    # Leads to: p = 1 - sqrt(1 - q)
-    proportional_fee_ratio = proportional_fee / 1e6
-    channel_prop_fee_ratio = 1 - sqrt(1 - proportional_fee_ratio)
-    channel_prop_fee = round(channel_prop_fee_ratio * 1e6)
-    return MediationFeeConfig(
-        token_network_to_flat_fee=token_network_to_flat_fee,
-        proportional_fee=ProportionalFeeAmount(channel_prop_fee),
-        proportional_imbalance_fee=proportional_imbalance_fee,
-    )
-
-
 def run_app(
     address: Address,
     keystore_path: str,
@@ -213,7 +181,7 @@ def run_app(
         api_port = Port(DEFAULT_HTTP_SERVER_PORT)
 
     fee_config = prepare_mediation_fee_config(
-        flat_fees=flat_fee,
+        cli_token_network_to_flat_fee=flat_fee,
         proportional_fee=proportional_fee,
         proportional_imbalance_fee=proportional_imbalance_fee,
     )
