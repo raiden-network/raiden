@@ -66,7 +66,6 @@ from raiden.utils.typing import (
     Optional,
     Signature,
     T_ChannelID,
-    T_ChannelState,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -602,7 +601,7 @@ class TokenNetwork:
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
         try:
-            channel_state = self._get_channel_state(
+            channel_data = self._detail_channel(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
@@ -610,7 +609,7 @@ class TokenNetwork:
             )
         except RaidenRecoverableError:
             return False
-        return channel_state == ChannelState.OPENED
+        return channel_data.state == ChannelState.OPENED
 
     def channel_is_closed(
         self,
@@ -621,7 +620,7 @@ class TokenNetwork:
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
         try:
-            channel_state = self._get_channel_state(
+            channel_data = self._detail_channel(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
@@ -629,7 +628,7 @@ class TokenNetwork:
             )
         except RaidenRecoverableError:
             return False
-        return channel_state == ChannelState.CLOSED
+        return channel_data.state == ChannelState.CLOSED
 
     def channel_is_settled(
         self,
@@ -640,7 +639,7 @@ class TokenNetwork:
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
         try:
-            channel_state = self._get_channel_state(
+            channel_data = self._detail_channel(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
@@ -648,7 +647,7 @@ class TokenNetwork:
             )
         except RaidenRecoverableError:
             return False
-        return channel_state >= ChannelState.SETTLED
+        return channel_data.state >= ChannelState.SETTLED
 
     def can_transfer(
         self,
@@ -958,15 +957,23 @@ class TokenNetwork:
                     block_identifier=failed_at_blockhash,
                 )
 
-                channel_state = self._get_channel_state(
+                channel_data = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
                     block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
-                # Check if deposit is being made on a non-open channel
-                if channel_state > ChannelState.OPENED:
-                    msg = "Deposit failed as the channel was not open"
+
+                if channel_data.state == ChannelState.CLOSED:
+                    msg = "Deposit failed because the channel was closed meanwhile"
+                    raise RaidenRecoverableError(msg)
+
+                if channel_data.state == ChannelState.SETTLED:
+                    msg = "Deposit failed because the channel was settled meanwhile"
+                    raise RaidenRecoverableError(msg)
+
+                if channel_data.state == ChannelState.REMOVED:
+                    msg = "Deposit failed because the channel was settled and unlocked meanwhile"
                     raise RaidenRecoverableError(msg)
 
                 deposit_amount = total_deposit - our_details.deposit
@@ -1094,7 +1101,7 @@ class TokenNetwork:
                 block_identifier=failed_at_blockhash,
             )
 
-            channel_state = self._get_channel_state(
+            channel_data = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=failed_at_blockhash,
@@ -1113,18 +1120,16 @@ class TokenNetwork:
                 Address(self.address), failed_at_blocknumber
             )
 
-            # Deposit was prohibited because the channel is settled
-            if channel_state == ChannelState.SETTLED:
-                msg = "Deposit is not possible due to channel being settled"
+            if channel_data.state == ChannelState.CLOSED:
+                msg = "Deposit was prohibited because the channel is closed"
                 raise RaidenRecoverableError(msg)
 
-            # Deposit was prohibited because the channel is closed
-            if channel_state == ChannelState.CLOSED:
-                msg = "Channel is already closed"
+            if channel_data.state == ChannelState.SETTLED:
+                msg = "Deposit was prohibited because the channel is settled"
                 raise RaidenRecoverableError(msg)
 
-            if channel_state == ChannelState.REMOVED:
-                msg = "Channel was settled and unlocked"
+            if channel_data.state == ChannelState.REMOVED:
+                msg = "Deposit was prohibited because the channel is settled and unlocked"
                 raise RaidenRecoverableError(msg)
 
             if our_details.deposit >= total_deposit:
@@ -1132,7 +1137,7 @@ class TokenNetwork:
                 raise RaidenRecoverableError(msg)
 
             # Check if deposit is being made on a nonexistent channel
-            if channel_state == ChannelState.NONEXISTENT:
+            if channel_data.state == ChannelState.NONEXISTENT:
                 msg = (
                     f"Channel between participant {to_checksum_address(self.node_address)} "
                     f"and {to_checksum_address(partner)} does not exist"
@@ -2613,21 +2618,3 @@ class TokenNetwork:
                 f"current={channel_identifier}, "
                 f"new={onchain_channel_identifier}"
             )
-
-    def _get_channel_state(
-        self,
-        participant1: Address,
-        participant2: Address,
-        block_identifier: BlockSpecification,
-        channel_identifier: ChannelID = None,
-    ) -> ChannelState:
-        channel_data = self._detail_channel(
-            participant1=participant1,
-            participant2=participant2,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        typecheck(channel_data.state, T_ChannelState)
-
-        return channel_data.state
