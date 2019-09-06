@@ -30,6 +30,7 @@ from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, 
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.tests.utils.transfer import calculate_fee_for_amount
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
 from raiden.waiting import (
@@ -1906,7 +1907,8 @@ def test_channel_events_raiden(api_server_test_instance, raiden_network, token_a
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_pending_transfers_endpoint(raiden_network, token_addresses):
     initiator, mediator, target = raiden_network
-    amount = 200
+    amount = 150
+    amount_with_fee = amount + calculate_fee_for_amount(amount)
     identifier = 42
 
     token_address = token_addresses[0]
@@ -1944,7 +1946,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     )
 
     transfer_arrived = target_wait.wait_for_message(LockedTransfer, {"payment_identifier": 42})
-    transfer_arrived.wait()
+    transfer_arrived.wait(timeout=30.0)
 
     for server in (initiator_server, mediator_server, target_server):
         request = grequests.get(api_url_for(server, "pending_transfers_resource"))
@@ -1953,7 +1955,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         content = json.loads(response.content)
         assert len(content) == 1
         assert content[0]["payment_identifier"] == str(identifier)
-        assert content[0]["locked_amount"] == str(amount)
+        assert content[0]["locked_amount"] == str(amount_with_fee)
         assert content[0]["token_address"] == to_checksum_address(token_address)
         assert content[0]["token_network_address"] == to_checksum_address(token_network_address)
 
