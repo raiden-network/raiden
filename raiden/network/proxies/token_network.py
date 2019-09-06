@@ -777,6 +777,9 @@ class TokenNetwork:
                 channel_participant_deposit_limit = self.channel_participant_deposit_limit(
                     block_identifier=given_block_identifier
                 )
+                network_total_deposit = self.token.balance_of(
+                    address=Address(self.address), block_identifier=given_block_identifier
+                )
             except ValueError:
                 # If `given_block_identifier` has been pruned the checks cannot be
                 # performed.
@@ -820,10 +823,6 @@ class TokenNetwork:
                         f"channel participant deposit limit"
                     )
                     raise BrokenPreconditionError(msg)
-
-                network_total_deposit = self.token.balance_of(
-                    Address(self.address), given_block_identifier
-                )
 
                 if network_total_deposit + amount_to_deposit > token_network_deposit_limit:
                     msg = (
