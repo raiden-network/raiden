@@ -22,6 +22,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
+from raiden.tests.utils.factories import make_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import T_ChannelID
 from raiden_contracts.constants import (
@@ -165,6 +166,13 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
+    # Using exactly the minimal timeout must succeed
+    c1_token_network_proxy.new_netting_channel(
+        partner=make_address(),
+        settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
+        given_block_identifier="latest",
+    )
+
     msg = (
         "Opening a channel with a settle_timeout larger then token "
         "network's maximum will fail. This must be validated and the "
@@ -177,6 +185,13 @@ def test_token_network_proxy(
             given_block_identifier="latest",
         )
         pytest.fail(msg)
+
+    # Using exactly the maximal timeout must succeed
+    c1_token_network_proxy.new_netting_channel(
+        partner=make_address(),
+        settle_timeout=TEST_SETTLE_TIMEOUT_MAX,
+        given_block_identifier="latest",
+    )
 
     msg = (
         "Opening a channel with itself is not allow. This must be validated and "
@@ -194,14 +209,14 @@ def test_token_network_proxy(
     with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
-            channel_identifier=1,
+            channel_identifier=100,
             total_deposit=1,
             partner=c2_client.address,
         )
         pytest.fail(msg)
 
     empty_balance_proof = BalanceProof(
-        channel_identifier=1,
+        channel_identifier=100,
         token_network_address=c1_token_network_proxy.address,
         balance_hash=encode_hex(EMPTY_BALANCE_HASH),
         nonce=0,
@@ -216,7 +231,7 @@ def test_token_network_proxy(
     match = "The channel was not open at the provided block"
     with pytest.raises(RaidenUnrecoverableError, match=match):
         c1_token_network_proxy.close(
-            channel_identifier=1,
+            channel_identifier=100,
             partner=c2_client.address,
             balance_hash=EMPTY_HASH,
             nonce=0,
