@@ -1416,7 +1416,7 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
-                if expiration_block < failed_at_blocknumber:
+                if expiration_block <= failed_at_blocknumber:
                     msg = (
                         f"setTotalWithdraw failed because the transaction was "
                         f"mined after the withdraw expired "
@@ -1478,10 +1478,11 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            if expiration_block < failed_at_blocknumber:
+            if expiration_block <= failed_at_blocknumber:
                 msg = (
-                    f"setTotalWithdraw would have failed because current block is "
-                    f"higher than the withdraw expiration expiration_block={expiration_block} "
+                    f"setTotalWithdraw would have failed because current block "
+                    f"has already reached the withdraw expiration "
+                    f"expiration_block={expiration_block} "
                     f"transation_checked_at={failed_at_blocknumber}"
                 )
                 raise RaidenRecoverableError(msg)
