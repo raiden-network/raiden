@@ -1,13 +1,17 @@
+from math import isclose
+
 import pytest
 
 from raiden.tests.utils import factories
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
-from raiden.utils.typing import ProportionalFeeAmount
+from raiden.utils.typing import FeeAmount, ProportionalFeeAmount
 
 
-@pytest.mark.parametrize("flat_fees", [(42, 21), (43, 21)])
-def test_prepare_mediation_fee_config_flat_fee(flat_fees):
-    cli_flat_fee, expected_channel_flat_fee = flat_fees
+@pytest.mark.parametrize(
+    "cli_flat_fee, expected_channel_flat_fee",
+    [(FeeAmount(42), FeeAmount(21)), (FeeAmount(43), FeeAmount(21))],
+)
+def test_prepare_mediation_fee_config_flat_fee(cli_flat_fee, expected_channel_flat_fee):
     token_network_address = factories.make_token_network_address()
     fee_config = prepare_mediation_fee_config(
         cli_token_network_to_flat_fee=((token_network_address, cli_flat_fee),),
@@ -19,22 +23,24 @@ def test_prepare_mediation_fee_config_flat_fee(flat_fees):
 
 
 @pytest.mark.parametrize(
-    "prop_fees",
+    "cli_prop_fee",
     [
-        (1_000_000, 1_000_000),  # 100%
-        (999_999, 999_000),  # 99.9999%
-        (990_000, 900_000),  # 99%
-        (100_000, 51317),  # 10%
-        (10_000, 5013),  # 1%
-        (0, 0),  # 0%
+        1_000_000,  # 100%
+        999_999,  # 99.9999%
+        990_000,  # 99%
+        100_000,  # 10%
+        10_000,  # 1%
+        0,  # 0%
     ],
 )
-def test_prepare_mediation_fee_config_prop_fee(prop_fees):
-    cli_prop_fee, expected_channel_prop_fee = prop_fees
+def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
     fee_config = prepare_mediation_fee_config(
         cli_token_network_to_flat_fee=(),
         proportional_fee=ProportionalFeeAmount(cli_prop_fee),
         proportional_imbalance_fee=ProportionalFeeAmount(0),
     )
 
-    assert fee_config.proportional_fee == expected_channel_prop_fee
+    cli_prop_fee_ratio = cli_prop_fee / 1e6
+    channel_prop_fee_ratio = fee_config.proportional_fee / 1e6
+
+    assert isclose((1 - channel_prop_fee_ratio) ** 2, 1 - cli_prop_fee_ratio, rel_tol=1e-6)
