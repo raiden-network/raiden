@@ -649,7 +649,13 @@ def run_test_mediated_transfer_with_fees(
     for i, fee_schedule in enumerate(case.get("incoming_fee_schedules", [])):
         if fee_schedule:
             set_fee_schedule(apps[i + 1], apps[i], fee_schedule)
-    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+
+    route_patch = patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees)
+    disable_max_mediation_fee_patch = patch(
+        "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=1
+    )
+
+    with route_patch, disable_max_mediation_fee_patch:
         transfer_and_assert_path(
             path=raiden_network, token_address=token_address, amount=amount, identifier=2
         )
