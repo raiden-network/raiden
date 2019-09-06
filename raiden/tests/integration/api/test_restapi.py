@@ -840,7 +840,7 @@ def test_api_payments_target_error(api_server_test_instance, raiden_network, tok
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments(api_server_test_instance, raiden_network, token_addresses):
     _, app1 = raiden_network
-    amount = 200
+    amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
@@ -985,7 +985,7 @@ def test_api_payments_with_secret_no_hash(
     api_server_test_instance, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 200
+    amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
@@ -1058,7 +1058,7 @@ def test_api_payments_with_secret_and_hash(
     api_server_test_instance, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 200
+    amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
@@ -1556,7 +1556,7 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_payment_events_endpoints(api_server_test_instance, raiden_network, token_addresses):
     app0, app1, app2 = raiden_network
-    amount1 = 200
+    amount1 = 10
     identifier1 = 42
     secret1, secrethash1 = factories.make_secret_with_hash()
     token_address = token_addresses[0]
@@ -1582,7 +1582,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
 
     # app0 is sending some tokens to target 2
     identifier2 = 43
-    amount2 = 123
+    amount2 = 10
     secret2, secrethash2 = factories.make_secret_with_hash()
     request = grequests.post(
         api_url_for(
@@ -1884,7 +1884,7 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_events_raiden(api_server_test_instance, raiden_network, token_addresses):
     _, app1 = raiden_network
-    amount = 200
+    amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
