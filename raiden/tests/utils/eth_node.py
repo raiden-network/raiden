@@ -177,6 +177,7 @@ def parity_to_cmd(
         "cache-size-blocks": "cache-size-blocks",
         "cache-size-queue": "cache-size-queue",
         "cache-size": "cache-size",
+        "bootnodes": "bootnodes",
     }
 
     cmd = ["parity"]
@@ -516,6 +517,8 @@ def run_private_blockchain(
 
         nodes_configuration.append(config)
 
+    eth_node_config_set_bootnodes(nodes_configuration)
+
     blockchain_type = eth_nodes[0].blockchain_type
 
     # This is not be configurable because it must be one of the running eth
@@ -523,8 +526,6 @@ def run_private_blockchain(
     seal_account = privatekey_to_address(eth_nodes[0].private_key)
 
     if blockchain_type == "geth":
-        eth_node_config_set_bootnodes(nodes_configuration)
-
         genesis_path = os.path.join(base_datadir, "custom_genesis.json")
         geth_generate_poa_genesis(
             genesis_path=genesis_path,
