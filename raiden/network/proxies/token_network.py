@@ -747,6 +747,11 @@ class TokenNetwork:
         # this, the allowance can not change until the deposit is done.
         with self.channel_operations_lock[partner], self.token.token_lock:
             try:
+                queried_channel_identifier = self.get_channel_identifier_or_none(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    block_identifier=given_block_identifier,
+                )
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
@@ -792,6 +797,16 @@ class TokenNetwork:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
+                if queried_channel_identifier != channel_identifier:
+                    msg = (
+                        f"There is a channel open among "
+                        f"{to_checksum_address(self.node_address)} and "
+                        f"{to_checksum_address(partner)}. However the channel id "
+                        f"on-chain {queried_channel_identifier} and the provided "
+                        f"id {channel_identifier} do not match."
+                    )
+                    raise BrokenPreconditionError(msg)
+
                 if safety_deprecation_switch:
                     msg = "This token_network has been deprecated."
                     raise BrokenPreconditionError(msg)
@@ -917,6 +932,8 @@ class TokenNetwork:
 
             if failed_receipt:
                 # Because the gas estimation succeeded it is known that:
+                # - The channel id was correct, i.e. this node and partner are
+                #   participants of the chanenl with id `channel_identifier`.
                 # - The channel was open.
                 # - The account had enough tokens to deposit
                 # - The account had enough balance to pay for the gas (however
@@ -955,7 +972,6 @@ class TokenNetwork:
                     partner=partner,
                     block_identifier=failed_at_blockhash,
                 )
-
                 channel_data = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
@@ -1046,8 +1062,6 @@ class TokenNetwork:
 
                 raise RaidenRecoverableError("Unlocked failed for an unknown reason")
         else:
-            # The transaction has failed, figure out why.
-
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
             failed_at = self.proxy.jsonrpc_client.get_block("latest")
@@ -1087,6 +1101,11 @@ class TokenNetwork:
                 msg = "The address doesnt have enough tokens"
                 raise RaidenRecoverableError(msg)
 
+            queried_channel_identifier = self.get_channel_identifier_or_none(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=failed_at_blockhash,
+            )
             our_details = self._detail_participant(
                 channel_identifier=channel_identifier,
                 detail_for=self.node_address,
@@ -1099,7 +1118,6 @@ class TokenNetwork:
                 partner=partner,
                 block_identifier=failed_at_blockhash,
             )
-
             channel_data = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
@@ -1118,6 +1136,23 @@ class TokenNetwork:
             network_total_deposit = self.token.balance_of(
                 Address(self.address), failed_at_blocknumber
             )
+
+            # This check can only be done against the block
+            # `failed_at_blockhash` if the channel id is in the mapping
+            # `participants_hash_to_channel_identifier`. The id is added on
+            # channel open and removed on settle.
+            is_invalid_channel_id = (
+                channel_data.state in (ChannelState.OPENED, ChannelState.CLOSED)
+                and queried_channel_identifier != channel_identifier
+            )
+            if is_invalid_channel_id:
+                msg = (
+                    f"There is an open channel with the id {channel_identifier}. "
+                    f"However addresses {to_checksum_address(self.node_address)} "
+                    f"and {to_checksum_address(partner)} are not participants of "
+                    f"that channel, the correct id is {queried_channel_identifier}."
+                )
+                raise RaidenUnrecoverableError(msg)  # This error is considered a bug
 
             if channel_data.state == ChannelState.CLOSED:
                 msg = "Deposit was prohibited because the channel is closed"
