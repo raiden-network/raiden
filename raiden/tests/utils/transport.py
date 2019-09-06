@@ -17,7 +17,7 @@ from twisted.internet import defer
 
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port
+from raiden.utils.typing import Iterable, Port, Signature
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -31,7 +31,7 @@ class ParsedURL(str):
     """ A string subclass that allows direct access to the split components of a URL """
 
     def __new__(cls, *args, **kwargs):
-        new = str.__new__(cls, *args, **kwargs)
+        new = str.__new__(cls, *args, **kwargs)  # type: ignore
         new._parsed = urlsplit(new)
         return new
 
@@ -74,7 +74,7 @@ class EthAuthProvider:
             )
             defer.returnValue(False)
 
-        signature = unhexlify(password[2:])
+        signature = Signature(unhexlify(password[2:]))
 
         user_match = self._user_re.match(user_id)
         if not user_match or user_match.group(2) != self.hs_hostname:
@@ -150,7 +150,7 @@ def make_requests_insecure():
     """
     # Disable verification in requests by replacing the 'verify'
     # attribute with non-writable property that always returns `False`
-    requests.Session.verify = property(lambda self: False, lambda self, val: None)
+    requests.Session.verify = property(lambda self: False, lambda self, val: None)  # type: ignore
 
 
 @contextmanager

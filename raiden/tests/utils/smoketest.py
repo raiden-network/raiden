@@ -287,7 +287,7 @@ def setup_raiden(
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
-        initial_amount=1000,
+        initial_amount=TokenAmount(1000),
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
@@ -297,16 +297,16 @@ def setup_raiden(
         client=client,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
-        token_address=to_canonical_address(token.contract.address),
+        token_address=to_checksum_address(token.contract.address),
     )
     registry = proxy_manager.token_network_registry(
-        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
     )
 
     registry.add_token(
-        token_address=to_canonical_address(token.contract.address),
-        channel_participant_deposit_limit=UINT256_MAX,
-        token_network_deposit_limit=UINT256_MAX,
+        token_address=TokenAddress(to_canonical_address(token.contract.address)),
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
         block_identifier=client.get_confirmed_blockhash(),
     )
 
