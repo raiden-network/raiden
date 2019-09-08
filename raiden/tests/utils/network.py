@@ -351,6 +351,7 @@ def create_apps(
     local_matrix_url: Optional[ParsedURL],
     private_rooms: bool,
     global_rooms: List[str],
+    routing_mode: RoutingMode,
 ) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -427,7 +428,7 @@ def create_apps(
             raiden_event_handler=hold_handler,
             message_handler=message_handler,
             user_deposit=user_deposit,
-            routing_mode=RoutingMode.PRIVATE,
+            routing_mode=routing_mode,
         )
         apps.append(app)
 
