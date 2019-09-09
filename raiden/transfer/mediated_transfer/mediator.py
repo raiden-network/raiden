@@ -1,7 +1,6 @@
 import itertools
 import random
 
-from raiden.exceptions import TransferAmountSmallerThanFees
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
@@ -232,7 +231,7 @@ def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> Fee
 
 def get_lock_amount_after_fees(
     lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
-) -> PaymentWithFeeAmount:
+) -> Optional[PaymentWithFeeAmount]:
     """
     Return the lock.amount after fees are taken.
 
@@ -245,10 +244,11 @@ def get_lock_amount_after_fees(
     # approximation.
     fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
     amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
+
     if amount_after_fees <= 0:
-        raise TransferAmountSmallerThanFees(
-            f"Can't take mediation fees of {fee_in} + {fee_out} from transfer of {lock.amount}"
-        )
+        # The node can't cover its mediations fees from the tranferred amount.
+        return None
+
     return amount_after_fees
 
 
@@ -384,6 +384,9 @@ def forward_transfer_pair(
     amount_after_fees = get_lock_amount_after_fees(
         payer_transfer.lock, payer_channel, payee_channel
     )
+    if not amount_after_fees:
+        return None, []
+
     lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
     safe_to_use_channel = channel.is_channel_usable_for_mediation(
         channel_state=payee_channel, transfer_amount=amount_after_fees, lock_timeout=lock_timeout
