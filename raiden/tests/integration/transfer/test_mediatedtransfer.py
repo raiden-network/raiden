@@ -10,7 +10,7 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure

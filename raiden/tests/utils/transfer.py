@@ -1076,17 +1076,10 @@ def block_timeout_for_transfer_by_secrethash(
 
 def calculate_amount_to_drain_channel(deposit: int) -> int:
     # calculate the amount to send so that including fees it covers the entire deposit
-    denominator = (
-        1
-        + INTERNAL_ROUTING_DEFAULT_FEE_PERC
-        + INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
-    )
+    denominator = 1 + INTERNAL_ROUTING_DEFAULT_FEE_PERC * (1 + DEFAULT_MEDIATION_FEE_MARGIN)
     amount = round(deposit / denominator)
     return amount
 
 
 def calculate_fee_for_amount(amount: int) -> int:
-    return round(
-        amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC
-        + amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC * DEFAULT_MEDIATION_FEE_MARGIN
-    )
+    return round((amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC) * (1 + DEFAULT_MEDIATION_FEE_MARGIN))

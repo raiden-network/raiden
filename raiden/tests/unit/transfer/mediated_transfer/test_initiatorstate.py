@@ -247,7 +247,7 @@ def test_init_with_usable_routes():
 def test_init_with_fees_more_than_max_limit():
     transfer_amount = TokenAmount(100)
     flat_fee = FeeAmount(int(transfer_amount + MAX_MEDIATION_FEE_PERC * transfer_amount))
-    expected_fee_margin = int(flat_fee * DEFAULT_MEDIATION_FEE_MARGIN)  # == 1
+    expected_fee_margin = int(flat_fee * DEFAULT_MEDIATION_FEE_MARGIN)
     properties = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties(
             balance=TokenAmount(transfer_amount + flat_fee + expected_fee_margin)
