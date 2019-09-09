@@ -287,15 +287,6 @@ class UndefinedMediationFee(RaidenError):
     FeeSchedule is outdated/inconsistent."""
 
 
-class TransferAmountSmallerThanFees(RaidenRecoverableError):
-    """The node can't cover its mediations fees from the tranferred amount.
-
-    The transferred amount can't go negative, so the node has no way to earn
-    its mediation fees when the transferred amount is too low. The mediator has
-    no incentive to mediate and will drop the transfer.
-    """
-
-
 class TokenNetworkDeprecated(RaidenError):
     """ Raised when the token network proxy safety switch
     is turned on (i.e deprecated).
