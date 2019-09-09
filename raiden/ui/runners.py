@@ -232,7 +232,7 @@ class NodeRunner:
                     task.get()  # re-raise
 
             gevent.joinall(
-                [gevent.spawn(stop_task, task) for task in tasks],
+                set(gevent.spawn(stop_task, task) for task in tasks),
                 app_.config.get("shutdown_timeout", settings.DEFAULT_SHUTDOWN_TIMEOUT),
                 raise_error=True,
             )
