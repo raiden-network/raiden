@@ -409,13 +409,15 @@ def transfer_and_assert_path(
         secret=secret,
     )
 
+    msg = (
+        f"transfer from {to_checksum_address(first_app.raiden.address)} "
+        f"to {to_checksum_address(last_app.raiden.address)} for amount "
+        f"{amount} failed"
+    )
+    exception = RuntimeError(msg + " due to Timeout")
     with watch_for_unlock_failures(*path):
-        with Timeout(seconds=timeout):
+        with Timeout(seconds=timeout, exception=exception):
             gevent.wait(results)
-            msg = (
-                f"transfer from {to_checksum_address(first_app.raiden.address)} "
-                f"to {to_checksum_address(last_app.raiden.address)} failed."
-            )
             assert payment_status.payment_done.get(), msg
 
     return secrethash
