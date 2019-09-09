@@ -126,10 +126,10 @@ class App:  # pylint: disable=too-few-public-methods
         """ Start the raiden app. """
         if self.raiden.stop_event.is_set():
             self.raiden.start()
-            log.info("Raiden started", node=self.raiden.address)
+            log.info("Raiden started", node=to_checksum_address(self.raiden.address))
 
     def stop(self) -> None:
         """ Stop the raiden app. """
         if not self.raiden.stop_event.is_set():
             self.raiden.stop()
-            log.info("Raiden stopped", node=self.raiden.address)
+            log.info("Raiden stopped", node=to_checksum_address(self.raiden.address))
