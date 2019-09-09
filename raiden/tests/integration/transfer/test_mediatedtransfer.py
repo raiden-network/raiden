@@ -11,7 +11,7 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -553,7 +553,7 @@ def run_test_mediated_transfer_with_fees(
     def get_best_routes_with_fees(*args, **kwargs):
         routes = get_best_routes_internal(*args, **kwargs)
         for r in routes:
-            r.estimated_fee = fee
+            r.estimated_fee = fee_without_margin
         return routes
 
     def assert_balances(expected_transferred_amounts=List[int]):
@@ -568,7 +568,8 @@ def run_test_mediated_transfer_with_fees(
                 pending_locks1=[],
             )
 
-    fee = FeeAmount(5)
+    fee_without_margin = FeeAmount(20)
+    fee = round(fee_without_margin * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
     amount = PaymentAmount(10)
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
