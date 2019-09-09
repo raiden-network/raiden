@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.mediated_transfer.mediation_fee import (
     NUM_DISCRETISATION_POINTS,
     FeeScheduleState,
@@ -78,6 +79,9 @@ def test_imbalance_penalty():
     assert v_schedule.fee(
         channel_balance=Balance(100 - 40), amount=PaymentAmount(20)
     ) == FeeAmount(0)
+
+    with pytest.raises(UndefinedMediationFee):
+        v_schedule.fee(channel_balance=Balance(0), amount=PaymentAmount(1))
 
 
 def test_linspace():

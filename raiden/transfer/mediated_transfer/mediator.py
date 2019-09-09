@@ -1,6 +1,7 @@
 import itertools
 import random
 
+from raiden.exceptions import TransferAmountSmallerThanFees
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
@@ -243,7 +244,12 @@ def get_lock_amount_after_fees(
     # we only have the amount including fee_out, so we use that as an
     # approximation.
     fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
-    return PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
+    amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
+    if amount_after_fees <= 0:
+        raise TransferAmountSmallerThanFees(
+            f"Can't take mediation fees of {fee_in} + {fee_out} from transfer of {lock.amount}"
+        )
+    return amount_after_fees
 
 
 def sanity_check(
