@@ -350,7 +350,9 @@ def blockchainevent_to_statechange(
                 reveal_timeout=raiden.config["reveal_timeout"],
                 fee_schedule=FeeScheduleState(
                     flat=fee_config.get_flat_fee(new_channel_details.token_network_address),
-                    proportional=fee_config.proportional_fee,
+                    proportional=fee_config.get_proportional_fee(
+                        new_channel_details.token_network_address
+                    )
                     # no need to set the imbalance fee here, will be set during deposit
                 ),
             )

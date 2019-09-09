@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
+    TokenNetworkAddress,
     TransactionHash,
 )
 
@@ -166,3 +167,7 @@ LOWEST_SUPPORTED_GETH_VERSION = "1.7.2"
 # this is the last stable version as of this comment
 HIGHEST_SUPPORTED_PARITY_VERSION = "2.5.5"
 LOWEST_SUPPORTED_PARITY_VERSION = "1.7.6"
+
+
+WETH_TOKEN_NETWORK_ADDRESS = TokenNetworkAddress(b"")  # TODO ADD this when deployed
+DAI_TOKEN_NETWORK_ADDRESS = TokenNetworkAddress(b"")  # TODO ADD this when deployed
