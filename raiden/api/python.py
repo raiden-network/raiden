@@ -20,6 +20,7 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     RaidenRecoverableError,
     TokenNetworkDeprecated,
+    TokenNetworkRegistryFull,
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
@@ -210,6 +211,8 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             InvalidBinaryAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
+            TokenNetworkRegistryOverLimit: If the TokenNetworkRegistry has so many tokens
+                registered that no new token can be registered.
             TransactionThrew: If the register transaction failed, this may
                 happen because the account has not enough balance to pay for the
                 gas or this register call raced with another transaction and lost.
@@ -242,6 +245,9 @@ class RaidenAPI:  # pragma: no unittest
         except RaidenRecoverableError as e:
             if "Token already registered" in str(e):
                 raise AlreadyRegisteredTokenAddress("Token already registered")
+            # else
+            if "Too many tokens already registered" in str(e):
+                raise TokenNetworkRegistryFull("TokenNetworkRegistry is full")
             # else
             raise
 

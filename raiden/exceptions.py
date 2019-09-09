@@ -156,6 +156,12 @@ class AlreadyRegisteredTokenAddress(RaidenError):
     """ Raised when the token address in already registered with the given network. """
 
 
+class TokenNetworkRegistryFull(RaidenError):
+    """ Raised when the TokenNetworkRegistry has so many tokens registered so no
+    new registration is possible.
+    """
+
+
 class InvalidToken(RaidenError):
     """ Raised if the token does not follow the ERC20 standard """
 
