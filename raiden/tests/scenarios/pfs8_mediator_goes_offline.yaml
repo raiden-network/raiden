@@ -88,7 +88,7 @@ scenario:
           name: "Stop node 4 to make sure that path isn't used again"
           tasks:
             - stop_node: 4
-      -serial:
+      - serial:
           name: "Make payment from 0 to 3 after node4 is stopped"
           tasks:
             # Check that a payment is made with the only availabe path [0, 1, 2, 3] from 0 to 3
