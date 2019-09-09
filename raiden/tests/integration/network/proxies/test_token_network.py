@@ -477,8 +477,7 @@ def test_token_network_proxy(
     assert token_proxy.balance_of(c2_client.address) == (initial_balance_c2 + transferred_amount)
 
     msg = "depositing to a settled channel must fail"
-    match = "The channel was not opened"
-    with pytest.raises(BrokenPreconditionError, match=match):
+    with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
