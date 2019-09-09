@@ -228,3 +228,11 @@ class TokenNetworkRegistry:
     def settlement_timeout_max(self) -> int:
         """ Returns the maximal settlement timeout for the token network registry. """
         return self.proxy.contract.functions.settlement_timeout_max().call()
+
+    def get_token_network_created(self, to_block: BlockSpecification = "latest") -> int:
+        """ Returns the number of TokenNetwork contracts created so far in the
+        token network registry.
+        """
+        return self.proxy.contract.functions.token_network_created().call(
+            block_identifier=to_block
+        )
