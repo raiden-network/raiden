@@ -29,6 +29,7 @@ from raiden.transfer import channel
 from raiden.transfer.architecture import State
 from raiden.transfer.events import (
     EventInvalidReceivedLockExpired,
+    EventInvalidSecretRequest,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
     SendProcessed,
@@ -1685,7 +1686,7 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
 
     state_change = ReceiveSecretRequest(
         payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        amount=setup.lock.amount - 1,  # Assuming 1 is the fee amount that was deducted
+        amount=setup.lock.amount - fee_amount,
         expiration=setup.lock.expiration,
         secrethash=setup.lock.secrethash,
         sender=UNIT_TRANSFER_TARGET,
@@ -1709,7 +1710,7 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
 
     state_change_2 = ReceiveSecretRequest(
         payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        amount=setup.lock.amount - fee_amount - 1,
+        amount=setup.lock.amount - fee_amount - 1,  # Now the amount becomes too small
         expiration=setup.lock.expiration,
         secrethash=setup.lock.secrethash,
         sender=UNIT_TRANSFER_TARGET,
@@ -1724,7 +1725,8 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
         block_number=setup.block_number,
     )
 
-    assert len(iteration2.events) == 0
+    assert len(iteration2.events) == 1
+    assert search_for_item(iteration2.events, EventInvalidSecretRequest, {}) is not None
 
 
 def test_initiator_manager_drops_invalid_state_changes():
