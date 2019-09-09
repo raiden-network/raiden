@@ -8,7 +8,11 @@ from raiden.settings import (
 )
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
-from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.events import (
+    EventInvalidSecretRequest,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+)
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
@@ -387,7 +391,11 @@ def handle_secretrequest(
 
     elif not is_valid_secretrequest and is_message_from_target:
         initiator_state.received_secret_request = True
-        iteration = TransitionResult(initiator_state, list())
+        invalid_request = EventInvalidSecretRequest(
+            intended_amount=initiator_state.transfer_description.amount,
+            actual_amount=state_change.amount,
+        )
+        iteration = TransitionResult(initiator_state, [invalid_request])
 
     else:
         iteration = TransitionResult(initiator_state, list())

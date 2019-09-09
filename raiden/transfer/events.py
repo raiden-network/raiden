@@ -302,3 +302,11 @@ class EventInvalidActionWithdraw(Event):
 @dataclass(frozen=True)
 class SendProcessed(SendMessageEvent):
     pass
+
+
+@dataclass(frozen=True)
+class EventInvalidSecretRequest(Event):
+    """ Event emitted when an invalid SecretRequest is received. """
+
+    intended_amount: PaymentAmount
+    actual_amount: PaymentAmount
