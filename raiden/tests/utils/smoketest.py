@@ -8,7 +8,7 @@ from http import HTTPStatus
 
 import click
 import requests
-from eth_utils import encode_hex, remove_0x_prefix, to_canonical_address, to_checksum_address
+from eth_utils import remove_0x_prefix, to_canonical_address, to_checksum_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
@@ -199,8 +199,7 @@ def setup_testchain(
         chain_id=NETWORKNAME_TO_ID["smoketest"],
     )
 
-    nodekeyhex = remove_0x_prefix(encode_hex(TEST_PRIVKEY))
-    datadir = eth_node_to_datadir(nodekeyhex, base_datadir)
+    datadir = eth_node_to_datadir(privatekey_to_address(TEST_PRIVKEY), base_datadir)
     if eth_client is EthClient.GETH:
         keystore = geth_keystore(datadir)
     elif eth_client is EthClient.PARITY:
