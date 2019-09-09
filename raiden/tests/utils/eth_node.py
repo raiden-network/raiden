@@ -133,10 +133,12 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
         # can override that.
         cmd.append("--allow-insecure-unlock")
 
-    # don't use the '--dev' flag
+    # Don't use the '--dev' flag
+    # Don't use `--nodiscover`. This flag completely disables the peer
+    # discovery, even if the peers are given through the `--bootnodes`
+    # configuration flag.
     cmd.extend(
         [
-            "--nodiscover",
             "--rpc",
             "--rpcapi",
             "eth,net,web3,personal,txpool",
