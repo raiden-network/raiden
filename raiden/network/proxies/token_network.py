@@ -799,7 +799,7 @@ class TokenNetwork:
             else:
                 if queried_channel_identifier != channel_identifier:
                     msg = (
-                        f"There is a channel open among "
+                        f"There is a channel open between "
                         f"{to_checksum_address(self.node_address)} and "
                         f"{to_checksum_address(partner)}. However the channel id "
                         f"on-chain {queried_channel_identifier} and the provided "
@@ -1137,10 +1137,9 @@ class TokenNetwork:
                 Address(self.address), failed_at_blocknumber
             )
 
-            # This check can only be done against the block
-            # `failed_at_blockhash` if the channel id is in the mapping
-            # `participants_hash_to_channel_identifier`. The id is added on
-            # channel open and removed on settle.
+            # This check can only be done if the channel is in the open/closed
+            # states because from the settled state and after the id is removed
+            # from the smart contract.
             is_invalid_channel_id = (
                 channel_data.state in (ChannelState.OPENED, ChannelState.CLOSED)
                 and queried_channel_identifier != channel_identifier
@@ -1150,7 +1149,7 @@ class TokenNetwork:
                     f"There is an open channel with the id {channel_identifier}. "
                     f"However addresses {to_checksum_address(self.node_address)} "
                     f"and {to_checksum_address(partner)} are not participants of "
-                    f"that channel, the correct id is {queried_channel_identifier}."
+                    f"that channel. The correct id is {queried_channel_identifier}."
                 )
                 raise RaidenUnrecoverableError(msg)  # This error is considered a bug
 
