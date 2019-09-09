@@ -573,7 +573,13 @@ def run_test_mediated_transfer_with_fees(
 
     fee_without_margin = FeeAmount(20)
     fee = round(fee_without_margin * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
-    amount = PaymentAmount(10)
+    amount = PaymentAmount(35)
+    msg = (
+        "The chosen values will result in less than the amount reaching "
+        "the target after the 3rd hop"
+    )
+    amount_at_end = amount + fee - (amount + fee) // 5 - (amount + fee - (amount + fee) // 5) // 5
+    assert amount_at_end >= amount, msg
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
         # result, the target receives the fee.
@@ -652,7 +658,7 @@ def run_test_mediated_transfer_with_fees(
 
     route_patch = patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees)
     disable_max_mediation_fee_patch = patch(
-        "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=1
+        "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=10000
     )
 
     with route_patch, disable_max_mediation_fee_patch:
