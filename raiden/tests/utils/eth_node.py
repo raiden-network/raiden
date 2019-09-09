@@ -318,16 +318,16 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
 
 
 def eth_node_config(
-    miner_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Any
+    node_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Any
 ) -> Dict[str, Any]:
-    address = privatekey_to_address(miner_pkey)
-    pub = privatekey_to_publickey(miner_pkey).hex()
+    address = privatekey_to_address(node_pkey)
+    pub = privatekey_to_publickey(node_pkey).hex()
 
     config = extra_config.copy()
     config.update(
         {
-            "nodekey": miner_pkey,
-            "nodekeyhex": remove_0x_prefix(encode_hex(miner_pkey)),
+            "nodekey": node_pkey,
+            "nodekeyhex": remove_0x_prefix(encode_hex(node_pkey)),
             "pub": pub,
             "address": address,
             "port": p2p_port,
@@ -346,12 +346,12 @@ def eth_node_config_set_bootnodes(nodes_configuration: List[Dict[str, Any]]) -> 
         config["bootnodes"] = bootnodes
 
 
-def eth_node_to_datadir(nodekeyhex: str, base_datadir: str) -> str:
+def eth_node_to_datadir(node_address: bytes, base_datadir: str) -> str:
     # HACK: Use only the first 8 characters to avoid golang's issue
     # https://github.com/golang/go/issues/6895 (IPC bind fails with path
     # longer than 108 characters).
     # BSD (and therefore macOS) socket path length limit is 104 chars
-    nodekey_part = nodekeyhex[:8]
+    nodekey_part = encode_hex(node_address)[:8]
     datadir = os.path.join(base_datadir, nodekey_part)
     return datadir
 
@@ -386,7 +386,7 @@ def eth_nodes_to_cmds(
 ) -> List[Command]:
     cmds = []
     for config, node_desc in zip(nodes_configuration, eth_node_descs):
-        datadir = eth_node_to_datadir(config["nodekeyhex"], base_datadir)
+        datadir = eth_node_to_datadir(config["address"], base_datadir)
 
         if node_desc.blockchain_type == "geth":
             geth_prepare_datadir(datadir, genesis_file)
@@ -534,7 +534,7 @@ def run_private_blockchain(
 
         for config in nodes_configuration:
             if config.get("mine"):
-                datadir = eth_node_to_datadir(config["nodekeyhex"], base_datadir)
+                datadir = eth_node_to_datadir(config["address"], base_datadir)
                 keyfile_path = geth_keyfile(datadir, config["address"])
                 eth_create_account_file(keyfile_path, config["nodekey"])
 
@@ -548,7 +548,7 @@ def run_private_blockchain(
 
         for config in nodes_configuration:
             if config.get("mine"):
-                datadir = eth_node_to_datadir(config["nodekeyhex"], base_datadir)
+                datadir = eth_node_to_datadir(config["address"], base_datadir)
                 keyfile_path = parity_keyfile(datadir)
                 eth_create_account_file(keyfile_path, config["nodekey"])
 
