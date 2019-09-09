@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`4762` Properly check the withdraw expiration on the TokenNetworkProxy. This gives a better error message to the users and prevents a corner case error.
 * :feature:`4102` Display progress during syncing the blockchain.
 * :feature:`4654` Define imbalance fees relative to channel balance.
 * :feature:`4653` Allow setting per token network flat mediation fee from CLI.
