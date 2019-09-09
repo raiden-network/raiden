@@ -4,7 +4,12 @@ import pytest
 from eth_utils import is_same_address, to_canonical_address, to_normalized_address
 
 from raiden.constants import UINT256_MAX
-from raiden.exceptions import AddressWithoutCode, InvalidToken, RaidenRecoverableError
+from raiden.exceptions import (
+    AddressWithoutCode,
+    BrokenPreconditionError,
+    InvalidToken,
+    RaidenRecoverableError,
+)
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -132,3 +137,58 @@ def test_token_network_registry_max_token_networks(
         blockchain_service=blockchain_service,
     )
     assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX
+
+
+def test_token_network_registry_too_many(
+    deploy_client, contract_manager, limited_token_network_registry_address, token_contract_name
+):
+    """ Register too many tokens to see BrokenPreconditionError exception """
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
+    limited_token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        registry_address=to_canonical_address(limited_token_network_registry_address),
+        contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
+    )
+
+    # create token network & register it
+    test_token = deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=1000,
+        decimals=0,
+        token_name="TKN",
+        token_symbol="TKN",
+        token_contract_name=token_contract_name,
+    )
+    adding_blockhash = deploy_client.get_confirmed_blockhash()
+    assert (
+        limited_token_network_registry_proxy.get_max_token_networks(to_block=adding_blockhash) == 1
+    )
+    # The first token registration succeeeds
+    limited_token_network_registry_proxy.add_token(
+        token_address=to_canonical_address(test_token.contract.address),
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
+        block_identifier=adding_blockhash,
+    )
+    assert limited_token_network_registry_proxy.get_token_network_created(to_block="latest") == 1
+    # The second token registration fails with BrokenPreconditionError exception
+    second_test_token = deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=1000,
+        decimals=0,
+        token_name="TTT",
+        token_symbol="TTT",
+        token_contract_name=token_contract_name,
+    )
+    with pytest.raises(BrokenPreconditionError, match="TokenNetworkRegistry has so many tokens"):
+        limited_token_network_registry_proxy.add_token(
+            token_address=to_canonical_address(second_test_token.contract.address),
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
+            block_identifier=deploy_client.get_confirmed_blockhash(),
+        )

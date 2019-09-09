@@ -211,6 +211,9 @@ class TokenNetworkRegistry:
                 if self.get_token_network(token_address, block):
                     raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
 
+                if self.get_token_network_created(block) >= self.get_max_token_networks(block):
+                    raise RaidenRecoverableError(f"{error_prefix}. TokenNetworkRegistry is full.")
+
                 raise RaidenUnrecoverableError(error_prefix)
 
             token_network_address = self.get_token_network(token_address, "latest")

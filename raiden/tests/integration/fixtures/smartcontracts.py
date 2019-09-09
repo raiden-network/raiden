@@ -211,6 +211,32 @@ def deploy_token_network_registry_and_return_address(
     return address
 
 
+@pytest.fixture(name="limited_token_network_registry_address")
+def deploy_limited_token_network_registry_and_return_address(
+    deploy_client,
+    secret_registry_address,
+    chain_id,
+    settle_timeout_min,
+    settle_timeout_max,
+    contract_manager,
+) -> typing.Address:
+    constructor_arguments = [
+        to_checksum_address(secret_registry_address),
+        chain_id,
+        settle_timeout_min,
+        settle_timeout_max,
+        1,
+    ]
+
+    address = deploy_contract_web3(
+        contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        constructor_arguments=constructor_arguments,
+    )
+    return address
+
+
 @pytest.fixture(name="token_network_proxy")
 def register_token_and_return_the_network_proxy(
     contract_manager, deploy_client, token_proxy, token_network_registry_address
