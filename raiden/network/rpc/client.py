@@ -640,7 +640,18 @@ class JSONRPCClient:
             return TransactionHash(tx_hash)
 
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
-        """ Wait until the `transaction_hash` is mined.
+        """ Wait until the `transaction_hash` is mined, confirmed, handling
+        reorgs.
+
+        Consider the following reorg, were a transaction is mined at block B,
+        but it is not mined in the canonical chain A-C-D:
+
+             A -> B   D
+             *--> C --^
+
+        When the Ethereum node looks at block B, from its perspective the
+        transaction is mined and it has a receipt. After the reorg it does not
+        have a receipt. This can happen on PoW and PoA based chains.
 
         Args:
             transaction_hash: Transaction hash that we are waiting for.
@@ -651,20 +662,39 @@ class JSONRPCClient:
         transaction_hash_hex = encode_hex(transaction_hash)
 
         while True:
-            # Returns `None` while the transaction isn't yet mined. A
-            # transaction is not guaranteed to be mined until the confirmation
-            # block is reached, because of this it is possible for the receipt
-            # to be set on one interation and for it to disappear on another
-            # (assuming a properly chosen confirmation_block number).
             tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash_hex)
 
-            if tx_receipt:
+            # Parity (as of 2.5.7) always returns a receipt. When the
+            # transaction is not mined in the canonical chain, the receipt will
+            # not have meaningful values. Example of receipt for a transaction
+            # that is not mined:
+            #
+            #   blockHash: None
+            #   blockNumber: None
+            #   contractAddress: None
+            #   cumulativeGasUsed: The transaction's gas
+            #   from: None
+            #   gasUsed: The transaction's gas
+            #   logs: []
+            #   logsBloom: Zero is hex
+            #   root: None
+            #   status: 1
+            #   to: None
+            #   transactionHash: The transaction's hash
+            #   transactionIndex: 0
+            #
+            # Geth only returns a receipt if the transaction was mined on the
+            # canonical chain. https://github.com/raiden-network/raiden/issues/4529
+            is_transaction_mined = tx_receipt and tx_receipt.get("blockNumber") is not None
+
+            if is_transaction_mined:
                 confirmation_block = (
                     tx_receipt["blockNumber"] + self.default_block_num_confirmations
                 )
                 block_number = self.block_number()
 
-                if block_number >= confirmation_block:
+                is_transaction_confirmed = block_number >= confirmation_block
+                if is_transaction_confirmed:
                     return tx_receipt
 
             gevent.sleep(1.0)
