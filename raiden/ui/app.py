@@ -33,8 +33,6 @@ from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, R
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
-    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-    DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
@@ -179,8 +177,8 @@ def run_app(
     routing_mode: RoutingMode,
     config: Dict[str, Any],
     flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
-    proportional_fee: ProportionalFeeAmount,
-    proportional_imbalance_fee: ProportionalFeeAmount,
+    proportional_fee: Tuple[Tuple[TokenNetworkAddress, ProportionalFeeAmount], ...],
+    proportional_imbalance_fee: Tuple[Tuple[TokenNetworkAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
@@ -210,8 +208,8 @@ def run_app(
 
     fee_config = prepare_mediation_fee_config(
         cli_token_network_to_flat_fee=flat_fee,
-        proportional_fee=proportional_fee,
-        proportional_imbalance_fee=proportional_imbalance_fee,
+        cli_token_network_to_proportional_fee=proportional_fee,
+        cli_token_network_to_proportional_imbalance_fee=proportional_imbalance_fee,
     )
 
     config["console"] = console
@@ -308,8 +306,8 @@ def run_app(
     log.debug("Fee Settings", fee_settings=fee_config)
     has_default_fees = (
         len(fee_config.token_network_to_flat_fee) == 0
-        and fee_config.proportional_fee == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-        and fee_config.proportional_imbalance_fee == DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+        and len(fee_config.token_network_to_proportional_fee) == 0
+        and len(fee_config.token_network_to_proportional_imbalance_fee) == 0
     )
     if has_default_fees:
         click.secho(

@@ -71,15 +71,39 @@ MONITORING_REWARD = TokenAmount(5 * 10 ** 18)  # about 1$
 MONITORING_MIN_CAPACITY = TokenAmount(100)
 
 
+DEFAULT_DAI_FLAT_FEE = 10 ** 12
+DEFAULT_WETH_FLAT_FEE = 10 ** 10
+DEFAULT_DAI_PROPORTIONAL_FEE = 4000  # in parts per million
+DEFAULT_WETH_PROPORTIONAL_FEE = 4000  # in parts per million
+DEFAULT_DAI_PROPORTIONAL_IMBALANCE_FEE = 3000  # in parts per million
+DEFAULT_WETH_PROPORTIONAL_IMBALANCE_FEE = 3000  # in parts per million
+
+
 @dataclass
 class MediationFeeConfig:
     token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = field(default_factory=dict)
-    proportional_fee: ProportionalFeeAmount = DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    proportional_imbalance_fee: ProportionalFeeAmount = (
-        DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+    token_network_to_proportional_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = field(
+        default_factory=dict
     )
+    token_network_to_proportional_imbalance_fee: Dict[
+        TokenNetworkAddress, ProportionalFeeAmount
+    ] = field(default_factory=dict)
 
     def get_flat_fee(self, token_network_address: TokenNetworkAddress) -> FeeAmount:
         return self.token_network_to_flat_fee.get(  # pylint: disable=no-member
             token_network_address, DEFAULT_MEDIATION_FLAT_FEE
+        )
+
+    def get_proportional_fee(
+        self, token_network_address: TokenNetworkAddress
+    ) -> ProportionalFeeAmount:
+        return self.token_network_to_proportional_fee.get(  # pylint: disable=no-member
+            token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_FEE
+        )
+
+    def get_proportional_imbalance_fee(
+        self, token_network_address: TokenNetworkAddress
+    ) -> ProportionalFeeAmount:
+        return self.token_network_to_proportional_imbalance_fee.get(  # pylint: disable=no-member
+            token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
         )

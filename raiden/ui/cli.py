@@ -25,8 +25,6 @@ from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
     DEFAULT_HTTP_SERVER_PORT,
-    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-    DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
@@ -431,20 +429,21 @@ def options(func):
             ),
             option(
                 "--proportional-fee",
-                help="Mediation fee as ratio of mediated amount in parts-per-million (10^-6).",
-                default=DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-                type=click.IntRange(min=0, max=10 ** 6),
-                show_default=True,
+                help=(
+                    "Mediation fee as ratio of mediated amount in parts-per-million "
+                    "(10^-6) for a certain token network."
+                ),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                multiple=True,
             ),
             option(
                 "--proportional-imbalance-fee",
                 help=(
                     "Set the worst-case imbalance fee relative to the channels capacity "
-                    "in parts-per-million (10^-6)."
+                    "in parts-per-million (10^-6) for a certain token network."
                 ),
-                default=DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
-                type=click.IntRange(min=0, max=10 ** 6),
-                show_default=True,
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                multiple=True,
             ),
         ),
     ]
