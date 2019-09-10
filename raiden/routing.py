@@ -213,6 +213,8 @@ def get_best_routes_internal(
         # https://github.com/raiden-network/raiden/issues/4751
         # Internal routing doesn't know about fee so it should set a percentage per hop
         estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
+        if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
+            estimated_fee = FeeAmount(0)
 
         available_routes.append(
             RouteState(
