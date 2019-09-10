@@ -703,6 +703,8 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.PRIVATE
             args["flat_fee"] = ()
+            args["proportional_fee"] = ()
+            args["proportional_imbalance_fee"] = ()
 
             for option_ in run.params:
                 if option_.name in args.keys():
