@@ -1,7 +1,7 @@
 import math
 from enum import Enum
 
-from eth_utils import keccak, to_checksum_address
+from eth_utils import keccak, to_canonical_address, to_checksum_address
 
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
@@ -169,5 +169,9 @@ HIGHEST_SUPPORTED_PARITY_VERSION = "2.5.5"
 LOWEST_SUPPORTED_PARITY_VERSION = "1.7.6"
 
 
-WETH_TOKEN_NETWORK_ADDRESS = TokenAddress(b"")  # TODO ADD this when deployed
-DAI_TOKEN_NETWORK_ADDRESS = TokenAddress(b"")  # TODO ADD this when deployed
+WETH_TOKEN_NETWORK_ADDRESS = TokenAddress(
+    to_canonical_address("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
+)
+DAI_TOKEN_NETWORK_ADDRESS = TokenAddress(
+    to_canonical_address("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359")
+)
