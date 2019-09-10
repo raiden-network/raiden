@@ -27,7 +27,7 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
 
-## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates 
+## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates
 ## after a partial withdraw takes place.
 ## A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
 ## Node0 will first make a payment to node3 through [0, 4, 3] and then node4 makes a partial withdraw
@@ -89,7 +89,7 @@ scenario:
           name: "Partially withdraw 500 from node4 to node3"
           tasks:
             - withdraw: {from: 4, to: 3, total_withdraw: 500, expected_http_status: 200}
-      -serial:
+      - serial:
           name: "Make payment from 0 to 3 after node4 is stopped"
           tasks:
             # Check that a payment is made with the only path [0, 1, 2, 3] with enough capacity from 0 to 3
