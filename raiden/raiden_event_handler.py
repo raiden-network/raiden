@@ -41,6 +41,7 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
+    EventInvalidSecretRequest,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
@@ -161,6 +162,9 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == EventUnlockFailed:
             assert isinstance(event, EventUnlockFailed), MYPY_ANNOTATION
             self.handle_unlockfailed(raiden, event)
+        elif type(event) == EventInvalidSecretRequest:
+            assert isinstance(event, EventInvalidSecretRequest), MYPY_ANNOTATION
+            self.handle_invalidsecretrequest(raiden, event)
         elif type(event) == ContractSendSecretReveal:
             assert isinstance(event, ContractSendSecretReveal), MYPY_ANNOTATION
             self.handle_contract_send_secretreveal(raiden, event)
@@ -316,6 +320,19 @@ class RaidenEventHandler(EventHandler):
             "UnlockFailed!",
             secrethash=to_hex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
+            node=to_checksum_address(raiden.address),
+        )
+
+    @staticmethod
+    def handle_invalidsecretrequest(
+        raiden: "RaidenService", invalid_secret_request_event: EventInvalidSecretRequest
+    ) -> None:  # pragma: no unittest
+        # pylint: disable=unused-argument
+        log.warning(
+            "Received invalid SecretRequest!",
+            payment_id=invalid_secret_request_event.payment_identifier,
+            intended_amount=invalid_secret_request_event.intended_amount,
+            actual_amount=invalid_secret_request_event.actual_amount,
             node=to_checksum_address(raiden.address),
         )
 

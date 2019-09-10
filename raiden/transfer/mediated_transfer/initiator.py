@@ -375,6 +375,7 @@ def handle_secretrequest(
     elif not is_valid_secretrequest and is_message_from_target:
         initiator_state.received_secret_request = True
         invalid_request = EventInvalidSecretRequest(
+            payment_identifier=state_change.payment_identifier,
             intended_amount=initiator_state.transfer_description.amount,
             actual_amount=state_change.amount,
         )

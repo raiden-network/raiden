@@ -308,5 +308,6 @@ class SendProcessed(SendMessageEvent):
 class EventInvalidSecretRequest(Event):
     """ Event emitted when an invalid SecretRequest is received. """
 
+    payment_identifier: PaymentID
     intended_amount: PaymentAmount
     actual_amount: PaymentAmount
