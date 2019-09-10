@@ -35,7 +35,7 @@ def test_token_network_registry(
 
     assert token_network_registry_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_registry_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
-    assert token_network_registry_proxy.get_token_network_created() == 0
+    assert token_network_registry_proxy.get_token_network_created(to_block="latest") == 0
 
     bad_token_address = make_address()
     # try to register non-existing token network
@@ -73,7 +73,7 @@ def test_token_network_registry(
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     )
-    assert token_network_registry_proxy.get_token_network_created() == 1
+    assert token_network_registry_proxy.get_token_network_created(to_block="latest") == 1
 
     with pytest.raises(RaidenRecoverableError) as exc:
         token_network_address = token_network_registry_proxy.add_token_with_limits(
@@ -117,4 +117,4 @@ def test_token_network_registry_max_token_networks(
         contract_manager=contract_manager,
         blockchain_service=blockchain_service,
     )
-    assert token_network_registry_proxy.get_max_token_networks() == UINT256_MAX
+    assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX
