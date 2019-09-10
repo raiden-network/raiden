@@ -1,15 +1,7 @@
 from math import sqrt
 
 from raiden.constants import DAI_TOKEN_NETWORK_ADDRESS, WETH_TOKEN_NETWORK_ADDRESS
-from raiden.settings import (
-    DEFAULT_DAI_FLAT_FEE,
-    DEFAULT_DAI_PROPORTIONAL_FEE,
-    DEFAULT_DAI_PROPORTIONAL_IMBALANCE_FEE,
-    DEFAULT_WETH_FLAT_FEE,
-    DEFAULT_WETH_PROPORTIONAL_FEE,
-    DEFAULT_WETH_PROPORTIONAL_IMBALANCE_FEE,
-    MediationFeeConfig,
-)
+from raiden.settings import DEFAULT_DAI_FLAT_FEE, DEFAULT_WETH_FLAT_FEE, MediationFeeConfig
 from raiden.utils.typing import Dict, FeeAmount, ProportionalFeeAmount, TokenNetworkAddress, Tuple
 
 
@@ -66,27 +58,15 @@ def prepare_mediation_fee_config(
     for address, fee in cli_token_network_to_flat_fee:
         tn_to_flat_fee[address] = FeeAmount(fee // 2)
 
-    # Add the defaults for proportional fees for DAI/WETH
-    tn_to_proportional_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = {}
-    tn_to_proportional_fee[WETH_TOKEN_NETWORK_ADDRESS] = ppm_fee_per_channel(
-        DEFAULT_WETH_PROPORTIONAL_FEE
-    )
-    tn_to_proportional_fee[DAI_TOKEN_NETWORK_ADDRESS] = ppm_fee_per_channel(
-        DEFAULT_DAI_PROPORTIONAL_FEE
-    )
-    for address, prop_fee in cli_token_network_to_proportional_fee:
-        tn_to_proportional_fee[address] = ppm_fee_per_channel(prop_fee)
+    tn_to_proportional_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = {
+        address: ppm_fee_per_channel(prop_fee)
+        for address, prop_fee in cli_token_network_to_proportional_fee
+    }
 
-    # Add the defaults for proportional imbalance fees for DAI/WETH
-    tn_to_proportional_imbalance_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = {}
-    tn_to_proportional_imbalance_fee[WETH_TOKEN_NETWORK_ADDRESS] = ppm_fee_per_channel(
-        DEFAULT_WETH_PROPORTIONAL_IMBALANCE_FEE
-    )
-    tn_to_proportional_imbalance_fee[DAI_TOKEN_NETWORK_ADDRESS] = ppm_fee_per_channel(
-        DEFAULT_DAI_PROPORTIONAL_IMBALANCE_FEE
-    )
-    for address, prop_fee in cli_token_network_to_proportional_imbalance_fee:
-        tn_to_proportional_imbalance_fee[address] = ppm_fee_per_channel(prop_fee)
+    tn_to_proportional_imbalance_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = {
+        address: ppm_fee_per_channel(prop_fee)
+        for address, prop_fee in cli_token_network_to_proportional_imbalance_fee
+    }
 
     return MediationFeeConfig(
         token_network_to_flat_fee=tn_to_flat_fee,
