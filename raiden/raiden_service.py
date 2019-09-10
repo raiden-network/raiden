@@ -1152,6 +1152,12 @@ class RaidenService(Runnable):
 
         self.start_health_check_for(Address(target))
 
+        # Checks if there is a payment in flight with the same payment_id and
+        # target. If there is such a payment and the details match, instead of
+        # starting a new payment this will give the caller the existing
+        # details. This prevents Raiden from having concurrently identical
+        # payments, which would likely mean paying more than once for the same
+        # thing.
         with self.payment_identifier_lock:
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
             if payment_status:
