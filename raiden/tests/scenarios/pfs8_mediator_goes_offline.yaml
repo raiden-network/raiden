@@ -23,12 +23,13 @@ nodes:
     gas-price: fast
     environment-type: development
     routing-mode: pfs
-    pathfinding-max-paths: 5
+    # Only use one path per call to make sure the expected one is used
+    pathfinding-max-paths: 1
     pathfinding-max-fee: 100
     enable-monitoring: true
 
 ## This is the PFS8 scenario. It aims to make sure that the PFS reacts correctly if a node along
-## a path goes offline and thus provides a new path is one is available.
+## a path goes offline and thus provides a new path if one is available.
 ## A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
 ## Node0 will first make a payment to node3 through [0, 4, 3] and then node4 goes offline. It is
 ## then expected that the path [0, 1, 2, 3] is used instead.
@@ -103,7 +104,7 @@ scenario:
                 source: 0
                 request_count: 2
                 target: 3
-                routes_count: 2
+                routes_count: 1
                 expected_routes:
-                  - [0, 4, 3] # TODO not sure this should be shown
+                  - [0, 4, 3]
                   - [0, 1, 2, 3]
