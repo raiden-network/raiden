@@ -222,7 +222,9 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         registry_address, token_address, app1.raiden.address, deposit
     )
 
-    wait_both_channel_deposit(app0, app1, registry_address, token_address, deposit, retry_timeout)
+    waiting.wait_both_channel_deposit(
+        app0, app1, registry_address, token_address, deposit, retry_timeout
+    )
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, Balance(0), [])
 
@@ -230,7 +232,9 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         registry_address, token_address, app0.raiden.address, deposit
     )
 
-    wait_both_channel_deposit(app1, app0, registry_address, token_address, deposit, retry_timeout)
+    waiting.wait_both_channel_deposit(
+        app1, app0, registry_address, token_address, deposit, retry_timeout
+    )
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
 
