@@ -422,7 +422,7 @@ def options(func):
                 "--flat-fee",
                 help=(
                     "Sets the flat fee required for every mediation in wei of the "
-                    "mediated token for a certain token network."
+                    "mediated token for a certain token address."
                 ),
                 type=(ADDRESS_TYPE, click.IntRange(min=0)),
                 multiple=True,
@@ -431,7 +431,7 @@ def options(func):
                 "--proportional-fee",
                 help=(
                     "Mediation fee as ratio of mediated amount in parts-per-million "
-                    "(10^-6) for a certain token network."
+                    "(10^-6) for a certain token address."
                 ),
                 type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
                 multiple=True,
@@ -440,7 +440,7 @@ def options(func):
                 "--proportional-imbalance-fee",
                 help=(
                     "Set the worst-case imbalance fee relative to the channels capacity "
-                    "in parts-per-million (10^-6) for a certain token network."
+                    "in parts-per-million (10^-6) for a certain token address."
                 ),
                 type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
                 multiple=True,

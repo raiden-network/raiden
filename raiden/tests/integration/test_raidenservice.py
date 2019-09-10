@@ -207,11 +207,6 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     app0, app1 = raiden_network
 
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
-    token_network_address = views.get_token_network_address_by_token_address(
-        chain_state, token_network_registry_address, token_address
-    )
 
     def get_channel_state(app) -> NettingChannelState:
         chain_state = views.state_from_app(app)
@@ -239,9 +234,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     flat_fee = FeeAmount(100)
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_network_to_flat_fee = {
-        token_network_address: flat_fee
-    }
+    app0.raiden.config["mediation_fees"].token_to_flat_fee = {token_address: flat_fee}
     app0.start()
 
     channel_state = get_channel_state(app0)
@@ -253,9 +246,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     prop_fee = ProportionalFeeAmount(123)
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_network_to_proportional_fee = {
-        token_network_address: prop_fee
-    }
+    app0.raiden.config["mediation_fees"].token_to_proportional_fee = {token_address: prop_fee}
     app0.start()
 
     channel_state = get_channel_state(app0)
@@ -266,9 +257,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_network_to_proportional_imbalance_fee = {
-        token_network_address: 42
-    }
+    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {token_address: 42}
     app0.start()
 
     channel_state = get_channel_state(app0)

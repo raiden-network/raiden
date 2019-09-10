@@ -982,10 +982,10 @@ class RaidenService(Runnable):
 
             for channel in channels:
                 # get the flat fee for this network if set, otherwise the default
-                flat_fee = fee_config.get_flat_fee(channel.token_network_address)
-                proportional_fee = fee_config.get_proportional_fee(channel.token_network_address)
+                flat_fee = fee_config.get_flat_fee(channel.token_address)
+                proportional_fee = fee_config.get_proportional_fee(channel.token_address)
                 proportional_imbalance_fee = fee_config.get_proportional_imbalance_fee(
-                    channel.token_network_address
+                    channel.token_address
                 )
                 log.info(
                     "Updating channel fees",
