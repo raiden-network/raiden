@@ -44,10 +44,9 @@ scenario:
             - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 409}
 
             # Check that IOU is created despite no available path
-            - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: 100}
 
-            ## Check that the path is indeed the expected one
+            ## Check that no path was returned
             - assert_pfs_history:
                 source: 3
                 request_count: 1
