@@ -5,7 +5,7 @@ from enum import Enum
 import pytest
 from eth_utils import remove_0x_prefix
 
-from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
+from raiden.constants import Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
@@ -183,8 +183,8 @@ def account_genesis_eth_balance():
 
 
 @pytest.fixture
-def token_amount(number_of_nodes):
-    total_per_node = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT * 4
+def token_amount(number_of_nodes, deposit):
+    total_per_node = 3 * (deposit + 1)
     total_token = total_per_node * number_of_nodes
     return total_token
 

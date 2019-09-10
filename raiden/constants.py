@@ -32,9 +32,6 @@ UINT64_MAX = 2 ** 64 - 1
 
 SECONDS_PER_DAY = 24 * 60 * 60
 
-RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
-RED_EYES_PER_TOKEN_NETWORK_LIMIT = int(250 * 10 ** 18)
-
 GENESIS_BLOCK_NUMBER = BlockNumber(0)
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value

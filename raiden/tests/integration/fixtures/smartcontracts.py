@@ -1,14 +1,7 @@
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.constants import (
-    EMPTY_ADDRESS,
-    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    SECONDS_PER_DAY,
-    UINT256_MAX,
-    Environment,
-)
+from raiden.constants import EMPTY_ADDRESS, SECONDS_PER_DAY, UINT256_MAX, Environment
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
@@ -30,6 +23,9 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
 )
+
+RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
+RED_EYES_PER_TOKEN_NETWORK_LIMIT = int(250 * 10 ** 18)
 
 
 @pytest.fixture

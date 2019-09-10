@@ -17,14 +17,7 @@ from raiden.accounts import AccountManager
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import (
-    EMPTY_ADDRESS,
-    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    SECONDS_PER_DAY,
-    UINT256_MAX,
-    EthClient,
-)
+from raiden.constants import EMPTY_ADDRESS, SECONDS_PER_DAY, UINT256_MAX, EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
@@ -304,8 +297,8 @@ def setup_raiden(
 
     registry.add_token_with_limits(
         token_address=to_canonical_address(token.contract.address),
-        channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-        token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+        channel_participant_deposit_limit=UINT256_MAX,
+        token_network_deposit_limit=UINT256_MAX,
     )
 
     print_step("Setting up Raiden")
