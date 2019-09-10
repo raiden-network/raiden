@@ -6,6 +6,7 @@ from eth_utils import is_same_address, to_canonical_address
 from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+    UINT256_MAX,
 )
 from raiden.exceptions import AddressWithoutCode, InvalidToken, RaidenRecoverableError
 from raiden.network.blockchain_service import BlockChainService
@@ -101,3 +102,19 @@ def test_token_network_registry(
     assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
     assert token_network_registry_proxy.get_token_network(token_network_address, "latest") is None
     assert token_network_registry_proxy.get_token_network(test_token_address, "latest") is not None
+
+
+def test_token_network_registry_max_token_networks(
+    deploy_client, token_network_registry_address, contract_manager
+):
+    """ get_max_token_networks() should return an integer """
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
+    token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        registry_address=to_canonical_address(token_network_registry_address),
+        contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
+    )
+    assert token_network_registry_proxy.get_max_token_networks() == UINT256_MAX

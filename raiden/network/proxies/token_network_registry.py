@@ -236,3 +236,9 @@ class TokenNetworkRegistry:
         return self.proxy.contract.functions.token_network_created().call(
             block_identifier=to_block
         )
+
+    def get_max_token_networks(self, to_block: BlockSpecification = "latest") -> int:
+        """ Returns the maximal number of TokenNetwork contracts that the
+        token network registry.
+        """
+        return self.proxy.contract.functions.max_token_networks().call(block_identifier=to_block)
