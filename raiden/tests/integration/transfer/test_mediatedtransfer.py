@@ -239,6 +239,7 @@ def run_test_mediated_transfer_with_entire_deposit(
         )
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4804")
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argument
