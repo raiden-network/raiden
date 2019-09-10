@@ -117,10 +117,8 @@ def wait_for_participant_deposit(
     """
     if target_address == raiden.address:
         balance = lambda channel_state: channel_state.our_state.contract_balance
-    elif target_address == partner_address:
-        balance = lambda channel_state: channel_state.partner_state.contract_balance
     else:
-        raise ValueError("target_address must be one of the channel participants")
+        balance = lambda channel_state: channel_state.partner_state.contract_balance
 
     channel_state = views.get_channelstate_for(
         views.state_from_raiden(raiden),
@@ -128,6 +126,9 @@ def wait_for_participant_deposit(
         token_address,
         partner_address,
     )
+    if not channel_state:
+        raise ValueError("no channel could be found between provided partner and target addresses")
+
     current_balance = balance(channel_state)
 
     log_details = {
@@ -151,6 +152,48 @@ def wait_for_participant_deposit(
             partner_address,
         )
         current_balance = balance(channel_state)
+
+
+def wait_both_channel_deposit(
+    app_deposit, app_partner, registry_address, token_address, total_deposit, retry_timeout
+):
+    wait_for_participant_deposit(
+        raiden=app_deposit.raiden,
+        token_network_registry_address=registry_address,
+        token_address=token_address,
+        partner_address=app_partner.raiden.address,
+        target_address=app_partner.raiden.address,
+        target_balance=total_deposit,
+        retry_timeout=retry_timeout,
+    )
+    wait_for_participant_deposit(
+        raiden=app_deposit.raiden,
+        token_network_registry_address=registry_address,
+        token_address=token_address,
+        partner_address=app_partner.raiden.address,
+        target_address=app_deposit.raiden.address,
+        target_balance=total_deposit,
+        retry_timeout=retry_timeout,
+    )
+
+    wait_for_participant_deposit(
+        raiden=app_partner.raiden,
+        token_network_registry_address=registry_address,
+        token_address=token_address,
+        partner_address=app_deposit.raiden.address,
+        target_address=app_deposit.raiden.address,
+        target_balance=total_deposit,
+        retry_timeout=retry_timeout,
+    )
+    wait_for_participant_deposit(
+        raiden=app_partner.raiden,
+        token_network_registry_address=registry_address,
+        token_address=token_address,
+        partner_address=app_deposit.raiden.address,
+        target_address=app_partner.raiden.address,
+        target_balance=total_deposit,
+        retry_timeout=retry_timeout,
+    )
 
 
 def wait_for_payment_balance(
