@@ -122,6 +122,7 @@ class PFSError(IntEnum):
     IOU_ALREADY_CLAIMED = 2105
     USE_THIS_IOU = 2106
     DEPOSIT_TOO_LOW = 2107
+    NO_ROUTE_FOUND = 2201
 
     @staticmethod
     def is_iou_rejected(error_code):
@@ -592,6 +593,9 @@ def query_paths(
                     raise ServiceRequestFailed("PFS fees too high.")
                 log.info(f"PFS increased fees", new_price=new_info.price)
                 pfs_config.info = new_info
+            elif code == PFSError.NO_ROUTE_FOUND:
+                log.info(f"PFS cannot find a route: {error}.")
+                return list(), None
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
