@@ -479,6 +479,7 @@ def test_mediated_transfer_with_fees(
 
     fee_without_margin = FeeAmount(20)
     fee = round(fee_without_margin * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
+
     amount = PaymentAmount(35)
     msg = (
         "The chosen values will result in less than the amount reaching "
@@ -486,21 +487,26 @@ def test_mediated_transfer_with_fees(
     )
     amount_at_end = amount + fee - (amount + fee) // 5 - (amount + fee - (amount + fee) // 5) // 5
     assert amount_at_end >= amount, msg
+
+    no_fees = FeeScheduleState(flat=0, proportional=0, imbalance_penalty=None)
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
         # result, the target receives the fee.
         dict(
-            fee_schedules=[None, None, None],
+            fee_schedules=[no_fees, no_fees, no_fees],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, amount + fee, amount + fee],
         ),
         # The first mediator claims all of the fee.
         dict(
-            fee_schedules=[None, FeeScheduleState(flat=fee), None],
+            fee_schedules=[no_fees, FeeScheduleState(flat=fee), no_fees],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, amount, amount],
         ),
         # The first mediator has a proportional fee of 20%
         dict(
-            fee_schedules=[None, FeeScheduleState(proportional=0.20e6), None],
+            fee_schedules=[no_fees, FeeScheduleState(proportional=0.20e6), no_fees],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
                 amount + fee,
                 amount + fee - 9,  # See test_get_lock_amount_after_fees for where 9 comes from
@@ -510,10 +516,11 @@ def test_mediated_transfer_with_fees(
         # Both mediators have a proportional fee of 20%
         dict(
             fee_schedules=[
-                None,
+                no_fees,
                 FeeScheduleState(proportional=0.20e6),
                 FeeScheduleState(proportional=0.20e6),
             ],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
                 amount + fee,
                 amount + fee - 9,  # See test_get_lock_amount_after_fees for where 9 comes from
@@ -524,7 +531,12 @@ def test_mediated_transfer_with_fees(
         # The first mediator has an imbalance fee that works like a 20%
         # proportional fee when using the channel in this direction.
         dict(
-            fee_schedules=[None, FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]), None],
+            fee_schedules=[
+                no_fees,
+                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),
+                no_fees,
+            ],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
                 amount + fee,
                 amount + fee - (amount + fee) // 5,
@@ -534,6 +546,7 @@ def test_mediated_transfer_with_fees(
         # Using the same fee_schedules as above on the incoming channel instead
         # of the outgoing channel of mediator 1 should yield the same result.
         dict(
+            fee_schedules=[no_fees, no_fees, no_fees],
             incoming_fee_schedules=[
                 FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),
                 None,
@@ -550,7 +563,12 @@ def test_mediated_transfer_with_fees(
         # better state. This causes the target to receive more than the `amount
         # + fees` which is sent by the initiator.
         dict(
-            fee_schedules=[None, FeeScheduleState(imbalance_penalty=[(0, 1000), (1000, 0)]), None],
+            fee_schedules=[
+                no_fees,
+                FeeScheduleState(imbalance_penalty=[(0, 1000), (1000, 0)]),
+                no_fees,
+            ],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, (amount + fee) * 2, (amount + fee) * 2],
         ),
     ]
