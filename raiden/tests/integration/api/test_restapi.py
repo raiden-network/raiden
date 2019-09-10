@@ -16,14 +16,10 @@ from eth_utils import (
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
-from raiden.constants import (
-    GENESIS_BLOCK_NUMBER,
-    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    SECRET_LENGTH,
-    Environment,
-)
+from raiden.constants import GENESIS_BLOCK_NUMBER, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.tests.integration.api.utils import create_api_server
+from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
@@ -46,6 +42,9 @@ from raiden_contracts.constants import (
 )
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
+
+# Makes sure the node will have enough deposit to test the overlimit deposit
+DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT + 2
 
 
 class CustomException(Exception):
@@ -1497,19 +1496,30 @@ def test_token_events_errors_for_unregistered_token(api_server_test_instance):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("deposit", [50000])
-def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_timeout):
+@pytest.mark.parametrize("deposit", [DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT])
+def test_api_deposit_limit(
+    api_server_test_instance,
+    deploy_service,
+    token_network_registry_address,
+    token_addresses,
+    reveal_timeout,
+):
+    token_address = token_addresses[0]
+
+    registry = deploy_service.token_network_registry(token_network_registry_address)
+    token_network_address = registry.get_token_network(token_address, "latest")
+    token_network = deploy_service.token_network(token_network_address)
+    deposit_limit = token_network.channel_participant_deposit_limit("latest")
+
     # let's create a new channel and deposit exactly the limit amount
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
     settle_timeout = 1650
-    balance_working = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
     channel_data_obj = {
         "partner_address": first_partner_address,
         "token_address": to_checksum_address(token_address),
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
-        "total_deposit": balance_working,
+        "total_deposit": deposit_limit,
     }
 
     request = grequests.put(
@@ -1523,17 +1533,17 @@ def test_api_deposit_limit(api_server_test_instance, token_addresses, reveal_tim
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
-            "balance": balance_working,
+            "balance": deposit_limit,
             "state": ChannelState.STATE_OPENED.value,
             "channel_identifier": first_channel_identifier,
-            "total_deposit": balance_working,
+            "total_deposit": deposit_limit,
         }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
-    balance_failing = balance_working + 1  # token has two digits
+    balance_failing = deposit_limit + 1  # token has two digits
     channel_data_obj = {
         "partner_address": second_partner_address,
         "token_address": to_checksum_address(token_address),
