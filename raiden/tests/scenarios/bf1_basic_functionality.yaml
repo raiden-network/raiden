@@ -9,8 +9,10 @@ settings:
     udc:
       enable: true
       token:
-        deposit: true
-        balance_per_node: 5000
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        balance_per_node: 7_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
 
 token:
 
