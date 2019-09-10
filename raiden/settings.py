@@ -9,8 +9,8 @@ from raiden.utils.typing import (
     FeeAmount,
     NetworkTimeout,
     ProportionalFeeAmount,
+    TokenAddress,
     TokenAmount,
-    TokenNetworkAddress,
 )
 
 CACHE_TTL = 60
@@ -83,29 +83,27 @@ DEFAULT_WETH_PROPORTIONAL_IMBALANCE_FEE = 3000  # in parts per million
 
 @dataclass
 class MediationFeeConfig:
-    token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = field(default_factory=dict)
-    token_network_to_proportional_fee: Dict[TokenNetworkAddress, ProportionalFeeAmount] = field(
+    token_to_flat_fee: Dict[TokenAddress, FeeAmount] = field(default_factory=dict)
+    token_to_proportional_fee: Dict[TokenAddress, ProportionalFeeAmount] = field(
         default_factory=dict
     )
-    token_network_to_proportional_imbalance_fee: Dict[
-        TokenNetworkAddress, ProportionalFeeAmount
-    ] = field(default_factory=dict)
+    token_to_proportional_imbalance_fee: Dict[TokenAddress, ProportionalFeeAmount] = field(
+        default_factory=dict
+    )
 
-    def get_flat_fee(self, token_network_address: TokenNetworkAddress) -> FeeAmount:
-        return self.token_network_to_flat_fee.get(  # pylint: disable=no-member
+    def get_flat_fee(self, token_network_address: TokenAddress) -> FeeAmount:
+        return self.token_to_flat_fee.get(  # pylint: disable=no-member
             token_network_address, DEFAULT_MEDIATION_FLAT_FEE
         )
 
-    def get_proportional_fee(
-        self, token_network_address: TokenNetworkAddress
-    ) -> ProportionalFeeAmount:
-        return self.token_network_to_proportional_fee.get(  # pylint: disable=no-member
+    def get_proportional_fee(self, token_network_address: TokenAddress) -> ProportionalFeeAmount:
+        return self.token_to_proportional_fee.get(  # pylint: disable=no-member
             token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_FEE
         )
 
     def get_proportional_imbalance_fee(
-        self, token_network_address: TokenNetworkAddress
+        self, token_network_address: TokenAddress
     ) -> ProportionalFeeAmount:
-        return self.token_network_to_proportional_imbalance_fee.get(  # pylint: disable=no-member
+        return self.token_to_proportional_imbalance_fee.get(  # pylint: disable=no-member
             token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
         )

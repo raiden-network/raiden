@@ -61,7 +61,7 @@ from raiden.utils.typing import (
     Port,
     PrivateKey,
     ProportionalFeeAmount,
-    TokenNetworkAddress,
+    TokenAddress,
     TokenNetworkRegistryAddress,
     Tuple,
 )
@@ -176,9 +176,9 @@ def run_app(
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
-    flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
-    proportional_fee: Tuple[Tuple[TokenNetworkAddress, ProportionalFeeAmount], ...],
-    proportional_imbalance_fee: Tuple[Tuple[TokenNetworkAddress, ProportionalFeeAmount], ...],
+    flat_fee: Tuple[Tuple[TokenAddress, FeeAmount], ...],
+    proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
+    proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
@@ -207,9 +207,9 @@ def run_app(
         api_port = Port(DEFAULT_HTTP_SERVER_PORT)
 
     fee_config = prepare_mediation_fee_config(
-        cli_token_network_to_flat_fee=flat_fee,
-        cli_token_network_to_proportional_fee=proportional_fee,
-        cli_token_network_to_proportional_imbalance_fee=proportional_imbalance_fee,
+        cli_token_to_flat_fee=flat_fee,
+        cli_token_to_proportional_fee=proportional_fee,
+        cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
     )
 
     config["console"] = console
@@ -305,9 +305,9 @@ def run_app(
     # User should be told how to set fees, if using default fee settings
     log.debug("Fee Settings", fee_settings=fee_config)
     has_default_fees = (
-        len(fee_config.token_network_to_flat_fee) == 0
-        and len(fee_config.token_network_to_proportional_fee) == 0
-        and len(fee_config.token_network_to_proportional_imbalance_fee) == 0
+        len(fee_config.token_to_flat_fee) == 0
+        and len(fee_config.token_to_proportional_fee) == 0
+        and len(fee_config.token_to_proportional_imbalance_fee) == 0
     )
     if has_default_fees:
         click.secho(
