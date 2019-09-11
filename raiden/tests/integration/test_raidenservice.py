@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import (
@@ -199,7 +200,9 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> None:
+def test_fees_are_updated_during_startup(
+    raiden_network, token_addresses, deposit, retry_timeout
+) -> None:
     """
     Test that the supplied fee settings are correctly forwarded to all
     channels during node startup.
@@ -222,11 +225,41 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
 
         return channel_state
 
+    waiting.wait_both_channel_deposit(
+        app0, app1, app0.raiden.default_registry.address, token_address, deposit, retry_timeout
+    )
+    # This is the imbalance penalty generated for the deposit
+    # with DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+    # once both channels have deposited the default (200) deposit
+    default_imbalance_penalty = [
+        (0, 1),
+        (20, 1),
+        (40, 1),
+        (60, 0),
+        (80, 0),
+        (100, 0),
+        (120, 0),
+        (140, 0),
+        (160, 0),
+        (180, 0),
+        (200, 0),
+        (220, 0),
+        (240, 0),
+        (260, 0),
+        (280, 0),
+        (300, 0),
+        (320, 0),
+        (340, 0),
+        (360, 1),
+        (380, 1),
+        (400, 1),
+    ]
+
     # Check that the defaults are used
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    assert channel_state.fee_schedule.imbalance_penalty is None
+    assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
     orginal_config = app0.raiden.config.copy()
 
@@ -240,7 +273,7 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == flat_fee
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    assert channel_state.fee_schedule.imbalance_penalty is None
+    assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
     # Now restart app0, and set new proportional fee
     prop_fee = ProportionalFeeAmount(123)
@@ -252,15 +285,40 @@ def test_fees_are_updated_during_startup(raiden_network, token_addresses) -> Non
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
     assert channel_state.fee_schedule.proportional == prop_fee
-    assert channel_state.fee_schedule.imbalance_penalty is None
+    assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {token_address: 42}
+    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {token_address: 1e6}
     app0.start()
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    assert channel_state.fee_schedule.imbalance_penalty is not None
+    # with 100% imbalance fee
+    full_imbalance_penalty = [
+        (0, 400),
+        (20, 324),
+        (40, 256),
+        (60, 196),
+        (80, 144),
+        (100, 100),
+        (120, 64),
+        (140, 36),
+        (160, 16),
+        (180, 4),
+        (200, 0),
+        (220, 4),
+        (240, 16),
+        (260, 36),
+        (280, 64),
+        (300, 100),
+        (320, 144),
+        (340, 196),
+        (360, 256),
+        (380, 324),
+        (400, 400),
+    ]
+
+    assert channel_state.fee_schedule.imbalance_penalty == full_imbalance_penalty
