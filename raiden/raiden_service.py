@@ -13,10 +13,7 @@ from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
 from raiden import constants, routing
-from raiden.blockchain.decode import (
-    actionchannelupdatefee_from_channelstate,
-    blockchainevent_to_statechange,
-)
+from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
@@ -80,6 +77,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import lpex, random_secret
 from raiden.utils.logging import redact_secret
+from raiden.utils.mediation_fees import actionchannelupdatefee_from_channelstate
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer

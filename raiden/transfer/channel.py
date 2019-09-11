@@ -24,6 +24,7 @@ from raiden.transfer.events import (
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
+    TriggerFeeUpdate,
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -2304,6 +2305,7 @@ def handle_channel_settled(
 def handle_channel_deposit(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
 ) -> TransitionResult[NettingChannelState]:
+    events: List[Event] = list()
     participant_address = state_change.deposit_transaction.participant_address
     contract_balance = Balance(state_change.deposit_transaction.contract_balance)
 
@@ -2312,7 +2314,10 @@ def handle_channel_deposit(
     elif participant_address == channel_state.partner_state.address:
         update_contract_balance(channel_state.partner_state, contract_balance)
 
-    return TransitionResult(channel_state, [])
+    # A deposit changes the total capacity of the channel and as such the fees need to change
+    events.append(TriggerFeeUpdate(canonical_identifier=channel_state.canonical_identifier))
+
+    return TransitionResult(channel_state, events)
 
 
 def handle_channel_withdraw(
@@ -2322,6 +2327,7 @@ def handle_channel_withdraw(
     track of this not to go lower than the on-chain value. The value is set to
     onchain_total_withdraw and the corresponding withdraw_state is cleared.
     """
+    events: List[Event] = list()
     participants = (channel_state.our_state.address, channel_state.partner_state.address)
     if state_change.participant not in participants:
         return TransitionResult(channel_state, list())
@@ -2337,7 +2343,10 @@ def handle_channel_withdraw(
 
     end_state.onchain_total_withdraw = state_change.total_withdraw
 
-    return TransitionResult(channel_state, list())
+    # A withdraw changes the total capacity of the channel and as such the fees need to change
+    events.append(TriggerFeeUpdate(canonical_identifier=channel_state.canonical_identifier))
+
+    return TransitionResult(channel_state, events)
 
 
 def handle_channel_batch_unlock(
