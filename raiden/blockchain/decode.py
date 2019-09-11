@@ -24,9 +24,7 @@ from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import MediationFeeConfig
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.channel import get_capacity
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.mediation_fee import calculate_imbalance_fees
 from raiden.transfer.state import (
     FeeScheduleState,
     NettingChannelEndState,
@@ -37,7 +35,6 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import (
-    ActionChannelUpdateFee,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelDeposit,
@@ -54,10 +51,8 @@ from raiden.utils.typing import (
     Balance,
     BlockNumber,
     BlockTimeout,
-    FeeAmount,
     List,
     Optional,
-    ProportionalFeeAmount,
     SecretRegistryAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
@@ -325,25 +320,6 @@ def contractreceivechannelbatchunlock_from_event(
     )
 
 
-def actionchannelupdatefee_from_channelstate(
-    channel_state: NettingChannelState,
-    flat_fee: FeeAmount,
-    proportional_fee: ProportionalFeeAmount,
-    proportional_imbalance_fee: ProportionalFeeAmount,
-) -> ActionChannelUpdateFee:
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=get_capacity(channel_state),
-        proportional_imbalance_fee=proportional_imbalance_fee,
-    )
-
-    return ActionChannelUpdateFee(
-        canonical_identifier=channel_state.canonical_identifier,
-        fee_schedule=FeeScheduleState(
-            flat=flat_fee, proportional=proportional_fee, imbalance_penalty=imbalance_penalty
-        ),
-    )
-
-
 def blockchainevent_to_statechange(
     raiden: "RaidenService", event: DecodedEvent, latest_confirmed_block: BlockNumber
 ) -> List[StateChange]:  # pragma: no unittest
@@ -385,35 +361,9 @@ def blockchainevent_to_statechange(
         deposit = contractreceivechanneldeposit_from_event(event)
         state_changes.append(deposit)
 
-        channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state, deposit.canonical_identifier
-        )
-        if channel_state is not None:
-            fee_config = raiden.config["mediation_fees"]
-            update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state=channel_state,
-                flat_fee=channel_state.fee_schedule.flat,
-                proportional_fee=channel_state.fee_schedule.proportional,
-                proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
-            )
-            state_changes.append(update_fee)
-
     elif event_name == ChannelEvent.WITHDRAW:
         withdraw = contractreceivechannelwithdraw_from_event(event)
         state_changes.append(withdraw)
-
-        channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state, withdraw.canonical_identifier
-        )
-        if channel_state is not None:
-            fee_config = raiden.config["mediation_fees"]
-            update_fee = actionchannelupdatefee_from_channelstate(
-                channel_state=channel_state,
-                flat_fee=channel_state.fee_schedule.flat,
-                proportional_fee=channel_state.fee_schedule.proportional,
-                proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
-            )
-            state_changes.append(update_fee)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
         channel_state = get_contractreceiveupdatetransfer_data_from_event(chain_state, event)

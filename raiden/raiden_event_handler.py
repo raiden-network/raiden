@@ -24,6 +24,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
+from raiden.transfer import views
 from raiden.transfer.architecture import Event
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
 from raiden.transfer.events import (
@@ -49,6 +50,7 @@ from raiden.transfer.events import (
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
+    TriggerFeeUpdate,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -66,6 +68,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
+from raiden.utils.mediation_fees import actionchannelupdatefee_from_channelstate
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 from raiden_contracts.constants import MessageTypeId
@@ -183,6 +186,9 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == ContractSendChannelWithdraw:
             assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
             self.handle_contract_send_channelwithdraw(raiden, event)
+        elif type(event) == TriggerFeeUpdate:
+            assert isinstance(event, TriggerFeeUpdate), MYPY_ANNOTATION
+            self.handle_trigger_fee_update(raiden, event)
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
@@ -191,6 +197,30 @@ class RaidenEventHandler(EventHandler):
                 event_type=str(type(event)),
                 node=to_checksum_address(raiden.address),
             )
+
+    @staticmethod
+    def handle_trigger_fee_update(
+        raiden: "RaidenService", event: TriggerFeeUpdate
+    ) -> None:  # pragma: no unittest
+        chain_state = views.state_from_raiden(raiden)
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            chain_state, event.canonical_identifier
+        )
+        if not channel_state:
+            # This should not happen. Channel should not dissapear between the
+            # triggering of the fee update event and its processing
+            raise RaidenUnrecoverableError(
+                f"Failed to find channel state for {event.canonical_identifier}"
+            )
+
+        fee_config = raiden.config["mediation_fees"]
+        state_change = actionchannelupdatefee_from_channelstate(
+            channel_state=channel_state,
+            flat_fee=channel_state.fee_schedule.flat,
+            proportional_fee=channel_state.fee_schedule.proportional,
+            proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
+        )
+        raiden.handle_and_track_state_changes([state_change])
 
     @staticmethod
     def handle_send_lockexpired(
