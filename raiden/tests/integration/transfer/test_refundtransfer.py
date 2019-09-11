@@ -17,7 +17,6 @@ from raiden.tests.utils.protocol import (
 )
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
-    calculate_amount_to_drain_channel,
     calculate_fee_for_amount,
     get_channelstate,
     transfer,
@@ -62,12 +61,13 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     )
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
-    exhaust_amount = calculate_amount_to_drain_channel(deposit)
+    # Here we make a direct transfer, no fees are charged so we should
+    # send the whole deposit amount to drain the channel.
     transfer(
         initiator_app=app1,
         target_app=app2,
         token_address=token_address,
-        amount=exhaust_amount,
+        amount=deposit,
         identifier=1,
     )
 
@@ -166,7 +166,6 @@ def run_test_refund_transfer(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    amount_drain_with_fees = amount_drain + calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -192,10 +191,10 @@ def run_test_refund_transfer(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain_with_fees,
+            deposit - amount_path - amount_drain,
             [],
             app2,
-            deposit + amount_path + amount_drain_with_fees,
+            deposit + amount_path + amount_drain,
             [],
         )
 
@@ -247,10 +246,10 @@ def run_test_refund_transfer(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain_with_fees,
+            deposit - amount_path - amount_drain,
             [],
             app2,
-            deposit + amount_path + amount_drain_with_fees,
+            deposit + amount_path + amount_drain,
             [],
         )
 
@@ -380,7 +379,6 @@ def run_test_different_view_of_last_bp_during_unlock(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    fee_app1_app2 = calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -406,10 +404,10 @@ def run_test_different_view_of_last_bp_during_unlock(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain - fee_app1_app2,
+            deposit - amount_path - amount_drain,
             [],
             app2,
-            deposit + amount_path + amount_drain + fee_app1_app2,
+            deposit + amount_path + amount_drain,
             [],
         )
 
@@ -461,10 +459,10 @@ def run_test_different_view_of_last_bp_during_unlock(
             assert_synced_channel_state,
             token_network_address,
             app1,
-            deposit - amount_path - amount_drain - fee_app1_app2,
+            deposit - amount_path - amount_drain,
             [],
             app2,
-            deposit + amount_path + amount_drain + fee_app1_app2,
+            deposit + amount_path + amount_drain,
             [],
         )
 
@@ -596,7 +594,6 @@ def run_test_refund_transfer_after_2nd_hop(
     # drain the channel app2 -> app3
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    amount_drain_with_fees = amount_drain + calculate_fee_for_amount(amount_drain)
     transfer(
         initiator_app=app2,
         target_app=app3,
@@ -633,10 +630,10 @@ def run_test_refund_transfer_after_2nd_hop(
             assert_synced_channel_state,
             token_network_address,
             app2,
-            deposit - amount_path - amount_drain_with_fees,
+            deposit - amount_path - amount_drain,
             [],
             app3,
-            deposit + amount_path + amount_drain_with_fees,
+            deposit + amount_path + amount_drain,
             [],
         )
 
@@ -713,9 +710,9 @@ def run_test_refund_transfer_after_2nd_hop(
             assert_synced_channel_state,
             token_network_address,
             app2,
-            deposit - amount_path - amount_drain_with_fees,
+            deposit - amount_path - amount_drain,
             [],
             app3,
-            deposit + amount_path + amount_drain_with_fees,
+            deposit + amount_path + amount_drain,
             [],
         )

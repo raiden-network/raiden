@@ -20,12 +20,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    calculate_fee_for_amount,
-    get_channelstate,
-    transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -660,7 +655,6 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     amount = PaymentAmount(30)
-    amount_with_fee = amount + calculate_fee_for_amount(amount)
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
@@ -733,8 +727,8 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
             given_block_identifier=current_block,
         )
 
-    expected_balance0 = initial_balance0 + deposit0 - amount_with_fee * 2
-    expected_balance1 = initial_balance1 + deposit1 + amount_with_fee * 2
+    expected_balance0 = initial_balance0 + deposit0 - amount * 2
+    expected_balance1 = initial_balance1 + deposit1 + amount * 2
 
     assert token_proxy.balance_of(address0) == expected_balance0
     assert token_proxy.balance_of(address1) == expected_balance1
