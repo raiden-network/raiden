@@ -37,6 +37,7 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
+    from raiden.app import App
 
 log = structlog.get_logger(__name__)
 
@@ -155,8 +156,13 @@ def wait_for_participant_deposit(
 
 
 def wait_both_channel_deposit(
-    app_deposit, app_partner, registry_address, token_address, total_deposit, retry_timeout
-):
+    app_deposit: "App",
+    app_partner: "App",
+    registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress,
+    total_deposit: TokenAmount,
+    retry_timeout: float,
+) -> None:
     wait_for_participant_deposit(
         raiden=app_deposit.raiden,
         token_network_registry_address=registry_address,
