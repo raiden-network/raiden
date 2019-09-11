@@ -1116,7 +1116,7 @@ def test_internal_routing_mediation_fees(
     chain_state, token_network_state, one_to_n_address, our_address
 ):
     """
-    Checks that requesting a route for a direct transfer
+    Checks that requesting a route for a single-hop transfer
     will return the route with estimated_fee of zero.
     """
     open_block_number = 10
