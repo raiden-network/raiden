@@ -76,6 +76,7 @@ from raiden.exceptions import (
     PaymentConflict,
     SamePeerAddress,
     TokenNetworkDeprecated,
+    TokenNetworkRegistryFull,
     TokenNotRegistered,
     TransactionThrew,
     UnexpectedChannelState,
@@ -541,6 +542,7 @@ class RestAPI:  # pragma: no unittest
         conflict_exceptions = (
             InvalidBinaryAddress,
             AlreadyRegisteredTokenAddress,
+            TokenNetworkRegistryFull,
             TransactionThrew,
             InvalidToken,
             AddressWithoutCode,
