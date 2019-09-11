@@ -1,6 +1,7 @@
 import itertools
 import random
 
+from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
@@ -224,9 +225,16 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> FeeAmount:
+def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> Optional[FeeAmount]:
+    """Returns the fee for the channel calculated from the channel state
+
+    Can also return None if the imbalance fee is calculated with an outdated/incosistent schedule.
+    """
     balance = get_balance(channel.our_state, channel.partner_state)
-    return channel.fee_schedule.fee(amount, balance)
+    try:
+        return channel.fee_schedule.fee(amount, balance)
+    except UndefinedMediationFee:
+        return None
 
 
 def get_lock_amount_after_fees(
@@ -239,10 +247,14 @@ def get_lock_amount_after_fees(
     collateral locked from this node.
     """
     fee_in = _fee_for_channel(payer_channel, PaymentAmount(lock.amount))
+    if fee_in is None:
+        return None
     # fee_out should be calculated on the payment amount without any fees. But
     # we only have the amount including fee_out, so we use that as an
     # approximation.
     fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
+    if fee_out is None:
+        return None
     amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
 
     if amount_after_fees <= 0:
