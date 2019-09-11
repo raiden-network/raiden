@@ -5,6 +5,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.app import App
 from raiden.constants import UINT256_MAX, Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -33,7 +34,9 @@ from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
+from raiden.utils.typing import List, TokenAddress, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
+from raiden_contracts.contract_manager import ContractManager
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
@@ -472,49 +475,66 @@ def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=
         assert not greenlet.value
 
 
-@pytest.mark.parametrize("privatekey_seed", ["test_set_deposit_limit_crash:{}"])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("token_amount", [90000000000000000000000])
+@pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
-def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager, retry_timeout):
-    """The development contracts as of 10/12/2018 were crashing if more than an amount was given
-    Regression test for https://github.com/raiden-network/raiden/issues/3135
+def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
+    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
+) -> None:
+    """The Python API must properly check the requested deposit will not exceed
+    the token network deposit limit.
+
+    This is a regression test for #3135.
+
+    As of version `v0.18.1` (commit 786347b23), the proxy was not properly
+    checking that the requested deposit amount was smaller than the smart
+    contract deposit limit. This led to two errors:
+
+    - The error message was vague and incorrect: "Deposit amount decreased"
+    - The exception used was not handled and crashed the node.
+
+    This test checks the limit is properly check from the REST API.
     """
     raise_on_failure(
         raiden_network,
-        run_test_set_deposit_limit_crash,
+        run_test_deposit_amount_must_be_smaller_than_the_token_network_limit,
         raiden_network=raiden_network,
-        token_amount=token_amount,
         contract_manager=contract_manager,
         retry_timeout=retry_timeout,
     )
 
 
-def run_test_set_deposit_limit_crash(
-    raiden_network, token_amount, contract_manager, retry_timeout
-):
+def run_test_deposit_amount_must_be_smaller_than_the_token_network_limit(
+    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
+) -> None:
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
 
-    token_address = deploy_contract_web3(
-        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.chain.client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    token_supply = 1_000_000
+    token_address = TokenAddress(
+        deploy_contract_web3(
+            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client=app1.raiden.chain.client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_supply, 2, "raiden", "Rd"),
+        )
     )
 
     api1 = RaidenAPI(app1.raiden)
-    assert token_address not in api1.get_tokens_list(registry_address)
 
+    msg = "Token is not registered yet, it must not be in the token list."
+    assert token_address not in api1.get_tokens_list(registry_address), msg
+
+    token_network_deposit_limit = TokenAmount(100)
     api1.token_network_register(
         registry_address=registry_address,
         token_address=token_address,
-        channel_participant_deposit_limit=UINT256_MAX,
-        token_network_deposit_limit=UINT256_MAX,
+        channel_participant_deposit_limit=token_network_deposit_limit,
+        token_network_deposit_limit=token_network_deposit_limit,
     )
+
     exception = RuntimeError("Did not see the token registration within 30 seconds")
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_state_change(
@@ -523,7 +543,9 @@ def run_test_set_deposit_limit_crash(
             {"token_network": {"token_address": token_address}},
             retry_timeout,
         )
-    assert token_address in api1.get_tokens_list(registry_address)
+
+    msg = "Token has been registered, yet must be available in the token list."
+    assert token_address in api1.get_tokens_list(registry_address), msg
 
     partner_address = make_address()
     api1.channel_open(
@@ -531,12 +553,18 @@ def run_test_set_deposit_limit_crash(
         token_address=token_address,
         partner_address=partner_address,
     )
+
     with pytest.raises(DepositOverLimit):
         api1.set_total_channel_deposit(
             registry_address=app1.raiden.default_registry.address,
             token_address=token_address,
             partner_address=partner_address,
-            total_deposit=10000000000000000000000,
+            total_deposit=TokenAmount(token_network_deposit_limit + 1),
+        )
+
+        pytest.fail(
+            "The deposit must fail if the requested deposit exceeds the token "
+            "network deposit limit."
         )
 
 
