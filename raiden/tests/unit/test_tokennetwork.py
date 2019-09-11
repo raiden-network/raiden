@@ -6,6 +6,7 @@ import pytest
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.routing import get_best_routes
+from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import node, token_network, views
@@ -1109,3 +1110,97 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
     )
     assert routes[0].next_hop_address == address2
     assert routes[1].next_hop_address == address1
+
+
+def test_internal_routing_mediation_fees(
+    chain_state, token_network_state, one_to_n_address, our_address
+):
+    """
+    Checks that requesting a route for a direct transfer
+    will return the route with estimated_fee of zero.
+    """
+    open_block_number = 10
+    open_block_number_hash = factories.make_block_hash()
+    address1 = factories.make_address()
+    address2 = factories.make_address()
+    pseudo_random_generator = random.Random()
+
+    direct_channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=50, address=our_address),
+            partner_state=factories.NettingChannelEndStateProperties(balance=0, address=address1),
+        )
+    )
+
+    # create new channels as participant
+    direct_channel_new_state_change = ContractReceiveChannelNew(
+        transaction_hash=factories.make_transaction_hash(),
+        channel_state=direct_channel_state,
+        block_number=open_block_number,
+        block_hash=open_block_number_hash,
+    )
+
+    direct_channel_new_iteration = token_network.state_transition(
+        token_network_state=token_network_state,
+        state_change=direct_channel_new_state_change,
+        block_number=open_block_number,
+        block_hash=open_block_number_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    route_new_state_change = ContractReceiveRouteNew(
+        transaction_hash=factories.make_transaction_hash(),
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address, channel_identifier=4
+        ),
+        participant1=address1,
+        participant2=address2,
+        block_number=open_block_number,
+        block_hash=open_block_number_hash,
+    )
+
+    route_new_iteration = token_network.state_transition(
+        token_network_state=direct_channel_new_iteration.new_state,
+        state_change=route_new_state_change,
+        block_number=open_block_number + 10,
+        block_hash=factories.make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    graph_state = route_new_iteration.new_state.network_graph
+    assert len(graph_state.channel_identifier_to_participants) == 2
+    assert len(graph_state.network.edges()) == 2
+
+    # test routing with all nodes available
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_REACHABLE,
+        address2: NODE_NETWORK_REACHABLE,
+    }
+
+    # Routing to our direct partner would require 0 mediation fees.x
+    routes, _ = get_best_routes(
+        chain_state=chain_state,
+        token_network_address=token_network_state.address,
+        one_to_n_address=one_to_n_address,
+        from_address=our_address,
+        to_address=address1,
+        amount=50,
+        previous_address=None,
+        config={},
+        privkey=b"",  # not used if pfs is not configured
+    )
+    assert routes[0].estimated_fee == 0
+
+    # Routing to our address2 through address1 would charge 2%
+    routes, _ = get_best_routes(
+        chain_state=chain_state,
+        token_network_address=token_network_state.address,
+        one_to_n_address=one_to_n_address,
+        from_address=our_address,
+        to_address=address2,
+        amount=50,
+        previous_address=None,
+        config={},
+        privkey=b"",  # not used if pfs is not configured
+    )
+    assert routes[0].estimated_fee == round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * 50)
