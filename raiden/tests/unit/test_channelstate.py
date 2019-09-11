@@ -50,6 +50,7 @@ from raiden.transfer.events import (
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
+    TriggerFeeUpdate,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
@@ -237,7 +238,7 @@ def test_endstate_update_contract_balance():
 
 def test_channelstate_update_contract_balance():
     """A blockchain event for a new balance must increase the respective
-    participants balance.
+    participants balance and trigger a fee update
     """
     deposit_block_number = 10
     block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
@@ -277,6 +278,9 @@ def test_channelstate_update_contract_balance():
 
     assert_partner_state(new_state.our_state, new_state.partner_state, our_model2)
     assert_partner_state(new_state.partner_state, new_state.our_state, partner_model2)
+    # Also make sure that a fee update triggering event is created
+    assert len(iteration.events) == 1
+    assert isinstance(iteration.events[0], TriggerFeeUpdate)
 
 
 def test_channelstate_decreasing_contract_balance():
@@ -2263,6 +2267,9 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.our_state.total_withdraw == total_withdraw
     assert iteration.new_state.our_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.our_state.withdraws_pending
+    # Also make sure that a fee update triggering event is created
+    assert len(iteration.events) == 1
+    assert isinstance(iteration.events[0], TriggerFeeUpdate)
 
     contract_receive_withdraw = ContractReceiveChannelWithdraw(
         canonical_identifier=channel_state.canonical_identifier,
@@ -2284,3 +2291,6 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.partner_state.total_withdraw == total_withdraw
     assert iteration.new_state.partner_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.partner_state.withdraws_pending
+    # Also make sure that a fee update triggering event is created
+    assert len(iteration.events) == 1
+    assert isinstance(iteration.events[0], TriggerFeeUpdate)
