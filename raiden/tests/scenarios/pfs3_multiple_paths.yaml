@@ -12,6 +12,7 @@ settings:
         deposit: true
 
 token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
 
 nodes:
   mode: managed

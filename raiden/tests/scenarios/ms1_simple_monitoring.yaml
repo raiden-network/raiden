@@ -15,7 +15,9 @@ settings:
         # The cost of an MR is `5 * 10 ** 18`
         balance_per_node: 7_000_000_000_000_000_000
         min_balance: 5_000_000_000_000_000_000
+
 token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
 
 nodes:
   mode: managed
