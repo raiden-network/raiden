@@ -61,7 +61,7 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
     )
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
-    # Here we make a direct transfer, no fees are charged so we should
+    # Here we make a single-hop transfer, no fees are charged so we should
     # send the whole deposit amount to drain the channel.
     transfer(
         initiator_app=app1,
