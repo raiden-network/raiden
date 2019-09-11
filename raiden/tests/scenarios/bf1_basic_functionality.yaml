@@ -15,6 +15,7 @@ settings:
         min_balance: 5_000_000_000_000_000_000
 
 token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
 
 nodes:
   mode: managed
@@ -74,7 +75,7 @@ scenario:
       - parallel:
           name: "Enable MSs between node 4 and 3 (will be used later in the scenario)"
           tasks:
-            - store_channel_info: {from: 4, to: 3, key: "MS Test Channel"}
+            - store_channel_info: {from: 4, to: 3, key: "MS Test Channel 3-4"}
       - serial:
           name: "Make 10 transfers from 3 to 0"
           repeat: 10
@@ -218,10 +219,12 @@ scenario:
             ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
             - wait_blocks: 401
             # Below line should potentially have num_events: 2
-            - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 1}
+            - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 2}
 
             ## Monitored channel must be settled before the monitoring service can claim its reward
             ## Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
             ## To make sure the transactions gets mined in time, 10 additional blocks are added
+            ## Monitoring Service only reacts for the second closing because node4 settled to first
+            ## channel itself
             - wait_blocks: 110
-            - assert_ms_claim: {channel_info_key: "MS Test Channel"}
+            - assert_ms_claim: {channel_info_key: "MS Test Channel 3-4"}
