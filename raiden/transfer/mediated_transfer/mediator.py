@@ -228,7 +228,8 @@ def get_pending_transfer_pairs(
 def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> Optional[FeeAmount]:
     """Returns the fee for the channel calculated from the channel state
 
-    Can also return None if the imbalance fee is calculated with an outdated/incosistent schedule.
+    Can also return None if the imbalance fee is calculated with an outdated/incosistent
+    schedule or if there is not enough balance to cover the transfer.
     """
     balance = get_balance(channel.our_state, channel.partner_state)
     try:

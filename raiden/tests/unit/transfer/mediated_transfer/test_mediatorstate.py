@@ -60,7 +60,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    FeeScheduleState,
+    calculate_imbalance_fees,
+)
 from raiden.transfer.mediated_transfer.mediator import get_payee_channel, set_offchain_secret
 from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
@@ -1922,6 +1925,89 @@ def test_next_transfer_pair_with_fees_deducted():
 
     event = search_for_item(events, SendLockedTransfer, {"recipient": pair.payee_address})
     assert event.transfer.lock.amount == balance
+
+
+def test_imbalance_penalty_at_insufficent_transfer_balance():
+    """
+    Test that having an imbalance penalty fee during a transfer with insufficient
+    balance does not throw an UndefinedMediationFee exception from the state machine.
+
+    Regression test for https://github.com/raiden-network/raiden/issues/4835
+    """
+    payer_transfer = create(
+        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
+    )
+
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=20, proportional_imbalance_fee=4000
+    )
+    channels = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=9),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=11),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+        ]
+    )
+
+    pair, _ = mediator.forward_transfer_pair(
+        payer_transfer=payer_transfer,
+        payer_channel=channels[0],
+        route_state=channels.get_route(1),
+        route_state_table=channels.get_routes(),
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+    )
+    assert not pair
+
+
+def test_outdated_imbalance_penalty_at_transfer():
+    """
+    Test that having an outdated (for older capacity) imbalance penalty fee
+    during a transfer where we have sufficient balance does not throw an
+    UndefinedMediationFee exception from the state machine.
+
+    Regression test for https://github.com/raiden-network/raiden/issues/4835
+    """
+    payer_transfer = create(
+        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
+    )
+
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=5, proportional_imbalance_fee=4000
+    )
+    channels = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=10),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=10),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+        ]
+    )
+
+    pair, _ = mediator.forward_transfer_pair(
+        payer_transfer=payer_transfer,
+        payer_channel=channels[0],
+        route_state=channels.get_route(1),
+        route_state_table=channels.get_routes(),
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+    )
+    # Up for discussion: Shouldn't this transfer actually succeed? If the imbalance fee
+    # is outdated for some reason and we can't calculate it shouldn't we just
+    # omit it and mediate without it as a mediator? Or is the current behaviour
+    # from this PR, namely to not mediate the transfer, okay?
+    assert not pair
 
 
 def test_backward_transfer_pair_with_fees_deducted():
