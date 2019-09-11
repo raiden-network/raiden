@@ -10,8 +10,8 @@ settings:
       enable: true
       token:
         deposit: true
-        balance_per_node: 20000
-        min_balance: 20000
+        balance_per_node: 7_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
 
 token:
 
@@ -66,7 +66,7 @@ scenario:
             - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
       - serial:
           name: "Make 100 transfers from 0 to 3"
-          repeat: 100 
+          repeat: 100
           tasks:
             # An amount is used that eventually cause one path to run out of capacity
             # and must then use the other path instead.
@@ -84,8 +84,9 @@ scenario:
             - assert_pfs_iou: {source: 0, amount: 10000}
             - assert_pfs_history:
                 source: 0
-                request_count: 100 
                 target: 3
+                request_count: 100
+                distinct_routes_only: true
                 expected_routes:
                   - [0, 4, 3]
                   - [0, 1, 2, 3]
