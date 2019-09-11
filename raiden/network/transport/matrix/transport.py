@@ -1151,16 +1151,7 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 "Inviting", peer_address=to_checksum_address(peer_address), user=user, room=room
             )
-            try:
-                room.invite_user(user.user_id)
-            except (json.JSONDecodeError, MatrixRequestError):
-                self.log.warning(
-                    "Exception inviting user, maybe their server is not healthy",
-                    peer_address=to_checksum_address(peer_address),
-                    user=user,
-                    room=room,
-                    exc_info=True,
-                )
+            self.invite_user_to_room_with_retries(user, room)
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
@@ -1356,3 +1347,60 @@ class MatrixTransport(Runnable):
                 continue
 
         return True
+
+    def invite_user_to_room_with_retries(self, user: User, room: Room):
+        address = validate_userid_signature(user)
+        if (
+            self._address_mgr.get_userid_presence(user.user_id) is not UserPresence.ONLINE
+            or UserPresence.UNKNOWN
+        ):
+            self.log.error(
+                "User to be invited is not online, trying to invite nonetheless",
+                room=room,
+                user_id=user.user_id,
+                peer_address=to_checksum_address(address),
+            )
+        last_ex: Optional[Exception] = None
+        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
+        retry_interval = ROOM_JOIN_RETRY_INTERVAL
+        for _ in range(JOIN_RETRIES):
+            try:
+                member_ids = {
+                    member.user_id for member in room.get_joined_members(force_resync=True)
+                }
+            except MatrixRequestError as e:
+                last_ex = e
+            if user.user_id not in member_ids or last_ex:
+                try:
+                    room.invite_user(user.user_id)
+                except (json.JSONDecodeError, MatrixRequestError):
+                    self.log.warning(
+                        "Exception inviting user, maybe their server is not healthy",
+                        room=room,
+                        user_id=user.user_id,
+                        peer_address=to_checksum_address(address),
+                        exc_info=True,
+                    )
+                if self._stop_event.wait(retry_interval):
+                    break
+                retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
+                self.log.debug(
+                    "Waiting for peer to join from invite",
+                    room=room,
+                    user_id=user.user_id,
+                    peer_address=to_checksum_address(address),
+                )
+            else:
+                break
+
+        if user.user_id not in member_ids or last_ex:
+            if last_ex:
+                raise last_ex  # re-raise if couldn't succeed in retries
+            else:
+                # Inform the client, that currently no one listens:
+                self.log.error(
+                    "Peer has not joined from invite yet, should join eventually",
+                    room=room,
+                    user_id=user.user_id,
+                    peer_address=to_checksum_address(address),
+                )
