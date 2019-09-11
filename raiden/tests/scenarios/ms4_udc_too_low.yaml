@@ -11,6 +11,8 @@ settings:
       enable: true
       token:
         deposit: true
+        min_balance: 9000
+        balance_per_node: 10000
         # MS reward is 5 * 10 ** 18 tokens, so less than that must be deposited
         max_funding: 10000
 
