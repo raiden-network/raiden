@@ -479,6 +479,93 @@ def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+def test_participant_deposit_amount_must_be_smaller_than_the_limit(
+    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
+) -> None:
+    """The Python API must properly check the requested participant deposit
+    will not exceed the smart contract limit.
+
+    This is companion test for
+    `test_deposit_amount_must_be_smaller_than_the_token_network_limit`. The
+    participant deposit limit was introduced for the bug bounty with the PR
+    https://github.com/raiden-network/raiden-contracts/pull/276/ , the limit is
+    available since version 0.4.0 of the smart contract.
+    """
+    raise_on_failure(
+        raiden_network,
+        run_test_participant_deposit_amount_must_be_smaller_than_the_limit,
+        raiden_network=raiden_network,
+        contract_manager=contract_manager,
+        retry_timeout=retry_timeout,
+    )
+
+
+def run_test_participant_deposit_amount_must_be_smaller_than_the_limit(
+    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
+) -> None:
+    app1 = raiden_network[0]
+
+    registry_address = app1.raiden.default_registry.address
+
+    token_supply = 1_000_000
+    token_address = TokenAddress(
+        deploy_contract_web3(
+            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client=app1.raiden.chain.client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_supply, 2, "raiden", "Rd"),
+        )
+    )
+
+    api1 = RaidenAPI(app1.raiden)
+
+    msg = "Token is not registered yet, it must not be in the token list."
+    assert token_address not in api1.get_tokens_list(registry_address), msg
+
+    token_network_participant_deposit_limit = TokenAmount(100)
+    api1.token_network_register(
+        registry_address=registry_address,
+        token_address=token_address,
+        channel_participant_deposit_limit=token_network_participant_deposit_limit,
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
+    )
+
+    exception = RuntimeError("Did not see the token registration within 30 seconds")
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_state_change(
+            app1.raiden,
+            ContractReceiveNewTokenNetwork,
+            {"token_network": {"token_address": token_address}},
+            retry_timeout,
+        )
+
+    msg = "Token has been registered, yet must be available in the token list."
+    assert token_address in api1.get_tokens_list(registry_address), msg
+
+    partner_address = make_address()
+    api1.channel_open(
+        registry_address=app1.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=partner_address,
+    )
+
+    with pytest.raises(DepositOverLimit):
+        api1.set_total_channel_deposit(
+            registry_address=app1.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=partner_address,
+            total_deposit=TokenAmount(token_network_participant_deposit_limit + 1),
+        )
+
+        pytest.fail(
+            "The deposit must fail if the requested deposit exceeds the participant deposit limit."
+        )
+
+
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("number_of_tokens", [0])
+@pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
     raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
 ) -> None:
