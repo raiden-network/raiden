@@ -211,7 +211,9 @@ def get_best_routes_internal(
         complete_route = [Address(from_address)] + neighbour.route
 
         # https://github.com/raiden-network/raiden/issues/4751
-        # Internal routing doesn't know about fee so it should set a percentage per hop
+        # Internal routing doesn't know how much fees the initiator will be charged,
+        # so it should set a percentage on top of the original amount
+        # for the whole route.
         estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
         if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
             estimated_fee = FeeAmount(0)
