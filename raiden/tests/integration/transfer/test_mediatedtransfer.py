@@ -10,7 +10,12 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_MEDIATION_FEE_MARGIN,
+    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -157,21 +162,23 @@ def test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
-    amount = calculate_amount_to_drain_channel(deposit)
+    calculation = calculate_amount_to_drain_channel(deposit, 1)
 
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=amount,
+        amount=calculation.total_amount,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
+
+    reverse_calculation = calculate_amount_to_drain_channel(deposit + calculation.total_amount, 1)
 
     reverse_path = list(raiden_network[::-1])
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
-        amount=amount * 2,
+        amount=reverse_calculation.total_amount,
         identifier=2,
         timeout=network_wait * number_of_nodes,
     )
@@ -181,10 +188,10 @@ def test_mediated_transfer_with_entire_deposit(
             assert_succeeding_transfer_invariants,
             token_network_address,
             app0,
-            deposit * 2,
+            deposit * 2 - 2 * (calculation.mediators_cut + calculation.estimated_fee),
             [],
             app1,
-            0,
+            2 * (calculation.mediators_cut + calculation.estimated_fee),
             [],
         )
     with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
@@ -192,10 +199,10 @@ def test_mediated_transfer_with_entire_deposit(
             assert_succeeding_transfer_invariants,
             token_network_address,
             app1,
-            deposit * 2,
+            deposit * 2 - calculation.estimated_fee,
             [],
             app2,
-            0,
+            calculation.estimated_fee,
             [],
         )
 
