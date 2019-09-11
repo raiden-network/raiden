@@ -23,7 +23,8 @@ nodes:
     gas-price: fast
     environment-type: development
     routing-mode: pfs
-    pathfinding-max-paths: 5
+    # PFS only returns one path to make sure that the best one available is returned
+    pathfinding-max-paths: 1
     pathfinding-max-fee: 100
     enable-monitoring: true
 
@@ -77,7 +78,7 @@ scenario:
       - serial:
           name: "Check that shortest path was used"
           tasks:
-            ## Check that the paths are indeed the expected ones
+            ## Check that the path is indeed the expected one
             - assert_pfs_history:
                 source: 0
                 request_count: 1
@@ -104,7 +105,7 @@ scenario:
                 source: 0
                 request_count: 2
                 target: 3
-                routes_count: 2
+                routes_count: 1
                 expected_routes:
-                  - [0, 4, 3] # TODO not sure this should be shown
+                  - [0, 4, 3]
                   - [0, 1, 2, 3]
