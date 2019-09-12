@@ -30,21 +30,10 @@ STATE_PRUNING = {
 }
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_locksroot_loading_during_channel_settle_handling(
-    raiden_chain, deploy_client, token_addresses
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_locksroot_loading_during_channel_settle_handling,
-        raiden_chain=raiden_chain,
-        deploy_client=deploy_client,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_locksroot_loading_during_channel_settle_handling(
     raiden_chain, deploy_client, token_addresses
 ):
     app0, app1 = raiden_chain

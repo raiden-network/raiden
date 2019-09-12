@@ -33,6 +33,7 @@ from raiden.utils import BlockNumber
 from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, ProportionalFeeAmount, Type
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -42,14 +43,6 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 
     Regression test for: https://github.com/raiden-network/raiden/issues/2894.
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_regression_filters_must_be_installed_from_confirmed_block,
-        raiden_network=raiden_network,
-    )
-
-
-def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_network):
     app0 = raiden_network[0]
 
     app0.raiden.alarm.stop()
@@ -70,6 +63,7 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     assert not search_for_item(app0_state_changes, Block, {"block_number": target_block_num})
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize(
@@ -85,20 +79,6 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
-    raise_on_failure(
-        raiden_apps=raiden_network,
-        test_function=run_test_regression_transport_global_queues_are_initialized_on_restart_for_services,  # noqa
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-        user_deposit_address=user_deposit_address,
-    )
-
-
-def run_test_regression_transport_global_queues_are_initialized_on_restart_for_services(
-    raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
-):
     app0, app1 = raiden_network
     app0.config["services"]["monitoring_enabled"] = True
     # Send a transfer to make sure the state has a balance proof

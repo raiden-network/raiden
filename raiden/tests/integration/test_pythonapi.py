@@ -44,23 +44,13 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_token_registration:{}"])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_register_token(raiden_network, token_amount, contract_manager, retry_timeout):
-    raise_on_failure(
-        raiden_network,
-        run_test_register_token,
-        raiden_network=raiden_network,
-        token_amount=token_amount,
-        contract_manager=contract_manager,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_register_token(raiden_network, token_amount, contract_manager, retry_timeout):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -101,21 +91,12 @@ def run_test_register_token(raiden_network, token_amount, contract_manager, retr
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_token_registration:{}"])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_register_token_insufficient_eth(raiden_network, token_amount, contract_manager):
-    raise_on_failure(
-        raiden_network,
-        run_test_register_token_insufficient_eth,
-        raiden_network=raiden_network,
-        token_amount=token_amount,
-        contract_manager=contract_manager,
-    )
-
-
-def run_test_register_token_insufficient_eth(raiden_network, token_amount, contract_manager):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -143,6 +124,7 @@ def run_test_register_token_insufficient_eth(raiden_network, token_amount, contr
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -154,17 +136,6 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     node that receives an error for "already registered token" must see the
     token in the token list. Issue: #784
     """
-    raise_on_failure(
-        raiden_chain,
-        run_test_token_registered_race,
-        raiden_chain=raiden_chain,
-        token_amount=token_amount,
-        retry_timeout=retry_timeout,
-        contract_manager=contract_manager,
-    )
-
-
-def run_test_token_registered_race(raiden_chain, token_amount, retry_timeout, contract_manager):
     app0, app1 = raiden_chain
 
     api0 = RaidenAPI(app0.raiden)
@@ -211,6 +182,7 @@ def run_test_token_registered_race(raiden_chain, token_amount, retry_timeout, co
     assert token_address in api1.get_tokens_list(registry_address)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -220,15 +192,6 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     `ContractReceiveChannelDeposit` message since the API needs to return
     the channel with the deposit balance updated.
     """
-    raise_on_failure(
-        raiden_chain,
-        run_test_deposit_updates_balance_immediately,
-        raiden_chain=raiden_chain,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -245,18 +208,10 @@ def run_test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_transfer_to_unknownchannel(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_transfer_to_unknownchannel,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_transfer_to_unknownchannel(raiden_network, token_addresses):
     app0, _ = raiden_network
     token_address = token_addresses[0]
     str_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
@@ -322,18 +277,10 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_channel_events(raiden_chain, token_addresses):
-    raise_on_failure(
-        raiden_chain,
-        run_test_api_channel_events,
-        raiden_chain=raiden_chain,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
@@ -364,19 +311,10 @@ def run_test_api_channel_events(raiden_chain, token_addresses):
     assert must_have_event(app1_events, {"event": ChannelEvent.DEPOSIT})
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_insufficient_funds(raiden_network, token_addresses, deposit):
-    raise_on_failure(
-        raiden_network,
-        run_test_insufficient_funds,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-    )
-
-
-def run_test_insufficient_funds(raiden_network, token_addresses, deposit):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
@@ -389,19 +327,11 @@ def run_test_insufficient_funds(raiden_network, token_addresses, deposit):
     assert isinstance(result.payment_done.get(), EventPaymentSentFailed)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_funds_check_for_openchannel(raiden_network, token_addresses):
     """Reproduces issue 2923 -- two open channel racing through the gas reserve"""
-    raise_on_failure(
-        raiden_network,
-        run_test_funds_check_for_openchannel,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_funds_check_for_openchannel(raiden_network, token_addresses):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
@@ -426,6 +356,7 @@ def run_test_funds_check_for_openchannel(raiden_network, token_addresses):
         gevent.joinall(greenlets, raise_error=True)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("reveal_timeout", [8])
@@ -441,19 +372,6 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
 
     Issue: https://github.com/raiden-network/raiden/issues/3094"""
 
-    raise_on_failure(
-        raiden_network,
-        run_test_payment_timing_out_if_partner_does_not_respond,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        reveal_timeout=reveal_timeout,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, reveal_timeout, retry_timeout
-):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
@@ -475,6 +393,8 @@ def run_test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=
         assert not greenlet.value
 
 
+@raise_on_failure
+@pytest.mark.parametrize("privatekey_seed", ["test_set_deposit_limit_crash:{}"])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [0])
@@ -491,18 +411,6 @@ def test_participant_deposit_amount_must_be_smaller_than_the_limit(
     https://github.com/raiden-network/raiden-contracts/pull/276/ , the limit is
     available since version 0.4.0 of the smart contract.
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_participant_deposit_amount_must_be_smaller_than_the_limit,
-        raiden_network=raiden_network,
-        contract_manager=contract_manager,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_participant_deposit_amount_must_be_smaller_than_the_limit(
-    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
-) -> None:
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -562,6 +470,7 @@ def run_test_participant_deposit_amount_must_be_smaller_than_the_limit(
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [0])
@@ -583,18 +492,6 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
 
     This test checks the limit is properly check from the REST API.
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_deposit_amount_must_be_smaller_than_the_token_network_limit,
-        raiden_network=raiden_network,
-        contract_manager=contract_manager,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_deposit_amount_must_be_smaller_than_the_token_network_limit(
-    raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
-) -> None:
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -655,19 +552,11 @@ def run_test_deposit_amount_must_be_smaller_than_the_token_network_limit(
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_create_monitoring_request(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_create_monitoring_request,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_create_monitoring_request(raiden_network, token_addresses):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)

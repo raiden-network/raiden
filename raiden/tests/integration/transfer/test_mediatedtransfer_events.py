@@ -13,22 +13,10 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.utils import wait_until
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_events(raiden_network, number_of_nodes, token_addresses, network_wait):
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_events,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_mediated_transfer_events(
-    raiden_network, number_of_nodes, token_addresses, network_wait
-):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 

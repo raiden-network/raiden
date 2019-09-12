@@ -17,23 +17,10 @@ from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden_contracts.constants import ChannelEvent
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_token_addresses(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_token_addresses,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-@pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-def test_channel_open_token_network_not_registered_in_confirmed_block(
-    raiden_network, token_addresses
-):
     """
     Test that opening a channel via the API provides the confirmed block and not
     the latest block. The discrepancy there lead to potential timing issues where
@@ -87,21 +74,11 @@ def run_test_token_addresses(raiden_network, token_addresses):
     assert set(api.get_tokens_list(registry_address)) == set(token_addresses)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):
     """Uses RaidenAPI to go through a complete channel lifecycle."""
-    raise_on_failure(
-        raiden_network,
-        run_test_raidenapi_channel_lifecycle,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(

@@ -65,20 +65,12 @@ def saturated_count(connection_managers, registry_address, token_address):
 # TODO: add test scenarios for
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [6])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
 def test_participant_selection(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_participant_selection,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_participant_selection(raiden_network, token_addresses):
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     one_to_n_address = raiden_network[0].raiden.default_one_to_n_address
