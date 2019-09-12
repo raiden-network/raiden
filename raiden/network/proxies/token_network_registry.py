@@ -112,14 +112,6 @@ class TokenNetworkRegistry:
             },
         )
 
-    def add_token_without_limits(self, token_address: TokenAddress) -> TokenNetworkAddress:
-        """
-        Register token of `token_address` with the token network.
-        This applies for versions prior to 0.13.0 of raiden-contracts,
-        since limits were hardcoded into the TokenNetwork contract.
-        """
-        return self._add_token(token_address=token_address, additional_arguments=dict())
-
     def _add_token(
         self, token_address: TokenAddress, additional_arguments: Dict
     ) -> TokenNetworkAddress:
