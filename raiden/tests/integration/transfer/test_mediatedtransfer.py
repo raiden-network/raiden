@@ -35,23 +35,10 @@ from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, TokenAmou
 from raiden.waiting import wait_for_block
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        deposit=deposit,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_mediated_transfer(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1, app2 = raiden_network
@@ -96,22 +83,10 @@ def run_test_mediated_transfer(
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [1])
 def test_locked_transfer_secret_registered_onchain(
-    raiden_network, token_addresses, secret_registry_address, retry_timeout
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_locked_transfer_secret_registered_onchain,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        secret_registry_address=secret_registry_address,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_locked_transfer_secret_registered_onchain(
     raiden_network, token_addresses, secret_registry_address, retry_timeout
 ):
     app0 = raiden_network[0]
@@ -169,23 +144,10 @@ def run_test_locked_transfer_secret_registered_onchain(
     assert not transfer_statechange_dispatched
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_with_entire_deposit(
-    raiden_network, number_of_nodes, token_addresses, deposit, network_wait
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_with_entire_deposit,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-    )
-
-
-def run_test_mediated_transfer_with_entire_deposit(
     raiden_network, number_of_nodes, token_addresses, deposit, network_wait
 ):
     app0, app1, app2 = raiden_network
@@ -240,22 +202,10 @@ def run_test_mediated_transfer_with_entire_deposit(
 
 
 @pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4804")
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argument
-    raiden_network, deposit, token_addresses, network_wait
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_messages_out_of_order,
-        raiden_network=raiden_network,
-        deposit=deposit,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_mediated_transfer_messages_out_of_order(
     raiden_network, deposit, token_addresses, network_wait
 ):
     """Raiden must properly handle repeated locked transfer messages."""
@@ -338,18 +288,10 @@ def run_test_mediated_transfer_messages_out_of_order(
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", (1,))
 @pytest.mark.parametrize("channels_per_node", (CHAIN,))
 def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_calls_pfs,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
     app0, = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -414,6 +356,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
 
 
 # pylint: disable=unused-argument
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
@@ -424,20 +367,6 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     Which means that the initiator will not reveal the secret
     to the target.
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        deposit=deposit,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
-):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -509,6 +438,7 @@ def run_test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     assert transfer_state != "transfer_secret_revealed", msg
 
 
+@raise_on_failure
 @pytest.mark.parametrize("case_no", range(7))
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [4])
@@ -518,22 +448,6 @@ def test_mediated_transfer_with_fees(
     """
     Test mediation with a variety of fee schedules
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_mediated_transfer_with_fees,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        deposit=deposit,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-        case_no=case_no,
-    )
-
-
-def run_test_mediated_transfer_with_fees(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait, case_no
-):
-
     apps = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(apps[0])

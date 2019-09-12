@@ -19,22 +19,13 @@ from raiden.waiting import TransferWaitResult, wait_for_received_transfer_result
 log = structlog.get_logger(__name__)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
 def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
-    raise_on_failure(
-        raiden_apps=raiden_chain,
-        test_function=run_test_echo_node_response,
-        token_addresses=token_addresses,
-        raiden_chain=raiden_chain,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
     app0, app1, echo_app = raiden_chain
     token_address = token_addresses[0]
     registry_address = echo_app.raiden.default_registry.address
@@ -112,22 +103,6 @@ def run_test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
     echo_node.stop()
 
 
-@pytest.mark.parametrize("number_of_nodes", [8])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("reveal_timeout", [15])
-@pytest.mark.parametrize("settle_timeout", [120])
-@pytest.mark.skip("https://github.com/raiden-network/raiden/issues/3750")
-def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
-    raise_on_failure(
-        raiden_apps=raiden_chain,
-        test_function=run_test_echo_node_lottery,
-        token_addresses=token_addresses,
-        raiden_chain=raiden_chain,
-        network_wait=network_wait,
-    )
-
-
 def transfer_and_await(app, token_address, target, amount, identifier, timeout):
     payment_status = RaidenAPI(app.raiden).transfer_async(
         registry_address=app.raiden.default_registry.address,
@@ -147,7 +122,14 @@ def transfer_and_await(app, token_address, target, amount, identifier, timeout):
         payment_status.payment_done.wait()
 
 
-def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [8])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.skip("https://github.com/raiden-network/raiden/issues/3750")
+def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]

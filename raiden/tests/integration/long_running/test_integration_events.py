@@ -166,19 +166,10 @@ def wait_both_channel_deposit(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_new(raiden_chain, retry_timeout, token_addresses):
-    raise_on_failure(
-        raiden_chain,
-        run_test_channel_new,
-        raiden_chain=raiden_chain,
-        retry_timeout=retry_timeout,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_channel_new(raiden_chain, retry_timeout, token_addresses):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -198,21 +189,11 @@ def run_test_channel_new(raiden_chain, retry_timeout, token_addresses):
     assert channelcount0 + 1 == channelcount1
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["event_new_channel:{}"])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
-    raise_on_failure(
-        raiden_chain,
-        run_test_channel_deposit,
-        raiden_chain=raiden_chain,
-        deposit=deposit,
-        retry_timeout=retry_timeout,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
@@ -254,31 +235,10 @@ def run_test_channel_deposit(raiden_chain, deposit, retry_timeout, token_address
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_query_events(
-    raiden_chain,
-    token_addresses,
-    deposit,
-    settle_timeout,
-    retry_timeout,
-    contract_manager,
-    blockchain_type,
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_query_events,
-        raiden_chain=raiden_chain,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        settle_timeout=settle_timeout,
-        retry_timeout=retry_timeout,
-        contract_manager=contract_manager,
-        blockchain_type=blockchain_type,
-    )
-
-
-def run_test_query_events(
     raiden_chain,
     token_addresses,
     deposit,
@@ -453,23 +413,10 @@ def run_test_query_events(
     assert must_have_event(all_netting_channel_events, settled_event)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_secret_revealed_on_chain(
-    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_secret_revealed_on_chain,
-        raiden_chain=raiden_chain,
-        deposit=deposit,
-        settle_timeout=settle_timeout,
-        token_addresses=token_addresses,
-        retry_interval=retry_interval,
-    )
-
-
-def run_test_secret_revealed_on_chain(
     raiden_chain, deposit, settle_timeout, token_addresses, retry_interval
 ):
     """ A node must reveal the secret on-chain if it's known and the channel is closed. """
@@ -541,19 +488,10 @@ def run_test_secret_revealed_on_chain(
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     """ Closing a channel clears the respective message queue. """
-    raise_on_failure(
-        raiden_network,
-        run_test_clear_closed_queue,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     app0, app1 = raiden_network
 
     hold_event_handler = app1.raiden.raiden_event_handler

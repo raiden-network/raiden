@@ -35,21 +35,11 @@ from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block, wait_for_settle
 
 
+@raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("settle_timeout", [50])
 def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
-    raise_on_failure(
-        raiden_chain,
-        run_test_refund_messages,
-        raiden_chain=raiden_chain,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-    )
-
-
-def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
     # The network has the following topology:
     #
     #   App0 <---> App1 <---> App2
@@ -113,25 +103,11 @@ def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wai
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_refund_transfer(
-    raiden_chain, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_refund_transfer,
-        raiden_chain=raiden_chain,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_refund_transfer(
     raiden_chain, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
 ):
     """A failed transfer must send a refund back.
@@ -315,32 +291,11 @@ def run_test_refund_transfer(
     assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_different_view_of_last_bp_during_unlock:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_different_view_of_last_bp_during_unlock(
-    raiden_chain,
-    number_of_nodes,
-    token_addresses,
-    deposit,
-    network_wait,
-    retry_timeout,
-    blockchain_type,
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_different_view_of_last_bp_during_unlock,
-        raiden_chain=raiden_chain,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-        retry_timeout=retry_timeout,
-        blockchain_type=blockchain_type,
-    )
-
-
-def run_test_different_view_of_last_bp_during_unlock(
     raiden_chain,
     number_of_nodes,
     token_addresses,
@@ -546,25 +501,12 @@ def run_test_different_view_of_last_bp_during_unlock(
     assert final_balance1 - deposit - initial_balance1 == 1
 
 
+@raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [4])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_refund_transfer_after_2nd_hop(
-    raiden_chain, number_of_nodes, token_addresses, deposit, network_wait
-):
-    raise_on_failure(
-        raiden_chain,
-        run_test_refund_transfer_after_2nd_hop,
-        raiden_chain=raiden_chain,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-    )
-
-
-def run_test_refund_transfer_after_2nd_hop(
     raiden_chain, number_of_nodes, token_addresses, deposit, network_wait
 ):
     """Test the refund transfer sent due to failure after 2nd hop"""

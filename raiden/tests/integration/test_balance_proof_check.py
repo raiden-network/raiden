@@ -16,6 +16,7 @@ from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden_contracts.constants import MessageTypeId
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -32,19 +33,6 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     - Assert that app0 can settle the closed channel, even though app1 didn't
     use the latest balance proof
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_node_can_settle_if_close_didnt_use_any_balance_proof,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
-    raiden_network, number_of_nodes, token_addresses, network_wait
-):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -115,6 +103,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -132,19 +121,6 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
     - Assert that app0 can settle the closed channel, even though app1 didn't
     use the latest balance proof
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_node_can_settle_if_partner_does_not_call_update_transfer,
-        raiden_network=raiden_network,
-        number_of_nodes=number_of_nodes,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
-    raiden_network, number_of_nodes, token_addresses, network_wait
-):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)

@@ -74,17 +74,9 @@ def is_channel_registered(
     return is_in_channelid_map and is_in_partner_map
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_settle_is_automatically_called(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_settle_is_automatically_called,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     """Settle is automatically called by one of the nodes."""
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
@@ -162,19 +154,10 @@ def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
-    raise_on_failure(
-        raiden_network,
-        run_test_lock_expiry,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-    )
-
-
-def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -284,6 +267,7 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     assert transfer_2_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
     """Tests that batch unlock is properly called.
@@ -292,17 +276,6 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     revealed *on-chain*. The node that receives the tokens has to call unlock,
     the node that doesn't gain anything does nothing.
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_batch_unlock,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        secret_registry_address=secret_registry_address,
-        deposit=deposit,
-    )
-
-
-def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
     alice_app, bob_app = raiden_network
     alice_address = alice_app.raiden.address
     bob_address = bob_app.raiden.address
@@ -454,24 +427,10 @@ def run_test_batch_unlock(raiden_network, token_addresses, secret_registry_addre
     assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance, msg
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw(
     raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_channel_withdraw,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-        number_of_nodes=number_of_nodes,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_channel_withdraw(
-    raiden_network, token_addresses, deposit, network_wait, number_of_nodes, retry_timeout
 ):
     """ Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
@@ -531,24 +490,10 @@ def run_test_channel_withdraw(
     assert bob_initial_balance + total_withdraw == bob_balance_after_withdraw
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw_expired(
     raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
-):
-    raise_on_failure(
-        raiden_network,
-        run_test_channel_withdraw_expired,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-        network_wait=network_wait,
-        number_of_nodes=number_of_nodes,
-        retry_timeout=retry_timeout,
-    )
-
-
-def run_test_channel_withdraw_expired(
-    raiden_network, token_addresses, deposit, network_wait, number_of_nodes, retry_timeout
 ):
     """ Tests withdraw expiration. """
     alice_app, bob_app = raiden_network
@@ -635,19 +580,10 @@ def run_test_channel_withdraw_expired(
         assert alice_bob_channel_state.partner_state.withdraws_pending.get(total_withdraw) is None
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, deposit):
-    raise_on_failure(
-        raiden_network,
-        run_test_settled_lock,
-        token_addresses=token_addresses,
-        raiden_network=raiden_network,
-        deposit=deposit,
-    )
-
-
-def run_test_settled_lock(token_addresses, raiden_network, deposit):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
@@ -734,18 +670,10 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     assert token_proxy.balance_of(address1) == expected_balance1
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_automatic_secret_registration(raiden_chain, token_addresses):
-    raise_on_failure(
-        raiden_chain,
-        run_test_automatic_secret_registration,
-        raiden_chain=raiden_chain,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -802,19 +730,10 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     )
 
 
+@raise_on_failure
 @pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_start_end_attack(token_addresses, raiden_chain, deposit):
-    raise_on_failure(
-        raiden_chain,
-        run_test_start_end_attack,
-        token_addresses=token_addresses,
-        raiden_chain=raiden_chain,
-        deposit=deposit,
-    )
-
-
-def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
@@ -908,18 +827,9 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     assert hub_contract.participants[app1.raiden.address]["netted"] == deposit - amount
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_automatic_dispute(raiden_network, deposit, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_automatic_dispute,
-        raiden_network=raiden_network,
-        deposit=deposit,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -992,18 +902,9 @@ def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     assert token_proxy.balance_of(app1.raiden.address) == expected_balance1
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
-    raise_on_failure(
-        raiden_network,
-        run_test_batch_unlock_after_restart,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        deposit=deposit,
-    )
-
-
-def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
     """Simulate the case where:
     - A sends B a transfer
     - B sends A a transfer

@@ -21,6 +21,7 @@ from raiden.utils import BlockNumber, create_default_identifier
 from raiden.utils.typing import TokenAmount
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -29,17 +30,6 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     raiden_network, deposit, token_addresses, network_wait
 ):
     """Test re-sending of undelivered messages on node restart"""
-    raise_on_failure(
-        raiden_network,
-        run_test_send_queued_messages,
-        raiden_network=raiden_network,
-        deposit=deposit,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_send_queued_messages(raiden_network, deposit, token_addresses, network_wait):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -142,6 +132,7 @@ def run_test_send_queued_messages(raiden_network, deposit, token_addresses, netw
     new_transport.stop()
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -159,16 +150,6 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     started the transfers.
     Related issue: https://github.com/raiden-network/raiden/issues/3432
     """
-    raise_on_failure(
-        raiden_network,
-        run_test_payment_statuses_are_restored,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-        network_wait=network_wait,
-    )
-
-
-def run_test_payment_statuses_are_restored(raiden_network, token_addresses, network_wait):
     app0, app1 = raiden_network
 
     token_address = token_addresses[0]

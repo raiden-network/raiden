@@ -11,6 +11,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.utils.typing import List, TokenAddress, TokenAmount, WithdrawAmount
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize(
@@ -18,18 +19,6 @@ from raiden.utils.typing import List, TokenAddress, TokenAmount, WithdrawAmount
 )
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
-    raiden_network, token_addresses
-) -> None:
-
-    raise_on_failure(
-        raiden_apps=raiden_network,
-        test_function=run_test_pfs_send_capacity_update_on_deposit_and_withdraw,  # noqa
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_pfs_send_capacity_update_on_deposit_and_withdraw(
     raiden_network: List[App], token_addresses: List[TokenAddress]
 ) -> None:
     # we need to test if CapacityUpdates are sent after a deposit and a withdraw
