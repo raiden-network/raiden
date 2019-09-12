@@ -72,6 +72,7 @@ Contents
 
   onboarding
   state_machines
+  proxies
   changelog
 
 .. toctree::
