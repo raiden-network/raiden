@@ -217,7 +217,7 @@ class ConsoleTools:
 
         registry = self._raiden.chain.token_network_registry(registry_address)
 
-        token_network_address = registry.add_token_with_limits(
+        token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=UINT256_MAX,
             token_network_deposit_limit=UINT256_MAX,

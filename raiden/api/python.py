@@ -227,7 +227,7 @@ class RaidenAPI:  # pragma: no unittest
         registry = self.raiden.chain.token_network_registry(registry_address)
 
         try:
-            return registry.add_token_with_limits(
+            return registry.add_token(
                 token_address=token_address,
                 channel_participant_deposit_limit=channel_participant_deposit_limit,
                 token_network_deposit_limit=token_network_deposit_limit,
