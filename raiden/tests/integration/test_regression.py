@@ -246,7 +246,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
     app_channels = [(app0, app1), (app1, app2), (app0, app3), (app3, app4), (app4, app2)]
     open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
 
-    exhaust_amount = calculate_amount_to_drain_channel(deposit)
+    exhaust_amount = calculate_amount_to_drain_channel(deposit, 1)
     # Use all deposit from app1->app2 to force a refund
     transfer(
         initiator_app=app1,
