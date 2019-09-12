@@ -655,7 +655,8 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
-    # let's try to set both new state and balance
+
+    # let's try to set both new state and total_deposit
     request = grequests.patch(
         api_url_for(
             api_server_test_instance,
@@ -667,6 +668,33 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # let's try to set both new state and total_withdraw
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(state=ChannelState.STATE_CLOSED.value, total_withdraw=200),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # let's try to set both total deposit and total_withdraw
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_deposit=500, total_withdraw=200),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
     # let's try to patch with no arguments
     request = grequests.patch(
         api_url_for(
