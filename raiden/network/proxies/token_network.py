@@ -1060,6 +1060,9 @@ class TokenNetwork:
                 if latest_deposit < total_deposit:
                     raise RaidenRecoverableError("The tokens were not transferred")
 
+                # Here, we don't know what caused the failure. But because we are
+                # dealing with an external token contract, it is assumed that it is
+                # malicious and therefore we raise a Recoverable error here.
                 raise RaidenRecoverableError("Unlocked failed for an unknown reason")
         else:
             # The latest block can not be used reliably because of reorgs,
