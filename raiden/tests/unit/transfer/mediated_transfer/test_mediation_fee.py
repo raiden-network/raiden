@@ -180,6 +180,9 @@ def ppm_fee_per_channel(per_hop_fee) -> ProportionalFeeAmount:
         (100, ppm_fee_per_channel(10_000), 1000 + 10 + 200, 999),
         # -
         (100, ppm_fee_per_channel(500_000), 1000 + 750, 1000),
+        # - values found in run_test_mediated_transfer_with_fees
+        (0, ppm_fee_per_channel(200_000), 47 + 9, 47),
+        (0, ppm_fee_per_channel(200_000), 39 + 8, 39),
     ],
 )
 def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected_amount):
