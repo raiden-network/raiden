@@ -7,7 +7,7 @@ from raiden.transfer.architecture import State
 from raiden.utils.typing import (
     Balance,
     FeeAmount,
-    PaymentAmount,
+    PaymentWithFeeAmount,
     ProportionalFeeAmount,
     TokenAmount,
 )
@@ -58,22 +58,33 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def fee(self, amount: PaymentAmount, channel_balance: Balance) -> FeeAmount:
+    def _imbalance_fee(self, amount: PaymentWithFeeAmount, channel_balance: Balance) -> FeeAmount:
         if self._penalty_func:
             # Total channel balance - node balance = balance (used as x-axis for the penalty)
             balance = self._penalty_func.x_list[-1] - channel_balance
             try:
-                imbalance_fee = round(
-                    self._penalty_func(balance + amount) - self._penalty_func(balance)
+                return FeeAmount(
+                    round(self._penalty_func(balance + amount) - self._penalty_func(balance))
                 )
             except ValueError:
                 raise UndefinedMediationFee()
-        else:
-            imbalance_fee = 0
+
+        return FeeAmount(0)
+
+    def fee_payer(self, amount: PaymentWithFeeAmount, channel_balance: Balance) -> FeeAmount:
+        imbalance_fee = self._imbalance_fee(amount=amount, channel_balance=channel_balance)
 
         flat_fee = self.flat
         prop_fee = int(round(amount * self.proportional / 1e6))
         return FeeAmount(flat_fee + prop_fee + imbalance_fee)
+
+    def fee_payee(self, amount: PaymentWithFeeAmount, channel_balance: Balance) -> FeeAmount:
+        imbalance_fee = self._imbalance_fee(amount=amount, channel_balance=channel_balance)
+
+        fee_out = round(
+            amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
+        )
+        return FeeAmount(fee_out)
 
     def reversed(self: T) -> T:
         if not self.imbalance_penalty:
