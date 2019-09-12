@@ -187,6 +187,20 @@ class UserAddressManager:
                 ),
             )
 
+    def get_online_user_ids_for_address(self, address: Address) -> Set[str]:
+        online_user_ids = {
+            user_id
+            for user_id in self.get_userids_for_address(address)
+            if self.get_userid_presence(user_id) == UserPresence.ONLINE or UserPresence.UNKNOWN
+        }
+        if len(online_user_ids) > 1:
+            self.log.error(
+                "Detected multiple online users for a single address",
+                address=to_checksum_address(address),
+                user_ids=online_user_ids
+            )
+        return online_user_ids
+
     def refresh_address_presence(self, address: Address) -> None:
         """
         Update synthesized address presence state from cached user presence states.
