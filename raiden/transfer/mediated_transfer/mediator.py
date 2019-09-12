@@ -15,7 +15,6 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferSignedState,
@@ -58,7 +57,6 @@ from raiden.utils.typing import (
     LockType,
     NodeNetworkStateMap,
     Optional,
-    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
@@ -231,7 +229,7 @@ def _fee_for_payer_channel(
 ) -> Optional[FeeAmount]:
     balance = get_balance(channel.our_state, channel.partner_state)
     try:
-        return channel.fee_schedule.fee(PaymentAmount(amount), balance)
+        return channel.fee_schedule.fee_payer(amount, balance)
     except UndefinedMediationFee:
         return None
 
@@ -241,23 +239,10 @@ def _fee_for_payee_channel(
 ) -> Optional[FeeAmount]:
     balance = get_balance(channel.our_state, channel.partner_state)
 
-    # Use the existing fee schedule to simplify calculation
-    imbalance_fee_schedule = FeeScheduleState(
-        imbalance_penalty=channel.fee_schedule.imbalance_penalty
-    )
     try:
-        imbalance_fee = imbalance_fee_schedule.fee(PaymentAmount(amount), balance)
+        return channel.fee_schedule.fee_payee(amount=amount, channel_balance=balance)
     except UndefinedMediationFee:
         return None
-
-    fee_out = round(
-        amount
-        - (
-            (amount - channel.fee_schedule.flat - imbalance_fee)
-            / (1 + channel.fee_schedule.proportional / 1e6)
-        )
-    )
-    return FeeAmount(fee_out)
 
 
 def get_lock_amount_after_fees(
