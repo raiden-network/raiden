@@ -197,7 +197,7 @@ class UserAddressManager:
             self.log.error(
                 "Detected multiple online users for a single address",
                 address=to_checksum_address(address),
-                user_ids=online_user_ids
+                user_ids=online_user_ids,
             )
         return online_user_ids
 

@@ -62,6 +62,7 @@ from raiden.utils.typing import (
     NamedTuple,
     NewType,
     Optional,
+    Set,
     Tuple,
     Union,
     cast,
@@ -989,38 +990,8 @@ class MatrixTransport(Runnable):
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
         room_is_empty = not bool(peer_ids & member_ids)
         if room_is_empty:
-            last_ex: Optional[Exception] = None
-            retry_interval = ROOM_JOIN_RETRY_INTERVAL
-            self.log.debug(
-                "Waiting for peer to join from invite",
-                room=room,
-                peer_address=to_checksum_address(address),
-            )
-            for _ in range(JOIN_RETRIES):
-                try:
-                    member_ids = {
-                        member.user_id for member in room.get_joined_members(force_resync=True)
-                    }
-                except MatrixRequestError as e:
-                    last_ex = e
-                room_is_empty = not bool(peer_ids & member_ids)
-                if room_is_empty or last_ex:
-                    if self._stop_event.wait(retry_interval):
-                        break
-                    retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
-                else:
-                    break
-
-            if room_is_empty or last_ex:
-                if last_ex:
-                    raise last_ex  # re-raise if couldn't succeed in retries
-                else:
-                    # Inform the client, that currently no one listens:
-                    self.log.error(
-                        "Peer has not joined from invite yet, should join eventually",
-                        room=room,
-                        peer_address=to_checksum_address(address),
-                    )
+            for peer in peers:
+                self.invite_user_to_room_with_retries(peer, room)
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         self._set_room_id_for_address(address, room.room_id)
@@ -1349,7 +1320,33 @@ class MatrixTransport(Runnable):
         return True
 
     def invite_user_to_room_with_retries(self, user: User, room: Room):
+        """
+        - Invites a given user to a given room.
+        - Logs an error if the user is not online.
+        - Verifies that the users address is whitelisted.
+        - Logs an error in case the user does not join from our invite.
+        """
+
         address = validate_userid_signature(user)
+        assert self._address_mgr.is_address_known(address)
+
+        retry_interval = ROOM_JOIN_RETRY_INTERVAL
+        join_retries = JOIN_RETRIES
+        last_ex: Optional[Exception] = None
+
+        def is_member():
+            """Check if given user is already member of the room or return exception"""
+            member_ids: Set[str] = set()
+            last_ex = None
+            try:
+                member_ids = {
+                    member.user_id for member in room.get_joined_members(force_resync=True)
+                }
+            except MatrixRequestError as e:
+                last_ex = e
+            return user.user_id in member_ids, last_ex
+
+        # user is not online, suppress retries.
         if (
             self._address_mgr.get_userid_presence(user.user_id) is not UserPresence.ONLINE
             or UserPresence.UNKNOWN
@@ -1360,17 +1357,11 @@ class MatrixTransport(Runnable):
                 user_id=user.user_id,
                 peer_address=to_checksum_address(address),
             )
-        last_ex: Optional[Exception] = None
-        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-        retry_interval = ROOM_JOIN_RETRY_INTERVAL
-        for _ in range(JOIN_RETRIES):
-            try:
-                member_ids = {
-                    member.user_id for member in room.get_joined_members(force_resync=True)
-                }
-            except MatrixRequestError as e:
-                last_ex = e
-            if user.user_id not in member_ids or last_ex:
+            join_retries = 1
+
+        for _ in range(join_retries):
+            is_member, last_ex = is_member()
+            if not is_member:
                 try:
                     room.invite_user(user.user_id)
                 except (json.JSONDecodeError, MatrixRequestError):
@@ -1393,7 +1384,7 @@ class MatrixTransport(Runnable):
             else:
                 break
 
-        if user.user_id not in member_ids or last_ex:
+        if not is_member or last_ex:
             if last_ex:
                 raise last_ex  # re-raise if couldn't succeed in retries
             else:

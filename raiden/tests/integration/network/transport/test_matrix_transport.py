@@ -144,7 +144,9 @@ def wait_for_peer_unreachable(
     )
 
 
-def wait_for_peer_reachable(transport: MatrixTransport, target_address: Address, timeout: int = 5):
+def wait_for_peer_reachable(
+    transport: MatrixTransport, target_address: Address, timeout: int = 15
+):
     _wait_for_peer_reachability(
         transport=transport,
         target_address=target_address,
