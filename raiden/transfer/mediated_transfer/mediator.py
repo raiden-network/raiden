@@ -15,6 +15,7 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferSignedState,
@@ -225,17 +226,38 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def _fee_for_channel(channel: NettingChannelState, amount: PaymentAmount) -> Optional[FeeAmount]:
-    """Returns the fee for the channel calculated from the channel state
-
-    Can also return None if the imbalance fee is calculated with an outdated/incosistent
-    schedule or if there is not enough balance to cover the transfer.
-    """
+def _fee_for_payer_channel(
+    channel: NettingChannelState, amount: PaymentWithFeeAmount
+) -> Optional[FeeAmount]:
     balance = get_balance(channel.our_state, channel.partner_state)
     try:
-        return channel.fee_schedule.fee(amount, balance)
+        return channel.fee_schedule.fee(PaymentAmount(amount), balance)
     except UndefinedMediationFee:
         return None
+
+
+def _fee_for_payee_channel(
+    channel: NettingChannelState, amount: PaymentWithFeeAmount
+) -> Optional[FeeAmount]:
+    balance = get_balance(channel.our_state, channel.partner_state)
+
+    # Use the existing fee schedule to simplify calculation
+    imbalance_fee_schedule = FeeScheduleState(
+        imbalance_penalty=channel.fee_schedule.imbalance_penalty
+    )
+    try:
+        imbalance_fee = imbalance_fee_schedule.fee(PaymentAmount(amount), balance)
+    except UndefinedMediationFee:
+        return None
+
+    fee_out = round(
+        amount
+        - (
+            (amount - channel.fee_schedule.flat - imbalance_fee)
+            / (1 + channel.fee_schedule.proportional / 1e6)
+        )
+    )
+    return FeeAmount(fee_out)
 
 
 def get_lock_amount_after_fees(
@@ -247,15 +269,14 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    fee_in = _fee_for_channel(payer_channel, PaymentAmount(lock.amount))
+    fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
     if fee_in is None:
         return None
-    # fee_out should be calculated on the payment amount without any fees. But
-    # we only have the amount including fee_out, so we use that as an
-    # approximation.
-    fee_out = _fee_for_channel(payee_channel, PaymentAmount(lock.amount - fee_in))
+    # TODO: add bounds checks
+    fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
     if fee_out is None:
         return None
+
     amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
 
     if amount_after_fees <= 0:
