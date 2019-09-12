@@ -63,12 +63,17 @@ class FeeScheduleState(State):
             # Total channel balance - node balance = balance (used as x-axis for the penalty)
             balance = self._penalty_func.x_list[-1] - channel_balance
             try:
-                imbalance_fee = self._penalty_func(balance + amount) - self._penalty_func(balance)
+                imbalance_fee = round(
+                    self._penalty_func(balance + amount) - self._penalty_func(balance)
+                )
             except ValueError:
                 raise UndefinedMediationFee()
         else:
             imbalance_fee = 0
-        return FeeAmount(round(self.flat + amount * self.proportional / 1e6 + imbalance_fee))
+
+        flat_fee = self.flat
+        prop_fee = int(round(amount * self.proportional / 1e6))
+        return FeeAmount(flat_fee + prop_fee + imbalance_fee)
 
     def reversed(self: T) -> T:
         if not self.imbalance_penalty:
