@@ -512,8 +512,8 @@ def test_mediated_transfer_with_fees(
             fee_schedules=[None, FeeScheduleState(proportional=0.20e6), None],
             expected_transferred_amounts=[
                 amount + fee,
-                amount + fee - (amount + fee) // 5,
-                amount + fee - (amount + fee) // 5,
+                amount + fee - 9,  # See test_get_lock_amount_after_fees for where 9 comes from
+                amount + fee - 9,  # See test_get_lock_amount_after_fees for where 9 comes from
             ],
         ),
         # Both mediators have a proportional fee of 20%
@@ -525,8 +525,9 @@ def test_mediated_transfer_with_fees(
             ],
             expected_transferred_amounts=[
                 amount + fee,
-                amount + fee - (amount + fee) // 5,
-                amount + fee - (amount + fee) // 5 - (amount + fee - (amount + fee) // 5) // 5,
+                amount + fee - 9,  # See test_get_lock_amount_after_fees for where 9 comes from
+                # See test_get_lock_amount_after_fees for where 9 and 8 come from
+                amount + fee - 9 - 8,
             ],
         ),
         # The first mediator has an imbalance fee that works like a 20%
