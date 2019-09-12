@@ -36,7 +36,12 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import BalanceProofSignedState, ChannelState, NettingChannelState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    ChainState,
+    ChannelState,
+    NettingChannelState,
+)
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -221,7 +226,12 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
-        if token_address in self.get_tokens_list(registry_address):
+        # We fix a state where the precondition checks happen. The blockhash of this chain state
+        # will be passed to the proxy so that the precondition checks in the proxy happen on the
+        # same block.
+        chain_state = views.state_from_raiden(self.raiden)
+
+        if token_address in self.get_tokens_list(registry_address, chain_state):
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
         registry = self.raiden.chain.token_network_registry(registry_address)
@@ -849,11 +859,14 @@ class RaidenAPI:  # pragma: no unittest
         """ Returns the currently network status of `node_address`. """
         self.raiden.start_health_check_for(node_address)
 
-    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress):
+    def get_tokens_list(
+        self, registry_address: TokenNetworkRegistryAddress, chain_state: ChainState = None
+    ):
         """Returns a list of tokens the node knows about"""
+        if chain_state is None:
+            chain_state = views.state_from_raiden(self.raiden)
         tokens_list = views.get_token_identifiers(
-            chain_state=views.state_from_raiden(self.raiden),
-            token_network_registry_address=registry_address,
+            chain_state=chain_state, token_network_registry_address=registry_address
         )
         return tokens_list
 
