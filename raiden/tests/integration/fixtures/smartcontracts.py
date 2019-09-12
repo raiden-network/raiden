@@ -68,7 +68,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
     if register_tokens:
         for token in token_addresses:
             registry = deploy_service.token_network_registry(token_network_registry_address)
-            registry.add_token_with_limits(
+            registry.add_token(
                 token_address=token,
                 channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
                 token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
@@ -226,7 +226,7 @@ def register_token_and_return_the_network_proxy(
         contract_manager=contract_manager,
         blockchain_service=blockchain_service,
     )
-    token_network_address = token_network_registry_proxy.add_token_with_limits(
+    token_network_address = token_network_registry_proxy.add_token(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,

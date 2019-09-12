@@ -41,7 +41,7 @@ def test_token_network_registry(
 
     # Registering a non-existing token network should fail
     with pytest.raises(AddressWithoutCode):
-        token_network_registry_proxy.add_token_with_limits(
+        token_network_registry_proxy.add_token(
             token_address=bad_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -63,7 +63,7 @@ def test_token_network_registry(
     # function implemented #3697 which is validated in the smart contract.
     with patch.object(Token, "total_supply", return_value=""):
         with pytest.raises(InvalidToken):
-            token_network_registry_proxy.add_token_with_limits(
+            token_network_registry_proxy.add_token(
                 token_address=test_token_address,
                 channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
                 token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -71,7 +71,7 @@ def test_token_network_registry(
 
     # Register a valid token
     event_filter = token_network_registry_proxy.tokenadded_filter()
-    token_network_address = token_network_registry_proxy.add_token_with_limits(
+    token_network_address = token_network_registry_proxy.add_token(
         token_address=test_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -83,7 +83,7 @@ def test_token_network_registry(
     # because it is a race condition.
     match = "Token already registered"
     with pytest.raises(RaidenRecoverableError, match=match):
-        token_network_registry_proxy.add_token_with_limits(
+        token_network_registry_proxy.add_token(
             token_address=test_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),

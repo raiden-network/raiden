@@ -93,7 +93,7 @@ class TokenNetworkRegistry:
 
         return address
 
-    def add_token_with_limits(
+    def add_token(
         self,
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
@@ -106,14 +106,15 @@ class TokenNetworkRegistry:
         """
         return self._add_token(
             token_address=token_address,
-            additional_arguments={
-                "_channel_participant_deposit_limit": channel_participant_deposit_limit,
-                "_token_network_deposit_limit": token_network_deposit_limit,
-            },
+            channel_participant_deposit_limit=channel_participant_deposit_limit,
+            token_network_deposit_limit=token_network_deposit_limit,
         )
 
     def _add_token(
-        self, token_address: TokenAddress, additional_arguments: Dict
+        self,
+        token_address: TokenAddress,
+        channel_participant_deposit_limit: TokenAmount,
+        token_network_deposit_limit: TokenAmount,
     ) -> TokenNetworkAddress:
         if not is_binary_address(token_address):
             raise ValueError("Expected binary address format for token")
@@ -136,8 +137,11 @@ class TokenNetworkRegistry:
             checking_block = self.client.get_checking_block()
             error_prefix = "Call to createERC20TokenNetwork will fail"
 
-            kwarguments = {"_token_address": token_address}
-            kwarguments.update(additional_arguments)
+            kwarguments = {
+                "_token_address": token_address,
+                "_channel_participant_deposit_limit": channel_participant_deposit_limit,
+                "_token_network_deposit_limit": token_network_deposit_limit,
+            }
             gas_limit = self.proxy.estimate_gas(
                 checking_block, "createERC20TokenNetwork", **kwarguments
             )

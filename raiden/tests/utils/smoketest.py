@@ -295,7 +295,7 @@ def setup_raiden(
         blockchain_service=blockchain_service,
     )
 
-    registry.add_token_with_limits(
+    registry.add_token(
         token_address=to_canonical_address(token.contract.address),
         channel_participant_deposit_limit=UINT256_MAX,
         token_network_deposit_limit=UINT256_MAX,
