@@ -1217,6 +1217,21 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
 
+        if total_withdraw is not None and state is not None:
+            return api_error(
+                errors="Can not update a channel's total withdraw and state at the same time",
+                status_code=HTTPStatus.CONFLICT,
+            )
+
+        if total_withdraw is not None and total_deposit is not None:
+            return api_error(
+                errors=(
+                    "Can not update a channel's total withdraw "
+                    "and total deposit at the same time"
+                ),
+                status_code=HTTPStatus.CONFLICT,
+            )
+
         if total_deposit is None and state is None and total_withdraw is None:
             return api_error(
                 errors=(
@@ -1225,10 +1240,12 @@ class RestAPI:  # pragma: no unittest
                 ),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
+
         if total_deposit and total_deposit < 0:
             return api_error(
                 errors="Amount to deposit must not be negative.", status_code=HTTPStatus.CONFLICT
             )
+
         if total_withdraw and total_withdraw < 0:
             return api_error(
                 errors="Amount to withdraw must not be negative.", status_code=HTTPStatus.CONFLICT
