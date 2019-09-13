@@ -456,10 +456,6 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def blockhash(self):
-        """ Return the most recent block hash """
-        return self.blockhash_from_blocknumber(self.block_number())
-
     def get_block(self, block_identifier: BlockSpecification) -> Dict:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)

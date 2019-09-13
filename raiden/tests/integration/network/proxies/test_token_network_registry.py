@@ -45,7 +45,7 @@ def test_token_network_registry(
             token_address=bad_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=deploy_client.blockhash(),
+            block_identifier=deploy_client.get_confirmed_blockhash(),
         )
 
     test_token = deploy_token(
@@ -68,12 +68,12 @@ def test_token_network_registry(
                 token_address=test_token_address,
                 channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
                 token_network_deposit_limit=TokenAmount(UINT256_MAX),
-                block_identifier=deploy_client.blockhash(),
+                block_identifier=deploy_client.get_confirmed_blockhash(),
             )
 
     # Register a valid token
     event_filter = token_network_registry_proxy.tokenadded_filter()
-    preblockhash = deploy_client.blockhash()
+    preblockhash = deploy_client.get_confirmed_blockhash()
     token_network_address = token_network_registry_proxy.add_token(
         token_address=test_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
