@@ -122,6 +122,9 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
+            created = self.get_token_network_created(to_block=block_identifier)
+            limit = self.get_max_token_networks(to_block=block_identifier)
+            registry_is_full = created >= limit
         except ValueError:
             # If `block_identifier` has been pruned the checks cannot be performed
             pass
@@ -131,6 +134,11 @@ class TokenNetworkRegistry:
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
+                )
+            if registry_is_full:
+                raise BrokenPreconditionError(
+                    "The TokenNetworkRegistry has so many tokens registered "
+                    "that it cannot get any more tokens."
                 )
 
         return self._add_token(
