@@ -10,6 +10,7 @@ from eth_utils import (
     to_canonical_address,
     to_checksum_address,
 )
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
 from raiden.exceptions import (
@@ -18,7 +19,7 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.proxies.utils import log_transaction
+from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
@@ -111,13 +112,21 @@ class TokenNetworkRegistry:
         since instantiation also takes the limits as constructor arguments.
         """
         # check preconditions
-        already_registered = self.get_token_network(
-            token_address=token_address, block_identifier=block_identifier
-        )
-        if already_registered:
-            raise BrokenPreconditionError(
-                "The token is already registered in the TokenNetworkRegistry."
+        try:
+            already_registered = self.get_token_network(
+                token_address=token_address, block_identifier=block_identifier
             )
+        except ValueError:
+            # If `block_identifier` has been pruned the checks cannot be performed
+            pass
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(block_identifier)
+        else:
+            if already_registered:
+                raise BrokenPreconditionError(
+                    "The token is already registered in the TokenNetworkRegistry."
+                )
+
         return self._add_token(
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
