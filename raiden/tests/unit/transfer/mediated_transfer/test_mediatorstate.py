@@ -2,6 +2,7 @@
 import random
 from copy import deepcopy
 from dataclasses import replace
+from typing import List, Optional, Tuple
 
 import pytest
 
@@ -42,6 +43,7 @@ from raiden.tests.utils.factories import (
 )
 from raiden.tests.utils.transfer import assert_dropped
 from raiden.transfer import channel, routes
+from raiden.transfer.architecture import Event
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendSecretReveal,
@@ -93,7 +95,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils import random_secret
-from raiden.utils.typing import FeeAmount
+from raiden.utils.typing import BlockExpiration, BlockNumber, FeeAmount, TokenAmount
 
 
 def make_route_from_channelstate(channel_state):
@@ -384,7 +386,7 @@ def test_events_for_secretreveal():
         setup.transfers_pair, our_address, pseudo_random_generator
     )
 
-    # the payeee from the first_pair did not send a secret reveal message, do
+    # the payee from the first_pair did not send a secret reveal message, do
     # nothing
     assert not events
 
@@ -1888,29 +1890,18 @@ def test_node_change_network_state_unreachable_node():
     assert iteration.events == []
 
 
-def test_next_transfer_pair_with_fees_deducted():
-    balance = 10
-    fee_in = 1
-    fee_out = 2
-
+def _foward_transfer_pair(
+    amount: TokenAmount,
+    channel_in: NettingChannelStateProperties,
+    channel_out: NettingChannelStateProperties,
+) -> Tuple[Optional[MediationPairState], List[Event]]:
     payer_transfer = create(
         LockedTransferSignedStateProperties(
-            amount=balance, initiator=HOP1, target=ADDR, expiration=50
+            amount=amount, initiator=HOP1, target=ADDR, expiration=BlockExpiration(50)
         )
     )
 
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance),
-                fee_schedule=FeeScheduleState(flat=fee_in),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance - fee_in - fee_out),
-                fee_schedule=FeeScheduleState(flat=fee_out),
-            ),
-        ]
-    )
+    channels = make_channel_set([channel_in, channel_out])
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
@@ -1919,7 +1910,26 @@ def test_next_transfer_pair_with_fees_deducted():
         route_state_table=channels.get_routes(),
         channelidentifiers_to_channels=channels.channel_map,
         pseudo_random_generator=random.Random(),
-        block_number=2,
+        block_number=BlockNumber(2),
+    )
+    return pair, events
+
+
+def test_next_transfer_pair_with_fees_deducted():
+    balance = 10
+    fee_in = 1
+    fee_out = 2
+
+    pair, events = _foward_transfer_pair(
+        balance,
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance),
+            fee_schedule=FeeScheduleState(flat=fee_in),
+        ),
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance - fee_in - fee_out),
+            fee_schedule=FeeScheduleState(flat=fee_out),
+        ),
     )
     assert pair
 
@@ -1935,35 +1945,18 @@ def test_imbalance_penalty_at_insufficent_payer_balance():
 
     Regression test for https://github.com/raiden-network/raiden/issues/4835
     """
-    payer_transfer = create(
-        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
-    )
-
     # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=20, proportional_imbalance_fee=4000
-    )
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=9),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=11),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-        ]
-    )
-
-    pair, _ = mediator.forward_transfer_pair(
-        payer_transfer=payer_transfer,
-        payer_channel=channels[0],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
-        channelidentifiers_to_channels=channels.channel_map,
-        pseudo_random_generator=random.Random(),
-        block_number=2,
+    imbalance_penalty = calculate_imbalance_fees(channel_capacity=20, proportional_imbalance_fee=1)
+    pair, _ = _foward_transfer_pair(
+        10,
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=9),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=11),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
     )
     assert not pair
 
@@ -1974,35 +1967,18 @@ def test_imbalance_penalty_at_insufficent_mediator_balance():
     insufficient balance does not throw an UndefinedMediationFee exception from
     the state machine.
     """
-    payer_transfer = create(
-        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
-    )
-
     # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=20, proportional_imbalance_fee=4000
-    )
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=11),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=9),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-        ]
-    )
-
-    pair, _ = mediator.forward_transfer_pair(
-        payer_transfer=payer_transfer,
-        payer_channel=channels[0],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
-        channelidentifiers_to_channels=channels.channel_map,
-        pseudo_random_generator=random.Random(),
-        block_number=2,
+    imbalance_penalty = calculate_imbalance_fees(channel_capacity=20, proportional_imbalance_fee=1)
+    pair, _ = _foward_transfer_pair(
+        10,
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=11),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=9),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
     )
     assert not pair
 
@@ -2012,37 +1988,48 @@ def test_imbalance_penalty_with_barely_sufficient_balance():
     Without keeping the flat fee, the mediator's balance would be insufficient.
     This tests that the imbalance fee calculation does not fail in such a case.
     """
-    payer_transfer = create(
-        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
-    )
-
     # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=20, proportional_imbalance_fee=4000
-    )
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=11),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=9),
-                fee_schedule=FeeScheduleState(flat=1, imbalance_penalty=imbalance_penalty),
-            ),
-        ]
-    )
-
-    pair, _ = mediator.forward_transfer_pair(
-        payer_transfer=payer_transfer,
-        payer_channel=channels[0],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
-        channelidentifiers_to_channels=channels.channel_map,
-        pseudo_random_generator=random.Random(),
-        block_number=2,
+    imbalance_penalty = calculate_imbalance_fees(channel_capacity=20, proportional_imbalance_fee=1)
+    pair, _ = _foward_transfer_pair(
+        10,
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=11),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=9),
+            fee_schedule=FeeScheduleState(flat=1, imbalance_penalty=imbalance_penalty),
+        ),
     )
     assert pair
+
+
+def test_imbalance_penalty_prevents_transfer():
+    """
+    In this case the imbalance fee is negative and increases the amount
+    transferred from the mediator to the target above the mediators capacity on
+    that channel. The mediator has two choices:
+    1. Only transfer as much as he has capacity. If this payment succeeds, this
+       is to the mediator's advantage, since he gets to keep more tokens.
+    2. Refund the transfer, because he can't send the negative imbalance fee he
+    promised and the payment is likely to have enough tokens when reaching the
+    target.
+    This test verifies that we choose option 2.
+    """
+    # Will reward payment with the enormous amount of 1 token per transferred token!
+    imbalance_penalty = [(0, 100), (100, 0)]
+    pair, _ = _foward_transfer_pair(
+        10,
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=10),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=10),
+            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+        ),
+    )
+    assert not pair
 
 
 def test_outdated_imbalance_penalty_at_transfer():
