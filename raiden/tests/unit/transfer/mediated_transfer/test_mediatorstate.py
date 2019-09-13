@@ -1895,7 +1895,7 @@ def test_next_transfer_pair_with_fees_deducted():
 
     payer_transfer = create(
         LockedTransferSignedStateProperties(
-            amount=balance + fee_in + fee_out, initiator=HOP1, target=ADDR, expiration=50
+            amount=balance, initiator=HOP1, target=ADDR, expiration=50
         )
     )
 
@@ -1906,7 +1906,7 @@ def test_next_transfer_pair_with_fees_deducted():
                 fee_schedule=FeeScheduleState(flat=fee_in),
             ),
             NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=balance),
+                our_state=NettingChannelEndStateProperties(balance=balance - fee_in - fee_out),
                 fee_schedule=FeeScheduleState(flat=fee_out),
             ),
         ]
@@ -1924,13 +1924,14 @@ def test_next_transfer_pair_with_fees_deducted():
     assert pair
 
     event = search_for_item(events, SendLockedTransfer, {"recipient": pair.payee_address})
-    assert event.transfer.lock.amount == balance
+    assert event.transfer.lock.amount == balance - fee_in - fee_out
 
 
-def test_imbalance_penalty_at_insufficent_transfer_balance():
+def test_imbalance_penalty_at_insufficent_payer_balance():
     """
-    Test that having an imbalance penalty fee during a transfer with insufficient
-    balance does not throw an UndefinedMediationFee exception from the state machine.
+    Test that having an imbalance penalty fee during a transfer where payer has
+    insufficient balance does not throw an UndefinedMediationFee exception from
+    the state machine.
 
     Regression test for https://github.com/raiden-network/raiden/issues/4835
     """
@@ -1938,6 +1939,7 @@ def test_imbalance_penalty_at_insufficent_transfer_balance():
         LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
     )
 
+    # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
     imbalance_penalty = calculate_imbalance_fees(
         channel_capacity=20, proportional_imbalance_fee=4000
     )
@@ -1964,6 +1966,83 @@ def test_imbalance_penalty_at_insufficent_transfer_balance():
         block_number=2,
     )
     assert not pair
+
+
+def test_imbalance_penalty_at_insufficent_mediator_balance():
+    """
+    Test that having an imbalance penalty fee during a transfer where mediator has
+    insufficient balance does not throw an UndefinedMediationFee exception from
+    the state machine.
+    """
+    payer_transfer = create(
+        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
+    )
+
+    # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=20, proportional_imbalance_fee=4000
+    )
+    channels = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=11),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=9),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+        ]
+    )
+
+    pair, _ = mediator.forward_transfer_pair(
+        payer_transfer=payer_transfer,
+        payer_channel=channels[0],
+        route_state=channels.get_route(1),
+        route_state_table=channels.get_routes(),
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+    )
+    assert not pair
+
+
+def test_imbalance_penalty_with_barely_sufficient_balance():
+    """
+    Without keeping the flat fee, the mediator's balance would be insufficient.
+    This tests that the imbalance fee calculation does not fail in such a case.
+    """
+    payer_transfer = create(
+        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
+    )
+
+    # imbalance_penalty result is not checked, we only verify that the calculation does not fail.
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=20, proportional_imbalance_fee=4000
+    )
+    channels = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=11),
+                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            ),
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=9),
+                fee_schedule=FeeScheduleState(flat=1, imbalance_penalty=imbalance_penalty),
+            ),
+        ]
+    )
+
+    pair, _ = mediator.forward_transfer_pair(
+        payer_transfer=payer_transfer,
+        payer_channel=channels[0],
+        route_state=channels.get_route(1),
+        route_state_table=channels.get_routes(),
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+    )
+    assert pair
 
 
 def test_outdated_imbalance_penalty_at_transfer():
