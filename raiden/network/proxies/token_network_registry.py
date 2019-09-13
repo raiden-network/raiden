@@ -12,7 +12,7 @@ from eth_utils import (
 from web3.exceptions import BadFunctionCallOutput
 from web3.utils.contracts import find_matching_event_abi
 
-from raiden.constants import NULL_ADDRESS
+from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidToken,
@@ -120,6 +120,10 @@ class TokenNetworkRegistry:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(block_identifier)
         else:
+            if token_address == NULL_ADDRESS_BYTES:
+                raise BrokenPreconditionError(
+                    "The call to register a token at 0x00..00 will fail."
+                )
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."

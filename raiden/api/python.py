@@ -5,7 +5,7 @@ from eth_utils import is_binary_address, to_checksum_address
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
+from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -220,12 +220,17 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
+        if token_address == NULL_ADDRESS_BYTES:
+            raise ValueError("token_address must be non-zero")
+
         # The following check is on prestate because the chain state does not
         # change here.
         # views.state_from_raiden() returns the same state again and again
         # as far as this gevent context is running.
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress("Token already registered")
+
+        chainstate_before_addition = views.state_from_raiden(self.raiden)
 
         registry = self.raiden.chain.token_network_registry(registry_address)
         chainstate = views.state_from_raiden(self.raiden)
