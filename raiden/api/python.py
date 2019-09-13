@@ -226,14 +226,25 @@ class RaidenAPI:  # pragma: no unittest
 
         chainstate_before_addition = views.state_from_raiden(self.raiden)
 
-        # The following check is on prestate because the chain state does not
-        # change here.
+        # The following check is on chainstate_before_addition because
+        # the chain state does not change here.
         # views.state_from_raiden() returns the same state again and again
         # as far as this gevent context is running.
-        if token_address in self.get_tokens_list(registry_address):
+        registered_tokens = self.get_tokens_list(registry_address)
+        if token_address in registered_tokens:
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
         registry = self.raiden.chain.token_network_registry(registry_address)
+
+        num_registered_tokens = len(registered_tokens)
+        max_tokens = registry.get_max_token_networks(
+            to_block=chainstate_before_addition.block_hash
+        )
+        if num_registered_tokens >= max_tokens:
+            raise TokenNetworkRegistryFull(
+                "TokenNetworkRegistry has reached its limit of the number of "
+                " tokens that can be registered."
+            )
 
         try:
             return registry.add_token(
