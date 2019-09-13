@@ -12,6 +12,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     linspace,
 )
 from raiden.transfer.mediated_transfer.mediator import get_lock_amount_after_fees
+from raiden.utils.mediation_fees import ppm_fee_per_channel
 from raiden.utils.typing import (
     Balance,
     FeeAmount,
@@ -159,53 +160,49 @@ def test_rebalancing_fee_calculation():
     assert calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(0)) is None
 
 
-def ppm_fee_per_channel(per_hop_fee) -> ProportionalFeeAmount:
-    per_hop_ratio = per_hop_fee / 1e6
-    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 1e6))
-
-
 @pytest.mark.parametrize(
     "flat_fee, prop_fee, initial_amount, expected_amount",
     [
         # pure flat fee
         (50, 0, 1000, 1000 - 50 - 50),
         # proprtional fee
-        (0, ppm_fee_per_channel(1_000_000), 2000, 1000),  # 100% per hop mediation fee
-        (0, ppm_fee_per_channel(100_000), 1100, 1000),  # 10% per hop mediation fee
-        (0, ppm_fee_per_channel(50_000), 1050, 1000),  # 5% per hop mediation fee
-        (0, ppm_fee_per_channel(10_000), 1010, 1000),  # 1% per hop mediation fee
-        (0, ppm_fee_per_channel(10_000), 101, 100),  # 1% per hop mediation fee
-        (0, ppm_fee_per_channel(5_000), 101, 101),  # 0,5% per hop mediation fee gets rounded away
+        (0, 1_000_000, 2000, 1000),  # 100% per hop mediation fee
+        (0, 100_000, 1100, 1000),  # 10% per hop mediation fee
+        (0, 50_000, 1050, 1000),  # 5% per hop mediation fee
+        (0, 10_000, 1010, 1000),  # 1% per hop mediation fee
+        (0, 10_000, 101, 100),  # 1% per hop mediation fee
+        (0, 5_000, 101, 101),  # 0,5% per hop mediation fee gets rounded away
         # mixed tests
-        (1, ppm_fee_per_channel(500_000), 1000 + 500 + 2, 1000),
-        (10, ppm_fee_per_channel(500_000), 1000 + 500 + 20, 997),
-        (100, ppm_fee_per_channel(500_000), 1000 + 500 + 200, 967),
+        (1, 500_000, 1000 + 500 + 2, 1000),
+        (10, 500_000, 1000 + 500 + 20, 997),
+        (100, 500_000, 1000 + 500 + 200, 967),
         # -
-        (1, ppm_fee_per_channel(100_000), 1000 + 100 + 2, 1000),
-        (10, ppm_fee_per_channel(100_000), 1000 + 100 + 20, 999),
-        (100, ppm_fee_per_channel(100_000), 1000 + 100 + 200, 991),
+        (1, 100_000, 1000 + 100 + 2, 1000),
+        (10, 100_000, 1000 + 100 + 20, 999),
+        (100, 100_000, 1000 + 100 + 200, 991),
         # -
-        (1, ppm_fee_per_channel(10_000), 1000 + 10 + 2, 1000),
-        (10, ppm_fee_per_channel(10_000), 1000 + 10 + 20, 1000),
-        (100, ppm_fee_per_channel(10_000), 1000 + 10 + 200, 999),
+        (1, 10_000, 1000 + 10 + 2, 1000),
+        (10, 10_000, 1000 + 10 + 20, 1000),
+        (100, 10_000, 1000 + 10 + 200, 999),
         # -
-        (100, ppm_fee_per_channel(500_000), 1000 + 750, 1000),
+        (100, 500_000, 1000 + 750, 1000),
         # - values found in run_test_mediated_transfer_with_fees
-        (0, ppm_fee_per_channel(200_000), 47 + 9, 47),
-        (0, ppm_fee_per_channel(200_000), 39 + 8, 39),
+        (0, 200_000, 47 + 9, 47),
+        (0, 200_000, 39 + 8, 39),
     ],
 )
 def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected_amount):
     """ Tests mediation fee deduction. """
+    prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     lock = make_hash_time_lock_state(amount=initial_amount)
     payer_channel = factories.create(
         NettingChannelStateProperties(
-            fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee)
+            fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee_per_channel)
         )
     )
     payee_channel = factories.create(
         NettingChannelStateProperties(
-            fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee)
+            fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee_per_channel)
         )
     )
 

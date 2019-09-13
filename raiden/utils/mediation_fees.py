@@ -1,5 +1,3 @@
-from math import sqrt
-
 from raiden.settings import MediationFeeConfig
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.mediated_transfer.mediation_fee import calculate_imbalance_fees
@@ -27,6 +25,20 @@ def actionchannelupdatefee_from_channelstate(
     )
 
 
+def ppm_fee_per_channel(per_hop_fee: ProportionalFeeAmount) -> ProportionalFeeAmount:
+    """
+    Converts proportional-fee-per-mediation into proportional-fee-per-channel
+
+    Input and output are given in parts-per-million (ppm).
+
+    See https://raiden-network-specification.readthedocs.io/en/latest/mediation_fees.html
+    #converting-per-hop-proportional-fees-in-per-channel-proportional-fees
+    for how to get to this formula.
+    """
+    per_hop_ratio = per_hop_fee / 1e6
+    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 1e6))
+
+
 def prepare_mediation_fee_config(
     cli_token_network_to_flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
     proportional_fee: ProportionalFeeAmount,
@@ -40,17 +52,7 @@ def prepare_mediation_fee_config(
     token_network_to_flat_fee: Dict[TokenNetworkAddress, FeeAmount] = {
         address: FeeAmount(fee // 2) for address, fee in cli_token_network_to_flat_fee
     }
-    # Given prop. fee also counts per mediation, therefore it needs to be adjusted on
-    # a per-channel basis:
-    # x * (1 - p) * (1 - p) = x * (1 - q)
-    # where
-    #    x = payment amount
-    #    q = cli proportional fee
-    #    p = per channel proportional fee
-    # Leads to: p = 1 - sqrt(1 - q)
-    proportional_fee_ratio = proportional_fee / 1e6
-    channel_prop_fee_ratio = 1 - sqrt(1 - proportional_fee_ratio)
-    channel_prop_fee = round(channel_prop_fee_ratio * 1e6)
+    channel_prop_fee = ppm_fee_per_channel(proportional_fee)
     return MediationFeeConfig(
         token_network_to_flat_fee=token_network_to_flat_fee,
         proportional_fee=ProportionalFeeAmount(channel_prop_fee),
