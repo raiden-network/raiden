@@ -49,11 +49,11 @@ def fee_receiver(
     def fee_in(imbalance_fee: FeeAmount) -> FeeAmount:
         return FeeAmount(
             round(
-                amount
-                - (
+                (
                     (amount + fee_schedule.flat + imbalance_fee)
                     / (1 - fee_schedule.proportional / 1e6)
                 )
+                - amount
             )
         )
 
@@ -93,7 +93,6 @@ def get_initial_payment_for_final_target_amount(
 
             total += fee_out  # type: ignore
 
-            # TODO: should order be switched?
             balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
             fee_in = fee_receiver(fee_schedule=fee_schedule_in, balance=balance_in, amount=total)
             if fee_in is None:
