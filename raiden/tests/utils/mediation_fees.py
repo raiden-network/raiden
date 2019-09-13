@@ -13,6 +13,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentWithFeeAmount,
     Sequence,
+    Tuple,
 )
 
 
@@ -63,9 +64,9 @@ def fee_receiver(
     return fee_in(imbalance_fee=imbalance_fee)
 
 
-def calculate_initial_amount_for_final_amount(
+def get_initial_payment_for_final_target_amount(
     final_amount: PaymentAmount, channels: List[NettingChannelState]
-) -> Optional[PaymentWithFeeAmount]:
+) -> Optional[Tuple[PaymentWithFeeAmount, List[FeeAmount]]]:
     """ Calculates the payment amount including fees to be supplied to the given
     channel configuration, so that `final_amount` arrived at the target. """
 
@@ -73,10 +74,11 @@ def calculate_initial_amount_for_final_amount(
 
     # No fees in direct transfer
     if len(channels) == 1:
-        return PaymentWithFeeAmount(final_amount)
+        return PaymentWithFeeAmount(final_amount), []
 
     # Backpropagate fees in mediation scenario
     total = PaymentWithFeeAmount(final_amount)
+    fees: List[FeeAmount] = []
     try:
         for channel_in, channel_out in reversed(list(window(channels, 2))):
             assert isinstance(channel_in, NettingChannelState)
@@ -98,7 +100,9 @@ def calculate_initial_amount_for_final_amount(
                 return None
 
             total += fee_in  # type: ignore
+
+            fees.append(FeeAmount(fee_out + fee_in))
     except UndefinedMediationFee:
         return None
 
-    return PaymentWithFeeAmount(total)
+    return PaymentWithFeeAmount(total), fees
