@@ -45,7 +45,7 @@ Before calling a proxy, make sure that the call is going to succeed in a confirm
 And then, pass the blockhash of the confirmed block to the proxy when you call it.
 
 The proxy checks the preconditions on the confirmed block. If any of the preconditions fail,
-it raises `BrokenPreconditionError`. This means there is a mistake in the Raiden codebase,
+it raises ``BrokenPreconditionError``. This means there is a mistake in the Raiden codebase,
 and a check must be added before calling the proxy.
 
 When the proxy doesn't raise an exception, the call was successful. A transaction was included
@@ -71,3 +71,12 @@ When you implement proxies, the best documentation to follow is the source of To
 
 Sometimes precondition checks are impossible because the specified block is too old (pruned in the Ethereum client).
 In this case, the precondition check can be skipped.
+
+When you implement a new method of a proxy, consider refusing the string ``"latest"`` as the block identifier.
+Usually passing ``"latest"`` as a block identifier to a proxy method poses a possibility of ``BrokenPreconditionError``.
+The method can raise a ``ValueError`` when ``"latest"`` is passed as the block identifier.
+Or, you might want to introduce a new type so that ``mypy`` complains against using ``"latest"`` as the block identifier.
+
+Mind the number of RPC calls you are making. Instead of fetching a block number and then the block hash,
+there is usually a way to get the whole block in a single RPC call. When you post multiple RPC calls,
+you introduce more race conditions and performance bottlenecks.
