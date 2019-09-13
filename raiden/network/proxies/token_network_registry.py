@@ -12,7 +12,12 @@ from eth_utils import (
 )
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
-from raiden.exceptions import InvalidToken, RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import (
+    BrokenPreconditionError,
+    InvalidToken,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -100,12 +105,19 @@ class TokenNetworkRegistry:
         token_network_deposit_limit: TokenAmount,
         block_identifier: BlockSpecification,
     ) -> TokenNetworkAddress:
-        # pylint: disable=unused-argument
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
         since instantiation also takes the limits as constructor arguments.
         """
+        # check preconditions
+        already_registered = self.get_token_network(
+            token_address=token_address, block_identifier=block_identifier
+        )
+        if already_registered:
+            raise BrokenPreconditionError(
+                "The token is already registered in the TokenNetworkRegistry."
+            )
         return self._add_token(
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
