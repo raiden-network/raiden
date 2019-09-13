@@ -98,7 +98,9 @@ class TokenNetworkRegistry:
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
+        block_identifier: BlockSpecification,
     ) -> TokenNetworkAddress:
+        # pylint: disable=unused-argument
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,

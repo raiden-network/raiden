@@ -72,6 +72,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
                 token_address=token,
                 channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
                 token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+                block_identifier=deploy_service.block_hash(),
             )
 
     return token_addresses
@@ -230,6 +231,7 @@ def register_token_and_return_the_network_proxy(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+        block_identifier=deploy_client.blockhash(),
     )
 
     blockchain_service = BlockChainService(
