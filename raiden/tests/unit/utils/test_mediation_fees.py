@@ -43,4 +43,8 @@ def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
     cli_prop_fee_ratio = cli_prop_fee / 1e6
     channel_prop_fee_ratio = fee_config.proportional_fee / 1e6
 
-    assert isclose((1 - channel_prop_fee_ratio) ** 2, 1 - cli_prop_fee_ratio, rel_tol=1e-6)
+    assert isclose(
+        1 + cli_prop_fee_ratio,
+        1 + channel_prop_fee_ratio + channel_prop_fee_ratio * (1 + cli_prop_fee_ratio),
+        rel_tol=1e-6,
+    )
