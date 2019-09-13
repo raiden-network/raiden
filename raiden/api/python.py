@@ -221,6 +221,12 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
+        chainstate_before_addition = views.state_from_raiden(self.raiden)
+
+        # The following check is on prestate because the chain state does not
+        # change here.
+        # views.state_from_raiden() returns the same state again and again
+        # as far as this gevent context is running.
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
@@ -231,6 +237,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_address=token_address,
                 channel_participant_deposit_limit=channel_participant_deposit_limit,
                 token_network_deposit_limit=token_network_deposit_limit,
+                block_identifier=chainstate_before_addition.block_hash,
             )
         except RaidenRecoverableError as e:
             if "Token already registered" in str(e):
