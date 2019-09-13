@@ -3,8 +3,24 @@ from math import isclose
 import pytest
 
 from raiden.tests.utils import factories
-from raiden.utils.mediation_fees import prepare_mediation_fee_config
-from raiden.utils.typing import FeeAmount, ProportionalFeeAmount
+from raiden.tests.utils.factories import (
+    CanonicalIdentifierProperties,
+    NettingChannelEndStateProperties,
+    NettingChannelStateProperties,
+    make_channel_set,
+)
+from raiden.tests.utils.mediation_fees import get_initial_payment_for_final_target_amount
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.utils.mediation_fees import ppm_fee_per_channel, prepare_mediation_fee_config
+from raiden.utils.typing import (
+    ChannelID,
+    FeeAmount,
+    List,
+    PaymentAmount,
+    PaymentWithFeeAmount,
+    ProportionalFeeAmount,
+    TokenAmount,
+)
 
 
 @pytest.mark.parametrize(
@@ -48,3 +64,48 @@ def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
         1 + channel_prop_fee_ratio + channel_prop_fee_ratio * (1 + cli_prop_fee_ratio),
         rel_tol=1e-6,
     )
+
+
+@pytest.mark.parametrize(
+    "flat_fee, prop_fee, balance, final_amount, initial_amount, expected_fees",
+    [(10, 0, 100, 50, 70, [20]), (0, 100_000, 1000, 100, 110, [10])],
+)
+def test_get_initial_payment_for_final_target_amount(
+    flat_fee: FeeAmount,
+    prop_fee: ProportionalFeeAmount,
+    balance: TokenAmount,
+    final_amount: PaymentAmount,
+    initial_amount: PaymentWithFeeAmount,
+    expected_fees: List[FeeAmount],
+):
+    prop_fee = ppm_fee_per_channel(prop_fee)
+    channel_set = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                canonical_identifier=factories.create(
+                    CanonicalIdentifierProperties(channel_identifier=ChannelID(1))
+                ),
+                our_state=NettingChannelEndStateProperties(balance=balance),
+                partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+                fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee),
+            ),
+            NettingChannelStateProperties(
+                canonical_identifier=factories.create(
+                    CanonicalIdentifierProperties(channel_identifier=ChannelID(2))
+                ),
+                our_state=NettingChannelEndStateProperties(balance=balance),
+                partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+                fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee),
+            ),
+        ]
+    )
+
+    result = get_initial_payment_for_final_target_amount(
+        final_amount=final_amount, channels=channel_set.channels
+    )
+
+    assert result is not None
+    payment_amount, fees = result
+
+    assert payment_amount == initial_amount
+    assert fees == expected_fees
