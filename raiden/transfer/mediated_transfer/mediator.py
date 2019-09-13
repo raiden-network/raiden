@@ -227,6 +227,10 @@ def get_pending_transfer_pairs(
 def _fee_for_payer_channel(
     channel: NettingChannelState, amount: PaymentWithFeeAmount
 ) -> Optional[FeeAmount]:
+    """ Fee deducted by the mediator for an incoming channel.
+
+    The `amount` is the total incoming amount without any fees deducted.
+    """
     balance = get_balance(channel.our_state, channel.partner_state)
     try:
         return channel.fee_schedule.fee_payer(amount, balance)
@@ -237,6 +241,12 @@ def _fee_for_payer_channel(
 def _fee_for_payee_channel(
     channel: NettingChannelState, amount: PaymentWithFeeAmount
 ) -> Optional[FeeAmount]:
+    """ Fee deducted by the mediator for an outgoing channel.
+
+    The `amount` is the incoming amount where the incoming fee is already
+    deducted, but the outgoing fee isn't (that's what this function does,
+    after all).
+    """
     balance = get_balance(channel.our_state, channel.partner_state)
 
     try:
@@ -257,7 +267,6 @@ def get_lock_amount_after_fees(
     fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
     if fee_in is None:
         return None
-    # TODO: add bounds checks
     fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
     if fee_out is None:
         return None

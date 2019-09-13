@@ -79,12 +79,19 @@ class FeeScheduleState(State):
         return FeeAmount(flat_fee + prop_fee + imbalance_fee)
 
     def fee_payee(self, amount: PaymentWithFeeAmount, channel_balance: Balance) -> FeeAmount:
-        imbalance_fee = self._imbalance_fee(amount=amount, channel_balance=channel_balance)
+        def fee_out(imbalance_fee: FeeAmount) -> FeeAmount:
+            return FeeAmount(
+                round(
+                    amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
+                )
+            )
 
-        fee_out = round(
-            amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
+        imbalance_fee = self._imbalance_fee(
+            amount=PaymentWithFeeAmount(amount - fee_out(FeeAmount(0))),
+            channel_balance=channel_balance,
         )
-        return FeeAmount(fee_out)
+
+        return fee_out(imbalance_fee)
 
     def reversed(self: T) -> T:
         if not self.imbalance_penalty:
