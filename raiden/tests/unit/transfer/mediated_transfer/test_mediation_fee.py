@@ -45,27 +45,19 @@ def test_interpolation():
 
 def test_basic_fee():
     flat_schedule = FeeScheduleState(flat=FeeAmount(2))
-    assert flat_schedule.fee_payer(
-        PaymentWithFeeAmount(10), channel_balance=Balance(0)
-    ) == FeeAmount(2)
+    assert flat_schedule.fee_payer(PaymentWithFeeAmount(10), balance=Balance(0)) == FeeAmount(2)
 
     prop_schedule = FeeScheduleState(proportional=ProportionalFeeAmount(int(0.01e6)))
-    assert prop_schedule.fee_payer(
-        PaymentWithFeeAmount(40), channel_balance=Balance(0)
-    ) == FeeAmount(0)
-    assert prop_schedule.fee_payer(
-        PaymentWithFeeAmount(60), channel_balance=Balance(0)
-    ) == FeeAmount(1)
-    assert prop_schedule.fee_payer(
-        PaymentWithFeeAmount(1000), channel_balance=Balance(0)
-    ) == FeeAmount(10)
+    assert prop_schedule.fee_payer(PaymentWithFeeAmount(40), balance=Balance(0)) == FeeAmount(0)
+    assert prop_schedule.fee_payer(PaymentWithFeeAmount(60), balance=Balance(0)) == FeeAmount(1)
+    assert prop_schedule.fee_payer(PaymentWithFeeAmount(1000), balance=Balance(0)) == FeeAmount(10)
 
     combined_schedule = FeeScheduleState(
         flat=FeeAmount(2), proportional=ProportionalFeeAmount(int(0.01e6))
     )
-    assert combined_schedule.fee_payer(
-        PaymentWithFeeAmount(60), channel_balance=Balance(0)
-    ) == FeeAmount(3)
+    assert combined_schedule.fee_payer(PaymentWithFeeAmount(60), balance=Balance(0)) == FeeAmount(
+        3
+    )
 
 
 def test_imbalance_penalty():
@@ -77,26 +69,26 @@ def test_imbalance_penalty():
         ]
     )
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 0), amount=PaymentWithFeeAmount(50)
+        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(50)
     ) == FeeAmount(-10)
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 50), amount=PaymentWithFeeAmount(50)
+        balance=Balance(100 - 50), amount=PaymentWithFeeAmount(50)
     ) == FeeAmount(10)
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 0), amount=PaymentWithFeeAmount(10)
+        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(10)
     ) == FeeAmount(-2)
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 10), amount=PaymentWithFeeAmount(10)
+        balance=Balance(100 - 10), amount=PaymentWithFeeAmount(10)
     ) == FeeAmount(-2)
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 0), amount=PaymentWithFeeAmount(20)
+        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(20)
     ) == FeeAmount(-4)
     assert v_schedule.fee_payer(
-        channel_balance=Balance(100 - 40), amount=PaymentWithFeeAmount(20)
+        balance=Balance(100 - 40), amount=PaymentWithFeeAmount(20)
     ) == FeeAmount(0)
 
     with pytest.raises(UndefinedMediationFee):
-        v_schedule.fee_payer(channel_balance=Balance(0), amount=PaymentWithFeeAmount(1))
+        v_schedule.fee_payer(balance=Balance(0), amount=PaymentWithFeeAmount(1))
 
 
 def test_linspace():
