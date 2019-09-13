@@ -111,6 +111,12 @@ class TokenNetworkRegistry:
         The limits apply for version 0.13.0 and above of raiden-contracts,
         since instantiation also takes the limits as constructor arguments.
         """
+        if block_identifier == "latest":
+            raise ValueError(
+                'Calling a proxy with "latest" is usually wrong because '
+                "the result of the precondition check is not precisely predictable."
+            )
+
         # check preconditions
         try:
             already_registered = self.get_token_network(
