@@ -336,10 +336,10 @@ HOP2_KEY = b"22222222222222222222222222222222"
 HOP3_KEY = b"33333333333333333333333333333333"
 HOP4_KEY = b"44444444444444444444444444444444"
 HOP5_KEY = b"55555555555555555555555555555555"
-HOP1 = privatekey_to_address(HOP1_KEY)
-HOP2 = privatekey_to_address(HOP2_KEY)
-HOP3 = privatekey_to_address(HOP3_KEY)
-ADDR = b"addraddraddraddraddr"
+HOP1 = InitiatorAddress(privatekey_to_address(HOP1_KEY))
+HOP2 = Address(privatekey_to_address(HOP2_KEY))
+HOP3 = Address(privatekey_to_address(HOP3_KEY))
+ADDR = TargetAddress(b"addraddraddraddraddr")
 
 
 def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
