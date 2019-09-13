@@ -250,7 +250,7 @@ def _fee_for_payee_channel(
     balance = get_balance(channel.our_state, channel.partner_state)
 
     try:
-        return channel.fee_schedule.fee_payee(amount=amount, channel_balance=balance)
+        return channel.fee_schedule.fee_payee(amount=amount, balance=balance)
     except UndefinedMediationFee:
         return None
 
