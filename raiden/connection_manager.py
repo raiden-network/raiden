@@ -18,7 +18,6 @@ from raiden.exceptions import (
     InvalidDBData,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
-    TransactionThrew,
     UnexpectedChannelState,
 )
 from raiden.transfer import views
@@ -41,7 +40,6 @@ RECOVERABLE_ERRORS = (
     DepositOverLimit,
     InsufficientFunds,
     RaidenRecoverableError,
-    TransactionThrew,
     UnexpectedChannelState,
 )
 
