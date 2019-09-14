@@ -210,8 +210,7 @@ class RaidenAPI:  # pragma: no unittest
             InvalidBinaryAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
             RaidenRecoverableError: If the register transaction failed, this may
-                happen because the account has not enough balance to pay for the
-                gas or this register call raced with another transaction and lost.
+            ValueError: If token_address is the null address (0x000000....00).
         """
 
         if not is_binary_address(registry_address):
