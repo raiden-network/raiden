@@ -12,7 +12,7 @@ from eth_utils import (
 )
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
+from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidToken,
@@ -122,6 +122,7 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
+            deprecation_executor = self.get_deprecation_executor(to_block=block_identifier)
         except ValueError:
             # If `block_identifier` has been pruned the checks cannot be performed
             pass
@@ -131,6 +132,14 @@ class TokenNetworkRegistry:
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
+                )
+            if deprecation_executor == NULL_ADDRESS_BYTES:
+                raise RaidenUnrecoverableError(
+                    "TokenNetworkRegistry's deprecation_executor is "
+                    "0x0000..0000. Maybe somebody has obtained the private key "
+                    "for this address. Maybe the node is talking to a fake "
+                    "TokenNetworkRegistry. Either way, the error is not "
+                    "recoverable."
                 )
 
         return self._add_token(
@@ -211,6 +220,12 @@ class TokenNetworkRegistry:
                 if self.get_token_network(token_address, block):
                     raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
 
+                if self.get_deprecation_executor(to_block=block) == NULL_ADDRESS_BYTES:
+                    raise RaidenUnrecoverableError(
+                        "TokenNetworkRegistry's deprecation_executor has changed. "
+                        "the node is talking to a fake TokenNetworkRegistry."
+                    )
+
                 raise RaidenUnrecoverableError(error_prefix)
 
             token_network_address = self.get_token_network(token_address, "latest")
@@ -267,3 +282,9 @@ class TokenNetworkRegistry:
         token network registry.
         """
         return self.proxy.contract.functions.max_token_networks().call(block_identifier=to_block)
+
+    def get_deprecation_executor(self, to_block: BlockSpecification) -> Address:
+        """ Returns the deprecation_executor_address """
+        return to_canonical_address(
+            self.proxy.contract.functions.deprecation_executor().call(block_identifier=to_block)
+        )
