@@ -210,7 +210,7 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             InvalidBinaryAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
-            TransactionThrew: If the register transaction failed, this may
+            RaidenRecoverableError: If the register transaction failed, this may
                 happen because the account has not enough balance to pay for the
                 gas or this register call raced with another transaction and lost.
         """
@@ -576,7 +576,7 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             InvalidBinaryAddress: If either token_address or partner_address is not
                 20 bytes long.
-            TransactionThrew: May happen for multiple reasons:
+            RaidenRecoverableError: May happen for multiple reasons:
                 - If the token approval fails, e.g. the token may validate if
                 account has enough balance for the allowance.
                 - The deposit failed, e.g. the allowance did not set the token

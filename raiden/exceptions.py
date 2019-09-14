@@ -1,6 +1,3 @@
-from typing import Any, Dict, Optional
-
-
 class RaidenError(Exception):
     """Raiden base exception.
 
@@ -195,14 +192,6 @@ class UnexpectedChannelState(RaidenRecoverableError):
 
 class ContractCodeMismatch(RaidenError):
     """Raised if the onchain code of the contract differs."""
-
-
-class TransactionThrew(RaidenError):
-    """Raised when, after waiting for a transaction to be mined,
-    the receipt has a 0x0 status field"""
-
-    def __init__(self, txname: str, receipt: Optional[Dict[str, Any]]) -> None:
-        super().__init__(f"{txname} transaction threw. Receipt={receipt}")
 
 
 class APIServerPortInUseError(RaidenError):
