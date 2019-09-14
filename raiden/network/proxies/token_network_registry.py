@@ -26,6 +26,7 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    ChainID,
     BlockSpecification,
     Dict,
     T_TargetAddress,
@@ -267,3 +268,7 @@ class TokenNetworkRegistry:
         token network registry.
         """
         return self.proxy.contract.functions.max_token_networks().call(block_identifier=to_block)
+
+    def get_chain_id(self, to_block: BlockSpecification) -> ChainID:
+        """ Returns the value of chain_id stored in the TokenNetworkRegistry contract """
+        return ChainID(self.proxy.contract.functions.chain_id().call(block_identifier=to_block))

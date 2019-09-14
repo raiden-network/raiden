@@ -132,3 +132,19 @@ def test_token_network_registry_max_token_networks(
         blockchain_service=blockchain_service,
     )
     assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX
+
+
+def test_token_network_registry_chain_id(
+    deploy_client, token_network_registry_address, contract_manager
+):
+    """ get_chain_id() should return the chain ID """
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
+    token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        registry_address=to_canonical_address(token_network_registry_address),
+        contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
+    )
+    assert token_network_registry_proxy.get_chain_id(to_block="latest") == int(deploy_client.web3.version.network)
