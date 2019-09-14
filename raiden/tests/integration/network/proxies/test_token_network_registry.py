@@ -132,3 +132,22 @@ def test_token_network_registry_max_token_networks(
         blockchain_service=blockchain_service,
     )
     assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX
+
+
+def test_token_network_registry_get_deprecation_executor(
+    deploy_client, token_network_registry_address, contract_manager
+):
+    """ get_deprecation_executor() should return the deployer address """
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client, contract_manager=contract_manager
+    )
+    token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        registry_address=to_canonical_address(token_network_registry_address),
+        contract_manager=contract_manager,
+        blockchain_service=blockchain_service,
+    )
+    assert (
+        token_network_registry_proxy.get_deprecation_executor(to_block="latest")
+        == deploy_client.address
+    )
