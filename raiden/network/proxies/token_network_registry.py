@@ -214,6 +214,12 @@ class TokenNetworkRegistry:
                 if self.get_token_network(token_address, block):
                     raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
 
+                if self.get_secret_registry_address(to_block=block) == NULL_ADDRESS_BYTES:
+                    raise RaidenUnrecoverableError(
+                        f"{error_prefix}. The SecretRegistryAddress in "
+                        "TokenNetworkRegistry has changed to zero. Very weird."
+                    )
+
                 raise RaidenUnrecoverableError(error_prefix)
 
             token_network_address = self.get_token_network(token_address, "latest")
