@@ -11,12 +11,18 @@ from raiden.exceptions import (
     RaidenRecoverableError,
 )
 from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.token import Token
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.factories import make_token_address
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.utils.typing import TokenAddress, TokenAmount, TokenNetworkRegistryAddress
-from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -164,3 +170,32 @@ def test_token_network_registry_with_zero_token_address(
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
             block_identifier=deploy_client.get_confirmed_blockhash(),
         )
+
+
+def test_token_network_registry_get_secret_registry_address(
+    deploy_client, token_network_registry_address, contract_manager, secret_registry_address
+):
+    """ get_secret_registry_address() should return the address of SecretRegistry """
+    blockchain_service = BlockChainService(
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
+    )
+    token_network_registry_metadata = SmartContractMetadata(
+        deployed_at=GENESIS_BLOCK_NUMBER,
+        filters_start_at=GENESIS_BLOCK_NUMBER,
+        address=to_canonical_address(token_network_registry_address),
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+    )
+    token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        metadata=token_network_registry_metadata,
+        blockchain_service=blockchain_service,
+    )
+    assert (
+        token_network_registry_proxy.get_secret_registry_address(to_block="latest")
+        == secret_registry_address
+    )
