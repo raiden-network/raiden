@@ -147,4 +147,6 @@ def test_token_network_registry_chain_id(
         contract_manager=contract_manager,
         blockchain_service=blockchain_service,
     )
-    assert token_network_registry_proxy.get_chain_id(to_block="latest") == int(deploy_client.web3.version.network)
+    assert token_network_registry_proxy.get_chain_id(to_block="latest") == int(
+        deploy_client.web3.version.network
+    )

@@ -26,8 +26,8 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
-    ChainID,
     BlockSpecification,
+    ChainID,
     Dict,
     T_TargetAddress,
     TokenAddress,
@@ -123,6 +123,7 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
+            chain_id = self.get_chain_id(to_block=block_identifier)
         except ValueError:
             # If `block_identifier` has been pruned the checks cannot be performed
             pass
@@ -132,6 +133,13 @@ class TokenNetworkRegistry:
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
+                )
+            if chain_id == 0:
+                raise RaidenUnrecoverableError(
+                    "The TokenNetworkRegistry was deployed for chain_id == 0. "
+                    "But the constructor of TokenNetworkRegistry usually refuses this value. "
+                    "Moreover, the constructor of TokenNetwork will refuse this value."
+                    "Probably the node is talking to a wrong smart contract."
                 )
 
         return self._add_token(
@@ -211,6 +219,12 @@ class TokenNetworkRegistry:
 
                 if self.get_token_network(token_address, block):
                     raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
+
+                if self.get_chain_id(block) == 0:
+                    raise RaidenUnrecoverableError(
+                        f"{error_prefix}. TokenNetworkRegistry's chain_id changed. "
+                        "Probably the node is talking to a wrong smart contract."
+                    )
 
                 raise RaidenUnrecoverableError(error_prefix)
 
