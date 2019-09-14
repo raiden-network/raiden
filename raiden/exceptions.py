@@ -149,7 +149,7 @@ class TokenNotRegistered(RaidenError):
     """ Raised if there is no token network for token used when opening a channel  """
 
 
-class AlreadyRegisteredTokenAddress(RaidenError):
+class AlreadyRegisteredTokenAddress(RaidenValidationError):
     """ Raised when the token address in already registered with the given network. """
 
 

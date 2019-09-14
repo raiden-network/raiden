@@ -14,10 +14,10 @@ from web3.utils.contracts import find_matching_event_abi
 
 from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
+    AlreadyRegisteredTokenAddress,
     BrokenPreconditionError,
     InvalidToken,
     InvalidTokenAddress,
-    RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
@@ -205,7 +205,9 @@ class TokenNetworkRegistry:
                 )
 
                 if self.get_token_network(token_address, block):
-                    raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
+                    raise AlreadyRegisteredTokenAddress(
+                        f"{error_prefix}. Token already registered"
+                    )
 
                 raise RaidenUnrecoverableError(error_prefix)
 
