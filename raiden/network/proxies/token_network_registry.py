@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
+    SecretRegistryAddress,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -118,6 +119,7 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
+            secret_registry_address = self.get_secret_registry_address(to_block=block_identifier)
         except ValueError:
             # If `block_identifier` has been pruned the checks cannot be performed
             pass
@@ -127,6 +129,11 @@ class TokenNetworkRegistry:
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
+                )
+            if secret_registry_address == NULL_ADDRESS_BYTES:
+                raise RaidenUnrecoverableError(
+                    "Found a TokenNetworkRegistry with secret_registry_address being zero. "
+                    "This is never supposed to happen."
                 )
 
         return self._add_token(
@@ -269,3 +276,13 @@ class TokenNetworkRegistry:
         token network registry.
         """
         return self.proxy.contract.functions.max_token_networks().call(block_identifier=to_block)
+
+    def get_secret_registry_address(self, to_block: BlockSpecification) -> SecretRegistryAddress:
+        """ Returns the SecretRegistry address stored in the TokenNetworkRegistry """
+        return SecretRegistryAddress(
+            to_canonical_address(
+                self.proxy.contract.functions.secret_registry_address().call(
+                    block_identifier=to_block
+                )
+            )
+        )
