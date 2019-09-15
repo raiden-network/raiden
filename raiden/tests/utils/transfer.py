@@ -16,9 +16,6 @@ from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, Unlock
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_MEDIATION_FEE_MARGIN,
-    DEFAULT_MEDIATION_FLAT_FEE,
-    DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-    DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
     DEFAULT_RETRY_TIMEOUT,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
 )
@@ -40,10 +37,6 @@ from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
-from raiden.transfer.mediated_transfer.mediation_fee import (
-    FeeScheduleState,
-    calculate_imbalance_fees,
-)
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -74,7 +67,6 @@ from raiden.utils.typing import (
     FeeAmount,
     List,
     LockedAmount,
-    NamedTuple,
     Nonce,
     Optional,
     PaymentAmount,
@@ -1082,40 +1074,6 @@ def block_timeout_for_transfer_by_secrethash(
         exception_to_throw=ValueError(error_message or default_error_message),
         block_number=BlockNumber(expiration),
         retry_timeout=DEFAULT_RETRY_TIMEOUT,
-    )
-
-
-class CalculatedFees(NamedTuple):
-    total_amount: int
-    estimated_fee: int
-    mediators_cut: int
-
-
-def calculate_amount_to_drain_channel(deposit: int, num_hops: int) -> CalculatedFees:
-    # calculate the amount to send so that including fees it covers the entire deposit
-    denominator = 1 + INTERNAL_ROUTING_DEFAULT_FEE_PERC * (1 + DEFAULT_MEDIATION_FEE_MARGIN)
-    amount_including_estimated_fee = round(deposit / denominator)
-    estimated_fee = deposit - amount_including_estimated_fee
-    mediators_amount = deposit
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=TokenAmount(deposit * 2),
-        proportional_imbalance_fee=DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
-    )
-    fee_schedule = FeeScheduleState(
-        flat=DEFAULT_MEDIATION_FLAT_FEE,
-        proportional=DEFAULT_MEDIATION_PROPORTIONAL_FEE,
-        imbalance_penalty=imbalance_penalty,
-    )
-    for _ in range(0, num_hops):
-        mediators_amount = mediators_amount - fee_schedule.fee(
-            amount=PaymentAmount(mediators_amount), channel_balance=Balance(mediators_amount)
-        )
-    mediators_cut = deposit - mediators_amount
-
-    return CalculatedFees(
-        total_amount=deposit - estimated_fee - mediators_cut,
-        estimated_fee=estimated_fee,
-        mediators_cut=mediators_cut,
     )
 
 

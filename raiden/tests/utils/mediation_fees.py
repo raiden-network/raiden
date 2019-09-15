@@ -9,11 +9,11 @@ from raiden.utils.typing import (
     FeeAmount,
     Iterable,
     List,
+    NamedTuple,
     Optional,
     PaymentAmount,
     PaymentWithFeeAmount,
     Sequence,
-    Tuple,
 )
 
 
@@ -69,17 +69,21 @@ def fee_receiver(
     return fee_in(imbalance_fee=imbalance_fee)
 
 
+class FeesCalculation(NamedTuple):
+    total_amount: PaymentWithFeeAmount
+    mediators_cut: List[FeeAmount]
+
+
 def get_initial_payment_for_final_target_amount(
     final_amount: PaymentAmount, channels: List[NettingChannelState]
-) -> Optional[Tuple[PaymentWithFeeAmount, List[FeeAmount]]]:
+) -> Optional[FeesCalculation]:
     """ Calculates the payment amount including fees to be supplied to the given
     channel configuration, so that `final_amount` arrived at the target. """
-
     assert len(channels) >= 1, "Need at least one channel"
 
     # No fees in direct transfer
     if len(channels) == 1:
-        return PaymentWithFeeAmount(final_amount), []
+        return FeesCalculation(total_amount=PaymentWithFeeAmount(final_amount), mediators_cut=[])
 
     # Backpropagate fees in mediation scenario
     total = PaymentWithFeeAmount(final_amount)
@@ -109,4 +113,23 @@ def get_initial_payment_for_final_target_amount(
     except UndefinedMediationFee:
         return None
 
-    return PaymentWithFeeAmount(total), fees
+    return FeesCalculation(total_amount=PaymentWithFeeAmount(total), mediators_cut=fees)
+
+
+def get_amounts_to_drain_channel_with_fees(
+    deposit: PaymentAmount, channels: List[NettingChannelState]
+) -> Optional[FeesCalculation]:
+
+    needed_amount = deposit
+    while needed_amount != 0:
+        calculation = get_initial_payment_for_final_target_amount(
+            final_amount=needed_amount, channels=channels
+        )
+        if (
+            calculation is not None
+            and calculation.total_amount + sum(calculation.mediators_cut) == deposit
+        ):
+            return calculation
+        needed_amount = PaymentAmount(needed_amount - 1)
+
+    return None
