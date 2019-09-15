@@ -18,12 +18,7 @@ from raiden.tests.utils.events import (
 )
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
-from raiden.tests.utils.transfer import (
-    calculate_amount_to_drain_channel,
-    get_channelstate,
-    transfer,
-    watch_for_unlock_failures,
-)
+from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
@@ -246,13 +241,12 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
     app_channels = [(app0, app1), (app1, app2), (app0, app3), (app3, app4), (app4, app2)]
     open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
 
-    exhaust_amount = calculate_amount_to_drain_channel(deposit, 1)
     # Use all deposit from app1->app2 to force a refund
     transfer(
         initiator_app=app1,
         target_app=app2,
         token_address=token,
-        amount=exhaust_amount,
+        amount=deposit,
         identifier=PaymentID(1),
     )
 
@@ -261,7 +255,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         initiator_app=app0,
         target_app=app2,
         token_address=token,
-        amount=exhaust_amount,
+        amount=50,
         identifier=PaymentID(2),
         timeout=20,
     )
