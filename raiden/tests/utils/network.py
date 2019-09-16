@@ -352,6 +352,7 @@ def create_apps(
     private_rooms: bool,
     global_rooms: List[str],
     routing_mode: RoutingMode,
+    blockchain_query_interval: float,
 ) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -369,7 +370,10 @@ def create_apps(
             "settle_timeout": settle_timeout,
             "contracts_path": contracts_path,
             "database_path": database_path,
-            "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
+            "blockchain": {
+                "confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+                "query_interval": blockchain_query_interval,
+            },
             "transport": {},
             "rpc": True,
             "console": False,

@@ -67,6 +67,7 @@ def raiden_chain(
     global_rooms: List[str],
     logs_storage: str,
     routing_mode: RoutingMode,
+    blockchain_query_interval: float,
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -103,6 +104,7 @@ def raiden_chain(
         contracts_path=contracts_path,
         global_rooms=global_rooms,
         routing_mode=routing_mode,
+        blockchain_query_interval=blockchain_query_interval,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
@@ -177,6 +179,7 @@ def raiden_network(
     logs_storage: str,
     start_raiden_apps: bool,
     routing_mode: RoutingMode,
+    blockchain_query_interval: float,
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -205,6 +208,7 @@ def raiden_network(
         private_rooms=private_rooms,
         global_rooms=global_rooms,
         routing_mode=routing_mode,
+        blockchain_query_interval=blockchain_query_interval,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1

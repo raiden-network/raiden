@@ -312,6 +312,15 @@ def transport_protocol(transport):
 
 
 @pytest.fixture
+def blockchain_query_interval():
+    """
+    Config setting (interval after which to check for new block.)  Set to this low value for the
+    integration tests, where we use a block time of 1 second.
+    """
+    return 0.5
+
+
+@pytest.fixture
 def skip_if_parity(blockchain_type):
     """Skip the test if it is run with a Parity node"""
     if blockchain_type == "parity":
