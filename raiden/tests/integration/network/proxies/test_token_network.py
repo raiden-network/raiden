@@ -19,7 +19,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     SamePeerAddress,
 )
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
@@ -47,7 +47,11 @@ def test_token_network_deposit_race(
     c2_client = JSONRPCClient(web3, private_keys[2])
 
     blockchain_service = BlockChainService(
-        jsonrpc_client=c1_client, contract_manager=contract_manager
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
 
     c1_token_network_proxy = TokenNetwork(
@@ -94,9 +98,21 @@ def test_token_network_proxy(
 
     c1_signer = LocalSigner(private_keys[1])
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c2_client = JSONRPCClient(web3, private_keys[2])
-    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+    c2_chain = BlockChainService(
+        jsonrpc_client=c2_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c2_signer = LocalSigner(private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -510,10 +526,22 @@ def test_token_network_proxy_update_transfer(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c1_signer = LocalSigner(private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
-    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+    c2_chain = BlockChainService(
+        jsonrpc_client=c2_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
@@ -734,7 +762,13 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
 
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -774,7 +808,13 @@ def test_token_network_actions_at_pruned_blocks(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
 
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
         token_network_address=token_network_address,
@@ -788,7 +828,13 @@ def test_token_network_actions_at_pruned_blocks(
     )
 
     c2_client = JSONRPCClient(web3, private_keys[2])
-    c2_chain = BlockChainService(jsonrpc_client=c2_client, contract_manager=contract_manager)
+    c2_chain = BlockChainService(
+        jsonrpc_client=c2_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
 
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,

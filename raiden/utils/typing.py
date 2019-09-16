@@ -36,6 +36,11 @@ def typecheck(value: Any, expected: Type):
 ABI = List[Dict[str, Any]]
 BlockchainEvent = Dict[str, Any]
 
+T_EVMBytecode = bytes
+EVMBytecode = NewType("EVMBytecode", T_EVMBytecode)
+
+GasMeasurements = Dict[str, int]
+
 T_Address = bytes
 
 AddressHex = ChecksumAddress

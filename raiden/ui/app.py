@@ -19,7 +19,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
@@ -212,8 +212,18 @@ def run_app(
         uses_infura="infura.io" in eth_rpc_endpoint,
     )
 
+    token_network_registry_deployed_at = BlockNumber(0)
+    if "TokenNetworkRegistry" in contracts:
+        token_network_registry_deployed_at = BlockNumber(
+            contracts["TokenNetworkRegistry"]["block_number"]
+        )
+
     blockchain_service = BlockChainService(
-        jsonrpc_client=rpc_client, contract_manager=ContractManager(config["contracts_path"])
+        jsonrpc_client=rpc_client,
+        contract_manager=ContractManager(config["contracts_path"]),
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=token_network_registry_deployed_at
+        ),
     )
 
     if sync_check:
@@ -281,14 +291,10 @@ def run_app(
     message_handler = MessageHandler()
 
     try:
-        start_block = 0
-        if "TokenNetworkRegistry" in contracts:
-            start_block = contracts["TokenNetworkRegistry"]["block_number"]
-
         raiden_app = App(
             config=config,
             chain=blockchain_service,
-            query_start_block=BlockNumber(start_block),
+            query_start_block=token_network_registry_deployed_at,
             default_one_to_n_address=(
                 one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
             ),

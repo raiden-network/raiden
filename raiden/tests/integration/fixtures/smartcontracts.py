@@ -8,11 +8,10 @@ from raiden.constants import (
     UINT256_MAX,
     Environment,
 )
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
@@ -224,15 +223,14 @@ def register_token_and_return_the_network_proxy(
     registry_address = to_canonical_address(token_network_registry_address)
 
     blockchain_service = BlockChainService(
-        jsonrpc_client=deploy_client, contract_manager=contract_manager
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
 
-    token_network_registry_proxy = TokenNetworkRegistry(
-        jsonrpc_client=deploy_client,
-        registry_address=registry_address,
-        contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
-    )
+    token_network_registry_proxy = blockchain_service.token_network(registry_address)
     token_network_address = token_network_registry_proxy.add_token(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
@@ -241,7 +239,11 @@ def register_token_and_return_the_network_proxy(
     )
 
     blockchain_service = BlockChainService(
-        jsonrpc_client=deploy_client, contract_manager=contract_manager
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
     return TokenNetwork(
         jsonrpc_client=deploy_client,

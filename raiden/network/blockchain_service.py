@@ -1,5 +1,5 @@
 import gevent
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address, to_checksum_address
 from gevent.lock import Semaphore
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
@@ -8,7 +8,10 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.network.proxies.token_network_registry import (
+    TokenNetworkRegistry,
+    TokenNetworkRegistryMetadata,
+)
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -20,6 +23,8 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    EVMBytecode,
+    NamedTuple,
     T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
@@ -27,7 +32,12 @@ from raiden.utils.typing import (
     Tuple,
     typecheck,
 )
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
+from raiden_contracts.contract_manager import ContractManager, gas_measurements
+
+
+class BlockChainServiceMetadata(NamedTuple):
+    token_network_registry_deployed_at: BlockNumber
 
 
 class BlockChainService:
@@ -40,7 +50,12 @@ class BlockChainService:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, jsonrpc_client: JSONRPCClient, contract_manager: ContractManager):
+    def __init__(
+        self,
+        jsonrpc_client: JSONRPCClient,
+        contract_manager: ContractManager,
+        metadata: BlockChainServiceMetadata,
+    ) -> None:
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
@@ -58,6 +73,7 @@ class BlockChainService:
 
         # Ask for the network id only once and store it here
         self.network_id = ChainID(int(self.client.web3.version.network))
+        self.metadata = metadata
 
         self._token_creation_lock = Semaphore()
         self._token_network_creation_lock = Semaphore()
@@ -147,16 +163,26 @@ class BlockChainService:
         return self.address_to_token[token_address]
 
     def token_network_registry(self, address: TokenNetworkRegistryAddress) -> TokenNetworkRegistry:
-        if not is_binary_address(address):
-            raise ValueError("address must be a valid address")
 
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
+
+                metadata = TokenNetworkRegistryMetadata(
+                    deployed_at=self.metadata.token_network_registry_deployed_at,
+                    address=address,
+                    abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+                    runtime_bytes=EVMBytecode(
+                        decode_hex(
+                            self.contract_manager.get_runtime_hexcode(
+                                CONTRACT_TOKEN_NETWORK_REGISTRY
+                            )
+                        )
+                    ),
+                    gas_measurements=gas_measurements(self.contract_manager.contracts_version),
+                )
+
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    jsonrpc_client=self.client,
-                    registry_address=TokenNetworkRegistryAddress(address),
-                    contract_manager=self.contract_manager,
-                    blockchain_service=self,
+                    jsonrpc_client=self.client, metadata=metadata, blockchain_service=self
                 )
 
         return self.address_to_token_network_registry[address]
@@ -184,7 +210,10 @@ class BlockChainService:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
                     token_network_registry_address=token_network_registry_address,
-                    filter_start_at=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                    # FIXME: Issue #3958
+                    # The token cannot be registered before the registry is
+                    # deployed, so this is a lower bound.
+                    filter_start_at=token_network_registry.metadata.deployed_at,
                 )
 
                 self.address_to_token_network[token_network_address] = TokenNetwork(
@@ -206,7 +235,12 @@ class BlockChainService:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
                     token_network_registry_address=None,
-                    filter_start_at=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                    # FIXME: Issue #3958
+                    # The token network doesn't have the addres of the
+                    # registry, so it's not stright forward to figure out when
+                    # the token was registered. Here it is necessary to fall
+                    # back to the worst lower bound.
+                    filter_start_at=GENESIS_BLOCK_NUMBER,
                 )
 
                 self.address_to_token_network[address] = TokenNetwork(
