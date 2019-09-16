@@ -165,7 +165,9 @@ def contractreceivechannelnew_from_event(
     )
 
 
-def contractreceivechanneldeposit_from_event(event: DecodedEvent) -> ContractReceiveChannelDeposit:
+def contractreceivechanneldeposit_from_event(
+    event: DecodedEvent, fee_config: MediationFeeConfig
+) -> ContractReceiveChannelDeposit:
     data = event.event_data
     args = data["args"]
     block_number = event.block_number
@@ -182,11 +184,12 @@ def contractreceivechanneldeposit_from_event(event: DecodedEvent) -> ContractRec
         transaction_hash=event.transaction_hash,
         block_number=block_number,
         block_hash=event.block_hash,
+        fee_config=fee_config,
     )
 
 
 def contractreceivechannelwithdraw_from_event(
-    event: DecodedEvent
+    event: DecodedEvent, fee_config: MediationFeeConfig
 ) -> ContractReceiveChannelWithdraw:
     data = event.event_data
     args = data["args"]
@@ -205,6 +208,7 @@ def contractreceivechannelwithdraw_from_event(
         transaction_hash=event.transaction_hash,
         block_number=event.block_number,
         block_hash=event.block_hash,
+        fee_config=fee_config,
     )
 
 
@@ -358,11 +362,13 @@ def blockchainevent_to_statechange(
             state_changes.append(contractreceiveroutenew_from_event(event))
 
     elif event_name == ChannelEvent.DEPOSIT:
-        deposit = contractreceivechanneldeposit_from_event(event)
+        deposit = contractreceivechanneldeposit_from_event(event, raiden.config["mediation_fees"])
         state_changes.append(deposit)
 
     elif event_name == ChannelEvent.WITHDRAW:
-        withdraw = contractreceivechannelwithdraw_from_event(event)
+        withdraw = contractreceivechannelwithdraw_from_event(
+            event, raiden.config["mediation_fees"]
+        )
         state_changes.append(withdraw)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:

@@ -1,10 +1,12 @@
 # pylint: disable=too-many-lines
 import random
+from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.exceptions import RaidenUnrecoverableError
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -20,11 +22,11 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
+    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
-    TriggerFeeUpdate,
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -33,6 +35,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
     SendRefundTransfer,
     refund_from_sendmediated,
+)
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    FeeScheduleState,
+    calculate_imbalance_fees,
 )
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -60,7 +66,6 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -109,6 +114,10 @@ from raiden.utils.typing import (
     Union,
     WithdrawAmount,
 )
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService  # noqa: F401
 
 # This should be changed to `Union[str, PendingLocksState]`
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
@@ -1849,17 +1858,6 @@ def handle_action_close(
     return TransitionResult(channel_state, events)
 
 
-def handle_action_update_fee(
-    channel_state: NettingChannelState, update_fee: ActionChannelUpdateFee
-) -> TransitionResult[NettingChannelState]:
-    msg = "caller must make sure the ids match"
-    assert channel_state.canonical_identifier == update_fee.canonical_identifier, msg
-
-    channel_state.fee_schedule = update_fee.fee_schedule
-
-    return TransitionResult(channel_state, list())
-
-
 def handle_action_withdraw(
     channel_state: NettingChannelState,
     action_withdraw: ActionChannelWithdraw,
@@ -2302,10 +2300,31 @@ def handle_channel_settled(
     return TransitionResult(channel_state, events)
 
 
+def update_fee_schedule_after_balance_change(
+    channel_state: NettingChannelState, fee_config: MediationFeeConfig
+) -> List[Event]:
+    if not channel_state:
+        # This should not happen. Channel should not dissapear between the
+        # triggering of the fee update event and its processing
+        raise RaidenUnrecoverableError(
+            f"Failed to find channel state for {channel_state.canonical_identifier}"
+        )
+
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=get_capacity(channel_state),
+        proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
+    )
+    channel_state.fee_schedule = FeeScheduleState(
+        flat=channel_state.fee_schedule.flat,
+        proportional=channel_state.fee_schedule.proportional,
+        imbalance_penalty=imbalance_penalty,
+    )
+    return [SendPFSFeeUpdate(canonical_identifier=channel_state.canonical_identifier)]
+
+
 def handle_channel_deposit(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
     participant_address = state_change.deposit_transaction.participant_address
     contract_balance = Balance(state_change.deposit_transaction.contract_balance)
 
@@ -2315,8 +2334,7 @@ def handle_channel_deposit(
         update_contract_balance(channel_state.partner_state, contract_balance)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
-    events.append(TriggerFeeUpdate(canonical_identifier=channel_state.canonical_identifier))
-
+    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
     return TransitionResult(channel_state, events)
 
 
@@ -2327,7 +2345,6 @@ def handle_channel_withdraw(
     track of this not to go lower than the on-chain value. The value is set to
     onchain_total_withdraw and the corresponding withdraw_state is cleared.
     """
-    events: List[Event] = list()
     participants = (channel_state.our_state.address, channel_state.partner_state.address)
     if state_change.participant not in participants:
         return TransitionResult(channel_state, list())
@@ -2344,8 +2361,7 @@ def handle_channel_withdraw(
     end_state.onchain_total_withdraw = state_change.total_withdraw
 
     # A withdraw changes the total capacity of the channel and as such the fees need to change
-    events.append(TriggerFeeUpdate(canonical_identifier=channel_state.canonical_identifier))
-
+    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
     return TransitionResult(channel_state, events)
 
 
@@ -2487,9 +2503,6 @@ def state_transition(
             block_number=block_number,
             block_hash=block_hash,
         )
-    elif type(state_change) == ActionChannelUpdateFee:
-        assert isinstance(state_change, ActionChannelUpdateFee), MYPY_ANNOTATION
-        iteration = handle_action_update_fee(channel_state=channel_state, update_fee=state_change)
     elif type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
         iteration = handle_action_withdraw(
