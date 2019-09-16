@@ -15,7 +15,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.mediation_fees import get_amounts_to_drain_channel_with_fees
+from raiden.tests.utils.mediation_fees import get_amount_to_drain_channel_with_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -168,15 +168,15 @@ def test_mediated_transfer_with_entire_deposit(
     )
     forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
 
-    calculation = get_amounts_to_drain_channel_with_fees(
-        deposit=deposit, channels=forward_channels
+    calculation = get_amount_to_drain_channel_with_fees(
+        initiator_capacity=deposit, channels=forward_channels
     )
     assert calculation, "fees calculation should be succesful"
 
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=calculation.total_amount,
+        amount=calculation.amount_to_send,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
@@ -217,8 +217,8 @@ def test_mediated_transfer_with_entire_deposit(
         partner_address=app1.raiden.address,
     )
     backwards_channels = [app2_app1_channel_state, app1_app0_channel_state]
-    reverse_calculation = get_amounts_to_drain_channel_with_fees(
-        deposit=deposit + calculation.total_amount, channels=backwards_channels
+    reverse_calculation = get_amount_to_drain_channel_with_fees(
+        initiator_capacity=deposit + calculation.amount_to_send, channels=backwards_channels
     )
     assert reverse_calculation, "reverse fees calculation should be succesful"
 
@@ -226,7 +226,7 @@ def test_mediated_transfer_with_entire_deposit(
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
-        amount=reverse_calculation.total_amount,
+        amount=reverse_calculation.amount_to_send,
         identifier=2,
         timeout=network_wait * number_of_nodes,
     )
