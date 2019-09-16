@@ -140,7 +140,7 @@ def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no uni
 class AlarmTask(Runnable):
     """ Task to notify when a block is mined. """
 
-    def __init__(self, chain: BlockChainService) -> None:
+    def __init__(self, chain: BlockChainService, sleep_time: float) -> None:
         super().__init__()
 
         self.callbacks: List[Callable] = list()
@@ -150,7 +150,7 @@ class AlarmTask(Runnable):
 
         # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.
-        self.sleep_time = 0.5
+        self.sleep_time = sleep_time
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.chain.client.address)}>"

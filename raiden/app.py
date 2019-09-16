@@ -13,6 +13,7 @@ from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
+    DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
@@ -38,7 +39,10 @@ class App:  # pylint: disable=too-few-public-methods
         "contracts_path": contracts_precompiled_path(RAIDEN_CONTRACT_VERSION),
         "database_path": "",
         "transport_type": "matrix",
-        "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
+        "blockchain": {
+            "confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+            "query_interval": DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+        },
         "transport": {
             "matrix": {
                 # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
