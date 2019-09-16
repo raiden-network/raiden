@@ -33,6 +33,21 @@ UINT64_MAX = 2 ** 64 - 1
 SECONDS_PER_DAY = 24 * 60 * 60
 
 GENESIS_BLOCK_NUMBER = BlockNumber(0)
+
+
+class EthereumForks(Enum):
+    # https://eips.ethereum.org/EIPS/eip-606
+    HOMESTEAD = BlockNumber(1_150_000)
+    # https://eips.ethereum.org/EIPS/eip-608
+    TANGERINE_WHISTLE = BlockNumber(2_463_000)
+    # https://eips.ethereum.org/EIPS/eip-607
+    SPURIOUS_DRAGON = BlockNumber(2_675_000)
+    # https://eips.ethereum.org/EIPS/eip-609
+    BYZANTIUM = BlockNumber(4_370_000)
+    # https://eips.ethereum.org/EIPS/eip-1013
+    CONSTANTINOPLE = BlockNumber(7_280_000)
+
+
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64
