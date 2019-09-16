@@ -52,15 +52,31 @@ log = structlog.get_logger(__name__)
 
 @dataclass
 class TokenNetworkRegistryMetadata:
-    deployed_at: BlockNumber
+    # If the user deployed the smart contract it's deployed block number is
+    # unknown.
+    deployed_at: Optional[BlockNumber]
     address: TokenNetworkRegistryAddress
     abi: ABI
     runtime_bytes: EVMBytecode
     gas_measurements: GasMeasurements
 
+    # Querying for on-chain logs should start at this block. This is not
+    # necessarily the block at which the TokenNetworkRegistry was deployed, it
+    # may be a lower block, meaning that the range of the filter can be
+    # non-optimal.
+    filter_start_at: BlockNumber
+
     def __post_init__(self) -> None:
         if not is_binary_address(self.address):
             raise ValueError("Expected binary address format for token network registry")
+
+        # Having a filter installed before or after the smart contract is
+        # deployed doesn't make sense. A smaller value will have a negative
+        # impact on performance (see #3958), a larger value will miss logs.
+        if self.deployed_at and self.filter_start_at != self.deployed_at:
+            raise ValueError(
+                "The deployed_at is known, the filters should start at that exact block"
+            )
 
 
 class TokenNetworkRegistry:
@@ -241,7 +257,7 @@ class TokenNetworkRegistry:
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         if from_block is None:
-            from_block = self.metadata.deployed_at
+            from_block = self.metadata.filter_start_at
 
         registry_address_bin = self.proxy.contract_address
         return self.client.new_filter(

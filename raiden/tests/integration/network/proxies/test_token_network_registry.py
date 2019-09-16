@@ -25,7 +25,8 @@ def test_token_network_registry(
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            smart_contracts_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
 

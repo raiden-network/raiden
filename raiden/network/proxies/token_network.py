@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 
 import structlog
 from eth_utils import (
@@ -130,14 +131,24 @@ class ChannelDetails(NamedTuple):
     participants_data: ParticipantsDetails
 
 
-class TokenNetworkMetadata(NamedTuple):
+@dataclass
+class TokenNetworkMetadata:
     deployed_at: Optional[BlockNumber]
     token_network_registry_address: Optional[TokenNetworkRegistryAddress]
 
-    # Querying for on-chain logs should start at this number. This is not
+    # Querying for on-chain logs should start at this block. This is not
     # necessarily the block at which the TokenNetwork was deployed, it may be a
     # lower block, meaning that the range of the filter can be non-optimal.
     filter_start_at: BlockNumber
+
+    def __post_init__(self) -> None:
+        # Having a filter installed before or after the smart contract is
+        # deployed doesn't make sense. A smaller value will have a negative
+        # impact on performance (see #3958), a larger value will miss logs.
+        if self.deployed_at and self.filter_start_at != self.deployed_at:
+            raise ValueError(
+                "The deployed_at is known, the filters should start at that exact block"
+            )
 
 
 class TokenNetwork:

@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+
 import gevent
 from eth_utils import decode_hex, is_binary_address, to_checksum_address
 from gevent.lock import Semaphore
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -24,7 +25,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     EVMBytecode,
-    NamedTuple,
+    Optional,
     T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
@@ -36,8 +37,28 @@ from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 
-class BlockChainServiceMetadata(NamedTuple):
-    token_network_registry_deployed_at: BlockNumber
+@dataclass
+class BlockChainServiceMetadata:
+    # If the user deployed the smart contract the block at which it was mined
+    # is unknown.
+    token_network_registry_deployed_at: Optional[BlockNumber]
+    # This is a lower bound used to skip unecessary blocks in some filters. If
+    # the deployed block number is unknown a hard fork block number can be
+    # used.
+    smart_contracts_start_at: BlockNumber
+
+    def __post_init__(self) -> None:
+        # Having a filter installed before or after the smart contract is
+        # deployed doesn't make sense. A smaller value will have a negative
+        # impact on performance (see #3958), a larger value will miss logs.
+        is_filter_start_valid = (
+            self.token_network_registry_deployed_at is not None
+            and self.token_network_registry_deployed_at != self.smart_contracts_start_at
+        )
+        if is_filter_start_valid:
+            raise ValueError(
+                "The deployed_at is known, the filters should start at that exact block"
+            )
 
 
 class BlockChainService:
@@ -179,6 +200,7 @@ class BlockChainService:
                         )
                     ),
                     gas_measurements=gas_measurements(self.contract_manager.contracts_version),
+                    filter_start_at=self.metadata.smart_contracts_start_at,
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
@@ -213,7 +235,7 @@ class BlockChainService:
                     # FIXME: Issue #3958
                     # The token cannot be registered before the registry is
                     # deployed, so this is a lower bound.
-                    filter_start_at=token_network_registry.metadata.deployed_at,
+                    filter_start_at=token_network_registry.metadata.filter_start_at,
                 )
 
                 self.address_to_token_network[token_network_address] = TokenNetwork(
@@ -237,10 +259,10 @@ class BlockChainService:
                     token_network_registry_address=None,
                     # FIXME: Issue #3958
                     # The token network doesn't have the addres of the
-                    # registry, so it's not stright forward to figure out when
+                    # registry, so it's not straight forward to figure out when
                     # the token was registered. Here it is necessary to fall
                     # back to the worst lower bound.
-                    filter_start_at=GENESIS_BLOCK_NUMBER,
+                    filter_start_at=self.metadata.smart_contracts_start_at,
                 )
 
                 self.address_to_token_network[address] = TokenNetwork(

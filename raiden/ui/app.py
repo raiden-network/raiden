@@ -11,10 +11,13 @@ from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
 from raiden.constants import (
+    GENESIS_BLOCK_NUMBER,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     RAIDEN_DB_VERSION,
     Environment,
+    EthereumForks,
+    Networks,
     RoutingMode,
 )
 from raiden.exceptions import RaidenError
@@ -162,6 +165,9 @@ def run_app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
     from raiden.app import App
 
+    token_network_registry_deployed_at: Optional[BlockNumber]
+    smart_contracts_start_at: BlockNumber
+
     if datadir is None:
         datadir = os.path.join(os.path.expanduser("~"), ".raiden")
 
@@ -212,17 +218,25 @@ def run_app(
         uses_infura="infura.io" in eth_rpc_endpoint,
     )
 
-    token_network_registry_deployed_at = BlockNumber(0)
+    token_network_registry_deployed_at = None
     if "TokenNetworkRegistry" in contracts:
         token_network_registry_deployed_at = BlockNumber(
             contracts["TokenNetworkRegistry"]["block_number"]
         )
 
+    if token_network_registry_deployed_at is not None:
+        smart_contracts_start_at = token_network_registry_deployed_at
+    elif network_id == Networks.MAINNET:
+        smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
+    else:
+        smart_contracts_start_at = GENESIS_BLOCK_NUMBER
+
     blockchain_service = BlockChainService(
         jsonrpc_client=rpc_client,
         contract_manager=ContractManager(config["contracts_path"]),
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=token_network_registry_deployed_at
+            token_network_registry_deployed_at=token_network_registry_deployed_at,
+            smart_contracts_start_at=smart_contracts_start_at,
         ),
     )
 
@@ -294,7 +308,7 @@ def run_app(
         raiden_app = App(
             config=config,
             chain=blockchain_service,
-            query_start_block=token_network_registry_deployed_at,
+            query_start_block=smart_contracts_start_at,
             default_one_to_n_address=(
                 one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
             ),
