@@ -69,6 +69,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
     typecheck,
 )
@@ -129,6 +130,16 @@ class ChannelDetails(NamedTuple):
     participants_data: ParticipantsDetails
 
 
+class TokenNetworkMetadata(NamedTuple):
+    deployed_at: Optional[BlockNumber]
+    token_network_registry_address: Optional[TokenNetworkRegistryAddress]
+
+    # Querying for on-chain logs should start at this number. This is not
+    # necessarily the block at which the TokenNetwork was deployed, it may be a
+    # lower block, meaning that the range of the filter can be non-optimal.
+    filter_start_at: BlockNumber
+
+
 class TokenNetwork:
     def __init__(
         self,
@@ -136,6 +147,7 @@ class TokenNetwork:
         token_network_address: TokenNetworkAddress,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
+        metadata: TokenNetworkMetadata,
     ) -> None:
         if not is_binary_address(token_network_address):
             raise ValueError("Expected binary address format for token nework")
@@ -164,6 +176,7 @@ class TokenNetwork:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
+        self.metadata = metadata
 
         self.token: Token = blockchain_service.token(token_address=self.token_address())
 
@@ -172,8 +185,8 @@ class TokenNetwork:
         # close, in this case if the node is lucky the close will be performed
         # before the deposit, and the deposit transactions will not be sent.
         #
-        # Note: unlock doesn't have to be synchronized, after settlement is as
-        # the channel doesn't exist anymore.
+        # Note: unlock doesn't have to be synchronized, after settlement the
+        # channel doesn't exist anymore.
         self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
         self.opening_channels_count = 0
 
@@ -2519,7 +2532,7 @@ class TokenNetwork:
                     token_network=self,
                     channel_identifier=channel_identifier,
                     contract_manager=self.contract_manager,
-                    from_block=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                    from_block=self.metadata.filter_start_at,
                 )
                 if not participants:
                     msg = (
@@ -2603,7 +2616,7 @@ class TokenNetwork:
                 token_network=self,
                 channel_identifier=channel_identifier,
                 contract_manager=self.contract_manager,
-                from_block=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                from_block=self.metadata.filter_start_at,
             )
             if not participants:
                 msg = (

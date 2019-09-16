@@ -3,8 +3,8 @@ from eth_utils import encode_hex, to_checksum_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
-from raiden.network.proxies.token_network import TokenNetwork
+from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE, GENESIS_BLOCK_NUMBER
+from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -62,6 +62,9 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         token_network_address=token_network_address,
         contract_manager=app1.raiden.contract_manager,
         blockchain_service=app1.raiden.chain,
+        metadata=TokenNetworkMetadata(
+            deployed_at=None, token_network_address=None, filter_start_at=GENESIS_BLOCK_NUMBER
+        ),
     )
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
