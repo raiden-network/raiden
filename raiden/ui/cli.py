@@ -22,6 +22,7 @@ from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlre
 from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
 from raiden.settings import (
+    DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE,
@@ -203,6 +204,13 @@ def options(func):
             "--showconfig",
             help="Show all configuration values used to control Raiden's behavior",
             is_flag=True,
+        ),
+        option(
+            "--blockchain-query-interval",
+            help="Time interval after which to check for new blocks (in seconds)",
+            default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+            show_default=True,
+            type=click.FloatRange(min=0.1),
         ),
         option_group(
             "Ethereum Node Options",

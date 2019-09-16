@@ -249,7 +249,7 @@ class RaidenService(Runnable):
         self.user_deposit = user_deposit
 
         self.blockchain_events = BlockchainEvents(self.chain.network_id)
-        self.alarm = AlarmTask(chain)
+        self.alarm = AlarmTask(chain, sleep_time=self.config["blockchain"]["query_interval"])
         self.raiden_event_handler = raiden_event_handler
         self.message_handler = message_handler
 

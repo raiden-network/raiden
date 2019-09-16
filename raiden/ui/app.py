@@ -157,6 +157,7 @@ def run_app(
     flat_fee: Tuple[Tuple[TokenNetworkAddress, FeeAmount], ...],
     proportional_fee: ProportionalFeeAmount,
     proportional_imbalance_fee: ProportionalFeeAmount,
+    blockchain_query_interval: float,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -199,6 +200,7 @@ def run_app(
     config["services"]["monitoring_enabled"] = enable_monitoring
     config["chain_id"] = network_id
     config["mediation_fees"] = fee_config
+    config["blockchain"]["query_interval"] = blockchain_query_interval
 
     setup_environment(config, environment_type)
 
