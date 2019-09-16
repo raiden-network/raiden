@@ -339,7 +339,7 @@ class RaidenService(Runnable):
 
         if self.wal.state_manager.current_state is None:
             log.debug(
-                "No recoverable state available, creating inital state.",
+                "No recoverable state available, creating initial state.",
                 node=to_checksum_address(self.address),
             )
             # On first run Raiden needs to fetch all events for the payment
