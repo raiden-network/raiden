@@ -225,7 +225,8 @@ def register_token_and_return_the_network_proxy(
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
 
@@ -241,7 +242,8 @@ def register_token_and_return_the_network_proxy(
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     return blockchain_service.token_network(token_network_address)

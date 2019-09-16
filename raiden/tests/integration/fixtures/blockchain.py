@@ -107,7 +107,8 @@ def deploy_service(deploy_key, deploy_client, contract_manager):
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
 
