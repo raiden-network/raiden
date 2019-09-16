@@ -5,12 +5,12 @@ from eth_utils import decode_hex, to_hex
 from structlog import BoundLoggerBase
 
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     Any,
+    BlockNumber,
     BlockSpecification,
     ChannelID,
     Dict,
@@ -31,11 +31,11 @@ if TYPE_CHECKING:
 
 
 def get_channel_participants_from_open_event(
-    token_network: "TokenNetwork", channel_identifier: ChannelID, contract_manager: ContractManager
+    token_network: "TokenNetwork",
+    channel_identifier: ChannelID,
+    contract_manager: ContractManager,
+    from_block: BlockNumber,
 ) -> Optional[Tuple[Address, Address]]:
-    # FIXME: Issue #3958
-    from_block = GENESIS_BLOCK_NUMBER
-
     # For this check it is perfectly fine to use a `latest` block number.
     # Because the filter is looking just for the OPENED event.
     to_block = "latest"

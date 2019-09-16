@@ -2519,6 +2519,7 @@ class TokenNetwork:
                     token_network=self,
                     channel_identifier=channel_identifier,
                     contract_manager=self.contract_manager,
+                    from_block=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
                 )
                 if not participants:
                     msg = (
@@ -2602,6 +2603,7 @@ class TokenNetwork:
                 token_network=self,
                 channel_identifier=channel_identifier,
                 contract_manager=self.contract_manager,
+                from_block=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
             )
             if not participants:
                 msg = (
