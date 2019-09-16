@@ -11,7 +11,6 @@ from raiden.constants import (
 from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
@@ -230,7 +229,7 @@ def register_token_and_return_the_network_proxy(
         ),
     )
 
-    token_network_registry_proxy = blockchain_service.token_network(registry_address)
+    token_network_registry_proxy = blockchain_service.token_network_registry(registry_address)
     token_network_address = token_network_registry_proxy.add_token(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
@@ -245,17 +244,7 @@ def register_token_and_return_the_network_proxy(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
         ),
     )
-    return TokenNetwork(
-        jsonrpc_client=deploy_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    return blockchain_service.token_network(token_network_address)
 
 
 @pytest.fixture(name="token_proxy")

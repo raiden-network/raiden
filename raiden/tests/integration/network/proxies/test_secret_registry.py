@@ -65,7 +65,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
-            smart_contracts_start_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     chain.wait_until_block(STATE_PRUNING_AFTER_BLOCKS + 1)

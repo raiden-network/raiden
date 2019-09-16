@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import structlog
@@ -20,19 +19,16 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
+from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
-    ABI,
     TYPE_CHECKING,
     Address,
-    BlockNumber,
     BlockSpecification,
     Dict,
-    EVMBytecode,
-    GasMeasurements,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -50,40 +46,11 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
-@dataclass
-class TokenNetworkRegistryMetadata:
-    # If the user deployed the smart contract it's deployed block number is
-    # unknown.
-    deployed_at: Optional[BlockNumber]
-    address: TokenNetworkRegistryAddress
-    abi: ABI
-    runtime_bytes: EVMBytecode
-    gas_measurements: GasMeasurements
-
-    # Querying for on-chain logs should start at this block. This is not
-    # necessarily the block at which the TokenNetworkRegistry was deployed, it
-    # may be a lower block, meaning that the range of the filter can be
-    # non-optimal.
-    filter_start_at: BlockNumber
-
-    def __post_init__(self) -> None:
-        if not is_binary_address(self.address):
-            raise ValueError("Expected binary address format for token network registry")
-
-        # Having a filter installed before or after the smart contract is
-        # deployed doesn't make sense. A smaller value will have a negative
-        # impact on performance (see #3958), a larger value will miss logs.
-        if self.deployed_at and self.filter_start_at != self.deployed_at:
-            raise ValueError(
-                "The deployed_at is known, the filters should start at that exact block"
-            )
-
-
 class TokenNetworkRegistry:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        metadata: TokenNetworkRegistryMetadata,
+        metadata: SmartContractMetadata,
         blockchain_service: "BlockChainService",
     ) -> None:
 
@@ -91,14 +58,14 @@ class TokenNetworkRegistry:
             client=jsonrpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            expected_code=metadata.runtime_bytes,
+            expected_code=metadata.runtime_bytecode,
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
             abi=metadata.abi, contract_address=Address(metadata.address)
         )
 
-        self.address = metadata.address
+        self.address = TokenNetworkRegistryAddress(metadata.address)
         self.blockchain_service = blockchain_service
         self.client = jsonrpc_client
         self.gas_measurements = metadata.gas_measurements
@@ -257,7 +224,7 @@ class TokenNetworkRegistry:
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         if from_block is None:
-            from_block = self.metadata.filter_start_at
+            from_block = self.metadata.filters_start_at
 
         registry_address_bin = self.proxy.contract_address
         return self.client.new_filter(
@@ -269,7 +236,7 @@ class TokenNetworkRegistry:
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
         filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(
-            fromBlock=self.metadata.deployed_at
+            fromBlock=self.metadata.filters_start_at
         )
         events = filter_.get_all_entries()
         if filter_.filter_id:
