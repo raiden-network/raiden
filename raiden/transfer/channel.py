@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
-from raiden.exceptions import RaidenUnrecoverableError
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.events import (
@@ -2303,13 +2302,6 @@ def handle_channel_settled(
 def update_fee_schedule_after_balance_change(
     channel_state: NettingChannelState, fee_config: MediationFeeConfig
 ) -> List[Event]:
-    if not channel_state:
-        # This should not happen. Channel should not dissapear between the
-        # triggering of the fee update event and its processing
-        raise RaidenUnrecoverableError(
-            f"Failed to find channel state for {channel_state.canonical_identifier}"
-        )
-
     imbalance_penalty = calculate_imbalance_fees(
         channel_capacity=get_capacity(channel_state),
         proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
