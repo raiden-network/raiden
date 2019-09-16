@@ -3,11 +3,10 @@ from unittest.mock import patch
 import pytest
 from eth_utils import is_same_address, to_canonical_address, to_normalized_address
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.exceptions import AddressWithoutCode, InvalidToken, RaidenRecoverableError
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.factories import make_token_address
 from raiden.tests.utils.smartcontracts import deploy_token
@@ -23,14 +22,15 @@ def test_token_network_registry(
     token_contract_name: str,
 ) -> None:
     blockchain_service = BlockChainService(
-        jsonrpc_client=deploy_client, contract_manager=contract_manager
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
 
-    token_network_registry_proxy = TokenNetworkRegistry(
-        jsonrpc_client=deploy_client,
-        registry_address=token_network_registry_address,
-        contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
+    token_network_registry_proxy = blockchain_service.token_network_registry(
+        token_network_registry_address
     )
 
     assert token_network_registry_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -123,12 +123,13 @@ def test_token_network_registry_max_token_networks(
 ):
     """ get_max_token_networks() should return an integer """
     blockchain_service = BlockChainService(
-        jsonrpc_client=deploy_client, contract_manager=contract_manager
-    )
-    token_network_registry_proxy = TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
-        registry_address=to_canonical_address(token_network_registry_address),
         contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
+    token_network_registry_proxy = blockchain_service.token_network_registry(
+        to_canonical_address(token_network_registry_address)
     )
     assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX

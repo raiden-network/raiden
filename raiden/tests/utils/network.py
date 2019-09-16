@@ -10,8 +10,8 @@ from web3 import Web3
 
 from raiden import waiting
 from raiden.app import App
-from raiden.constants import Environment, RoutingMode
-from raiden.network.blockchain_service import BlockChainService
+from raiden.constants import GENESIS_BLOCK_NUMBER, Environment, RoutingMode
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -471,7 +471,11 @@ def jsonrpc_services(
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
         blockchain = BlockChainService(
-            jsonrpc_client=rpc_client, contract_manager=contract_manager
+            jsonrpc_client=rpc_client,
+            contract_manager=contract_manager,
+            metadata=BlockChainServiceMetadata(
+                token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            ),
         )
         blockchain_services.append(blockchain)
 

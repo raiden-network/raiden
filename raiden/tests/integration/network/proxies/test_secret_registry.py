@@ -4,9 +4,9 @@ from hashlib import sha256
 import gevent
 import pytest
 
-from raiden.constants import STATE_PRUNING_AFTER_BLOCKS
+from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
@@ -61,7 +61,11 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     ), "Test setup is invalid, secret must be unknown"
 
     chain = BlockChainService(
-        jsonrpc_client=secret_registry_proxy.client, contract_manager=contract_manager
+        jsonrpc_client=secret_registry_proxy.client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
     chain.wait_until_block(STATE_PRUNING_AFTER_BLOCKS + 1)
 
@@ -108,7 +112,13 @@ def test_register_secret_batch_with_pruned_block(
 ):
     """Test secret registration with a pruned given block."""
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(jsonrpc_client=c1_client, contract_manager=contract_manager)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     # Now wait until this block becomes pruned
     pruned_number = c1_chain.block_number()
     c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)

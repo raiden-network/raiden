@@ -3,8 +3,8 @@ import os
 import pytest
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import EthClient
-from raiden.network.blockchain_service import BlockChainService
+from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.eth_node import (
     AccountDescription,
@@ -103,7 +103,13 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
 
 @pytest.fixture
 def deploy_service(deploy_key, deploy_client, contract_manager):
-    return BlockChainService(jsonrpc_client=deploy_client, contract_manager=contract_manager)
+    return BlockChainService(
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
 
 
 @pytest.fixture

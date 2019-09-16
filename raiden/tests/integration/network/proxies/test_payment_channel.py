@@ -1,13 +1,19 @@
 import pytest
 from eth_utils import encode_hex
 
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import (
+    EMPTY_BALANCE_HASH,
+    EMPTY_HASH,
+    EMPTY_SIGNATURE,
+    GENESIS_BLOCK_NUMBER,
+    LOCKSROOT_OF_NO_LOCKS,
+)
 from raiden.exceptions import (
     BrokenPreconditionError,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -23,7 +29,13 @@ def test_payment_channel_proxy_basics(
     partner = privatekey_to_address(private_keys[0])
 
     client = JSONRPCClient(web3, private_keys[1])
-    chain = BlockChainService(jsonrpc_client=client, contract_manager=contract_manager)
+    chain = BlockChainService(
+        jsonrpc_client=client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
+    )
     token_network_proxy = chain.token_network(address=token_network_address)
     start_block = web3.eth.blockNumber
 

@@ -17,9 +17,14 @@ from raiden.accounts import AccountManager
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import EMPTY_ADDRESS, SECONDS_PER_DAY, UINT256_MAX, EthClient
-from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.constants import (
+    EMPTY_ADDRESS,
+    GENESIS_BLOCK_NUMBER,
+    SECONDS_PER_DAY,
+    UINT256_MAX,
+    EthClient,
+)
+from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -270,7 +275,11 @@ def setup_raiden(
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
     blockchain_service = BlockChainService(
-        jsonrpc_client=client, contract_manager=contract_manager
+        jsonrpc_client=client,
+        contract_manager=contract_manager,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+        ),
     )
 
     token = deploy_token(
@@ -288,11 +297,8 @@ def setup_raiden(
         contract_manager=contract_manager,
         token_address=to_canonical_address(token.contract.address),
     )
-    registry = TokenNetworkRegistry(
-        jsonrpc_client=client,
-        registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-        contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
+    registry = blockchain_service.token_network_registry(
+        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
     )
 
     registry.add_token(

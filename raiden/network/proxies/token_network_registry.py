@@ -1,8 +1,8 @@
+from dataclasses import dataclass
 from typing import Any, List, Optional
 
 import structlog
 from eth_utils import (
-    decode_hex,
     encode_hex,
     event_abi_to_log_topic,
     is_binary_address,
@@ -11,8 +11,9 @@ from eth_utils import (
     to_checksum_address,
 )
 from web3.exceptions import BadFunctionCallOutput
+from web3.utils.contracts import find_matching_event_abi
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
+from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidToken,
@@ -24,10 +25,14 @@ from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_addr
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
+    ABI,
     TYPE_CHECKING,
     Address,
+    BlockNumber,
     BlockSpecification,
     Dict,
+    EVMBytecode,
+    GasMeasurements,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -36,7 +41,6 @@ from raiden.utils.typing import (
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
-from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -46,40 +50,45 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
+@dataclass
+class TokenNetworkRegistryMetadata:
+    deployed_at: BlockNumber
+    address: TokenNetworkRegistryAddress
+    abi: ABI
+    runtime_bytes: EVMBytecode
+    gas_measurements: GasMeasurements
+
+    def __post_init__(self) -> None:
+        if not is_binary_address(self.address):
+            raise ValueError("Expected binary address format for token network registry")
+
+
 class TokenNetworkRegistry:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        registry_address: TokenNetworkRegistryAddress,
-        contract_manager: ContractManager,
+        metadata: TokenNetworkRegistryMetadata,
         blockchain_service: "BlockChainService",
     ) -> None:
-        if not is_binary_address(registry_address):
-            raise ValueError("Expected binary address format for token network registry")
 
         check_address_has_code(
             client=jsonrpc_client,
-            address=Address(registry_address),
+            address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            expected_code=decode_hex(
-                contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK_REGISTRY)
-            ),
+            expected_code=metadata.runtime_bytes,
         )
 
-        self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
-            abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-            contract_address=Address(registry_address),
+            abi=metadata.abi, contract_address=Address(metadata.address)
         )
 
-        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
-
+        self.address = metadata.address
         self.blockchain_service = blockchain_service
-
-        self.address = registry_address
-        self.proxy = proxy
         self.client = jsonrpc_client
+        self.gas_measurements = metadata.gas_measurements
+        self.metadata = metadata
         self.node_address = self.client.address
+        self.proxy = proxy
 
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockSpecification
@@ -222,13 +231,17 @@ class TokenNetworkRegistry:
 
     def tokenadded_filter(
         self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+        from_block: Optional[BlockSpecification] = None,
         to_block: BlockSpecification = "latest",
     ) -> StatelessFilter:
-        event_abi = self.contract_manager.get_event_abi(
-            CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
+        event_abi = find_matching_event_abi(
+            abi=self.metadata.abi, event_name=EVENT_TOKEN_NETWORK_CREATED
         )
+
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
+
+        if from_block is None:
+            from_block = self.metadata.deployed_at
 
         registry_address_bin = self.proxy.contract_address
         return self.client.new_filter(
@@ -239,7 +252,9 @@ class TokenNetworkRegistry:
         )
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
-        filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(fromBlock=0)
+        filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(
+            fromBlock=self.metadata.deployed_at
+        )
         events = filter_.get_all_entries()
         if filter_.filter_id:
             self.proxy.contract.web3.eth.uninstallFilter(filter_.filter_id)
