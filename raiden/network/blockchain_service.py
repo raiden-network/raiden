@@ -1,5 +1,5 @@
 import gevent
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_checksum_address
 from gevent.lock import Semaphore
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
@@ -160,6 +160,42 @@ class BlockChainService:
                 )
 
         return self.address_to_token_network_registry[address]
+
+    def token_network_from_registry(
+        self,
+        token_network_registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        block_identifier: BlockSpecification = "latest",
+    ) -> TokenNetwork:
+        token_network_registry = self.token_network_registry(token_network_registry_address)
+        token_network_address = token_network_registry.get_token_network(
+            token_address=token_address, block_identifier=block_identifier
+        )
+
+        if token_network_address is None:
+            raise ValueError(
+                f"{to_checksum_address(token_network_registry_address)} does not "
+                f"have the token {to_checksum_address(token_address)} "
+                f"registered."
+            )
+
+        with self._token_network_creation_lock:
+            if token_network_address not in self.address_to_token_network:
+                metadata = TokenNetworkMetadata(
+                    deployed_at=None,
+                    token_network_registry_address=token_network_registry_address,
+                    filter_start_at=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                )
+
+                self.address_to_token_network[token_network_address] = TokenNetwork(
+                    jsonrpc_client=self.client,
+                    token_network_address=token_network_address,
+                    contract_manager=self.contract_manager,
+                    blockchain_service=self,
+                    metadata=metadata,
+                )
+
+        return self.address_to_token_network[token_network_address]
 
     def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
         if not is_binary_address(address):
