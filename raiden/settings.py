@@ -82,3 +82,5 @@ class MediationFeeConfig:
         return self.token_network_to_flat_fee.get(  # pylint: disable=no-member
             token_network_address, DEFAULT_MEDIATION_FLAT_FEE
         )
+
+ADDITIONAL_SETTING = 1
