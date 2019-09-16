@@ -64,7 +64,8 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
         jsonrpc_client=secret_registry_proxy.client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            smart_contracts_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     chain.wait_until_block(STATE_PRUNING_AFTER_BLOCKS + 1)
@@ -116,7 +117,8 @@ def test_register_secret_batch_with_pruned_block(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            smart_contracts_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     # Now wait until this block becomes pruned

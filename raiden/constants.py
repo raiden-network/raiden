@@ -48,6 +48,15 @@ class EthereumForks(Enum):
     CONSTANTINOPLE = BlockNumber(7_280_000)
 
 
+class Networks(Enum):
+    MAINNET = 1
+    ROPSTEN = 3
+    RINKEBY = 4
+    GOERLI = 5
+    KOVAN = 42
+    SMOKETEST = 627
+
+
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64
