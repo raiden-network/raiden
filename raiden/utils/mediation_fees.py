@@ -1,28 +1,5 @@
 from raiden.settings import MediationFeeConfig
-from raiden.transfer.channel import get_capacity
-from raiden.transfer.mediated_transfer.mediation_fee import calculate_imbalance_fees
-from raiden.transfer.state import FeeScheduleState, NettingChannelState
-from raiden.transfer.state_change import ActionChannelUpdateFee
 from raiden.utils.typing import Dict, FeeAmount, ProportionalFeeAmount, TokenNetworkAddress, Tuple
-
-
-def actionchannelupdatefee_from_channelstate(
-    channel_state: NettingChannelState,
-    flat_fee: FeeAmount,
-    proportional_fee: ProportionalFeeAmount,
-    proportional_imbalance_fee: ProportionalFeeAmount,
-) -> ActionChannelUpdateFee:
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=get_capacity(channel_state),
-        proportional_imbalance_fee=proportional_imbalance_fee,
-    )
-
-    return ActionChannelUpdateFee(
-        canonical_identifier=channel_state.canonical_identifier,
-        fee_schedule=FeeScheduleState(
-            flat=flat_fee, proportional=proportional_fee, imbalance_penalty=imbalance_penalty
-        ),
-    )
 
 
 def ppm_fee_per_channel(per_hop_fee: ProportionalFeeAmount) -> ProportionalFeeAmount:

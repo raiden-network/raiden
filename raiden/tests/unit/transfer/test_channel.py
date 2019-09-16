@@ -4,27 +4,32 @@ from dataclasses import replace
 from hashlib import sha256
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
+from raiden.settings import MediationFeeConfig
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
     make_receive_transfer_mediated,
 )
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import make_block_hash, make_transaction_hash
+from raiden.tests.utils.factories import (
+    NettingChannelEndStateProperties,
+    make_block_hash,
+    make_transaction_hash,
+)
 from raiden.transfer import channel
 from raiden.transfer.channel import (
     compute_locksroot,
     get_batch_unlock_gain,
     get_secret,
     get_status,
-    handle_action_update_fee,
     handle_block,
     handle_receive_lockedtransfer,
     is_balance_proof_usable_onchain,
     is_valid_balanceproof_signature,
     set_settled,
+    update_fee_schedule_after_balance_change,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.events import SendPFSFeeUpdate
 from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
@@ -33,7 +38,6 @@ from raiden.transfer.state import (
     UnlockPartialProofState,
 )
 from raiden.transfer.state_change import (
-    ActionChannelUpdateFee,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
@@ -329,21 +333,6 @@ def test_set_settled():
     assert get_status(channel) == ChannelState.STATE_SETTLED
 
 
-def test_handle_action_set_fee():
-    state = factories.create(factories.NettingChannelStateProperties())
-    flat_fee = 130
-    proportional_fee = 1000
-    action = ActionChannelUpdateFee(
-        canonical_identifier=state.canonical_identifier,
-        fee_schedule=FeeScheduleState(flat=flat_fee, proportional=proportional_fee),
-    )
-    result = handle_action_update_fee(state, action)
-    assert result.new_state.fee_schedule.flat == flat_fee
-    assert result.new_state.fee_schedule.proportional == proportional_fee
-    assert not result.new_state.fee_schedule.imbalance_penalty
-    assert not result.events
-
-
 def make_hash_time_lock_state(amount) -> HashTimeLockState:
     return HashTimeLockState(
         amount=amount, expiration=BlockExpiration(5), secrethash=factories.UNIT_SECRETHASH
@@ -432,3 +421,16 @@ def test_get_capacity():
 
     channel_state.our_state = replace(our_state, onchain_total_withdraw=50)
     assert channel.get_capacity(channel_state) == 100
+
+
+def test_update_fee_schedule_after_balance_change():
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=100),
+            partner_state=NettingChannelEndStateProperties(balance=0),
+        )
+    )
+    fee_config = MediationFeeConfig(proportional_imbalance_fee=100_000)  # 10%
+    events = update_fee_schedule_after_balance_change(channel_state, fee_config)
+    assert isinstance(events[0], SendPFSFeeUpdate)
+    assert channel_state.fee_schedule.imbalance_penalty[0] == (0, 10)

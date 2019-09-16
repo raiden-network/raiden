@@ -10,7 +10,7 @@ import pytest
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.transfers import Lock, Unlock
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     HOP1,
@@ -46,11 +46,11 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
+    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
-    TriggerFeeUpdate,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
@@ -260,6 +260,7 @@ def test_channelstate_update_contract_balance():
         deposit_transaction=deposit_transaction,
         block_number=block_number,
         block_hash=block_hash,
+        fee_config=MediationFeeConfig(),
     )
 
     iteration = channel.state_transition(
@@ -280,7 +281,7 @@ def test_channelstate_update_contract_balance():
     assert_partner_state(new_state.partner_state, new_state.our_state, partner_model2)
     # Also make sure that a fee update triggering event is created
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], TriggerFeeUpdate)
+    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
 
 def test_channelstate_decreasing_contract_balance():
@@ -307,6 +308,7 @@ def test_channelstate_decreasing_contract_balance():
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
         block_hash=deposit_block_hash,
+        fee_config=MediationFeeConfig(),
     )
 
     iteration = channel.state_transition(
@@ -346,6 +348,7 @@ def test_channelstate_repeated_contract_balance():
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
         block_hash=deposit_block_hash,
+        fee_config=MediationFeeConfig(),
     )
 
     our_model2 = our_model1._replace(
@@ -2256,6 +2259,7 @@ def test_receive_contract_withdraw():
         block_number=15,
         block_hash=block_hash,
         transaction_hash=make_transaction_hash(),
+        fee_config=MediationFeeConfig(),
     )
 
     iteration = channel.handle_channel_withdraw(
@@ -2269,7 +2273,7 @@ def test_receive_contract_withdraw():
     assert total_withdraw not in iteration.new_state.our_state.withdraws_pending
     # Also make sure that a fee update triggering event is created
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], TriggerFeeUpdate)
+    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
     contract_receive_withdraw = ContractReceiveChannelWithdraw(
         canonical_identifier=channel_state.canonical_identifier,
@@ -2280,6 +2284,7 @@ def test_receive_contract_withdraw():
         block_number=15,
         block_hash=block_hash,
         transaction_hash=make_transaction_hash(),
+        fee_config=MediationFeeConfig(),
     )
 
     iteration = channel.handle_channel_withdraw(
@@ -2293,4 +2298,4 @@ def test_receive_contract_withdraw():
     assert total_withdraw not in iteration.new_state.partner_state.withdraws_pending
     # Also make sure that a fee update triggering event is created
     assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], TriggerFeeUpdate)
+    assert isinstance(iteration.events[0], SendPFSFeeUpdate)

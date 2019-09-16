@@ -29,7 +29,6 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.state_change import ActionChannelUpdateFee
 from raiden.utils import sha3
 from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, TokenAmount
 from raiden.waiting import wait_for_block
@@ -384,12 +383,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     )
 
     # Let app1 consume all of the allocated mediation fee
-    action_update_fee = ActionChannelUpdateFee(
-        canonical_identifier=app1_app2_channel_state.canonical_identifier,
-        fee_schedule=FeeScheduleState(flat=FeeAmount(fee * 2)),
-    )
-
-    app1.raiden.handle_state_changes(state_changes=[action_update_fee])
+    app1_app2_channel_state.fee_schedule = FeeScheduleState(flat=FeeAmount(fee * 2))
 
     secret = factories.make_secret(0)
     secrethash = sha256(secret).digest()
@@ -463,10 +457,7 @@ def test_mediated_transfer_with_fees(
             partner_address=other_app.raiden.address,
         )
         assert channel_state
-        action_update_fee = ActionChannelUpdateFee(
-            canonical_identifier=channel_state.canonical_identifier, fee_schedule=fee_schedule
-        )
-        app.raiden.handle_state_changes(state_changes=[action_update_fee])
+        channel_state.fee_schedule = fee_schedule
 
     def get_best_routes_with_fees(*args, **kwargs):
         routes = get_best_routes_internal(*args, **kwargs)

@@ -3,10 +3,8 @@ from typing import TYPE_CHECKING
 import gevent
 
 from raiden.connection_manager import ConnectionManager
-from raiden.services import send_pfs_update
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (
-    ActionChannelUpdateFee,
     ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
     ContractReceiveNewTokenNetwork,
@@ -49,17 +47,6 @@ def after_new_route_join_network(
     )
     retry_connect = gevent.spawn(connection_manager.retry_connect)
     raiden.add_pending_greenlet(retry_connect)
-
-
-def after_local_fee_update_inform_the_pfs(
-    raiden: "RaidenService", update_fee: ActionChannelUpdateFee
-) -> None:
-    """Update the PFS with the new fee schedule."""
-    send_pfs_update(
-        raiden=raiden,
-        canonical_identifier=update_fee.canonical_identifier,
-        update_fee_schedule=True,
-    )
 
 
 def after_new_channel_start_healthcheck(
@@ -115,7 +102,3 @@ def after_blockchain_statechange(raiden: "RaidenService", state_change: StateCha
     elif type(state_change) == ContractReceiveChannelDeposit:
         assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
         after_new_deposit_join_network(raiden, state_change)
-
-    elif type(state_change) == ActionChannelUpdateFee:
-        assert isinstance(state_change, ActionChannelUpdateFee), MYPY_ANNOTATION
-        after_local_fee_update_inform_the_pfs(raiden, state_change)

@@ -45,7 +45,6 @@ from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNe
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
-    ActionChannelUpdateFee,
     ActionChannelWithdraw,
     ActionInitChain,
     ActionNewTokenNetwork,
@@ -812,13 +811,6 @@ def handle_state_change(
         elif type(state_change) == ActionChannelClose:
             assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
             iteration = handle_token_network_action(chain_state, state_change)
-        elif type(state_change) == ActionChannelUpdateFee:
-            assert isinstance(state_change, ActionChannelUpdateFee), MYPY_ANNOTATION
-            iteration = subdispatch_by_canonical_id(
-                chain_state=chain_state,
-                canonical_identifier=state_change.canonical_identifier,
-                state_change=state_change,
-            )
         elif type(state_change) == ActionChannelWithdraw:
             assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
             iteration = subdispatch_by_canonical_id(

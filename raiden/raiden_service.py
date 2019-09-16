@@ -58,8 +58,14 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
+from raiden.transfer.channel import get_capacity
+from raiden.transfer.events import SendPFSFeeUpdate
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    FeeScheduleState,
+    calculate_imbalance_fees,
+)
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -77,7 +83,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import lpex, random_secret
 from raiden.utils.logging import redact_secret
-from raiden.utils.mediation_fees import actionchannelupdatefee_from_channelstate
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
@@ -999,14 +1004,19 @@ class RaidenService(Runnable):
                     proportional_fee=fee_config.proportional_fee,
                     proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
-
-                state_change = actionchannelupdatefee_from_channelstate(
-                    channel_state=channel,
-                    flat_fee=flat_fee,
-                    proportional_fee=fee_config.proportional_fee,
+                imbalance_penalty = calculate_imbalance_fees(
+                    channel_capacity=get_capacity(channel),
                     proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
                 )
-                self.handle_and_track_state_changes([state_change])
+                channel.fee_schedule = FeeScheduleState(
+                    flat=flat_fee,
+                    proportional=fee_config.proportional_fee,
+                    imbalance_penalty=imbalance_penalty,
+                )
+                self.handle_event(
+                    chain_state,
+                    SendPFSFeeUpdate(canonical_identifier=channel.canonical_identifier),
+                )
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """

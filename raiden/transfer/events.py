@@ -314,8 +314,8 @@ class EventInvalidSecretRequest(Event):
 
 
 @dataclass(frozen=True)
-class TriggerFeeUpdate(Event):
-    """Event emitted when a fee update needs to be made for a channel.
+class SendPFSFeeUpdate(Event):
+    """ Tell the PFSs about changed fee schedules
 
     For example when a deposit or a withdrawal is made into a channel
     """
