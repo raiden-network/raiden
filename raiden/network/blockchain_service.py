@@ -4,15 +4,13 @@ import gevent
 from eth_utils import decode_hex, is_binary_address, to_checksum_address
 from gevent.lock import Semaphore
 
+from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
-from raiden.network.proxies.token_network_registry import (
-    TokenNetworkRegistry,
-    TokenNetworkRegistryMetadata,
-)
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -33,7 +31,7 @@ from raiden.utils.typing import (
     Tuple,
     typecheck,
 )
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 
@@ -42,10 +40,7 @@ class BlockChainServiceMetadata:
     # If the user deployed the smart contract the block at which it was mined
     # is unknown.
     token_network_registry_deployed_at: Optional[BlockNumber]
-    # This is a lower bound used to skip unecessary blocks in some filters. If
-    # the deployed block number is unknown a hard fork block number can be
-    # used.
-    smart_contracts_start_at: BlockNumber
+    filters_start_at: BlockNumber
 
     def __post_init__(self) -> None:
         # Having a filter installed before or after the smart contract is
@@ -53,7 +48,7 @@ class BlockChainServiceMetadata:
         # impact on performance (see #3958), a larger value will miss logs.
         is_filter_start_valid = (
             self.token_network_registry_deployed_at is not None
-            and self.token_network_registry_deployed_at != self.smart_contracts_start_at
+            and self.token_network_registry_deployed_at != self.filters_start_at
         )
         if is_filter_start_valid:
             raise ValueError(
@@ -188,11 +183,11 @@ class BlockChainService:
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
 
-                metadata = TokenNetworkRegistryMetadata(
+                metadata = SmartContractMetadata(
                     deployed_at=self.metadata.token_network_registry_deployed_at,
-                    address=address,
+                    address=Address(address),
                     abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-                    runtime_bytes=EVMBytecode(
+                    runtime_bytecode=EVMBytecode(
                         decode_hex(
                             self.contract_manager.get_runtime_hexcode(
                                 CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -200,7 +195,7 @@ class BlockChainService:
                         )
                     ),
                     gas_measurements=gas_measurements(self.contract_manager.contracts_version),
-                    filter_start_at=self.metadata.smart_contracts_start_at,
+                    filters_start_at=self.metadata.filters_start_at,
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
@@ -231,16 +226,20 @@ class BlockChainService:
             if token_network_address not in self.address_to_token_network:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
+                    address=Address(token_network_address),
+                    abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+                    gas_measurements=gas_measurements(self.contract_manager.contracts_version),
+                    runtime_bytecode=EVMBytecode(
+                        decode_hex(
+                            self.contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
+                        )
+                    ),
                     token_network_registry_address=token_network_registry_address,
-                    # FIXME: Issue #3958
-                    # The token cannot be registered before the registry is
-                    # deployed, so this is a lower bound.
-                    filter_start_at=token_network_registry.metadata.filter_start_at,
+                    filters_start_at=token_network_registry.metadata.filters_start_at,
                 )
 
                 self.address_to_token_network[token_network_address] = TokenNetwork(
                     jsonrpc_client=self.client,
-                    token_network_address=token_network_address,
                     contract_manager=self.contract_manager,
                     blockchain_service=self,
                     metadata=metadata,
@@ -256,18 +255,20 @@ class BlockChainService:
             if address not in self.address_to_token_network:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
+                    abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+                    gas_measurements=gas_measurements(self.contract_manager.contracts_version),
+                    runtime_bytecode=EVMBytecode(
+                        decode_hex(
+                            self.contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
+                        )
+                    ),
+                    address=Address(address),
                     token_network_registry_address=None,
-                    # FIXME: Issue #3958
-                    # The token network doesn't have the addres of the
-                    # registry, so it's not straight forward to figure out when
-                    # the token was registered. Here it is necessary to fall
-                    # back to the worst lower bound.
-                    filter_start_at=self.metadata.smart_contracts_start_at,
+                    filters_start_at=self.metadata.filters_start_at,
                 )
 
                 self.address_to_token_network[address] = TokenNetwork(
                     jsonrpc_client=self.client,
-                    token_network_address=address,
                     contract_manager=self.contract_manager,
                     blockchain_service=self,
                     metadata=metadata,

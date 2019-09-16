@@ -20,7 +20,6 @@ from raiden.exceptions import (
     SamePeerAddress,
 )
 from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
-from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.factories import make_address
@@ -54,17 +53,7 @@ def test_token_network_deposit_race(
         ),
     )
 
-    c1_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c1_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c1_token_network_proxy = blockchain_service.token_network(token_network_address)
     token_proxy.transfer(c1_client.address, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
@@ -114,28 +103,8 @@ def test_token_network_proxy(
         ),
     )
     c2_signer = LocalSigner(private_keys[2])
-    c1_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c1_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c1_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
-    c2_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c2_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c2_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c1_token_network_proxy = c1_chain.token_network(token_network_address)
+    c2_token_network_proxy = c2_chain.token_network(token_network_address)
 
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)
@@ -542,28 +511,8 @@ def test_token_network_proxy_update_transfer(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
         ),
     )
-    c1_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c1_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c1_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
-    c2_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c2_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c2_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c1_token_network_proxy = c1_chain.token_network(token_network_address)
+    c2_token_network_proxy = c2_chain.token_network(token_network_address)
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
@@ -770,17 +719,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         ),
     )
     c2_client = JSONRPCClient(web3, private_keys[2])
-    c1_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c1_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c1_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c1_token_network_proxy = c1_chain.token_network(token_network_address)
     # create a channel and query the state at the current block hash
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
@@ -815,17 +754,7 @@ def test_token_network_actions_at_pruned_blocks(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
         ),
     )
-    c1_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c1_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c1_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c1_token_network_proxy = c1_chain.token_network(token_network_address)
 
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_chain = BlockChainService(
@@ -836,17 +765,7 @@ def test_token_network_actions_at_pruned_blocks(
         ),
     )
 
-    c2_token_network_proxy = TokenNetwork(
-        jsonrpc_client=c2_client,
-        token_network_address=token_network_address,
-        contract_manager=contract_manager,
-        blockchain_service=c2_chain,
-        metadata=TokenNetworkMetadata(
-            deployed_at=None,
-            token_network_registry_address=None,
-            filter_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    c2_token_network_proxy = c2_chain.token_network(token_network_address)
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)
     token_proxy.transfer(c2_client.address, initial_token_balance)

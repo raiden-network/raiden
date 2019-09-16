@@ -475,7 +475,7 @@ def jsonrpc_services(
             contract_manager=contract_manager,
             metadata=BlockChainServiceMetadata(
                 token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
-                smart_contracts_start_at=GENESIS_BLOCK_NUMBER,
+                filters_start_at=GENESIS_BLOCK_NUMBER,
             ),
         )
         blockchain_services.append(blockchain)

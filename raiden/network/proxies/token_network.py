@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 import structlog
 from eth_utils import (
-    decode_hex,
     encode_hex,
     is_binary_address,
     to_canonical_address,
@@ -34,6 +33,7 @@ from raiden.exceptions import (
     SamePeerAddress,
     WithdrawMismatch,
 )
+from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import (
     get_channel_participants_from_open_event,
@@ -81,7 +81,7 @@ from raiden_contracts.constants import (
     MessageTypeId,
     ParticipantInfoIndex,
 )
-from raiden_contracts.contract_manager import ContractManager, gas_measurements
+from raiden_contracts.contract_manager import ContractManager
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -132,48 +132,31 @@ class ChannelDetails(NamedTuple):
 
 
 @dataclass
-class TokenNetworkMetadata:
-    deployed_at: Optional[BlockNumber]
+class TokenNetworkMetadata(SmartContractMetadata):
     token_network_registry_address: Optional[TokenNetworkRegistryAddress]
-
-    # Querying for on-chain logs should start at this block. This is not
-    # necessarily the block at which the TokenNetwork was deployed, it may be a
-    # lower block, meaning that the range of the filter can be non-optimal.
-    filter_start_at: BlockNumber
-
-    def __post_init__(self) -> None:
-        # Having a filter installed before or after the smart contract is
-        # deployed doesn't make sense. A smaller value will have a negative
-        # impact on performance (see #3958), a larger value will miss logs.
-        if self.deployed_at and self.filter_start_at != self.deployed_at:
-            raise ValueError(
-                "The deployed_at is known, the filters should start at that exact block"
-            )
 
 
 class TokenNetwork:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        token_network_address: TokenNetworkAddress,
         contract_manager: ContractManager,
         blockchain_service: "BlockChainService",
         metadata: TokenNetworkMetadata,
     ) -> None:
-        if not is_binary_address(token_network_address):
+        if not is_binary_address(metadata.address):
             raise ValueError("Expected binary address format for token nework")
 
         check_address_has_code(
             client=jsonrpc_client,
-            address=Address(token_network_address),
+            address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK,
-            expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)),
+            expected_code=metadata.runtime_bytecode,
         )
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
-            abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            contract_address=Address(token_network_address),
+            abi=metadata.abi, contract_address=Address(metadata.address)
         )
 
         # These are constants
@@ -181,9 +164,8 @@ class TokenNetwork:
         self._token_address = TokenAddress(
             to_canonical_address(proxy.contract.functions.token().call())
         )
-        self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
-        self.address = token_network_address
+        self.address = TokenNetworkAddress(metadata.address)
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
@@ -332,7 +314,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
-                required_gas=self.gas_measurements["TokenNetwork.openChannel"],
+                required_gas=self.metadata.gas_measurements["TokenNetwork.openChannel"],
                 block_identifier=failed_at_blocknumber,
             )
 
@@ -361,7 +343,7 @@ class TokenNetwork:
             )
         else:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetwork.openChannel"]
+                gas_limit, self.metadata.gas_measurements["TokenNetwork.openChannel"]
             )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact(
@@ -939,7 +921,7 @@ class TokenNetwork:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetwork.setTotalDeposit"]
+                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
             )
             log_details["gas_limit"] = gas_limit
 
@@ -1098,7 +1080,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=False,
-                required_gas=self.gas_measurements["TokenNetwork.setTotalDeposit"],
+                required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
                 block_identifier=failed_at_blocknumber,
             )
 
@@ -1401,7 +1383,7 @@ class TokenNetwork:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetwork.setTotalWithdraw"]
+                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"]
             )
             log_details["gas_limit"] = gas_limit
 
@@ -1509,7 +1491,7 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="total_withdraw",
                 transaction_executed=False,
-                required_gas=self.gas_measurements["TokenNetwork.setTotalWithdraw"],
+                required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
                 block_identifier=failed_at_blocknumber,
             )
             detail = self._detail_channel(
@@ -1714,7 +1696,7 @@ class TokenNetwork:
 
             if gas_limit:
                 gas_limit = safe_gas_limit(
-                    gas_limit, self.gas_measurements["TokenNetwork.closeChannel"]
+                    gas_limit, self.metadata.gas_measurements["TokenNetwork.closeChannel"]
                 )
                 log_details["gas_limit"] = gas_limit
                 transaction_hash = self.proxy.transact(
@@ -1782,7 +1764,7 @@ class TokenNetwork:
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
-                    required_gas=self.gas_measurements["TokenNetwork.closeChannel"],
+                    required_gas=self.metadata.gas_measurements["TokenNetwork.closeChannel"],
                     block_identifier=failed_at_blocknumber,
                 )
 
@@ -1973,7 +1955,8 @@ class TokenNetwork:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"]
+                gas_limit,
+                self.metadata.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
             )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact(
@@ -2097,7 +2080,9 @@ class TokenNetwork:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
-                required_gas=self.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
+                required_gas=self.metadata.gas_measurements[
+                    "TokenNetwork.updateNonClosingBalanceProof"
+                ],
                 block_identifier=failed_at_blocknumber,
             )
 
@@ -2485,7 +2470,7 @@ class TokenNetwork:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetwork.settleChannel"]
+                gas_limit, self.metadata.gas_measurements["TokenNetwork.settleChannel"]
             )
             log_details["gas_limit"] = gas_limit
 
@@ -2505,7 +2490,7 @@ class TokenNetwork:
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=True,
-                    required_gas=self.gas_measurements["TokenNetwork.settleChannel"],
+                    required_gas=self.metadata.gas_measurements["TokenNetwork.settleChannel"],
                     block_identifier=failed_at_blocknumber,
                 )
 
@@ -2543,7 +2528,7 @@ class TokenNetwork:
                     token_network=self,
                     channel_identifier=channel_identifier,
                     contract_manager=self.contract_manager,
-                    from_block=self.metadata.filter_start_at,
+                    from_block=self.metadata.filters_start_at,
                 )
                 if not participants:
                     msg = (
@@ -2627,7 +2612,7 @@ class TokenNetwork:
                 token_network=self,
                 channel_identifier=channel_identifier,
                 contract_manager=self.contract_manager,
-                from_block=self.metadata.filter_start_at,
+                from_block=self.metadata.filters_start_at,
             )
             if not participants:
                 msg = (

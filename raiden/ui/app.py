@@ -236,7 +236,7 @@ def run_app(
         contract_manager=ContractManager(config["contracts_path"]),
         metadata=BlockChainServiceMetadata(
             token_network_registry_deployed_at=token_network_registry_deployed_at,
-            smart_contracts_start_at=smart_contracts_start_at,
+            filters_start_at=smart_contracts_start_at,
         ),
     )
 
