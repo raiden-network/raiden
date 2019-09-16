@@ -3,7 +3,7 @@ from typing import Optional
 from web3.utils.filters import Filter
 
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
+from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.network.proxies.utils import get_channel_participants_from_open_event
 from raiden.transfer.state import PendingLocksState
@@ -42,7 +42,7 @@ class PaymentChannel:
             token_network=token_network,
             channel_identifier=channel_identifier,
             contract_manager=contract_manager,
-            from_block=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+            from_block=token_network.metadata.filter_start_at,
         )
 
         if not participants:
