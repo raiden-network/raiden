@@ -7,7 +7,7 @@ from gevent.lock import Semaphore
 from raiden.utils.typing import Any, Generic, Iterable, Iterator, List, Tuple, TypeVar, cast
 
 
-@dataclass(frozen=True, order=True)
+@dataclass(frozen=True, order=True, repr=False)
 class ULID:
     """An ULID.
 
@@ -22,7 +22,7 @@ class ULID:
     def __post_init__(self) -> None:
         assert len(self.identifier) == 16, "id_ must be 16 bytes long"
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"ULID<{self.identifier.hex()}>"
 
     @property
