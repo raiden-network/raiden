@@ -1,11 +1,17 @@
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.constants import EMPTY_ADDRESS, SECONDS_PER_DAY, UINT256_MAX, Environment
+from raiden.constants import (
+    EMPTY_ADDRESS,
+    GENESIS_BLOCK_NUMBER,
+    SECONDS_PER_DAY,
+    UINT256_MAX,
+    Environment,
+)
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils.smartcontracts import (
@@ -242,6 +248,11 @@ def register_token_and_return_the_network_proxy(
         token_network_address=token_network_address,
         contract_manager=contract_manager,
         blockchain_service=blockchain_service,
+        metadata=TokenNetworkMetadata(
+            deployed_at=None,
+            token_network_registry_address=None,
+            filter_start_at=GENESIS_BLOCK_NUMBER,
+        ),
     )
 
 

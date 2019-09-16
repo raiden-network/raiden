@@ -2,11 +2,12 @@ import gevent
 from eth_utils import is_binary_address
 from gevent.lock import Semaphore
 
+from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetadata
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
@@ -166,11 +167,18 @@ class BlockChainService:
 
         with self._token_network_creation_lock:
             if address not in self.address_to_token_network:
+                metadata = TokenNetworkMetadata(
+                    deployed_at=None,
+                    token_network_registry_address=None,
+                    filter_start_at=GENESIS_BLOCK_NUMBER,  # FIXME: Issue #3958
+                )
+
                 self.address_to_token_network[address] = TokenNetwork(
                     jsonrpc_client=self.client,
                     token_network_address=address,
                     contract_manager=self.contract_manager,
                     blockchain_service=self,
+                    metadata=metadata,
                 )
 
         return self.address_to_token_network[address]
