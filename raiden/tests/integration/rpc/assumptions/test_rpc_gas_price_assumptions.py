@@ -76,23 +76,11 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     assert gas_estimate, "Gas estimation should not fail here"
 
     zerogas_txhash = zero_gas_proxy.transact("ret", gas_estimate)
-
-    zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
-
-    # wait for a few blocks, since this is a private chain, if the transaction
-    # is supposed to be mined it will happen quite fast.
-    current_block = deploy_client.block_number()
-    target_block_number = current_block + 5
-    while current_block < target_block_number:
-        current_block = deploy_client.block_number()
-        gevent.sleep(0.5)
-
+    zerogas_receipt = deploy_client.poll(zerogas_txhash)
     zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
 
     msg = "Even thought the transaction had a zero gas price, it is not removed from the pool"
     assert zerogas_tx is not None, msg
-
-    zerogas_receipt = deploy_client.web3.eth.getTransactionReceipt(zerogas_txhash)
 
     msg = "Even though the transaction had gas price of zero, it did get mined."
     assert zerogas_receipt["status"] != RECEIPT_FAILURE_CODE, msg
@@ -124,9 +112,6 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     zero_gas_proxy = client.new_contract_proxy(
         abi=normal_gas_proxy.contract.abi, contract_address=normal_gas_proxy.contract_address
     )
-
-    # assert miner_client.web3.eth.mining, "Miner should be mining"
-    # assert not client.web3.eth.mining, "Extra client should NOT be mining"
 
     address = normal_gas_proxy.contract_address
     assert len(client.web3.eth.getCode(to_checksum_address(address))) > 0
