@@ -49,7 +49,8 @@ def test_token_network_deposit_race(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
 
@@ -91,7 +92,8 @@ def test_token_network_proxy(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c2_client = JSONRPCClient(web3, private_keys[2])
@@ -99,7 +101,8 @@ def test_token_network_proxy(
         jsonrpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c2_signer = LocalSigner(private_keys[2])
@@ -499,7 +502,8 @@ def test_token_network_proxy_update_transfer(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c1_signer = LocalSigner(private_keys[1])
@@ -508,7 +512,8 @@ def test_token_network_proxy_update_transfer(
         jsonrpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c1_token_network_proxy = c1_chain.token_network(token_network_address)
@@ -715,7 +720,8 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c2_client = JSONRPCClient(web3, private_keys[2])
@@ -751,7 +757,8 @@ def test_token_network_actions_at_pruned_blocks(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     c1_token_network_proxy = c1_chain.token_network(token_network_address)
@@ -761,7 +768,8 @@ def test_token_network_actions_at_pruned_blocks(
         jsonrpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=BlockChainServiceMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
 
