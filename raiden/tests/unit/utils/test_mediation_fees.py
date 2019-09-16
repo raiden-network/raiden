@@ -28,14 +28,14 @@ from raiden.utils.typing import (
     [(FeeAmount(42), FeeAmount(21)), (FeeAmount(43), FeeAmount(21))],
 )
 def test_prepare_mediation_fee_config_flat_fee(cli_flat_fee, expected_channel_flat_fee):
-    token_network_address = factories.make_token_network_address()
+    token_address = factories.make_token_address()
     fee_config = prepare_mediation_fee_config(
-        cli_token_network_to_flat_fee=((token_network_address, cli_flat_fee),),
-        proportional_fee=ProportionalFeeAmount(0),
-        proportional_imbalance_fee=ProportionalFeeAmount(0),
+        cli_token_to_flat_fee=((token_address, cli_flat_fee),),
+        cli_token_to_proportional_fee=((token_address, ProportionalFeeAmount(0)),),
+        cli_token_to_proportional_imbalance_fee=((token_address, ProportionalFeeAmount(0)),),
     )
 
-    assert fee_config.get_flat_fee(token_network_address) == expected_channel_flat_fee
+    assert fee_config.get_flat_fee(token_address) == expected_channel_flat_fee
 
 
 @pytest.mark.parametrize(
@@ -50,14 +50,15 @@ def test_prepare_mediation_fee_config_flat_fee(cli_flat_fee, expected_channel_fl
     ],
 )
 def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
+    token_address = factories.make_token_address()
     fee_config = prepare_mediation_fee_config(
-        cli_token_network_to_flat_fee=(),
-        proportional_fee=ProportionalFeeAmount(cli_prop_fee),
-        proportional_imbalance_fee=ProportionalFeeAmount(0),
+        cli_token_to_flat_fee=(),
+        cli_token_to_proportional_fee=((token_address, ProportionalFeeAmount(cli_prop_fee)),),
+        cli_token_to_proportional_imbalance_fee=((token_address, ProportionalFeeAmount(0)),),
     )
 
     cli_prop_fee_ratio = cli_prop_fee / 1e6
-    channel_prop_fee_ratio = fee_config.proportional_fee / 1e6
+    channel_prop_fee_ratio = fee_config.get_proportional_fee(token_address) / 1e6
 
     assert isclose(
         1 + cli_prop_fee_ratio,
@@ -100,12 +101,10 @@ def test_get_initial_payment_for_final_target_amount(
         ]
     )
 
-    result = get_initial_payment_for_final_target_amount(
+    calculation = get_initial_payment_for_final_target_amount(
         final_amount=final_amount, channels=channel_set.channels
     )
 
-    assert result is not None
-    payment_amount, fees = result
-
-    assert payment_amount == initial_amount
-    assert fees == expected_fees
+    assert calculation is not None
+    assert calculation.total_amount == initial_amount
+    assert calculation.mediators_cut == expected_fees

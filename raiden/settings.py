@@ -87,19 +87,17 @@ class MediationFeeConfig:
         default_factory=dict
     )
 
-    def get_flat_fee(self, token_network_address: TokenAddress) -> FeeAmount:
+    def get_flat_fee(self, token_address: TokenAddress) -> FeeAmount:
         return self.token_to_flat_fee.get(  # pylint: disable=no-member
-            token_network_address, DEFAULT_MEDIATION_FLAT_FEE
+            token_address, DEFAULT_MEDIATION_FLAT_FEE
         )
 
-    def get_proportional_fee(self, token_network_address: TokenAddress) -> ProportionalFeeAmount:
+    def get_proportional_fee(self, token_address: TokenAddress) -> ProportionalFeeAmount:
         return self.token_to_proportional_fee.get(  # pylint: disable=no-member
-            token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_FEE
+            token_address, DEFAULT_MEDIATION_PROPORTIONAL_FEE
         )
 
-    def get_proportional_imbalance_fee(
-        self, token_network_address: TokenAddress
-    ) -> ProportionalFeeAmount:
+    def get_proportional_imbalance_fee(self, token_address: TokenAddress) -> ProportionalFeeAmount:
         return self.token_to_proportional_imbalance_fee.get(  # pylint: disable=no-member
-            token_network_address, DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
+            token_address, DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
         )
