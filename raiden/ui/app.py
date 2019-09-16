@@ -17,7 +17,11 @@ from raiden.constants import (
     RAIDEN_DB_VERSION,
     Environment,
     EthereumForks,
+    GoerliForks,
+    KovanForks,
     Networks,
+    RinkebyForks,
+    RopstenForks,
     RoutingMode,
 )
 from raiden.exceptions import RaidenError
@@ -117,6 +121,23 @@ def get_account_and_private_key(
         )
 
     return to_canonical_address(address_hex), privatekey_bin
+
+
+def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
+    if network_id == Networks.MAINNET:
+        smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
+    elif network_id == Networks.ROPSTEN:
+        smart_contracts_start_at = RopstenForks.CONSTANTINOPLE.value
+    elif network_id == Networks.KOVAN:
+        smart_contracts_start_at = KovanForks.CONSTANTINOPLE.value
+    elif network_id == Networks.RINKEBY:
+        smart_contracts_start_at = RinkebyForks.CONSTANTINOPLE.value
+    elif network_id == Networks.GOERLI:
+        smart_contracts_start_at = GoerliForks.CONSTANTINOPLE.value
+    else:
+        smart_contracts_start_at = GENESIS_BLOCK_NUMBER
+
+    return smart_contracts_start_at
 
 
 def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
@@ -224,12 +245,10 @@ def run_app(
             contracts["TokenNetworkRegistry"]["block_number"]
         )
 
-    if token_network_registry_deployed_at is not None:
-        smart_contracts_start_at = token_network_registry_deployed_at
-    elif network_id == Networks.MAINNET:
-        smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
+    if token_network_registry_deployed_at is None:
+        smart_contracts_start_at = get_smart_contracts_start_at(network_id)
     else:
-        smart_contracts_start_at = GENESIS_BLOCK_NUMBER
+        smart_contracts_start_at = token_network_registry_deployed_at
 
     blockchain_service = BlockChainService(
         jsonrpc_client=rpc_client,

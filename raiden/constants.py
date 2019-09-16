@@ -34,18 +34,34 @@ SECONDS_PER_DAY = 24 * 60 * 60
 
 GENESIS_BLOCK_NUMBER = BlockNumber(0)
 
+# Relevant forks:
+# BYZANTIUM https://eips.ethereum.org/EIPS/eip-609
+# CONSTANTINOPLE https://eips.ethereum.org/EIPS/eip-1013
+
 
 class EthereumForks(Enum):
-    # https://eips.ethereum.org/EIPS/eip-606
-    HOMESTEAD = BlockNumber(1_150_000)
-    # https://eips.ethereum.org/EIPS/eip-608
-    TANGERINE_WHISTLE = BlockNumber(2_463_000)
-    # https://eips.ethereum.org/EIPS/eip-607
-    SPURIOUS_DRAGON = BlockNumber(2_675_000)
-    # https://eips.ethereum.org/EIPS/eip-609
     BYZANTIUM = BlockNumber(4_370_000)
-    # https://eips.ethereum.org/EIPS/eip-1013
     CONSTANTINOPLE = BlockNumber(7_280_000)
+
+
+class RopstenForks(Enum):
+    BYZANTIUM = BlockNumber(1_700_000)
+    CONSTANTINOPLE = BlockNumber(4_230_000)
+
+
+class KovanForks(Enum):
+    BYZANTIUM = BlockNumber(0)
+    CONSTANTINOPLE = BlockNumber(4_230_000)
+
+
+class RinkebyForks(Enum):
+    BYZANTIUM = BlockNumber(0)
+    CONSTANTINOPLE = BlockNumber(3_660_663)
+
+
+class GoerliForks(Enum):
+    BYZANTIUM = BlockNumber(0)
+    CONSTANTINOPLE = BlockNumber(0)
 
 
 class Networks(Enum):
