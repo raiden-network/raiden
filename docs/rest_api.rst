@@ -106,6 +106,28 @@ Querying Information About Your Raiden Node
           "our_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
       }
 
+.. http:get:: /api/(version)/version
+
+   Query the version of the Raiden instance
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/version HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "version": "0.100.5a1.dev157+geb2af878d"
+      }
+
 Deploying
 =========
 .. note::
