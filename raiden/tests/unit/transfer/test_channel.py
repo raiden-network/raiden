@@ -4,7 +4,6 @@ from dataclasses import replace
 from hashlib import sha256
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
-from raiden.settings import MediationFeeConfig
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
@@ -43,6 +42,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
+from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import BlockExpiration, TokenAmount
 
 
@@ -430,7 +430,13 @@ def test_update_fee_schedule_after_balance_change():
             partner_state=NettingChannelEndStateProperties(balance=0),
         )
     )
-    fee_config = MediationFeeConfig(proportional_imbalance_fee=100_000)  # 10%
+
+    fee_config = prepare_mediation_fee_config(
+        cli_token_to_flat_fee=(),
+        cli_token_to_proportional_fee=(),
+        # 10%
+        cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 100_000),),
+    )
     events = update_fee_schedule_after_balance_change(channel_state, fee_config)
     assert isinstance(events[0], SendPFSFeeUpdate)
     assert channel_state.fee_schedule.imbalance_penalty[0] == (0, 10)

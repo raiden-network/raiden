@@ -62,8 +62,7 @@ def prepare_mediation_fee_config(
     }
 
     tn_to_proportional_imbalance_fee: Dict[TokenAddress, ProportionalFeeAmount] = {
-        address: ppm_fee_per_channel(prop_fee)
-        for address, prop_fee in cli_token_to_proportional_imbalance_fee
+        address: prop_fee for address, prop_fee in cli_token_to_proportional_imbalance_fee
     }
 
     return MediationFeeConfig(
