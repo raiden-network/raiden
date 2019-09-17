@@ -8,7 +8,7 @@ import structlog
 from eth_utils import encode_hex, is_checksum_address, to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
-from requests.exceptions import ConnectTimeout, ReadTimeout
+from requests.exceptions import ReadTimeout
 from web3 import Web3
 from web3.contract import ContractFunction
 from web3.eth import Eth
@@ -23,11 +23,10 @@ from raiden.blockchain.filters import StatelessFilter
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
-    EthNodeCommunicationError,
     EthNodeInterfaceError,
     InsufficientFunds,
 )
-from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
+from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import privatekey_to_address
 from raiden.utils.ethereum_clients import is_supported_client
@@ -352,10 +351,6 @@ def monkey_patch_web3(web3, gas_price_strategy):
         # scoped web3 instance is used for all clients
         pass
 
-    # create the connection test middleware (but only for non-tester chain)
-    if not hasattr(web3, "testing"):
-        web3.middleware_stack.inject(connection_test_middleware, layer=0)
-
     # Temporary until next web3.py release (5.X.X)
     ContractFunction.estimateGas = patched_contractfunction_estimateGas
     Eth.estimateGas = patched_web3_eth_estimate_gas
@@ -393,11 +388,7 @@ class JSONRPCClient:
 
         monkey_patch_web3(web3, gas_price_strategy)
 
-        try:
-            version = web3.version.node
-        except ConnectTimeout:
-            raise EthNodeCommunicationError("couldnt reach the ethereum node")
-
+        version = web3.version.node
         supported, eth_node, _ = is_supported_client(version)
 
         if not supported:

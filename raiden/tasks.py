@@ -1,5 +1,4 @@
 import re
-from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING, Dict
 
 import click
@@ -20,7 +19,6 @@ from raiden.constants import (
     RELEASE_PAGE,
     SECURITY_EXPRESSION,
 )
-from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
@@ -202,10 +200,7 @@ class AlarmTask(Runnable):
 
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
-            try:
-                latest_block = self.chain.get_block(block_identifier="latest")
-            except JSONDecodeError as e:
-                raise EthNodeCommunicationError(str(e))
+            latest_block = self.chain.get_block(block_identifier="latest")
 
             self._maybe_run_callbacks(latest_block)
 

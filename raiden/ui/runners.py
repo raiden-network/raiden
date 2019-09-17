@@ -11,17 +11,12 @@ import gevent
 import gevent.monkey
 import structlog
 from gevent.event import AsyncResult
-from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 
 from raiden import constants, settings
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
-from raiden.exceptions import (
-    APIServerPortInUseError,
-    EthNodeCommunicationError,
-    EthNodeInterfaceError,
-    RaidenError,
-)
+from raiden.exceptions import APIServerPortInUseError, EthNodeInterfaceError, RaidenError
 from raiden.log_config import configure_logging
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
@@ -93,7 +88,7 @@ class NodeRunner:
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
             app_ = run_app(**self._options)
-        except (EthNodeCommunicationError, RequestsConnectionError):
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RuntimeError as e:
@@ -197,7 +192,7 @@ class NodeRunner:
         try:
             event.get()
             print("Signal received. Shutting down ...")
-        except (EthNodeCommunicationError, RequestsConnectionError):
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RaidenError as ex:
