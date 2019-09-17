@@ -949,33 +949,32 @@ class MatrixTransport(Runnable):
         address_hex = to_normalized_address(address)
         msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
         assert address and self._address_mgr.is_address_known(address), msg
+        assert self._raiden_service is not None
 
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
-        if room_ids:  # if we know any room for this user, use the first one
-            # This loop is used to ignore any broadcast rooms that may have 'polluted' the
-            # user's room cache due to bug #3765
-            # Can be removed after the next upgrade that switches to a new TokenNetworkRegistry
-            while room_ids:
-                room_id = room_ids.pop(0)
-                room = self._client.rooms[room_id]
-                if not self._is_broadcast_room(room):
-                    self.log.debug("Existing room", room=room, members=room.get_joined_members())
-                    return room
-                self.log.warning("Ignoring broadcast room for peer", room=room, peer=address_hex)
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-        address_pair = sorted(
-            [to_normalized_address(address) for address in [address, self._raiden_service.address]]
-        )
-        room_name = make_room_alias(self.chain_id, *address_pair)
+        online_user_ids = self._address_mgr.get_online_user_ids_for_address(address)
+        for room_id in room_ids:
+            room = self._client.rooms[room_id]
+            member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
+            if not member_ids & online_user_ids and member_ids:
+                continue
+            if not self._is_room_global(room):
+                continue
+            self.log.debug(
+                "Existing room",
+                room=room,
+                members=member_ids,
+                listening_peers=member_ids & online_user_ids,
+            )
+            return room
 
         # no room with expected name => create one and invite peer
+
+        # filter peer_candidates
         peer_candidates = [
             self._get_user(user) for user in self._client.search_user_directory(address_hex)
         ]
-
-        # filter peer_candidates
         peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
         if not peers:
             self.log.error("No valid peer found", peer_address=to_checksum_address(address))
@@ -984,7 +983,7 @@ class MatrixTransport(Runnable):
         if self._private_rooms:
             room = self._create_private_room(invitees=peers)
         else:
-            room = self._get_public_room(room_name, invitees=peers)
+            room = self._get_public_room(invitees=peers)
 
         peer_ids = self._address_mgr.get_userids_for_address(address)
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
@@ -1019,6 +1018,13 @@ class MatrixTransport(Runnable):
 
     def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
         """ Obtain a public, canonically named (if possible) room and invite peers """
+        # retrieve address from invitees implicitly, is constant for all invitees
+        assert self._raiden_service is not None  # Extra assertion for mypy
+        address = validate_userid_signature(invitees[0])
+        address_pair = sorted(
+            [to_normalized_address(address) for address in [address, self._raiden_service.address]]
+        )
+        room_name = make_room_alias(self.network_id, *address_pair)
         room_name_full = f"#{room_name}:{self._server_name}"
         invitees_uids = [user.user_id for user in invitees]
 
