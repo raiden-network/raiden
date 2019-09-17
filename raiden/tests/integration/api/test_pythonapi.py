@@ -78,7 +78,9 @@ def run_test_token_addresses(raiden_network, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):
+def test_raidenapi_channel_lifecycle(
+    raiden_network, token_addresses, deposit, retry_timeout, settle_timeout_max
+):
     """Uses RaidenAPI to go through a complete channel lifecycle."""
     node1, node2 = raiden_network
     token_address = token_addresses[0]
@@ -105,6 +107,16 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
     # Make sure a small settle timeout is not accepted when opening a channel
     with pytest.raises(InvalidSettleTimeout):
         invalid_settle_timeout = node1.raiden.config["reveal_timeout"] * 2 - 1
+        api1.channel_open(
+            registry_address=node1.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=api2.address,
+            settle_timeout=invalid_settle_timeout,
+        )
+
+    # Make sure a too large settle timeout is not accepted when opening a channel
+    with pytest.raises(InvalidSettleTimeout):
+        invalid_settle_timeout = settle_timeout_max + 1
         api1.channel_open(
             registry_address=node1.raiden.default_registry.address,
             token_address=token_address,
