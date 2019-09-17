@@ -779,7 +779,7 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 "Message from invalid user displayName signature",
                 peer_user=user.user_id,
-                room=room,
+                room_id=room.room_id,
             )
             return False
 
@@ -790,7 +790,7 @@ class MatrixTransport(Runnable):
                 "Message from non-whitelisted peer - ignoring",
                 sender=user,
                 sender_address=to_checksum_address(peer_address),
-                room=room,
+                room_id=room.room_id,
             )
             return False
 
@@ -808,7 +808,7 @@ class MatrixTransport(Runnable):
                 "Ignoring invalid message",
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
-                room=room,
+                room_id=room.room_id,
                 expected_room_ids=room_ids,
                 reason=reason,
             )
@@ -825,7 +825,7 @@ class MatrixTransport(Runnable):
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
                 known_user_rooms=room_ids,
-                room=room,
+                room_id=room.room_id,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
@@ -851,7 +851,7 @@ class MatrixTransport(Runnable):
             messages=messages,
             sender=to_checksum_address(peer_address),
             sender_user=user,
-            room=room,
+            room_id=room.room_id,
         )
 
         for message in messages:
@@ -938,7 +938,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Send raw",
             receiver=to_checksum_address(receiver_address),
-            room=room,
+            room_id=room.room_id,
             data=data.replace("\n", "\\n"),
         )
         room.send_text(data)
@@ -963,10 +963,18 @@ class MatrixTransport(Runnable):
                 continue
             self.log.debug(
                 "Existing room",
-                room=room,
+                room_id=room.room_id,
                 members=member_ids,
                 listening_peers=member_ids & online_user_ids,
             )
+            if not member_ids & online_user_ids and member_ids:
+                self.log.error(
+                    "No online user listening to current room",
+                    room_id=room.room_id,
+                    users_currently_online=online_user_ids,
+                    room_members=member_ids,
+                    peer_address=to_checksum_address(address),
+                )
             return room
 
         # no room with expected name => create one and invite peer
@@ -1013,7 +1021,7 @@ class MatrixTransport(Runnable):
         room = self._client.create_room(
             None, invitees=[user.user_id for user in invitees], is_public=False
         )
-        self.log.debug("Creating private room", room=room, invitees=invitees)
+        self.log.debug("Creating private room", room_id=room.room_id, invitees=invitees)
         return room
 
     def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
@@ -1049,7 +1057,7 @@ class MatrixTransport(Runnable):
                 # Invite users to existing room
                 member_ids = {user.user_id for user in room.get_joined_members(force_resync=True)}
                 users_to_invite = set(invitees_uids) - member_ids
-                self.log.debug("Inviting users", room=room, invitee_ids=users_to_invite)
+                self.log.debug("Inviting users", room_id=room.room_id, invitee_ids=users_to_invite)
                 for invitee_id in users_to_invite:
                     room.invite_user(invitee_id)
                 self.log.debug("Joined public room", room=room)
@@ -1071,14 +1079,16 @@ class MatrixTransport(Runnable):
                     msg, room_name=room_name, error=error.content, error_code=error.code
                 )
             else:
-                self.log.debug("Room created successfully", room=room, invitees=invitees)
+                self.log.debug(
+                    "Room created successfully", room_id=room.room_id, invitees=invitees
+                )
                 break
         else:
             # if can't join nor create, create an unnamed one
             room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
             self.log.warning(
                 "Could not create nor join a named room. Successfuly created an unnamed one",
-                room=room,
+                room_id=room.room_id,
                 invitees=invitees,
             )
 
@@ -1359,7 +1369,7 @@ class MatrixTransport(Runnable):
         ):
             self.log.error(
                 "User to be invited is not online, trying to invite nonetheless",
-                room=room,
+                room_id=room.room_id,
                 user_id=user.user_id,
                 peer_address=to_checksum_address(address),
             )
@@ -1373,7 +1383,7 @@ class MatrixTransport(Runnable):
                 except (json.JSONDecodeError, MatrixRequestError):
                     self.log.warning(
                         "Exception inviting user, maybe their server is not healthy",
-                        room=room,
+                        room_id=room.room_id,
                         user_id=user.user_id,
                         peer_address=to_checksum_address(address),
                         exc_info=True,
@@ -1383,7 +1393,7 @@ class MatrixTransport(Runnable):
                 retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
                 self.log.debug(
                     "Waiting for peer to join from invite",
-                    room=room,
+                    room_id=room.room_id,
                     user_id=user.user_id,
                     peer_address=to_checksum_address(address),
                 )
@@ -1397,7 +1407,7 @@ class MatrixTransport(Runnable):
                 # Inform the client, that currently no one listens:
                 self.log.error(
                     "Peer has not joined from invite yet, should join eventually",
-                    room=room,
+                    room_id=room.room_id,
                     user_id=user.user_id,
                     peer_address=to_checksum_address(address),
                 )
