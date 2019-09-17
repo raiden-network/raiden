@@ -672,7 +672,7 @@ class RaidenService(Runnable):
             log.error(str(e))
         except InvalidDBData:
             raise
-        except RaidenUnrecoverableError as e:
+        except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
             log_unrecoverable = (
                 self.config["environment_type"] == Environment.PRODUCTION
                 and not self.config["unrecoverable_error_should_crash"]
@@ -804,23 +804,9 @@ class RaidenService(Runnable):
         )
 
         for transaction in pending_transactions:
-            try:
-                self.raiden_event_handler.on_raiden_event(
-                    raiden=self, chain_state=chain_state, event=transaction
-                )
-            except RaidenRecoverableError as e:
-                log.error(str(e))
-            except InvalidDBData:
-                raise
-            except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
-                log_unrecoverable = (
-                    self.config["environment_type"] == Environment.PRODUCTION
-                    and not self.config["unrecoverable_error_should_crash"]
-                )
-                if log_unrecoverable:
-                    log.error(str(e))
-                else:
-                    raise
+            self.add_pending_greenlet(
+                self.handle_event(chain_state=chain_state, raiden_event=transaction)
+            )
 
     def _initialize_payment_statuses(self, chain_state: ChainState) -> None:
         """ Re-initialize targets_to_identifiers_to_statuses.
