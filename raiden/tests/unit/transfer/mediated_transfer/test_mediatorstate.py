@@ -1950,7 +1950,8 @@ def test_imbalance_penalty_at_insufficent_payer_balance():
     pair, _ = _foward_transfer_pair(
         10,
         NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(balance=9),
+            # the payer's capacity is 20 - 11 = 9
+            our_state=NettingChannelEndStateProperties(balance=11),
             fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
         ),
         NettingChannelStateProperties(
@@ -1993,7 +1994,8 @@ def test_imbalance_penalty_with_barely_sufficient_balance():
     pair, _ = _foward_transfer_pair(
         10,
         NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(balance=11),
+            # the payer's capacity is 20 - 9 = 11
+            our_state=NettingChannelEndStateProperties(balance=9),
             fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
         ),
         NettingChannelStateProperties(

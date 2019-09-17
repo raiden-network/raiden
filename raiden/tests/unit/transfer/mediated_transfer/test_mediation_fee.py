@@ -68,27 +68,31 @@ def test_imbalance_penalty():
             (TokenAmount(100), FeeAmount(10)),
         ]
     )
-    assert v_schedule.fee_payer(
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 0), amount=PaymentWithFeeAmount(50)
     ) == FeeAmount(-10)
+    # The payer channel works in the opposite direction
     assert v_schedule.fee_payer(
+        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(-50)
+    ) == FeeAmount(-10)
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 50), amount=PaymentWithFeeAmount(50)
     ) == FeeAmount(10)
-    assert v_schedule.fee_payer(
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 0), amount=PaymentWithFeeAmount(10)
     ) == FeeAmount(-2)
-    assert v_schedule.fee_payer(
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 10), amount=PaymentWithFeeAmount(10)
     ) == FeeAmount(-2)
-    assert v_schedule.fee_payer(
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 0), amount=PaymentWithFeeAmount(20)
     ) == FeeAmount(-4)
-    assert v_schedule.fee_payer(
+    assert v_schedule.fee_payee(
         balance=Balance(100 - 40), amount=PaymentWithFeeAmount(20)
     ) == FeeAmount(0)
 
     with pytest.raises(UndefinedMediationFee):
-        v_schedule.fee_payer(balance=Balance(0), amount=PaymentWithFeeAmount(1))
+        v_schedule.fee_payee(balance=Balance(0), amount=PaymentWithFeeAmount(1))
 
 
 def test_linspace():
