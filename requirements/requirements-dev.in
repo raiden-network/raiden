@@ -33,6 +33,9 @@ hypothesis
 pdbpp
 colour
 
+# Profilling
+objgraph
+
 # Continuous Integration
 coverage
 
