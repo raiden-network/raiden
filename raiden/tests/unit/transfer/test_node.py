@@ -47,10 +47,10 @@ from raiden.transfer.node import (
     subdispatch_to_paymenttask,
 )
 from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     ChannelState,
     HopState,
+    NetworkState,
     PendingLocksState,
     RouteState,
     TokenNetworkGraphState,
@@ -369,7 +369,7 @@ def test_subdispatch_by_canonical_id(chain_state):
 
 def test_handle_node_change_network_state(chain_state, netting_channel_state, monkeypatch):
     state_change = ActionChangeNodeNetworkState(
-        node_address=factories.make_address(), network_state=NODE_NETWORK_REACHABLE
+        node_address=factories.make_address(), network_state=NetworkState.NODE_NETWORK_REACHABLE
     )
     transition_result = handle_action_change_node_network_state(chain_state, state_change)
     # no events if no mediator tasks are there to apply to

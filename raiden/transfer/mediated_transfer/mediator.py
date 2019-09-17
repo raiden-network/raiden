@@ -30,9 +30,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
     ChannelState,
     NettingChannelState,
+    NetworkState,
     RouteState,
     message_identifier_from_prng,
 )
@@ -1426,7 +1426,7 @@ def handle_node_change_network_state(
     3. Check that the transfer was stuck because there was no route available.
     4. Send the transfer again to this now-available route.
     """
-    if state_change.network_state != NODE_NETWORK_REACHABLE:
+    if state_change.network_state != NetworkState.NODE_NETWORK_REACHABLE:
         return TransitionResult(mediator_state, list())
 
     try:

@@ -36,7 +36,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import NODE_NETWORK_UNREACHABLE, message_identifier_from_prng
+from raiden.transfer.state import NetworkState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import BlockExpiration
@@ -585,7 +585,8 @@ def test_regression_unavailable_nodes_must_be_properly_filtered():
     payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
 
     all_nodes_offline = {
-        channel.partner_state.address: NODE_NETWORK_UNREACHABLE for channel in channels.channels
+        channel.partner_state.address: NetworkState.NODE_NETWORK_UNREACHABLE
+        for channel in channels.channels
     }
 
     initial_iteration = mediator.state_transition(

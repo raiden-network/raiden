@@ -1,4 +1,4 @@
-from raiden.transfer.state import NODE_NETWORK_REACHABLE, RouteState
+from raiden.transfer.state import NetworkState, RouteState
 from raiden.utils.typing import ChannelID, List, NodeNetworkStateMap
 
 
@@ -10,7 +10,8 @@ def filter_reachable_routes(
     return [
         route
         for route in route_states
-        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NODE_NETWORK_REACHABLE
+        if nodeaddresses_to_networkstates.get(route.next_hop_address)
+        == NetworkState.NODE_NETWORK_REACHABLE
     ]
 
 

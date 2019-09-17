@@ -13,9 +13,8 @@ from raiden.transfer import node, token_network, views
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
+    NetworkState,
     PendingLocksState,
     RouteState,
     TokenNetworkGraphState,
@@ -837,10 +836,10 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
-        address3: NODE_NETWORK_REACHABLE,
-        address4: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
+        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address4: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes1, _ = get_best_routes(
@@ -859,10 +858,10 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     # test routing with node 2 offline
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_UNREACHABLE,
-        address3: NODE_NETWORK_REACHABLE,
-        address4: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_UNREACHABLE,
+        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address4: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes1, _ = get_best_routes(
@@ -881,10 +880,10 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
     # test routing with node 3 offline
     # the routing doesn't care as node 3 is not directly connected
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
-        address3: NODE_NETWORK_UNREACHABLE,
-        address4: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
+        address3: NetworkState.NODE_NETWORK_UNREACHABLE,
+        address4: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes1, _ = get_best_routes(
@@ -903,10 +902,10 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
 
     # test routing with node 1 offline
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_UNREACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
-        address3: NODE_NETWORK_REACHABLE,
-        address4: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_UNREACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
+        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address4: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes1, _ = get_best_routes(
@@ -1070,9 +1069,9 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
 
     # test routing priority with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
-        address3: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
+        address3: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes, _ = get_best_routes(
@@ -1091,10 +1090,10 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
 
     # number of hops overwrites refunding capacity (route over node 2 involves less hops)
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
-        address3: NODE_NETWORK_REACHABLE,
-        address4: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
+        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address4: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     routes, _ = get_best_routes(
@@ -1173,8 +1172,8 @@ def test_internal_routing_mediation_fees(
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NODE_NETWORK_REACHABLE,
-        address2: NODE_NETWORK_REACHABLE,
+        address1: NetworkState.NODE_NETWORK_REACHABLE,
+        address2: NetworkState.NODE_NETWORK_REACHABLE,
     }
 
     # Routing to our direct partner would require 0 mediation fees.x
