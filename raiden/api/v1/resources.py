@@ -34,6 +34,11 @@ class AddressResource(BaseResource):
         return self.rest_api.get_our_address()
 
 
+class VersionResource(BaseResource):
+    def get(self):
+        return self.rest_api.get_raiden_version()
+
+
 class ChannelsResource(BaseResource):
 
     put_schema = ChannelPutSchema
