@@ -18,7 +18,7 @@ LOG_BLACKLIST = {
     ): r"\1/<redacted>",
 }
 DEFAULT_LOG_LEVEL = "INFO"
-MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
+MAX_LOG_FILE_SIZE = 250 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
 
 _FIRST_PARTY_PACKAGES = frozenset(["raiden", "raiden_contracts"])
