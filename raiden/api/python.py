@@ -45,7 +45,6 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     Any,
-    BlockNumber,
     BlockSpecification,
     BlockTimeout,
     ChannelID,
@@ -221,8 +220,6 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
-        chainstate_before_addition = views.state_from_raiden(self.raiden)
-
         # The following check is on prestate because the chain state does not
         # change here.
         # views.state_from_raiden() returns the same state again and again
@@ -231,30 +228,23 @@ class RaidenAPI:  # pragma: no unittest
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
         registry = self.raiden.chain.token_network_registry(registry_address)
+        chainstate = views.state_from_raiden(self.raiden)
 
-        try:
-            return registry.add_token(
-                token_address=token_address,
-                channel_participant_deposit_limit=channel_participant_deposit_limit,
-                token_network_deposit_limit=token_network_deposit_limit,
-                block_identifier=chainstate_before_addition.block_hash,
-            )
-        except RaidenRecoverableError as e:
-            if "Token already registered" in str(e):
-                raise AlreadyRegisteredTokenAddress("Token already registered")
-            # else
-            raise
+        token_network_address = registry.add_token(
+            token_address=token_address,
+            channel_participant_deposit_limit=channel_participant_deposit_limit,
+            token_network_deposit_limit=token_network_deposit_limit,
+            block_identifier=chainstate.block_hash,
+        )
 
-        finally:
-            # Assume the transaction failed because the token is already
-            # registered with the smart contract and this node has not yet
-            # polled for the event (otherwise the check above would have
-            # failed).
-            #
-            # To provide a consistent view to the user, wait one block, this
-            # will guarantee that the events have been processed.
-            next_block = BlockNumber(self.raiden.get_block_number() + 1)
-            waiting.wait_for_block(self.raiden, next_block, retry_timeout)
+        waiting.wait_for_token_network(
+            raiden=self.raiden,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            retry_timeout=retry_timeout,
+        )
+
+        return token_network_address
 
     def token_network_connect(
         self,
