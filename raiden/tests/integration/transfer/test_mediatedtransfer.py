@@ -535,7 +535,7 @@ def test_mediated_transfer_with_fees(
         # of the outgoing channel of mediator 1 should yield the same result.
         dict(
             incoming_fee_schedules=[
-                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),
+                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),
                 None,
                 None,
             ],

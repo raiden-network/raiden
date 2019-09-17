@@ -72,7 +72,7 @@ class FeeScheduleState(State):
         return FeeAmount(0)
 
     def fee_payer(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        imbalance_fee = self.imbalance_fee(amount=amount, balance=balance)
+        imbalance_fee = self.imbalance_fee(amount=PaymentWithFeeAmount(-amount), balance=balance)
 
         flat_fee = self.flat
         prop_fee = int(round(amount * self.proportional / 1e6))
