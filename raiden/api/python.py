@@ -370,7 +370,18 @@ class RaidenAPI:  # pragma: no unittest
 
         if settle_timeout < self.raiden.config["reveal_timeout"] * 2:
             raise InvalidSettleTimeout(
-                "settle_timeout can not be smaller than double the reveal_timeout"
+                "`settle_timeout` can not be smaller than double the "
+                "`reveal_timeout`.\n "
+                "\n "
+                "The setting `reveal_timeout` determines the maximum number of "
+                "blocks it should take a transaction to be mined when the "
+                "blockchain is under congestion. This setting determines the "
+                "when a node must go on-chain to register a secret, and it is "
+                "therefore the lower bound of the lock expiration. The "
+                "`settle_timeout` determines when a channel can be settled "
+                "on-chain, for this operation to be safe all locks must have "
+                "been resolved, for this reason the `settle_timeout` has to be "
+                "larger than `reveal_timeout`."
             )
 
         if not is_binary_address(registry_address):
