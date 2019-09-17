@@ -3,7 +3,6 @@ import sys
 import click
 import structlog
 from eth_utils import to_checksum_address
-from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
 from raiden.accounts import AccountManager
@@ -16,7 +15,7 @@ from raiden.constants import (
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
 )
-from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
+from raiden.exceptions import EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -44,8 +43,6 @@ def check_sql_version() -> None:
 def check_ethereum_client_is_supported(web3: Web3) -> None:
     try:
         node_version = web3.version.node  # pylint: disable=no-member
-    except ConnectTimeout:
-        raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying ethereum node does not have the web3 rpc interface "

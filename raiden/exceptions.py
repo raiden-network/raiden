@@ -161,14 +161,6 @@ class STUNUnavailableException(RaidenError):
     pass
 
 
-class EthNodeCommunicationError(RaidenError):
-    """ Raised when something unexpected has happened during
-    communication with the underlying ethereum node"""
-
-    def __init__(self, error_msg: str) -> None:
-        super().__init__(error_msg)
-
-
 class EthNodeInterfaceError(RaidenError):
     """ Raised when the underlying ETH node does not support an rpc interface"""
 
