@@ -4,6 +4,8 @@ import pickle
 import sys
 import threading
 import time
+from types import FrameType
+from typing import IO, Any, Dict, NewType, Optional
 
 import greenlet
 import objgraph
@@ -17,28 +19,32 @@ from .timer import TIMER, TIMER_SIGNAL, Timer
 #   amount of memory used by the type (heapy is a good alternative for this)
 # - Experiment with heapy or PySizer for memory profiling / leak hunting
 
+FlameFrame = NewType("FlameFrame", str)
+FlameStack = NewType("FlameStack", str)
+FlameGraph = Dict[FlameStack, int]
 
-def frame_format(frame):
+
+def frame_format(frame: FrameType) -> FlameFrame:
     block_name = frame.f_code.co_name
     module_name = frame.f_globals.get("__name__")
-    return "{}({})".format(block_name, module_name)
+    return FlameFrame("{}({})".format(block_name, module_name))
 
 
-def flamegraph_format(stack_count):
+def flamegraph_format(stack_count: FlameGraph) -> str:
     return "\n".join("%s %d" % (key, value) for key, value in sorted(stack_count.items()))
 
 
-def sample_stack(stack_count, frame, timespent):
+def sample_stack(stack_count: FlameGraph, frame: FrameType, timespent) -> None:
     callstack = []
     while frame is not None:
         callstack.append(frame_format(frame))
         frame = frame.f_back
 
-    formatted_stack = ";".join(reversed(callstack))
+    formatted_stack = FlameStack(";".join(reversed(callstack)))
     stack_count[formatted_stack] += timespent
 
 
-def process_memory_mb(pid):
+def process_memory_mb(pid: int) -> float:
     process = psutil.Process(pid)
     memory = process.memory_info()[0]
     for child in process.children(recursive=True):
@@ -46,15 +52,15 @@ def process_memory_mb(pid):
     return memory / MEGA
 
 
-def sample_memory(timestamp, pid, stream):
+def sample_memory(timestamp: float, pid: int, stream: IO) -> None:
     memory = process_memory_mb(pid)
     stream.write("{timestamp:.6f} {memory:.4f}\n".format(timestamp=timestamp, memory=memory))
 
 
-def sample_objects(timestamp, stream):
+def sample_objects(timestamp: float, stream: IO) -> None:
     # instead of keeping the count_per_type in memory, stream the data to a file
     # to save memory
-    count_per_type = objgraph.typestats()
+    count_per_type: Dict[str, int] = objgraph.typestats()
 
     # add the timestamp for plotting
     data = [timestamp, count_per_type]
@@ -64,9 +70,11 @@ def sample_objects(timestamp, stream):
 
 
 class FlameGraphCollector:
-    def __init__(self, stack_stream):
+    last_timestamp: Optional[float]
+
+    def __init__(self, stack_stream: IO) -> None:
         self.stack_stream = stack_stream
-        self.stack_count = collections.defaultdict(int)
+        self.stack_count: FlameGraph = collections.defaultdict(int)
 
         # Correct the flamegraph proportionally to the time spent in the
         # function call. This is important for functions which are considerably
@@ -80,49 +88,52 @@ class FlameGraphCollector:
         # appear to take more of the cpu time.
         self.last_timestamp = None
 
-    def collect(self, frame, timestamp):
+    def collect(self, frame: FrameType, timestamp: float) -> None:
         if self.last_timestamp is not None:
             sample_stack(self.stack_count, frame, timestamp)
 
         self.last_timestamp = timestamp
 
-    def stop(self):
+    def stop(self) -> None:
         stack_data = flamegraph_format(self.stack_count)
 
         self.stack_stream.write(stack_data)
         self.stack_stream.close()
-        self.stack_stream = None
-        self.last_timestamp = None
+
+        del self.stack_stream
+        del self.last_timestamp
 
 
 class MemoryCollector:
-    def __init__(self, memory_stream):
+    def __init__(self, memory_stream: IO) -> None:
         self.memory_stream = memory_stream
 
-    def collect(self, _frame, timestamp):
+    def collect(self, _frame: FrameType, timestamp: float) -> None:
         # waiting for the cache to fill takes too long, just flush the data
         sample_memory(timestamp, os.getpid(), self.memory_stream)
         self.memory_stream.flush()
 
-    def stop(self):
+    def stop(self) -> None:
         self.memory_stream.close()
-        self.memory_stream = None
+        del self.memory_stream
 
 
 class ObjectCollector:
-    def __init__(self, objects_stream):
+    def __init__(self, objects_stream: IO):
         self.objects_stream = objects_stream
 
-    def collect(self, _frame, timestamp):
+    def collect(self, _frame: FrameType, timestamp: float) -> None:
         sample_objects(timestamp, self.objects_stream)
         self.objects_stream.flush()
 
-    def stop(self):
+    def stop(self) -> None:
         self.objects_stream.close()
-        self.objects_stream = None
+        del self.objects_stream
 
 
 class TraceSampler:
+    old_frame: Optional[FrameType]
+
     def __init__(self, collector, sample_interval=0.1):
         self.collector = collector
         self.sample_interval = sample_interval
@@ -144,7 +155,7 @@ class TraceSampler:
         sys.setprofile(self._thread_profiler)
         # threading.setprofile(self._thread_profiler)
 
-    def _should_sample(self, timestamp):
+    def _should_sample(self, timestamp: float) -> bool:
         if timestamp - self.last_timestamp >= self.sample_interval:
             self.last_timestamp = timestamp
             return True
@@ -166,17 +177,17 @@ class TraceSampler:
 
         self.old_frame = frame
 
-    def _thread_profiler(self, frame, _event, _arg):
+    def _thread_profiler(self, frame: FrameType, _event: str, _arg: Any) -> None:
         timestamp = time.time()
         if self._should_sample(timestamp):
             self.collector.collect(self.old_frame, timestamp)
         self.old_frame = frame
 
-    def stop(self):
+    def stop(self) -> None:
         # Unregister the profiler in this order, otherwise we will have extra
         # measurements in the end
         sys.setprofile(None)
-        threading.setprofile(None)
+        threading.setprofile(None)  # type: ignore
         greenlet.settrace(None)  # pylint: disable=c-extension-no-member
 
         self.collector.stop()
@@ -187,8 +198,12 @@ class SignalSampler:
     """ Signal based sampler. """
 
     def __init__(
-        self, collector, timer=TIMER, interval=INTERVAL_SECONDS, timer_signal=TIMER_SIGNAL
-    ):
+        self,
+        collector,
+        timer: int = TIMER,
+        interval: float = INTERVAL_SECONDS,
+        timer_signal: int = TIMER_SIGNAL,
+    ) -> None:
 
         self.collector = collector
         # The timer must be started after collector is set
@@ -199,17 +214,19 @@ class SignalSampler:
             timer_signal=timer_signal,
         )
 
-    def _timer_callback(self, signum, frame):  # pylint: disable=unused-argument
+    def _timer_callback(
+        self, signum: int, frame: FrameType  # pylint: disable=unused-argument
+    ) -> None:
         # Sample can be called one last time after sample_stop
         if self.collector is not None:
             self.collector.collect(frame, time.time())
 
-    def stop(self):
+    def stop(self) -> None:
         timer = self.timer
         collector = self.collector
 
-        self.timer = None
-        self.collector = None
+        del self.timer
+        del self.collector
 
         # The timer must be stoped before sampler
         timer.stop()

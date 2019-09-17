@@ -4,6 +4,7 @@ import pickle
 import time
 import tracemalloc
 from datetime import datetime
+from types import FrameType
 
 from .constants import MINUTE
 from .timer import Timer
@@ -17,23 +18,22 @@ def _serialize_statistics(statistics):
 
 
 class TraceProfiler:
-    def __init__(self, datadir):
+    def __init__(self, datadir: str) -> None:
         self.datadir = datadir
-        self.trace_stream = None
         self.timer = None
         self.profiling = True
 
         now = datetime.now()
         trace_file = "{:%Y%m%d_%H%M}_trace.pickle".format(now)
         trace_path = os.path.join(self.datadir, trace_file)
-        self.trace_stream = open(trace_path, "w")
+        self.trace_stream = open(trace_path, "wb")
         tracemalloc.start(15)
 
         # Take snapshots at slower pace because the size of the samples is not
         # negligible, the de/serialization is slow and uses lots of memory.
         self.timer = Timer(self.trace, interval=MINUTE * 5)
 
-    def trace(self, signum, frame):  # pylint: disable=unused-argument
+    def trace(self, signum: int, frame: FrameType) -> None:  # pylint: disable=unused-argument
         """ Signal handler used to take snapshots of the running process. """
 
         # the last pending signal after trace_stop
