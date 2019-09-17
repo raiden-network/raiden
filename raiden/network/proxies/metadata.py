@@ -38,9 +38,9 @@ class SmartContractMetadata:
 
     def __post_init__(self) -> None:
         is_filter_start_valid = (
-            self.deployed_at is not None and self.deployed_at != self.filters_start_at
+            self.deployed_at is None or self.deployed_at == self.filters_start_at
         )
-        if is_filter_start_valid:
+        if not is_filter_start_valid:
             raise ValueError(
                 "The deployed_at is known, the filters should start at that exact block"
             )
