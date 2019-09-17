@@ -2302,10 +2302,14 @@ def handle_channel_settled(
 def update_fee_schedule_after_balance_change(
     channel_state: NettingChannelState, fee_config: MediationFeeConfig
 ) -> List[Event]:
+    proportional_imbalance_fee = fee_config.get_proportional_imbalance_fee(
+        channel_state.token_address
+    )
     imbalance_penalty = calculate_imbalance_fees(
         channel_capacity=get_capacity(channel_state),
-        proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
+        proportional_imbalance_fee=proportional_imbalance_fee,
     )
+
     channel_state.fee_schedule = FeeScheduleState(
         flat=channel_state.fee_schedule.flat,
         proportional=channel_state.fee_schedule.proportional,

@@ -994,13 +994,17 @@ class RaidenService(Runnable):
                     proportional_fee=proportional_fee,
                     proportional_imbalance_fee=proportional_imbalance_fee,
                 )
+                proportional_imbalance_fee = fee_config.get_proportional_imbalance_fee(
+                    channel.token_address
+                )
                 imbalance_penalty = calculate_imbalance_fees(
                     channel_capacity=get_capacity(channel),
-                    proportional_imbalance_fee=fee_config.proportional_imbalance_fee,
+                    proportional_imbalance_fee=proportional_imbalance_fee,
                 )
+                proportional_fee = fee_config.get_proportional_fee(channel.token_address)
                 channel.fee_schedule = FeeScheduleState(
                     flat=flat_fee,
-                    proportional=fee_config.proportional_fee,
+                    proportional=proportional_fee,
                     imbalance_penalty=imbalance_penalty,
                 )
                 self.handle_event(
