@@ -52,6 +52,7 @@ from raiden.api.v1.resources import (
     RaidenInternalEventsResource,
     RegisterTokenResource,
     TokensResource,
+    VersionResource,
     create_blueprint,
 )
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
@@ -91,6 +92,7 @@ from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.utils import (
     Endpoint,
     create_default_identifier,
+    get_system_spec,
     optional_address_to_string,
     split_endpoint,
 )
@@ -130,6 +132,7 @@ ERROR_STATUS_CODES = [
 
 URLS_V1 = [
     ("/address", AddressResource),
+    ("/version", VersionResource),
     ("/channels", ChannelsResource),
     ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
     (
@@ -527,6 +530,10 @@ class RestAPI:  # pragma: no unittest
 
     def get_our_address(self) -> Response:
         return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
+
+    @classmethod
+    def get_raiden_version(self):
+        return api_response(result=dict(version=get_system_spec()["raiden"]))
 
     def register_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
