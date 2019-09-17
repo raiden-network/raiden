@@ -36,9 +36,13 @@ def fee_sender(
 ) -> Optional[FeeAmount]:
     """Returns the mediation fee for this channel when transferring the given amount"""
     try:
-        return fee_schedule.fee_payer(amount, balance)
+        imbalance_fee = fee_schedule.imbalance_fee(amount=amount, balance=balance)
     except UndefinedMediationFee:
         return None
+
+    flat_fee = fee_schedule.flat
+    prop_fee = int(round(amount * fee_schedule.proportional / 1e6))
+    return FeeAmount(flat_fee + prop_fee + imbalance_fee)
 
 
 def fee_receiver(
@@ -58,7 +62,8 @@ def fee_receiver(
         )
 
     imbalance_fee = fee_schedule.imbalance_fee(
-        amount=PaymentWithFeeAmount(amount - fee_in(imbalance_fee=FeeAmount(0))), balance=balance
+        amount=PaymentWithFeeAmount(-(amount - fee_in(imbalance_fee=FeeAmount(0)))),
+        balance=balance,
     )
 
     return fee_in(imbalance_fee=imbalance_fee)
