@@ -4,6 +4,7 @@ from eth_utils import to_checksum_address
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import (
     DepositMismatch,
+    InvalidSettleTimeout,
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
@@ -99,6 +100,16 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
     with pytest.raises(UnknownTokenAddress):
         api1.get_channel_list(
             registry_address=registry_address, token_address=None, partner_address=api2.address
+        )
+
+    # Make sure a small settle timeout is not accepted when opening a channel
+    with pytest.raises(InvalidSettleTimeout):
+        invalid_settle_timeout = node1.raiden.config["reveal_timeout"] * 2 - 1
+        api1.channel_open(
+            registry_address=node1.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=api2.address,
+            settle_timeout=invalid_settle_timeout,
         )
 
     # open is a synchronous api
