@@ -13,6 +13,7 @@ ipython<5.0.0
 marshmallow-dataclass==6.0.0rc4
 marshmallow-polyfield==5.7
 marshmallow==3.0.0rc8
+marshmallow_enum
 matrix-client==0.3.2
 mirakuru
 netifaces

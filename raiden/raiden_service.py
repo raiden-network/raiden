@@ -73,7 +73,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, HopState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, HopState, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelWithdraw,
@@ -685,7 +685,7 @@ class RaidenService(Runnable):
             else:
                 raise
 
-    def set_node_network_state(self, node_address: Address, network_state: str) -> None:
+    def set_node_network_state(self, node_address: Address, network_state: NetworkState) -> None:
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
         self.handle_and_track_state_changes([state_change])
 

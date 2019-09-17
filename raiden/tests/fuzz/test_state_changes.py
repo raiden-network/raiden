@@ -37,10 +37,10 @@ from raiden.transfer.mediated_transfer.state_change import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
     ChainState,
     ChannelState,
     HashTimeLockState,
+    NetworkState,
     TokenNetworkGraphState,
     TokenNetworkRegistryState,
     TokenNetworkState,
@@ -143,7 +143,9 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(self.chain_state, channel_new_state_change)
-        self.chain_state.nodeaddresses_to_networkstates[partner_address] = NODE_NETWORK_REACHABLE
+        self.chain_state.nodeaddresses_to_networkstates[
+            partner_address
+        ] = NetworkState.NODE_NETWORK_REACHABLE
 
         return partner_address
 

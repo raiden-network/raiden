@@ -85,9 +85,11 @@ CHANNEL_AFTER_CLOSE_STATES = (
     ChannelState.STATE_SETTLED,
 )
 
-NODE_NETWORK_UNKNOWN = "unknown"
-NODE_NETWORK_UNREACHABLE = "unreachable"
-NODE_NETWORK_REACHABLE = "reachable"
+
+class NetworkState(Enum):
+    NODE_NETWORK_UNKNOWN = "unknown"
+    NODE_NETWORK_UNREACHABLE = "unreachable"
+    NODE_NETWORK_REACHABLE = "reachable"
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:
@@ -516,7 +518,9 @@ class ChainState(State):
     identifiers_to_tokennetworkregistries: Dict[
         TokenNetworkRegistryAddress, TokenNetworkRegistryState
     ] = field(repr=False, default_factory=dict)
-    nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
+    nodeaddresses_to_networkstates: Dict[Address, NetworkState] = field(
+        repr=False, default_factory=dict
+    )
     payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
     pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)

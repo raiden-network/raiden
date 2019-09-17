@@ -79,6 +79,7 @@ ldap3==2.6                # via matrix-synapse-ldap3
 lru-dict==1.1.6
 markupsafe==1.1.1
 marshmallow-dataclass==6.0.0rc4
+marshmallow-enum==1.5.1
 marshmallow-polyfield==5.7
 marshmallow==3.0.0rc8
 matrix-angular-sdk==0.6.8  # via matrix-synapse

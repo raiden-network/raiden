@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         HashTimeLockState,
         NettingChannelState,
         UnlockPartialProofState,
+        NetworkState,
     )
     from raiden.transfer.mediated_transfer.state import (  # noqa: F401
         InitiatorTransferState,
@@ -172,7 +173,7 @@ WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
 
 BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 
-NodeNetworkStateMap = Dict[Address, str]
+NodeNetworkStateMap = Dict[Address, "NetworkState"]
 
 Host = NewType("Host", str)
 Port = NewType("Port", int)

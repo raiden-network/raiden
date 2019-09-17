@@ -42,12 +42,7 @@ from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
-from raiden.transfer.state import (
-    NODE_NETWORK_REACHABLE,
-    NODE_NETWORK_UNKNOWN,
-    NODE_NETWORK_UNREACHABLE,
-    QueueIdsToQueues,
-)
+from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionUpdateTransportAuthData,
@@ -1119,15 +1114,15 @@ class MatrixTransport(Runnable):
 
     def _address_reachability_changed(self, address: Address, reachability: AddressReachability):
         if reachability is AddressReachability.REACHABLE:
-            node_reachability = NODE_NETWORK_REACHABLE
+            node_reachability = NetworkState.NODE_NETWORK_REACHABLE
             # _QueueRetry.notify when partner comes online
             retrier = self._address_to_retrier.get(address)
             if retrier:
                 retrier.notify()
         elif reachability is AddressReachability.UNKNOWN:
-            node_reachability = NODE_NETWORK_UNKNOWN
+            node_reachability = NetworkState.NODE_NETWORK_UNKNOWN
         elif reachability is AddressReachability.UNREACHABLE:
-            node_reachability = NODE_NETWORK_UNREACHABLE
+            node_reachability = NetworkState.NODE_NETWORK_UNREACHABLE
         else:
             raise TypeError(f'Unexpected reachability state "{reachability}".')
 

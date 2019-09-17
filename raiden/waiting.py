@@ -13,9 +13,9 @@ from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
-    NODE_NETWORK_REACHABLE,
     ChannelState,
     NettingChannelEndState,
+    NetworkState,
 )
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
@@ -413,7 +413,10 @@ def wait_for_settle(
 
 
 def wait_for_network_state(
-    raiden: "RaidenService", node_address: Address, network_state: str, retry_timeout: float
+    raiden: "RaidenService",
+    node_address: Address,
+    network_state: NetworkState,
+    retry_timeout: float,
 ) -> None:  # pragma: no unittest
     """Wait until `node_address` becomes healthy.
 
@@ -446,7 +449,9 @@ def wait_for_healthy(
         This does not time out, use gevent.Timeout.
     """
 
-    wait_for_network_state(raiden, node_address, NODE_NETWORK_REACHABLE, retry_timeout)
+    wait_for_network_state(
+        raiden, node_address, NetworkState.NODE_NETWORK_REACHABLE, retry_timeout
+    )
 
 
 class TransferWaitResult(Enum):
