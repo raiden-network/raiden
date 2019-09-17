@@ -128,6 +128,7 @@ class PaymentAmountCalculation(NamedTuple):
 
     amount_to_send: PaymentAmount
     mediators_cut: List[FeeAmount]
+    amount_with_fees: PaymentWithFeeAmount
 
 
 def get_amount_to_drain_channel_with_fees(
@@ -165,7 +166,9 @@ def get_amount_to_drain_channel_with_fees(
 
         if send_amount_with_fees <= initiator_capacity:
             return PaymentAmountCalculation(
-                amount_to_send=PaymentAmount(send_amount), mediators_cut=calculation.mediators_cut
+                amount_to_send=PaymentAmount(send_amount),
+                mediators_cut=calculation.mediators_cut,
+                amount_with_fees=send_amount_with_fees,
             )
 
         amount_at_target = PaymentAmount(amount_at_target - 1)
