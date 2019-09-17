@@ -61,38 +61,52 @@ def test_basic_fee():
 
 
 def test_imbalance_penalty():
+    r""" Test an imbalance penalty by moving back and forth
+
+    The imbalance fee looks like
+
+    20 |         /
+       |        /
+    10 |\.     /
+       |  \.  /
+     0 |    \/
+    ---------------
+       0    50  100
+
+    For each input, we first assume the channel is used to forward tokens to a
+    payee, which moves the capacity from x1 to x2. The we assume the same
+    amount is mediated in the opposite direction (moving from x2 to x1) and
+    check that the calculated fee is the same as before just with the opposite
+    sign.
+    """
     v_schedule = FeeScheduleState(
         imbalance_penalty=[
             (TokenAmount(0), FeeAmount(10)),
             (TokenAmount(50), FeeAmount(0)),
-            (TokenAmount(100), FeeAmount(10)),
+            (TokenAmount(100), FeeAmount(20)),
         ]
     )
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(50)
-    ) == FeeAmount(-10)
-    # The payer channel works in the opposite direction
-    assert v_schedule.fee_payer(
-        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(-50)
-    ) == FeeAmount(-10)
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 50), amount=PaymentWithFeeAmount(50)
-    ) == FeeAmount(10)
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(10)
-    ) == FeeAmount(-2)
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 10), amount=PaymentWithFeeAmount(10)
-    ) == FeeAmount(-2)
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 0), amount=PaymentWithFeeAmount(20)
-    ) == FeeAmount(-4)
-    assert v_schedule.fee_payee(
-        balance=Balance(100 - 40), amount=PaymentWithFeeAmount(20)
-    ) == FeeAmount(0)
+
+    for x1, amount, expected_fee in [
+        (0, 50, -10),
+        (50, 50, 20),
+        (0, 10, -2),
+        (10, 10, -2),
+        (0, 20, -4),
+        (40, 15, 0),
+    ]:
+        x2 = x1 + amount
+        assert v_schedule.fee_payee(
+            balance=Balance(100 - x1), amount=PaymentWithFeeAmount(amount)
+        ) == FeeAmount(expected_fee)
+        assert v_schedule.fee_payer(
+            balance=Balance(100 - x2), amount=PaymentWithFeeAmount(amount)
+        ) == FeeAmount(-expected_fee)
 
     with pytest.raises(UndefinedMediationFee):
         v_schedule.fee_payee(balance=Balance(0), amount=PaymentWithFeeAmount(1))
+    with pytest.raises(UndefinedMediationFee):
+        v_schedule.fee_payer(balance=Balance(100), amount=PaymentWithFeeAmount(1))
 
 
 def test_linspace():
