@@ -1,4 +1,6 @@
 import signal
+from types import FrameType
+from typing import Callable
 
 from .constants import INTERVAL_SECONDS
 
@@ -9,11 +11,17 @@ from .constants import INTERVAL_SECONDS
 TIMER = signal.ITIMER_PROF
 TIMER_SIGNAL = signal.SIGPROF
 
+SignalHandler = Callable[[int, FrameType], None]
+
 
 class Timer:
     def __init__(
-        self, callback, timer=TIMER, interval=INTERVAL_SECONDS, timer_signal=TIMER_SIGNAL
-    ):
+        self,
+        callback: SignalHandler,
+        timer: int = TIMER,
+        interval: float = INTERVAL_SECONDS,
+        timer_signal: int = TIMER_SIGNAL,
+    ) -> None:
 
         assert callable(callback), "callback must be callable"
 
@@ -25,14 +33,14 @@ class Timer:
         self.oldtimer = oldtimer
         self._callback = callback
 
-    def callback(self, signum, stack):
+    def callback(self, signum: int, stack: FrameType) -> None:
         self._callback(signum, stack)
 
         if self.oldaction and callable(self.oldaction):
             self.oldaction(signum, stack)  # pylint: disable=not-callable
 
-    def stop(self):
-        self._callback = None
+    def stop(self) -> None:
+        del self._callback
 
         if self.oldaction and callable(self.oldaction):
             signal.signal(TIMER_SIGNAL, self.oldaction)
@@ -40,9 +48,9 @@ class Timer:
         else:
             signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.stop()
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         # we're always truthy
         return True

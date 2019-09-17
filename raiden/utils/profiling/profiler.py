@@ -4,6 +4,7 @@ import threading
 import time
 from collections import OrderedDict, namedtuple
 from itertools import chain, zip_longest
+from typing import Dict, List, Optional, Tuple
 
 import greenlet
 
@@ -21,7 +22,7 @@ from raiden.utils.profiling.stack import get_trace_from_frame, get_trace_info
 #     - https://www.python.org/dev/peps/pep-0418/
 
 # this variable holds the global state of the profiler, while it is running
-_state = None
+_state: Optional["GlobalState"] = None
 
 # about the measurements:
 # - GreenletProfiler/YAPPI uses a configurable clock to get the time (wall or cpu)
@@ -79,6 +80,9 @@ def ensure_call(curr, call):
 
 
 def ensure_thread_state(target, frame):
+    global _state
+    assert _state
+
     if target not in _state:
         frame = frame
         trace = get_trace_from_frame(frame)
@@ -185,6 +189,8 @@ class ThreadState:
                 top_depth = depth
                 accumulated += node["accumulated"]
 
+        return accumulated
+
     def call_enter(self, call, now):
         node = ensure_call(self.curr, call)
 
@@ -196,7 +202,7 @@ class ThreadState:
 
         self.curr = node
 
-    def call_exit(self, call, now):
+    def call_exit(self, call, now):  # pylint: disable=unused-argument
         info = self.curr.info
 
         info["wall_exit_time"].append(now)
@@ -264,6 +270,7 @@ class ThreadState:
 
 def thread_profiler(frame, event, arg):
     global _state
+    assert _state
 
     now = clock()  # measure once and reuse it
 
@@ -296,6 +303,9 @@ def thread_profiler(frame, event, arg):
 
 
 def greenlet_profiler(event, args):
+    global _state
+    assert _state
+
     if event in ("switch", "throw"):  # both events are in the target context
         now = clock()
 
@@ -319,6 +329,7 @@ def greenlet_profiler(event, args):
 
 def start_profiler():
     global _state
+    assert _state
 
     _state = GlobalState()
 
@@ -340,7 +351,7 @@ def stop_profiler():
     # Unregister the profiler in this order, otherwise we will have extra
     # measurements in the end
     sys.setprofile(None)
-    threading.setprofile(None)
+    threading.setprofile(None)  # type: ignore
     greenlet.settrace(None)  # pylint: disable=no-member
 
 
@@ -359,7 +370,7 @@ def zip_outter_join(equal, *element_list):
         raise ValueError("equal must be a callable")
 
     length = len(element_list)
-    result = [list() for __ in range(length)]
+    result: List[List] = [list() for __ in range(length)]
 
     # do it all in one swipe
     for iteration in zip_longest(*element_list):
@@ -394,42 +405,42 @@ def zip_outter_join(equal, *element_list):
 
 
 def merge_info(*allinfo):
-    def _info_to_list(infodata, field):
+    def _info_to_list(infodata, field):  # pylint: disable=unused-argument
         iterable = chain.from_iterable(info[field] for info in allinfo)
         return list(iterable)
 
-    allinfo = list(allinfo)
+    allinfo_copy = list(allinfo)
     # guarantee that the metrics are calculated
-    for pos, info in enumerate(allinfo):
-        allinfo[pos] = calculate_metrics(info)
+    for pos, info in enumerate(allinfo_copy):
+        allinfo_copy[pos] = calculate_metrics(info)
 
-    result = dict(allinfo[0])
+    result = dict(allinfo_copy[0])
 
     # keep this data in case we need to call calculate_metrics again, preserve the order
-    result["calls"] = sum(info["calls"] for info in allinfo)
+    result["calls"] = sum(info["calls"] for info in allinfo_copy)
 
-    result["wall_enter_time"] = _info_to_list(allinfo, "wall_enter_time")
-    result["wall_exit_time"] = _info_to_list(allinfo, "wall_exit_time")
-    result["sleep_start_time"] = _info_to_list(allinfo, "sleep_start_time")
-    result["sleep_end_time"] = _info_to_list(allinfo, "sleep_end_time")
-    result["subcall_enter_time"] = _info_to_list(allinfo, "subcall_enter_time")
-    result["subcall_exit_time"] = _info_to_list(allinfo, "subcall_exit_time")
+    result["wall_enter_time"] = _info_to_list(allinfo_copy, "wall_enter_time")
+    result["wall_exit_time"] = _info_to_list(allinfo_copy, "wall_exit_time")
+    result["sleep_start_time"] = _info_to_list(allinfo_copy, "sleep_start_time")
+    result["sleep_end_time"] = _info_to_list(allinfo_copy, "sleep_end_time")
+    result["subcall_enter_time"] = _info_to_list(allinfo_copy, "subcall_enter_time")
+    result["subcall_exit_time"] = _info_to_list(allinfo_copy, "subcall_exit_time")
 
-    result["sleep"] = sum(info["sleep"] for info in allinfo)
-    result["accumulated"] = sum(info["accumulated"] for info in allinfo)
-    result["subcall_time"] = sum(info["subcall_time"] for info in allinfo)
-    result["inline"] = sum(info["inline"] for info in allinfo)
-    result["min"] = min(info["min"] for info in allinfo)
-    result["max"] = max(info["max"] for info in allinfo)
+    result["sleep"] = sum(info["sleep"] for info in allinfo_copy)
+    result["accumulated"] = sum(info["accumulated"] for info in allinfo_copy)
+    result["subcall_time"] = sum(info["subcall_time"] for info in allinfo_copy)
+    result["inline"] = sum(info["inline"] for info in allinfo_copy)
+    result["min"] = min(info["min"] for info in allinfo_copy)
+    result["max"] = max(info["max"] for info in allinfo_copy)
 
     # if one element is None convert the result to None
-    if all(info["profiled_calls"] for info in allinfo):
-        result["profiled_calls"] = sum(info["profiled_calls"] for info in allinfo)
+    if all(info["profiled_calls"] for info in allinfo_copy):
+        result["profiled_calls"] = sum(info["profiled_calls"] for info in allinfo_copy)
     else:
         result["profiled_calls"] = None
 
-    if all(info["avg"] for info in allinfo):
-        result["avg"] = sum(info["avg"] for info in allinfo) / len(allinfo)
+    if all(info["avg"] for info in allinfo_copy):
+        result["avg"] = sum(info["avg"] for info in allinfo_copy) / len(allinfo_copy)
     else:
         result["avg"] = None
 
@@ -448,7 +459,7 @@ def merge_threadstates(*threadstates):
 
         return (module and function) or runtime_id
 
-    tree = [(1, {}, [state.calltree for state in threadstates])]
+    tree: List[Tuple[int, Dict, List]] = [(1, {}, [state.calltree for state in threadstates])]
 
     while tree:
         depth, curr, callnodes = tree.pop()
@@ -540,6 +551,7 @@ def print_thread_profile(thread_state):
 
 def print_merged():
     global _state
+    assert _state
 
     merged = merge_threadstates(*_state.values())
     print_info_tree(filter_fast(merged))
@@ -547,6 +559,7 @@ def print_merged():
 
 def print_all_threads():
     global _state
+    assert _state
 
     for thread_state in _state.values():
         print_thread_profile(thread_state)

@@ -34,6 +34,7 @@ import collections
 import pickle
 from datetime import datetime
 from itertools import chain
+from typing import Dict
 
 from .constants import INTERVAL_SECONDS, ONESECOND_TIMEDELTA
 
@@ -83,16 +84,16 @@ def memory_objcount(output, data_list, topn=10):
     alltime_factory = lambda: [0.0 for __ in range(alltime_count)]
 
     position = 0
-    alltime_data = {}
+    alltime_data: Dict = {}
     alltime_timestamps = []
     for data in data_list:
-        sample_highcount = {}
+        sample_highcount: Dict = {}
 
         # some classes might not appear on all samples, nevertheless the list
         # must have the same length
         sample_count = len(data)
         sample_factory = lambda: [0.0 for __ in range(sample_count)]
-        objcount = collections.defaultdict(sample_factory)
+        objcount: Dict = collections.defaultdict(sample_factory)
 
         # group the samples by class
         for index, (__, count_per_type) in enumerate(data):
@@ -163,7 +164,7 @@ def memory_timeline(output, data_list):
     fig, memory_axes = plt.subplots()
 
     last_ts = None
-    memory_max = 0
+    memory_max = 0.0
 
     for data in data_list:
         timestamp = [line[TIMESTAMP] for line in data]
@@ -201,7 +202,7 @@ def memory_subplot(output, data_list):
     if number_plots == 1:
         all_memory_axes = [all_memory_axes]
 
-    memory_max = 0
+    memory_max = 0.0
     for line in chain(*data_list):
         memory_max = max(memory_max, line[MEMORY])
 
@@ -232,7 +233,7 @@ def memory_subplot(output, data_list):
     plt.savefig(output)
 
 
-def latency_scatter(output, data_list, interval):
+def latency_scatter(output, data_list):
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots()
@@ -280,7 +281,7 @@ def objcount_data(filepath):
 
     data = []
     try:
-        with open(filepath) as handler:
+        with open(filepath, "rb") as handler:
             while True:  # while we dont hit EOFError
                 timestamp_string, object_count = pickle.load(handler)
                 timestamp = ts_to_dt(timestamp_string)
@@ -372,7 +373,7 @@ def main():
     elif arguments.action == "latency" and arguments.plot == "scatter":
         data_list = [latency_data(path) for path in arguments.data]
         data_list = list(filter(len, data_list))
-        latency_scatter(arguments.output, data_list, arguments.interval)
+        latency_scatter(arguments.output, data_list)
 
 
 if __name__ == "__main__":

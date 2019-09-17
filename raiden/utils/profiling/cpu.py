@@ -6,7 +6,7 @@ import GreenletProfiler
 
 
 class CpuProfiler:
-    def __init__(self, datadir):
+    def __init__(self, datadir: str) -> None:
         # create a new file every time instead of overwritting the latest profiling
         summary_file = "{:%Y%m%d_%H%M}_profile_summary".format(datetime.now())
         stats_file = "{:%Y%m%d_%H%M}_profile_stats".format(datetime.now())
@@ -24,7 +24,7 @@ class CpuProfiler:
 
         self.datadir = datadir
 
-    def stop(self):
+    def stop(self) -> None:
         GreenletProfiler.stop()
         # gevent_profiler.detach()
 
