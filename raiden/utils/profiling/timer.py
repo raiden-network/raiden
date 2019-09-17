@@ -12,13 +12,10 @@ TIMER_SIGNAL = signal.SIGPROF
 
 class Timer:
     def __init__(
-            self,
-            callback,
-            timer=TIMER,
-            interval=INTERVAL_SECONDS,
-            timer_signal=TIMER_SIGNAL):
+        self, callback, timer=TIMER, interval=INTERVAL_SECONDS, timer_signal=TIMER_SIGNAL
+    ):
 
-        assert callable(callback), 'callback must be callable'
+        assert callable(callback), "callback must be callable"
 
         signal.signal(timer_signal, self.callback)
         signal.setitimer(timer, interval, interval)
@@ -39,11 +36,7 @@ class Timer:
 
         if self.oldaction and callable(self.oldaction):
             signal.signal(TIMER_SIGNAL, self.oldaction)
-            signal.setitimer(
-                TIMER_SIGNAL,
-                self.oldtimer[0],
-                self.oldtimer[1],
-            )
+            signal.setitimer(TIMER_SIGNAL, self.oldtimer[0], self.oldtimer[1])
         else:
             signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
 

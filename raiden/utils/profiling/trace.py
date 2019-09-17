@@ -11,8 +11,7 @@ from .timer import Timer
 
 def _serialize_statistics(statistics):
     traceback = [
-        frame._frame  # pylint: disable=protected-access
-        for frame in statistics.traceback
+        frame._frame for frame in statistics.traceback  # pylint: disable=protected-access
     ]
     return (statistics.count, statistics.size, traceback)
 
@@ -25,9 +24,9 @@ class TraceProfiler:
         self.profiling = True
 
         now = datetime.now()
-        trace_file = '{:%Y%m%d_%H%M}_trace.pickle'.format(now)
+        trace_file = "{:%Y%m%d_%H%M}_trace.pickle".format(now)
         trace_path = os.path.join(self.datadir, trace_file)
-        self.trace_stream = open(trace_path, 'w')
+        self.trace_stream = open(trace_path, "w")
         tracemalloc.start(15)
 
         # Take snapshots at slower pace because the size of the samples is not

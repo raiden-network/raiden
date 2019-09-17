@@ -20,12 +20,12 @@ from .timer import TIMER, TIMER_SIGNAL, Timer
 
 def frame_format(frame):
     block_name = frame.f_code.co_name
-    module_name = frame.f_globals.get('__name__')
-    return '{}({})'.format(block_name, module_name)
+    module_name = frame.f_globals.get("__name__")
+    return "{}({})".format(block_name, module_name)
 
 
 def flamegraph_format(stack_count):
-    return '\n'.join('%s %d' % (key, value) for key, value in sorted(stack_count.items()))
+    return "\n".join("%s %d" % (key, value) for key, value in sorted(stack_count.items()))
 
 
 def sample_stack(stack_count, frame, timespent):
@@ -34,7 +34,7 @@ def sample_stack(stack_count, frame, timespent):
         callstack.append(frame_format(frame))
         frame = frame.f_back
 
-    formatted_stack = ';'.join(reversed(callstack))
+    formatted_stack = ";".join(reversed(callstack))
     stack_count[formatted_stack] += timespent
 
 
@@ -48,10 +48,7 @@ def process_memory_mb(pid):
 
 def sample_memory(timestamp, pid, stream):
     memory = process_memory_mb(pid)
-    stream.write('{timestamp:.6f} {memory:.4f}\n'.format(
-        timestamp=timestamp,
-        memory=memory,
-    ))
+    stream.write("{timestamp:.6f} {memory:.4f}\n".format(timestamp=timestamp, memory=memory))
 
 
 def sample_objects(timestamp, stream):
@@ -190,11 +187,7 @@ class SignalSampler:
     """ Signal based sampler. """
 
     def __init__(
-            self,
-            collector,
-            timer=TIMER,
-            interval=INTERVAL_SECONDS,
-            timer_signal=TIMER_SIGNAL,
+        self, collector, timer=TIMER, interval=INTERVAL_SECONDS, timer_signal=TIMER_SIGNAL
     ):
 
         self.collector = collector
