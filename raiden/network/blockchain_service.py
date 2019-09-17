@@ -47,10 +47,10 @@ class BlockChainServiceMetadata:
         # deployed doesn't make sense. A smaller value will have a negative
         # impact on performance (see #3958), a larger value will miss logs.
         is_filter_start_valid = (
-            self.token_network_registry_deployed_at is not None
-            and self.token_network_registry_deployed_at != self.filters_start_at
+            self.token_network_registry_deployed_at is None
+            or self.token_network_registry_deployed_at == self.filters_start_at
         )
-        if is_filter_start_valid:
+        if not is_filter_start_valid:
             raise ValueError(
                 "The deployed_at is known, the filters should start at that exact block"
             )
