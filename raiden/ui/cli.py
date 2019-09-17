@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import json
 import os
 import signal
@@ -380,6 +381,19 @@ def options(func):
         option_group(
             "Debugging options",
             option(
+                "--flamegraph",
+                help=("Directory to save stack data used to produce flame graphs."),
+                type=click.Path(
+                    exists=False,
+                    dir_okay=True,
+                    file_okay=False,
+                    writable=True,
+                    resolve_path=True,
+                    allow_dash=False,
+                ),
+                default=None,
+            ),
+            option(
                 "--unrecoverable-error-should-crash",
                 help=(
                     "DO NOT use, unless you know what you are doing. If provided "
@@ -445,6 +459,20 @@ def options(func):
 @click.pass_context
 def run(ctx, **kwargs):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+
+    flamegraph = kwargs.pop("flamegraph", None)
+    profiler = None
+
+    if flamegraph:
+        os.makedirs(flamegraph, exist_ok=True)
+
+        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
+
+        now = datetime.datetime.now()
+        stack_path = os.path.join(flamegraph, f"{now:%Y%m%d_%H%M}_stack.data")
+        stack_stream = open(stack_path, "w")
+        flame = FlameGraphCollector(stack_stream)
+        profiler = TraceSampler(flame)
 
     if kwargs.pop("version", False):
         click.echo(
@@ -528,6 +556,9 @@ def run(ctx, **kwargs):
             fg="red",
         )
         sys.exit(1)
+    finally:
+        if profiler is not None:
+            profiler.stop()
 
 
 @run.command()
