@@ -80,7 +80,11 @@ def get_initial_payment_for_final_target_amount(
     final_amount: PaymentAmount, channels: List[NettingChannelState]
 ) -> Optional[FeesCalculation]:
     """ Calculates the payment amount including fees to be supplied to the given
-    channel configuration, so that `final_amount` arrived at the target. """
+    channel configuration, so that `final_amount` arrived at the target.
+
+    Note: The channels have to be from the view of the mediator, so for the case
+        A -> B -> C this should be [B->A, B->C]
+    """
     assert len(channels) >= 1, "Need at least one channel"
 
     # No fees in direct transfer
