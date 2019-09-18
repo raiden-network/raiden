@@ -681,6 +681,8 @@ Connection Management
    .. note::
       Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
+.. _Payments:
+
 Payments
 ========
 
@@ -735,7 +737,7 @@ Payments
       This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
       However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
 
-   To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for `secret` and `secret_hash`.
+To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
 
    **Example Request**:
 
@@ -755,7 +757,8 @@ Payments
    :reqjson int amount: Amount to be sent to the target
    :reqjson int identifier: Identifier of the payment (optional)
    :reqjson string secret: The secret to be used for the payment
-   :reqjson string secret_hash: The secret hash (should be equal to SHA256 of the secret).
+   :reqjson string secret_hash: The secret hash (should be equal to SHA256 of the secret)
+
 
 Querying Events
 ===============
