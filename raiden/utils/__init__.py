@@ -53,7 +53,7 @@ def random_secret() -> Secret:
 
 
 def ishash(data: bytes) -> bool:
-    return isinstance(data, bytes) and len(data) == 32
+    return len(data) == 32
 
 
 def address_checksum_and_decode(addr: str) -> Address:

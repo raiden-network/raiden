@@ -126,11 +126,13 @@ def convert_ulid_identifier(data: bytes) -> ULID:
     return ULID(identifier=data)
 
 
-def _sanitize_limit_and_offset(limit: int = None, offset: int = None) -> Tuple[int, int]:
-    if limit is not None and (not isinstance(limit, int) or limit < 0):  # pragma: no unittest
+def _sanitize_limit_and_offset(
+    limit: Optional[int] = None, offset: Optional[int] = None
+) -> Tuple[int, int]:
+    if limit is not None and limit < 0:  # pragma: no unittest
         raise InvalidNumberInput("limit must be a positive integer")
 
-    if offset is not None and (not isinstance(offset, int) or offset < 0):  # pragma: no unittest
+    if offset is not None and offset < 0:  # pragma: no unittest
         raise InvalidNumberInput("offset must be a positive integer")
 
     limit = -1 if limit is None else limit

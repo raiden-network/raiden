@@ -7,6 +7,7 @@ from operator import attrgetter, itemgetter
 from random import Random
 from typing import Any, Callable, Dict, Iterable, KeysView, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
+from uuid import UUID
 
 import gevent
 import structlog
@@ -100,7 +101,7 @@ class UserAddressManager:
 
         self._log_context = _log_context
         self._log = None
-        self._listener_id = None
+        self._listener_id: Optional[UUID] = None
 
     def start(self) -> None:
         """ Start listening for presence updates.

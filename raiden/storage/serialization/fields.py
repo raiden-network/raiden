@@ -34,12 +34,16 @@ class OptionalIntegerToStringField(marshmallow.fields.Field):
 class BytesField(marshmallow.fields.Field):
     """ Used for `bytes` in the dataclass, serialize to hex encoding"""
 
-    def _serialize(self, value: bytes, attr: Any, obj: Any, **kwargs: Any) -> str:
+    def _serialize(
+        self, value: Optional[bytes], attr: Any, obj: Any, **kwargs: Any
+    ) -> Optional[str]:
         if value is None:
             return value
         return to_hex(value)
 
-    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> bytes:
+    def _deserialize(
+        self, value: Optional[str], attr: Any, data: Any, **kwargs: Any
+    ) -> Optional[bytes]:
         if value is None:
             return value
         return to_bytes(hexstr=value)

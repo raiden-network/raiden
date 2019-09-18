@@ -425,7 +425,7 @@ def secret_from_transfer_task(
     """Return the secret for the transfer, None on ABSENT_SECRET."""
     assert isinstance(transfer_task, InitiatorTask)
 
-    transfer_state = transfer_task.manager_state.initiator_transfers[secrethash]
+    transfer_state = transfer_task.manager_state.initiator_transfers.get(secrethash)
 
     if transfer_state is None:
         return None

@@ -4,7 +4,17 @@ from time import CLOCK_MONOTONIC_RAW, clock_getres, clock_gettime_ns, time_ns
 
 from gevent.lock import Semaphore
 
-from raiden.utils.typing import Any, Generic, Iterable, Iterator, List, Tuple, TypeVar, cast
+from raiden.utils.typing import (
+    Any,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 
 @dataclass(frozen=True, order=True, repr=False)
@@ -49,7 +59,7 @@ class ULIDMonotonicFactory(Generic[ID]):
     because of leap seconds, etc. Therefore a monotonic clock must be used.
     """
 
-    def __init__(self, start: int) -> None:
+    def __init__(self, start: Optional[int]) -> None:
         resolution = clock_getres(CLOCK_MONOTONIC_RAW)
 
         msg = (
