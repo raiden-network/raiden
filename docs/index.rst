@@ -73,6 +73,7 @@ Contents
   onboarding
   state_machines
   proxies
+  token-swaps
   changelog
 
 .. toctree::
