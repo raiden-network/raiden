@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`4917` Added documentation on using Raiden for atomic swaps.
 * :feature:`-` Added a new api endpoint ``/api/v1/version`` to query the raiden version via the Rest API.
 * :bug:`4762` Properly check the withdraw expiration on the TokenNetworkProxy. This gives a better error message to the users and prevents a corner case error.
 * :feature:`4102` Display progress during syncing the blockchain.
