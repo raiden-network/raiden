@@ -191,7 +191,7 @@ class UserAddressManager:
         online_user_ids = {
             user_id
             for user_id in self.get_userids_for_address(address)
-            if self.get_userid_presence(user_id) == UserPresence.ONLINE or UserPresence.UNKNOWN
+            if self.get_userid_presence(user_id) in {UserPresence.ONLINE, UserPresence.UNKNOWN}
         }
         if len(online_user_ids) > 1:
             self.log.error(

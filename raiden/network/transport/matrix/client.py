@@ -2,7 +2,7 @@ import json
 import time
 from functools import wraps
 from itertools import repeat
-from typing import Any, Callable, Container, Dict, Iterable, List, Optional
+from typing import Any, Callable, Container, Dict, Iterable, List, Optional, Set
 from urllib.parse import quote
 
 import gevent
@@ -32,7 +32,7 @@ class Room(MatrixRoom):
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
 
-    def get_joined_members(self, force_resync=False) -> List[User]:
+    def get_joined_members(self, force_resync=True) -> List[User]:
         """ Return a list of members of this room. """
         if force_resync:
             response = self.client.api.get_room_members(self.room_id)
@@ -90,6 +90,16 @@ class Room(MatrixRoom):
         return self.client.api.set_room_account_data(
             quote(self.client.user_id), quote(self.room_id), quote(type_), content
         )
+
+    def is_member(self, user: User):
+        """Check if given user is already member of the room or return exception"""
+        member_ids: Set[str] = set()
+        last_ex = None
+        try:
+            member_ids = {member.user_id for member in self.get_joined_members(force_resync=True)}
+        except MatrixRequestError as e:
+            last_ex = e
+        return user.user_id in member_ids, last_ex
 
 
 class GMatrixHttpApi(MatrixHttpApi):

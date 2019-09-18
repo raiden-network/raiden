@@ -62,7 +62,6 @@ from raiden.utils.typing import (
     NamedTuple,
     NewType,
     Optional,
-    Set,
     Tuple,
     Union,
     cast,
@@ -652,7 +651,10 @@ class MatrixTransport(Runnable):
             if not room.listeners:
                 room.add_listener(self._handle_message, "m.room.message")
             self.log.debug(
-                "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
+                "Found room",
+                room=room,
+                aliases=room.aliases,
+                members=room.get_joined_members(force_resync=False),
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
@@ -779,7 +781,7 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 "Message from invalid user displayName signature",
                 peer_user=user.user_id,
-                room_id=room.room_id,
+                room=room,
             )
             return False
 
@@ -790,7 +792,7 @@ class MatrixTransport(Runnable):
                 "Message from non-whitelisted peer - ignoring",
                 sender=user,
                 sender_address=to_checksum_address(peer_address),
-                room_id=room.room_id,
+                room=room,
             )
             return False
 
@@ -808,7 +810,7 @@ class MatrixTransport(Runnable):
                 "Ignoring invalid message",
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
-                room_id=room.room_id,
+                room=room,
                 expected_room_ids=room_ids,
                 reason=reason,
             )
@@ -825,7 +827,7 @@ class MatrixTransport(Runnable):
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
                 known_user_rooms=room_ids,
-                room_id=room.room_id,
+                room=room,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
@@ -851,7 +853,7 @@ class MatrixTransport(Runnable):
             messages=messages,
             sender=to_checksum_address(peer_address),
             sender_user=user,
-            room_id=room.room_id,
+            room=room,
         )
 
         for message in messages:
@@ -938,7 +940,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Send raw",
             receiver=to_checksum_address(receiver_address),
-            room_id=room.room_id,
+            room=room,
             data=data.replace("\n", "\\n"),
         )
         room.send_text(data)
@@ -951,31 +953,48 @@ class MatrixTransport(Runnable):
         assert address and self._address_mgr.is_address_known(address), msg
         assert self._raiden_service is not None
 
+        # filter peer_candidates
+        peer_candidates = [
+            self._get_user(user) for user in self._client.search_user_directory(address_hex)
+        ]
+        peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
+
+        if not peers and not allow_missing_peers:
+            self.log.error("No valid peer found", peer_address=to_checksum_address(address))
+            return None
+
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
         online_user_ids = self._address_mgr.get_online_user_ids_for_address(address)
         for room_id in room_ids:
             room = self._client.rooms[room_id]
-            member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-            if not member_ids & online_user_ids and member_ids:
-                continue
-            if not self._is_room_global(room):
-                continue
-            self.log.debug(
-                "Existing room",
-                room_id=room.room_id,
-                members=member_ids,
-                listening_peers=member_ids & online_user_ids,
-            )
-            if not member_ids & online_user_ids and member_ids:
+            member_ids = {member.user_id for member in room.get_joined_members()}
+
+            # Handle the case where an empty room was found
+            if not member_ids & online_user_ids:
+                for peer in peers:
+                    self._invite_user_to_room_with_retries(peer, room)
+                member_ids = {member.user_id for member in room.get_joined_members()}
+
+            # Do only return a room where no currently online user is listening
+            # before all rooms have been checked for an online peer
+            if member_ids & online_user_ids:
+                self.log.debug(
+                    "Existing room",
+                    room=room,
+                    members=member_ids,
+                    listening_peers=member_ids & online_user_ids,
+                )
+                return room
+            else:
                 self.log.error(
                     "No online user listening to current room",
-                    room_id=room.room_id,
+                    room=room,
                     users_currently_online=online_user_ids,
                     room_members=member_ids,
                     peer_address=to_checksum_address(address),
                 )
-            return room
+                return room
 
         # no room with expected name => create one and invite peer
 
@@ -993,12 +1012,26 @@ class MatrixTransport(Runnable):
         else:
             room = self._get_public_room(invitees=peers)
 
-        peer_ids = self._address_mgr.get_userids_for_address(address)
-        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-        room_is_empty = not bool(peer_ids & member_ids)
-        if room_is_empty:
-            for peer in peers:
-                self.invite_user_to_room_with_retries(peer, room)
+        for peer in peers:
+            self._invite_user_to_room_with_retries(peer, room)
+
+        member_ids = {member.user_id for member in room.get_joined_members()}
+        if not online_user_ids & member_ids:
+            self.log.error(
+                "No online user listening to current room",
+                room=room,
+                users_currently_online=online_user_ids,
+                room_members=member_ids,
+                peer_address=to_checksum_address(address),
+            )
+        else:
+            self.log.error(
+                "Successfully created new room",
+                room=room,
+                users_currently_online=online_user_ids,
+                room_members=member_ids,
+                peer_address=to_checksum_address(address),
+            )
 
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         self._set_room_id_for_address(address, room.room_id)
@@ -1021,7 +1054,7 @@ class MatrixTransport(Runnable):
         room = self._client.create_room(
             None, invitees=[user.user_id for user in invitees], is_public=False
         )
-        self.log.debug("Creating private room", room_id=room.room_id, invitees=invitees)
+        self.log.debug("Creating private room", room=room, invitees=invitees)
         return room
 
     def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
@@ -1032,7 +1065,7 @@ class MatrixTransport(Runnable):
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
-        room_name = make_room_alias(self.network_id, *address_pair)
+        room_name = make_room_alias(self.chain_id, *address_pair)
         room_name_full = f"#{room_name}:{self._server_name}"
         invitees_uids = [user.user_id for user in invitees]
 
@@ -1055,9 +1088,9 @@ class MatrixTransport(Runnable):
                     )
             else:
                 # Invite users to existing room
-                member_ids = {user.user_id for user in room.get_joined_members(force_resync=True)}
+                member_ids = {user.user_id for user in room.get_joined_members()}
                 users_to_invite = set(invitees_uids) - member_ids
-                self.log.debug("Inviting users", room_id=room.room_id, invitee_ids=users_to_invite)
+                self.log.debug("Inviting users", room=room, invitee_ids=users_to_invite)
                 for invitee_id in users_to_invite:
                     room.invite_user(invitee_id)
                 self.log.debug("Joined public room", room=room)
@@ -1079,16 +1112,14 @@ class MatrixTransport(Runnable):
                     msg, room_name=room_name, error=error.content, error_code=error.code
                 )
             else:
-                self.log.debug(
-                    "Room created successfully", room_id=room.room_id, invitees=invitees
-                )
+                self.log.debug("Room created successfully", room=room, invitees=invitees)
                 break
         else:
             # if can't join nor create, create an unnamed one
             room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
             self.log.warning(
                 "Could not create nor join a named room. Successfuly created an unnamed one",
-                room_id=room.room_id,
+                room=room,
                 invitees=invitees,
             )
 
@@ -1133,12 +1164,12 @@ class MatrixTransport(Runnable):
 
         room = self._client.rooms[room_ids[0]]
         if not room._members:
-            room.get_joined_members(force_resync=True)
+            room.get_joined_members()
         if user.user_id not in room._members:
             self.log.debug(
                 "Inviting", peer_address=to_checksum_address(peer_address), user=user, room=room
             )
-            self.invite_user_to_room_with_retries(user, room)
+            self._invite_user_to_room_with_retries(user, room)
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
@@ -1335,7 +1366,7 @@ class MatrixTransport(Runnable):
 
         return True
 
-    def invite_user_to_room_with_retries(self, user: User, room: Room):
+    def _invite_user_to_room_with_retries(self, user: User, room: Room):
         """
         - Invites a given user to a given room.
         - Logs an error if the user is not online.
@@ -1349,41 +1380,30 @@ class MatrixTransport(Runnable):
         retry_interval = ROOM_JOIN_RETRY_INTERVAL
         join_retries = JOIN_RETRIES
         last_ex: Optional[Exception] = None
-
-        def is_member():
-            """Check if given user is already member of the room or return exception"""
-            member_ids: Set[str] = set()
-            last_ex = None
-            try:
-                member_ids = {
-                    member.user_id for member in room.get_joined_members(force_resync=True)
-                }
-            except MatrixRequestError as e:
-                last_ex = e
-            return user.user_id in member_ids, last_ex
+        is_member = False
 
         # user is not online, suppress retries.
-        if (
-            self._address_mgr.get_userid_presence(user.user_id) is not UserPresence.ONLINE
-            or UserPresence.UNKNOWN
+        if not (
+            self._address_mgr.get_userid_presence(user.user_id)
+            in {UserPresence.ONLINE, UserPresence.UNKNOWN}
         ):
             self.log.error(
                 "User to be invited is not online, trying to invite nonetheless",
-                room_id=room.room_id,
+                room=room,
                 user_id=user.user_id,
                 peer_address=to_checksum_address(address),
             )
             join_retries = 1
 
         for _ in range(join_retries):
-            is_member, last_ex = is_member()
+            is_member, last_ex = room.is_member(user)
             if not is_member:
                 try:
                     room.invite_user(user.user_id)
                 except (json.JSONDecodeError, MatrixRequestError):
                     self.log.warning(
                         "Exception inviting user, maybe their server is not healthy",
-                        room_id=room.room_id,
+                        room=room,
                         user_id=user.user_id,
                         peer_address=to_checksum_address(address),
                         exc_info=True,
@@ -1393,7 +1413,7 @@ class MatrixTransport(Runnable):
                 retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
                 self.log.debug(
                     "Waiting for peer to join from invite",
-                    room_id=room.room_id,
+                    room=room,
                     user_id=user.user_id,
                     peer_address=to_checksum_address(address),
                 )
@@ -1407,7 +1427,7 @@ class MatrixTransport(Runnable):
                 # Inform the client, that currently no one listens:
                 self.log.error(
                     "Peer has not joined from invite yet, should join eventually",
-                    room_id=room.room_id,
+                    room=room,
                     user_id=user.user_id,
                     peer_address=to_checksum_address(address),
                 )
