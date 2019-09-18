@@ -155,7 +155,7 @@ def wait_for_participant_deposit(
         current_balance = balance(channel_state)
 
 
-def wait_both_channel_deposit(
+def wait_single_channel_deposit(
     app_deposit: "App",
     app_partner: "App",
     registry_address: TokenNetworkRegistryAddress,
@@ -168,36 +168,43 @@ def wait_both_channel_deposit(
         token_network_registry_address=registry_address,
         token_address=token_address,
         partner_address=app_partner.raiden.address,
-        target_address=app_partner.raiden.address,
-        target_balance=total_deposit,
-        retry_timeout=retry_timeout,
-    )
-    wait_for_participant_deposit(
-        raiden=app_deposit.raiden,
-        token_network_registry_address=registry_address,
-        token_address=token_address,
-        partner_address=app_partner.raiden.address,
         target_address=app_deposit.raiden.address,
         target_balance=total_deposit,
         retry_timeout=retry_timeout,
     )
+    wait_for_participant_deposit(
+        raiden=app_partner.raiden,
+        token_network_registry_address=registry_address,
+        token_address=token_address,
+        partner_address=app_deposit.raiden.address,
+        target_address=app_deposit.raiden.address,
+        target_balance=total_deposit,
+        retry_timeout=retry_timeout,
+    )
+
 
-    wait_for_participant_deposit(
-        raiden=app_partner.raiden,
-        token_network_registry_address=registry_address,
+def wait_both_channel_deposit(
+    app_deposit: "App",
+    app_partner: "App",
+    registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress,
+    total_deposit: TokenAmount,
+    retry_timeout: float,
+) -> None:
+    wait_single_channel_deposit(
+        app_deposit=app_deposit,
+        app_partner=app_partner,
+        registry_address=registry_address,
         token_address=token_address,
-        partner_address=app_deposit.raiden.address,
-        target_address=app_deposit.raiden.address,
-        target_balance=total_deposit,
+        total_deposit=total_deposit,
         retry_timeout=retry_timeout,
     )
-    wait_for_participant_deposit(
-        raiden=app_partner.raiden,
-        token_network_registry_address=registry_address,
+    wait_single_channel_deposit(
+        app_deposit=app_partner,
+        app_partner=app_deposit,
+        registry_address=registry_address,
         token_address=token_address,
-        partner_address=app_deposit.raiden.address,
-        target_address=app_partner.raiden.address,
-        target_balance=total_deposit,
+        total_deposit=total_deposit,
         retry_timeout=retry_timeout,
     )
 
