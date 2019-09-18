@@ -142,30 +142,6 @@ def wait_both_channel_open(app0, app1, registry_address, token_address, retry_ti
     )
 
 
-def wait_both_channel_deposit(
-    app_deposit, app_partner, registry_address, token_address, total_deposit, retry_timeout
-):
-    waiting.wait_for_participant_deposit(
-        app_deposit.raiden,
-        registry_address,
-        token_address,
-        app_partner.raiden.address,
-        app_deposit.raiden.address,
-        total_deposit,
-        retry_timeout,
-    )
-
-    waiting.wait_for_participant_deposit(
-        app_partner.raiden,
-        registry_address,
-        token_address,
-        app_deposit.raiden.address,
-        app_deposit.raiden.address,
-        total_deposit,
-        retry_timeout,
-    )
-
-
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -214,7 +190,10 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
     RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
 
-    wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
+    timeout_seconds = 15
+    exception = RuntimeError(f"Did not see the channels open within {timeout_seconds} seconds")
+    with gevent.Timeout(seconds=timeout_seconds, exception=exception):
+        wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     assert_synced_channel_state(token_network_address, app0, Balance(0), [], app1, Balance(0), [])
 
@@ -222,9 +201,11 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         registry_address, token_address, app1.raiden.address, deposit
     )
 
-    waiting.wait_both_channel_deposit(
-        app0, app1, registry_address, token_address, deposit, retry_timeout
-    )
+    exception = RuntimeError(f"Did not see the channel deposit within {timeout_seconds} seconds")
+    with gevent.Timeout(seconds=timeout_seconds, exception=exception):
+        waiting.wait_single_channel_deposit(
+            app0, app1, registry_address, token_address, deposit, retry_timeout
+        )
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, Balance(0), [])
 
@@ -232,9 +213,10 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         registry_address, token_address, app0.raiden.address, deposit
     )
 
-    waiting.wait_both_channel_deposit(
-        app1, app0, registry_address, token_address, deposit, retry_timeout
-    )
+    with gevent.Timeout(seconds=timeout_seconds, exception=exception):
+        waiting.wait_single_channel_deposit(
+            app1, app0, registry_address, token_address, deposit, retry_timeout
+        )
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
 
