@@ -735,6 +735,27 @@ Payments
       This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
       However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
 
+   To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for `secret` and `secret_hash`.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "amount": 200,
+          "identifier": 42,
+          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
+          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
+      }
+
+   :reqjson int amount: Amount to be sent to the target
+   :reqjson int identifier: Identifier of the payment (optional)
+   :reqjson string secret: The secret to be used for the payment
+   :reqjson string secret_hash: The secret hash (should be equal to SHA256 of the secret).
 
 Querying Events
 ===============
