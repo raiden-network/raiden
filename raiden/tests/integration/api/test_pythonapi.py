@@ -11,6 +11,7 @@ from raiden.exceptions import (
 )
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
 from raiden.transfer.state import NODE_NETWORK_REACHABLE, NODE_NETWORK_UNKNOWN, ChannelState
@@ -104,25 +105,45 @@ def test_raidenapi_channel_lifecycle(
             registry_address=registry_address, token_address=None, partner_address=api2.address
         )
 
+    address_for_lowest_settle_timeout = make_address()
+    lowest_valid_settle_timeout = node1.raiden.config["reveal_timeout"] * 2
+
     # Make sure a small settle timeout is not accepted when opening a channel
     with pytest.raises(InvalidSettleTimeout):
-        invalid_settle_timeout = node1.raiden.config["reveal_timeout"] * 2 - 1
         api1.channel_open(
             registry_address=node1.raiden.default_registry.address,
             token_address=token_address,
-            partner_address=api2.address,
-            settle_timeout=invalid_settle_timeout,
+            partner_address=address_for_lowest_settle_timeout,
+            settle_timeout=lowest_valid_settle_timeout - 1,
         )
 
-    # Make sure a too large settle timeout is not accepted when opening a channel
+    # Make sure a the smallest settle timeout is accepted
+    api1.channel_open(
+        registry_address=node1.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=address_for_lowest_settle_timeout,
+        settle_timeout=lowest_valid_settle_timeout,
+    )
+
+    address_for_highest_settle_timeout = make_address()
+    highest_valid_settle_timeout = settle_timeout_max
+
+    # Make sure a large settle timeout is not accepted when opening a channel
     with pytest.raises(InvalidSettleTimeout):
-        invalid_settle_timeout = settle_timeout_max + 1
         api1.channel_open(
             registry_address=node1.raiden.default_registry.address,
             token_address=token_address,
-            partner_address=api2.address,
-            settle_timeout=invalid_settle_timeout,
+            partner_address=address_for_highest_settle_timeout,
+            settle_timeout=highest_valid_settle_timeout + 1,
         )
+
+    # Make sure the highest settle timeout is accepted
+    api1.channel_open(
+        registry_address=node1.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=address_for_highest_settle_timeout,
+        settle_timeout=highest_valid_settle_timeout,
+    )
 
     # open is a synchronous api
     api1.channel_open(node1.raiden.default_registry.address, token_address, api2.address)
