@@ -338,6 +338,7 @@ class PaymentSchema(BaseSchema):
     identifier = fields.Integer(missing=None)
     secret = SecretField(missing=None)
     secret_hash = SecretHashField(missing=None)
+    lock_timeout = fields.Integer(missing=None)
 
     class Meta:
         strict = True

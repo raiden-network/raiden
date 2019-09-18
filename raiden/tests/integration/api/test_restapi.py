@@ -18,6 +18,7 @@ from flask import url_for
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import GENESIS_BLOCK_NUMBER, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.utils import factories
@@ -2158,3 +2159,67 @@ def test_api_testnet_token_mint(api_server_test_instance, token_addresses):
     request = grequests.post(url, json=dict(to=user_address[:-2], value=10))
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_api_payments_with_lock_timeout(api_server_test_instance, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    amount = 100
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+    number_of_nodes = 2
+    reveal_timeout = number_of_nodes * 4 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    settle_timeout = 39
+
+    # try lock_timeout = reveal_timeout - should not work
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "lock_timeout": reveal_timeout},
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
+
+    # try lock_timeout = reveal_timeout * 2  - should  work.
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "lock_timeout": 2 * reveal_timeout},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+
+    # try lock_timeout = settle_timeout - should work.
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "lock_timeout": settle_timeout},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+
+    # try lock_timeout = settle_timeout+1 - should not work.
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "lock_timeout": settle_timeout + 1},
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)

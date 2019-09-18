@@ -117,6 +117,7 @@ def initiator_init(
     transfer_secrethash: SecretHash,
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
+    lock_timeout: BlockTimeout = None,
 ) -> ActionInitInitiator:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
@@ -127,6 +128,7 @@ def initiator_init(
         target=target_address,
         secret=transfer_secret,
         secrethash=transfer_secrethash,
+        lock_timeout=lock_timeout,
     )
 
     routes, feedback_token = routing.get_best_routes(
@@ -204,6 +206,7 @@ class PaymentStatus(NamedTuple):
     amount: PaymentAmount
     token_network_address: TokenNetworkAddress
     payment_done: AsyncResult
+    lock_timeout: Optional[BlockTimeout]
 
     def matches(self, token_network_address: TokenNetworkAddress, amount: PaymentAmount) -> bool:
         return token_network_address == self.token_network_address and amount == self.amount
@@ -845,6 +848,7 @@ class RaidenService(Runnable):
                     amount=transfer_description.amount,
                     token_network_address=balance_proof.token_network_address,
                     payment_done=AsyncResult(),
+                    lock_timeout=initiator.transfer_description.lock_timeout,
                 )
 
     def _initialize_messages_queues(self, chain_state: ChainState) -> None:
@@ -1075,6 +1079,7 @@ class RaidenService(Runnable):
         identifier: PaymentID,
         secret: Secret = None,
         secrethash: SecretHash = None,
+        lock_timeout: BlockTimeout = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -1099,6 +1104,7 @@ class RaidenService(Runnable):
             identifier=identifier,
             secret=secret,
             secrethash=secrethash,
+            lock_timeout=lock_timeout,
         )
 
         return payment_status
@@ -1111,6 +1117,7 @@ class RaidenService(Runnable):
         identifier: PaymentID,
         secret: Secret,
         secrethash: SecretHash = None,
+        lock_timeout: BlockTimeout = None,
     ) -> PaymentStatus:
 
         if secrethash is None:
@@ -1170,6 +1177,7 @@ class RaidenService(Runnable):
                 amount=amount,
                 token_network_address=token_network_address,
                 payment_done=AsyncResult(),
+                lock_timeout=lock_timeout,
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
@@ -1181,6 +1189,7 @@ class RaidenService(Runnable):
             transfer_secrethash=secrethash,
             token_network_address=token_network_address,
             target_address=target,
+            lock_timeout=lock_timeout,
         )
 
         # Dispatch the state change even if there are no routes to create the
