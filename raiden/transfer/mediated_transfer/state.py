@@ -14,6 +14,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    BlockTimeout,
     ChannelID,
     Dict,
     InitiatorAddress,
@@ -112,6 +113,7 @@ class TransferDescriptionWithSecretState(State):
     target: TargetAddress
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
+    lock_timeout: Optional[BlockTimeout] = field(default=None)
 
     def __post_init__(self) -> None:
         if self.secrethash == EMPTY_SECRETHASH and self.secret:

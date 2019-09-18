@@ -1024,6 +1024,7 @@ class RestAPI:  # pragma: no unittest
         identifier: PaymentID,
         secret: Secret,
         secret_hash: SecretHash,
+        lock_timeout: BlockTimeout,
     ) -> Response:
         log.debug(
             "Initiating payment",
@@ -1035,6 +1036,7 @@ class RestAPI:  # pragma: no unittest
             payment_identifier=identifier,
             secret=secret,
             secret_hash=secret_hash,
+            lock_timeout=lock_timeout,
         )
 
         if identifier is None:
@@ -1049,6 +1051,7 @@ class RestAPI:  # pragma: no unittest
                 identifier=identifier,
                 secret=secret,
                 secrethash=secret_hash,
+                lock_timeout=lock_timeout,
             )
         except (
             InvalidAmount,

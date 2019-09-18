@@ -884,6 +884,7 @@ class RaidenAPI:  # pragma: no unittest
         transfer_timeout: int = None,
         secret: Secret = None,
         secrethash: SecretHash = None,
+        lock_timeout: BlockTimeout = None,
     ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
@@ -896,6 +897,7 @@ class RaidenAPI:  # pragma: no unittest
             identifier=identifier,
             secret=secret,
             secrethash=secrethash,
+            lock_timeout=lock_timeout,
         )
         payment_status.payment_done.wait(timeout=transfer_timeout)
         return payment_status
@@ -909,6 +911,7 @@ class RaidenAPI:  # pragma: no unittest
         identifier: PaymentID = None,
         secret: Secret = None,
         secrethash: SecretHash = None,
+        lock_timeout: BlockTimeout = None,
     ):
         current_state = views.state_from_raiden(self.raiden)
         token_network_registry_address = self.raiden.default_registry.address
@@ -974,6 +977,7 @@ class RaidenAPI:  # pragma: no unittest
             identifier=identifier,
             secret=secret,
             secrethash=secrethash,
+            lock_timeout=lock_timeout,
         )
         return payment_status
 

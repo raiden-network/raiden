@@ -707,6 +707,8 @@ Payments
 
    :reqjson int amount: Amount to be sent to the target
    :reqjson int identifier: Identifier of the payment (optional)
+   :reqjson int lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
+
 
    **Example Response**:
 

@@ -131,7 +131,7 @@ class UnlockGain(NamedTuple):
 
 
 def get_safe_initial_expiration(
-    block_number: BlockNumber, reveal_timeout: BlockTimeout
+    block_number: BlockNumber, reveal_timeout: BlockTimeout, lock_timeout: BlockTimeout = None
 ) -> BlockExpiration:
     """ Returns the upper bound block expiration number used by the initiator
     of a transfer or a withdraw.
@@ -145,6 +145,9 @@ def get_safe_initial_expiration(
     reveal_timeout`, otherwise for off-chain transfers Raiden would be slower
     than blockchain.
     """
+    if lock_timeout:
+        return BlockExpiration(block_number + lock_timeout)
+
     return BlockExpiration(block_number + reveal_timeout * 2)
 
 
@@ -199,18 +202,18 @@ def is_channel_usable_for_mediation(
     secret on-chain.
     """
 
-    channel_usable = is_channel_usable_for_new_transfer(channel_state, transfer_amount)
-    lock_timeout_valid = (
-        lock_timeout > 0
-        and channel_state.settle_timeout >= lock_timeout
-        and channel_state.reveal_timeout < lock_timeout
+    channel_usable = is_channel_usable_for_new_transfer(
+        channel_state, transfer_amount, lock_timeout
     )
+    lock_timeout_valid = lock_timeout > 0
 
     return channel_usable and lock_timeout_valid
 
 
 def is_channel_usable_for_new_transfer(
-    channel_state: NettingChannelState, transfer_amount: PaymentWithFeeAmount
+    channel_state: NettingChannelState,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: Optional[BlockTimeout],
 ) -> bool:
     """True if the channel be used to start a new transfer.
 
@@ -219,6 +222,7 @@ def is_channel_usable_for_new_transfer(
     - The channel has capacity.
     - The number of locks can be claimed on-chain.
     - The transfer amount does not overflow.
+    - lock_timeout, if provided, is within allowed range (reveal_timeout, settle_timeout]
 
     The number of locks has to be checked because the gas usage will increase
     linearly with the number of locks in it, this has to be limited to a value
@@ -227,11 +231,17 @@ def is_channel_usable_for_new_transfer(
     pending_transfers = get_number_of_pending_transfers(channel_state.our_state)
     distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
 
+    lock_timeout_valid = lock_timeout is None or (
+        lock_timeout <= channel_state.settle_timeout
+        and lock_timeout > channel_state.reveal_timeout
+    )
+
     channel_usable = (
         get_status(channel_state) == ChannelState.STATE_OPENED
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
+        and lock_timeout_valid
     )
     return channel_usable
 
