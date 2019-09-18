@@ -718,7 +718,9 @@ Payments
           "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
           "amount": 200,
-          "identifier": 42
+          "identifier": 42,
+          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
+          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
 
    :statuscode 200: Successful payment
