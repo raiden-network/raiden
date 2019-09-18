@@ -204,32 +204,21 @@ def test_mediated_transfer_with_entire_deposit(
             [],
         )
 
-    # --- Works fine until here
-
-    # app1_app0_channel_state = views.get_channelstate_by_token_network_and_partner(
-    #     chain_state=views.state_from_raiden(app1.raiden),
-    #     token_network_address=token_network_address,
-    #     partner_address=app0.raiden.address,
-    # )
-    # app2_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
-    #     chain_state=views.state_from_raiden(app2.raiden),
-    #     token_network_address=token_network_address,
-    #     partner_address=app1.raiden.address,
-    # )
-    # backwards_channels = [app2_app1_channel_state, app1_app0_channel_state]
-    # reverse_calculation = get_amount_to_drain_channel_with_fees(
-    #     initiator_capacity=deposit + calculation.amount_to_send, channels=backwards_channels
-    # )
-    # assert reverse_calculation, "reverse fees calculation should be succesful"
-
-    # This is the fee calculation that works. Using this here now until the utility
-    # functions get fixed
-    class Foo:
-        amount_to_send = 388
-        mediators_cut = [4]
-        amount_with_fees = 396
-
-    reverse_calculation = Foo()
+    app1_app0_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app1.raiden),
+        token_network_address=token_network_address,
+        partner_address=app0.raiden.address,
+    )
+    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app1.raiden),
+        token_network_address=token_network_address,
+        partner_address=app2.raiden.address,
+    )
+    mediator_channels = [app1_app2_channel_state, app1_app0_channel_state]
+    reverse_calculation = get_amount_to_drain_channel_with_fees(
+        initiator_capacity=deposit + calculation.amount_to_send, channels=mediator_channels
+    )
+    assert reverse_calculation, "reverse fees calculation should be succesful"
 
     reverse_path = list(raiden_network[::-1])
     transfer_and_assert_path(
