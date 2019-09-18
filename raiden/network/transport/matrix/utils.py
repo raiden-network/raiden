@@ -130,19 +130,19 @@ class UserAddressManager:
         """ Is the given ``address`` reachability being monitored? """
         return address in self._address_to_userids
 
-    def add_address(self, address: Address):
+    def add_address(self, address: Address) -> None:
         """ Add ``address`` to the known addresses that are being observed for reachability. """
         # Since _address_to_userids is a defaultdict accessing the key creates the entry
         _ = self._address_to_userids[address]
 
-    def add_userid_for_address(self, address: Address, user_id: str):
+    def add_userid_for_address(self, address: Address, user_id: str) -> None:
         """ Add a ``user_id`` for the given ``address``.
 
         Implicitly adds the address if it was unknown before.
         """
         self._address_to_userids[address].add(user_id)
 
-    def add_userids_for_address(self, address: Address, user_ids: Iterable[str]):
+    def add_userids_for_address(self, address: Address, user_ids: Iterable[str]) -> None:
         """ Add multiple ``user_ids`` for the given ``address``.
 
         Implicitly adds any addresses if they were unknown before.
@@ -163,7 +163,7 @@ class UserAddressManager:
         """ Return the current reachability state for ``address``. """
         return self._address_to_reachability.get(address, AddressReachability.UNKNOWN)
 
-    def force_user_presence(self, user: User, presence: UserPresence):
+    def force_user_presence(self, user: User, presence: UserPresence) -> None:
         """ Forcibly set the ``user`` presence to ``presence``.
 
         This method is only provided to cover an edge case in our use of the Matrix protocol and
@@ -171,7 +171,7 @@ class UserAddressManager:
         """
         self._userid_to_presence[user.user_id] = presence
 
-    def populate_userids_for_address(self, address: Address, force: bool = False):
+    def populate_userids_for_address(self, address: Address, force: bool = False) -> None:
         """ Populate known user ids for the given ``address`` from the server directory.
 
         If ``force`` is ``True`` perform the directory search even if there
@@ -187,7 +187,7 @@ class UserAddressManager:
                 ),
             )
 
-    def refresh_address_presence(self, address: Address):
+    def refresh_address_presence(self, address: Address) -> None:
         """
         Update synthesized address presence state from cached user presence states.
 
@@ -223,7 +223,7 @@ class UserAddressManager:
         self._address_to_reachability[address] = new_address_reachability
         self._address_reachability_changed_callback(address, new_address_reachability)
 
-    def _presence_listener(self, event: Dict[str, Any]):
+    def _presence_listener(self, event: Dict[str, Any]) -> None:
         """
         Update cached user presence state from Matrix presence events.
 
@@ -265,7 +265,7 @@ class UserAddressManager:
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
 
-    def log_status_message(self):
+    def log_status_message(self) -> None:
         while not self._stop_event.ready():
             addresses_uids_presence = {
                 to_checksum_address(address): {
@@ -282,7 +282,7 @@ class UserAddressManager:
             )
             self._stop_event.wait(30)
 
-    def _reset_state(self):
+    def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
@@ -547,7 +547,7 @@ def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     return sorted_servers
 
 
-def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
+def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
     """Given a list of possible servers, chooses the closest available and create a GMatrixClient
 
     Params:
@@ -604,7 +604,7 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
     return ROOM_NAME_SEPARATOR.join([ROOM_NAME_PREFIX, network_name, *suffixes])
 
 
-def validate_and_parse_message(data, peer_address) -> List[Message]:
+def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message]:
     messages: List[Message] = list()
 
     if not isinstance(data, str):
@@ -649,7 +649,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
     return messages
 
 
-def my_place_or_yours(our_address: Address, partner_address: Address):
+def my_place_or_yours(our_address: Address, partner_address: Address) -> Address:
     """Convention to compare two addresses. Compares lexicographical
     order and returns the preceding address """
 
