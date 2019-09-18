@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tupl
 import gevent
 import structlog
 
-LOG_BLACKLIST = {
+LOG_BLACKLIST: Dict[Pattern, Optional[str]] = {
     re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>",
     re.compile(
         r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"
@@ -118,7 +118,7 @@ def add_greenlet_name(
     return event_dict
 
 
-def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
+def redactor(blacklist: Dict[Pattern, Optional[str]]) -> Callable[[str], str]:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
 
     def processor_wrapper(msg: str) -> str:

@@ -28,25 +28,15 @@ class Timer:
         signal.signal(timer_signal, self.callback)
         signal.setitimer(timer, interval, interval)
 
-        oldtimer, oldaction = None, None  # cheating for now
-        self.oldaction = oldaction
-        self.oldtimer = oldtimer
         self._callback = callback
 
     def callback(self, signum: int, stack: FrameType) -> None:
         self._callback(signum, stack)
 
-        if self.oldaction and callable(self.oldaction):
-            self.oldaction(signum, stack)  # pylint: disable=not-callable
-
     def stop(self) -> None:
         del self._callback
 
-        if self.oldaction and callable(self.oldaction):
-            signal.signal(TIMER_SIGNAL, self.oldaction)
-            signal.setitimer(TIMER_SIGNAL, self.oldtimer[0], self.oldtimer[1])
-        else:
-            signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
+        signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
 
     def __del__(self) -> None:
         self.stop()

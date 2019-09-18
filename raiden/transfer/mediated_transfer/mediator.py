@@ -123,9 +123,7 @@ def is_send_transfer_almost_equal(
     """ True if both transfers are for the same mediated transfer. """
     # The only thing that may change is the direction of the transfer
     return (
-        isinstance(send, LockedTransferUnsignedState)
-        and isinstance(received, LockedTransferSignedState)
-        and send.payment_identifier == received.payment_identifier
+        send.payment_identifier == received.payment_identifier
         and send.token == received.token
         # FIXME: Checking the transferred amount would make a lot of sense, but
         #        this is hard to do precisely without larger changes to the

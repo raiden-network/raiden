@@ -36,9 +36,10 @@ def flamegraph_format(stack_count: FlameGraph) -> str:
 
 def sample_stack(stack_count: FlameGraph, frame: FrameType, timespent) -> None:
     callstack = []
-    while frame is not None:
-        callstack.append(frame_format(frame))
-        frame = frame.f_back
+    optional_frame: Optional[FrameType] = frame
+    while optional_frame is not None:
+        callstack.append(frame_format(optional_frame))
+        optional_frame = optional_frame.f_back
 
     formatted_stack = FlameStack(";".join(reversed(callstack)))
     stack_count[formatted_stack] += timespent

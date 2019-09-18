@@ -224,8 +224,6 @@ class Account:
         """Set the UUID. Set it to `None` in order to remove it."""
         if value is not None:
             self.keystore["id"] = value
-        elif "id" in self.keystore:
-            self.keystore.pop("id")
 
     def __repr__(self) -> str:
         if self.address is not None:

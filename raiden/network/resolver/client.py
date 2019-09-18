@@ -48,7 +48,7 @@ def reveal_secret_with_resolver(
     except requests.exceptions.RequestException:
         return False
 
-    if response is None or response.status_code != HTTPStatus.OK:
+    if response.status_code != HTTPStatus.OK:
         return False
 
     state_change = ReceiveSecretReveal(
