@@ -135,15 +135,16 @@ class PaymentAmountCalculation(NamedTuple):
     amount_with_fees: PaymentWithFeeAmount
 
 
-def get_amount_to_drain_channel_with_fees(
-    initiator_capacity: PaymentAmount, channels: List[NettingChannelState]
+def get_amount_for_sending_before_fees(
+    amount_to_leave_initiator: PaymentAmount, channels: List[NettingChannelState]
 ) -> Optional[PaymentAmountCalculation]:
     """
-    Calculates the amount needed to drain the path of the given channels list
+    Calculates the amount needed to be sent by the initiator (before fees) in
+    order for his balance to be reduced by `amount_to_leave_initiator`.
 
-    The initial capacity of the initiator we want to drain should be given.
+    Also returns the fees kept by the mediators.
     """
-    amount_at_target = initiator_capacity
+    amount_at_target = amount_to_leave_initiator
     while amount_at_target != 0:
         calculation = get_initial_payment_for_final_target_amount(
             final_amount=amount_at_target, channels=channels
@@ -168,7 +169,7 @@ def get_amount_to_drain_channel_with_fees(
             estimated_total_amount_at_initiator, total_amount_with_mediator_fees
         )
 
-        if send_amount_with_fees <= initiator_capacity:
+        if send_amount_with_fees <= amount_to_leave_initiator:
             return PaymentAmountCalculation(
                 amount_to_send=PaymentAmount(send_amount),
                 mediators_cut=calculation.mediators_cut,

@@ -23,10 +23,10 @@ from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNE
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
+from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.transfer import calculate_fee_for_amount
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
@@ -1956,14 +1956,28 @@ def test_channel_events_raiden(api_server_test_instance, raiden_network, token_a
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_pending_transfers_endpoint(raiden_network, token_addresses):
     initiator, mediator, target = raiden_network
-    amount = 150
-    amount_with_fee = amount + calculate_fee_for_amount(amount)
-    identifier = 42
-
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
     )
+    app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(initiator.raiden),
+        token_network_address=token_network_address,
+        partner_address=mediator.raiden.address,
+    )
+    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(mediator.raiden),
+        token_network_address=token_network_address,
+        partner_address=target.raiden.address,
+    )
+    forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
+    amount_to_leave = 150
+    calculation = get_amount_for_sending_before_fees(
+        amount_to_leave_initiator=amount_to_leave, channels=forward_channels
+    )
+
+    assert calculation, "fees calculation should be succesful"
+    identifier = 42
 
     initiator_server = create_api_server(initiator, 8575)
     mediator_server = create_api_server(mediator, 8576)
@@ -1988,7 +2002,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
     initiator.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
-        amount=amount,
+        amount=calculation.amount_to_send,
         target=target.raiden.address,
         identifier=identifier,
         secret=secret,
@@ -2004,7 +2018,12 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         content = json.loads(response.content)
         assert len(content) == 1
         assert content[0]["payment_identifier"] == str(identifier)
-        assert content[0]["locked_amount"] == str(amount_with_fee)
+        if server == target_server:
+            assert content[0]["locked_amount"] == str(
+                calculation.amount_with_fees - sum(calculation.mediators_cut)
+            )
+        else:
+            assert content[0]["locked_amount"] == str(calculation.amount_with_fees)
         assert content[0]["token_address"] == to_checksum_address(token_address)
         assert content[0]["token_network_address"] == to_checksum_address(token_network_address)
 

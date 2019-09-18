@@ -15,7 +15,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.mediation_fees import get_amount_to_drain_channel_with_fees
+from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -168,8 +168,8 @@ def test_mediated_transfer_with_entire_deposit(
     )
     forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
 
-    calculation = get_amount_to_drain_channel_with_fees(
-        initiator_capacity=deposit, channels=forward_channels
+    calculation = get_amount_for_sending_before_fees(
+        amount_to_leave_initiator=deposit, channels=forward_channels
     )
     assert calculation, "fees calculation should be succesful"
 
@@ -215,8 +215,8 @@ def test_mediated_transfer_with_entire_deposit(
         partner_address=app2.raiden.address,
     )
     mediator_channels = [app1_app2_channel_state, app1_app0_channel_state]
-    reverse_calculation = get_amount_to_drain_channel_with_fees(
-        initiator_capacity=deposit + calculation.amount_to_send, channels=mediator_channels
+    reverse_calculation = get_amount_for_sending_before_fees(
+        amount_to_leave_initiator=deposit + calculation.amount_to_send, channels=mediator_channels
     )
     assert reverse_calculation, "reverse fees calculation should be succesful"
 
