@@ -707,6 +707,11 @@ Payments
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
    :statuscode 500: Internal Raiden node error
 
+.. note::
+      This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
+      However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
+
+
 Querying Events
 ===============
 
