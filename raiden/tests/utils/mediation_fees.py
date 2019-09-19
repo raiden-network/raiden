@@ -73,7 +73,7 @@ def fee_receiver(
 
 class FeesCalculation(NamedTuple):
     total_amount: PaymentWithFeeAmount
-    mediators_cut: List[FeeAmount]
+    mediation_fees: List[FeeAmount]
 
 
 def get_initial_payment_for_final_target_amount(
@@ -89,7 +89,7 @@ def get_initial_payment_for_final_target_amount(
 
     # No fees in direct transfer
     if len(channels) == 1:
-        return FeesCalculation(total_amount=PaymentWithFeeAmount(final_amount), mediators_cut=[])
+        return FeesCalculation(total_amount=PaymentWithFeeAmount(final_amount), mediation_fees=[])
 
     # Backpropagate fees in mediation scenario
     total = PaymentWithFeeAmount(final_amount)
@@ -119,7 +119,7 @@ def get_initial_payment_for_final_target_amount(
     except UndefinedMediationFee:
         return None
 
-    return FeesCalculation(total_amount=PaymentWithFeeAmount(total), mediators_cut=fees)
+    return FeesCalculation(total_amount=PaymentWithFeeAmount(total), mediation_fees=fees)
 
 
 class PaymentAmountCalculation(NamedTuple):
@@ -131,11 +131,11 @@ class PaymentAmountCalculation(NamedTuple):
     """
 
     amount_to_send: PaymentAmount
-    mediators_cut: List[FeeAmount]
+    mediation_fees: List[FeeAmount]
     amount_with_fees: PaymentWithFeeAmount
 
 
-def get_amount_for_sending_before_fees(
+def get_amount_for_sending_before_and_after_fees(
     amount_to_leave_initiator: PaymentAmount, channels: List[NettingChannelState]
 ) -> Optional[PaymentAmountCalculation]:
     """
@@ -154,7 +154,7 @@ def get_amount_for_sending_before_fees(
             continue
 
         total_amount_with_mediator_fees = calculation.total_amount
-        mediation_fees = sum(calculation.mediators_cut)
+        mediation_fees = sum(calculation.mediation_fees)
         estimated_fee = max(
             mediation_fees, round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_at_target)
         )
@@ -172,7 +172,7 @@ def get_amount_for_sending_before_fees(
         if send_amount_with_fees <= amount_to_leave_initiator:
             return PaymentAmountCalculation(
                 amount_to_send=PaymentAmount(send_amount),
-                mediators_cut=calculation.mediators_cut,
+                mediation_fees=calculation.mediation_fees,
                 amount_with_fees=send_amount_with_fees,
             )
 

@@ -23,7 +23,7 @@ from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNE
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
-from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_fees
+from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
@@ -1972,7 +1972,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     )
     forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
     amount_to_leave = 150
-    calculation = get_amount_for_sending_before_fees(
+    calculation = get_amount_for_sending_before_and_after_fees(
         amount_to_leave_initiator=amount_to_leave, channels=forward_channels
     )
 
@@ -2020,7 +2020,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         assert content[0]["payment_identifier"] == str(identifier)
         if server == target_server:
             assert content[0]["locked_amount"] == str(
-                calculation.amount_with_fees - sum(calculation.mediators_cut)
+                calculation.amount_with_fees - sum(calculation.mediation_fees)
             )
         else:
             assert content[0]["locked_amount"] == str(calculation.amount_with_fees)

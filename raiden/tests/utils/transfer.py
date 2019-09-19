@@ -837,7 +837,6 @@ def wait_assert(func: Callable, *args, **kwargs) -> None:
         try:
             func(*args, **kwargs)
         except AssertionError as e:
-            print(str(e))
             try:
                 gevent.sleep(0.5)
             except gevent.Timeout:
