@@ -142,15 +142,17 @@ def test_token_network_registry_with_zero_token_address(
 ):
     """ Try to register a token at 0x0000..00 """
     blockchain_service = BlockChainService(
-        jsonrpc_client=deploy_client, contract_manager=contract_manager
-    )
-    token_network_registry_proxy = TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
-        registry_address=to_canonical_address(token_network_registry_address),
         contract_manager=contract_manager,
-        blockchain_service=blockchain_service,
+        metadata=BlockChainServiceMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
     )
-    with pytest.raises(BrokenPreconditionError, match="0x00..00 will fail"):
+    token_network_registry_proxy = blockchain_service.token_network_registry(
+        token_network_registry_address
+    )
+    with pytest.raises(ValueError, match="0x00..00 will fail"):
         token_network_registry_proxy.add_token(
             token_address=NULL_ADDRESS_BYTES,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),

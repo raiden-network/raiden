@@ -232,13 +232,12 @@ class RaidenAPI:  # pragma: no unittest
         chainstate_before_addition = views.state_from_raiden(self.raiden)
 
         registry = self.raiden.chain.token_network_registry(registry_address)
-        chainstate = views.state_from_raiden(self.raiden)
 
         token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
-            block_identifier=chainstate.block_hash,
+            block_identifier=chainstate_before_addition.block_hash,
         )
 
         waiting.wait_for_token_network(
