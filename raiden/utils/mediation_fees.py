@@ -19,23 +19,6 @@ def ppm_fee_per_channel(per_hop_fee: ProportionalFeeAmount) -> ProportionalFeeAm
     return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 1e6))
 
 
-def adjust_proportional_fee(given_propoprtional_fee) -> ProportionalFeeAmount:
-    """
-     Given prop. fee also counts per mediation, therefore it needs to be adjusted on
-     a per-channel basis:
-     x * (1 - p) * (1 - p) = x * (1 - q)
-     where
-        x = payment amount
-        q = cli proportional fee
-        p = per channel proportional fee
-     Leads to: p = 1 - sqrt(1 - q)
-"""
-    proportional_fee_ratio = given_propoprtional_fee / 1e6
-    channel_prop_fee_ratio = 1 - sqrt(1 - proportional_fee_ratio)
-    channel_prop_fee = round(channel_prop_fee_ratio * 1e6)
-    return ProportionalFeeAmount(channel_prop_fee)
-
-
 def prepare_mediation_fee_config(
     cli_token_to_flat_fee: Tuple[Tuple[TokenAddress, FeeAmount], ...],
     cli_token_to_proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
