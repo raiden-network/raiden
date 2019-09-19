@@ -177,4 +177,6 @@ def dont_handle_node_change_network_state():
     def empty_state_transition(chain_state, state_change):  # pylint: disable=unused-argument
         return TransitionResult(chain_state, list())
 
-    return patch("raiden.transfer.node.handle_node_change_network_state", empty_state_transition)
+    return patch(
+        "raiden.transfer.node.handle_action_change_node_network_state", empty_state_transition
+    )
