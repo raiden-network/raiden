@@ -449,9 +449,7 @@ def wait_for_healthy(
         This does not time out, use gevent.Timeout.
     """
 
-    wait_for_network_state(
-        raiden, node_address, NetworkState.NODE_NETWORK_REACHABLE, retry_timeout
-    )
+    wait_for_network_state(raiden, node_address, NetworkState.REACHABLE, retry_timeout)
 
 
 class TransferWaitResult(Enum):

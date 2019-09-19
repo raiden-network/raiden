@@ -164,8 +164,7 @@ def setup_initiator_tests(
         prng=prng,
         lock=lock,
         nodeaddresses_to_networkstates={
-            channel.partner_state.address: NetworkState.NODE_NETWORK_REACHABLE
-            for channel in channels.channels
+            channel.partner_state.address: NetworkState.REACHABLE for channel in channels.channels
         },
     )
     return setup
@@ -949,7 +948,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
                 state_change=init_state_change,
                 channelidentifiers_to_channels=channel_map,
                 nodeaddresses_to_networkstates={
-                    channel1.partner_state.address: NetworkState.NODE_NETWORK_REACHABLE
+                    channel1.partner_state.address: NetworkState.REACHABLE
                 },
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,

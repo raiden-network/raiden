@@ -95,8 +95,8 @@ def test_raidenapi_channel_lifecycle(
     registry_address = node1.raiden.default_registry.address
 
     # nodes don't have a channel, so they are not healthchecking
-    assert api1.get_node_network_state(api2.address) == NetworkState.NODE_NETWORK_UNKNOWN
-    assert api2.get_node_network_state(api1.address) == NetworkState.NODE_NETWORK_UNKNOWN
+    assert api1.get_node_network_state(api2.address) == NetworkState.UNKNOWN
+    assert api2.get_node_network_state(api1.address) == NetworkState.UNKNOWN
     assert not api1.get_channel_list(registry_address, token_address, api2.address)
 
     # Make sure invalid arguments to get_channel_list are caught
@@ -199,8 +199,8 @@ def test_raidenapi_channel_lifecycle(
     assert api1.get_channel_list(registry_address, token_address, api2.address) == [channel12]
 
     # there is a channel open, they must be healthchecking each other
-    assert api1.get_node_network_state(api2.address) == NetworkState.NODE_NETWORK_REACHABLE
-    assert api2.get_node_network_state(api1.address) == NetworkState.NODE_NETWORK_REACHABLE
+    assert api1.get_node_network_state(api2.address) == NetworkState.REACHABLE
+    assert api2.get_node_network_state(api1.address) == NetworkState.REACHABLE
 
     event_list2 = api1.get_blockchain_events_channel(
         token_address, channel12.partner_state.address

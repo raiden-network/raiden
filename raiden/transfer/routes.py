@@ -10,8 +10,7 @@ def filter_reachable_routes(
     return [
         route
         for route in route_states
-        if nodeaddresses_to_networkstates.get(route.next_hop_address)
-        == NetworkState.NODE_NETWORK_REACHABLE
+        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NetworkState.REACHABLE
     ]
 
 

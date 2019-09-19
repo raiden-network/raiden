@@ -162,10 +162,10 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
     address1, address2, address3, address4 = addresses
 
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_REACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
-        address4: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.REACHABLE,
+        address3: NetworkState.REACHABLE,
+        address4: NetworkState.REACHABLE,
     }
 
     json_data = {
@@ -276,9 +276,9 @@ def test_routing_mocked_pfs_request_error(
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_REACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.REACHABLE,
+        address3: NetworkState.REACHABLE,
     }
 
     with patch.object(requests, "post", side_effect=requests.RequestException()):
@@ -311,9 +311,9 @@ def test_routing_mocked_pfs_bad_http_code(
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_REACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.REACHABLE,
+        address3: NetworkState.REACHABLE,
     }
 
     # in case the pfs sends a bad http code but the correct path back
@@ -364,9 +364,9 @@ def test_routing_mocked_pfs_invalid_json(
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_REACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.REACHABLE,
+        address3: NetworkState.REACHABLE,
     }
 
     response = mocked_failed_response(error=ValueError(), status_code=200)
@@ -402,9 +402,9 @@ def test_routing_mocked_pfs_invalid_json_structure(
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_REACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.REACHABLE,
+        address3: NetworkState.REACHABLE,
     }
 
     response = mocked_json_response(response_data={}, status_code=400)
@@ -455,9 +455,9 @@ def test_routing_mocked_pfs_unavailable_peer(
 
     # test routing with node 2 unavailable
     chain_state.nodeaddresses_to_networkstates = {
-        address1: NetworkState.NODE_NETWORK_REACHABLE,
-        address2: NetworkState.NODE_NETWORK_UNREACHABLE,
-        address3: NetworkState.NODE_NETWORK_REACHABLE,
+        address1: NetworkState.REACHABLE,
+        address2: NetworkState.UNREACHABLE,
+        address3: NetworkState.REACHABLE,
     }
 
     response = mocked_json_response(response_data=json_data, status_code=200)

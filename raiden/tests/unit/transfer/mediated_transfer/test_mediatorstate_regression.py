@@ -585,8 +585,7 @@ def test_regression_unavailable_nodes_must_be_properly_filtered():
     payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
 
     all_nodes_offline = {
-        channel.partner_state.address: NetworkState.NODE_NETWORK_UNREACHABLE
-        for channel in channels.channels
+        channel.partner_state.address: NetworkState.UNREACHABLE for channel in channels.channels
     }
 
     initial_iteration = mediator.state_transition(

@@ -143,9 +143,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(self.chain_state, channel_new_state_change)
-        self.chain_state.nodeaddresses_to_networkstates[
-            partner_address
-        ] = NetworkState.NODE_NETWORK_REACHABLE
+        self.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
 
         return partner_address
 

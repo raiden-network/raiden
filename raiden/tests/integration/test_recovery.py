@@ -57,7 +57,7 @@ def test_recovery_happy_case(
     app0.stop()
 
     waiting.wait_for_network_state(
-        app1.raiden, app0.raiden.address, NetworkState.NODE_NETWORK_UNREACHABLE, network_wait
+        app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, network_wait
     )
 
     app0.start()
