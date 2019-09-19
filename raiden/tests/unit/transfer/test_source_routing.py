@@ -17,7 +17,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
 )
-from raiden.transfer.node import handle_init_initiator, state_transition
+from raiden.transfer.node import handle_action_init_initiator, state_transition
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.typing import BlockNumber, FeeAmount, TokenAmount
 
@@ -258,7 +258,7 @@ def test_initiator_skips_used_routes():
     init_action = factories.initiator_make_init_action(
         channels=channels, routes=routes, transfer=transfer, estimated_fee=FeeAmount(0)
     )
-    transition_result = handle_init_initiator(
+    transition_result = handle_action_init_initiator(
         chain_state=test_chain_state.chain_state, state_change=init_action
     )
 

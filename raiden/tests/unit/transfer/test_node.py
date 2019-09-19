@@ -31,11 +31,11 @@ from raiden.transfer.mediated_transfer.state import MediatorTransferState, Targe
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask
 from raiden.transfer.node import (
-    handle_delivered,
-    handle_new_token_network,
-    handle_new_token_network_registry,
-    handle_node_change_network_state,
-    handle_processed,
+    handle_action_change_node_network_state,
+    handle_action_new_token_network,
+    handle_contract_receive_new_token_network_registry,
+    handle_receive_delivered,
+    handle_receive_processed,
     inplace_delete_message_queue,
     is_transaction_effect_satisfied,
     is_transaction_expired,
@@ -258,7 +258,7 @@ def test_handle_new_token_network(chain_state, token_network_address):
     state_change = ActionNewTokenNetwork(
         token_network_registry_address=token_network_registry_address, token_network=token_network
     )
-    transition_result = handle_new_token_network(
+    transition_result = handle_action_new_token_network(
         chain_state=chain_state, state_change=state_change
     )
     new_chain_state = transition_result.new_state
@@ -371,7 +371,7 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
     state_change = ActionChangeNodeNetworkState(
         node_address=factories.make_address(), network_state=NODE_NETWORK_REACHABLE
     )
-    transition_result = handle_node_change_network_state(chain_state, state_change)
+    transition_result = handle_action_change_node_network_state(chain_state, state_change)
     # no events if no mediator tasks are there to apply to
     assert not transition_result.events
 
@@ -400,7 +400,7 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
         "subdispatch_mediatortask",
         lambda *args, **kwargs: TransitionResult(chain_state, [result]),
     )
-    transition_result = handle_node_change_network_state(chain_state, state_change)
+    transition_result = handle_action_change_node_network_state(chain_state, state_change)
 
     assert transition_result.events == [result]
 
@@ -422,7 +422,9 @@ def test_handle_new_token_network_registry(chain_state, token_network_address):
         block_number=1,
     )
     assert token_network_registry.address not in chain_state.identifiers_to_tokennetworkregistries
-    transition_result = handle_new_token_network_registry(chain_state, state_change)
+    transition_result = handle_contract_receive_new_token_network_registry(
+        chain_state, state_change
+    )
     assert transition_result.new_state == chain_state
     msg = "handle_new_token_network_registry did not add to chain_state mapping"
     assert token_network_registry.address in chain_state.identifiers_to_tokennetworkregistries, msg
@@ -454,7 +456,7 @@ def test_inplace_delete_message_queue(chain_state):
         )
     ]
     assert global_identifier in chain_state.queueids_to_queues, "queue mapping insertion failed"
-    handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
+    handle_receive_delivered(chain_state=chain_state, state_change=delivered_state_change)
     assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
 
     queue_identifier = QueueIdentifier(recipient=sender, canonical_identifier=canonical_identifier)
@@ -467,5 +469,5 @@ def test_inplace_delete_message_queue(chain_state):
         )
     ]
     assert queue_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
-    handle_processed(chain_state=chain_state, state_change=processed_state_change)
+    handle_receive_processed(chain_state=chain_state, state_change=processed_state_change)
     assert queue_identifier not in chain_state.queueids_to_queues, "queue did not clear"
