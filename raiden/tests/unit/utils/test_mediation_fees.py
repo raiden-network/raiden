@@ -107,4 +107,4 @@ def test_get_initial_payment_for_final_target_amount(
 
     assert calculation is not None
     assert calculation.total_amount == initial_amount
-    assert calculation.mediators_cut == expected_fees
+    assert calculation.mediation_fees == expected_fees
