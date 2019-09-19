@@ -1,5 +1,3 @@
-from math import sqrt
-
 from raiden.constants import DAI_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS
 from raiden.settings import DEFAULT_DAI_FLAT_FEE, DEFAULT_WETH_FLAT_FEE, MediationFeeConfig
 from raiden.utils.typing import Dict, FeeAmount, ProportionalFeeAmount, TokenAddress, Tuple
