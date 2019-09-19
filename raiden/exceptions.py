@@ -157,6 +157,10 @@ class InvalidToken(RaidenError):
     """ Raised if the token does not follow the ERC20 standard """
 
 
+class InvalidTokenAddress(RaidenError):
+    """ Raised if the token address is invalid """
+
+
 class STUNUnavailableException(RaidenError):
     pass
 

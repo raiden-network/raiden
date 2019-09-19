@@ -73,6 +73,7 @@ from raiden.exceptions import (
     InvalidSecretHash,
     InvalidSettleTimeout,
     InvalidToken,
+    InvalidTokenAddress,
     MintFailed,
     PaymentConflict,
     SamePeerAddress,
@@ -545,11 +546,11 @@ class RestAPI:  # pragma: no unittest
             )
 
         conflict_exceptions = (
-            InvalidBinaryAddress,
-            AlreadyRegisteredTokenAddress,
-            InvalidToken,
             AddressWithoutCode,
-            ValueError,
+            AlreadyRegisteredTokenAddress,
+            InvalidBinaryAddress,
+            InvalidToken,
+            InvalidTokenAddress,
         )
         log.debug(
             "Registering token",
