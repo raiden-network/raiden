@@ -163,6 +163,7 @@ def wait_single_channel_deposit(
     total_deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
+    """ Wait until a deposit of `total_deposit` for app_deposit is seen by both apps"""
     wait_for_participant_deposit(
         raiden=app_deposit.raiden,
         token_network_registry_address=registry_address,
@@ -191,6 +192,7 @@ def wait_both_channel_deposit(
     total_deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
+    """ Wait until a deposit of `total_deposit` for both apps is seen by both apps"""
     wait_single_channel_deposit(
         app_deposit=app_deposit,
         app_partner=app_partner,
