@@ -16,6 +16,7 @@ from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidToken,
+    InvalidTokenAddress,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -110,7 +111,7 @@ class TokenNetworkRegistry:
             )
 
         if token_address == NULL_ADDRESS_BYTES:
-            raise ValueError("The call to register a token at 0x00..00 will fail.")
+            raise InvalidTokenAddress("The call to register a token at 0x00..00 will fail.")
 
         # check preconditions
         try:

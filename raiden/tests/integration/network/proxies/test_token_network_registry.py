@@ -4,7 +4,12 @@ import pytest
 from eth_utils import is_same_address, to_canonical_address, to_normalized_address
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
-from raiden.exceptions import AddressWithoutCode, InvalidToken, RaidenRecoverableError
+from raiden.exceptions import (
+    AddressWithoutCode,
+    InvalidToken,
+    InvalidTokenAddress,
+    RaidenRecoverableError,
+)
 from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
@@ -152,7 +157,7 @@ def test_token_network_registry_with_zero_token_address(
     token_network_registry_proxy = blockchain_service.token_network_registry(
         token_network_registry_address
     )
-    with pytest.raises(ValueError, match="0x00..00 will fail"):
+    with pytest.raises(InvalidTokenAddress, match="0x00..00 will fail"):
         token_network_registry_proxy.add_token(
             token_address=NULL_ADDRESS_BYTES,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),

@@ -18,6 +18,7 @@ from raiden.exceptions import (
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
+    InvalidTokenAddress,
     RaidenRecoverableError,
     TokenNetworkDeprecated,
     TokenNotRegistered,
@@ -210,7 +211,9 @@ class RaidenAPI:  # pragma: no unittest
             InvalidBinaryAddress: If the registry_address or token_address is not a valid address.
             AlreadyRegisteredTokenAddress: If the token is already registered.
             RaidenRecoverableError: If the register transaction failed, this may
-            ValueError: If token_address is the null address (0x000000....00).
+                happen because the account has not enough balance to pay for the
+                gas or this register call raced with another transaction and lost.
+            InvalidTokenAddress: If token_address is the null address (0x000000....00).
         """
 
         if not is_binary_address(registry_address):
@@ -220,7 +223,7 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress("token_address must be a valid address in binary")
 
         if token_address == NULL_ADDRESS_BYTES:
-            raise ValueError("token_address must be non-zero")
+            raise InvalidTokenAddress("token_address must be non-zero")
 
         # The following check is on prestate because the chain state does not
         # change here.
@@ -229,7 +232,7 @@ class RaidenAPI:  # pragma: no unittest
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress("Token already registered")
 
-        chainstate_before_addition = views.state_from_raiden(self.raiden)
+        chainstate = views.state_from_raiden(self.raiden)
 
         registry = self.raiden.chain.token_network_registry(registry_address)
 
@@ -237,7 +240,7 @@ class RaidenAPI:  # pragma: no unittest
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
-            block_identifier=chainstate_before_addition.block_hash,
+            block_identifier=chainstate.block_hash,
         )
 
         waiting.wait_for_token_network(
