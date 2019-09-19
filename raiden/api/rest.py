@@ -549,6 +549,7 @@ class RestAPI:  # pragma: no unittest
             AlreadyRegisteredTokenAddress,
             InvalidToken,
             AddressWithoutCode,
+            ValueError,
         )
         log.debug(
             "Registering token",

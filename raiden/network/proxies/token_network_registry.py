@@ -109,6 +109,9 @@ class TokenNetworkRegistry:
                 "the result of the precondition check is not precisely predictable."
             )
 
+        if token_address == NULL_ADDRESS_BYTES:
+            raise ValueError("The call to register a token at 0x00..00 will fail.")
+
         # check preconditions
         try:
             already_registered = self.get_token_network(
@@ -120,10 +123,6 @@ class TokenNetworkRegistry:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(block_identifier)
         else:
-            if token_address == NULL_ADDRESS_BYTES:
-                raise BrokenPreconditionError(
-                    "The call to register a token at 0x00..00 will fail."
-                )
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
