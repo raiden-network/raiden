@@ -1,6 +1,6 @@
 from math import sqrt
 
-from raiden.constants import DAI_TOKEN_NETWORK_ADDRESS, WETH_TOKEN_NETWORK_ADDRESS
+from raiden.constants import DAI_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS
 from raiden.settings import DEFAULT_DAI_FLAT_FEE, DEFAULT_WETH_FLAT_FEE, MediationFeeConfig
 from raiden.utils.typing import Dict, FeeAmount, ProportionalFeeAmount, TokenAddress, Tuple
 
@@ -30,8 +30,8 @@ def prepare_mediation_fee_config(
     mediation fees. """
     tn_to_flat_fee: Dict[TokenAddress, FeeAmount] = {}
     # Add the defaults for flat fees for DAI/WETH
-    tn_to_flat_fee[WETH_TOKEN_NETWORK_ADDRESS] = FeeAmount(DEFAULT_WETH_FLAT_FEE // 2)
-    tn_to_flat_fee[DAI_TOKEN_NETWORK_ADDRESS] = FeeAmount(DEFAULT_DAI_FLAT_FEE // 2)
+    tn_to_flat_fee[WETH_TOKEN_ADDRESS] = FeeAmount(DEFAULT_WETH_FLAT_FEE // 2)
+    tn_to_flat_fee[DAI_TOKEN_ADDRESS] = FeeAmount(DEFAULT_DAI_FLAT_FEE // 2)
 
     # Store the flat fee settings for the given token addresses
     # The given flat fee is for the whole mediation, but that includes two channels.
