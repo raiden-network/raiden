@@ -369,7 +369,7 @@ def test_subdispatch_by_canonical_id(chain_state):
 
 def test_handle_node_change_network_state(chain_state, netting_channel_state, monkeypatch):
     state_change = ActionChangeNodeNetworkState(
-        node_address=factories.make_address(), network_state=NetworkState.NODE_NETWORK_REACHABLE
+        node_address=factories.make_address(), network_state=NetworkState.REACHABLE
     )
     transition_result = handle_action_change_node_network_state(chain_state, state_change)
     # no events if no mediator tasks are there to apply to

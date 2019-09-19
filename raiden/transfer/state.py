@@ -87,9 +87,9 @@ CHANNEL_AFTER_CLOSE_STATES = (
 
 
 class NetworkState(Enum):
-    NODE_NETWORK_UNKNOWN = "unknown"
-    NODE_NETWORK_UNREACHABLE = "unreachable"
-    NODE_NETWORK_REACHABLE = "reachable"
+    UNKNOWN = "unknown"
+    UNREACHABLE = "unreachable"
+    REACHABLE = "reachable"
 
 
 def message_identifier_from_prng(prng: Random) -> MessageID:

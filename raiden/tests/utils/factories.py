@@ -1052,10 +1052,7 @@ class ChannelSet:
 
     @property
     def nodeaddresses_to_networkstates(self) -> NodeNetworkStateMap:
-        return {
-            channel.partner_state.address: NetworkState.NODE_NETWORK_REACHABLE
-            for channel in self.channels
-        }
+        return {channel.partner_state.address: NetworkState.REACHABLE for channel in self.channels}
 
     def our_address(self, index: int) -> Address:
         return self.channels[index].our_state.address
@@ -1392,7 +1389,7 @@ def make_chain_state(
 
 
 def make_node_availability_map(nodes):
-    return {node: NetworkState.NODE_NETWORK_REACHABLE for node in nodes}
+    return {node: NetworkState.REACHABLE for node in nodes}
 
 
 def make_route_from_channel(channel: NettingChannelState) -> RouteState:

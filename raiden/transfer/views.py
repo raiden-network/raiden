@@ -102,9 +102,7 @@ def get_networkstatuses(chain_state: ChainState) -> Dict:
 
 
 def get_node_network_status(chain_state: ChainState, node_address: Address) -> NetworkState:
-    return chain_state.nodeaddresses_to_networkstates.get(
-        node_address, NetworkState.NODE_NETWORK_UNKNOWN
-    )
+    return chain_state.nodeaddresses_to_networkstates.get(node_address, NetworkState.UNKNOWN)
 
 
 def get_participants_addresses(

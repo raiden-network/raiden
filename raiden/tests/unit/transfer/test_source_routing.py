@@ -173,7 +173,7 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
         pnrg = random.Random()
 
         nodeaddresses_to_networkstates = {
-            mediating_channel.partner_state.address: NetworkState.NODE_NETWORK_REACHABLE
+            mediating_channel.partner_state.address: NetworkState.REACHABLE
         }
 
         channelidentifiers_to_channels = {mediating_channel.identifier: mediating_channel}
@@ -371,8 +371,7 @@ def test_mediator_skips_used_routes():
     )
     init_action = factories.mediator_make_init_action(channels=channels, transfer=locked_transfer)
     nodeaddresses_to_networkstates = {
-        channel.partner_state.address: NetworkState.NODE_NETWORK_REACHABLE
-        for channel in channels.channels
+        channel.partner_state.address: NetworkState.REACHABLE for channel in channels.channels
     }
 
     transition_result = mediator.handle_init(

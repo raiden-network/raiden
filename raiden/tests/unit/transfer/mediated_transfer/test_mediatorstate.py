@@ -1145,7 +1145,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         sender=from_transfer.balance_proof.sender,
     )
 
-    nodeaddresses_to_networkstates = {UNIT_TRANSFER_TARGET: NetworkState.NODE_NETWORK_REACHABLE}
+    nodeaddresses_to_networkstates = {UNIT_TRANSFER_TARGET: NetworkState.REACHABLE}
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -1847,7 +1847,7 @@ def test_node_change_network_state_reachable_node():
 
     iteration = mediator.state_transition(
         mediator_state=mediator_state,
-        state_change=ActionChangeNodeNetworkState(HOP2, NetworkState.NODE_NETWORK_REACHABLE),
+        state_change=ActionChangeNodeNetworkState(HOP2, NetworkState.REACHABLE),
         channelidentifiers_to_channels=setup.channel_map,
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=random.Random(),
@@ -1877,7 +1877,7 @@ def test_node_change_network_state_unreachable_node():
     mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=[])
     iteration = mediator.handle_node_change_network_state(
         mediator_state=mediator_state,
-        state_change=ActionChangeNodeNetworkState(HOP1, NetworkState.NODE_NETWORK_UNREACHABLE),
+        state_change=ActionChangeNodeNetworkState(HOP1, NetworkState.UNREACHABLE),
         channelidentifiers_to_channels={},
         pseudo_random_generator=random.Random(),
         block_number=1,
