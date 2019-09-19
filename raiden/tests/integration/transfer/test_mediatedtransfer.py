@@ -237,8 +237,7 @@ def test_mediated_transfer_with_entire_deposit(
             reverse_calculation.amount_with_fees - reverse_calculation.mediation_fees[0],
             [],
             app1,
-            # Why *2 here?
-            reverse_calculation.mediation_fees[0] * 2,
+            calculation.mediation_fees[0] + reverse_calculation.mediation_fees[0],
             [],
         )
     with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
