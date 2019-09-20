@@ -194,7 +194,11 @@ scenario:
           name: "Assert after closing channel between 0 and 4"
           tasks:
             - wait: 10
-            - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 0}
             - assert: {from: 0, to: 4, state: "closed"}
       - serial:
           name: "Make 100 payments from 3 to 0"
@@ -214,13 +218,20 @@ scenario:
             - close_channel: {from: 3, to: 4}
             ## Wait for channel to be closed
             - wait_blocks: 1
-            - assert: {from: 3 ,to: 4, state: "closed"}
-            - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
+            - assert: {from: 3, to: 4, state: "closed"}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 3}
 
             ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
             - wait_blocks: 401
-            # Below line should potentially have num_events: 2
-            - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 2}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 1
+                event_args: {closing_participant: 3}
 
             ## Monitored channel must be settled before the monitoring service can claim its reward
             ## Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
