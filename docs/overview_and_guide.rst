@@ -252,3 +252,28 @@ To start Raiden you need to provide a valid pathfinding service address, e.g. fo
 
 
 Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface.
+
+
+Optional CLI arguments
+***************************
+
+In this section we will see how some optional CLI arguments work and what you can achieve by using them.
+
+Logging configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+By default raiden keeps a "debug" log file so that people who have not configured logging but are facing problems can still provide us with some logs to debug their problems.
+
+For expert users of raiden who want to configure proper logging we recommend disabling the debug log file and configuring normal logging appropriately.
+
+To disable the log file the ``--disable-debug-logfile`` argument should be passed.
+
+To specify the logging level add: ``--log-config ":debug"`` if you want all debug statements to be logged. The logging level can actually be configured down to the module level through this argument.
+
+To provide the filename for the logs use ``--log-file XXX`` where ``XXX`` is the full path and filename to the log you want to create or append to. Note that Raiden uses a python `WatchedFileHandler <https://docs.python.org/3/library/logging.handlers.html#watchedfilehandler>`__ for this log. That means that if you or your system moves the logfile (for example due to log rotation) then Raiden will detect that and close and reopen the log file handler with the same name.
+
+Finally by default the output of the logs are in plain readable text format. In order to make them machine readable and parsable json add the ``--log-json`` argument.
+
+Summing up these are the arguments you need to append if you want to disable the debug log and want to configure normal logging for up to debug statement in json inside a file called ``raiden.log``
+
+``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``
