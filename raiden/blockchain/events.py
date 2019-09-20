@@ -342,7 +342,7 @@ class BlockchainEvents:
         self,
         secret_registry_proxy: SecretRegistry,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = "latest",
+        from_block: BlockNumber,
     ) -> None:
         secret_registry_filter = secret_registry_proxy.secret_registered_filter(
             from_block=from_block

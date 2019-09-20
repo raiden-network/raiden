@@ -1,5 +1,4 @@
 from collections import defaultdict
-from hashlib import sha256
 
 import gevent
 import pytest
@@ -13,13 +12,14 @@ from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
 from raiden.utils import BlockNumber
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.typing import Dict, Secret
 
 
-def secret_registry_batch_happy_path(secret_registry_proxy):
+def secret_registry_batch_happy_path(secret_registry_proxy: SecretRegistry):
     secrets = [make_secret() for i in range(4)]
-    secrethashes = [sha256(secret).digest() for secret in secrets]
+    secrethashes = [sha256_secrethash(secret) for secret in secrets]
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
     secret_registry_proxy.register_secret_batch(secrets=secrets)
 
     logs = [
@@ -52,7 +52,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     secret_unregistered = make_secret()
     secrethash_unregistered = sha256_secrethash(secret_unregistered)
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
 
     assert not secret_registry_proxy.is_secret_registered(
         secrethash=secrethash, block_identifier="latest"
@@ -104,13 +104,13 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     assert block is None, "The secret that was not registered must not change block height!"
 
 
-def test_register_secret_batch_happy_path(secret_registry_proxy):
+def test_register_secret_batch_happy_path(secret_registry_proxy: SecretRegistry):
     """Test happy path for secret registration batching."""
     secret_registry_batch_happy_path(secret_registry_proxy)
 
 
 def test_register_secret_batch_with_pruned_block(
-    secret_registry_proxy, web3, private_keys, contract_manager
+    secret_registry_proxy: SecretRegistry, web3, private_keys, contract_manager
 ):
     """Test secret registration with a pruned given block."""
     c1_client = JSONRPCClient(web3, private_keys[1])
@@ -130,7 +130,7 @@ def test_register_secret_batch_with_pruned_block(
     secret_registry_batch_happy_path(secret_registry_proxy)
 
 
-def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
+def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, monkeypatch):
     """Only one transaction must be sent if multiple greenlets are used to
     register the same secret.
 
@@ -143,7 +143,7 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
         in user code, therefore this behavior is not 100% guaranteed.
     """
     with monkeypatch.context() as m:
-        count = defaultdict(int)
+        count: Dict[Secret, int] = defaultdict(int)
         transact = secret_registry_proxy.proxy.transact
 
         # Using positional arguments with the signature used by SecretRegistry
