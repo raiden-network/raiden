@@ -44,7 +44,7 @@ scenario:
             - open_channel: {from: 0, to: 1, total_deposit: 1000}
       - serial:
           name: "Make 10 payments from node0 to node1"
-          repeat: 10 
+          repeat: 10
           tasks:
             - transfer: {from: 0, to: 1, amount: 50, expected_http_status: 200}
       - serial:
@@ -65,14 +65,24 @@ scenario:
           tasks:
             - wait_blocks: 1
             - assert: {from: 0 ,to: 1, total_deposit: 1000, balance: 500, state: "closed"}
-            - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 0}
+
       - serial:
           name: "Wait for MS to not react"
           tasks:
             # The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
             - wait_blocks: 401
             # Note that 0 events are expected
-            - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 0}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 0
+                event_args: {closing_participant: 0}
+
       - serial:
           name: "Wait for remaining timeout period to expire and check again that MS did not react"
           tasks:
@@ -80,4 +90,8 @@ scenario:
             # Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
             # To make sure the transactions gets mined in time, 10 additional blocks are added
             - wait_blocks: 110
-            - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 0}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 0
+                event_args: {closing_participant: 0}

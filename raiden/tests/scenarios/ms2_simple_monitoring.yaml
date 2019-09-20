@@ -45,11 +45,19 @@ scenario:
       ## Wait for channel to be closed
       - wait_blocks: 10
       - assert: {from: 0 ,to: 1, total_deposit: 1000, balance: 500, state: "closed"}
-      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
+      - assert_events:
+          contract_name: "TokenNetwork"
+          event_name: "ChannelClosed"
+          num_events: 1
+          event_args: {closing_participant: 0}
 
       ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
       - wait_blocks: 401
-      - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 1}
+      - assert_events:
+          contract_name: "TokenNetwork"
+          event_name: "NonClosingBalanceProofUpdated"
+          num_events: 1
+          event_args: {closing_participant: 0}
 
       ## Node1 gets back online after the MS has reacted.
       ## The MS should claim the reward
