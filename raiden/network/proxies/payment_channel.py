@@ -264,9 +264,7 @@ class PaymentChannel:
             given_block_identifier=block_identifier,
         )
 
-    def all_events_filter(
-        self, from_block: BlockSpecification, to_block: BlockSpecification
-    ) -> Filter:
+    def all_events_filter(self, from_block: BlockSpecification) -> Filter:
 
         channel_topics: List[Optional[str]] = [
             None,  # event topic is any
@@ -280,7 +278,6 @@ class PaymentChannel:
             contract_address=Address(self.token_network.address),
             topics=channel_topics,
             from_block=from_block,
-            to_block=to_block,
         )
 
         return channel_filter

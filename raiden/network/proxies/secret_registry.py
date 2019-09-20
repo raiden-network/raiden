@@ -322,9 +322,7 @@ class SecretRegistry:
         return block is not None
 
     def secret_registered_filter(
-        self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        self, from_block: BlockSpecification = GENESIS_BLOCK_NUMBER
     ) -> StatelessFilter:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
@@ -332,5 +330,5 @@ class SecretRegistry:
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
-            contract_address=self.address, topics=topics, from_block=from_block, to_block=to_block
+            contract_address=self.address, topics=topics, from_block=from_block
         )

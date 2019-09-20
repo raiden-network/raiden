@@ -53,7 +53,7 @@ def test_payment_channel_proxy_basics(
         )
     )
 
-    channel_filter = channel_proxy_1.all_events_filter(from_block=start_block, to_block="latest")
+    channel_filter = channel_proxy_1.all_events_filter(from_block=start_block)
 
     assert channel_proxy_1.channel_identifier == channel_identifier
     assert channel_proxy_1.opened("latest") is True

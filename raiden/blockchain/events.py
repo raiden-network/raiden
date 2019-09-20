@@ -297,10 +297,6 @@ class BlockchainEvents:
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self) -> None:
-        for listener in self.event_listeners:
-            if listener.filter.filter_id:
-                listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
-
         self.event_listeners = list()
 
     def add_event_listener(

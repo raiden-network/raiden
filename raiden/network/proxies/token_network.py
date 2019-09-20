@@ -2657,9 +2657,7 @@ class TokenNetwork:
             raise RaidenRecoverableError("Settle failed for an unknown reason")
 
     def all_events_filter(
-        self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        self, from_block: BlockSpecification = GENESIS_BLOCK_NUMBER
     ) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract
 
@@ -2671,10 +2669,7 @@ class TokenNetwork:
             The filter instance.
         """
         return self.client.new_filter(
-            contract_address=Address(self.address),
-            topics=None,
-            from_block=from_block,
-            to_block=to_block,
+            contract_address=Address(self.address), topics=None, from_block=from_block
         )
 
     def _check_for_outdated_channel(
