@@ -60,7 +60,7 @@ Contents
   :caption: Using Raiden
 
   overview_and_guide
-  red_eyes_mainnet_tutorial
+  alderaan_mainnet_tutorial
   api_walkthrough
   webui_tutorial
   rest_api
