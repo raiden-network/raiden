@@ -125,21 +125,6 @@ class StatelessFilter(LogFilter):
         self._last_block: BlockNumber = BlockNumber(-1)
         self._lock = Semaphore()
 
-    def _do_get_new_entries(
-        self, from_block: BlockNumber, to_block: BlockNumber
-    ) -> List[BlockchainEvent]:
-        filter_params = {
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "address": self.contract_address,
-            "topics": self.topics,
-        }
-
-        log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
-        result = self.web3.eth.getLogs(filter_params)
-        self._last_block = to_block
-        return result
-
     def from_block_number(self) -> BlockNumber:
         return BlockNumber(max(self.from_block, self._last_block + 1))
 
@@ -154,9 +139,20 @@ class StatelessFilter(LogFilter):
                 to_block = BlockNumber(
                     min(from_block_number + FILTER_MAX_BLOCK_RANGE, target_block_number)
                 )
-                result.extend(
-                    self._do_get_new_entries(from_block=from_block_number, to_block=to_block)
-                )
-                from_block_number += FILTER_MAX_BLOCK_RANGE  # type: ignore
+                filter_params = {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block,
+                    "address": self.contract_address,
+                    "topics": self.topics,
+                }
+
+                log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
+                result.extend(self.web3.eth.getLogs(filter_params))
+
+                # `getLogs` is inclusive, the next loop should start from the
+                # next block.
+                from_block_number = BlockNumber(to_block + 1)
+
+                self._last_block = to_block
 
             return result
