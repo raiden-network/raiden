@@ -701,13 +701,10 @@ class JSONRPCClient:
         from_block: BlockSpecification,
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
-        to_block = "latest"
-        logs_blocks_sanity_check(from_block, to_block)
         return StatelessFilter(
             self.web3,
             {
                 "fromBlock": from_block,
-                "toBlock": to_block,
                 "address": to_checksum_address(contract_address),
                 "topics": topics,
             },

@@ -122,7 +122,9 @@ class StatelessFilter(LogFilter):
         filter_params["fromBlock"] = from_block
         filter_params["toBlock"] = to_block
 
-        log.debug("Querying StatelessFilter", from_block=from_block, to_block=to_block)
+        log.debug(
+            "StatelessFilter: querying new entries", from_block=from_block, to_block=to_block
+        )
         result = self.web3.eth.getLogs(filter_params)
         self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
         return result
@@ -151,17 +153,18 @@ class StatelessFilter(LogFilter):
 
     def get_all_entries(self, block_number: BlockNumber = None) -> List[BlockchainEvent]:
         with self._lock:
-            filter_params = self.filter_params.copy()
             block_number = block_number or self.web3.eth.blockNumber
+            assert isinstance(block_number, int)
 
-            if self.filter_params.get("toBlock") in ("latest", "pending"):
-                filter_params["toBlock"] = block_number
+            filter_params = self.filter_params.copy()
+            filter_params["toBlock"] = block_number
 
+            log.debug(
+                "StatelessFilter: querying all entries",
+                from_block=filter_params.get("fromBlock"),
+                to_block=block_number,
+            )
             result = self.web3.eth.getLogs(filter_params)
-            to_block = filter_params.get("toBlock")
-            if to_block:
-                self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
-            else:
-                self._last_block = block_number
+            self._last_block = block_number
 
             return result

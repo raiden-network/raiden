@@ -63,9 +63,7 @@ def test_blockchain_events(contract_manager):
     blockchain_events = BlockchainEvents(UNIT_CHAIN_ID)
     abi = contract_manager.get_contract_abi("TokenNetwork")
 
-    stateless_filter = StatelessFilter(
-        web3=stub_web3(event_logs), filter_params=dict(toBlock="pending")
-    )
+    stateless_filter = StatelessFilter(web3=stub_web3(event_logs), filter_params={})
     blockchain_events.add_event_listener(event_name="Block", eth_filter=stateless_filter, abi=abi)
 
     events = list(blockchain_events.poll_blockchain_events(block_number=BlockNumber(235)))
