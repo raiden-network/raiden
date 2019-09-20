@@ -91,8 +91,7 @@ def test_token_network_registry(
 
     # Re-registering the same token should fail with a recoverable error
     # because it is a race condition.
-    match = "Token already registered"
-    with pytest.raises(RaidenRecoverableError, match=match):
+    with pytest.raises(RaidenRecoverableError):
         token_network_registry_proxy.add_token(
             token_address=test_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
