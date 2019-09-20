@@ -78,7 +78,6 @@ def test_token_network_registry(
             )
 
     # Register a valid token
-    event_filter = token_network_registry_proxy.tokenadded_filter()
     preblockhash = deploy_client.get_confirmed_blockhash()
     token_network_address = token_network_registry_proxy.add_token(
         token_address=test_token_address,
@@ -99,7 +98,9 @@ def test_token_network_registry(
             block_identifier=preblockhash,
         )
 
-    logs = event_filter.get_all_entries()
+    logs = token_network_registry_proxy.tokenadded_filter().get_new_entries(
+        deploy_client.web3.eth.blockNumber
+    )
     assert len(logs) == 1
     decoded_event = token_network_registry_proxy.proxy.decode_event(logs[0])
     assert is_same_address(decoded_event["args"]["token_address"], test_token.contract.address)
