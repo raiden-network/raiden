@@ -6,14 +6,11 @@ import requests
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, to_canonical_address
 
-from raiden.constants import EMPTY_HASH
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_http_rtt
-from raiden.tests.utils.mocks import MockWeb3
-from raiden.utils import block_specification_to_number, privatekey_to_publickey, sha3
+from raiden.utils import privatekey_to_publickey, sha3
 from raiden.utils.signer import LocalSigner, Signer, recover
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import BlockNumber
 
 
 def test_privatekey_to_publickey():
@@ -63,21 +60,6 @@ def test_recover_exception(signature, nested_exception):
     with pytest.raises(InvalidSignature) as exc_info:
         recover(b"bla", signature)
     assert isinstance(exc_info.value.__context__, nested_exception)
-
-
-def test_block_speficiation_to_number():
-    web3 = MockWeb3(1)
-    assert block_specification_to_number("latest", web3) == BlockNumber(42)
-    assert block_specification_to_number("pending", web3) == BlockNumber(42)
-
-    with pytest.raises(AssertionError):
-        block_specification_to_number("whatever", web3)
-
-    assert block_specification_to_number(EMPTY_HASH, web3) == BlockNumber(42)
-    assert block_specification_to_number(BlockNumber(56), web3) == BlockNumber(56)
-
-    with pytest.raises(AssertionError):
-        block_specification_to_number([1, 2], web3)
 
 
 def test_get_http_rtt():

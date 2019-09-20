@@ -8,7 +8,6 @@ from web3.utils.events import get_event_data
 from web3.utils.filters import LogFilter, construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.utils import block_specification_to_number
 from raiden.utils.typing import (
     ABI,
     Any,
@@ -127,7 +126,7 @@ class StatelessFilter(LogFilter):
         self._lock = Semaphore()
 
     def _do_get_new_entries(
-        self, from_block: BlockNumber, to_block: BlockSpecification
+        self, from_block: BlockNumber, to_block: BlockNumber
     ) -> List[BlockchainEvent]:
         filter_params = {
             "fromBlock": from_block,
@@ -138,7 +137,7 @@ class StatelessFilter(LogFilter):
 
         log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
         result = self.web3.eth.getLogs(filter_params)
-        self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
+        self._last_block = to_block
         return result
 
     def from_block_number(self) -> BlockNumber:
@@ -152,7 +151,9 @@ class StatelessFilter(LogFilter):
             # Batch the filter queries in ranges of FILTER_MAX_BLOCK_RANGE
             # to avoid timeout problems
             while from_block_number <= target_block_number:
-                to_block = min(from_block_number + FILTER_MAX_BLOCK_RANGE, target_block_number)
+                to_block = BlockNumber(
+                    min(from_block_number + FILTER_MAX_BLOCK_RANGE, target_block_number)
+                )
                 result.extend(
                     self._do_get_new_entries(from_block=from_block_number, to_block=to_block)
                 )
