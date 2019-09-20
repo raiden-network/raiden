@@ -312,7 +312,7 @@ class BlockchainEvents:
         self,
         token_network_registry_proxy: TokenNetworkRegistry,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = "latest",
+        from_block: BlockNumber,
     ) -> None:
         token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
         token_network_registry_address = token_network_registry_proxy.address

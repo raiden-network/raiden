@@ -29,6 +29,7 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    BlockNumber,
     BlockSpecification,
     Dict,
     SecretRegistryAddress,
@@ -431,9 +432,7 @@ class TokenNetworkRegistry:
             raise RaidenUnrecoverableError("createERC20TokenNetwork failed for an unknown reason")
         return token_network_address
 
-    def tokenadded_filter(
-        self, from_block: Optional[BlockSpecification] = None
-    ) -> StatelessFilter:
+    def tokenadded_filter(self, from_block: Optional[BlockNumber] = None) -> StatelessFilter:
         event_abi = find_matching_event_abi(
             abi=self.metadata.abi, event_name=EVENT_TOKEN_NETWORK_CREATED
         )
