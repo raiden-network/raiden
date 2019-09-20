@@ -142,8 +142,7 @@ class StatelessFilter(LogFilter):
         return result
 
     def from_block_number(self) -> BlockNumber:
-        filter_from_number = block_specification_to_number(block=self.from_block, web3=self.web3)
-        return BlockNumber(max(filter_from_number, self._last_block + 1))
+        return BlockNumber(max(self.from_block, self._last_block + 1))
 
     def get_new_entries(self, target_block_number: BlockNumber) -> List[BlockchainEvent]:
         with self._lock:
