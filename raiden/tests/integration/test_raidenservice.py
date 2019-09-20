@@ -30,8 +30,14 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
-from raiden.utils import BlockNumber
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, ProportionalFeeAmount, Type
+from raiden.utils.typing import (
+    BlockNumber,
+    FeeAmount,
+    PaymentAmount,
+    PaymentID,
+    ProportionalFeeAmount,
+    Type,
+)
 
 
 @raise_on_failure

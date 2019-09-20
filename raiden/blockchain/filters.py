@@ -160,21 +160,3 @@ class StatelessFilter(LogFilter):
                 from_block_number += FILTER_MAX_BLOCK_RANGE  # type: ignore
 
             return result
-
-    def get_all_entries(self, block_number: BlockNumber = None) -> List[BlockchainEvent]:
-        with self._lock:
-            block_number = block_number or self.web3.eth.blockNumber
-            assert isinstance(block_number, int)
-
-            filter_params = {
-                "fromBlock": self.from_block,
-                "toBlock": block_number,
-                "address": self.contract_address,
-                "topics": self.topics,
-            }
-
-            log.debug("StatelessFilter: querying all entries", filter_params=filter_params)
-            result = self.web3.eth.getLogs(filter_params)
-            self._last_block = block_number
-
-            return result

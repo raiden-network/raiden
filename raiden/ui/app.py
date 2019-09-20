@@ -49,11 +49,12 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils import BlockNumber, pex, split_endpoint
+from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     ChainID,
     Endpoint,
     FeeAmount,
