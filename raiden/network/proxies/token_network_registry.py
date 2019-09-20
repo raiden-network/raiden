@@ -432,9 +432,7 @@ class TokenNetworkRegistry:
         return token_network_address
 
     def tokenadded_filter(
-        self,
-        from_block: Optional[BlockSpecification] = None,
-        to_block: BlockSpecification = "latest",
+        self, from_block: Optional[BlockSpecification] = None
     ) -> StatelessFilter:
         event_abi = find_matching_event_abi(
             abi=self.metadata.abi, event_name=EVENT_TOKEN_NETWORK_CREATED
@@ -446,11 +444,8 @@ class TokenNetworkRegistry:
             from_block = self.metadata.filters_start_at
 
         registry_address_bin = self.proxy.contract_address
-        return self.rpc_client.new_filter(
-            contract_address=registry_address_bin,
-            topics=topics,
-            from_block=from_block,
-            to_block=to_block,
+        return self.client.new_filter(
+            contract_address=registry_address_bin, topics=topics, from_block=from_block
         )
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
