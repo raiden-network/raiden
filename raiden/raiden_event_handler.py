@@ -244,7 +244,7 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_secretrequest(
         raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
-    ):  # pragma: no unittest
+    ) -> None:  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, chain_state, secret_request_event):
             return
 

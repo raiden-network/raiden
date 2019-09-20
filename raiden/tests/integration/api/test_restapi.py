@@ -20,8 +20,8 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.api.utils import create_api_server
-from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.fixtures.raiden_network import stop_resolvers
+from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
