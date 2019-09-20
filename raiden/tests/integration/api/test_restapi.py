@@ -34,6 +34,7 @@ from raiden.utils import get_system_spec
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
+    wait_for_participant_deposit,
     wait_for_received_transfer_result,
     wait_for_token_network,
 )
@@ -485,6 +486,95 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     json_response = get_json_response(response)
     assert "The account balance is below the estimated amount" in json_response["errors"]
+
+
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+def test_api_open_and_deposit_race(
+    api_server_test_instance,
+    raiden_network,
+    token_addresses,
+    reveal_timeout,
+    token_network_registry_address,
+    retry_timeout,
+):
+    """Tests that a race for the same deposit from the API is handled properly
+
+    The proxy's set_total_deposit is raising a RaidenRecoverableError in case of
+    races. That needs to be properly handled and not allowed to bubble out of
+    the greenlet.
+
+    Regression test for https://github.com/raiden-network/raiden/issues/4937
+    """
+    app0 = raiden_network[0]
+    # let's create a new channel
+    first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
+    token_address = token_addresses[0]
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": first_partner_address,
+        "token_address": to_checksum_address(token_address),
+        "settle_timeout": settle_timeout,
+        "reveal_timeout": reveal_timeout,
+    }
+
+    request = grequests.put(
+        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    )
+    response = request.send().response
+
+    assert_proper_response(response, HTTPStatus.CREATED)
+    json_response = get_json_response(response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update(
+        {
+            "balance": 0,
+            "state": ChannelState.STATE_OPENED.value,
+            "channel_identifier": 1,
+            "total_deposit": 0,
+        }
+    )
+    assert check_dict_nested_attrs(json_response, expected_response)
+
+    # Prepare the deposit api call
+    deposit_amount = 99
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=first_partner_address,
+        ),
+        json={"total_deposit": deposit_amount},
+    )
+
+    # Spawn two greenlets doing the same deposit request
+    greenlets = set()
+    greenlets.add(gevent.spawn(request.send))
+    greenlets.add(gevent.spawn(request.send))
+    gevent.joinall(greenlets, raise_error=True)
+
+    # Wait for the deposit to be seen
+    timeout_seconds = 20
+    exception = Exception(f"Expected deposit not seen within {timeout_seconds}")
+    with gevent.Timeout(seconds=timeout_seconds, exception=exception):
+        wait_for_participant_deposit(
+            raiden=app0.raiden,
+            token_network_registry_address=token_network_registry_address,
+            token_address=token_address,
+            partner_address=to_canonical_address(first_partner_address),
+            target_address=app0.raiden.address,
+            target_balance=deposit_amount,
+            retry_timeout=retry_timeout,
+        )
+
+    request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    json_response = get_json_response(response)
+    channel_info = json_response[0]
+    assert channel_info["token_address"] == to_checksum_address(token_address)
+    assert channel_info["total_deposit"] == deposit_amount
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
