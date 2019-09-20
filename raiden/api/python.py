@@ -455,7 +455,7 @@ class RaidenAPI:  # pragma: no unittest
                     token_network_address=token_network_address, partner_address=partner_address
                 )
                 if duplicated_channel:
-                    log.info("partner opened channel first")
+                    log.info("Channel has already been opened")
                 else:
                     raise
 
@@ -705,7 +705,12 @@ class RaidenAPI:  # pragma: no unittest
 
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum)
-        channel_proxy.set_total_deposit(total_deposit=total_deposit, block_identifier=blockhash)
+        try:
+            channel_proxy.set_total_deposit(
+                total_deposit=total_deposit, block_identifier=blockhash
+            )
+        except RaidenRecoverableError:
+            log.info("The deposit has already been done or the channel is no longer open.")
 
         target_address = self.raiden.address
         waiting.wait_for_participant_deposit(
