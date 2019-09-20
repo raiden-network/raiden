@@ -4,7 +4,6 @@ import structlog
 from eth_utils import (
     encode_hex,
     event_abi_to_log_topic,
-    is_binary_address,
     is_same_address,
     to_canonical_address,
     to_checksum_address,
@@ -186,6 +185,12 @@ class TokenNetworkRegistry:
                     "The chain ID property for the TokenNetworkRegistry is invalid."
                 )
 
+            if chain_id != self.blockchain_service.network_id:
+                raise BrokenPreconditionError(
+                    "The provided chain ID {chain_id} does not match the "
+                    "network Raiden is running on: {self.blockchain_service.network_id}."
+                )
+
             if secret_registry_address == NULL_ADDRESS:
                 raise BrokenPreconditionError(
                     "The secret registry address for the token network is invalid."
@@ -298,6 +303,12 @@ class TokenNetworkRegistry:
                         "The chain ID property for the TokenNetworkRegistry is invalid."
                     )
 
+                if chain_id != self.blockchain_service.network_id:
+                    raise RaidenUnrecoverableError(
+                        "The provided chain ID {chain_id} does not match the "
+                        "network Raiden is running on: {self.blockchain_service.network_id}."
+                    )
+
                 if secret_registry_address == NULL_ADDRESS:
                     raise RaidenUnrecoverableError(
                         "The secret registry address for the token network is invalid."
@@ -381,6 +392,12 @@ class TokenNetworkRegistry:
             if chain_id == 0:
                 raise RaidenUnrecoverableError(
                     "The chain ID property for the TokenNetworkRegistry is invalid."
+                )
+
+            if chain_id != self.blockchain_service.network_id:
+                raise RaidenUnrecoverableError(
+                    "The provided chain ID {chain_id} does not match the "
+                    "network Raiden is running on: {self.blockchain_service.network_id}."
                 )
 
             if secret_registry_address == NULL_ADDRESS:
