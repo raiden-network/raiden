@@ -45,6 +45,9 @@ def serve():
                 self.send_response(400)
                 self.end_headers()
 
+    # TODO: accept port as runtime parameters to allow parallel execution
+    # of multiple resolvers.
+
     httpd = HTTPServer(("localhost", 8000), SimpleHTTPRequestHandler)
     httpd.serve_forever()
 

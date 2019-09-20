@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import gevent
 import pytest
@@ -68,6 +69,7 @@ def raiden_chain(
     logs_storage: str,
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
+    resolver_ports: List[Optional[int]],
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -105,6 +107,7 @@ def raiden_chain(
         global_rooms=global_rooms,
         routing_mode=routing_mode,
         blockchain_query_interval=blockchain_query_interval,
+        resolver_ports=resolver_ports,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
@@ -155,6 +158,26 @@ def monitoring_service_contract_address() -> Address:
 
 
 @pytest.fixture
+def resolvers(resolver_ports) -> List[Optional[subprocess.Popen]]:
+    resolvers = []
+    for port in resolver_ports:
+        resolver = None
+        if port is not None:
+            args = ["python", "tools/dummy_resolver_server.py", str(port)]
+            resolver = subprocess.Popen(args, stdout=subprocess.PIPE)
+            assert resolver.poll() is None
+        resolvers.append(resolver)
+
+    return resolvers
+
+
+def stop_resolvers(resolvers: List[subprocess.Popen]):
+    for resolver in resolvers:
+        if resolver is not None:
+            resolver.terminate()
+
+
+@pytest.fixture
 def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
@@ -180,6 +203,7 @@ def raiden_network(
     start_raiden_apps: bool,
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
+    resolver_ports: List[Optional[int]],
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -209,6 +233,7 @@ def raiden_network(
         global_rooms=global_rooms,
         routing_mode=routing_mode,
         blockchain_query_interval=blockchain_query_interval,
+        resolver_ports=resolver_ports,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1

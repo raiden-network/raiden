@@ -353,6 +353,7 @@ def create_apps(
     global_rooms: List[str],
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
+    resolver_ports: List[Optional[int]],
 ) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -361,6 +362,8 @@ def create_apps(
     apps = []
     for idx, blockchain in enumerate(services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
+        assert len(resolver_ports) > idx
+        resolver_port = resolver_ports[idx]
 
         config = {
             "chain_id": chain_id,
@@ -398,6 +401,9 @@ def create_apps(
                     },
                 },
             )
+
+        if resolver_port is not None:
+            merge_dict(config, {"resolver_endpoint": "http://localhost:" + str(resolver_port)})
 
         config_copy = deepcopy(App.DEFAULT_CONFIG)
         config_copy.update(config)
