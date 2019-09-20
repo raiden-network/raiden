@@ -1027,8 +1027,6 @@ def is_valid_withdraw_expired(
 ) -> SuccessOrError:
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    is_valid = is_valid_withdraw(state_change)
-
     withdraw_expired = is_withdraw_expired(
         block_number=block_number,
         expiration_threshold=get_receiver_expiration_threshold(
@@ -1056,7 +1054,7 @@ def is_valid_withdraw_expired(
             f"got: {state_change.nonce}."
         )
     else:
-        return is_valid
+        return SuccessOrError()
 
 
 def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
