@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     Dict,
+    SecretRegistryAddress,
     T_TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -73,6 +74,35 @@ class TokenNetworkRegistry:
         self.metadata = metadata
         self.node_address = self.client.address
         self.proxy = proxy
+
+    def get_chain_id(self, block_identifier: BlockSpecification) -> int:
+        return self.proxy.contract.functions.chain_id().call(block_identifier=block_identifier)
+
+    def get_settlement_timeout_min(self, block_identifier: BlockSpecification) -> int:
+        return self.proxy.contract.functions.settlement_timeout_min().call(
+            block_identifier=block_identifier
+        )
+
+    def get_settlement_timeout_max(self, block_identifier: BlockSpecification) -> int:
+        return self.proxy.contract.functions.settlement_timeout_max().call(
+            block_identifier=block_identifier
+        )
+
+    def get_secret_registry_address(
+        self, block_identifier: BlockSpecification
+    ) -> SecretRegistryAddress:
+        return SecretRegistryAddress(
+            self.proxy.contract.functions.secret_registry_address().call(
+                block_identifier=block_identifier
+            )
+        )
+
+    def get_deprecation_executor(self, block_identifier: BlockSpecification) -> Address:
+        return Address(
+            self.proxy.contract.functions.deprecation_executor().call(
+                block_identifier=block_identifier
+            )
+        )
 
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockSpecification
@@ -118,6 +148,17 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
+            deprecation_executor = self.get_deprecation_executor(block_identifier=block_identifier)
+            settlement_timeout_min = self.get_settlement_timeout_min(
+                block_identifier=block_identifier
+            )
+            settlement_timeout_max = self.get_settlement_timeout_max(
+                block_identifier=block_identifier
+            )
+            chain_id = self.get_chain_id(block_identifier=block_identifier)
+            secret_registry_address = self.get_secret_registry_address(
+                block_identifier=block_identifier
+            )
         except ValueError:
             # If `block_identifier` has been pruned the checks cannot be performed
             pass
@@ -127,6 +168,39 @@ class TokenNetworkRegistry:
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
+                )
+
+            if deprecation_executor == NULL_ADDRESS:
+                raise BrokenPreconditionError(
+                    "The deprecation executor property for the TokenNetworkRegistry is invalid."
+                )
+
+            if chain_id == 0:
+                raise BrokenPreconditionError(
+                    "The chain ID property for the TokenNetworkRegistry is invalid."
+                )
+
+            if secret_registry_address == NULL_ADDRESS:
+                raise BrokenPreconditionError(
+                    "The secret registry address for the token network is invalid."
+                )
+
+            if settlement_timeout_min == 0:
+                raise BrokenPreconditionError(
+                    "The minimum settlement timeout for the token network "
+                    "should be larger than zero."
+                )
+
+            if settlement_timeout_min == 0:
+                raise BrokenPreconditionError(
+                    "The minimum settlement timeout for the token network "
+                    "should be larger than zero."
+                )
+
+            if settlement_timeout_max <= settlement_timeout_min:
+                raise BrokenPreconditionError(
+                    "The maximum settlement timeout for the token network "
+                    "should be larger than the minimum settlement timeout."
                 )
 
         return self._add_token(
