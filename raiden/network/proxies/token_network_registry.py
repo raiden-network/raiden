@@ -143,8 +143,9 @@ class TokenNetworkRegistry:
         if token_address == NULL_ADDRESS_BYTES:
             raise InvalidTokenAddress("The call to register a token at 0x00..00 will fail.")
 
-        # check preconditions
+        token_proxy = self.blockchain_service.token(token_address)
         try:
+            token_supply = token_proxy.total_supply(block_identifier=block_identifier)
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=block_identifier
             )
@@ -165,6 +166,11 @@ class TokenNetworkRegistry:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(block_identifier)
         else:
+            if token_supply == "":
+                raise InvalidToken(
+                    "Given token address does not follow the "
+                    "ERC20 standard (missing `totalSupply()`)"
+                )
             if already_registered:
                 raise BrokenPreconditionError(
                     "The token is already registered in the TokenNetworkRegistry."
@@ -203,91 +209,209 @@ class TokenNetworkRegistry:
                     "should be larger than the minimum settlement timeout."
                 )
 
-        return self._add_token(
-            token_address=token_address,
-            channel_participant_deposit_limit=channel_participant_deposit_limit,
-            token_network_deposit_limit=token_network_deposit_limit,
-        )
+        log_details = {
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "token_address": to_checksum_address(token_address),
+        }
+        with log_transaction(log, "add_token", log_details):
+            return self._add_token(
+                token_address=token_address,
+                channel_participant_deposit_limit=channel_participant_deposit_limit,
+                token_network_deposit_limit=token_network_deposit_limit,
+                log_details=log_details,
+            )
 
     def _add_token(
         self,
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
+        log_details: Dict[Any, Any],
     ) -> TokenNetworkAddress:
-        if not is_binary_address(token_address):
-            raise ValueError("Expected binary address format for token")
+        token_network_address = None
 
-        token_proxy = self.blockchain_service.token(token_address)
+        checking_block = self.client.get_checking_block()
 
-        if token_proxy.total_supply() == "":
-            raise InvalidToken(
-                "Given token address does not follow the ERC20 standard (missing `totalSupply()`)"
-            )
-
-        log_details: Dict[str, Any] = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "token_address": to_checksum_address(token_address),
+        kwargs = {
+            "_token_address": token_address,
+            "_channel_participant_deposit_limit": channel_participant_deposit_limit,
+            "_token_network_deposit_limit": token_network_deposit_limit,
         }
+        gas_limit = self.proxy.estimate_gas(checking_block, "createERC20TokenNetwork", **kwargs)
 
-        failed_receipt = None
-        with log_transaction(log, "add_token", log_details):
-            checking_block = self.client.get_checking_block()
-            error_prefix = "Call to createERC20TokenNetwork will fail"
-
-            kwarguments = {
-                "_token_address": token_address,
-                "_channel_participant_deposit_limit": channel_participant_deposit_limit,
-                "_token_network_deposit_limit": token_network_deposit_limit,
-            }
-            gas_limit = self.proxy.estimate_gas(
-                checking_block, "createERC20TokenNetwork", **kwarguments
+        if gas_limit:
+            gas_limit = safe_gas_limit(
+                gas_limit, self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
+            log_details["gas_limit"] = gas_limit
+            transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
 
-            if gas_limit:
-                error_prefix = "Call to createERC20TokenNetwork failed"
-                gas_limit = safe_gas_limit(
-                    gas_limit,
-                    self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"],
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(receipt=receipt)
+
+            if failed_receipt:
+                failed_at_blocknumber = failed_receipt["blockNumber"]
+
+                already_registered = self.get_token_network(
+                    token_address=token_address, block_identifier=failed_at_blocknumber
                 )
-                log_details["gas_limit"] = gas_limit
-                transaction_hash = self.proxy.transact(
-                    "createERC20TokenNetwork", gas_limit, **kwarguments
+                deprecation_executor = self.get_deprecation_executor(
+                    block_identifier=failed_at_blocknumber
                 )
-
-                receipt = self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(receipt=receipt)
-
-            transaction_executed = gas_limit is not None
-            if not transaction_executed or failed_receipt:
-                if failed_receipt:
-                    block = failed_receipt["blockNumber"]
-                else:
-                    block = checking_block
-
-                required_gas = (
-                    gas_limit
-                    if gas_limit
-                    else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
+                settlement_timeout_min = self.get_settlement_timeout_min(
+                    block_identifier=failed_at_blocknumber
                 )
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                    transaction_name="createERC20TokenNetwork",
-                    transaction_executed=transaction_executed,
-                    required_gas=required_gas,
-                    block_identifier=block,
+                settlement_timeout_max = self.get_settlement_timeout_max(
+                    block_identifier=failed_at_blocknumber
+                )
+                chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
+                secret_registry_address = self.get_secret_registry_address(
+                    block_identifier=failed_at_blocknumber
                 )
 
-                if self.get_token_network(token_address, block):
-                    raise RaidenRecoverableError(f"{error_prefix}. Token already registered")
+                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                    msg = (
+                        f"createERC20TokenNetwork failed and all gas was used "
+                        f"({gas_limit}). Estimate gas may have underestimated "
+                        f"createERC20TokenNetwork, or succeeded even though an assert is "
+                        f"triggered, or the smart contract code has an "
+                        f"conditional assert."
+                    )
+                    raise RaidenRecoverableError(msg)
 
-                raise RaidenUnrecoverableError(error_prefix)
+                if already_registered:
+                    # Race condition lost, the token network was created in a different
+                    # transaction which got mined first.
+                    raise RaidenRecoverableError(
+                        "The token was already registered in the TokenNetworkRegistry."
+                    )
 
-            token_network_address = self.get_token_network(token_address, "latest")
+                if deprecation_executor == NULL_ADDRESS:
+                    raise RaidenUnrecoverableError(
+                        "The deprecation executor property for the "
+                        "TokenNetworkRegistry is invalid."
+                    )
+
+                if chain_id == 0:
+                    raise RaidenUnrecoverableError(
+                        "The chain ID property for the TokenNetworkRegistry is invalid."
+                    )
+
+                if secret_registry_address == NULL_ADDRESS:
+                    raise RaidenUnrecoverableError(
+                        "The secret registry address for the token network is invalid."
+                    )
+
+                if settlement_timeout_min == 0:
+                    raise RaidenUnrecoverableError(
+                        "The minimum settlement timeout for the token network "
+                        "should be larger than zero."
+                    )
+
+                if settlement_timeout_min == 0:
+                    raise RaidenUnrecoverableError(
+                        "The minimum settlement timeout for the token network "
+                        "should be larger than zero."
+                    )
+
+                if settlement_timeout_max <= settlement_timeout_min:
+                    raise RaidenUnrecoverableError(
+                        "The maximum settlement timeout for the token network "
+                        "should be larger than the minimum settlement timeout."
+                    )
+
+                # At this point, the TokenNetworkRegistry fails to instantiate
+                # a new TokenNetwork.
+                raise RaidenUnrecoverableError(
+                    "createERC20TokenNetwork failed for an unknown reason"
+                )
+
+            token_network_address = self.get_token_network(token_address, receipt["blockHash"])
             if token_network_address is None:
                 msg = "createERC20TokenNetwork succeeded but token network address is Null"
-                raise RuntimeError(msg)
+                raise RaidenUnrecoverableError(msg)
+        else:
+            # The latest block can not be used reliably because of reorgs,
+            # therefore every call using this block has to handle pruned data.
+            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at_blocknumber = failed_at["number"]
 
+            already_registered = self.get_token_network(
+                token_address=token_address, block_identifier=failed_at_blocknumber
+            )
+            deprecation_executor = self.get_deprecation_executor(
+                block_identifier=failed_at_blocknumber
+            )
+            settlement_timeout_min = self.get_settlement_timeout_min(
+                block_identifier=failed_at_blocknumber
+            )
+            settlement_timeout_max = self.get_settlement_timeout_max(
+                block_identifier=failed_at_blocknumber
+            )
+            chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
+            secret_registry_address = self.get_secret_registry_address(
+                block_identifier=failed_at_blocknumber
+            )
+
+            required_gas = (
+                gas_limit
+                if gas_limit
+                else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
+            )
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name="createERC20TokenNetwork",
+                transaction_executed=False,
+                required_gas=required_gas,
+                block_identifier=failed_at_blocknumber,
+            )
+
+            if already_registered:
+                # Race condition lost, the token network was created in a different
+                # transaction which got mined first.
+                raise RaidenRecoverableError(
+                    "The token was already registered in the TokenNetworkRegistry."
+                )
+
+            if deprecation_executor == NULL_ADDRESS:
+                raise RaidenUnrecoverableError(
+                    "The deprecation executor property for the " "TokenNetworkRegistry is invalid."
+                )
+
+            if chain_id == 0:
+                raise RaidenUnrecoverableError(
+                    "The chain ID property for the TokenNetworkRegistry is invalid."
+                )
+
+            if secret_registry_address == NULL_ADDRESS:
+                raise RaidenUnrecoverableError(
+                    "The secret registry address for the token network is invalid."
+                )
+
+            if settlement_timeout_min == 0:
+                raise RaidenUnrecoverableError(
+                    "The minimum settlement timeout for the token network "
+                    "should be larger than zero."
+                )
+
+            if settlement_timeout_min == 0:
+                raise RaidenUnrecoverableError(
+                    "The minimum settlement timeout for the token network "
+                    "should be larger than zero."
+                )
+
+            if settlement_timeout_max <= settlement_timeout_min:
+                raise RaidenUnrecoverableError(
+                    "The maximum settlement timeout for the token network "
+                    "should be larger than the minimum settlement timeout."
+                )
+
+            if self.get_token_network(token_address, failed_at_blocknumber):
+                raise RaidenRecoverableError("Token already registered")
+
+            # At this point, the TokenNetworkRegistry fails to instantiate
+            # a new TokenNetwork.
+            raise RaidenUnrecoverableError("createERC20TokenNetwork failed for an unknown reason")
         return token_network_address
 
     def tokenadded_filter(
