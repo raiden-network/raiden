@@ -703,11 +703,9 @@ class JSONRPCClient:
         """ Create a filter in the ethereum node. """
         return StatelessFilter(
             self.web3,
-            {
-                "fromBlock": from_block,
-                "address": to_checksum_address(contract_address),
-                "topics": topics,
-            },
+            from_block=from_block,
+            contract_address=to_checksum_address(contract_address),
+            topics=topics,
         )
 
     def get_filter_events(
