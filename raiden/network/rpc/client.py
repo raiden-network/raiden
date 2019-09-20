@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     BlockHash,
+    BlockNumber,
     BlockSpecification,
     CompiledContract,
     Nonce,
@@ -698,7 +699,7 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: Optional[List[Optional[str]]],
-        from_block: BlockSpecification,
+        from_block: BlockNumber,
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
         return StatelessFilter(

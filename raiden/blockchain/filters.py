@@ -114,7 +114,7 @@ class StatelessFilter(LogFilter):
     def __init__(
         self,
         web3: Web3,
-        from_block: BlockSpecification,
+        from_block: BlockNumber,
         contract_address: ChecksumAddress,
         topics: Optional[List[Optional[str]]],
     ) -> None:
@@ -127,7 +127,7 @@ class StatelessFilter(LogFilter):
         self._lock = Semaphore()
 
     def _do_get_new_entries(
-        self, from_block: BlockSpecification, to_block: BlockSpecification
+        self, from_block: BlockNumber, to_block: BlockSpecification
     ) -> List[BlockchainEvent]:
         filter_params = {
             "fromBlock": from_block,

@@ -264,7 +264,7 @@ class PaymentChannel:
             given_block_identifier=block_identifier,
         )
 
-    def all_events_filter(self, from_block: BlockSpecification) -> Filter:
+    def all_events_filter(self, from_block: BlockNumber) -> Filter:
 
         channel_topics: List[Optional[str]] = [
             None,  # event topic is any
