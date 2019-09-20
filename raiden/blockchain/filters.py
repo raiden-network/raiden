@@ -119,16 +119,22 @@ class StatelessFilter(LogFilter):
     ) -> None:
         super().__init__(web3, filter_id=None)
 
-        self.from_block = from_block
+        # fix off-by-one
+        last_block = from_block - 1
+
         self.contract_address = contract_address
         self.topics = topics
-        self._last_block: BlockNumber = BlockNumber(-1)
+        self.last_block = last_block
         self._lock = Semaphore()
 
     def from_block_number(self) -> BlockNumber:
-        return BlockNumber(max(self.from_block, self._last_block + 1))
+        """Return the next block to be queried."""
+        return BlockNumber(self.last_block + 1)
 
     def get_new_entries(self, target_block_number: BlockNumber) -> List[BlockchainEvent]:
+        """Return the new log entries matching the filter, starting from the
+        last run of `get_new_entries`.
+        """
         with self._lock:
             result: List[BlockchainEvent] = []
             from_block_number = self.from_block_number()
@@ -153,6 +159,6 @@ class StatelessFilter(LogFilter):
                 # next block.
                 from_block_number = BlockNumber(to_block + 1)
 
-                self._last_block = to_block
+                self.last_block = to_block
 
             return result
