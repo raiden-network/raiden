@@ -6,6 +6,7 @@ from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.network.transport import MatrixTransport
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
+from raiden.utils.typing import Optional
 
 
 @pytest.fixture
@@ -85,3 +86,8 @@ def matrix_transports(
         # Calling `get()` on a never started Greenlet will block forever
         if transport._started:
             transport.get()
+
+
+@pytest.fixture
+def resolver_ports(number_of_nodes) -> List[Optional[int]]:
+    return [None] * number_of_nodes

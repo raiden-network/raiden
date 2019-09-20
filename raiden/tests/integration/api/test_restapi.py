@@ -21,6 +21,7 @@ from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
+from raiden.tests.integration.fixtures.raiden_network import stop_resolvers
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
@@ -1193,6 +1194,82 @@ def test_api_payments_with_hash_no_secret(
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
     assert payment == payment
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("resolver_ports", [[None, 8000]])
+def test_api_payments_with_resolver(
+    api_server_test_instance, raiden_network, token_addresses, resolvers
+):
+
+    _, app1 = raiden_network
+    amount = 100
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+    secret = to_hex(factories.make_secret())
+    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+
+    payment = {
+        "initiator_address": to_checksum_address(our_address),
+        "target_address": to_checksum_address(target_address),
+        "token_address": to_checksum_address(token_address),
+        "amount": amount,
+        "identifier": identifier,
+    }
+
+    # payment with secret_hash when both resolver and initiator don't have the secret
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "secret_hash": secret_hash},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+    assert payment == payment
+
+    # payment with secret where the resolver don't have the secret. Should work.
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "secret": secret},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert payment == payment
+
+    # payment with secret_hash where the resolver has the secret. Should work.
+
+    secret = "0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e"
+    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": amount, "identifier": identifier, "secret_hash": secret_hash},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.OK)
+    assert payment == payment
+
+    # cleanup - stop resolvers.
+    stop_resolvers(resolvers)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
