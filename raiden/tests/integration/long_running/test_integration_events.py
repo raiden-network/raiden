@@ -447,7 +447,7 @@ def test_secret_revealed_on_chain(
     channel_close_event = ContractSendChannelClose(  # type: ignore
         canonical_identifier=channel_state2_1.canonical_identifier,
         balance_proof=channel_state2_1.partner_state.balance_proof,
-        triggered_by_block_hash=app0.raiden.chain.block_hash(),
+        triggered_by_block_hash=app0.raiden.chain.client.blockhash_from_blocknumber("latest"),
     )
     current_state = app2.raiden.wal.state_manager.current_state
     app2.raiden.raiden_event_handler.on_raiden_event(
