@@ -541,7 +541,7 @@ class RaidenService(Runnable):
         # new token network event filters when this is the first time Raiden runs.
         # Here we poll for any new events that may exist after the addition of
         # those event filters.
-        latest_block_num = self.chain.get_block(block_identifier="latest")["number"]
+        latest_block_num = self.chain.client.get_block(block_identifier="latest")["number"]
         latest_confirmed_block_num = max(
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )

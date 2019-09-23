@@ -200,14 +200,14 @@ class AlarmTask(Runnable):
 
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
-            latest_block = self.chain.get_block(block_identifier="latest")
+            latest_block = self.chain.client.get_block(block_identifier="latest")
 
             self._maybe_run_callbacks(latest_block)
 
     def first_run(self, known_block_number: BlockNumber) -> None:
         """ Blocking call to update the local state, if necessary. """
         assert self.callbacks, "callbacks not set"
-        latest_block = self.chain.get_block(block_identifier="latest")
+        latest_block = self.chain.client.get_block(block_identifier="latest")
 
         log.debug(
             "Alarm task first run",
