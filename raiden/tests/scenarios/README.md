@@ -92,3 +92,7 @@ A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
 Node0 will first make a payment to node3 through [0, 4, 3] and then node4 makes a partial withdraw
 results in not enough capacity for a second transfer to be routes through that path.
 The expected path for the second transfer is then [0, 1, 2, 3].
+
+#### [mfee1_flat_fee](./mfee1_flat_fee.yaml)
+This scenario creates a network with topology 0 -> 1 -> 2 -> 3 and only enables flat mediation fees.
+It then checks whether a path is returned. It also checks that correct flat mediation fees are deducted.

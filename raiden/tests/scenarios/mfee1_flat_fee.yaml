@@ -14,6 +14,7 @@ settings:
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
   balance_min: 1_000_000
+  balance_fund: 1_000_000
 
 nodes:
   mode: managed
@@ -64,11 +65,11 @@ scenario:
                   - [0, 1, 2, 3]
 
             # 200 TKN fees are calculated, 5% margin of that is 10 TKN
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 98_790, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 1210, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_790, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_210, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 98_890, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 1110, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_890, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_110, state: "opened"}
 
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 98_990, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 1010, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_990, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_010, state: "opened"}
