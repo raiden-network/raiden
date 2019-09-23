@@ -149,7 +149,6 @@ class MessageHandler:
             participant=message.participant,
             nonce=message.nonce,
             expiration=message.expiration,
-            signature=message.signature,
         )
         raiden.handle_and_track_state_changes([withdraw_expired])
 

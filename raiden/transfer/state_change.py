@@ -440,7 +440,6 @@ class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
-    signature: Signature
     participant: Address
 
     @property
