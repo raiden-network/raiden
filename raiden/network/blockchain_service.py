@@ -108,21 +108,6 @@ class BlockChainService:
     def get_block(self, block_identifier: BlockSpecification):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
 
-    def is_synced(self) -> bool:
-        result = self.client.web3.eth.syncing
-
-        # the node is synchronized
-        if result is False:
-            return True
-
-        current_block = self.block_number()
-        highest_block = result["highestBlock"]
-
-        if highest_block - current_block > 2:
-            return False
-
-        return True
-
     def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
