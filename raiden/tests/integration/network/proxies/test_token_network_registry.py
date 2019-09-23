@@ -39,9 +39,9 @@ def test_token_network_registry(
         token_network_registry_address
     )
 
-    assert token_network_registry_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
-    assert token_network_registry_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
-    assert token_network_registry_proxy.get_token_network_created(to_block="latest") == 0
+    assert token_network_registry_proxy.settlement_timeout_min("latest") == TEST_SETTLE_TIMEOUT_MIN
+    assert token_network_registry_proxy.settlement_timeout_max("latest") == TEST_SETTLE_TIMEOUT_MAX
+    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 0
 
     bad_token_address = make_token_address()
 
@@ -87,7 +87,7 @@ def test_token_network_registry(
         block_identifier=preblockhash,
     )
     assert token_network_address
-    assert token_network_registry_proxy.get_token_network_created(to_block="latest") == 1
+    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 1
 
     # Re-registering the same token should fail with a recoverable error
     # because it is a race condition.
@@ -138,7 +138,10 @@ def test_token_network_registry_max_token_networks(
     token_network_registry_proxy = blockchain_service.token_network_registry(
         to_canonical_address(token_network_registry_address)
     )
-    assert token_network_registry_proxy.get_max_token_networks(to_block="latest") == UINT256_MAX
+    assert (
+        token_network_registry_proxy.get_max_token_networks(block_identifier="latest")
+        == UINT256_MAX
+    )
 
 
 def test_token_network_registry_with_zero_token_address(
