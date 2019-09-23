@@ -14,8 +14,10 @@ from web3.utils.contracts import find_matching_event_abi
 from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     BrokenPreconditionError,
+    InvalidChannelParticipantDepositLimit,
     InvalidToken,
     InvalidTokenAddress,
+    InvalidTokenNetworkDepositLimit,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -113,6 +115,16 @@ class TokenNetworkRegistry:
         if token_address == NULL_ADDRESS_BYTES:
             raise InvalidTokenAddress("The call to register a token at 0x00..00 will fail.")
 
+        if token_network_deposit_limit <= 0:
+            raise InvalidTokenNetworkDepositLimit(
+                f"Token network deposit limit of {token_network_deposit_limit} is invalid"
+            )
+
+        if channel_participant_deposit_limit >= token_network_deposit_limit:
+            raise InvalidChannelParticipantDepositLimit(
+                f"Channel participant deposit limit of {channel_participant_deposit_limit} is invalid"
+            )
+
         token_proxy = self.blockchain_service.token(token_address)
         try:
             token_supply = token_proxy.total_supply(block_identifier=block_identifier)
@@ -120,14 +132,14 @@ class TokenNetworkRegistry:
                 token_address=token_address, block_identifier=block_identifier
             )
             deprecation_executor = self.get_deprecation_executor(block_identifier=block_identifier)
-            settlement_timeout_min = self.get_settlement_timeout_min(
-                block_identifier=block_identifier
-            )
-            settlement_timeout_max = self.get_settlement_timeout_max(
-                block_identifier=block_identifier
-            )
+            settlement_timeout_min = self.settlement_timeout_min(block_identifier=block_identifier)
+            settlement_timeout_max = self.settlement_timeout_max(block_identifier=block_identifier)
             chain_id = self.get_chain_id(block_identifier=block_identifier)
             secret_registry_address = self.get_secret_registry_address(
+                block_identifier=block_identifier
+            )
+            max_token_networks = self.get_max_token_networks(block_identifier=block_identifier)
+            token_networks_created = self.get_token_network_created(
                 block_identifier=block_identifier
             )
         except ValueError:
@@ -136,6 +148,11 @@ class TokenNetworkRegistry:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(block_identifier)
         else:
+            if token_networks_created + 1 >= max_token_networks:
+                raise BrokenPreconditionError(
+                    f"Number of token networks will exceed the max of {max_token_networks}"
+                )
+
             if token_supply == "":
                 raise InvalidToken(
                     "Given token address does not follow the "
@@ -218,7 +235,8 @@ class TokenNetworkRegistry:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements.get("TokenNetworkRegistry.createERC20TokenNetwork")
+                gas_limit,
+                self.gas_measurements.get("TokenNetworkRegistry.createERC20TokenNetwork"),
             )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
@@ -229,16 +247,22 @@ class TokenNetworkRegistry:
             if failed_receipt:
                 failed_at_blocknumber = failed_receipt["blockNumber"]
 
+                max_token_networks = self.get_max_token_networks(
+                    block_identifier=failed_at_blocknumber
+                )
+                token_networks_created = self.get_token_network_created(
+                    block_identifier=failed_at_blocknumber
+                )
                 already_registered = self.get_token_network(
                     token_address=token_address, block_identifier=failed_at_blocknumber
                 )
                 deprecation_executor = self.get_deprecation_executor(
                     block_identifier=failed_at_blocknumber
                 )
-                settlement_timeout_min = self.get_settlement_timeout_min(
+                settlement_timeout_min = self.settlement_timeout_min(
                     block_identifier=failed_at_blocknumber
                 )
-                settlement_timeout_max = self.get_settlement_timeout_max(
+                settlement_timeout_max = self.settlement_timeout_max(
                     block_identifier=failed_at_blocknumber
                 )
                 chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
@@ -255,6 +279,11 @@ class TokenNetworkRegistry:
                         f"conditional assert."
                     )
                     raise RaidenRecoverableError(msg)
+
+                if token_networks_created >= max_token_networks:
+                    raise RaidenRecoverableError(
+                        "The number of existing token networks reached the maximum allowed"
+                    )
 
                 if already_registered:
                     # Race condition lost, the token network was created in a different
@@ -319,16 +348,23 @@ class TokenNetworkRegistry:
             failed_at = self.proxy.jsonrpc_client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
+            max_token_networks = self.get_max_token_networks(
+                block_identifier=failed_at_blocknumber
+            )
+            token_networks_created = self.get_token_network_created(
+                block_identifier=failed_at_blocknumber
+            )
+
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=failed_at_blocknumber
             )
             deprecation_executor = self.get_deprecation_executor(
                 block_identifier=failed_at_blocknumber
             )
-            settlement_timeout_min = self.get_settlement_timeout_min(
+            settlement_timeout_min = self.settlement_timeout_min(
                 block_identifier=failed_at_blocknumber
             )
-            settlement_timeout_max = self.get_settlement_timeout_max(
+            settlement_timeout_max = self.settlement_timeout_max(
                 block_identifier=failed_at_blocknumber
             )
             chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
@@ -347,6 +383,11 @@ class TokenNetworkRegistry:
                 required_gas=required_gas,
                 block_identifier=failed_at_blocknumber,
             )
+
+            if token_networks_created >= max_token_networks:
+                raise RaidenRecoverableError(
+                    "The number of existing token networks reached the maximum allowed"
+                )
 
             if already_registered:
                 # Race condition lost, the token network was created in a different
