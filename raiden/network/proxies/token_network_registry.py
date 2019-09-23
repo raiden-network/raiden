@@ -74,35 +74,6 @@ class TokenNetworkRegistry:
         self.node_address = self.client.address
         self.proxy = proxy
 
-    def get_chain_id(self, block_identifier: BlockSpecification) -> int:
-        return self.proxy.contract.functions.chain_id().call(block_identifier=block_identifier)
-
-    def get_settlement_timeout_min(self, block_identifier: BlockSpecification) -> int:
-        return self.proxy.contract.functions.settlement_timeout_min().call(
-            block_identifier=block_identifier
-        )
-
-    def get_settlement_timeout_max(self, block_identifier: BlockSpecification) -> int:
-        return self.proxy.contract.functions.settlement_timeout_max().call(
-            block_identifier=block_identifier
-        )
-
-    def get_secret_registry_address(
-        self, block_identifier: BlockSpecification
-    ) -> SecretRegistryAddress:
-        return SecretRegistryAddress(
-            self.proxy.contract.functions.secret_registry_address().call(
-                block_identifier=block_identifier
-            )
-        )
-
-    def get_deprecation_executor(self, block_identifier: BlockSpecification) -> Address:
-        return Address(
-            self.proxy.contract.functions.deprecation_executor().call(
-                block_identifier=block_identifier
-            )
-        )
-
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockSpecification
     ) -> Optional[TokenNetworkAddress]:
@@ -463,24 +434,49 @@ class TokenNetworkRegistry:
 
         return events
 
-    def settlement_timeout_min(self) -> int:
+    def get_chain_id(self, block_identifier: BlockSpecification) -> int:
+        return self.proxy.contract.functions.chain_id().call(block_identifier=block_identifier)
+
+    def get_secret_registry_address(
+        self, block_identifier: BlockSpecification
+    ) -> SecretRegistryAddress:
+        return SecretRegistryAddress(
+            self.proxy.contract.functions.secret_registry_address().call(
+                block_identifier=block_identifier
+            )
+        )
+
+    def get_deprecation_executor(self, block_identifier: BlockSpecification) -> Address:
+        return Address(
+            self.proxy.contract.functions.deprecation_executor().call(
+                block_identifier=block_identifier
+            )
+        )
+
+    def settlement_timeout_min(self, block_identifier: BlockSpecification) -> int:
         """ Returns the minimal settlement timeout for the token network registry. """
-        return self.proxy.contract.functions.settlement_timeout_min().call()
+        return self.proxy.contract.functions.settlement_timeout_min().call(
+            block_identifier=block_identifier
+        )
 
-    def settlement_timeout_max(self) -> int:
+    def settlement_timeout_max(self, block_identifier: BlockSpecification) -> int:
         """ Returns the maximal settlement timeout for the token network registry. """
-        return self.proxy.contract.functions.settlement_timeout_max().call()
+        return self.proxy.contract.functions.settlement_timeout_max().call(
+            block_identifier=block_identifier
+        )
 
-    def get_token_network_created(self, to_block: BlockSpecification) -> int:
+    def get_token_network_created(self, block_identifier: BlockSpecification) -> int:
         """ Returns the number of TokenNetwork contracts created so far in the
         token network registry.
         """
         return self.proxy.contract.functions.token_network_created().call(
-            block_identifier=to_block
+            block_identifier=block_identifier
         )
 
-    def get_max_token_networks(self, to_block: BlockSpecification) -> int:
+    def get_max_token_networks(self, block_identifier: BlockSpecification) -> int:
         """ Returns the maximal number of TokenNetwork contracts that the
         token network registry.
         """
-        return self.proxy.contract.functions.max_token_networks().call(block_identifier=to_block)
+        return self.proxy.contract.functions.max_token_networks().call(
+            block_identifier=block_identifier
+        )
