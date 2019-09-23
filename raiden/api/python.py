@@ -709,8 +709,8 @@ class RaidenAPI:  # pragma: no unittest
             channel_proxy.set_total_deposit(
                 total_deposit=total_deposit, block_identifier=blockhash
             )
-        except RaidenRecoverableError:
-            log.info("The deposit has already been done or the channel is no longer open.")
+        except RaidenRecoverableError as e:
+            log.info(f"Deposit failed. {str(e)}")
 
         target_address = self.raiden.address
         waiting.wait_for_participant_deposit(
