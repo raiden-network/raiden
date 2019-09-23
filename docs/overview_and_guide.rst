@@ -163,6 +163,7 @@ In order to use Raiden correctly and safely there are some things that need to b
 - **Ethereum Client Always Online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
 - **Ethereum Client can not be changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
 - **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
+- **"Wormhole Attack" is possible** When your Raiden node plays the role of a mediator, so-called "wormhole attack" is possible. Under this attack, even though the whole payment succeeds, your incoming and outgoing capacities will be locked until the expiration, and the attackers gain mediation fees. However, such an attacker can also avoid your node altogether, and avoid locking their capacities.
 - **Be patient**: Do not mash buttons in the webUI and do not shut down the client while on-chain transactions are on the fly and have not yet been confirmed.
 
 Firing it up
