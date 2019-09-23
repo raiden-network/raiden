@@ -553,6 +553,17 @@ def test_api_open_and_deposit_race(
     greenlets.add(gevent.spawn(request.send))
     greenlets.add(gevent.spawn(request.send))
     gevent.joinall(greenlets, raise_error=True)
+    greenlets = list(greenlets)
+    # Make sure that both responses are fine
+    g1_response = greenlets[0].get().response
+    assert_proper_response(g1_response, HTTPStatus.OK)
+    json_response = get_json_response(g1_response)
+    expected_response.update({"total_deposit": deposit_amount, "balance": deposit_amount})
+    assert check_dict_nested_attrs(json_response, expected_response)
+    g2_response = greenlets[0].get().response
+    assert_proper_response(g2_response, HTTPStatus.OK)
+    json_response = get_json_response(g2_response)
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # Wait for the deposit to be seen
     timeout_seconds = 20
