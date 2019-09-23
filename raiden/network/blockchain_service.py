@@ -105,9 +105,6 @@ class BlockChainService:
     def block_hash(self) -> BlockHash:
         return self.client.blockhash_from_blocknumber("latest")
 
-    def get_block(self, block_identifier: BlockSpecification):
-        return self.client.web3.eth.getBlock(block_identifier=block_identifier)
-
     def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
@@ -125,8 +122,8 @@ class BlockChainService:
         else:
             interval = last_block_number - oldest
         assert interval > 0
-        last_timestamp = self.get_block(last_block_number)["timestamp"]
-        first_timestamp = self.get_block(last_block_number - interval)["timestamp"]
+        last_timestamp = self.client.get_block(last_block_number)["timestamp"]
+        first_timestamp = self.client.get_block(last_block_number - interval)["timestamp"]
         delta = last_timestamp - first_timestamp
         return delta / interval
 

@@ -51,7 +51,7 @@ def test_token_addresses(raiden_network, token_addresses):
     api0 = RaidenAPI(app0.raiden)
     # Emulate the confirmed block being a block where TokenNetwork for token_address
     # has not been deployed.
-    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.chain.get_block(
+    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.chain.client.get_block(
         token_network_deploy_block_number - 1
     )["hash"]
 
