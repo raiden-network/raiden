@@ -215,7 +215,7 @@ def is_channel_usable_for_new_transfer(
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: Optional[BlockTimeout],
 ) -> bool:
-    """True if the channel be used to start a new transfer.
+    """True if the channel can be used to start a new transfer.
 
     This will make sure that:
 
