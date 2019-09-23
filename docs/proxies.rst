@@ -42,11 +42,18 @@ A Guide for Using Proxies
 =========================
 
 Before calling a proxy, make sure that the call is going to succeed in a confirmed block.
-And then, pass the blockhash of the confirmed block to the proxy when you call it.
+Pick a confirmed block and query the blockchain so that the chain state allows a successful
+execution at that moment.  And then, pass the blockhash of the confirmed block to the proxy
+when you call it.
 
-The proxy checks the preconditions on the confirmed block. If any of the preconditions fail,
-it raises ``BrokenPreconditionError``. This means there is a mistake in the Raiden codebase,
-and a check must be added before calling the proxy.
+The proxy checks the preconditions on the confirmed block. If any of the preconditions fail
+because of the chain state, it raises ``BrokenPreconditionError``. This means there is a
+mistake in the Raiden codebase, and a check must be added before calling the proxy.
+
+However, the proxy raises ``BrokenPreconditionError`` only when the error is about the chain state.
+There are values that are invalid regardless of the chain state. These cause ``RaidenValidationError``
+instead of ``BrokenPreconditionError``.  The ``RaidenValidationError`` is not considered as
+a bug in the codebase.
 
 When the proxy doesn't raise an exception, the call was successful. A transaction was included
 in a block and the transaction has been executed successfully. Moreover the proxy has waited
@@ -71,6 +78,13 @@ When you implement proxies, the best documentation to follow is the source of To
 
 Sometimes precondition checks are impossible because the specified block is too old (pruned in the Ethereum client).
 In this case, the precondition check can be skipped.
+
+Checks before the gas estimation should raise one of the following exceptions:
+
+- ``BrokenPreconditionError`` when the specified block has an unsuitable chain state for the call.
+- ``RaidenValidationError`` when the given argument is invalid regardless of the chain state.
+- Instead of ``RaidenValidationError``, you can also raise a special exception that you derive from ``RaidenError``,
+  but make sure you catch it. The typical use case is to provide a nice HTTP status number.
 
 When you implement a new method of a proxy, consider refusing the string ``"latest"`` as the block identifier.
 Usually passing ``"latest"`` as a block identifier to a proxy method poses a possibility of ``BrokenPreconditionError``.

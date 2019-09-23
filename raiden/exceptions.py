@@ -1,3 +1,16 @@
+"""
+What do you want from this file?
+
+1. I need to look up when to raise what.
+    Then read on the docstrings.
+2. I have to add a new exception.
+    Make sure you catch it somewhere. Sometimes you'll realize you cannot catch it.
+    Especially, if your new exception indicates bug in the Raiden codebase,
+    you are not supposed to catch the exception.  Instead, use one of the
+    existing uncaught exceptions: RaidenUnrecoverableError or BrokenPreconditionError.
+"""
+
+
 class RaidenError(Exception):
     """Raiden base exception.
 
@@ -46,6 +59,18 @@ class RaidenValidationError(RaidenRecoverableError):
 
     This exception must be raised on the edges of the system, to inform the
     caller one of the provided values is invalid.
+
+    Actually, this exception can also be used in the proxies for insane values
+    that are not valid regardless of the chain state.
+    If a value is not acceptable because of the chain state, BrokenPreconditionError
+    must be used instead.
+    Also, if a value indicates a bug in our codebase, RaidenValidationError
+    is not the right error because RaidenValidationError is considered as a
+    recoverable error.
+
+    We prefer this exception over ValueError because libraries (e.g. web3.py)
+    raise ValueError sometimes, and we want to differentiate our own exceptions
+    from those.
     """
 
 
@@ -255,13 +280,20 @@ class InsufficientGasReserve(RaidenError):
 
 
 class BrokenPreconditionError(RaidenError):
-    """ Raised while checking transaction preconditions
-    which should be satisfied before sending the transaction.
-    This exception when:
-    1. An assert or a revert in the smart contract would be hit for
-    triggering block.
+    """ Raised when the chain doesn't satisfy transaction preconditions
+    that proxies check at the specified block.
 
-    2. If provided values are invalid (i.e ValueError)
+    This exception should be used, when the proxy already sees that,
+    on the specified block, due to the blockchain state, an assert
+    or a revert in the smart contract would be hit for the triggering block.
+
+    This exception should not be used for errors independent of the
+    chain state. For example, when an argument needs to be always non-zero,
+    violation of this condition is not a BrokenPreconditionError, but
+    RaidenValidationError.
+
+    This exception can also be used when preconditions are not satisfied
+    on another Raiden node.
     """
 
 
