@@ -14,10 +14,7 @@ from web3.utils.contracts import find_matching_event_abi
 from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     BrokenPreconditionError,
-    InvalidChannelParticipantDepositLimit,
     InvalidToken,
-    InvalidTokenAddress,
-    InvalidTokenNetworkDepositLimit,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -113,15 +110,15 @@ class TokenNetworkRegistry:
             )
 
         if token_address == NULL_ADDRESS_BYTES:
-            raise InvalidTokenAddress("The call to register a token at 0x00..00 will fail.")
+            raise BrokenPreconditionError("The call to register a token at 0x00..00 will fail.")
 
         if token_network_deposit_limit <= 0:
-            raise InvalidTokenNetworkDepositLimit(
+            raise BrokenPreconditionError(
                 f"Token network deposit limit of {token_network_deposit_limit} is invalid"
             )
 
         if channel_participant_deposit_limit > token_network_deposit_limit:
-            raise InvalidChannelParticipantDepositLimit(
+            raise BrokenPreconditionError(
                 f"Channel participant deposit limit of "
                 f"{channel_participant_deposit_limit} is invalid"
             )

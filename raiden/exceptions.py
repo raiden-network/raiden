@@ -161,18 +161,6 @@ class InvalidTokenAddress(RaidenError):
     """ Raised if the token address is invalid """
 
 
-class InvalidTokenNetworkDepositLimit(RaidenError):
-    """ Raised when an invalid token network deposit
-    limit is passed to the token network registry proxy.
-    """
-
-
-class InvalidChannelParticipantDepositLimit(RaidenError):
-    """ Raised when an invalid channel participant
-    deposit limit is passed to the token network registry proxy.
-    """
-
-
 class STUNUnavailableException(RaidenError):
     pass
 
