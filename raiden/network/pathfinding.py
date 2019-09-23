@@ -16,6 +16,7 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingM
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
+from raiden.utils import to_rdn
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -44,6 +45,7 @@ log = structlog.get_logger(__name__)
 @dataclass(frozen=True)
 class PFSInfo:
     url: str
+    # Price in RAI (RDN wei equivalent)
     price: TokenAmount
     chain_id: ChainID
     token_network_registry_address: TokenNetworkRegistryAddress
@@ -298,7 +300,7 @@ def configure_pfs_or_exit(
         f"running version: {pathfinding_service_info.version}, "
         f"chain_id: {pathfinding_service_info.chain_id}.\n"
         f"Fees will be paid to {to_checksum_address(pathfinding_service_info.payment_address)}. "
-        f"Each request costs {pathfinding_service_info.price} RDN.\n"
+        f"Each request costs {to_rdn(pathfinding_service_info.price)} RDN.\n"
         f"Message from the PFS:\n{pathfinding_service_info.message}"
     )
 
