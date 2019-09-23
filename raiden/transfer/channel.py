@@ -354,9 +354,7 @@ def is_valid_channel_total_withdraw(channel_total_withdraw: TokenAmount) -> bool
 
 
 def is_valid_withdraw(
-    withdraw_request: Union[
-        ReceiveWithdrawRequest, ReceiveWithdrawConfirmation, ReceiveWithdrawExpired
-    ]
+    withdraw_request: Union[ReceiveWithdrawRequest, ReceiveWithdrawConfirmation]
 ) -> SuccessOrError:
     """True if the signature of the message corresponds is valid.
 

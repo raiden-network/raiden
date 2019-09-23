@@ -1939,7 +1939,6 @@ def test_node_handles_received_withdraw_expiry():
 
     our_model1, _ = create_model(balance=70)
     partner_model1, privkey2 = create_model(balance=100)
-    signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
     block_hash = make_block_hash()
 
@@ -1951,21 +1950,10 @@ def test_node_handles_received_withdraw_expiry():
         total_withdraw=total_withdraw, expiration=expiration_block_number, nonce=1
     )
 
-    packed = pack_withdraw(
-        canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
-        participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
-        total_withdraw=total_withdraw,
-        expiration_block=10,
-    )
-    partner_signature = signer.sign(packed)
-
     receive_withdraw_expired = ReceiveWithdrawExpired(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
-        signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.partner_state.address,
@@ -1994,7 +1982,6 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
 
     our_model1, _ = create_model(balance=70)
     partner_model1, privkey2 = create_model(balance=100)
-    signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
     block_hash = make_block_hash()
 
@@ -2007,22 +1994,11 @@ def test_node_rejects_received_withdraw_expiry_invalid_total_withdraw():
     )
     channel_state.partner_state.withdraws_pending[total_withdraw] = pending_withdraw
 
-    packed = pack_withdraw(
-        canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
-        participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
-        total_withdraw=total_withdraw,
-        expiration_block=expiration_block_number,
-    )
-    partner_signature = signer.sign(packed)
-
     # Test a withdraw that has not expired yet
     receive_withdraw_expired = ReceiveWithdrawExpired(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
-        signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.partner_state.address,
@@ -2070,14 +2046,13 @@ def test_node_rejects_received_withdraw_expiry_invalid_signature():
     )
     channel_state.partner_state.withdraws_pending[total_withdraw] = pending_withdraw
 
-    # Invalid signature
+    # Signed by wrong party
     receive_withdraw_expired = ReceiveWithdrawExpired(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
-        signature=make_32bytes(),
         # pylint: disable=no-member
-        sender=channel_state.partner_state.address,
+        sender=channel_state.our_state.address,  # signed by wrong party
         participant=channel_state.partner_state.address,
         # pylint: enable=no-member
         nonce=1,
@@ -2111,7 +2086,6 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
 
     our_model1, _ = create_model(balance=70)
     partner_model1, privkey2 = create_model(balance=100)
-    signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
     block_hash = make_block_hash()
 
@@ -2124,22 +2098,11 @@ def test_node_rejects_received_withdraw_expiry_invalid_nonce():
     )
     channel_state.partner_state.withdraws_pending[total_withdraw] = pending_withdraw
 
-    packed = pack_withdraw(
-        canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
-        participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
-        total_withdraw=total_withdraw,
-        expiration_block=expiration_block_number,
-    )
-    partner_signature = signer.sign(packed)
-
     # Invalid Nonce
     receive_withdraw_expired = ReceiveWithdrawExpired(
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
-        signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.partner_state.address,
@@ -2175,23 +2138,12 @@ def test_node_multiple_withdraws_with_one_expiring():
 
     our_model1, _ = create_model(balance=70)
     partner_model1, privkey2 = create_model(balance=100)
-    signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
     block_hash = make_block_hash()
 
     total_withdraw = 50
     expiration_block_number = 10
     expiration_threshold = channel.get_receiver_expiration_threshold(expiration_block_number)
-
-    packed = pack_withdraw(
-        canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
-        participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
-        total_withdraw=total_withdraw,
-        expiration_block=expiration_block_number,
-    )
-    partner_signature = signer.sign(packed)
 
     second_total_withdraw = total_withdraw * 2
 
@@ -2208,7 +2160,6 @@ def test_node_multiple_withdraws_with_one_expiring():
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         canonical_identifier=channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
-        signature=partner_signature,
         # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.partner_state.address,
