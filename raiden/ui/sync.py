@@ -8,6 +8,7 @@ from eth_utils import to_int
 from requests.exceptions import RequestException
 
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.rpc.client import JSONRPCClient
 
 
 def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
@@ -58,8 +59,8 @@ def wait_for_sync_etherscan(
     print("")
 
 
-def wait_for_sync_rpc_api(blockchain_service: BlockChainService, sleep: float) -> None:
-    if blockchain_service.is_synced():
+def wait_for_sync_rpc_api(rpc_client: JSONRPCClient, sleep: float) -> None:
+    if rpc_client.is_synced():
         return
 
     print("Waiting for the ethereum node to synchronize [Use ^C to exit].")
@@ -73,7 +74,7 @@ def wait_for_sync_rpc_api(blockchain_service: BlockChainService, sleep: float) -
 
         gevent.sleep(sleep)
 
-        if blockchain_service.is_synced():
+        if rpc_client.is_synced():
             return
 
     # add a newline so that the next print will start have it's own line
@@ -93,4 +94,4 @@ def wait_for_sync(
         print(f"Cannot use {url}. Request failed")
         print("Falling back to eth_sync api.")
 
-        wait_for_sync_rpc_api(blockchain_service, sleep)
+        wait_for_sync_rpc_api(blockchain_service.client, sleep)
