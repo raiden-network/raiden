@@ -766,3 +766,18 @@ class JSONRPCClient:
         if self.eth_node is constants.EthClient.PARITY:
             checking_block = "latest"
         return checking_block
+
+    def is_synced(self) -> bool:
+        result = self.web3.eth.syncing
+
+        # the node is synchronized
+        if result is False:
+            return True
+
+        current_block = self.block_number()
+        highest_block = result["highestBlock"]
+
+        if highest_block - current_block > 2:
+            return False
+
+        return True
