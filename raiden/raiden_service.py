@@ -357,7 +357,7 @@ class RaidenService(Runnable):
                 pseudo_random_generator=random.Random(),
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
-                our_address=self.chain.node_address,
+                our_address=self.address,
                 chain_id=self.chain.network_id,
             )
             token_network_registry = TokenNetworkRegistryState(

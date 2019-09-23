@@ -99,10 +99,6 @@ class BlockChainService:
         self._payment_channel_creation_lock = Semaphore()
         self._user_deposit_creation_lock = Semaphore()
 
-    @property
-    def node_address(self) -> Address:
-        return self.client.address
-
     def block_number(self) -> BlockNumber:
         return self.client.block_number()
 

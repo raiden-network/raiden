@@ -154,7 +154,7 @@ class AlarmTask(Runnable):
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.chain.client.address)}>"
 
     def start(self) -> None:
-        log.debug("Alarm task started", node=to_checksum_address(self.chain.node_address))
+        log.debug("Alarm task started", node=to_checksum_address(self.chain.client.address))
         self._stop_event = AsyncResult()
         super().start()
 
@@ -215,7 +215,7 @@ class AlarmTask(Runnable):
             latest_block_number=latest_block["number"],
             latest_gas_limit=latest_block["gasLimit"],
             latest_block_hash=to_hex(latest_block["hash"]),
-            node=to_checksum_address(self.chain.node_address),
+            node=to_checksum_address(self.chain.client.address),
         )
 
         self.known_block_number = known_block_number
@@ -241,7 +241,7 @@ class AlarmTask(Runnable):
                 old_block_number=latest_block["number"],
                 old_gas_limit=latest_block["gasLimit"],
                 old_block_hash=to_hex(latest_block["hash"]),
-                node=to_checksum_address(self.chain.node_address),
+                node=to_checksum_address(self.chain.client.address),
             )
         elif missed_blocks > 0:
             log_details = dict(
@@ -249,7 +249,7 @@ class AlarmTask(Runnable):
                 latest_block_number=latest_block_number,
                 latest_block_hash=to_hex(latest_block["hash"]),
                 latest_block_gas_limit=latest_block["gasLimit"],
-                node=to_checksum_address(self.chain.node_address),
+                node=to_checksum_address(self.chain.client.address),
             )
             if missed_blocks > 1:
                 log_details["num_missed_blocks"] = missed_blocks - 1
@@ -270,7 +270,7 @@ class AlarmTask(Runnable):
     def stop(self) -> Any:
         if self._stop_event:
             self._stop_event.set(True)
-        log.debug("Alarm task stopped", node=to_checksum_address(self.chain.node_address))
+        log.debug("Alarm task stopped", node=to_checksum_address(self.chain.client.address))
         result = self.join()
         # Callbacks should be cleaned after join
         self.callbacks = []
