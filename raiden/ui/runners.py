@@ -176,7 +176,7 @@ class NodeRunner:
         self._startup_hook()
 
         # wait for interrupt
-        event = AsyncResult()
+        event: "AsyncResult[None]" = AsyncResult()
 
         def sig_set(sig=None, _frame=None):
             event.set(sig)

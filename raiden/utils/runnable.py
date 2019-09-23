@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
 import structlog
-from gevent import Greenlet
+from gevent import Greenlet, GreenletExit
 
 from raiden.utils.typing import Callable
 
@@ -15,7 +15,7 @@ class Runnable:
     In the future, when proper restart is implemented, may be replaced by actual greenlet
     """
 
-    greenlet: Greenlet = None
+    greenlet: Greenlet
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
 
@@ -72,7 +72,9 @@ class Runnable:
         )
         if not self.greenlet:
             return
-        self.greenlet.kill(subtask.exception)
+
+        exception = subtask.exception or GreenletExit()
+        self.greenlet.kill(exception)
 
     def _schedule_new_greenlet(
         self, func: Callable, *args, in_seconds_from_now: int = None, **kwargs

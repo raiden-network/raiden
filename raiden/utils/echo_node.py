@@ -126,7 +126,7 @@ class EchoNode:  # pragma: no unittest
                     if received_transfers:
                         self.num_seen_events += len(received_transfers)
 
-                    if not self.echo_worker_greenlet.started:
+                    if not bool(self.echo_worker_greenlet):
                         log.debug(
                             "Restarting echo_worker_greenlet",
                             node=to_checksum_address(self.api.address),
