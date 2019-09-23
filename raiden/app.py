@@ -101,9 +101,11 @@ class App:  # pylint: disable=too-few-public-methods
         )
 
         # check that the settlement timeout fits the limits of the contract
+        settlement_timeout_min = default_registry.settlement_timeout_min("latest")
+        settlement_timeout_max = default_registry.settlement_timeout_max("latest")
         invalid_settle_timeout = (
-            config["settle_timeout"] < default_registry.settlement_timeout_min()
-            or config["settle_timeout"] > default_registry.settlement_timeout_max()
+            config["settle_timeout"] < settlement_timeout_min
+            or config["settle_timeout"] > settlement_timeout_max
             or config["settle_timeout"] < config["reveal_timeout"] * 2
         )
         if invalid_settle_timeout:
@@ -113,8 +115,8 @@ class App:  # pylint: disable=too-few-public-methods
                     "be in range [{}, {}], is {}"
                 ).format(
                     to_checksum_address(default_registry.address),
-                    default_registry.settlement_timeout_min(),
-                    default_registry.settlement_timeout_max(),
+                    settlement_timeout_min,
+                    settlement_timeout_max,
                     config["settle_timeout"],
                 )
             )

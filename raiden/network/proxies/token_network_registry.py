@@ -120,9 +120,10 @@ class TokenNetworkRegistry:
                 f"Token network deposit limit of {token_network_deposit_limit} is invalid"
             )
 
-        if channel_participant_deposit_limit >= token_network_deposit_limit:
+        if channel_participant_deposit_limit > token_network_deposit_limit:
             raise InvalidChannelParticipantDepositLimit(
-                f"Channel participant deposit limit of {channel_participant_deposit_limit} is invalid"
+                f"Channel participant deposit limit of "
+                f"{channel_participant_deposit_limit} is invalid"
             )
 
         token_proxy = self.blockchain_service.token(token_address)
@@ -235,8 +236,7 @@ class TokenNetworkRegistry:
 
         if gas_limit:
             gas_limit = safe_gas_limit(
-                gas_limit,
-                self.gas_measurements.get("TokenNetworkRegistry.createERC20TokenNetwork"),
+                gas_limit, self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
@@ -375,7 +375,7 @@ class TokenNetworkRegistry:
             required_gas = (
                 gas_limit
                 if gas_limit
-                else self.gas_measurements.get("TokenNetworkRegistry.createERC20TokenNetwork")
+                else self.gas_measurements.get("TokenNetworkRegistry createERC20TokenNetwork")
             )
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",
