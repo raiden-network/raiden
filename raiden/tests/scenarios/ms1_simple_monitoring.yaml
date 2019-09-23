@@ -28,6 +28,12 @@ nodes:
     gas-price: fast
     environment-type: development
     enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
 
 # This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward.

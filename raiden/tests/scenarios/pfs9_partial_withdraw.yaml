@@ -28,6 +28,12 @@ nodes:
     pathfinding-max-paths: 1
     pathfinding-max-fee: 100
     enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
 
 ## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates
 ## after a partial withdraw takes place.
