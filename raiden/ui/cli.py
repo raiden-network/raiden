@@ -14,8 +14,8 @@ from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
-import urllib3
-from urllib3.exceptions import InsecureRequestWarning
+from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 from raiden.app import App
 from raiden.constants import Environment, EthClient, RoutingMode
