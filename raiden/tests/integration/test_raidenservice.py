@@ -47,7 +47,9 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     app0 = raiden_network[0]
 
     app0.raiden.alarm.stop()
-    target_block_num = app0.raiden.chain.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+    target_block_num = (
+        app0.raiden.chain.client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+    )
     app0.raiden.chain.wait_until_block(target_block_num)
 
     latest_block = app0.raiden.chain.client.get_block(block_identifier="latest")
@@ -169,7 +171,8 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     # the channel creation events
     blockchain_services.deploy_service.wait_until_block(target_block_number=10)
     target_block_num = (
-        blockchain_services.deploy_service.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        blockchain_services.deploy_service.client.block_number()
+        + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
     blockchain_services.deploy_service.wait_until_block(target_block_number=target_block_num)
 

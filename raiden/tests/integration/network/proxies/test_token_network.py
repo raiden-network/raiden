@@ -439,7 +439,7 @@ def test_token_network_proxy(
         pytest.fail(msg)
 
     c1_chain.wait_until_block(
-        target_block_number=c1_chain.block_number() + TEST_SETTLE_TIMEOUT_MIN
+        target_block_number=c1_chain.client.block_number() + TEST_SETTLE_TIMEOUT_MIN
     )
 
     invalid_transferred_amount = 1
@@ -661,7 +661,7 @@ def test_token_network_proxy_update_transfer(
 
         assert "cannot be settled before settlement window is over" in str(exc)
 
-    c1_chain.wait_until_block(target_block_number=c1_chain.block_number() + 10)
+    c1_chain.wait_until_block(target_block_number=c1_chain.client.block_number() + 10)
 
     # settling with an invalid amount
     with pytest.raises(BrokenPreconditionError):
@@ -788,7 +788,7 @@ def test_token_network_actions_at_pruned_blocks(
     )
 
     # Now wait until this block becomes pruned
-    pruned_number = c1_chain.block_number()
+    pruned_number = c1_chain.client.block_number()
     c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
 
     # deposit with given block being pruned
@@ -838,7 +838,7 @@ def test_token_network_actions_at_pruned_blocks(
         closing_signature=LocalSigner(c1_client.privkey).sign(data=closing_data),
         given_block_identifier=pruned_number,
     )
-    close_pruned_number = c1_chain.block_number()
+    close_pruned_number = c1_chain.client.block_number()
 
     assert (
         c1_token_network_proxy.channel_is_closed(
