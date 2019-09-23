@@ -76,6 +76,7 @@ from raiden.exceptions import (
     InvalidTokenAddress,
     MintFailed,
     PaymentConflict,
+    RaidenRecoverableError,
     SamePeerAddress,
     TokenNetworkDeprecated,
     TokenNotRegistered,
@@ -551,6 +552,7 @@ class RestAPI:  # pragma: no unittest
             InvalidBinaryAddress,
             InvalidToken,
             InvalidTokenAddress,
+            RaidenRecoverableError,
         )
         log.debug(
             "Registering token",
