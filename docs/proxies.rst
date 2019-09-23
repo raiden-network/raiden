@@ -33,7 +33,7 @@ When the precondition checks fail, the proxy raises ``BrokenPreconditionError``,
 When the gas estimation fails, the proxy performs additional checks on the latest available block in order to determine the cause of the failure.
 
 When the transaction was included in a block but the execution has failed, the proxy performs additional checks on that block in order to determine
-the cause of the failure.
+the cause of the failure. The checks use the chain state at the end of the failing block.
 
 Depending on the cause of the failure, the proxy raises different kinds of exceptions. If you use the proxies, you'll need to
 make sense of these exceptions (see below).
