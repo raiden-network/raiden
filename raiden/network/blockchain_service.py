@@ -102,9 +102,6 @@ class BlockChainService:
     def block_number(self) -> BlockNumber:
         return self.client.block_number()
 
-    def block_hash(self) -> BlockHash:
-        return self.client.blockhash_from_blocknumber("latest")
-
     def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
