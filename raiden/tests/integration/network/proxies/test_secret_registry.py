@@ -122,7 +122,7 @@ def test_register_secret_batch_with_pruned_block(
         ),
     )
     # Now wait until this block becomes pruned
-    pruned_number = c1_chain.block_number()
+    pruned_number = c1_chain.client.block_number()
     c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
     secret_registry_batch_happy_path(secret_registry_proxy)
 

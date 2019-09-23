@@ -16,7 +16,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
-    BlockHash,
     BlockNumber,
     BlockSpecification,
     ChainID,
@@ -99,9 +98,6 @@ class BlockChainService:
         self._payment_channel_creation_lock = Semaphore()
         self._user_deposit_creation_lock = Semaphore()
 
-    def block_number(self) -> BlockNumber:
-        return self.client.block_number()
-
     def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
         Args:
@@ -109,7 +105,7 @@ class BlockChainService:
         Return:
             average block time in seconds
         """
-        last_block_number = self.block_number()
+        last_block_number = self.client.block_number()
         # around genesis block there is nothing to estimate
         if last_block_number < 1:
             return 15
@@ -125,15 +121,15 @@ class BlockChainService:
         return delta / interval
 
     def next_block(self) -> int:
-        target_block_number = self.block_number() + 1
+        target_block_number = self.client.block_number() + 1
         self.wait_until_block(target_block_number=target_block_number)
         return target_block_number
 
     def wait_until_block(self, target_block_number):
-        current_block = self.block_number()
+        current_block = self.client.block_number()
 
         while current_block < target_block_number:
-            current_block = self.block_number()
+            current_block = self.client.block_number()
             gevent.sleep(0.5)
 
         return current_block

@@ -38,7 +38,7 @@ def test_token_addresses(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
-    last_number = app0.raiden.chain.block_number()
+    last_number = app0.raiden.chain.client.block_number()
 
     for block_number in range(last_number, 0, -1):
         code = app0.raiden.chain.client.web3.eth.getCode(

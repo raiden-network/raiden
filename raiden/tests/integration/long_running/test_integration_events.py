@@ -377,7 +377,7 @@ def test_query_events(
     assert must_have_event(closed_events, closed_event)
     assert must_have_event(all_netting_channel_events, closed_event)
 
-    settle_expiration = app0.raiden.chain.block_number() + settle_timeout + 5
+    settle_expiration = app0.raiden.chain.client.block_number() + settle_timeout + 5
     app0.raiden.chain.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
@@ -455,7 +455,9 @@ def test_secret_revealed_on_chain(
     )
 
     settle_expiration = (
-        app0.raiden.chain.block_number() + settle_timeout + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        app0.raiden.chain.client.block_number()
+        + settle_timeout
+        + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
     app0.raiden.chain.wait_until_block(target_block_number=settle_expiration)
 
