@@ -225,8 +225,9 @@ class RaidenAPI:  # pragma: no unittest
         if token_address == NULL_ADDRESS_BYTES:
             raise InvalidTokenAddress("token_address must be non-zero")
 
-        # The following check is on prestate because the chain state does not
-        # change here.
+        # The following check is on the same chain state as the
+        # `chainstate` variable defined below because the chain state does
+        # not change between this line and seven lines below.
         # views.state_from_raiden() returns the same state again and again
         # as far as this gevent context is running.
         if token_address in self.get_tokens_list(registry_address):
