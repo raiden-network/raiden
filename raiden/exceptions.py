@@ -42,10 +42,11 @@ class RaidenUnrecoverableError(RaidenError):
 
 
 class RaidenValidationError(RaidenRecoverableError):
-    """Exception raised when an input value is invalid.
+    """Exception raised when an input value is invalid in the situation.
 
     This exception must be raised on the edges of the system, to inform the
-    caller one of the provided values is invalid.
+    caller one of the provided values is invalid according to the state of
+    the client and the blockchain.
     """
 
 
