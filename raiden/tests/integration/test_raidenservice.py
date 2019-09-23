@@ -50,7 +50,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     target_block_num = app0.raiden.chain.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     app0.raiden.chain.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.chain.get_block(block_identifier="latest")
+    latest_block = app0.raiden.chain.client.get_block(block_identifier="latest")
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
