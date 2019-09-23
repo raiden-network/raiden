@@ -33,6 +33,7 @@ from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
 from raiden.waiting import (
     TransferWaitResult,
+    wait_for_block,
     wait_for_received_transfer_result,
     wait_for_token_network,
 )
@@ -1221,7 +1222,12 @@ def test_register_token_mainnet(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_register_token(
-    api_server_test_instance, token_amount, token_addresses, raiden_network, contract_manager
+    api_server_test_instance,
+    token_amount,
+    token_addresses,
+    raiden_network,
+    contract_manager,
+    retry_timeout,
 ):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
@@ -1235,6 +1241,20 @@ def test_register_token(
         app0.raiden.chain.client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
+    )
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
     )
 
     register_request = grequests.put(
@@ -1279,7 +1299,12 @@ def test_register_token(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_get_token_network_for_token(
-    api_server_test_instance, token_amount, token_addresses, raiden_network, contract_manager
+    api_server_test_instance,
+    token_amount,
+    token_addresses,
+    raiden_network,
+    contract_manager,
+    retry_timeout,
 ):
     app0 = raiden_network[0]
 
@@ -1288,6 +1313,15 @@ def test_get_token_network_for_token(
         app0.raiden.chain.client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
     )
 
     # unregistered token returns 404

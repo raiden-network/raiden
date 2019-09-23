@@ -14,6 +14,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidBinaryAddress,
 )
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -34,7 +35,7 @@ from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
-from raiden.utils.typing import List, TokenAddress, TokenAmount
+from raiden.utils.typing import BlockNumber, List, TokenAddress, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
@@ -60,6 +61,15 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    waiting.wait_for_block(
+        raiden=app1.raiden,
+        block_number=app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
     )
 
     api1 = RaidenAPI(app1.raiden)
@@ -96,7 +106,9 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
-def test_register_token_insufficient_eth(raiden_network, token_amount, contract_manager):
+def test_register_token_insufficient_eth(
+    raiden_network, token_amount, contract_manager, retry_timeout
+):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -106,6 +118,15 @@ def test_register_token_insufficient_eth(raiden_network, token_amount, contract_
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    waiting.wait_for_block(
+        raiden=app1.raiden,
+        block_number=app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
     )
 
     api1 = RaidenAPI(app1.raiden)
@@ -151,6 +172,15 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    waiting.wait_for_block(
+        raiden=app1.raiden,
+        block_number=app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
     )
 
     registry_address = app0.raiden.default_registry.address
@@ -430,6 +460,17 @@ def test_participant_deposit_amount_must_be_smaller_than_the_limit(
     msg = "Token is not registered yet, it must not be in the token list."
     assert token_address not in api1.get_tokens_list(registry_address), msg
 
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    waiting.wait_for_block(
+        raiden=app1.raiden,
+        block_number=BlockNumber(
+            app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
+        retry_timeout=retry_timeout,
+    )
+
     token_network_participant_deposit_limit = TokenAmount(100)
     api1.token_network_register(
         registry_address=registry_address,
@@ -504,6 +545,17 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
             contract_manager=contract_manager,
             constructor_arguments=(token_supply, 2, "raiden", "Rd"),
         )
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    waiting.wait_for_block(
+        raiden=app1.raiden,
+        block_number=BlockNumber(
+            app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
+        retry_timeout=retry_timeout,
     )
 
     api1 = RaidenAPI(app1.raiden)
