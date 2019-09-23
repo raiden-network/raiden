@@ -63,6 +63,7 @@ Contents
   api_walkthrough
   webui_tutorial
   rest_api
+  raiden_services
   private_net_tutorial
   glossary
 
