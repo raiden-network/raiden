@@ -220,13 +220,13 @@ class SecretRequest(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Unlock(EnvelopeMessage):
-    """ Message used to succesfully unlock a lock.
+    """ Message used to successfully unlock a lock.
 
     For this message to be valid the balance proof has to be updated to:
 
-    - Remove the succesfull lock from the pending locks and decrement the
+    - Remove the successful lock from the pending locks and decrement the
       locked_amount by the lock's amount, otherwise the sender will pay twice.
-    - Increase the transferred_amount, otherwise the recepient will reject it
+    - Increase the transferred_amount, otherwise the recipient will reject it
       because it is not being paid.
 
     This message is needed to unlock off-chain transfers for channels that used
@@ -472,7 +472,7 @@ class RefundTransfer(LockedTransferBase):
 class LockExpired(EnvelopeMessage):
     """ Message used when a lock expires.
 
-    This will complete an unsuccesful transfer off-chain.
+    This will complete an unsuccessful transfer off-chain.
 
     For this message to be valid the balance proof has to be updated to:
 

@@ -18,7 +18,7 @@ class Processed(SignedRetrieableMessage):
 
     - Node A starts a deposit of 5 tokens.
     - Node A sees the deposit, and starts a transfer.
-    - Node B receives the the transfer, however it has not seen the deposit,
+    - Node B receives the transfer, however it has not seen the deposit,
       therefore the transfer is rejected.
 
     Second scenario:
@@ -61,9 +61,9 @@ class Delivered(SignedMessage):
 
     Notes:
         - This message provides a weaker guarantee in respect to the Processed
-          message. It can be emulated by a transport layer that guarantess
-          persistance, or it can be sent by the recipient before the received
-          message is processed (threfore it does not matter if the message was
+          message. It can be emulated by a transport layer that guarantees
+          persistence, or it can be sent by the recipient before the received
+          message is processed (therefore it does not matter if the message was
           successfully processed or not).
     """
 

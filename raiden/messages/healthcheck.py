@@ -10,7 +10,7 @@ from raiden.utils.typing import ClassVar, Nonce, RaidenProtocolVersion
 class Ping(SignedMessage):
     """ Healthcheck message.
 
-    This message is sent to another node with an unique nonce, a Pong reponse is
+    This message is sent to another node with an unique nonce, a Pong response is
     expected. If the recipient takes too long to send a Pong back it is assumed
     the node is offline.
 
