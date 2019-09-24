@@ -6,8 +6,8 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
-from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -105,7 +105,7 @@ def setup_proxies_or_exit(
     secret_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,
-    blockchain_service: BlockChainService,
+    proxy_manager: ProxyManager,
     contracts: Dict[str, Any],
     routing_mode: RoutingMode,
     pathfinding_service_address: str,
@@ -139,7 +139,7 @@ def setup_proxies_or_exit(
             registered_address = to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
             )
-        token_network_registry = blockchain_service.token_network_registry(registered_address)
+        token_network_registry = proxy_manager.token_network_registry(registered_address)
     except ContractCodeMismatch as e:
         handle_contract_code_mismatch(e)
     except AddressWithoutCode:
@@ -153,7 +153,7 @@ def setup_proxies_or_exit(
 
     secret_registry = None
     try:
-        secret_registry = blockchain_service.secret_registry(
+        secret_registry = proxy_manager.secret_registry(
             secret_registry_contract_address
             or to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
         )
@@ -178,7 +178,7 @@ def setup_proxies_or_exit(
     )
     if should_use_user_deposit:
         try:
-            user_deposit = blockchain_service.user_deposit(
+            user_deposit = proxy_manager.user_deposit(
                 user_deposit_contract_address
                 or to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
             )
@@ -192,7 +192,7 @@ def setup_proxies_or_exit(
     service_registry = None
     if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
         try:
-            service_registry = blockchain_service.service_registry(
+            service_registry = proxy_manager.service_registry(
                 service_registry_contract_address
                 or to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
             )

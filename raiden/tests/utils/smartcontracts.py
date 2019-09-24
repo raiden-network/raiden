@@ -2,8 +2,8 @@ import os
 
 from solc import compile_files
 
-from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import get_random_pfs
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
@@ -46,7 +46,7 @@ def deploy_token(
 def deploy_tokens_and_fund_accounts(
     token_amount: TokenAmount,
     number_of_tokens: int,
-    deploy_service: BlockChainService,
+    proxy_manager: ProxyManager,
     participants: List[Address],
     contract_manager: ContractManager,
     token_contract_name: str,
@@ -56,17 +56,17 @@ def deploy_tokens_and_fund_accounts(
     the raiden registry.
 
     Args:
-        token_amount (int): number of units that will be created per token
-        number_of_tokens (int): number of token instances that will be created
-        deploy_service (BlockChainService): the blockchain connection that will deploy
-        participants (list(address)): participant addresses that will receive tokens
+        token_amount: number of units that will be created per token
+        number_of_tokens: number of token instances that will be created
+        proxy_manager: the blockchain connection that will deploy
+        participants: participant addresses that will receive tokens
     """
     result = list()
     for _ in range(number_of_tokens):
         token_address = TokenAddress(
             deploy_contract_web3(
-                token_contract_name,
-                deploy_service.client,
+                contract_name=token_contract_name,
+                deploy_client=proxy_manager.client,
                 contract_manager=contract_manager,
                 constructor_arguments=(token_amount, 2, "raiden", "Rd"),
             )
@@ -77,7 +77,7 @@ def deploy_tokens_and_fund_accounts(
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
         for transfer_to in participants:
-            deploy_service.token(token_address).transfer(
+            proxy_manager.token(token_address).transfer(
                 to_address=transfer_to, amount=TokenAmount(token_amount // len(participants))
             )
 

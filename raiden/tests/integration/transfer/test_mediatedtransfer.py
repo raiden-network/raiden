@@ -101,7 +101,7 @@ def test_locked_transfer_secret_registered_onchain(
     identifier = 1
     transfer_secret = sha3(target + b"1")
 
-    secret_registry_proxy = app0.raiden.chain.secret_registry(secret_registry_address)
+    secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(secret_registry_address)
     secret_registry_proxy.register_secret(secret=transfer_secret)
 
     # Wait until our node has processed the block that the secret registration was mined at
@@ -367,7 +367,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         app0.raiden.config["pfs_config"] = PFSConfig(
             info=PFSInfo(
                 url="mock-address",
-                chain_id=app0.raiden.chain.network_id,
+                chain_id=app0.raiden.proxy_manager.network_id,
                 token_network_registry_address=token_network_registry_address,
                 payment_address=factories.make_address(),
                 message="",

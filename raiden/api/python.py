@@ -235,7 +235,7 @@ class RaidenAPI:  # pragma: no unittest
 
         chainstate = views.state_from_raiden(self.raiden)
 
-        registry = self.raiden.chain.token_network_registry(registry_address)
+        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
 
         token_network_address = registry.add_token(
             token_address=token_address,
@@ -341,12 +341,12 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
         block_identifier: Optional[BlockSpecification] = None,
     ) -> bool:
-        chain_state = self.raiden.chain
-        proxy = chain_state.address_to_token_network[token_network_address]
+        proxy_manager = self.raiden.proxy_manager
+        proxy = proxy_manager.address_to_token_network[token_network_address]
         channel_identifier = proxy.get_channel_identifier_or_none(
             participant1=self.raiden.address,
             participant2=partner_address,
-            block_identifier=block_identifier or chain_state.client.get_checking_block(),
+            block_identifier=block_identifier or proxy_manager.client.get_checking_block(),
         )
 
         return channel_identifier is not None
@@ -395,7 +395,7 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
-        registry = self.raiden.chain.token_network_registry(registry_address)
+        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
         token_network_address = registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -404,7 +404,7 @@ class RaidenAPI:  # pragma: no unittest
                 "Token network for token %s does not exist" % to_checksum_address(token_address)
             )
 
-        token_network = self.raiden.chain.token_network(token_network_address)
+        token_network = self.raiden.proxy_manager.token_network(token_network_address)
 
         safety_deprecation_switch = token_network.safety_deprecation_switch(
             block_identifier=confirmed_block_identifier
@@ -491,7 +491,7 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             MintFailed if the minting fails for any reason.
         """
-        jsonrpc_client = self.raiden.chain.client
+        jsonrpc_client = self.raiden.proxy_manager.client
         token_proxy = token_minting_proxy(jsonrpc_client, token_address)
         args = [to, value] if contract_method == MintingMethod.MINT else [value, to]
 
@@ -622,8 +622,8 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        token = self.raiden.chain.token(token_address)
-        token_network_registry = self.raiden.chain.token_network_registry(registry_address)
+        token = self.raiden.proxy_manager.token(token_address)
+        token_network_registry = self.raiden.proxy_manager.token_network_registry(registry_address)
         confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
         token_network_address = token_network_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
@@ -635,8 +635,8 @@ class RaidenAPI:  # pragma: no unittest
                 f"with the network {to_checksum_address(registry_address)}."
             )
 
-        token_network_proxy = self.raiden.chain.token_network(token_network_address)
-        channel_proxy = self.raiden.chain.payment_channel(
+        token_network_proxy = self.raiden.proxy_manager.token_network(token_network_address)
+        channel_proxy = self.raiden.proxy_manager.payment_channel(
             canonical_identifier=channel_state.canonical_identifier
         )
 
@@ -1057,7 +1057,7 @@ class RaidenAPI:  # pragma: no unittest
         to_block: BlockSpecification = "latest",
     ) -> List[Dict]:
         events = blockchain_events.get_token_network_registry_events(
-            chain=self.raiden.chain,
+            proxy_manager=self.raiden.proxy_manager,
             token_network_registry_address=registry_address,
             contract_manager=self.raiden.contract_manager,
             events=blockchain_events.ALL_EVENTS,
@@ -1089,7 +1089,7 @@ class RaidenAPI:  # pragma: no unittest
             raise UnknownTokenAddress("Token address is not known.")
 
         returned_events = blockchain_events.get_token_network_events(
-            chain=self.raiden.chain,
+            proxy_manager=self.raiden.proxy_manager,
             token_network_address=token_network_address,
             contract_manager=self.raiden.contract_manager,
             events=blockchain_events.ALL_EVENTS,
@@ -1131,7 +1131,7 @@ class RaidenAPI:  # pragma: no unittest
         for channel_state in channel_list:
             returned_events.extend(
                 blockchain_events.get_all_netting_channel_events(
-                    chain=self.raiden.chain,
+                    proxy_manager=self.raiden.proxy_manager,
                     token_network_address=token_network_address,
                     netting_channel_identifier=channel_state.identifier,
                     contract_manager=self.raiden.contract_manager,

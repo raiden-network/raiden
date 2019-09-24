@@ -44,7 +44,7 @@ class EchoNode:  # pragma: no unittest
         ]
 
         if len(open_channels) == 0:
-            token_proxy = self.api.raiden.chain.token(self.token_address)
+            token_proxy = self.api.raiden.proxy_manager.token(self.token_address)
             if not token_proxy.balance_of(self.api.raiden.address) > 0:
                 raise ValueError(
                     f"Not enough funds for echo node "

@@ -130,7 +130,7 @@ class Console(gevent.Greenlet):
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
-            "chain": self.app.raiden.chain,
+            "chain": self.app.raiden.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,
@@ -215,7 +215,7 @@ class ConsoleTools:
         registry_address = to_canonical_address(registry_address_hex)
         token_address = TokenAddress(to_canonical_address(token_address_hex))
 
-        registry = self._raiden.chain.token_network_registry(registry_address)
+        registry = self._raiden.proxy_manager.token_network_registry(registry_address)
 
         token_network_address = registry.add_token(
             token_address=token_address,
@@ -226,7 +226,7 @@ class ConsoleTools:
             self._raiden, registry.address, token_address, retry_timeout
         )
 
-        return self._raiden.chain.token_network(token_network_address)
+        return self._raiden.proxy_manager.token_network(token_network_address)
 
     def open_channel_with_funding(
         self,
@@ -273,14 +273,16 @@ class ConsoleTools:
         """
         contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.web3.eth.getCode(to_checksum_address(contract_address))
+        result = self._raiden.proxy_manager.client.web3.eth.getCode(
+            to_checksum_address(contract_address)
+        )
 
         current_time = time.time()
         while not result:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.chain.client.web3.eth.getCode(
+            result = self._raiden.proxy_manager.client.web3.eth.getCode(
                 to_checksum_address(contract_address)
             )
             gevent.sleep(0.5)

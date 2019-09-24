@@ -4,7 +4,7 @@ import pytest
 from web3 import HTTPProvider, Web3
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
-from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.eth_node import (
     AccountDescription,
@@ -102,11 +102,11 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
 
 
 @pytest.fixture
-def deploy_service(deploy_key, deploy_client, contract_manager):
-    return BlockChainService(
+def proxy_manager(deploy_key, deploy_client, contract_manager):
+    return ProxyManager(
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
-        metadata=BlockChainServiceMetadata(
+        metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
@@ -115,7 +115,7 @@ def deploy_service(deploy_key, deploy_client, contract_manager):
 
 @pytest.fixture
 def blockchain_services(
-    deploy_service,
+    proxy_manager,
     private_keys,
     secret_registry_address,
     service_registry_address,
@@ -124,7 +124,7 @@ def blockchain_services(
     contract_manager,
 ):
     return jsonrpc_services(
-        deploy_service=deploy_service,
+        proxy_manager=proxy_manager,
         private_keys=private_keys,
         secret_registry_address=secret_registry_address,
         service_registry_address=service_registry_address,

@@ -40,7 +40,7 @@ from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.decode import lockedtransfersigned_from_message
 from raiden.messages.encode import message_from_sendevent
 from raiden.messages.transfers import LockedTransfer
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -217,7 +217,7 @@ class RaidenService(Runnable):
 
     def __init__(
         self,
-        chain: BlockChainService,
+        proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
@@ -235,7 +235,7 @@ class RaidenService(Runnable):
         self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
-        self.chain: BlockChainService = chain
+        self.proxy_manager = proxy_manager
         self.default_registry = default_registry
         self.query_start_block = query_start_block
         self.default_one_to_n_address = default_one_to_n_address
@@ -245,14 +245,16 @@ class RaidenService(Runnable):
         self.routing_mode = routing_mode
         self.config = config
 
-        self.signer: Signer = LocalSigner(self.chain.client.privkey)
+        self.signer: Signer = LocalSigner(self.proxy_manager.client.privkey)
         self.address = self.signer.address
         self.transport = transport
 
         self.user_deposit = user_deposit
 
-        self.blockchain_events = BlockchainEvents(self.chain.network_id)
-        self.alarm = AlarmTask(chain, sleep_time=self.config["blockchain"]["query_interval"])
+        self.blockchain_events = BlockchainEvents(self.proxy_manager.network_id)
+        self.alarm = AlarmTask(
+            proxy_manager, sleep_time=self.config["blockchain"]["query_interval"]
+        )
         self.raiden_event_handler = raiden_event_handler
         self.message_handler = message_handler
 
@@ -349,7 +351,7 @@ class RaidenService(Runnable):
             # network, to reconstruct all token network graphs and find opened
             # channels
             last_log_block_number = self.query_start_block
-            last_log_block_hash = self.chain.client.blockhash_from_blocknumber(
+            last_log_block_hash = self.proxy_manager.client.blockhash_from_blocknumber(
                 last_log_block_number
             )
 
@@ -358,7 +360,7 @@ class RaidenService(Runnable):
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
                 our_address=self.address,
-                chain_id=self.chain.network_id,
+                chain_id=self.proxy_manager.network_id,
             )
             token_network_registry = TokenNetworkRegistryState(
                 self.default_registry.address,
@@ -483,7 +485,7 @@ class RaidenService(Runnable):
 
     @property
     def privkey(self) -> bytes:
-        return self.chain.client.privkey
+        return self.proxy_manager.client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet) -> None:
         """ Ensures an error on the passed greenlet crashes self/main greenlet. """
@@ -541,7 +543,7 @@ class RaidenService(Runnable):
         # new token network event filters when this is the first time Raiden runs.
         # Here we poll for any new events that may exist after the addition of
         # those event filters.
-        latest_block_num = self.chain.client.get_block(block_identifier="latest")["number"]
+        latest_block_num = self.proxy_manager.client.get_block(block_identifier="latest")["number"]
         latest_confirmed_block_num = max(
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )
@@ -727,7 +729,7 @@ class RaidenService(Runnable):
             latest_confirmed_block_number = max(
                 GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
             )
-            latest_confirmed_block = self.chain.client.web3.eth.getBlock(
+            latest_confirmed_block = self.proxy_manager.client.web3.eth.getBlock(
                 latest_confirmed_block_number
             )
 
@@ -1043,7 +1045,7 @@ class RaidenService(Runnable):
             )
 
             for token_network_address in token_networks:
-                token_network_proxy = self.chain.token_network(token_network_address)
+                token_network_proxy = self.proxy_manager.token_network(token_network_address)
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy=token_network_proxy,
                     contract_manager=self.contract_manager,
@@ -1218,6 +1220,6 @@ class RaidenService(Runnable):
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(
-            db_filename=self.database_path, raiden=self, web3=self.chain.client.web3
+            db_filename=self.database_path, raiden=self, web3=self.proxy_manager.client.web3
         )
         manager.run()

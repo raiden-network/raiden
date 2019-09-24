@@ -70,7 +70,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     message_handler = MessageHandler()
     app0_restart = App(
         config=app0.config,
-        chain=app0.raiden.chain,
+        proxy_manager=app0.raiden.proxy_manager,
         query_start_block=0,
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
@@ -180,7 +180,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
 
     app0_restart = App(
         config=app0.config,
-        chain=app0.raiden.chain,
+        proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,

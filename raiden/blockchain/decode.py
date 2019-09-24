@@ -332,7 +332,7 @@ def blockchainevent_to_statechange(
 
     event_name = event.event_data["event"]
     chain_state = views.state_from_raiden(raiden)
-    chain_service = raiden.chain
+    proxy_manager = raiden.proxy_manager
 
     state_changes: List[StateChange] = []
 
@@ -388,7 +388,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
-            chain_service=chain_service,
+            proxy_manager=proxy_manager,
             chain_state=chain_state,
             event=event,
             latest_confirmed_block=latest_confirmed_block,

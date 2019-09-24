@@ -207,7 +207,9 @@ def test_participant_selection(raiden_network, token_addresses):
     connection_manager = connection_managers[0]
 
     timeout = (
-        sender_channel.settle_timeout * connection_manager.raiden.chain.estimate_blocktime() * 10
+        sender_channel.settle_timeout
+        * connection_manager.raiden.proxy_manager.estimate_blocktime()
+        * 10
     )
     assert timeout > 0
 

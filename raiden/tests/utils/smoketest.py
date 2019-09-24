@@ -24,7 +24,7 @@ from raiden.constants import (
     UINT256_MAX,
     EthClient,
 )
-from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -274,10 +274,10 @@ def setup_raiden(
         client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
-    blockchain_service = BlockChainService(
+    proxy_manager = ProxyManager(
         jsonrpc_client=client,
         contract_manager=contract_manager,
-        metadata=BlockChainServiceMetadata(
+        metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
@@ -298,7 +298,7 @@ def setup_raiden(
         contract_manager=contract_manager,
         token_address=to_canonical_address(token.contract.address),
     )
-    registry = blockchain_service.token_network_registry(
+    registry = proxy_manager.token_network_registry(
         contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
     )
 

@@ -26,7 +26,7 @@ from raiden_contracts.contract_manager import ContractManager
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.proxy_manager import ProxyManager
     from raiden.network.proxies.token_network import TokenNetwork
 
 
@@ -63,7 +63,7 @@ def get_channel_participants_from_open_event(
 
 
 def get_onchain_locksroots(
-    chain: "BlockChainService",
+    proxy_manager: "ProxyManager",
     canonical_identifier: CanonicalIdentifier,
     participant1: Address,
     participant2: Address,
@@ -95,7 +95,7 @@ def get_onchain_locksroots(
     - When channel is settled A must query the blockchain to figure out which
       locksroot was used.
     """
-    payment_channel = chain.payment_channel(canonical_identifier=canonical_identifier)
+    payment_channel = proxy_manager.payment_channel(canonical_identifier=canonical_identifier)
     token_network = payment_channel.token_network
 
     participants_details = token_network.detail_participants(

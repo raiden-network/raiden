@@ -66,9 +66,9 @@ def test_locksroot_loading_during_channel_settle_handling(
         app0=app0, app1=app1, token_network_address=token_network_address
     )
 
-    channel = app0.raiden.chain.payment_channel(channel_state.canonical_identifier)
+    channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
     balance_proof = channel_state.partner_state.balance_proof
-    block_number = app0.raiden.chain.client.block_number()
+    block_number = app0.raiden.proxy_manager.client.block_number()
 
     closing_data = pack_signed_balance_proof(
         msg_type=MessageTypeId.BALANCE_PROOF,
@@ -89,7 +89,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         block_identifier=block_number,
     )
 
-    close_block = app0.raiden.chain.client.block_number()
+    close_block = app0.raiden.proxy_manager.client.block_number()
 
     app0.stop()
 
@@ -122,7 +122,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         raiden=app1.raiden, block_number=close_block + pruned_after_blocks, retry_timeout=1
     )
 
-    channel = app0.raiden.chain.payment_channel(channel_state.canonical_identifier)
+    channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
 
     # make sure the block was pruned
     with pytest.raises(ValueError):

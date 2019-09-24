@@ -202,22 +202,22 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     gevent.joinall(wait)
 
 
-def test_regression_register_secret_once(secret_registry_address, deploy_service):
+def test_regression_register_secret_once(secret_registry_address, proxy_manager):
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
-    secret_registry = deploy_service.secret_registry(secret_registry_address)
+    secret_registry = proxy_manager.secret_registry(secret_registry_address)
 
     secret = sha3(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)
 
-    previous_nonce = deploy_service.client._available_nonce
+    previous_nonce = proxy_manager.client._available_nonce
     secret_registry.register_secret(secret=secret)
-    assert previous_nonce == deploy_service.client._available_nonce
+    assert previous_nonce == proxy_manager.client._available_nonce
 
-    previous_nonce = deploy_service.client._available_nonce
+    previous_nonce = proxy_manager.client._available_nonce
     secret_registry.register_secret_batch(secrets=[secret])
-    assert previous_nonce == deploy_service.client._available_nonce
+    assert previous_nonce == proxy_manager.client._available_nonce
 
 
 @raise_on_failure

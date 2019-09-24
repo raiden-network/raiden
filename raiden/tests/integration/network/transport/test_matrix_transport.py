@@ -251,7 +251,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
         token_address=token_address,
         partner_address=app1.raiden.address,
     )
-    burn_eth(app0.raiden.chain.client)
+    burn_eth(app0.raiden.proxy_manager.client)
 
     def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
         close_channel = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)

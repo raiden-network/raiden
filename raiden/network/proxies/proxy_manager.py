@@ -35,7 +35,7 @@ from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 
 @dataclass
-class BlockChainServiceMetadata:
+class ProxyManagerMetadata:
     # If the user deployed the smart contract the block at which it was mined
     # is unknown.
     token_network_registry_deployed_at: Optional[BlockNumber]
@@ -55,7 +55,7 @@ class BlockChainServiceMetadata:
             )
 
 
-class BlockChainService:
+class ProxyManager:
     """ Encapsulates access and creation of contract proxies.
 
     This class keeps track of mapping between contract addresses and their internal
@@ -69,7 +69,7 @@ class BlockChainService:
         self,
         jsonrpc_client: JSONRPCClient,
         contract_manager: ContractManager,
-        metadata: BlockChainServiceMetadata,
+        metadata: ProxyManagerMetadata,
     ) -> None:
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
@@ -125,7 +125,7 @@ class BlockChainService:
         self.wait_until_block(target_block_number=target_block_number)
         return target_block_number
 
-    def wait_until_block(self, target_block_number):
+    def wait_until_block(self, target_block_number: BlockNumber) -> BlockNumber:
         current_block = self.client.block_number()
 
         while current_block < target_block_number:
@@ -170,7 +170,7 @@ class BlockChainService:
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    jsonrpc_client=self.client, metadata=metadata, blockchain_service=self
+                    jsonrpc_client=self.client, metadata=metadata, proxy_manager=self
                 )
 
         return self.address_to_token_network_registry[address]
@@ -212,7 +212,7 @@ class BlockChainService:
                 self.address_to_token_network[token_network_address] = TokenNetwork(
                     jsonrpc_client=self.client,
                     contract_manager=self.contract_manager,
-                    blockchain_service=self,
+                    proxy_manager=self,
                     metadata=metadata,
                 )
 
@@ -241,7 +241,7 @@ class BlockChainService:
                 self.address_to_token_network[address] = TokenNetwork(
                     jsonrpc_client=self.client,
                     contract_manager=self.contract_manager,
-                    blockchain_service=self,
+                    proxy_manager=self,
                     metadata=metadata,
                 )
 
@@ -305,7 +305,7 @@ class BlockChainService:
                     jsonrpc_client=self.client,
                     user_deposit_address=address,
                     contract_manager=self.contract_manager,
-                    blockchain_service=self,
+                    proxy_manager=self,
                 )
 
         return self.address_to_user_deposit[address]

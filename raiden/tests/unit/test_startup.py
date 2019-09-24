@@ -10,7 +10,7 @@ from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
 from raiden.tests.utils.factories import make_address, make_token_network_registry_address
-from raiden.tests.utils.mocks import MockChain, MockWeb3
+from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
 from raiden.utils.typing import TokenAmount, TokenNetworkRegistryAddress
@@ -166,7 +166,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -174,7 +174,7 @@ def test_setup_proxies_raiden_addresses_are_given():
         secret_registry_contract_address=make_address(),
         user_deposit_contract_address=None,
         service_registry_contract_address=None,
-        blockchain_service=blockchain_service,
+        proxy_manager=proxy_manager,
         contracts=contracts,
         routing_mode=RoutingMode.LOCAL,
         pathfinding_service_address=None,
@@ -194,7 +194,7 @@ def test_setup_proxies_all_addresses_are_given():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -203,7 +203,7 @@ def test_setup_proxies_all_addresses_are_given():
             secret_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=make_address(),
-            blockchain_service=blockchain_service,
+            proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
@@ -223,7 +223,7 @@ def test_setup_proxies_all_addresses_are_known():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = setup_contracts_or_exit(config, network_id)
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -232,7 +232,7 @@ def test_setup_proxies_all_addresses_are_known():
             secret_registry_contract_address=None,
             user_deposit_contract_address=None,
             service_registry_contract_address=None,
-            blockchain_service=blockchain_service,
+            proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
@@ -261,7 +261,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
         ),
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -270,7 +270,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
             secret_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=None,
-            blockchain_service=blockchain_service,
+            proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
@@ -294,7 +294,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         ),
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
 
     with pytest.raises(SystemExit):
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
@@ -304,7 +304,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
                 secret_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,
-                blockchain_service=blockchain_service,
+                proxy_manager=proxy_manager,
                 contracts=contracts,
                 routing_mode=RoutingMode.PFS,
                 pathfinding_service_address=None,

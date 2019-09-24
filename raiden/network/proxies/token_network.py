@@ -85,7 +85,7 @@ from raiden_contracts.contract_manager import ContractManager
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.proxy_manager import ProxyManager
 
 
 log = structlog.get_logger(__name__)
@@ -141,7 +141,7 @@ class TokenNetwork:
         self,
         jsonrpc_client: JSONRPCClient,
         contract_manager: ContractManager,
-        blockchain_service: "BlockChainService",
+        proxy_manager: "ProxyManager",
         metadata: TokenNetworkMetadata,
     ) -> None:
         if not is_binary_address(metadata.address):
@@ -171,7 +171,7 @@ class TokenNetwork:
         self.node_address = self.client.address
         self.metadata = metadata
 
-        self.token: Token = blockchain_service.token(token_address=self.token_address())
+        self.token: Token = proxy_manager.token(token_address=self.token_address())
 
         # Forbids concurrent operations on the same channel. This is important
         # because some operations conflict with each other. E.g. deposit and

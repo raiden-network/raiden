@@ -48,11 +48,11 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 
     app0.raiden.alarm.stop()
     target_block_num = (
-        app0.raiden.chain.client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        app0.raiden.proxy_manager.client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     )
-    app0.raiden.chain.wait_until_block(target_block_num)
+    app0.raiden.proxy_manager.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.chain.client.get_block(block_identifier="latest")
+    latest_block = app0.raiden.proxy_manager.client.get_block(block_identifier="latest")
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
@@ -138,7 +138,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     app0_restart = App(
         config=app0.config,
-        chain=app0.raiden.chain,
+        proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
@@ -149,7 +149,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
-        user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
+        user_deposit=app0.raiden.proxy_manager.user_deposit(user_deposit_address),
     )
     app0_restart.start()
 
@@ -169,12 +169,12 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
 
     # Make sure we get into app0.start() with a confirmed block that contains
     # the channel creation events
-    blockchain_services.deploy_service.wait_until_block(target_block_number=10)
+    blockchain_services.proxy_manager.wait_until_block(target_block_number=10)
     target_block_num = (
-        blockchain_services.deploy_service.client.block_number()
+        blockchain_services.proxy_manager.client.block_number()
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    blockchain_services.deploy_service.wait_until_block(target_block_number=target_block_num)
+    blockchain_services.proxy_manager.wait_until_block(target_block_number=target_block_num)
 
     original_first_run = app0.raiden._prepare_and_execute_alarm_first_run
 
