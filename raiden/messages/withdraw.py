@@ -133,6 +133,7 @@ class WithdrawExpired(SignedRetrieableMessage):
             (self.cmdid.value, "uint8"),
             (b"\x00" * 3, "bytes"),  # padding
             (self.nonce, "uint256"),
+            (self.message_identifier, "uint64"),
             (self.token_network_address, "address"),
             (self.chain_id, "uint256"),
             (self.message_type, "uint256"),
