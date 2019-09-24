@@ -90,4 +90,10 @@ def matrix_transports(
 
 @pytest.fixture
 def resolver_ports(number_of_nodes) -> List[Optional[int]]:
+    """Default resolver ports for all nodes.
+
+    By default, Raiden nodes start without hash resolvers.
+    This is achieved by setting the ports to None. This cause the command line not to
+    include --resolver-endpoint  and resolver processes will not start.
+    """
     return [None] * number_of_nodes

@@ -158,7 +158,11 @@ def monitoring_service_contract_address() -> Address:
 
 
 @pytest.fixture
-def resolvers(resolver_ports) -> List[Optional[subprocess.Popen]]:
+def resolvers(resolver_ports):
+    """Invoke resolver process for each node having a resolver port
+
+    By default, Raiden nodes start without hash resolvers (all ports are None)
+    """
     resolvers = []
     for port in resolver_ports:
         resolver = None
@@ -168,10 +172,8 @@ def resolvers(resolver_ports) -> List[Optional[subprocess.Popen]]:
             assert resolver.poll() is None
         resolvers.append(resolver)
 
-    return resolvers
+    yield resolvers
 
-
-def stop_resolvers(resolvers: List[subprocess.Popen]):
     for resolver in resolvers:
         if resolver is not None:
             resolver.terminate()
