@@ -23,6 +23,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
 )
+from raiden_contracts.utils.type_aliases import ChainID
 
 
 class MockJSONRPCClient:
@@ -60,8 +61,8 @@ class MockPaymentChannel:
         self.token_network = token_network
 
 
-class MockChain:
-    def __init__(self, network_id: int, node_address: Address):
+class MockProxyManager:
+    def __init__(self, network_id: ChainID, node_address: Address):
         self.network_id = network_id
         # let's make a single mock token network for testing
         self.token_network = MockTokenNetworkProxy()
@@ -118,7 +119,7 @@ class MockRaidenService:
             self.privkey = private_key
             self.address = privatekey_to_address(private_key)
 
-        self.chain = MockChain(network_id=17, node_address=self.address)
+        self.proxy_manager = MockProxyManager(network_id=17, node_address=self.address)
         self.signer = LocalSigner(self.privkey)
 
         self.message_handler = message_handler
@@ -146,8 +147,8 @@ class MockRaidenService:
             pseudo_random_generator=random.Random(),
             block_number=0,
             block_hash=factories.make_block_hash(),
-            our_address=self.chain.node_address,
-            chain_id=self.chain.network_id,
+            our_address=self.proxy_manager.node_address,
+            chain_id=self.proxy_manager.network_id,
         )
 
         self.wal.log_and_dispatch([state_change])

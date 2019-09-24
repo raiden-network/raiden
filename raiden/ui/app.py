@@ -26,7 +26,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
@@ -250,17 +250,17 @@ def run_app(
     else:
         smart_contracts_start_at = token_network_registry_deployed_at
 
-    blockchain_service = BlockChainService(
+    proxy_manager = ProxyManager(
         jsonrpc_client=rpc_client,
         contract_manager=ContractManager(config["contracts_path"]),
-        metadata=BlockChainServiceMetadata(
+        metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=token_network_registry_deployed_at,
             filters_start_at=smart_contracts_start_at,
         ),
     )
 
     if sync_check:
-        check_synced(blockchain_service)
+        check_synced(proxy_manager)
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -268,7 +268,7 @@ def run_app(
         secret_registry_contract_address=secret_registry_contract_address,
         user_deposit_contract_address=user_deposit_contract_address,
         service_registry_contract_address=service_registry_contract_address,
-        blockchain_service=blockchain_service,
+        proxy_manager=proxy_manager,
         contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
@@ -326,7 +326,7 @@ def run_app(
     try:
         raiden_app = App(
             config=config,
-            chain=blockchain_service,
+            proxy_manager=proxy_manager,
             query_start_block=smart_contracts_start_at,
             default_one_to_n_address=(
                 one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]

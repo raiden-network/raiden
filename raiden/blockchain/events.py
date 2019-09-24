@@ -12,7 +12,7 @@ from raiden.blockchain.filters import (
 )
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -83,7 +83,7 @@ def verify_block_number(number: BlockSpecification, argname: str) -> None:
 
 
 def get_contract_events(
-    chain: BlockChainService,
+    proxy_manager: ProxyManager,
     abi: ABI,
     contract_address: Address,
     topics: Optional[List[str]],
@@ -96,7 +96,7 @@ def get_contract_events(
     """
     verify_block_number(from_block, "from_block")
     verify_block_number(to_block, "to_block")
-    events = chain.client.get_filter_events(
+    events = proxy_manager.client.get_filter_events(
         contract_address, topics=topics, from_block=from_block, to_block=to_block
     )
 
@@ -111,7 +111,7 @@ def get_contract_events(
 
 
 def get_token_network_registry_events(
-    chain: BlockChainService,
+    proxy_manager: ProxyManager,
     token_network_registry_address: TokenNetworkRegistryAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
@@ -120,7 +120,7 @@ def get_token_network_registry_events(
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
-        chain=chain,
+        proxy_manager=proxy_manager,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         contract_address=Address(token_network_registry_address),
         topics=events,
@@ -130,7 +130,7 @@ def get_token_network_registry_events(
 
 
 def get_token_network_events(
-    chain: BlockChainService,
+    proxy_manager: ProxyManager,
     token_network_address: TokenNetworkAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
@@ -140,7 +140,7 @@ def get_token_network_events(
     """ Helper to get all events of the ChannelManagerContract at `token_address`. """
 
     return get_contract_events(
-        chain,
+        proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
         events,
@@ -150,7 +150,7 @@ def get_token_network_events(
 
 
 def get_all_netting_channel_events(
-    chain: BlockChainService,
+    proxy_manager: ProxyManager,
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
@@ -168,7 +168,7 @@ def get_all_netting_channel_events(
     )
 
     return get_contract_events(
-        chain,
+        proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
         filter_args["topics"],

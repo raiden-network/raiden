@@ -43,7 +43,7 @@ from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TO
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.proxy_manager import ProxyManager
 
 
 log = structlog.get_logger(__name__)
@@ -54,7 +54,7 @@ class TokenNetworkRegistry:
         self,
         jsonrpc_client: JSONRPCClient,
         metadata: SmartContractMetadata,
-        blockchain_service: "BlockChainService",
+        proxy_manager: "ProxyManager",
     ) -> None:
 
         check_address_has_code(
@@ -69,7 +69,7 @@ class TokenNetworkRegistry:
         )
 
         self.address = TokenNetworkRegistryAddress(metadata.address)
-        self.blockchain_service = blockchain_service
+        self.proxy_manager = proxy_manager
         self.client = jsonrpc_client
         self.gas_measurements = metadata.gas_measurements
         self.metadata = metadata
@@ -126,7 +126,7 @@ class TokenNetworkRegistry:
                 f"{channel_participant_deposit_limit} is invalid"
             )
 
-        token_proxy = self.blockchain_service.token(token_address)
+        token_proxy = self.proxy_manager.token(token_address)
         try:
             token_supply = token_proxy.total_supply(block_identifier=block_identifier)
             already_registered = self.get_token_network(
@@ -394,10 +394,10 @@ class TokenNetworkRegistry:
                     "The chain ID property for the TokenNetworkRegistry is invalid."
                 )
 
-            if chain_id != self.blockchain_service.network_id:
+            if chain_id != self.proxy_manager.network_id:
                 raise RaidenUnrecoverableError(
-                    "The provided chain ID {chain_id} does not match the "
-                    "network Raiden is running on: {self.blockchain_service.network_id}."
+                    f"The provided chain ID {chain_id} does not match the "
+                    f"network Raiden is running on: {self.proxy_manager.network_id}."
                 )
 
             if secret_registry_address == NULL_ADDRESS:

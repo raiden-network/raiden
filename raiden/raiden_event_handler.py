@@ -369,7 +369,7 @@ class RaidenEventHandler(EventHandler):
         )
         our_signature = raiden.signer.sign(data=withdraw_confirmation_data)
 
-        channel_proxy = raiden.chain.payment_channel(
+        channel_proxy = raiden.proxy_manager.payment_channel(
             canonical_identifier=channel_withdraw_event.canonical_identifier
         )
 
@@ -414,7 +414,7 @@ class RaidenEventHandler(EventHandler):
 
         our_signature = raiden.signer.sign(data=closing_data)
 
-        channel_proxy = raiden.chain.payment_channel(
+        channel_proxy = raiden.proxy_manager.payment_channel(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
                 token_network_address=channel_close_event.token_network_address,
@@ -439,7 +439,9 @@ class RaidenEventHandler(EventHandler):
 
         if balance_proof:
             canonical_identifier = balance_proof.canonical_identifier
-            channel = raiden.chain.payment_channel(canonical_identifier=canonical_identifier)
+            channel = raiden.proxy_manager.payment_channel(
+                canonical_identifier=canonical_identifier
+            )
 
             non_closing_data = pack_signed_balance_proof(
                 msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
@@ -473,7 +475,7 @@ class RaidenEventHandler(EventHandler):
         channel_identifier = canonical_identifier.channel_identifier
         participant = channel_unlock_event.sender
 
-        payment_channel: PaymentChannel = raiden.chain.payment_channel(
+        payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(
             canonical_identifier=canonical_identifier
         )
 
@@ -525,7 +527,7 @@ class RaidenEventHandler(EventHandler):
             if state_change_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find state that matches the current channel locksroots. "
-                    f"chain_id:{raiden.chain.network_id} "
+                    f"chain_id:{raiden.proxy_manager.network_id} "
                     f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
@@ -567,7 +569,7 @@ class RaidenEventHandler(EventHandler):
             if event_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find event that match current channel locksroots. "
-                    f"chain_id:{raiden.chain.network_id} "
+                    f"chain_id:{raiden.proxy_manager.network_id} "
                     f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
@@ -605,13 +607,13 @@ class RaidenEventHandler(EventHandler):
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=raiden.chain.network_id,
+            chain_identifier=raiden.proxy_manager.network_id,
             token_network_address=channel_settle_event.token_network_address,
             channel_identifier=channel_settle_event.channel_identifier,
         )
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
-        payment_channel: PaymentChannel = raiden.chain.payment_channel(
+        payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(
             canonical_identifier=canonical_identifier
         )
         token_network_proxy: TokenNetwork = payment_channel.token_network

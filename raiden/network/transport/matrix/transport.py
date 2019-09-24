@@ -623,7 +623,7 @@ class MatrixTransport(Runnable):
     @property
     def network_id(self) -> ChainID:
         assert self._raiden_service is not None
-        return ChainID(self._raiden_service.chain.network_id)
+        return ChainID(self._raiden_service.proxy_manager.network_id)
 
     @property
     def _private_rooms(self) -> bool:

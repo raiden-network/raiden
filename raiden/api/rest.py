@@ -628,7 +628,7 @@ class RestAPI:  # pragma: no unittest
         )
 
         try:
-            token = self.raiden_api.raiden.chain.token(token_address)
+            token = self.raiden_api.raiden.proxy_manager.token(token_address)
         except AddressWithoutCode as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 

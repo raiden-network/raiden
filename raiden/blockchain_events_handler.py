@@ -28,7 +28,7 @@ def after_new_token_network_create_filter(
     block_number = state_change.block_number
     token_network_address = state_change.token_network.address
 
-    token_network_proxy = raiden.chain.token_network(token_network_address)
+    token_network_proxy = raiden.proxy_manager.token_network(token_network_address)
     raiden.blockchain_events.add_token_network_listener(
         token_network_proxy=token_network_proxy,
         contract_manager=raiden.contract_manager,

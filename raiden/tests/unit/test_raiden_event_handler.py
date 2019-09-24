@@ -101,7 +101,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         return ParticipantsDetails(our_details, partner_details)
 
     # make sure detail_participants returns partner data with a locksroot of 0x0
-    raiden.chain.token_network.detail_participants = detail_participants
+    raiden.proxy_manager.token_network.detail_participants = detail_participants
 
     event = ContractSendChannelBatchUnlock(
         canonical_identifier=make_canonical_identifier(

@@ -6,11 +6,12 @@ import pytest
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
-from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
+from raiden.utils import BlockNumber
 from raiden.utils.secrethash import sha256_secrethash
 
 
@@ -60,15 +61,15 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
         secrethash=secrethash_unregistered, block_identifier="latest"
     ), "Test setup is invalid, secret must be unknown"
 
-    chain = BlockChainService(
+    proxy_manager = ProxyManager(
         jsonrpc_client=secret_registry_proxy.client,
         contract_manager=contract_manager,
-        metadata=BlockChainServiceMetadata(
+        metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
-    chain.wait_until_block(STATE_PRUNING_AFTER_BLOCKS + 1)
+    proxy_manager.wait_until_block(BlockNumber(STATE_PRUNING_AFTER_BLOCKS + 1))
 
     with pytest.raises(NoStateForBlockIdentifier):
         secret_registry_proxy.is_secret_registered(
@@ -113,17 +114,19 @@ def test_register_secret_batch_with_pruned_block(
 ):
     """Test secret registration with a pruned given block."""
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(
+    c1_proxy_manager = ProxyManager(
         jsonrpc_client=c1_client,
         contract_manager=contract_manager,
-        metadata=BlockChainServiceMetadata(
+        metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
     # Now wait until this block becomes pruned
-    pruned_number = c1_chain.client.block_number()
-    c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
+    pruned_number = c1_proxy_manager.client.block_number()
+    c1_proxy_manager.wait_until_block(
+        target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS
+    )
     secret_registry_batch_happy_path(secret_registry_proxy)
 
 

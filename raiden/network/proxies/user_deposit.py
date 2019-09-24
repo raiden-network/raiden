@@ -25,7 +25,7 @@ from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.proxy_manager import ProxyManager
 
 
 log = structlog.get_logger(__name__)
@@ -37,7 +37,7 @@ class UserDeposit:
         jsonrpc_client: JSONRPCClient,
         user_deposit_address: Address,
         contract_manager: ContractManager,
-        blockchain_service: "BlockChainService",
+        proxy_manager: "ProxyManager",
     ) -> None:
         if not is_binary_address(user_deposit_address):
             raise ValueError("Expected binary address format for token nework")
@@ -56,7 +56,7 @@ class UserDeposit:
         self.contract_manager = contract_manager
         self.gas_measurements = gas_measurements(self.contract_manager.contracts_version)
 
-        self.blockchain_service = blockchain_service
+        self.proxy_manager = proxy_manager
 
         self.proxy = jsonrpc_client.new_contract_proxy(
             abi=self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
@@ -101,7 +101,7 @@ class UserDeposit:
         to the beneficiary's account. """
 
         token_address = self.token_address(given_block_identifier)
-        token = self.blockchain_service.token(token_address=token_address)
+        token = self.proxy_manager.token(token_address=token_address)
 
         log_details = {
             "beneficiary": to_checksum_address(beneficiary),

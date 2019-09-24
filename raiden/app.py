@@ -4,7 +4,7 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.message_handler import MessageHandler
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -71,7 +71,7 @@ class App:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         config: typing.Dict,
-        chain: BlockChainService,
+        proxy_manager: ProxyManager,
         query_start_block: typing.BlockNumber,
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
@@ -85,7 +85,7 @@ class App:  # pylint: disable=too-few-public-methods
         user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
-            chain=chain,
+            proxy_manager=proxy_manager,
             query_start_block=query_start_block,
             default_registry=default_registry,
             default_one_to_n_address=default_one_to_n_address,

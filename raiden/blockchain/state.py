@@ -24,7 +24,7 @@ from eth_utils import to_checksum_address, to_hex
 
 from raiden.blockchain.events import DecodedEvent
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
@@ -66,7 +66,7 @@ class NewChannelDetails:
 
 
 def get_contractreceivechannelsettled_data_from_event(
-    chain_service: BlockChainService,
+    proxy_manager: ProxyManager,
     chain_state: ChainState,
     event: DecodedEvent,
     latest_confirmed_block: BlockNumber,
@@ -104,7 +104,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # ContractReceiveChannelSettled's locksroots will  match the values
         # provided during settle.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
-            chain=chain_service,
+            proxy_manager=proxy_manager,
             canonical_identifier=channel_state.canonical_identifier,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
@@ -124,7 +124,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # who called it, only if there are tokens locked in the settled
         # channel.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
-            chain=chain_service,
+            proxy_manager=proxy_manager,
             canonical_identifier=channel_state.canonical_identifier,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,

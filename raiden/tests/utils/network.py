@@ -11,7 +11,7 @@ from web3 import Web3
 from raiden import waiting
 from raiden.app import App
 from raiden.constants import GENESIS_BLOCK_NUMBER, Environment, RoutingMode
-from raiden.network.blockchain_service import BlockChainService, BlockChainServiceMetadata
+from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -60,7 +60,7 @@ BlockchainServices = namedtuple(
         "deploy_registry",
         "secret_registry",
         "service_registry",
-        "deploy_service",
+        "proxy_manager",
         "blockchain_services",
     ),
 )
@@ -79,8 +79,12 @@ def check_channel(
         token_network_address=token_network_address,
         channel_identifier=channel_identifier,
     )
-    netcontract1 = app1.raiden.chain.payment_channel(canonical_identifier=canonical_identifier)
-    netcontract2 = app2.raiden.chain.payment_channel(canonical_identifier=canonical_identifier)
+    netcontract1 = app1.raiden.proxy_manager.payment_channel(
+        canonical_identifier=canonical_identifier
+    )
+    netcontract2 = app2.raiden.proxy_manager.payment_channel(
+        canonical_identifier=canonical_identifier
+    )
 
     # Check a valid settle timeout was used, the netting contract has an
     # enforced minimum and maximum
@@ -139,7 +143,7 @@ def payment_channel_open_and_deposit(
         token_address=token_address, block_identifier=block_identifier
     )
     assert token_network_address, "request a channel for an unregistered token"
-    token_network_proxy = app0.raiden.chain.token_network(token_network_address)
+    token_network_proxy = app0.raiden.proxy_manager.token_network(token_network_address)
 
     channel_identifier = token_network_proxy.new_netting_channel(
         partner=app1.raiden.address,
@@ -156,8 +160,8 @@ def payment_channel_open_and_deposit(
         )
         for app in [app0, app1]:
             # Use each app's own chain because of the private key / local signing
-            token = app.raiden.chain.token(token_address)
-            payment_channel_proxy = app.raiden.chain.payment_channel(
+            token = app.raiden.proxy_manager.token(token_address)
+            payment_channel_proxy = app.raiden.proxy_manager.payment_channel(
                 canonical_identifier=canonical_identifier
             )
 
@@ -427,7 +431,7 @@ def create_apps(
 
         app = App(
             config=config_copy,
-            chain=blockchain,
+            proxy_manager=blockchain,
             query_start_block=BlockNumber(0),
             default_registry=registry,
             default_one_to_n_address=one_to_n_address,
@@ -463,7 +467,7 @@ def parallel_start_apps(raiden_apps: List[App]) -> None:
 
 
 def jsonrpc_services(
-    deploy_service: BlockChainService,
+    proxy_manager: ProxyManager,
     private_keys: List[PrivateKey],
     secret_registry_address: Address,
     service_registry_address: Address,
@@ -471,30 +475,30 @@ def jsonrpc_services(
     web3: Web3,
     contract_manager: ContractManager,
 ) -> BlockchainServices:
-    secret_registry = deploy_service.secret_registry(secret_registry_address)
+    secret_registry = proxy_manager.secret_registry(secret_registry_address)
     service_registry = None
     if service_registry_address:
-        service_registry = deploy_service.service_registry(service_registry_address)
-    deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
+        service_registry = proxy_manager.service_registry(service_registry_address)
+    deploy_registry = proxy_manager.token_network_registry(token_network_registry_address)
 
     blockchain_services = list()
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
-        blockchain = BlockChainService(
+        proxy_manager = ProxyManager(
             jsonrpc_client=rpc_client,
             contract_manager=contract_manager,
-            metadata=BlockChainServiceMetadata(
+            metadata=ProxyManagerMetadata(
                 token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
                 filters_start_at=GENESIS_BLOCK_NUMBER,
             ),
         )
-        blockchain_services.append(blockchain)
+        blockchain_services.append(proxy_manager)
 
     return BlockchainServices(
         deploy_registry=deploy_registry,
         secret_registry=secret_registry,
         service_registry=service_registry,
-        deploy_service=deploy_service,
+        proxy_manager=proxy_manager,
         blockchain_services=blockchain_services,
     )
 
