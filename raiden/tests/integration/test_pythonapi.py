@@ -178,6 +178,11 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
     waiting.wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
+    )
+    waiting.wait_for_block(
         raiden=app1.raiden,
         block_number=app1.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
         retry_timeout=retry_timeout,
