@@ -1,3 +1,4 @@
+from eth_typing.evm import HexAddress
 from eth_utils import to_checksum_address
 
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -10,6 +11,7 @@ from raiden.utils.typing import (
     Nonce,
     Signature,
     TokenAmount,
+    TokenNetworkAddress,
     WithdrawAmount,
 )
 from raiden_contracts.constants import MessageTypeId
@@ -65,15 +67,21 @@ def pack_signed_balance_proof(
 
 def pack_reward_proof(
     chain_id: ChainID,
+    token_network_address: TokenNetworkAddress,
     reward_amount: TokenAmount,
     monitoring_service_contract_address: Address,
+    non_closing_participant: Address,
     non_closing_signature: Signature,
 ) -> bytes:
     return proofs.pack_reward_proof(
-        to_checksum_address(monitoring_service_contract_address),
-        chain_id,
-        non_closing_signature,
-        reward_amount,
+        monitoring_service_contract_address=to_checksum_address(
+            monitoring_service_contract_address
+        ),
+        chain_id=chain_id,
+        token_network_address=HexAddress(to_checksum_address(token_network_address)),
+        non_closing_participant=HexAddress(to_checksum_address(non_closing_participant)),
+        non_closing_signature=non_closing_signature,
+        reward_amount=reward_amount,
     )
 
 
