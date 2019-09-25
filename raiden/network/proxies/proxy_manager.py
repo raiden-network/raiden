@@ -18,7 +18,6 @@ from raiden.utils.typing import (
     Address,
     BlockNumber,
     BlockSpecification,
-    ChainID,
     ChannelID,
     Dict,
     EVMBytecode,
@@ -85,9 +84,6 @@ class ProxyManager:
 
         self.client = rpc_client
         self.contract_manager = contract_manager
-
-        # Ask for the network id only once and store it here
-        self.network_id = ChainID(int(self.client.web3.version.network))
         self.metadata = metadata
 
         self._token_creation_lock = Semaphore()
@@ -170,7 +166,7 @@ class ProxyManager:
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    jsonrpc_client=self.client, metadata=metadata, proxy_manager=self
+                    rpc_client=self.client, metadata=metadata, proxy_manager=self
                 )
 
         return self.address_to_token_network_registry[address]

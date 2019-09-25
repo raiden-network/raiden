@@ -41,6 +41,7 @@ from raiden.utils.typing import (
     PrivateKey,
     TransactionHash,
 )
+from raiden_contracts.utils.type_aliases import ChainID
 
 log = structlog.get_logger(__name__)
 
@@ -424,6 +425,9 @@ class JSONRPCClient:
         self.address = address
         self.web3 = web3
         self.default_block_num_confirmations = block_num_confirmations
+
+        # Ask for the network id only once and store it here
+        self.chain_id = ChainID(int(self.web3.version.network))
 
         self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()

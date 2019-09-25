@@ -52,28 +52,28 @@ log = structlog.get_logger(__name__)
 class TokenNetworkRegistry:
     def __init__(
         self,
-        jsonrpc_client: JSONRPCClient,
+        rpc_client: JSONRPCClient,
         metadata: SmartContractMetadata,
         proxy_manager: "ProxyManager",
     ) -> None:
 
         check_address_has_code(
-            client=jsonrpc_client,
+            client=rpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
             expected_code=metadata.runtime_bytecode,
         )
 
-        proxy = jsonrpc_client.new_contract_proxy(
+        proxy = rpc_client.new_contract_proxy(
             abi=metadata.abi, contract_address=Address(metadata.address)
         )
 
         self.address = TokenNetworkRegistryAddress(metadata.address)
         self.proxy_manager = proxy_manager
-        self.client = jsonrpc_client
+        self.rpc_client = rpc_client
         self.gas_measurements = metadata.gas_measurements
         self.metadata = metadata
-        self.node_address = self.client.address
+        self.node_address = self.rpc_client.address
         self.proxy = proxy
 
     def get_token_network(
@@ -219,7 +219,7 @@ class TokenNetworkRegistry:
     ) -> TokenNetworkAddress:
         token_network_address = None
 
-        checking_block = self.client.get_checking_block()
+        checking_block = self.rpc_client.get_checking_block()
 
         kwargs = {
             "_token_address": token_address,
@@ -235,7 +235,7 @@ class TokenNetworkRegistry:
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
 
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.rpc_client.poll(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -394,10 +394,10 @@ class TokenNetworkRegistry:
                     "The chain ID property for the TokenNetworkRegistry is invalid."
                 )
 
-            if chain_id != self.proxy_manager.network_id:
+            if chain_id != self.rpc_client.chain_id:
                 raise RaidenUnrecoverableError(
                     f"The provided chain ID {chain_id} does not match the "
-                    f"network Raiden is running on: {self.proxy_manager.network_id}."
+                    f"network Raiden is running on: {self.rpc_client.chain_id}."
                 )
 
             if secret_registry_address == NULL_ADDRESS:
@@ -446,7 +446,7 @@ class TokenNetworkRegistry:
             from_block = self.metadata.filters_start_at
 
         registry_address_bin = self.proxy.contract_address
-        return self.client.new_filter(
+        return self.rpc_client.new_filter(
             contract_address=registry_address_bin,
             topics=topics,
             from_block=from_block,

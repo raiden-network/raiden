@@ -160,7 +160,7 @@ class NodeRunner:
         # spawn a greenlet to handle the periodic check for the network id
         tasks.append(
             gevent.spawn(
-                check_network_id, app_.raiden.proxy_manager.network_id, app_.raiden.rpc_client.web3
+                check_network_id, app_.raiden.rpc_client.chain_id, app_.raiden.rpc_client.web3
             )
         )
 
