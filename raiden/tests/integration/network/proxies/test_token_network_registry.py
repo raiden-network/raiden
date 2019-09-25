@@ -27,7 +27,7 @@ def test_token_network_registry(
     token_contract_name: str,
 ) -> None:
     proxy_manager = ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -128,7 +128,7 @@ def test_token_network_registry_max_token_networks(
 ):
     """ get_max_token_networks() should return an integer """
     proxy_manager = ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -149,7 +149,7 @@ def test_token_network_registry_with_zero_token_address(
 ):
     """ Try to register a token at 0x0000..00 """
     proxy_manager = ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

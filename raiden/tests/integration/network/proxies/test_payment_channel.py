@@ -30,7 +30,7 @@ def test_payment_channel_proxy_basics(
 
     client = JSONRPCClient(web3, private_keys[1])
     proxy_manager = ProxyManager(
-        jsonrpc_client=client,
+        rpc_client=client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

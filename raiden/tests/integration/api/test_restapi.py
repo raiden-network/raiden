@@ -471,7 +471,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     assert check_dict_nested_attrs(json_response, expected_response)
 
     # finally let's burn all eth and try to open another channel
-    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.proxy_manager.client)
+    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
     channel_data_obj = {
         "partner_address": "0xf3AF96F89b3d7CdcBE0C083690A28185Feb0b3CE",
         "token_address": to_checksum_address(token_address),
@@ -686,7 +686,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     assert check_dict_nested_attrs(json_response, expected_response)
 
     # let's burn all eth and try to close the channel
-    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.proxy_manager.client)
+    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
     request = grequests.patch(
         api_url_for(
             api_server_test_instance,
@@ -1376,7 +1376,7 @@ def test_register_token_mainnet(
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.proxy_manager.client,
+        app0.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -1406,13 +1406,13 @@ def test_register_token(
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.proxy_manager.client,
+        app0.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
     other_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.proxy_manager.client,
+        app0.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -1456,7 +1456,7 @@ def test_register_token(
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
     # Burn all the eth and then make sure we get the appropriate API error
-    burn_eth(app0.raiden.proxy_manager.client)
+    burn_eth(app0.raiden.rpc_client)
     poor_request = grequests.put(
         api_url_for(
             api_server_test_instance,
@@ -1484,7 +1484,7 @@ def test_get_token_network_for_token(
 
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.proxy_manager.client,
+        app0.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -1603,7 +1603,7 @@ def test_get_connection_managers_info(api_server_test_instance, token_addresses)
 def test_connect_insufficient_reserve(api_server_test_instance, token_addresses):
 
     # Burn all eth and then try to connect to a token network
-    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.proxy_manager.client)
+    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
     funds = 100
     token_address1 = to_checksum_address(token_addresses[0])
     connect_data_obj = {"funds": funds}

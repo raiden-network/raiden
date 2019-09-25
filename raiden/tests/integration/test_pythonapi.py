@@ -58,7 +58,7 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 
     token_address = deploy_contract_web3(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.proxy_manager.client,
+        deploy_client=app1.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -115,7 +115,7 @@ def test_register_token_insufficient_eth(
 
     token_address = deploy_contract_web3(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.proxy_manager.client,
+        deploy_client=app1.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -133,7 +133,7 @@ def test_register_token_insufficient_eth(
     assert token_address not in api1.get_tokens_list(registry_address)
 
     # app1.raiden loses all its ETH because it has been naughty
-    burn_eth(app1.raiden.proxy_manager.client)
+    burn_eth(app1.raiden.rpc_client)
 
     # At this point we should get an UnrecoverableError due to InsufficientFunds
     with pytest.raises(InsufficientFunds):
@@ -169,7 +169,7 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
 
     token_address = deploy_contract_web3(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.proxy_manager.client,
+        deploy_client=app1.raiden.rpc_client,
         contract_manager=contract_manager,
         constructor_arguments=(token_amount, 2, "raiden", "Rd"),
     )
@@ -368,7 +368,7 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
     gas = get_required_gas_estimate(raiden=app0.raiden, channels_to_open=1)
     gas = round(gas * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
     api0 = RaidenAPI(app0.raiden)
-    burn_eth(rpc_client=app0.raiden.proxy_manager.client, amount_to_leave=gas)
+    burn_eth(rpc_client=app0.raiden.rpc_client, amount_to_leave=gas)
 
     partners = [app1.raiden.address, app2.raiden.address]
 
@@ -449,7 +449,7 @@ def test_participant_deposit_amount_must_be_smaller_than_the_limit(
     token_address = TokenAddress(
         deploy_contract_web3(
             contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.proxy_manager.client,
+            deploy_client=app1.raiden.rpc_client,
             contract_manager=contract_manager,
             constructor_arguments=(token_supply, 2, "raiden", "Rd"),
         )
@@ -541,7 +541,7 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
     token_address = TokenAddress(
         deploy_contract_web3(
             contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.proxy_manager.client,
+            deploy_client=app1.raiden.rpc_client,
             contract_manager=contract_manager,
             constructor_arguments=(token_supply, 2, "raiden", "Rd"),
         )

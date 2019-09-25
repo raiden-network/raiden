@@ -62,7 +62,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     ), "Test setup is invalid, secret must be unknown"
 
     proxy_manager = ProxyManager(
-        jsonrpc_client=secret_registry_proxy.client,
+        rpc_client=secret_registry_proxy.client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -115,7 +115,7 @@ def test_register_secret_batch_with_pruned_block(
     """Test secret registration with a pruned given block."""
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

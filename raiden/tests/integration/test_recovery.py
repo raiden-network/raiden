@@ -155,6 +155,7 @@ def test_recovery_unhappy_case(
 
     app0_restart = App(
         config=app0.config,
+        rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
@@ -213,6 +214,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 
     app0_restart = App(
         config=app0.config,
+        rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,

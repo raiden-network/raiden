@@ -45,6 +45,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.services import (
@@ -217,6 +218,7 @@ class RaidenService(Runnable):
 
     def __init__(
         self,
+        rpc_client: JSONRPCClient,
         proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
         default_registry: TokenNetworkRegistry,
@@ -235,6 +237,7 @@ class RaidenService(Runnable):
         self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
+        self.rpc_client = rpc_client
         self.proxy_manager = proxy_manager
         self.default_registry = default_registry
         self.query_start_block = query_start_block
@@ -245,7 +248,7 @@ class RaidenService(Runnable):
         self.routing_mode = routing_mode
         self.config = config
 
-        self.signer: Signer = LocalSigner(self.proxy_manager.client.privkey)
+        self.signer: Signer = LocalSigner(self.rpc_client.privkey)
         self.address = self.signer.address
         self.transport = transport
 
@@ -351,9 +354,7 @@ class RaidenService(Runnable):
             # network, to reconstruct all token network graphs and find opened
             # channels
             last_log_block_number = self.query_start_block
-            last_log_block_hash = self.proxy_manager.client.blockhash_from_blocknumber(
-                last_log_block_number
-            )
+            last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
 
             init_state_change = ActionInitChain(
                 pseudo_random_generator=random.Random(),
@@ -485,7 +486,7 @@ class RaidenService(Runnable):
 
     @property
     def privkey(self) -> bytes:
-        return self.proxy_manager.client.privkey
+        return self.rpc_client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet) -> None:
         """ Ensures an error on the passed greenlet crashes self/main greenlet. """
@@ -543,7 +544,7 @@ class RaidenService(Runnable):
         # new token network event filters when this is the first time Raiden runs.
         # Here we poll for any new events that may exist after the addition of
         # those event filters.
-        latest_block_num = self.proxy_manager.client.get_block(block_identifier="latest")["number"]
+        latest_block_num = self.rpc_client.get_block(block_identifier="latest")["number"]
         latest_confirmed_block_num = max(
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )
@@ -729,7 +730,7 @@ class RaidenService(Runnable):
             latest_confirmed_block_number = max(
                 GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
             )
-            latest_confirmed_block = self.proxy_manager.client.web3.eth.getBlock(
+            latest_confirmed_block = self.rpc_client.web3.eth.getBlock(
                 latest_confirmed_block_number
             )
 
@@ -1220,6 +1221,6 @@ class RaidenService(Runnable):
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(
-            db_filename=self.database_path, raiden=self, web3=self.proxy_manager.client.web3
+            db_filename=self.database_path, raiden=self, web3=self.rpc_client.web3
         )
         manager.run()

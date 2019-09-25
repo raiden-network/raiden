@@ -647,7 +647,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         [channelstate_0_1.identifier],
         app1.raiden.alarm.sleep_time,
     )
-    current_block = app0.raiden.proxy_manager.client.block_number()
+    current_block = app0.raiden.rpc_client.block_number()
 
     netting_channel = app1.raiden.proxy_manager.payment_channel(
         canonical_identifier=channelstate_0_1.canonical_identifier

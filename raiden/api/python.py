@@ -491,7 +491,7 @@ class RaidenAPI:  # pragma: no unittest
         Raises:
             MintFailed if the minting fails for any reason.
         """
-        jsonrpc_client = self.raiden.proxy_manager.client
+        jsonrpc_client = self.raiden.rpc_client
         token_proxy = token_minting_proxy(jsonrpc_client, token_address)
         args = [to, value] if contract_method == MintingMethod.MINT else [value, to]
 

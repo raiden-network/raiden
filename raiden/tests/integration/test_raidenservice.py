@@ -48,11 +48,11 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 
     app0.raiden.alarm.stop()
     target_block_num = (
-        app0.raiden.proxy_manager.client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        app0.raiden.rpc_client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     )
     app0.raiden.proxy_manager.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.proxy_manager.client.get_block(block_identifier="latest")
+    latest_block = app0.raiden.rpc_client.get_block(block_identifier="latest")
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
@@ -138,6 +138,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     app0_restart = App(
         config=app0.config,
+        rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,

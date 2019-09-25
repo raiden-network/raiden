@@ -104,7 +104,7 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
 @pytest.fixture
 def proxy_manager(deploy_key, deploy_client, contract_manager):
     return ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

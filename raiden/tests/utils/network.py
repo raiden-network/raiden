@@ -364,7 +364,7 @@ def create_apps(
     services = blockchain_services
 
     apps = []
-    for idx, blockchain in enumerate(services):
+    for idx, proxy_manager in enumerate(services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
         assert len(resolver_ports) > idx
         resolver_port = resolver_ports[idx]
@@ -412,16 +412,16 @@ def create_apps(
         config_copy = deepcopy(App.DEFAULT_CONFIG)
         config_copy.update(config)
 
-        registry = blockchain.token_network_registry(token_network_registry_address)
-        secret_registry = blockchain.secret_registry(secret_registry_address)
+        registry = proxy_manager.token_network_registry(token_network_registry_address)
+        secret_registry = proxy_manager.secret_registry(secret_registry_address)
 
         service_registry = None
         if service_registry_address:
-            service_registry = blockchain.service_registry(service_registry_address)
+            service_registry = proxy_manager.service_registry(service_registry_address)
 
         user_deposit = None
         if user_deposit_address:
-            user_deposit = blockchain.user_deposit(user_deposit_address)
+            user_deposit = proxy_manager.user_deposit(user_deposit_address)
 
         transport = MatrixTransport(config["transport"]["matrix"])
 
@@ -431,7 +431,8 @@ def create_apps(
 
         app = App(
             config=config_copy,
-            proxy_manager=blockchain,
+            rpc_client=proxy_manager.client,
+            proxy_manager=proxy_manager,
             query_start_block=BlockNumber(0),
             default_registry=registry,
             default_one_to_n_address=one_to_n_address,
@@ -485,7 +486,7 @@ def jsonrpc_services(
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
         proxy_manager = ProxyManager(
-            jsonrpc_client=rpc_client,
+            rpc_client=rpc_client,
             contract_manager=contract_manager,
             metadata=ProxyManagerMetadata(
                 token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
