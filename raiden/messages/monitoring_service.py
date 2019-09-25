@@ -97,6 +97,7 @@ class RequestMonitoring(SignedMessage):
     balance_proof: SignedBlindedBalanceProof
     reward_amount: TokenAmount
     monitoring_service_contract_address: Address
+    non_closing_participant: Address
     non_closing_signature: Optional[Signature] = None
 
     def __post_init__(self):
@@ -122,6 +123,7 @@ class RequestMonitoring(SignedMessage):
             balance_proof=onchain_balance_proof,
             reward_amount=reward_amount,
             signature=EMPTY_SIGNATURE,
+            non_closing_participant=balance_proof.sender,
             monitoring_service_contract_address=monitoring_service_contract_address,
         )
         return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
@@ -135,8 +137,10 @@ class RequestMonitoring(SignedMessage):
         assert self.non_closing_signature
         packed = pack_reward_proof(
             chain_id=self.balance_proof.chain_id,
+            token_network_address=self.balance_proof.token_network_address,
             reward_amount=self.reward_amount,
             monitoring_service_contract_address=self.monitoring_service_contract_address,
+            non_closing_participant=self.non_closing_participant,
             non_closing_signature=self.non_closing_signature,
         )
         return packed
@@ -182,8 +186,10 @@ class RequestMonitoring(SignedMessage):
         )
         reward_proof_data = pack_reward_proof(
             chain_id=self.balance_proof.chain_id,
+            token_network_address=self.balance_proof.token_network_address,
             reward_amount=self.reward_amount,
             monitoring_service_contract_address=self.monitoring_service_contract_address,
+            non_closing_participant=requesting_address,
             non_closing_signature=self.non_closing_signature,
         )
         reward_proof_signature = self.reward_proof_signature or EMPTY_SIGNATURE
