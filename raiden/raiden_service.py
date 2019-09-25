@@ -931,7 +931,7 @@ class RaidenService(Runnable):
                 ),
                 current_state=chain_state,
             )
-            # only request monitoring for own BPs
+            # only request monitoring for partner's BPs
             if isinstance(balance_proof, BalanceProofSignedState)
         )
 
