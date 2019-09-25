@@ -1,3 +1,4 @@
+from eth_typing.evm import HexAddress
 from eth_utils import to_checksum_address
 
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -77,8 +78,8 @@ def pack_reward_proof(
             monitoring_service_contract_address
         ),
         chain_id=chain_id,
-        token_network_address=token_network_address,
-        non_closing_participant=non_closing_participant,
+        token_network_address=HexAddress(str(token_network_address)),
+        non_closing_participant=HexAddress(str(non_closing_participant)),
         non_closing_signature=non_closing_signature,
         reward_amount=reward_amount,
     )
