@@ -45,6 +45,7 @@ def test_request_monitoring() -> None:
     )
     request_monitoring = RequestMonitoring(
         balance_proof=partner_signed_balance_proof,
+        non_closing_participant=balance_proof.sender,
         reward_amount=TokenAmount(55),
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=MSC_ADDRESS,
@@ -80,9 +81,11 @@ def test_request_monitoring() -> None:
     # test signature verification
     assert request_monitoring.non_closing_signature
     reward_proof_data = pack_reward_proof(
+        token_network_address=request_monitoring.balance_proof.token_network_address,
         chain_id=request_monitoring.balance_proof.chain_id,
         reward_amount=request_monitoring.reward_amount,
         monitoring_service_contract_address=MSC_ADDRESS,
+        non_closing_participant=ADDRESS,
         non_closing_signature=request_monitoring.non_closing_signature,
     )
 
