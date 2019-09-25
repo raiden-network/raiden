@@ -37,10 +37,10 @@ nodes:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 10_000
 
-## This is the MFEE3 scenario. It creates a network with topology 0 -> 1 -> 2 and checks
-## whether a path is returned. It also checks that correct imbalance fees are deducted or added in order
-## to keep the channel imbalances within the desired limits.
-## For every 10000 TKNs tranferred a fee of 10 TKN is expected.
+# This is the MFEE3 scenario. It creates a network with topology 0 -> 1 -> 2 and checks
+# whether a path is returned. It also checks that correct imbalance fees are deducted or added in order
+# to keep the channel imbalances within the desired limits.
+# For every 10000 TKNs tranferred a fee of 10 TKN is expected.
 
 scenario:
   serial:
@@ -57,7 +57,7 @@ scenario:
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 2, amount: 50_000, expected_http_status: 200}
 
-            ## Check that the path is indeed the expected one
+            # Check that the path is indeed the expected one
             - assert_pfs_history:
                 source: 0
                 request_count: 1
@@ -67,13 +67,12 @@ scenario:
 
             # Test that correct imbalance fees were used
             # Imbalance fee is 1%
-            # Fee of fee is 1%
             # Safety margin is 5%
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 49_470, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 50_530, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 51_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 49_000, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 49_475, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 50_025, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 51_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 49_000, state: "opened"}
       - serial:
           name: "Test that correct imbalance fee works in other direction"
           tasks:
@@ -87,7 +86,7 @@ scenario:
                 request_count: 1
                 target: 1
                 expected_routes:
-                  - [2, 1, 1]
+                  - [2, 1, 0]
 
             # Check that the imbalance fee works correctly in the other direction
             - assert: {from: 2, to: 1, total_deposit: 0, balance: 0, state: "opened"}
