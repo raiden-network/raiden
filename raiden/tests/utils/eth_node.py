@@ -141,7 +141,7 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
         [
             "--rpc",
             "--rpcapi",
-            "eth,net,web3,personal,txpool",
+            "eth,net,web3,personal",
             "--rpcaddr",
             "127.0.0.1",
             "--networkid",

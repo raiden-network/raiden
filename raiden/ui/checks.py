@@ -46,7 +46,7 @@ def check_ethereum_client_is_supported(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying ethereum node does not have the web3 rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3,txpool for geth "
+            "enabled. Please run it with --rpcapi eth,net,web3 for geth "
             "and --jsonrpc-apis=eth,net,web3,parity for parity."
         )
 
