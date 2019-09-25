@@ -143,6 +143,8 @@ class AlarmTask(Runnable):
 
         self.callbacks: List[Callable] = list()
         self.proxy_manager = proxy_manager
+        self.rpc_client = proxy_manager.client
+
         self.known_block_number: Optional[BlockNumber] = None
         self._stop_event: Optional[AsyncResult] = None
 
@@ -152,21 +154,16 @@ class AlarmTask(Runnable):
 
     def __repr__(self) -> str:
         return (
-            f"<{self.__class__.__name__} node:"
-            f"{to_checksum_address(self.proxy_manager.client.address)}>"
+            f"<{self.__class__.__name__} node:" f"{to_checksum_address(self.rpc_client.address)}>"
         )
 
     def start(self) -> None:
-        log.debug(
-            "Alarm task started", node=to_checksum_address(self.proxy_manager.client.address)
-        )
+        log.debug("Alarm task started", node=to_checksum_address(self.rpc_client.address))
         self._stop_event = AsyncResult()
         super().start()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
-        self.greenlet.name = (
-            f"AlarmTask._run node:{to_checksum_address(self.proxy_manager.client.address)}"
-        )
+        self.greenlet.name = f"AlarmTask._run node:{to_checksum_address(self.rpc_client.address)}"
         try:
             self.loop_until_stop()
         finally:
@@ -205,14 +202,14 @@ class AlarmTask(Runnable):
 
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
-            latest_block = self.proxy_manager.client.get_block(block_identifier="latest")
+            latest_block = self.rpc_client.get_block(block_identifier="latest")
 
             self._maybe_run_callbacks(latest_block)
 
     def first_run(self, known_block_number: BlockNumber) -> None:
         """ Blocking call to update the local state, if necessary. """
         assert self.callbacks, "callbacks not set"
-        latest_block = self.proxy_manager.client.get_block(block_identifier="latest")
+        latest_block = self.rpc_client.get_block(block_identifier="latest")
 
         log.debug(
             "Alarm task first run",
@@ -220,7 +217,7 @@ class AlarmTask(Runnable):
             latest_block_number=latest_block["number"],
             latest_gas_limit=latest_block["gasLimit"],
             latest_block_hash=to_hex(latest_block["hash"]),
-            node=to_checksum_address(self.proxy_manager.client.address),
+            node=to_checksum_address(self.rpc_client.address),
         )
 
         self.known_block_number = known_block_number
@@ -246,7 +243,7 @@ class AlarmTask(Runnable):
                 old_block_number=latest_block["number"],
                 old_gas_limit=latest_block["gasLimit"],
                 old_block_hash=to_hex(latest_block["hash"]),
-                node=to_checksum_address(self.proxy_manager.client.address),
+                node=to_checksum_address(self.rpc_client.address),
             )
         elif missed_blocks > 0:
             log_details = dict(
@@ -254,7 +251,7 @@ class AlarmTask(Runnable):
                 latest_block_number=latest_block_number,
                 latest_block_hash=to_hex(latest_block["hash"]),
                 latest_block_gas_limit=latest_block["gasLimit"],
-                node=to_checksum_address(self.proxy_manager.client.address),
+                node=to_checksum_address(self.rpc_client.address),
             )
             if missed_blocks > 1:
                 log_details["num_missed_blocks"] = missed_blocks - 1
@@ -275,9 +272,7 @@ class AlarmTask(Runnable):
     def stop(self) -> Any:
         if self._stop_event:
             self._stop_event.set(True)
-        log.debug(
-            "Alarm task stopped", node=to_checksum_address(self.proxy_manager.client.address)
-        )
+        log.debug("Alarm task stopped", node=to_checksum_address(self.rpc_client.address))
         result = self.join()
         # Callbacks should be cleaned after join
         self.callbacks = []
