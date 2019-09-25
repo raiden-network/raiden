@@ -426,7 +426,7 @@ class JSONRPCClient:
         self.web3 = web3
         self.default_block_num_confirmations = block_num_confirmations
 
-        # Ask for the network id only once and store it here
+        # Ask for the chain id only once and store it here
         self.chain_id = ChainID(int(self.web3.version.network))
 
         self._available_nonce = available_nonce
