@@ -102,6 +102,12 @@ This is the MFEE2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 
 whether a path is returned. It also checks that correct proportional mediation fees are deducted
 and received by the mediating parties. For every 1000 TKNs tranferred a fee of 10 TKN is expected.
 
+#### [mfee3_imbalance_fee](./mfee3_imbalance_fee.yaml)
+This scenario creates a network with topology 0 -> 1 -> 2 and checks
+whether a path is returned. It also checks that correct imbalance fees are deducted or added in order
+to keep the channel imbalances within the desired limits.
+For every 10000 TKNs tranferred a fee of 100 TKN is expected.
+
 #### [mfee4_combined_fees](./mfee4_combined_fees.yaml)
 This scenario creates a network with topology 0 -> 1 -> 2 -> 3 and only enables all mediation fee components.
 It then checks whether a path is returned. It also checks that correct mediation fees are deducted.
