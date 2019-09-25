@@ -443,7 +443,7 @@ class TokenNetworkRegistry:
             from_block = self.metadata.filters_start_at
 
         registry_address_bin = self.proxy.contract_address
-        return self.client.new_filter(
+        return self.rpc_client.new_filter(
             contract_address=registry_address_bin, topics=topics, from_block=from_block
         )
 

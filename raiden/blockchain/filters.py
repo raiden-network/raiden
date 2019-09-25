@@ -5,7 +5,7 @@ from gevent.lock import Semaphore
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
-from web3.utils.filters import LogFilter, construct_event_filter_params
+from web3.utils.filters import construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.utils.typing import (
@@ -104,12 +104,7 @@ def decode_event(abi: ABI, log: BlockchainEvent) -> Dict[str, Any]:
     return get_event_data(event_abi, log)
 
 
-class StatelessFilter(LogFilter):
-    """ Like LogFilter, but uses eth_getLogs instead of installed filter
-
-    Pass latest block_number to get_(new|all)_entries to avoid querying it
-    """
-
+class StatelessFilter:
     def __init__(
         self,
         web3: Web3,
@@ -117,11 +112,10 @@ class StatelessFilter(LogFilter):
         contract_address: ChecksumAddress,
         topics: Optional[List[Optional[str]]],
     ) -> None:
-        super().__init__(web3, filter_id=None)
-
         # fix off-by-one
         last_block = from_block - 1
 
+        self.web3 = web3
         self.contract_address = contract_address
         self.topics = topics
         self.last_block = last_block
