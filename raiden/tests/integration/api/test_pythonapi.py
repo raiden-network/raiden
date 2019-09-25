@@ -38,10 +38,10 @@ def test_token_addresses(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
-    last_number = app0.raiden.proxy_manager.client.block_number()
+    last_number = app0.raiden.rpc_client.block_number()
 
     for block_number in range(last_number, 0, -1):
-        code = app0.raiden.proxy_manager.client.web3.eth.getCode(
+        code = app0.raiden.rpc_client.web3.eth.getCode(
             to_checksum_address(token_network_address), block_number
         )
         if code == b"":
@@ -51,7 +51,7 @@ def test_token_addresses(raiden_network, token_addresses):
     api0 = RaidenAPI(app0.raiden)
     # Emulate the confirmed block being a block where TokenNetwork for token_address
     # has not been deployed.
-    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.proxy_manager.client.get_block(
+    views.state_from_raiden(app0.raiden).block_hash = app0.raiden.rpc_client.get_block(
         token_network_deploy_block_number - 1
     )["hash"]
 

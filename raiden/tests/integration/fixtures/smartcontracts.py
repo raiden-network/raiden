@@ -222,7 +222,7 @@ def register_token_and_return_the_network_proxy(
     registry_address = to_canonical_address(token_network_registry_address)
 
     blockchain_service = ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -239,7 +239,7 @@ def register_token_and_return_the_network_proxy(
     )
 
     blockchain_service = ProxyManager(
-        jsonrpc_client=deploy_client,
+        rpc_client=deploy_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

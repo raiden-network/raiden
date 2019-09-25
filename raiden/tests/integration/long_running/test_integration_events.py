@@ -377,7 +377,7 @@ def test_query_events(
     assert must_have_event(closed_events, closed_event)
     assert must_have_event(all_netting_channel_events, closed_event)
 
-    settle_expiration = app0.raiden.proxy_manager.client.block_number() + settle_timeout + 5
+    settle_expiration = app0.raiden.rpc_client.block_number() + settle_timeout + 5
     app0.raiden.proxy_manager.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
@@ -447,9 +447,7 @@ def test_secret_revealed_on_chain(
     channel_close_event = ContractSendChannelClose(  # type: ignore
         canonical_identifier=channel_state2_1.canonical_identifier,
         balance_proof=channel_state2_1.partner_state.balance_proof,
-        triggered_by_block_hash=app0.raiden.proxy_manager.client.blockhash_from_blocknumber(
-            "latest"
-        ),
+        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
     )
     current_state = app2.raiden.wal.state_manager.current_state
     app2.raiden.raiden_event_handler.on_raiden_event(
@@ -457,7 +455,7 @@ def test_secret_revealed_on_chain(
     )
 
     settle_expiration = (
-        app0.raiden.proxy_manager.client.block_number()
+        app0.raiden.rpc_client.block_number()
         + settle_timeout
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )

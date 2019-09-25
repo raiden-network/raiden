@@ -80,6 +80,7 @@ def restart_app(app: App) -> App:
     new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
     app = App(
         config=app.config,
+        rpc_client=app.raiden.rpc_client,
         proxy_manager=app.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_one_to_n_address=app.raiden.default_one_to_n_address,

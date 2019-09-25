@@ -251,7 +251,7 @@ def run_app(
         smart_contracts_start_at = token_network_registry_deployed_at
 
     proxy_manager = ProxyManager(
-        jsonrpc_client=rpc_client,
+        rpc_client=rpc_client,
         contract_manager=ContractManager(config["contracts_path"]),
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=token_network_registry_deployed_at,
@@ -326,6 +326,7 @@ def run_app(
     try:
         raiden_app = App(
             config=config,
+            rpc_client=rpc_client,
             proxy_manager=proxy_manager,
             query_start_block=smart_contracts_start_at,
             default_one_to_n_address=(

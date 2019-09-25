@@ -275,7 +275,7 @@ def setup_raiden(
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
     proxy_manager = ProxyManager(
-        jsonrpc_client=client,
+        rpc_client=client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

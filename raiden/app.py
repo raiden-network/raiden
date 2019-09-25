@@ -9,6 +9,7 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
@@ -71,6 +72,7 @@ class App:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         config: typing.Dict,
+        rpc_client: JSONRPCClient,
         proxy_manager: ProxyManager,
         query_start_block: typing.BlockNumber,
         default_registry: TokenNetworkRegistry,
@@ -85,6 +87,7 @@ class App:  # pylint: disable=too-few-public-methods
         user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
+            rpc_client=rpc_client,
             proxy_manager=proxy_manager,
             query_start_block=query_start_block,
             default_registry=default_registry,

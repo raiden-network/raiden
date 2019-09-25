@@ -68,7 +68,7 @@ def test_locksroot_loading_during_channel_settle_handling(
 
     channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
     balance_proof = channel_state.partner_state.balance_proof
-    block_number = app0.raiden.proxy_manager.client.block_number()
+    block_number = app0.raiden.rpc_client.block_number()
 
     closing_data = pack_signed_balance_proof(
         msg_type=MessageTypeId.BALANCE_PROOF,
@@ -89,7 +89,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         block_identifier=block_number,
     )
 
-    close_block = app0.raiden.proxy_manager.client.block_number()
+    close_block = app0.raiden.rpc_client.block_number()
 
     app0.stop()
 

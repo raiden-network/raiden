@@ -46,7 +46,7 @@ def test_token_network_deposit_race(
     c2_client = JSONRPCClient(web3, private_keys[2])
 
     proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -89,7 +89,7 @@ def test_token_network_proxy(
     c1_signer = LocalSigner(private_keys[1])
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -98,7 +98,7 @@ def test_token_network_proxy(
     )
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_proxy_manager = ProxyManager(
-        jsonrpc_client=c2_client,
+        rpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -499,7 +499,7 @@ def test_token_network_proxy_update_transfer(
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -509,7 +509,7 @@ def test_token_network_proxy_update_transfer(
     c1_signer = LocalSigner(private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_proxy_manager = ProxyManager(
-        jsonrpc_client=c2_client,
+        rpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -719,7 +719,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -756,7 +756,7 @@ def test_token_network_actions_at_pruned_blocks(
     c1_client = JSONRPCClient(web3, private_keys[1])
 
     c1_proxy_manager = ProxyManager(
-        jsonrpc_client=c1_client,
+        rpc_client=c1_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -767,7 +767,7 @@ def test_token_network_actions_at_pruned_blocks(
 
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_proxy_manager = ProxyManager(
-        jsonrpc_client=c2_client,
+        rpc_client=c2_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,

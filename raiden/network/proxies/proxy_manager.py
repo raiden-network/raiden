@@ -67,7 +67,7 @@ class ProxyManager:
 
     def __init__(
         self,
-        jsonrpc_client: JSONRPCClient,
+        rpc_client: JSONRPCClient,
         contract_manager: ContractManager,
         metadata: ProxyManagerMetadata,
     ) -> None:
@@ -83,7 +83,7 @@ class ProxyManager:
             Tuple[TokenNetworkAddress, ChannelID], PaymentChannel
         ] = dict()
 
-        self.client = jsonrpc_client
+        self.client = rpc_client
         self.contract_manager = contract_manager
 
         # Ask for the network id only once and store it here
