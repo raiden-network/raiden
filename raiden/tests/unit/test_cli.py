@@ -68,7 +68,9 @@ def run_test_check_json_rpc_geth():
 
 def test_check_json_rpc_geth():
     # Pin the highest supported version for the test purposes
-    with patch("raiden.utils.ethereum_clients.HIGHEST_SUPPORTED_GETH_VERSION", new="1.9.2"):
+    with patch("raiden.utils.ethereum_clients.HIGHEST_SUPPORTED_GETH_VERSION", new="1.9.2"), patch(
+        "raiden.utils.ethereum_clients.LOWEST_SUPPORTED_GETH_VERSION", new="1.7.2"
+    ):
         run_test_check_json_rpc_geth()
 
 
