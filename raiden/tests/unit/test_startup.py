@@ -166,7 +166,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(node_address=make_address())
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -194,7 +194,7 @@ def test_setup_proxies_all_addresses_are_given():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
-    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -223,7 +223,7 @@ def test_setup_proxies_all_addresses_are_known():
     network_id = 42
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = setup_contracts_or_exit(config, network_id)
-    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -261,7 +261,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
         ),
     }
     contracts = {}
-    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         proxies = setup_proxies_or_exit(
@@ -294,7 +294,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         ),
     }
     contracts = {}
-    proxy_manager = MockProxyManager(network_id=network_id, node_address=make_address())
+    proxy_manager = MockProxyManager(node_address=make_address())
 
     with pytest.raises(SystemExit):
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):

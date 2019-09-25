@@ -254,7 +254,7 @@ class RaidenService(Runnable):
 
         self.user_deposit = user_deposit
 
-        self.blockchain_events = BlockchainEvents(self.proxy_manager.network_id)
+        self.blockchain_events = BlockchainEvents(self.rpc_client.chain_id)
         self.alarm = AlarmTask(
             proxy_manager, sleep_time=self.config["blockchain"]["query_interval"]
         )
@@ -361,7 +361,7 @@ class RaidenService(Runnable):
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
                 our_address=self.address,
-                chain_id=self.proxy_manager.network_id,
+                chain_id=self.rpc_client.chain_id,
             )
             token_network_registry = TokenNetworkRegistryState(
                 self.default_registry.address,

@@ -367,7 +367,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         app0.raiden.config["pfs_config"] = PFSConfig(
             info=PFSInfo(
                 url="mock-address",
-                chain_id=app0.raiden.proxy_manager.network_id,
+                chain_id=app0.raiden.rpc_client.chain_id,
                 token_network_registry_address=token_network_registry_address,
                 payment_address=factories.make_address(),
                 message="",

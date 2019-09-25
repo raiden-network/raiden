@@ -527,7 +527,7 @@ class RaidenEventHandler(EventHandler):
             if state_change_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find state that matches the current channel locksroots. "
-                    f"chain_id:{raiden.proxy_manager.network_id} "
+                    f"chain_id:{raiden.rpc_client.chain_id} "
                     f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
@@ -569,7 +569,7 @@ class RaidenEventHandler(EventHandler):
             if event_record is None:
                 raise RaidenUnrecoverableError(
                     f"Failed to find event that match current channel locksroots. "
-                    f"chain_id:{raiden.proxy_manager.network_id} "
+                    f"chain_id:{raiden.rpc_client.chain_id} "
                     f"token_network:{to_checksum_address(token_network_address)} "
                     f"channel:{channel_identifier} "
                     f"participant:{to_checksum_address(participant)} "
@@ -607,7 +607,7 @@ class RaidenEventHandler(EventHandler):
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=raiden.proxy_manager.network_id,
+            chain_identifier=raiden.rpc_client.chain_id,
             token_network_address=channel_settle_event.token_network_address,
             channel_identifier=channel_settle_event.channel_identifier,
         )

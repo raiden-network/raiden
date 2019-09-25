@@ -238,7 +238,7 @@ class AlarmTask(Runnable):
         if missed_blocks < 0:
             log.critical(
                 "Block number decreased",
-                chain_id=self.proxy_manager.network_id,
+                chain_id=self.rpc_client.chain_id,
                 known_block_number=self.known_block_number,
                 old_block_number=latest_block["number"],
                 old_gas_limit=latest_block["gasLimit"],
