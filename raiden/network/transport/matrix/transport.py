@@ -391,7 +391,7 @@ class MatrixTransport(Runnable):
             self._client._handle_thread.get()
 
         for suffix in self._config["global_rooms"]:
-            room_name = make_room_alias(self.network_id, suffix)  # e.g. raiden_ropsten_discovery
+            room_name = make_room_alias(self.chain_id, suffix)  # e.g. raiden_ropsten_discovery
             room = join_global_room(
                 self._client, room_name, self._config.get("available_servers") or ()
             )
@@ -570,7 +570,7 @@ class MatrixTransport(Runnable):
                     f'Send global called on non-global room "{room_name}". '
                     f'Known global rooms: {self._config["global_rooms"]}.'
                 )
-            room_name = make_room_alias(self.network_id, room_name)
+            room_name = make_room_alias(self.chain_id, room_name)
             if room_name not in self._global_rooms:
                 room = join_global_room(
                     self._client, room_name, self._config.get("available_servers") or ()
@@ -621,7 +621,7 @@ class MatrixTransport(Runnable):
         return getattr(self, "_client", None) and getattr(self._client, "user_id", None)
 
     @property
-    def network_id(self) -> ChainID:
+    def chain_id(self) -> ChainID:
         assert self._raiden_service is not None
         return self._raiden_service.rpc_client.chain_id
 
@@ -963,7 +963,7 @@ class MatrixTransport(Runnable):
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
-        room_name = make_room_alias(self.network_id, *address_pair)
+        room_name = make_room_alias(self.chain_id, *address_pair)
 
         # no room with expected name => create one and invite peer
         peer_candidates = [
@@ -1168,7 +1168,7 @@ class MatrixTransport(Runnable):
         As all users are supposed to be in discovery room, its members dict is used for caching"""
         user_id: str = getattr(user, "user_id", user)
         discovery_room = self._global_rooms.get(
-            make_room_alias(self.network_id, DISCOVERY_DEFAULT_ROOM)
+            make_room_alias(self.chain_id, DISCOVERY_DEFAULT_ROOM)
         )
         if discovery_room and user_id in discovery_room._members:
             duser = discovery_room._members[user_id]

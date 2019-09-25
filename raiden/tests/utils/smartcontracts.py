@@ -58,7 +58,7 @@ def deploy_tokens_and_fund_accounts(
     Args:
         token_amount: number of units that will be created per token
         number_of_tokens: number of token instances that will be created
-        proxy_manager: the blockchain connection that will deploy
+        proxy_manager: the proxy manager used to create the token proxy
         participants: participant addresses that will receive tokens
     """
     result = list()

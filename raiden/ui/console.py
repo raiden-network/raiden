@@ -130,7 +130,7 @@ class Console(gevent.Greenlet):
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
-            "chain": self.app.raiden.proxy_manager,
+            "proxy_manager": self.app.raiden.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,

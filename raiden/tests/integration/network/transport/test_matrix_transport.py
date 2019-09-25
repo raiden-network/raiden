@@ -374,7 +374,7 @@ def test_join_invalid_discovery(
 
     transport.start(raiden_service, raiden_service.message_handler, None)
     transport.log = MagicMock()
-    discovery_room_name = make_room_alias(transport.network_id, "discovery")
+    discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
 
     transport.stop()
@@ -435,7 +435,7 @@ def test_matrix_discovery_room_offline_server(
     )
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
 
-    discovery_room_name = make_room_alias(transport.network_id, "discovery")
+    discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     with gevent.Timeout(1):
         while not isinstance(transport._global_rooms.get(discovery_room_name), Room):
             gevent.sleep(0.1)
@@ -461,7 +461,7 @@ def test_matrix_send_global(
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
     gevent.idle()
 
-    ms_room_name = make_room_alias(transport.network_id, MONITORING_BROADCASTING_ROOM)
+    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
 
@@ -515,7 +515,7 @@ def test_monitoring_global_messages(
 
     transport.start(raiden_service, raiden_service.message_handler, None)
 
-    ms_room_name = make_room_alias(transport.network_id, MONITORING_BROADCASTING_ROOM)
+    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
@@ -583,7 +583,7 @@ def test_pfs_global_messages(
 
     transport.start(raiden_service, raiden_service.message_handler, None)
 
-    pfs_room_name = make_room_alias(transport.network_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_room_name = make_room_alias(transport.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_room = transport._global_rooms.get(pfs_room_name)
     assert isinstance(pfs_room, Room)
     pfs_room.send_text = MagicMock(spec=pfs_room.send_text)

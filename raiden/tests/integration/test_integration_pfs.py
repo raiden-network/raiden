@@ -29,7 +29,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     app0, app1 = raiden_network
     transport0 = app0.raiden.transport
 
-    pfs_room_name = make_room_alias(transport0.network_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_room_name = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_room = transport0._global_rooms.get(pfs_room_name)
     # need to assert for mypy that pfs_room is not None
     assert isinstance(pfs_room, Room)
