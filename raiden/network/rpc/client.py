@@ -61,7 +61,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the web3 rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3,txpool"
+            "enabled. Please run it with --rpcapi eth,net,web3"
         )
 
     try:
@@ -69,7 +69,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the eth rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3,txpool"
+            "enabled. Please run it with --rpcapi eth,net,web3"
         )
 
     try:
@@ -77,15 +77,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the net rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3,txpool"
-        )
-
-    try:
-        web3.txpool.inspect
-    except ValueError:
-        raise EthNodeInterfaceError(
-            "The underlying geth node does not have the txpool rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3,txpool"
+            "enabled. Please run it with --rpcapi eth,net,web3"
         )
 
 
@@ -134,33 +126,7 @@ def parity_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Non
 
 def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce:
     """Returns the next available nonce for `address`."""
-
-    # The nonces of the mempool transactions are considered used, and it's
-    # assumed these transactions are different from the ones currently pending
-    # in the client. This is a simplification, otherwise it would be necessary
-    # to filter the local pending transactions based on the mempool.
-    pool = web3.txpool.inspect or {}
-
-    # pool is roughly:
-    #
-    # {'queued': {'account1': {nonce1: ... nonce2: ...}, 'account2': ...}, 'pending': ...}
-    #
-    # Pending refers to the current block and if it contains transactions from
-    # the user, these will be the younger transactions. Because this needs the
-    # largest nonce, queued is checked first.
-
-    address = to_checksum_address(address)
-    queued = pool.get("queued", {}).get(address)
-    if queued:
-        return Nonce(max(int(k) for k in queued.keys()) + 1)
-
-    pending = pool.get("pending", {}).get(address)
-    if pending:
-        return Nonce(max(int(k) for k in pending.keys()) + 1)
-
-    # The first valid nonce is 0, therefore the count is already the next
-    # available nonce
-    return web3.eth.getTransactionCount(address, "latest")
+    return web3.eth.getTransactionCount(address, "pending")
 
 
 def check_address_has_code(

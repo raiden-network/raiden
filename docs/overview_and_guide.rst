@@ -183,7 +183,7 @@ We will provide you with the necessary cli arguments step by step. Full example 
 
 Run the Ethereum client and let it sync::
 
-    geth --syncmode fast --rpc --rpcapi eth,net,web3,txpool
+    geth --syncmode fast --rpc --rpcapi eth,net,web3
 
 .. note::
     When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.

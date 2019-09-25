@@ -87,7 +87,7 @@ With the ``genesis.json`` you can initialize a blockchain.
  (env) $ pwd
  <snip>/priv_chain
  (env) $ geth --datadir blkchain1 init genesis.json
- (env) $ geth --rpc --datadir blkchain1 --networkid 4321 --rpcapi "eth,net,web3,txpool" console
+ (env) $ geth --rpc --datadir blkchain1 --networkid 4321 --rpcapi "eth,net,web3" console
  <snip>
  > personal.newAccount()
  "0xd4de892c06cf4a0557c7d515f79fd20b8356d6cf"
