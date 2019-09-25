@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`-` The lowest supported geth version is now 1.8.21.
 * :feature:`4976` Geth users no longer need to activate the special txpool RPC api when starting their geth node.
 * :feature:`4917` Added documentation on using Raiden for atomic swaps.
 * :feature:`-` Added a new api endpoint ``/api/v1/version`` to query the raiden version via the Rest API.
