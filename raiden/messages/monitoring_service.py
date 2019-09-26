@@ -189,7 +189,7 @@ class RequestMonitoring(SignedMessage):
             token_network_address=self.balance_proof.token_network_address,
             reward_amount=self.reward_amount,
             monitoring_service_contract_address=self.monitoring_service_contract_address,
-            non_closing_participant=partner_address,
+            non_closing_participant=requesting_address,
             non_closing_signature=self.non_closing_signature,
         )
         reward_proof_signature = self.reward_proof_signature or EMPTY_SIGNATURE
