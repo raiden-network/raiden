@@ -620,7 +620,12 @@ class RaidenService(Runnable):
             after_blockchain_statechange(self, state_change)
 
         for changed_balance_proof in views.detect_balance_proof_change(old_state, new_state):
-            update_services_from_balance_proof(self, new_state, changed_balance_proof)
+            update_services_from_balance_proof(
+                self,
+                chain_state=new_state,
+                balance_proof=changed_balance_proof,
+                non_closing_participant=self.address,
+            )
 
         log.debug(
             "Raiden events",
@@ -942,7 +947,12 @@ class RaidenService(Runnable):
         )
 
         for balance_proof in current_balance_proofs:
-            update_monitoring_service_from_balance_proof(self, chain_state, balance_proof)
+            update_monitoring_service_from_balance_proof(
+                self,
+                chain_state=chain_state,
+                new_balance_proof=balance_proof,
+                non_closing_participant=self.address,
+            )
 
     def _initialize_whitelists(self, chain_state: ChainState) -> None:
         """ Whitelist neighbors and mediated transfer targets on transport """
