@@ -38,7 +38,7 @@ nodes:
       - 10_000  # 1% imbalance fee on channel balance
 
 ## This is the MFEE4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
-## whether a path is returned. It also checks that correct imbalance are deducted.
+## whether a path is returned. It also checks that correct fees are deducted.
 
 scenario:
   serial:
@@ -67,15 +67,15 @@ scenario:
                 expected_routes:
                   - [0, 1, 2, 3]
 
-            # 691 TKN fees are calculated, 5% margin of that is 35 TKN
-            # This results in a total fee of 726
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_274, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 110_726, state: "opened"}
+            # 487 TKN fees are calculated, 5% margin of that is 24 TKN
+            # This results in a total fee of 511
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_489, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 11_0511, state: "opened"}
 
-            # 349 TKN fees
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_663, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 110_337, state: "opened"}
+            # 511 TKN fees
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_737, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 11_0263, state: "opened"}
 
-            # 342 TKN fees
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_965, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 110_035, state: "opened"}
+            # 263 TKN fees
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_980, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 110_020, state: "opened"}
