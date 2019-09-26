@@ -12,6 +12,10 @@ The scenarios serve the following purpose
 - Testing in a distributed environment
 - Understanding how Raiden and the Raiden Services can be used and interact
 
+## Writing scenarios
+
+If you want to write a new scenario you can check out the [following example file](https://github.com/raiden-network/scenario-player/blob/master/examples/scenario-example-v2.yaml).
+
 ## Scenarios
 
 #### [bf1_basic_functionality](./bf1_basic_functionality.yaml)
