@@ -1154,6 +1154,7 @@ class RaidenAPI:  # pragma: no unittest
         # create RequestMonitoring message from the above + `reward_amount`
         monitor_request = RequestMonitoring.from_balance_proof_signed_state(
             balance_proof=balance_proof,
+            non_closing_participant=self.raiden.address,
             reward_amount=reward_amount,
             monitoring_service_contract_address=self.raiden.default_msc_address,
         )

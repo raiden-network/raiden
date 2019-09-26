@@ -26,6 +26,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
+from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
@@ -536,7 +537,10 @@ def test_monitoring_global_messages(
     raiden_service.user_deposit.effective_balance.return_value = MONITORING_REWARD
 
     update_monitoring_service_from_balance_proof(
-        raiden=raiden_service, chain_state=None, new_balance_proof=balance_proof
+        raiden=raiden_service,
+        chain_state=None,
+        new_balance_proof=balance_proof,
+        non_closing_participant=HOP1,
     )
     gevent.idle()
 

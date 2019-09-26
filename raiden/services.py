@@ -13,7 +13,7 @@ from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUn
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState
 from raiden.utils import to_rdn
-from raiden.utils.typing import TYPE_CHECKING
+from raiden.utils.typing import TYPE_CHECKING, Address
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -26,11 +26,15 @@ def update_services_from_balance_proof(
     raiden: "RaidenService",
     chain_state: ChainState,
     balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
+    non_closing_participant: Address,
 ) -> None:
     send_pfs_update(raiden=raiden, canonical_identifier=balance_proof.canonical_identifier)
     if isinstance(balance_proof, BalanceProofSignedState):
         update_monitoring_service_from_balance_proof(
-            raiden=raiden, chain_state=chain_state, new_balance_proof=balance_proof
+            raiden=raiden,
+            chain_state=chain_state,
+            new_balance_proof=balance_proof,
+            non_closing_participant=non_closing_participant,
         )
 
 
@@ -63,7 +67,10 @@ def send_pfs_update(
 
 
 def update_monitoring_service_from_balance_proof(
-    raiden: "RaidenService", chain_state: ChainState, new_balance_proof: BalanceProofSignedState
+    raiden: "RaidenService",
+    chain_state: ChainState,
+    new_balance_proof: BalanceProofSignedState,
+    non_closing_participant: Address,
 ) -> None:
     if raiden.config["services"]["monitoring_enabled"] is False:
         return
@@ -98,6 +105,7 @@ def update_monitoring_service_from_balance_proof(
 
     monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
         balance_proof=new_balance_proof,
+        non_closing_participant=non_closing_participant,
         reward_amount=MONITORING_REWARD,
         monitoring_service_contract_address=raiden.default_msc_address,
     )

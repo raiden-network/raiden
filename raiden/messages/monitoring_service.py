@@ -110,6 +110,7 @@ class RequestMonitoring(SignedMessage):
     def from_balance_proof_signed_state(
         cls,
         balance_proof: BalanceProofSignedState,
+        non_closing_participant: Address,
         reward_amount: TokenAmount,
         monitoring_service_contract_address: Address,
     ) -> "RequestMonitoring":
@@ -123,7 +124,7 @@ class RequestMonitoring(SignedMessage):
             balance_proof=onchain_balance_proof,
             reward_amount=reward_amount,
             signature=EMPTY_SIGNATURE,
-            non_closing_participant=balance_proof.sender,
+            non_closing_participant=non_closing_participant,
             monitoring_service_contract_address=monitoring_service_contract_address,
         )
         return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
