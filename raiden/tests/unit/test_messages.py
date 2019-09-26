@@ -45,7 +45,7 @@ def test_request_monitoring() -> None:
     )
     request_monitoring = RequestMonitoring(
         balance_proof=partner_signed_balance_proof,
-        non_closing_participant=balance_proof.sender,
+        non_closing_participant=ADDRESS,
         reward_amount=TokenAmount(55),
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=MSC_ADDRESS,
@@ -173,6 +173,7 @@ def test_tamper_request_monitoring():
         reward_amount=55,
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=msc_address,
+        non_closing_participant=ADDRESS,
     )
     request_monitoring.sign(signer)
 
@@ -183,8 +184,10 @@ def test_tamper_request_monitoring():
 
     reward_proof_data = pack_reward_proof(
         chain_id=request_monitoring.balance_proof.chain_id,
+        token_network_address=request_monitoring.balance_proof.token_network_address,
         reward_amount=request_monitoring.reward_amount,
         monitoring_service_contract_address=msc_address,
+        non_closing_participant=ADDRESS,
         non_closing_signature=request_monitoring.non_closing_signature,
     )
 
@@ -194,6 +197,7 @@ def test_tamper_request_monitoring():
     tampered_balance_hash_request_monitoring = RequestMonitoring(
         balance_proof=partner_signed_balance_proof,
         reward_amount=55,
+        non_closing_participant=ADDRESS,
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=MSC_ADDRESS,
     )
@@ -201,8 +205,10 @@ def test_tamper_request_monitoring():
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
     tampered_balance_hash_reward_proof_data = pack_reward_proof(
         chain_id=tampered_bp.chain_id,
+        token_network_address=request_monitoring.balance_proof.token_network_address,
         reward_amount=tampered_balance_hash_request_monitoring.reward_amount,
         monitoring_service_contract_address=msc_address,
+        non_closing_participant=ADDRESS,
         non_closing_signature=request_monitoring.non_closing_signature,
     )
     # The signature works/is unaffected by that change...
@@ -226,13 +232,18 @@ def test_tamper_request_monitoring():
         reward_amount=55,
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=MSC_ADDRESS,
+        non_closing_participant=ADDRESS,
     )
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
     tampered_additional_hash_reward_proof_data = pack_reward_proof(
         chain_id=tampered_bp.chain_id,
+        token_network_address=(
+            tampered_additional_hash_request_monitoring.balance_proof.token_network_address
+        ),
         reward_amount=tampered_additional_hash_request_monitoring.reward_amount,
         monitoring_service_contract_address=msc_address,
+        non_closing_participant=ADDRESS,
         non_closing_signature=request_monitoring.non_closing_signature,
     )
 
@@ -257,13 +268,18 @@ def test_tamper_request_monitoring():
         reward_amount=55,
         signature=EMPTY_SIGNATURE,
         monitoring_service_contract_address=MSC_ADDRESS,
+        non_closing_participant=ADDRESS,
     )
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
     tampered_non_closing_signature_reward_proof_data = pack_reward_proof(
         chain_id=tampered_bp.chain_id,
+        token_network_address=(
+            tampered_non_closing_signature_request_monitoring.balance_proof.token_network_address
+        ),
         reward_amount=tampered_non_closing_signature_request_monitoring.reward_amount,
         monitoring_service_contract_address=msc_address,
+        non_closing_participant=ADDRESS,
         non_closing_signature=request_monitoring.non_closing_signature,
     )
 
