@@ -13,6 +13,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000
 
 nodes:
   mode: managed
@@ -23,7 +24,7 @@ nodes:
     gas-price: fast
     environment-type: development
     routing-mode: pfs
-    ## Make sure to only use the "best" path
+    # Make sure to only use the "best" path
     pathfinding-max-paths: 1
     pathfinding-max-fee: 100
     proportional-fee:
@@ -33,9 +34,9 @@ nodes:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 0
 
-## This is the PFS5 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3
-## where 0 <-> 4 <-> 3 doesn't have enough capacity to make a second transfer and hence the other path
-## is used for that transfer. This also checks that the PFS reacts correctly to the capacity update.
+# This is the PFS5 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3
+# where 0 <-> 4 <-> 3 doesn't have enough capacity to make a second transfer and hence the other path
+# is used for that transfer. This also checks that the PFS reacts correctly to the capacity update.
 
 scenario:
   serial:
@@ -43,22 +44,29 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
-            - open_channel: {from: 1, to: 2, total_deposit: 1000}
-            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
             # Setup alternative (best) path
-            - open_channel: {from: 0, to: 4, total_deposit: 1000}
-            - open_channel: {from: 4, to: 3, total_deposit: 15}
+            - open_channel: {from: 0, to: 4, total_deposit: 100_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1500}
       - serial:
           name: "Test shortest path route"
           tasks:
             # Check that a payment is made with shortest path [0, 4, 3] from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 1000, expected_http_status: 200}
+
+            # Assert that correct amount was tranferred on the correct path
+            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 4, to: 3, total_deposit: 1500, balance: 500}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 100_000}
 
             # Check that IOU is created
             - assert_pfs_iou: {source: 0, amount: 100}
 
-            ## Check that the paths are indeed the expected ones
+            # Check that the paths are indeed the expected ones
             - assert_pfs_history:
                 source: 0
                 request_count: 1
@@ -69,14 +77,19 @@ scenario:
 
             # There is not enough capacity through node4, so path [0, 1, 2, 3] 
             # should be used instead.
-            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 1000, expected_http_status: 200}
 
-            # Note: We might need a `wait` here in case the PFS doesn't register
-            #       capacity updates quick enough.
+            # Assert that correct amount was tranferred on the correct path
+            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 4, to: 3, total_deposit: 1500, balance: 500}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 99_000}
+              #
             # Check that the second IOU is created
             - assert_pfs_iou: {source: 0, amount: 200}
 
-            ## Check that the paths are indeed the expected ones
+            # Check that the paths are indeed the expected ones
             - assert_pfs_history:
                 source: 0
                 request_count: 2

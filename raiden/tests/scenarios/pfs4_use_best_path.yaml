@@ -13,6 +13,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000
 
 nodes:
   mode: managed
@@ -32,7 +33,7 @@ nodes:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 0
 
-## This is the PFS4 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 2
+## This is the PFS4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and 0 -> 4 -> 3
 ## and checks whether the best path is the one used for the payment. 
 ## Note that `max-paths` is set to 1 path.
 
@@ -42,26 +43,24 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
-            - open_channel: {from: 1, to: 2, total_deposit: 1000}
-            - open_channel: {from: 2, to: 3, total_deposit: 1000}
-            # Setup alternative (best) path
-            - open_channel: {from: 0, to: 4, total_deposit: 1000}
-            - open_channel: {from: 4, to: 3, total_deposit: 1000}
-      - parallel:
-          name: "Deposit in the other directions"
-          tasks:
-            - deposit: {from: 1, to: 0, total_deposit: 1000}
-            - deposit: {from: 2, to: 1, total_deposit: 1000}
-            - deposit: {from: 3, to: 2, total_deposit: 1000}
-            # Setup alternative (best) path
-            - deposit: {from: 4, to: 0, total_deposit: 1000}
-            - deposit: {from: 3, to: 4, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
+            # Setup alternative path
+            - open_channel: {from: 0, to: 4, total_deposit: 100_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 100_000}
       - serial:
           name: "Test providing routes"
           tasks:
-            # Check that a payment goes through
-            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+            # Check that the payment goes through from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 1000, expected_http_status: 200}
+
+            # Assert that correct amount was tranferred
+            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 4, to: 3, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 100_000}
 
             # Check that IOU is created
             - assert_pfs_iou: {source: 0, amount: 100}
