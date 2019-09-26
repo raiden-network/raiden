@@ -18,6 +18,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000
 
 nodes:
   mode: managed
@@ -47,12 +48,12 @@ scenario:
       - serial:
           name: "Open channel between node0 and node1"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
       - serial:
           name: "Make 10 payments from node0 to node1"
           repeat: 10
           tasks:
-            - transfer: {from: 0, to: 1, amount: 50, expected_http_status: 200}
+            - transfer: {from: 0, to: 1, amount: 5000, expected_http_status: 200}
       - serial:
           name: "Make monitor request"
           tasks:
@@ -70,7 +71,7 @@ scenario:
           name: "Wait for channel close and assert that it is closed"
           tasks:
             - wait_blocks: 1
-            - assert: {from: 0 ,to: 1, total_deposit: 1000, balance: 500, state: "closed"}
+            - assert: {from: 0 ,to: 1, total_deposit: 100_000, balance: 50_000, state: "closed"}
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "ChannelClosed"

@@ -14,6 +14,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000
 
 nodes:
   mode: managed
@@ -47,37 +48,44 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
-            - open_channel: {from: 1, to: 2, total_deposit: 1000}
-            - open_channel: {from: 2, to: 3, total_deposit: 1000}
-            - open_channel: {from: 0, to: 4, total_deposit: 1000}
-            - open_channel: {from: 4, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
+            - open_channel: {from: 0, to: 4, total_deposit: 100_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 100_000}
       - parallel:
           name: "Deposit in the other directions"
           tasks:
-            - deposit: {from: 1, to: 0, total_deposit: 1000}
-            - deposit: {from: 2, to: 1, total_deposit: 1000}
-            - deposit: {from: 3, to: 2, total_deposit: 1000}
-            - deposit: {from: 3, to: 4, total_deposit: 1000}
-            - deposit: {from: 4, to: 0, total_deposit: 1000}
+            - deposit: {from: 1, to: 0, total_deposit: 100_000}
+            - deposit: {from: 2, to: 1, total_deposit: 100_000}
+            - deposit: {from: 3, to: 2, total_deposit: 100_000}
+            - deposit: {from: 3, to: 4, total_deposit: 100_000}
+            - deposit: {from: 4, to: 0, total_deposit: 100_000}
       - parallel:
           name: "Assert after deposits"
           tasks:
-            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 1, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 2, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 0, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 4, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
-            - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 100_000, balance: 100_000, state: "opened"}
       - serial:
           name: "Make payment from 0 to 3"
           tasks:
             # Check that a payment is made with shortest path [0, 4, 3] from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 1000, expected_http_status: 200}
+
+            # Assert that correct amount was tranferred on the correct path
+            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 4, to: 3, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 100_000}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 100_000}
 
             # Check that IOU is created
             - assert_pfs_iou: {source: 0, amount: 100}
@@ -100,7 +108,12 @@ scenario:
           name: "Make payment from 0 to 3 after node4 is stopped"
           tasks:
             # Check that a payment is made with the only availabe path [0, 1, 2, 3] from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 1000, expected_http_status: 200}
+
+            # Assert that correct amount was tranferred on the correct path
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 99_000}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 99_000}
 
             # Check that IOU is created
             - assert_pfs_iou: {source: 0, amount: 200}
