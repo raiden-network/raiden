@@ -13,8 +13,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
-  balance_min: 1_000_000
-  balance_fund: 1_000_000
+  balance_fund: 10_000_000_000_000_000_000
 
 nodes:
   mode: managed
@@ -48,15 +47,15 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
       - serial:
           name: "Test providing routes"
           tasks:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 100_000_000_000_000_000, expected_http_status: 200}
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -70,11 +69,11 @@ scenario:
             # should be paid, plus a 1% fee of fees per mediator.
             # balance_minus_fee = deposit - transfer_amount - (transfer_amount / prop_fee * amount_of_hubs_to_target)
             # balance_minus_fee_and_fee_margin = balance_minus_fee - (transfer_amount / prop_fee / 100 * fee_margin)
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_789, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 89_789_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211_000_000_000_000_000, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_890, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_110, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 89_890_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 1_010_000_000_000_000_000, state: "opened"}
 
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_990, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_010, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 89_990_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 1_001_000_000_000_000_000, state: "opened"}
