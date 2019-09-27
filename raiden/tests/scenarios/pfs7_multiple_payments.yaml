@@ -15,7 +15,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
-  balance_fund: 1_000_000
+  balance_fund: 10_000_000_000_000_000_000
 
 nodes:
   mode: managed
@@ -46,45 +46,45 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
-            - open_channel: {from: 4, to: 3, total_deposit: 100_000}
-            - open_channel: {from: 0, to: 4, total_deposit: 100_000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
       - parallel:
           name: "Deposit in the other directions"
           tasks:
-            - deposit: {from: 1, to: 0, total_deposit: 100_000}
-            - deposit: {from: 2, to: 1, total_deposit: 100_000}
-            - deposit: {from: 3, to: 2, total_deposit: 100_000}
-            - deposit: {from: 3, to: 4, total_deposit: 100_000}
-            - deposit: {from: 4, to: 0, total_deposit: 100_000}
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
       - parallel:
           name: "Assert after opening and depositing"
           tasks:
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 0, to: 4, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 4, to: 3, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 4, to: 0, total_deposit: 100_000, balance: 100_000, state: "opened"}
-            - assert: {from: 3, to: 4, total_deposit: 100_000, balance: 100_000, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
       - serial:
           name: "Make 100 transfers from 0 to 3"
           repeat: 100
           tasks:
             # An amount is used that eventually cause one path to run out of capacity
             # and must then use the other path instead.
-            - transfer: {from: 0, to: 3, amount: 1500}
+            - transfer: {from: 0, to: 3, amount: 15_000_000_000_000_000, expected_http_status: 200}
       - serial:
           name: "Assert after 100 payments from 0 to 3"
           tasks:
             - wait: 10
-            - assert_sum: {from: 0, balance_sum: 50_000}
-            - assert_sum: {from: 3, balance_sum: 350_000}
+            - assert_sum: {from: 0, balance_sum: 500_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 3_500_000_000_000_000_000}
       - serial:
           name: "Check that IOUs exist after the payments"
           tasks:

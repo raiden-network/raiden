@@ -13,8 +13,7 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
-  balance_min: 1_000_000
-  balance_fund: 1_000_000
+  balance_fund: 10_000_000_000_000_000_000
 
 nodes:
   mode: managed
@@ -46,18 +45,18 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 0, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
-            - open_channel: {from: 3, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
       - serial:
           name: "Test providing routes"
           tasks:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 100_000_000_000_000_000, expected_http_status: 200}
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -69,13 +68,13 @@ scenario:
 
             # 487 TKN fees are calculated, 5% margin of that is 24 TKN
             # This results in a total fee of 511
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_489, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 11_0511, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 889_489_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_110_511_000_000_000_000, state: "opened"}
 
             # 511 TKN fees
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_737, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 11_0263, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 889_737_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_110_263_000_000_000_000, state: "opened"}
 
             # 263 TKN fees
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_980, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 110_020, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 889_980_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_110_020_000_000_000_000, state: "opened"}
