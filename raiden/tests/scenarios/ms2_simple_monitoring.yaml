@@ -57,8 +57,8 @@ scenario:
           num_events: 1
           event_args: {closing_participant: 0}
 
-      ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
-      - wait_blocks: 401
+      ## The MS reacts within the settle_timeout
+      - wait_blocks: 500
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -70,7 +70,6 @@ scenario:
       - start_node: 1
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
       ## To make sure the transactions gets mined in time, 10 additional blocks are added
-      - wait_blocks: 110
+      - wait_blocks: 10
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}
