@@ -250,6 +250,7 @@ def test_api_query_our_address(api_server_test_instance):
     our_address = api_server_test_instance.rest_api.raiden_api.address
     assert get_json_response(response) == {"our_address": to_checksum_address(our_address)}
 
+
 def test_api_get_raiden_version(api_server_test_instance):
     request = grequests.get(api_url_for(api_server_test_instance, "versionresource"))
     response = request.send().response
