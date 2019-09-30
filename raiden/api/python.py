@@ -15,6 +15,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAmount,
     InvalidBinaryAddress,
+    InvalidRevealTimeout,
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
@@ -367,7 +368,7 @@ class RaidenAPI:  # pragma: no unittest
             settle_timeout = self.raiden.config["settle_timeout"]
 
         if reveal_timeout is None:
-            reveal_timeout = self.raiden.config['reveal_timeout']
+            reveal_timeout = self.raiden.config["reveal_timeout"]
 
         if settle_timeout < reveal_timeout * 2:
             raise InvalidSettleTimeout(
@@ -725,6 +726,56 @@ class RaidenAPI:  # pragma: no unittest
             target_address=target_address,
             target_balance=total_deposit,
             retry_timeout=retry_timeout,
+        )
+
+    def set_reveal_timeout(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        partner_address: Address,
+        reveal_timeout: BlockTimeout,
+    ):
+        """ Set the `reveal_timeout` in the channel with the peer at `partner_address` and the
+        given `token_address`.
+
+        Raises:
+            InvalidBinaryAddress: If either token_address or partner_address is not
+                20 bytes long.
+            InvalidRevealTimeout: If reveal_timeout has an invalid value.
+        """
+        chain_state = views.state_from_raiden(self.raiden)
+
+        token_addresses = views.get_token_identifiers(chain_state, registry_address)
+        channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if not is_binary_address(token_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in channel deposit"
+            )
+
+        if not is_binary_address(partner_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel deposit"
+            )
+
+        if token_address not in token_addresses:
+            raise UnknownTokenAddress("Unknown token address")
+
+        if channel_state is None:
+            raise NonexistingChannel("No channel with partner_address for the given token")
+
+        if channel_state.settle_timeout < reveal_timeout * 2:
+            raise InvalidRevealTimeout(
+                "`settle_timeout` should be at least double the " "provided `reveal_timeout`."
+            )
+
+        self.raiden.set_channel_reveal_timeout(
+            canonical_identifier=channel_state.canonical_identifier, reveal_timeout=reveal_timeout
         )
 
     def channel_close(

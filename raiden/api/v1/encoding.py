@@ -313,6 +313,7 @@ class ChannelPutSchema(BaseSchema):
 class ChannelPatchSchema(BaseSchema):
     total_deposit = fields.Integer(default=None, missing=None)
     total_withdraw = fields.Integer(default=None, missing=None)
+    reveal_timeout = fields.Integer(default=None, missing=None)
     state = fields.String(
         default=None,
         missing=None,
