@@ -13,6 +13,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
+    EventInvalidActionSetRevealTimeout,
     EventInvalidActionWithdraw,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
@@ -65,6 +66,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -1891,6 +1893,30 @@ def handle_action_withdraw(
     return TransitionResult(channel_state, events)
 
 
+def handle_action_set_reveal_timeout(
+    channel_state: NettingChannelState,
+    state_change: ActionChannelSetRevealTimeout,
+) -> TransitionResult[NettingChannelState]:
+    events: List[Event] = list()
+
+    is_valid_reveal_timeout = (
+        state_change.reveal_timeout > 0
+        and channel_state.settle_timeout >= state_change.reveal_timeout * 2
+    )
+
+    if is_valid_reveal_timeout:
+        channel_state.reveal_timeout = state_change.reveal_timeout
+    else:
+        error_msg = "Settle timeout should be at least twice as large as reveal timeout"
+        events = [
+            EventInvalidActionSetRevealTimeout(
+                reveal_timeout=state_change.reveal_timeout, reason=error_msg
+            )
+        ]
+
+    return TransitionResult(channel_state, events)
+
+
 def handle_receive_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> TransitionResult[NettingChannelState]:
@@ -2512,6 +2538,11 @@ def state_transition(
             action_withdraw=state_change,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
+        )
+    elif type(state_change) == ActionChannelSetRevealTimeout:
+        assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
+        iteration = handle_action_set_reveal_timeout(
+            channel_state=channel_state, state_change=state_change
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION

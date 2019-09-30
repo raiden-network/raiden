@@ -25,6 +25,7 @@ from raiden.utils.typing import (
     BlockGasLimit,
     BlockHash,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     ChannelID,
     Locksroot,
@@ -245,6 +246,22 @@ class ActionChangeNodeNetworkState(StateChange):
 
     def __post_init__(self) -> None:
         typecheck(self.node_address, T_Address)
+
+
+@dataclass(frozen=True)
+class ActionChannelSetRevealTimeout(StateChange):
+    """ Change the reveal timeout value of a given channel. """
+
+    canonical_identifier: CanonicalIdentifier
+    reveal_timeout: BlockTimeout
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
 
 
 @dataclass(frozen=True)

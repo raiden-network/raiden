@@ -15,6 +15,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
+    BlockTimeout,
     ChannelID,
     InitiatorAddress,
     List,
@@ -296,6 +297,14 @@ class EventInvalidActionWithdraw(Event):
     """ Event emitted when an invalid withdraw is initiated. """
 
     attempted_withdraw: WithdrawAmount
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventInvalidActionSetRevealTimeout(Event):
+    """ Event emitted when an invalid withdraw is initiated. """
+
+    reveal_timeout: BlockTimeout
     reason: str
 
 
