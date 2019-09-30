@@ -357,6 +357,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address,
         settle_timeout: BlockTimeout = None,
+        reveal_timeout: BlockTimeout = None,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> ChannelID:
         """ Open a channel with the peer at `partner_address`
@@ -365,7 +366,10 @@ class RaidenAPI:  # pragma: no unittest
         if settle_timeout is None:
             settle_timeout = self.raiden.config["settle_timeout"]
 
-        if settle_timeout < self.raiden.config["reveal_timeout"] * 2:
+        if reveal_timeout is None:
+            reveal_timeout = self.raiden.config['reveal_timeout']
+
+        if settle_timeout < reveal_timeout * 2:
             raise InvalidSettleTimeout(
                 "`settle_timeout` can not be smaller than double the "
                 "`reveal_timeout`.\n "

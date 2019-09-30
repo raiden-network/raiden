@@ -616,6 +616,7 @@ class RestAPI:  # pragma: no unittest
         partner_address: Address,
         token_address: TokenAddress,
         settle_timeout: BlockTimeout = None,
+        reveal_timeout: BlockTimeout = None,
         total_deposit: TokenAmount = None,
     ) -> Response:
         log.debug(
@@ -625,6 +626,7 @@ class RestAPI:  # pragma: no unittest
             partner_address=to_checksum_address(partner_address),
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
+            reveal_timeout=reveal_timeout,
         )
 
         try:
@@ -642,7 +644,11 @@ class RestAPI:  # pragma: no unittest
 
         try:
             self.raiden_api.channel_open(
-                registry_address, token_address, partner_address, settle_timeout
+                registry_address=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
+                settle_timeout=settle_timeout,
+                reveal_timeout=reveal_timeout,
             )
         except (
             InvalidBinaryAddress,
