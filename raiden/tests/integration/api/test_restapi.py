@@ -808,6 +808,45 @@ def test_api_channel_state_change_errors(
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
+    # let's try to set both new state and reveal_timeout
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(state=ChannelState.STATE_CLOSED.value, reveal_timeout=50),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # let's try to set both total_deposit and reveal_timeout
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_deposit=500, reveal_timeout=50),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # let's try to set both total_withdraw and reveal_timeout
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw=500, reveal_timeout=50),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
     # let's try to patch with no arguments
     request = grequests.patch(
         api_url_for(
@@ -2431,3 +2470,61 @@ def test_api_payments_with_lock_timeout(api_server_test_instance, raiden_network
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("deposit", [0])
+def test_api_set_reveal_timeout(
+    api_server_test_instance, raiden_network, token_addresses, settle_timeout
+):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    partner_address = app1.raiden.address
+
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(reveal_timeout=0),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(reveal_timeout=settle_timeout + 1),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    reveal_timeout = int(settle_timeout / 2)
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(reveal_timeout=reveal_timeout),
+    )
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+    )
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app0.raiden),
+        token_network_address=token_network_address,
+        partner_address=app1.raiden.address,
+    )
+
+    assert channel_state.reveal_timeout == reveal_timeout

@@ -370,6 +370,9 @@ class RaidenAPI:  # pragma: no unittest
         if reveal_timeout is None:
             reveal_timeout = self.raiden.config["reveal_timeout"]
 
+        if reveal_timeout <= 0:
+            raise InvalidRevealTimeout("reveal_timeout should be larger than zero")
+
         if settle_timeout < reveal_timeout * 2:
             raise InvalidSettleTimeout(
                 "`settle_timeout` can not be smaller than double the "
@@ -786,6 +789,9 @@ class RaidenAPI:  # pragma: no unittest
 
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
+
+        if reveal_timeout <= 0:
+            raise InvalidRevealTimeout("reveal_timeout should be larger than zero.")
 
         if channel_state.settle_timeout < reveal_timeout * 2:
             raise InvalidRevealTimeout(
