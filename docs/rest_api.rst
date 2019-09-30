@@ -446,12 +446,14 @@ Channel Management
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "total_deposit": 35000000,
           "settle_timeout": 500
+          "reveal_timeout": 50
       }
 
    :reqjson address partner_address: The partner we want to open a channel with.
    :reqjson address token_address: The token we want to be used in the channel.
    :reqjson int total_deposit: Total amount of tokens to be deposited to the channel
    :reqjson int settle_timeout: The amount of blocks that the settle timeout should have.
+   :reqjson int reveal_timeout: The amount of blocks that the reveal timeout should have.
 
    The request's payload is a channel object; since it is a new channel, its ``channel_address``
    and ``status`` fields will be ignored and can be omitted.
@@ -479,7 +481,7 @@ Channel Management
           "total_withdraw": 0,
           "state": "opened",
           "settle_timeout": 500,
-          "reveal_timeout": 30
+          "reveal_timeout": 50
       }
 
    :statuscode 201: Channel created successfully
