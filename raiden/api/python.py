@@ -401,6 +401,24 @@ class RaidenAPI:  # pragma: no unittest
 
         confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
         registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+
+        settlement_timeout_min = registry.settlement_timeout_min(
+            block_identifier=confirmed_block_identifier
+        )
+        settlement_timeout_max = registry.settlement_timeout_max(
+            block_identifier=confirmed_block_identifier
+        )
+
+        if settle_timeout < settlement_timeout_min:
+            raise InvalidSettleTimeout(
+                f"Settlement timeout should be at least {settlement_timeout_min}"
+            )
+
+        if settle_timeout > settlement_timeout_max:
+            raise InvalidSettleTimeout(
+                f"Settlement timeout exceeds max of {settlement_timeout_max}"
+            )
+
         token_network_address = registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
