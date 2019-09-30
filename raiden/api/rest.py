@@ -1180,6 +1180,41 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
+    def _set_channel_reveal_timeout(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        channel_state: NettingChannelState,
+        reveal_timeout: BlockTimeout,
+    ) -> Response:
+        log.debug(
+            "Set channel reveal timeout",
+            node=to_checksum_address(self.raiden_api.address),
+            channel_identifier=channel_state.identifier,
+            reveal_timeout=reveal_timeout,
+        )
+
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+            return api_error(
+                errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
+            )
+
+        try:
+            self.raiden_api.set_reveal_timeout(
+                registry_address=registry_address,
+                token_address=channel_state.token_address,
+                partner_address=channel_state.partner_state.address,
+                reveal_timeout=reveal_timeout,
+            )
+        except (NonexistingChannel, UnknownTokenAddress) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
+
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address, channel_state.token_address, channel_state.partner_state.address
+        )
+
+        result = self.channel_schema.dump(updated_channel_state)
+        return api_response(result=result)
+
     def _close(
         self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
     ) -> Response:
@@ -1217,6 +1252,7 @@ class RestAPI:  # pragma: no unittest
         partner_address: Address,
         total_deposit: TokenAmount = None,
         total_withdraw: WithdrawAmount = None,
+        reveal_timeout: BlockTimeout = None,
         state: str = None,
     ) -> Response:
         log.debug(
@@ -1226,8 +1262,15 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
             partner_address=to_checksum_address(partner_address),
             total_deposit=total_deposit,
+            reveal_timeout=reveal_timeout,
             state=state,
         )
+
+        if reveal_timeout is not None and state is not None:
+            return api_error(
+                errors="Can not update a channel's reveal timeout and state at the same time",
+                status_code=HTTPStatus.CONFLICT,
+            )
 
         if total_deposit is not None and state is not None:
             return api_error(
@@ -1250,13 +1293,22 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        if total_deposit is None and state is None and total_withdraw is None:
+        if reveal_timeout is not None and total_deposit is not None:
             return api_error(
                 errors=(
-                    "Nothing to do. Should either provide "
-                    "'total_deposit', 'total_withdraw' or 'state' argument"
+                    "Can not update a channel's reveal timeout "
+                    "and total deposit at the same time"
                 ),
-                status_code=HTTPStatus.BAD_REQUEST,
+                status_code=HTTPStatus.CONFLICT,
+            )
+
+        if reveal_timeout is not None and total_withdraw is not None:
+            return api_error(
+                errors=(
+                    "Can not update a channel's reveal timeout "
+                    "and total withdraw at the same time"
+                ),
+                status_code=HTTPStatus.CONFLICT,
             )
 
         if total_deposit and total_deposit < 0:
@@ -1267,6 +1319,22 @@ class RestAPI:  # pragma: no unittest
         if total_withdraw and total_withdraw < 0:
             return api_error(
                 errors="Amount to withdraw must not be negative.", status_code=HTTPStatus.CONFLICT
+            )
+
+        empty_request = (
+            total_deposit is None
+            and state is None
+            and total_withdraw is None
+            and reveal_timeout is None
+        )
+        if empty_request:
+            return api_error(
+                errors=(
+                    "Nothing to do. Should either provide "
+                    "'total_deposit', 'total_withdraw', 'reveal_timeout' or "
+                    "'state' argument"
+                ),
+                status_code=HTTPStatus.BAD_REQUEST,
             )
 
         try:
@@ -1291,6 +1359,13 @@ class RestAPI:  # pragma: no unittest
 
         elif total_withdraw is not None:
             result = self._withdraw(registry_address, channel_state, total_withdraw)
+
+        elif reveal_timeout is not None:
+            result = self._set_channel_reveal_timeout(
+                registry_address=registry_address,
+                channel_state=channel_state,
+                reveal_timeout=reveal_timeout,
+            )
 
         elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)

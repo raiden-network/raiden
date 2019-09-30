@@ -77,6 +77,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
@@ -1228,6 +1229,15 @@ class RaidenService(Runnable):
         )
 
         self.handle_and_track_state_changes([init_withdraw])
+
+    def set_channel_reveal_timeout(
+        self, canonical_identifier: CanonicalIdentifier, reveal_timeout: BlockTimeout
+    ) -> None:
+        action_set_channel_reveal_timeout = ActionChannelSetRevealTimeout(
+            canonical_identifier=canonical_identifier, reveal_timeout=reveal_timeout
+        )
+
+        self.handle_and_track_state_changes([action_set_channel_reveal_timeout])
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(

@@ -1894,8 +1894,7 @@ def handle_action_withdraw(
 
 
 def handle_action_set_reveal_timeout(
-    channel_state: NettingChannelState,
-    state_change: ActionChannelSetRevealTimeout,
+    channel_state: NettingChannelState, state_change: ActionChannelSetRevealTimeout
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 

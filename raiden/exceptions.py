@@ -151,6 +151,13 @@ class InvalidSettleTimeout(RaidenError):
     settle timeout"""
 
 
+class InvalidRevealTimeout(RaidenError):
+    """ Raised when the channel's settle timeout is less than
+    double the user provided reveal timeout value.
+    condition: settle_timeout < reveal_timeout * 2
+    """
+
+
 class InvalidSignature(RaidenError):
     """Raised on invalid signature recover/verify"""
 
