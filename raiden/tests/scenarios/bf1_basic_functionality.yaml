@@ -144,7 +144,7 @@ scenario:
           name: "Assert after 5 payments from 0 to 2"
           tasks:
             - wait: 10
-            - assert_sum: {from: 2, balance_sum: 1_894_000_000_000_000_000}
+            - assert_sum: {from: 2, balance_sum: 1_895_000_000_000_000_000}
             - assert_sum: {from: 0, balance_sum: 2_005_000_000_000_000_000}
       - parallel:
           name: "2 deposits back the 10% it withdrew"
