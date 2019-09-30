@@ -127,10 +127,10 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
 def calculate_imbalance_fees(
     channel_capacity: TokenAmount, proportional_imbalance_fee: ProportionalFeeAmount
 ) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
-    """ Calculates a quadratic rebalancing curve.
+    """ Calculates a U-shaped imbalance curve
 
     The penalty term takes the following value at the extrema:
-        channel_capacity * (proportional_imbalance_fee / 1_000_000)
+    channel_capacity * (proportional_imbalance_fee / 1_000_000)
     """
     assert channel_capacity >= 0
     assert proportional_imbalance_fee >= 0
@@ -141,16 +141,23 @@ def calculate_imbalance_fees(
     if channel_capacity == 0:
         return None
 
-    # calculate the maximum imbalance fee for the channel
-    max_imbalance_fee = round(channel_capacity * proportional_imbalance_fee / int(1e6))
+    MAXIMUM_SLOPE = 0.1
+    max_imbalance_fee = channel_capacity * proportional_imbalance_fee / 1e6
 
-    def f(balance: TokenAmount) -> FeeAmount:
-        constant = max_imbalance_fee / (channel_capacity / 2) ** 2
-        inner = balance - (channel_capacity / 2)
+    assert proportional_imbalance_fee / 1e6 <= MAXIMUM_SLOPE / 2, "Too high imbalance fee"
 
-        return FeeAmount(int(round(constant * inner ** 2)))
+    # calculate function parameters
+    s = MAXIMUM_SLOPE
+    c = max_imbalance_fee
+    o = channel_capacity / 2
+    b = s * o / c
+    b = min(b, 100)  # limit exponent to keep numerical stability
+    a = c / o ** b
 
-    # Do not duplicate base points when not enough token are available
+    def f(x: TokenAmount) -> FeeAmount:
+        return FeeAmount(int(round(a * abs(x - o) ** b)))
+
+    # calculate discrete function points
     num_base_points = min(NUM_DISCRETISATION_POINTS, channel_capacity + 1)
     x_values = linspace(TokenAmount(0), channel_capacity, num_base_points)
     y_values = [f(x) for x in x_values]
