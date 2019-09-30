@@ -5,7 +5,7 @@ import gevent
 import pytest
 
 from raiden.app import App
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment, RoutingMode
+from raiden.constants import Environment, RoutingMode
 from raiden.tests.utils.network import (
     CHAIN,
     BlockchainServices,
@@ -116,12 +116,6 @@ def raiden_chain(
     blockchain_services.proxy_manager.wait_until_block(target_block_number=confirmed_block)
 
     parallel_start_apps(raiden_apps)
-
-    from_block = GENESIS_BLOCK_NUMBER
-    for app in raiden_apps:
-        app.raiden.install_all_blockchain_filters(
-            app.raiden.default_registry, app.raiden.default_secret_registry, from_block
-        )
 
     exception = RuntimeError("`raiden_chain` fixture setup failed, token networks unavailable")
     with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):

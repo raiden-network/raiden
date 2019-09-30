@@ -18,7 +18,6 @@ from web3.utils.contracts import prepare_transaction
 from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
-from raiden.blockchain.filters import StatelessFilter
 from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS_HEX, EthClient
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -689,20 +688,6 @@ class JSONRPCClient:
                     return tx_receipt
 
             gevent.sleep(1.0)
-
-    def new_filter(
-        self,
-        contract_address: Address,
-        topics: Optional[List[Optional[str]]],
-        from_block: BlockNumber,
-    ) -> StatelessFilter:
-        """ Create a filter in the ethereum node. """
-        return StatelessFilter(
-            self.web3,
-            from_block=from_block,
-            contract_address=to_checksum_address(contract_address),
-            topics=topics,
-        )
 
     def get_filter_events(
         self,

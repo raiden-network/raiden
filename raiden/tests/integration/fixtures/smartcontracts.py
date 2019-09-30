@@ -218,7 +218,7 @@ def secret_registry_proxy(
     """
     return SecretRegistry(
         jsonrpc_client=deploy_client,
-        secret_registry_address=to_canonical_address(secret_registry_address),
+        secret_registry_address=secret_registry_address,
         contract_manager=contract_manager,
     )
 

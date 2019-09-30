@@ -1,10 +1,4 @@
-from typing import Optional
-
-from raiden.blockchain.filters import (
-    StatelessFilter,
-    decode_event,
-    get_filter_args_for_specific_event_from_channel,
-)
+from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.network.proxies.utils import get_channel_participants_from_open_event
@@ -14,11 +8,9 @@ from raiden.utils.typing import (
     Address,
     BalanceHash,
     BlockExpiration,
-    BlockNumber,
     BlockSpecification,
     BlockTimeout,
     ChannelID,
-    List,
     Locksroot,
     Nonce,
     Signature,
@@ -243,21 +235,3 @@ class PaymentChannel:
             partner_locksroot=partner_locksroot,
             given_block_identifier=block_identifier,
         )
-
-    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
-
-        channel_topics: List[Optional[str]] = [
-            None,  # event topic is any
-            f"0x{self.channel_identifier:064x}",
-        ]
-
-        # This will match the events:
-        # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,
-        # NonClosingBalanceProofUpdated, ChannelSettled, ChannelUnlocked
-        channel_filter = self.token_network.client.new_filter(
-            contract_address=Address(self.token_network.address),
-            topics=channel_topics,
-            from_block=from_block,
-        )
-
-        return channel_filter

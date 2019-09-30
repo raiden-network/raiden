@@ -2,6 +2,7 @@
 import os
 import random
 from collections import defaultdict
+from datetime import datetime
 from typing import Any, Dict, List, NamedTuple, Tuple
 from uuid import UUID
 
@@ -12,13 +13,22 @@ from eth_utils import is_binary_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
-from raiden import constants, routing
+from raiden import routing
 from raiden.blockchain.decode import blockchainevent_to_statechange
-from raiden.blockchain.events import BlockchainEvents
+from raiden.blockchain.events import (
+    ZERO_POLL_RESULT,
+    BlockchainEvents,
+    SmartContractEvents,
+    secret_registry_events,
+    token_network_events,
+    token_network_registry_events,
+)
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
+    EMPTY_HASH,
+    EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -92,7 +102,6 @@ from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
-    BlockHash,
     BlockNumber,
     BlockTimeout,
     InitiatorAddress,
@@ -103,8 +112,10 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    SecretRegistryAddress,
     TargetAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
 )
 from raiden.utils.upgrades import UpgradeManager
@@ -201,6 +212,30 @@ def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     return init_target_statechange
 
 
+def smart_contract_filters_from_node_state(
+    chain_state: ChainState,
+    contract_manager: ContractManager,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    secret_registry_address: SecretRegistryAddress,
+) -> List[SmartContractEvents]:
+
+    token_networks = views.get_token_network_addresses(chain_state, token_network_registry_address)
+
+    registry_listener = token_network_registry_events(
+        token_network_registry_address, contract_manager
+    )
+    secret_listener = secret_registry_events(secret_registry_address, contract_manager)
+    token_listeners = [
+        token_network_events(token_network_address, contract_manager)
+        for token_network_address in token_networks
+    ]
+
+    listeners: List[SmartContractEvents] = [registry_listener, secret_listener]
+    listeners.extend(token_listeners)
+
+    return listeners
+
+
 class PaymentStatus(NamedTuple):
     """Value type for RaidenService.targets_to_identifiers_to_statuses.
 
@@ -259,16 +294,19 @@ class RaidenService(Runnable):
 
         self.user_deposit = user_deposit
 
-        self.blockchain_events = BlockchainEvents(self.rpc_client.chain_id)
         self.alarm = AlarmTask(
             proxy_manager, sleep_time=self.config["blockchain"]["query_interval"]
         )
         self.raiden_event_handler = raiden_event_handler
         self.message_handler = message_handler
+        self.blockchain_events: Optional[BlockchainEvents] = None
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
         self.greenlets: List[Greenlet] = list()
+
+        self.last_log_time = datetime.now()
+        self.last_log_block = BlockNumber(0)
 
         self.contract_manager = ContractManager(config["contracts_path"])
         self.database_path = config["database_path"]
@@ -298,7 +336,6 @@ class RaidenService(Runnable):
             self.serialization_file = None
             self.db_lock = None
 
-        self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
 
@@ -330,6 +367,133 @@ class RaidenService(Runnable):
 
         self.ready_to_process_events = False  # set to False because of restarts
 
+        self._initialize_wal()
+        self._synchronize_with_blockchain()
+
+        chain_state = views.state_from_raiden(self)
+
+        self._initialize_payment_statuses(chain_state)
+        self._initialize_transactions_queues(chain_state)
+        self._initialize_messages_queues(chain_state)
+        self._initialize_channel_fees()
+        self._initialize_monitoring_services_queue(chain_state)
+        self._initialize_ready_to_process_events()
+
+        # Start the side-effects:
+        # - React to blockchain events
+        # - React to incoming messages
+        # - Send pending transactions
+        # - Send pending message
+        self.alarm.greenlet.link_exception(self.on_error)
+        self.transport.greenlet.link_exception(self.on_error)
+        self._start_transport(chain_state)
+        self._start_alarm_task()
+
+        log.debug("Raiden Service started", node=to_checksum_address(self.address))
+        super().start()
+
+    def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
+        """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
+        self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
+        try:
+            self.stop_event.wait()
+        except gevent.GreenletExit:  # killed without exception
+            self.stop_event.set()
+            gevent.killall([self.alarm, self.transport])  # kill children
+            raise  # re-raise to keep killed status
+        except Exception:
+            self.stop()
+            raise
+
+    def stop(self) -> None:
+        """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
+        if self.stop_event.ready():  # not started
+            return
+
+        # Needs to come before any greenlets joining
+        self.stop_event.set()
+
+        # Filters must be uninstalled after the alarm task has stopped. Since
+        # the events are polled by an alarm task callback, if the filters are
+        # uninstalled before the alarm task is fully stopped the callback will
+        # fail.
+        #
+        # We need a timeout to prevent an endless loop from trying to
+        # contact the disconnected client
+        self.transport.stop()
+        self.alarm.stop()
+
+        self.transport.greenlet.join()
+        self.alarm.greenlet.join()
+
+        assert (
+            self.blockchain_events
+        ), f"The blockchain_events has to be set by the start. node:{self!r}"
+        self.blockchain_events.uninstall_all_event_listeners()
+
+        # Close storage DB to release internal DB lock
+        assert (
+            self.wal
+        ), f"The Service must have been started before it can be stopped. node:{self!r}"
+        self.wal.storage.close()
+        self.wal = None
+
+        if self.db_lock is not None:
+            self.db_lock.release()
+
+        log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
+
+    @property
+    def confirmation_blocks(self) -> BlockTimeout:
+        return self.config["blockchain"]["confirmation_blocks"]
+
+    @property
+    def privkey(self) -> bytes:
+        return self.rpc_client.privkey
+
+    def add_pending_greenlet(self, greenlet: Greenlet) -> None:
+        """ Ensures an error on the passed greenlet crashes self/main greenlet. """
+
+        def remove(_: Any) -> None:
+            self.greenlets.remove(greenlet)
+
+        self.greenlets.append(greenlet)
+        greenlet.link_exception(self.on_error)
+        greenlet.link_value(remove)
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
+
+    def _start_transport(self, chain_state: ChainState) -> None:
+        """ Initialize the transport and related facilities.
+
+        Note:
+            The node has first to `_synchronize_with_blockchain` before
+            starting the transport. This synchronization includes the on-chain
+            channel state and is necessary to reject new messages for closed
+            channels.
+        """
+        assert self.ready_to_process_events, f"Event procossing disable. node:{self!r}"
+        assert self.blockchain_events
+
+        whitelist = self._get_initial_whitelist(chain_state)
+        log.debug(
+            "Initializing whitelists",
+            neighbour_nodes=[to_checksum_address(address) for address in whitelist],
+            node=to_checksum_address(self.address),
+        )
+
+        self.transport.start(
+            raiden_service=self,
+            prev_auth_data=chain_state.last_transport_authdata,
+            whitelist=whitelist,
+        )
+
+        for neighbour in views.all_neighbour_nodes(chain_state):
+            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
+                self.start_health_check_for(neighbour)
+
+    def _initialize_wal(self) -> None:
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
@@ -374,12 +538,19 @@ class RaidenService(Runnable):
                 "No recoverable state available, creating initial state.",
                 node=to_checksum_address(self.address),
             )
+
             # On first run Raiden needs to fetch all events for the payment
             # network, to reconstruct all token network graphs and find opened
             # channels
             last_log_block_number = self.query_start_block
             last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
 
+            # The value `self.query_start_block` is an optimization, because
+            # Raiden has to poll all events until the last confirmed block,
+            # using the genesis block would result in fetchs for a few million
+            # of unecessary blocks. Instead of querying all these unecessary
+            # blocks, the configuration variable `query_start_block` is used to
+            # start at the block which `TokenNetworkRegistry`  was deployed.
             init_state_change = ActionInitChain(
                 pseudo_random_generator=random.Random(),
                 block_number=last_log_block_number,
@@ -392,7 +563,7 @@ class RaidenService(Runnable):
                 [],  # empty list of token network states as it's the node's startup
             )
             new_network_state_change = ContractReceiveNewTokenNetworkRegistry(
-                transaction_hash=constants.EMPTY_TRANSACTION_HASH,
+                transaction_hash=EMPTY_TRANSACTION_HASH,
                 token_network_registry=token_network_registry,
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
@@ -423,168 +594,80 @@ class RaidenService(Runnable):
                     f"smart contracts {known_registries}"
                 )
 
-        # Install the filters using the latest confirmed from_block value,
-        # otherwise blockchain logs can be lost.
-        self.install_all_blockchain_filters(
-            self.default_registry, self.default_secret_registry, last_log_block_number
-        )
-        self._prepare_and_execute_alarm_first_run(last_log_block=last_log_block_number)
+        # Restore the current snapshot group
+        state_change_qty = self.wal.storage.count_state_changes()
+        self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
-        chain_state = views.state_from_raiden(self)
-
-        # This must happen after DB had been initialized and the alarm task's first run
-        self._initialize_payment_statuses(chain_state)
-        self._initialize_transactions_queues(chain_state)
-        self._initialize_messages_queues(chain_state)
-        self._initialize_channel_fees()
-        self._initialize_monitoring_services_queue(chain_state)
-        self._initialize_ready_to_process_events()
-
-        # Start the side-effects:
-        # - React to blockchain events
-        # - React to incoming messages
-        # - Send pending transactions
-        # - Send pending message
-        self.alarm.greenlet.link_exception(self.on_error)
-        self.transport.greenlet.link_exception(self.on_error)
-        self._start_transport(chain_state)
-        self._start_alarm_task()
-
-        log.debug("Raiden Service started", node=to_checksum_address(self.address))
-        super().start()
-
-    def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
-        """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
-        self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
-        try:
-            self.stop_event.wait()
-        except gevent.GreenletExit:  # killed without exception
-            self.stop_event.set()
-            gevent.killall([self.alarm, self.transport])  # kill children
-            raise  # re-raise to keep killed status
-        except Exception:
-            self.stop()
-            raise
-
-    def stop(self) -> None:
-        """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
-        if self.stop_event.ready():  # not started
-            return
-
-        # Needs to come before any greenlets joining
-        self.stop_event.set()
-
-        # Filters must be uninstalled after the alarm task has stopped. Since
-        # the events are polled by an alarm task callback, if the filters are
-        # uninstalled before the alarm task is fully stopped the callback
-        # `poll_blockchain_events` will fail.
-        #
-        # We need a timeout to prevent an endless loop from trying to
-        # contact the disconnected client
-        self.transport.stop()
-        self.alarm.stop()
-
-        self.transport.greenlet.join()
-        self.alarm.greenlet.join()
-
-        self.blockchain_events.uninstall_all_event_listeners()
-
-        # Close storage DB to release internal DB lock
-        assert self.wal, "The Service must have been started before it can be stopped"
-        self.wal.storage.close()
-        self.wal = None
-
-        if self.db_lock is not None:
-            self.db_lock.release()
-
-        log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
-
-    @property
-    def confirmation_blocks(self) -> BlockTimeout:
-        return self.config["blockchain"]["confirmation_blocks"]
-
-    @property
-    def privkey(self) -> bytes:
-        return self.rpc_client.privkey
-
-    def add_pending_greenlet(self, greenlet: Greenlet) -> None:
-        """ Ensures an error on the passed greenlet crashes self/main greenlet. """
-
-        def remove(_: Any) -> None:
-            self.greenlets.remove(greenlet)
-
-        self.greenlets.append(greenlet)
-        greenlet.link_exception(self.on_error)
-        greenlet.link_value(remove)
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
-
-    def _start_transport(self, chain_state: ChainState) -> None:
-        """ Initialize the transport and related facilities.
-
-        Note:
-            The transport must not be started before the node has caught up
-            with the blockchain through `AlarmTask.first_run()`. This
-            synchronization includes the on-chain channel state and is
-            necessary to reject new messages for closed channels.
+    def _log_sync_progress(self, to_block: BlockNumber) -> None:
+        """Print a message if there are many blocks to be fetched, or if the
+        time in-between polls is high.
         """
-        assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
-        assert self.ready_to_process_events, f"Event procossing disable. node:{self!r}"
+        now = datetime.now()
+        blocks_to_sync = to_block - self.last_log_block
+        elapsed = (now - self.last_log_time).total_seconds()
 
-        whitelist = self._get_initial_whitelist(chain_state)
-        log.debug(
-            "Initializing whitelists",
-            neighbour_nodes=[to_checksum_address(address) for address in whitelist],
-            node=to_checksum_address(self.address),
-        )
+        if blocks_to_sync > 100 or elapsed > 15.0:
+            log.info(
+                "Synchronizing blockchain events",
+                blocks_to_sync=blocks_to_sync,
+                blocks_per_second=blocks_to_sync / elapsed,
+                elapsed=elapsed,
+            )
+            self.last_log_time = now
 
-        self.transport.start(
-            raiden_service=self,
-            prev_auth_data=chain_state.last_transport_authdata,
-            whitelist=whitelist,
-        )
+        self.last_log_block = to_block
 
-        for neighbour in views.all_neighbour_nodes(chain_state):
-            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.start_health_check_for(neighbour)
-
-    def _prepare_and_execute_alarm_first_run(self, last_log_block: BlockNumber) -> None:
-        """Prepares the alarm task callback and executes its first run
-
-        Complete the first_run of the alarm task and synchronize with the
-        blockchain since the last run.
+    def _synchronize_with_blockchain(self) -> None:
+        """Prepares the alarm task callback and synchronize with the blockchain
+        since the last run.
 
          Notes about setup order:
          - The filters must be polled after the node state has been primed,
            otherwise the state changes won't have effect.
-         - The alarm must complete its first run before the transport is started,
-           to reject messages for closed/settled channels.
+         - The synchronization must be done before the transport is started, to
+           reject messages for closed/settled channels.
         """
-        assert not self.transport, f"Transport is running. node:{self!r}"
-        assert self.wal, "The database must have been initialized. node:{self!r}"
+        msg = (
+            f"Transport must not be started before the node has synchronized "
+            f"with the blockchain, otherwise the node may accept transfers to a "
+            f"closed channel. node:{self!r}"
+        )
+        assert not self.transport, msg
+        assert self.wal, f"The database must have been initialized. node:{self!r}"
 
-        self.alarm.register_callback(self._callback_new_block)
-        self.alarm.first_run(last_log_block)
-        # The first run of the alarm task processes some state changes and may add
-        # new token network event filters when this is the first time Raiden runs.
-        # Here we poll for any new events that may exist after the addition of
-        # those event filters.
+        chain_state = views.state_from_raiden(self)
+
+        # The `Block` state change is dispatched only after all the events for
+        # that given block have been processed, filters can be safely installed
+        # starting from this position without missing events.
+        last_block_number = views.block_number(chain_state)
+
+        filters = smart_contract_filters_from_node_state(
+            chain_state,
+            self.contract_manager,
+            self.default_registry.address,
+            self.default_secret_registry.address,
+        )
+        blockchain_events = BlockchainEvents(
+            web3=self.rpc_client.web3,
+            chain_id=chain_state.chain_id,
+            contract_manager=self.contract_manager,
+            last_fetched_block=last_block_number,
+            event_filters=filters,
+            max_number_of_blocks_to_poll=BlockNumber(100_000),
+        )
+
         latest_block_num = self.rpc_client.get_block(block_identifier="latest")["number"]
-        latest_confirmed_block_num = max(
+        latest_confirmed_block_number = max(
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )
 
-        blockchain_events = self.blockchain_events.poll_blockchain_events(
-            latest_confirmed_block_num
-        )
+        # `blockchain_events` is a required for `_poll_until_target`, so it
+        # must be set before calling it
+        self.blockchain_events = blockchain_events
+        self._poll_until_target(latest_confirmed_block_number)
 
-        state_changes = []
-        for event in blockchain_events:
-            state_changes.extend(
-                blockchainevent_to_statechange(self, event, latest_confirmed_block_num)
-            )
-        self.handle_and_track_state_changes(state_changes)
+        self.alarm.register_callback(self._callback_new_block)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
@@ -598,10 +681,26 @@ class RaidenService(Runnable):
         self.alarm.start()
 
     def _initialize_ready_to_process_events(self) -> None:
-        assert not self.transport
-        assert not self.alarm
+        """Mark the node as ready to start processing raiden events that may
+        send messages or transactions.
 
-        # This flag /must/ be set to true before the transport or the alarm task is started
+        This flag /must/ be set to true before the both  transport and the
+        alarm are started.
+        """
+        msg = (
+            f"The transport must not be initialized before the "
+            f"`ready_to_process_events` flag is set, since this is a requirement "
+            f"for the alarm task and the alarm task should be started before the "
+            f"transport to avoid race conditions. node:{self!r}"
+        )
+        assert not self.transport
+        msg = (
+            f"Alarm task must not be started before the "
+            f"`ready_to_process_events` flag is set, otherwise events may be "
+            f"missed. node:{self!r}"
+        )
+        assert not self.alarm, msg
+
         self.ready_to_process_events = True
 
     def get_block_number(self) -> BlockNumber:
@@ -749,28 +848,65 @@ class RaidenService(Runnable):
             Therefore this method should be called only once a new block is
             mined with the corresponding block data from the AlarmTask.
         """
-        # User facing APIs, which have on-chain side-effects, force polled the
-        # blockchain to update the node's state. This force poll is used to
-        # provide a consistent view to the user, e.g. a channel open call waits
-        # for the transaction to be mined and force polled the event to update
-        # the node's state. This pattern introduced a race with the alarm task
-        # and the task which served the user request, because the events are
-        # returned only once per filter. The lock below is to protect against
-        # these races (introduced by the commit
-        # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
-        with self.event_poll_lock:
-            latest_block_number = latest_block["number"]
 
-            # Handle testing with private chains. The block number can be
-            # smaller than confirmation_blocks
-            latest_confirmed_block_number = max(
-                GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
-            )
-            latest_confirmed_block = self.rpc_client.web3.eth.getBlock(
-                latest_confirmed_block_number
-            )
+        latest_block_number = latest_block["number"]
+
+        # Handle testing with private chains. The block number can be
+        # smaller than confirmation_blocks
+        latest_confirmed_block_number = max(
+            GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
+        )
+
+        self._poll_until_target(latest_confirmed_block_number)
+
+    def _poll_until_target(self, target_block_number: BlockNumber) -> None:
+        """Poll blockchain events up to `target_block_number`.
+
+        Multiple queries may be necessary on restarts, because the node may
+        have been offline for an extend perior of time. During normal
+        operation, this must not happen, because in this case the node may have
+        missed important events, like a channel close, while the transport
+        layer is running, this can lead to loss of funds.
+
+        It is very important for `confirmed_target_block_number` to be an
+        confirmed block, otherwise reorgs may cause havoc. This is problematic
+        since some operations are irreversible, namely sending a balance proof.
+        Once a node accepts a deposit, these tokens can be used to do mediated
+        transfers, and if a reorg removes the deposit tokens could be lost.
+
+        This function takes care of fetching blocks in batches and confirming
+        their result. This is important to keep memory usage low and to speed
+        up restarts. Memory usage can get a hit if the node is asleep for a
+        long period of time and on the first run, since all the missing
+        confirmed blocks have to be fetched before the node is in a working
+        state. Restarts get a hit if the node is closed while it was
+        synchronizing, without regularly saving that work, if the node is
+        killed while synchronizing, it only gets gradually slower.
+
+        Returns:
+            int: number of polling queries required to synchronized with
+            `target_block_number`.
+        """
+        msg = (
+            f"The blockchain event handler has to be instantiated before the "
+            f"alarm task is started. node:{self!r}"
+        )
+        assert self.blockchain_events, msg
+
+        poll_result = ZERO_POLL_RESULT
+
+        sync_start = datetime.now()
+
+        while self.blockchain_events.last_fetched_block < target_block_number:
+            self._log_sync_progress(target_block_number)
+
+            poll_result = self.blockchain_events.fetch_logs_in_batch(target_block_number)
 
             state_changes: List[StateChange] = list()
+            for event in poll_result.events:
+                state_changes.extend(
+                    blockchainevent_to_statechange(self, event, poll_result.polled_block_number)
+                )
 
             # On restarts the node has to pick up all events generated since the
             # last run. To do this the node will set the filters' from_block to
@@ -805,26 +941,26 @@ class RaidenService(Runnable):
             # immediately before the channel existed. This breaks a proxy
             # precondition which crashes the client.
             block_state_change = Block(
-                block_number=latest_confirmed_block_number,
-                gas_limit=latest_confirmed_block["gasLimit"],
-                block_hash=BlockHash(bytes(latest_confirmed_block["hash"])),
+                block_number=poll_result.polled_block_number,
+                gas_limit=poll_result.polled_block_gas_limit,
+                block_hash=poll_result.polled_block_hash,
             )
             state_changes.append(block_state_change)
 
-            blockchain_events = self.blockchain_events.poll_blockchain_events(
-                latest_confirmed_block_number
-            )
-
-            for event in blockchain_events:
-                state_changes.extend(
-                    blockchainevent_to_statechange(self, event, latest_confirmed_block_number)
-                )
-
-            # It's important to /not/ block here, because this function can be
-            # called from the alarm task greenlet, which should not starve.
-            #
-            # All the state changes are dispatched together
+            # It's important to /not/ block here, because this function can
+            # be called from the alarm task greenlet, which should not
+            # starve. This was a problem when the node decided to send a new
+            # transaction, since the proxies block until the transaction is
+            # mined and confirmed (e.g. the settle window is over and the
+            # node sends the settle transaction).
             self.handle_and_track_state_changes(state_changes)
+
+        sync_end = datetime.now()
+        log.debug(
+            "Synchronized to a new confirmed block",
+            event_filters_qty=len(self.blockchain_events._address_to_filters),
+            sync_elapsed=sync_end - sync_start,
+        )
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.
@@ -835,7 +971,16 @@ class RaidenService(Runnable):
             already will be detected by the alarm task's first run and cleared
             from the queue (e.g. A monitoring service update transfer).
         """
-        assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
+        msg = (
+            f"Initializing the transaction queue requires the state to be restored. node:{self!r}"
+        )
+        assert self.wal, msg
+        msg = (
+            f"Initializing the transaction queue must be done after the "
+            f"blockchain has be synched. This removes invalidated transactions from "
+            f"the queue. node:{self!r}"
+        )
+        assert self.blockchain_events, msg
 
         pending_transactions = views.get_pending_transactions(chain_state)
 
@@ -905,7 +1050,8 @@ class RaidenService(Runnable):
             won't be properly cleared. It is not bad but it is suboptimal.
         """
         assert not self.transport, f"Transport is running. node:{self!r}"
-        assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
+        msg = f"Node must be synchronized with the blockchain. node:{self!r}"
+        assert self.blockchain_events, msg
 
         events_queues = views.get_all_messagequeues(chain_state)
 
@@ -947,12 +1093,12 @@ class RaidenService(Runnable):
             the processing of the message queues.
         """
         msg = (
-            "Transport was started before the monitoring service queue was updated. "
-            "This can lead to safety issue. node:{self!r}"
+            f"Transport was started before the monitoring service queue was updated. "
+            f"This can lead to safety issue. node:{self!r}"
         )
         assert not self.transport, msg
 
-        msg = "The node state was not yet recovered, cant read balance proofs. node:{self!r}"
+        msg = f"The node state was not yet recovered, cant read balance proofs. node:{self!r}"
         assert self.wal, msg
 
         current_balance_proofs = list(
@@ -961,7 +1107,7 @@ class RaidenService(Runnable):
                 old_state=ChainState(
                     pseudo_random_generator=chain_state.pseudo_random_generator,
                     block_number=GENESIS_BLOCK_NUMBER,
-                    block_hash=constants.EMPTY_HASH,
+                    block_hash=EMPTY_HASH,
                     our_address=chain_state.our_address,
                     chain_id=chain_state.chain_id,
                 ),
@@ -1061,37 +1207,6 @@ class RaidenService(Runnable):
             raise ValueError("{} is not signable.".format(repr(message)))
 
         message.sign(self.signer)
-
-    def install_all_blockchain_filters(
-        self,
-        token_network_registry_proxy: TokenNetworkRegistry,
-        secret_registry_proxy: SecretRegistry,
-        from_block: BlockNumber,
-    ) -> None:
-        with self.event_poll_lock:
-            node_state = views.state_from_raiden(self)
-            token_networks = views.get_token_network_addresses(
-                node_state, token_network_registry_proxy.address
-            )
-
-            self.blockchain_events.add_token_network_registry_listener(
-                token_network_registry_proxy=token_network_registry_proxy,
-                contract_manager=self.contract_manager,
-                from_block=from_block,
-            )
-            self.blockchain_events.add_secret_registry_listener(
-                secret_registry_proxy=secret_registry_proxy,
-                contract_manager=self.contract_manager,
-                from_block=from_block,
-            )
-
-            for token_network_address in token_networks:
-                token_network_proxy = self.proxy_manager.token_network(token_network_address)
-                self.blockchain_events.add_token_network_listener(
-                    token_network_proxy=token_network_proxy,
-                    contract_manager=self.contract_manager,
-                    from_block=from_block,
-                )
 
     def connection_manager_for_token_network(
         self, token_network_address: TokenNetworkAddress

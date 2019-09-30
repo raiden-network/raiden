@@ -15,6 +15,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidBinaryAddress,
     InvalidSettleTimeout,
+    RaidenRecoverableError,
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
@@ -160,11 +161,6 @@ def test_token_registered_race(raiden_chain, retry_timeout, unregistered_token):
     api0 = RaidenAPI(app0.raiden)
     api1 = RaidenAPI(app1.raiden)
 
-    # Recreate the race condition by making sure the non-registering app won't
-    # register at all by watching for the TokenAdded blockchain event.
-    event_listeners = app1.raiden.blockchain_events.event_listeners
-    app1.raiden.blockchain_events.event_listeners = list()
-
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
@@ -183,12 +179,27 @@ def test_token_registered_race(raiden_chain, retry_timeout, unregistered_token):
     assert token_address not in api0.get_tokens_list(registry_address)
     assert token_address not in api1.get_tokens_list(registry_address)
 
-    api0.token_network_register(
-        registry_address=registry_address,
-        token_address=token_address,
-        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
-        token_network_deposit_limit=TokenAmount(UINT256_MAX),
-    )
+    greenlets: set = {
+        gevent.spawn(
+            api0.token_network_register,
+            registry_address=registry_address,
+            token_address=token_address,
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
+        ),
+        gevent.spawn(
+            api0.token_network_register,
+            registry_address=registry_address,
+            token_address=token_address,
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
+        ),
+    }
+
+    # One of the nodes will lose the race
+    with pytest.raises(RaidenRecoverableError):
+        gevent.joinall(greenlets, raise_error=True)
+
     exception = RuntimeError("Did not see the token registration within 30 seconds")
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_state_change(
@@ -197,15 +208,24 @@ def test_token_registered_race(raiden_chain, retry_timeout, unregistered_token):
             {"token_network": {"token_address": token_address}},
             retry_timeout,
         )
+        wait_for_state_change(
+            app1.raiden,
+            ContractReceiveNewTokenNetwork,
+            {"token_network": {"token_address": token_address}},
+            retry_timeout,
+        )
 
     assert token_address in api0.get_tokens_list(registry_address)
-    assert token_address not in api1.get_tokens_list(registry_address)
-
-    # The next time when the event is polled, the token is registered
-    app1.raiden.blockchain_events.event_listeners = event_listeners
-    waiting.wait_for_block(app1.raiden, app1.raiden.get_block_number() + 1, retry_timeout)
-
     assert token_address in api1.get_tokens_list(registry_address)
+
+    for api in (api0, api1):
+        with pytest.raises(AlreadyRegisteredTokenAddress):
+            api.token_network_register(
+                registry_address=registry_address,
+                token_address=token_address,
+                channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+                token_network_deposit_limit=TokenAmount(UINT256_MAX),
+            )
 
 
 @raise_on_failure

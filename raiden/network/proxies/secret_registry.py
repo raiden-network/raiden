@@ -2,13 +2,7 @@ from typing import List
 
 import gevent
 import structlog
-from eth_utils import (
-    decode_hex,
-    encode_hex,
-    event_abi_to_log_topic,
-    is_binary_address,
-    to_checksum_address,
-)
+from eth_utils import decode_hex, encode_hex, is_binary_address, to_checksum_address
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -19,7 +13,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
 )
 from raiden.network.proxies.utils import log_transaction
-from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
@@ -31,9 +25,10 @@ from raiden.utils.typing import (
     Optional,
     Secret,
     SecretHash,
+    SecretRegistryAddress,
     Union,
 )
-from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -43,7 +38,7 @@ class SecretRegistry:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        secret_registry_address: Address,
+        secret_registry_address: SecretRegistryAddress,
         contract_manager: ContractManager,
     ) -> None:
         if not is_binary_address(secret_registry_address):
@@ -52,7 +47,7 @@ class SecretRegistry:
         self.contract_manager = contract_manager
         check_address_has_code(
             client=jsonrpc_client,
-            address=secret_registry_address,
+            address=Address(secret_registry_address),
             contract_name=CONTRACT_SECRET_REGISTRY,
             expected_code=decode_hex(
                 contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
@@ -61,7 +56,7 @@ class SecretRegistry:
 
         proxy = jsonrpc_client.new_contract_proxy(
             abi=self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-            contract_address=secret_registry_address,
+            contract_address=Address(secret_registry_address),
         )
 
         # There should be only one smart contract deployed, to avoid race
@@ -317,13 +312,3 @@ class SecretRegistry:
             secrethash=secrethash, block_identifier=block_identifier
         )
         return block is not None
-
-    def secret_registered_filter(self, from_block: BlockNumber) -> StatelessFilter:
-        event_abi = self.contract_manager.get_event_abi(
-            CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
-        )
-        topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
-
-        return self.client.new_filter(
-            contract_address=self.address, topics=topics, from_block=from_block
-        )

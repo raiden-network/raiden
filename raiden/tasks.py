@@ -171,10 +171,6 @@ class AlarmTask(Runnable):
         finally:
             self.callbacks = list()
 
-    def is_primed(self) -> bool:
-        """True if the first_run has been called."""
-        return self.known_block_number is not None
-
     def register_callback(self, callback: Callable) -> None:
         """ Register a new callback.
 
@@ -194,36 +190,11 @@ class AlarmTask(Runnable):
             self.callbacks.remove(callback)
 
     def loop_until_stop(self) -> None:
-        # The AlarmTask must have completed its first_run() before starting
-        # the background greenlet.
-        #
-        # This is required because the first run will synchronize the node with
-        # the blockchain since the last run.
-        msg = "Only start the AlarmTask after it has been primed with the first_run"
-        assert self.is_primed(), msg
-
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
             latest_block = self.rpc_client.get_block(block_identifier="latest")
 
             self._maybe_run_callbacks(latest_block)
-
-    def first_run(self, known_block_number: BlockNumber) -> None:
-        """ Blocking call to update the local state, if necessary. """
-        assert self.callbacks, "callbacks not set"
-        latest_block = self.rpc_client.get_block(block_identifier="latest")
-
-        log.debug(
-            "Alarm task first run",
-            known_block_number=known_block_number,
-            latest_block_number=latest_block["number"],
-            latest_gas_limit=latest_block["gasLimit"],
-            latest_block_hash=to_hex(latest_block["hash"]),
-            node=to_checksum_address(self.rpc_client.address),
-        )
-
-        self.known_block_number = known_block_number
-        self._maybe_run_callbacks(latest_block)
 
     def _maybe_run_callbacks(self, latest_block: Dict[str, Any]) -> None:
         """ Run the callbacks if there is at least one new block.
@@ -232,10 +203,14 @@ class AlarmTask(Runnable):
         filters may try to poll for an inexisting block number and the Ethereum
         client can return an JSON-RPC error.
         """
-        assert self.known_block_number is not None, "known_block_number not set"
-
         latest_block_number = latest_block["number"]
-        missed_blocks = latest_block_number - self.known_block_number
+
+        # First run, set the block and run the callbacks
+        if self.known_block_number is None:
+            self.known_block_number = latest_block_number
+            missed_blocks = 1
+        else:
+            missed_blocks = latest_block_number - self.known_block_number
 
         if missed_blocks < 0:
             log.critical(

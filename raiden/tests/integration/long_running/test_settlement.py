@@ -35,7 +35,6 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signing import sha3
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (
-    Address,
     Balance,
     BlockNumber,
     List,
@@ -43,6 +42,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     Secret,
+    SecretRegistryAddress,
     TargetAddress,
     TokenAddress,
     TokenAmount,
@@ -286,7 +286,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 def test_batch_unlock(
     raiden_network: List[App],
     token_addresses: List[TokenAddress],
-    secret_registry_address: Address,
+    secret_registry_address: SecretRegistryAddress,
     deposit: TokenAmount,
 ) -> None:
     """Tests that batch unlock is properly called.

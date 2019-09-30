@@ -38,7 +38,7 @@ from raiden.network.proxies.utils import (
     log_transaction,
     raise_on_call_returned_empty,
 )
-from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -2650,17 +2650,3 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError(msg)
 
             raise RaidenRecoverableError("Settle failed for an unknown reason")
-
-    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
-        """ Install a new filter for all the events emitted by the current token network contract
-
-        Args:
-            from_block: Create filter starting from this block number (default: 0).
-            to_block: Create filter stopping at this block number (default: 'latest').
-
-        Return:
-            The filter instance.
-        """
-        return self.client.new_filter(
-            contract_address=Address(self.address), topics=None, from_block=from_block
-        )
