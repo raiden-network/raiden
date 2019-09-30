@@ -33,15 +33,47 @@ def window(seq: Sequence, n: int = 2) -> Iterable[tuple]:
         yield result
 
 
+def imbalance_fee_receiver(
+    fee_schedule: FeeScheduleState, amount: PaymentWithFeeAmount, balance: Balance
+) -> FeeAmount:
+    if not fee_schedule._penalty_func:
+        return FeeAmount(0)
+
+    # Calculate the mediators balance
+    balance = fee_schedule._penalty_func.x_list[-1] - balance
+    try:
+        return FeeAmount(
+            # Mediator is gaining balance on his channel side
+            round(
+                fee_schedule._penalty_func(balance + amount) - fee_schedule._penalty_func(balance)
+            )
+        )
+    except ValueError:
+        raise UndefinedMediationFee()
+
+
+def imbalance_fee_sender(
+    fee_schedule: FeeScheduleState, amount: PaymentWithFeeAmount, balance: Balance
+) -> FeeAmount:
+    if not fee_schedule._penalty_func:
+        return FeeAmount(0)
+
+    try:
+        return FeeAmount(
+            # Mediator is loosing balance on his channel side
+            round(
+                fee_schedule._penalty_func(balance - amount) - fee_schedule._penalty_func(balance)
+            )
+        )
+    except ValueError:
+        raise UndefinedMediationFee()
+
+
 def fee_sender(
     fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
 ) -> Optional[FeeAmount]:
     """Returns the mediation fee for this channel when transferring the given amount"""
-    try:
-        imbalance_fee = fee_schedule.imbalance_fee(amount=amount, balance=balance)
-    except UndefinedMediationFee:
-        return None
-
+    imbalance_fee = imbalance_fee_sender(fee_schedule=fee_schedule, amount=amount, balance=balance)
     flat_fee = fee_schedule.flat
     prop_fee = int(round(amount * fee_schedule.proportional / 1e6))
     return FeeAmount(flat_fee + prop_fee + imbalance_fee)
@@ -63,8 +95,9 @@ def fee_receiver(
             )
         )
 
-    imbalance_fee = fee_schedule.imbalance_fee(
-        amount=PaymentWithFeeAmount(-(amount - fee_in(imbalance_fee=FeeAmount(0)))),
+    imbalance_fee = imbalance_fee_receiver(
+        fee_schedule=fee_schedule,
+        amount=PaymentWithFeeAmount(amount - fee_in(imbalance_fee=FeeAmount(0))),
         balance=balance,
     )
 
