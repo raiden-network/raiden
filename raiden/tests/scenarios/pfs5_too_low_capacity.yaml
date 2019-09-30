@@ -49,7 +49,7 @@ scenario:
             - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
             # Setup alternative path
             - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000}
-            - open_channel: {from: 4, to: 3, total_deposit: 15_000_000_000_000_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1_500_000_000_000_000}
       - serial:
           name: "Test shortest path route"
           tasks:
@@ -58,7 +58,7 @@ scenario:
 
             # Assert that correct amount was tranferred on the correct path
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
-            - assert: {from: 4, to: 3, total_deposit: 15_000_000_000_000_000, balance: 5_000_000_000_000_000}
+            - assert: {from: 4, to: 3, total_deposit: 1_500_000_000_000_000, balance: 500_000_000_000_000}
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
@@ -81,7 +81,7 @@ scenario:
 
             # Assert that correct amount was tranferred on the correct path
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
-            - assert: {from: 4, to: 3, total_deposit: 15_000_000_000_000_000, balance: 5_000_000_000_000_000}
+            - assert: {from: 4, to: 3, total_deposit: 1_500_000_000_000_000, balance: 500_000_000_000_000}
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
