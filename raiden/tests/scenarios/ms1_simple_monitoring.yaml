@@ -51,7 +51,7 @@ scenario:
       - close_channel: {from: 0, to: 1}
       ## Wait for channel to be closed
       - wait_blocks: 1
-      - assert: {from: 0, to: 1, total_deposit: 100_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
+      - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "ChannelClosed"
