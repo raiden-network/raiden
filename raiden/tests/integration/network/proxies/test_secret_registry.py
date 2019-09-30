@@ -4,6 +4,7 @@ import gevent
 import pytest
 from web3 import Web3
 
+from raiden.blockchain.events import get_secret_registry_events
 from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -16,17 +17,19 @@ from raiden.utils.typing import BlockNumber, Dict, List, PrivateKey, Secret
 from raiden_contracts.contract_manager import ContractManager
 
 
-def secret_registry_batch_happy_path(web3: Web3, secret_registry_proxy: SecretRegistry) -> None:
+def secret_registry_batch_happy_path(
+    proxy_manager: ProxyManager, secret_registry_proxy: SecretRegistry
+) -> None:
     secrets = [make_secret() for i in range(4)]
     secrethashes = [sha256_secrethash(secret) for secret in secrets]
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
     secret_registry_proxy.register_secret_batch(secrets=secrets)
 
-    logs = [
-        secret_registry_proxy.proxy.decode_event(log)
-        for log in secret_registered_filter.get_new_entries(web3.eth.blockNumber)
-    ]
+    logs = get_secret_registry_events(
+        proxy_manager=proxy_manager,
+        secret_registry_address=secret_registry_proxy.address,
+        contract_manager=secret_registry_proxy.contract_manager,
+    )
 
     for secrethash in secrethashes:
         secret_registered = must_have_event(
@@ -42,7 +45,7 @@ def secret_registry_batch_happy_path(web3: Web3, secret_registry_proxy: SecretRe
 
 
 def test_register_secret_happy_path(
-    web3: Web3, secret_registry_proxy: SecretRegistry, contract_manager: ContractManager
+    secret_registry_proxy: SecretRegistry, contract_manager: ContractManager
 ) -> None:
     """Test happy path of SecretRegistry with a single secret.
 
@@ -54,8 +57,6 @@ def test_register_secret_happy_path(
     secrethash = sha256_secrethash(secret)
     secret_unregistered = make_secret()
     secrethash_unregistered = sha256_secrethash(secret_unregistered)
-
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
 
     assert not secret_registry_proxy.is_secret_registered(
         secrethash=secrethash, block_identifier="latest"
@@ -81,10 +82,11 @@ def test_register_secret_happy_path(
 
     secret_registry_proxy.register_secret(secret=secret)
 
-    logs = [
-        secret_registry_proxy.proxy.decode_event(encoded_log)
-        for encoded_log in secret_registered_filter.get_new_entries(web3.eth.blockNumber)
-    ]
+    logs = get_secret_registry_events(
+        proxy_manager=proxy_manager,
+        secret_registry_address=secret_registry_proxy.address,
+        contract_manager=secret_registry_proxy.contract_manager,
+    )
     secret_registered = must_have_event(
         logs, {"event": "SecretRevealed", "args": {"secrethash": secrethash}}
     )
@@ -99,7 +101,7 @@ def test_register_secret_happy_path(
         "Block height returned by the SecretRegistry.get_secret_registration_block_by_secrethash "
         "does not match the block from the SecretRevealed event."
     )
-    assert secret_registered["blockNumber"] == registered_block, msg
+    assert secret_registered["block_number"] == registered_block, msg
 
     block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
         secrethash=secrethash_unregistered, block_identifier="latest"
@@ -107,12 +109,15 @@ def test_register_secret_happy_path(
     assert block is None, "The secret that was not registered must not change block height!"
 
 
-def test_register_secret_batch_happy_path(web3: Web3, secret_registry_proxy: SecretRegistry):
+def test_register_secret_batch_happy_path(
+    proxy_manager: ProxyManager, secret_registry_proxy: SecretRegistry
+):
     """Test happy path for secret registration batching."""
-    secret_registry_batch_happy_path(web3, secret_registry_proxy)
+    secret_registry_batch_happy_path(proxy_manager, secret_registry_proxy)
 
 
 def test_register_secret_batch_with_pruned_block(
+    proxy_manager: ProxyManager,
     secret_registry_proxy: SecretRegistry,
     web3: Web3,
     private_keys: List[PrivateKey],
@@ -133,7 +138,7 @@ def test_register_secret_batch_with_pruned_block(
     c1_proxy_manager.wait_until_block(
         target_block_number=BlockNumber(pruned_number + STATE_PRUNING_AFTER_BLOCKS)
     )
-    secret_registry_batch_happy_path(web3, secret_registry_proxy)
+    secret_registry_batch_happy_path(proxy_manager, secret_registry_proxy)
 
 
 def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, monkeypatch):

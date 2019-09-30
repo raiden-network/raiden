@@ -25,6 +25,7 @@ from raiden.utils.typing import (
     MonitoringServiceAddress,
     OneToNAddress,
     Optional,
+    SecretRegistryAddress,
     ServiceRegistryAddress,
     T_ChannelID,
     TokenAddress,
@@ -75,7 +76,7 @@ class ProxyManager:
         contract_manager: ContractManager,
         metadata: ProxyManagerMetadata,
     ) -> None:
-        self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
+        self.address_to_secret_registry: Dict[SecretRegistryAddress, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
         self.address_to_token_network_registry: Dict[
@@ -206,7 +207,7 @@ class ProxyManager:
 
         return self.address_to_token_network[address]
 
-    def secret_registry(self, address: Address) -> SecretRegistry:
+    def secret_registry(self, address: SecretRegistryAddress) -> SecretRegistry:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 

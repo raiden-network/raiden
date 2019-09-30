@@ -1,5 +1,5 @@
 from copy import deepcopy
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -166,47 +166,30 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain_services):
-    """
-    Test that the alarm tasks syncs blockchain events at the end of its first run
+    """Raiden must synchronize with the blockchain events during
+    initialization.
 
     Test for https://github.com/raiden-network/raiden/issues/4498
     """
-    # These apps have had channels created but are not yet started
     app0, _ = raiden_network
 
     # Make sure we get into app0.start() with a confirmed block that contains
     # the channel creation events
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=10)
     target_block_num = (
         blockchain_services.proxy_manager.client.block_number()
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
     blockchain_services.proxy_manager.wait_until_block(target_block_number=target_block_num)
 
-    original_first_run = app0.raiden._prepare_and_execute_alarm_first_run
+    # This is a bit brittle, it calls the same steps as `start` would do
+    app0.raiden._initialize_wal()
+    app0.raiden._synchronize_with_blockchain()
 
-    def first_run_with_check(last_log_block):
-        """
-        This function simply enhances the alarm task first run
-
-        The enhanced version has a check for channels being available right after
-        the first run of the alarm task
-        """
-        original_first_run(last_log_block)
-        channels = RaidenAPI(app0.raiden).get_channel_list(
-            registry_address=app0.raiden.default_registry.address
-        )
-        assert len(channels) != 0, "After the first alarm task run no channels are visible"
-
-    patched_first_run = patch.object(
-        app0.raiden, "_prepare_and_execute_alarm_first_run", side_effect=first_run_with_check
+    channels = RaidenAPI(app0.raiden).get_channel_list(
+        registry_address=app0.raiden.default_registry.address
     )
-    with patched_first_run:
-        app0.start()
-
-    # If all runs well and our first_run_with_check function runs then test passes
-    # since that means channels were queriable right after the first run of the
-    # alarm task
+    msg = "Initialization did not properly synchronize with the blockchain, channel is missing"
+    assert len(channels) != 0, msg
 
 
 @raise_on_failure

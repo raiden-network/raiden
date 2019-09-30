@@ -7,7 +7,6 @@ from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (
     ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
-    ContractReceiveNewTokenNetwork,
     ContractReceiveRouteNew,
 )
 from raiden.utils.typing import MYPY_ANNOTATION
@@ -15,25 +14,6 @@ from raiden.utils.typing import MYPY_ANNOTATION
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
-
-
-def after_new_token_network_create_filter(
-    raiden: "RaidenService", state_change: ContractReceiveNewTokenNetwork
-) -> None:
-    """ Handles the creation of a new token network.
-
-    Add the filter used to synchronize the node with the new TokenNetwork smart
-    contract.
-    """
-    block_number = state_change.block_number
-    token_network_address = state_change.token_network.address
-
-    token_network_proxy = raiden.proxy_manager.token_network(token_network_address)
-    raiden.blockchain_events.add_token_network_listener(
-        token_network_proxy=token_network_proxy,
-        contract_manager=raiden.contract_manager,
-        from_block=block_number,
-    )
 
 
 def after_new_route_join_network(
@@ -87,11 +67,7 @@ def after_new_deposit_join_network(
 
 
 def after_blockchain_statechange(raiden: "RaidenService", state_change: StateChange) -> None:
-    if type(state_change) == ContractReceiveNewTokenNetwork:
-        assert isinstance(state_change, ContractReceiveNewTokenNetwork), MYPY_ANNOTATION
-        after_new_token_network_create_filter(raiden, state_change)
-
-    elif type(state_change) == ContractReceiveChannelNew:
+    if type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
         after_new_channel_start_healthcheck(raiden, state_change)
 

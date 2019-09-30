@@ -472,7 +472,7 @@ def parallel_start_apps(raiden_apps: List[App]) -> None:
 def jsonrpc_services(
     proxy_manager: ProxyManager,
     private_keys: List[PrivateKey],
-    secret_registry_address: Address,
+    secret_registry_address: SecretRegistryAddress,
     service_registry_address: ServiceRegistryAddress,
     token_network_registry_address: TokenNetworkRegistryAddress,
     web3: Web3,

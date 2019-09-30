@@ -2,6 +2,7 @@ import pytest
 from eth_utils import encode_hex
 from web3 import Web3
 
+from raiden.blockchain.events import get_all_netting_channel_events
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
     EMPTY_MESSAGE_HASH,
@@ -74,9 +75,15 @@ def test_payment_channel_proxy_basics(
     channel_proxy_1.set_total_deposit(total_deposit=TokenAmount(10), block_identifier="latest")
 
     # ChannelOpened, ChannelNewDeposit
-    channel_events = channel_proxy_1.all_events_filter(from_block=start_block).get_new_entries(
-        web3.eth.blockNumber
+    channel_events = get_all_netting_channel_events(
+        proxy_manager=proxy_manager,
+        token_network_address=token_network_address,
+        netting_channel_identifier=channel_proxy_1.channel_identifier,
+        contract_manager=contract_manager,
+        from_block=start_block,
+        to_block=web3.eth.blockNumber,
     )
+
     assert len(channel_events) == 2
 
     block_before_close = web3.eth.blockNumber
@@ -101,8 +108,13 @@ def test_payment_channel_proxy_basics(
     )
     assert channel_proxy_1.closed("latest") is True
     # ChannelOpened, ChannelNewDeposit, ChannelClosed
-    channel_events = channel_proxy_1.all_events_filter(from_block=start_block).get_new_entries(
-        web3.eth.blockNumber
+    channel_events = get_all_netting_channel_events(
+        proxy_manager=proxy_manager,
+        token_network_address=token_network_address,
+        netting_channel_identifier=channel_proxy_1.channel_identifier,
+        contract_manager=contract_manager,
+        from_block=start_block,
+        to_block=web3.eth.blockNumber,
     )
     assert len(channel_events) == 3
 
@@ -127,8 +139,13 @@ def test_payment_channel_proxy_basics(
     )
     assert channel_proxy_1.settled("latest") is True
     # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
-    channel_events = channel_proxy_1.all_events_filter(from_block=start_block).get_new_entries(
-        web3.eth.blockNumber
+    channel_events = get_all_netting_channel_events(
+        proxy_manager=proxy_manager,
+        token_network_address=token_network_address,
+        netting_channel_identifier=channel_proxy_1.channel_identifier,
+        contract_manager=contract_manager,
+        from_block=start_block,
+        to_block=web3.eth.blockNumber,
     )
     assert len(channel_events) == 4
 
