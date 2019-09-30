@@ -69,6 +69,7 @@ from raiden.exceptions import (
     InvalidBinaryAddress,
     InvalidBlockNumberInput,
     InvalidNumberInput,
+    InvalidRevealTimeout,
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
@@ -1205,8 +1206,10 @@ class RestAPI:  # pragma: no unittest
                 partner_address=channel_state.partner_state.address,
                 reveal_timeout=reveal_timeout,
             )
-        except (NonexistingChannel, UnknownTokenAddress) as e:
+        except (NonexistingChannel, UnknownTokenAddress, InvalidBinaryAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
+        except InvalidRevealTimeout as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address, channel_state.token_address, channel_state.partner_state.address
