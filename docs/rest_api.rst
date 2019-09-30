@@ -531,11 +531,24 @@ Channel Management
           "total_withdraw": 100
       }
 
+   **Example Request (update channel reveal timeout)**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "reveal_timeout": 50
+      }
+
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
    :reqjson int total_deposit: The increased total deposit
    :reqjson int total_withdraw: The increased total withdraw
+   :reqjson int reveal_timeout: The new reveal timeout value
 
-   .. note::
+.. note::
       For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
    **Example Response**:
