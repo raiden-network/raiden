@@ -237,8 +237,8 @@ def test_fees_are_updated_during_startup(
     # once both channels have deposited the default (200) deposit
     default_imbalance_penalty = [
         (0, 1),
-        (20, 1),
-        (40, 1),
+        (20, 0),
+        (40, 0),
         (60, 0),
         (80, 0),
         (100, 0),
@@ -254,8 +254,8 @@ def test_fees_are_updated_during_startup(
         (300, 0),
         (320, 0),
         (340, 0),
-        (360, 1),
-        (380, 1),
+        (360, 0),
+        (380, 0),
         (400, 1),
     ]
 
@@ -294,35 +294,38 @@ def test_fees_are_updated_during_startup(
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
     app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {token_address: 1e6}
+    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {
+        token_address: 0.05e6
+    }
     app0.start()
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    # with 100% imbalance fee
+    # with 5% 400imbalance fee
+    print(channel_state.fee_schedule.imbalance_penalty)
     full_imbalance_penalty = [
-        (0, 400),
-        (20, 324),
-        (40, 256),
-        (60, 196),
-        (80, 144),
-        (100, 100),
-        (120, 64),
-        (140, 36),
-        (160, 16),
-        (180, 4),
+        (0, 20),
+        (20, 18),
+        (40, 16),
+        (60, 14),
+        (80, 12),
+        (100, 10),
+        (120, 8),
+        (140, 6),
+        (160, 4),
+        (180, 2),
         (200, 0),
-        (220, 4),
-        (240, 16),
-        (260, 36),
-        (280, 64),
-        (300, 100),
-        (320, 144),
-        (340, 196),
-        (360, 256),
-        (380, 324),
-        (400, 400),
+        (220, 2),
+        (240, 4),
+        (260, 6),
+        (280, 8),
+        (300, 10),
+        (320, 12),
+        (340, 14),
+        (360, 16),
+        (380, 18),
+        (400, 20),
     ]
 
     assert channel_state.fee_schedule.imbalance_penalty == full_imbalance_penalty

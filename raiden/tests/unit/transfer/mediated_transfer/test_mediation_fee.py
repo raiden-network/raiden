@@ -127,44 +127,44 @@ def test_linspace():
 
 
 def test_rebalancing_fee_calculation():
-    sample = calculate_imbalance_fees(TokenAmount(200), ProportionalFeeAmount(500_000))  # 50%
+    sample = calculate_imbalance_fees(TokenAmount(200), ProportionalFeeAmount(50_000))  # 5%
     assert sample is not None
     assert len(sample) == NUM_DISCRETISATION_POINTS
     assert all(0 <= x <= 200 for x, _ in sample)
     assert max(x for x, _ in sample) == 200
-    assert all(0 <= y <= 100 for _, y in sample)
-    assert max(y for _, y in sample) == 100  # 50% of the 200 TokenAmount capacity
+    assert all(0 <= y <= 10 for _, y in sample)
+    assert max(y for _, y in sample) == 10  # 5% of the 200 TokenAmount capacity
 
-    sample = calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(200_000))  # 20%
+    sample = calculate_imbalance_fees(TokenAmount(100), ProportionalFeeAmount(20_000))  # 2%
     assert sample is not None
-    assert len(sample) == 11
-    assert all(0 <= x <= 10 for x, _ in sample)
-    assert max(x for x, _ in sample) == 10
+    assert len(sample) == NUM_DISCRETISATION_POINTS
+    assert all(0 <= x <= 100 for x, _ in sample)
+    assert max(x for x, _ in sample) == 100
     assert all(0 <= y <= 2 for _, y in sample)
-    assert max(y for _, y in sample) == 2  # 20% of the 10 TokenAmount capacity
+    assert max(y for _, y in sample) == 2  # 2% of the 100 TokenAmount capacity
 
-    sample = calculate_imbalance_fees(TokenAmount(1), ProportionalFeeAmount(1_000_000))  # 100%
+    sample = calculate_imbalance_fees(TokenAmount(15), ProportionalFeeAmount(50_000))  # 5%
     assert sample is not None
-    assert len(sample) == 2
-    assert all(0 <= x <= 1 for x, _ in sample)
-    assert max(x for x, _ in sample) == 1
+    assert len(sample) == 16
+    assert all(0 <= x <= 16 for x, _ in sample)
+    assert max(x for x, _ in sample) == 15
     assert all(0 <= y <= 1 for _, y in sample)
-    assert max(y for _, y in sample) == 1  # 100% of the 1 TokenAmount capacity
+    assert max(y for _, y in sample) == 1  # 5% of the 5 rounded up
 
     # test rounding of the max_balance_fee calculation
-    sample = calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(549_000))  # 54.9%
+    sample = calculate_imbalance_fees(TokenAmount(1000), ProportionalFeeAmount(5_490))  # 0.549%
     assert sample is not None
-    assert len(sample) == 11
-    assert all(0 <= x <= 10 for x, _ in sample)
-    assert max(x for x, _ in sample) == 10
+    assert len(sample) == NUM_DISCRETISATION_POINTS
+    assert all(0 <= x <= 1000 for x, _ in sample)
+    assert max(x for x, _ in sample) == 1000
     assert all(0 <= y <= 5 for _, y in sample)
     assert max(y for _, y in sample) == 5  # 5.49 is rounded to 5
 
-    sample = calculate_imbalance_fees(TokenAmount(10), ProportionalFeeAmount(550_000))  # 55%
+    sample = calculate_imbalance_fees(TokenAmount(1000), ProportionalFeeAmount(5_500))  # 0.55%
     assert sample is not None
-    assert len(sample) == 11
-    assert all(0 <= x <= 10 for x, _ in sample)
-    assert max(x for x, _ in sample) == 10
+    assert len(sample) == NUM_DISCRETISATION_POINTS
+    assert all(0 <= x <= 1000 for x, _ in sample)
+    assert max(x for x, _ in sample) == 1000
     assert all(0 <= y <= 6 for _, y in sample)
     assert max(y for _, y in sample) == 6  # 5.5 is rounded to 6
 
