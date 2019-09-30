@@ -300,6 +300,7 @@ class ChannelStateSchema(BaseSchema):
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
+    reveal_timeout = fields.Integer(missing=None)
     settle_timeout = fields.Integer(missing=None)
     total_deposit = fields.Integer(default=None, missing=None)
 
