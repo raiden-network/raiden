@@ -53,7 +53,7 @@ scenario:
           name: "Make 10 payments from node0 to node1"
           repeat: 10
           tasks:
-            - transfer: {from: 0, to: 1, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 0, to: 1, amount: 50_000_000_000_000_000, expected_http_status: 200}
       - serial:
           name: "Make monitor request"
           tasks:
