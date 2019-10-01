@@ -209,12 +209,12 @@ def test_mediated_transfer_with_entire_deposit(
         token_network_address=token_network_address,
         partner_address=app0.raiden.address,
     )
-    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app1.raiden),
+    app2_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app2.raiden),
         token_network_address=token_network_address,
-        partner_address=app2.raiden.address,
+        partner_address=app1.raiden.address,
     )
-    mediator_channels = [app1_app2_channel_state, app1_app0_channel_state]
+    mediator_channels = [app2_app1_channel_state, app1_app0_channel_state]
     reverse_calculation = get_amount_for_sending_before_and_after_fees(
         amount_to_leave_initiator=deposit + calculation.amount_to_send, channels=mediator_channels
     )
