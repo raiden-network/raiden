@@ -59,7 +59,7 @@ In case we know of a specific address in the network that we will do frequent pa
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": 2000,
-       "settle_timeout": 600
+       "settle_timeout": 500
    }
 
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <topping-up-a-channel>` to a channel if need be.
@@ -79,8 +79,8 @@ Successfully opening a channel returns the following information:
        "balance": 2000,
        "total_deposit": 2000,
        "state": "opened",
-       "settle_timeout": 600,
-       "reveal_timeout": 10
+       "settle_timeout": 500,
+       "reveal_timeout": 50
    }
 
 .. _doing-payments:
@@ -161,8 +161,8 @@ This returns the following JSON response::
           "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
           "balance": 3958,
           "state": "open",
-          "settle_timeout": 600,
-          "reveal_timeout": 30
+          "settle_timeout": 500,
+          "reveal_timeout": 50
       }
 
 We can see that the current balance of the channel is ``3958`` which matches with the two deposits and one payment we've made ``2000 + 2000 - 42``.
