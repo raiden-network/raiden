@@ -1196,7 +1196,8 @@ class RestAPI:  # pragma: no unittest
 
         if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
-                errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
+                errors="Can't update the reveal timeout of a closed channel",
+                status_code=HTTPStatus.CONFLICT,
             )
 
         try:
