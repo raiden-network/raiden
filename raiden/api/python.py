@@ -492,6 +492,7 @@ class RaidenAPI:  # pragma: no unittest
             partner_address=partner_address,
             retry_timeout=retry_timeout,
         )
+
         chain_state = views.state_from_raiden(self.raiden)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
@@ -501,6 +502,10 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         assert channel_state, f"channel {channel_state} is gone"
+
+        self.raiden.set_channel_reveal_timeout(
+            canonical_identifier=channel_state.canonical_identifier, reveal_timeout=reveal_timeout
+        )
 
         return channel_state.identifier
 
