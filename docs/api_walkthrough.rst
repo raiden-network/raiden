@@ -121,7 +121,7 @@ Successfully opening a channel returns the following information:
        "total_deposit": 1337, 
        "state": "opened",
        "settle_timeout": 500,
-       "reveal_timeout": 10
+       "reveal_timeout": 50
    }
 
 Here it's interesting to notice that a ``channel_identifier`` has been generated. This means that the channel has been created inside the `Token Network <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#tokennetwork-contract>`_.
@@ -298,7 +298,7 @@ When successful this gives a response with a channel object where the state is s
         "balance": 350,
         "state": "closed",
         "settle_timeout": 500,
-        "reveal_timeout": 10
+        "reveal_timeout": 50
     }
 
 Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"opened"``.
@@ -356,7 +356,7 @@ Afterwards you can check your events and you should find an ``EventPaymentReceiv
         "event": "EventPaymentReceivedSuccess",
         "amount": 1,
         "identifier": 43,
-        "initiator": "0x02f4b6BC65561A792836212Ebc54434Db0Ab759a"
+        "initiator": "0x02f4b6BC65561A792836212Ebc54434Db0Ab759a",
         "log_time": "2018-10-30T07:04:22.293"
     }
 

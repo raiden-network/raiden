@@ -29,7 +29,7 @@ Channel Object
        "total_deposit": 35000000,
        "state": "opened",
        "settle_timeout": 500,
-       "reveal_timeout": 40
+       "reveal_timeout": 50
     }
 
 
@@ -195,8 +195,8 @@ Querying Information About Channels and Tokens
               "total_deposit": 35000000,
               "total_withdraw": 5000000,
               "state": "opened",
-              "settle_timeout": 100,
-              "reveal_timeout": 30
+              "settle_timeout": 500,
+              "reveal_timeout": 50
           }
       ]
 
@@ -231,8 +231,8 @@ Querying Information About Channels and Tokens
               "total_deposit": 35000000,
               "total_withdraw": 5000000,
               "state": "opened",
-              "settle_timeout": 100,
-              "reveal_timeout": 30
+              "settle_timeout": 500,
+              "reveal_timeout": 50
           }
       ]
 
@@ -267,8 +267,8 @@ Querying Information About Channels and Tokens
           "total_deposit": 35000000,
           "total_withdraw": 5000000,
           "state": "opened",
-          "settle_timeout": 100,
-          "reveal_timeout": 30
+          "settle_timeout": 500,
+          "reveal_timeout": 50
       }
 
    :statuscode 200: Successful query
@@ -445,7 +445,7 @@ Channel Management
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "total_deposit": 35000000,
-          "settle_timeout": 500
+          "settle_timeout": 500,
           "reveal_timeout": 50
       }
 
@@ -568,7 +568,7 @@ Channel Management
           "total_withdraw": 5000000,
           "state": "closed",
           "settle_timeout": 500,
-          "reveal_timeout": 30
+          "reveal_timeout": 50
       }
 
    :statuscode 200: Success
