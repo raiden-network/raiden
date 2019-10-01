@@ -1,12 +1,13 @@
 import json
-import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+import gevent
 import requests
 from eth_utils import to_bytes, to_hex
 
 from raiden.storage.wal import WriteAheadLog
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state import ChainState
@@ -46,8 +47,7 @@ def reveal_secret_with_resolver(
 
     # loop until we get a valid response from the resolver or until timeout
     while True:
-        current_state = raiden.wal.state_manager.current_state
-        assert isinstance(current_state, ChainState)
+        current_state = views.state_from_raiden(raiden)
 
         if secret_request_event.expiration < current_state.block_number:
             return False
@@ -66,7 +66,7 @@ def reveal_secret_with_resolver(
                 break
             if response.status_code == HTTPStatus.NOT_FOUND:
                 return False
-        time.sleep(5)
+        gevent.sleep(5)
 
     state_change = ReceiveSecretReveal(
         sender=secret_request_event.recipient,
