@@ -10,12 +10,15 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
-from raiden.settings import DEFAULT_MEDIATION_FEE_MARGIN, DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_MEDIATION_FEE_MARGIN,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -156,27 +159,12 @@ def test_mediated_transfer_with_entire_deposit(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
-    app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app0.raiden),
-        token_network_address=token_network_address,
-        partner_address=app1.raiden.address,
-    )
-    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app1.raiden),
-        token_network_address=token_network_address,
-        partner_address=app2.raiden.address,
-    )
-    forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
 
-    calculation = get_amount_for_sending_before_and_after_fees(
-        amount_to_leave_initiator=deposit, channels=forward_channels
-    )
-    assert calculation, "fees calculation should be succesful"
-
+    fee1 = int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC)
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=calculation.amount_to_send,
+        amount=deposit - fee1,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
@@ -197,34 +185,20 @@ def test_mediated_transfer_with_entire_deposit(
             assert_succeeding_transfer_invariants,
             token_network_address,
             app1,
-            calculation.mediation_fees[0],
+            fee1,
             [],
             app2,
-            deposit * 2 - calculation.mediation_fees[0],
+            deposit * 2 - fee1,
             [],
         )
 
-    app1_app0_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app1.raiden),
-        token_network_address=token_network_address,
-        partner_address=app0.raiden.address,
-    )
-    app2_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app2.raiden),
-        token_network_address=token_network_address,
-        partner_address=app1.raiden.address,
-    )
-    mediator_channels = [app2_app1_channel_state, app1_app0_channel_state]
-    reverse_calculation = get_amount_for_sending_before_and_after_fees(
-        amount_to_leave_initiator=deposit + calculation.amount_to_send, channels=mediator_channels
-    )
-    assert reverse_calculation, "reverse fees calculation should be succesful"
-
+    app2_capacity = 2 * deposit - fee1
+    fee2 = int(round(app2_capacity * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
     reverse_path = list(raiden_network[::-1])
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
-        amount=reverse_calculation.amount_to_send,
+        amount=app2_capacity - fee2,
         identifier=2,
         timeout=network_wait * number_of_nodes,
     )
@@ -234,10 +208,10 @@ def test_mediated_transfer_with_entire_deposit(
             assert_succeeding_transfer_invariants,
             token_network_address,
             app0,
-            reverse_calculation.amount_with_fees - reverse_calculation.mediation_fees[0],
+            2 * deposit - fee2,
             [],
             app1,
-            calculation.mediation_fees[0] + reverse_calculation.mediation_fees[0],
+            fee2,
             [],
         )
     with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):

@@ -227,7 +227,7 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
 
 @pytest.mark.parametrize(
     "flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
-    [(0, 0, 10_000, 50_000, 50_000 + 1996)],
+    [(0, 0, 10_000, 50_000, 50_000 + 2_000)],
 )
 def test_get_lock_amount_after_fees_imbalanced_channel(
     flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
