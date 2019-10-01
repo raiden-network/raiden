@@ -73,6 +73,8 @@ class NodeRunner:
         from raiden.api.python import RaidenAPI
 
         config = deepcopy(App.DEFAULT_CONFIG)
+        config["reveal_timeout"] = self._options["default_reveal_timeout"]
+        config["settle_timeout"] = self._options["default_settle_timeout"]
         if self._options.get("extra_config", dict()):
             merge_dict(config, self._options["extra_config"])
             del self._options["extra_config"]
