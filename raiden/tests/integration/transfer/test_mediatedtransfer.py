@@ -30,7 +30,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.utils import sha3
-from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, TokenAmount
+from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, PaymentID, TokenAmount
 from raiden.waiting import wait_for_block
 
 
@@ -534,12 +534,6 @@ def test_mediated_transfer_with_fees(
     fee = round(fee_without_margin * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
 
     amount = PaymentAmount(35)
-    msg = (
-        "The chosen values will result in less than the amount reaching "
-        "the target after the 3rd hop"
-    )
-    amount_at_end = amount + fee - (amount + fee) // 5 - (amount + fee - (amount + fee) // 5) // 5
-    assert amount_at_end >= amount, msg
 
     no_fees = FeeScheduleState(flat=0, proportional=0, imbalance_penalty=None)
     cases = [
@@ -592,8 +586,8 @@ def test_mediated_transfer_with_fees(
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
                 amount + fee,
-                amount + fee - (amount + fee) // 5,
-                amount + fee - (amount + fee) // 5,
+                amount + fee - (amount + fee) // 5 + 2,
+                amount + fee - (amount + fee) // 5 + 2,
             ],
         ),
         # Using the same fee_schedules as above on the incoming channel instead
@@ -611,18 +605,19 @@ def test_mediated_transfer_with_fees(
                 amount + fee - (amount + fee) // 5,
             ],
         ),
-        # The first mediator has an imbalance fee which will add one token for
+        # The first mediator has an imbalance fee which will add 1/20 token for
         # for every token transferred as a reward for moving the channel into a
         # better state. This causes the target to receive more than the `amount
         # + fees` which is sent by the initiator.
+        # transferred amount is 55, so 3 token get added from imbnalance fee
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(imbalance_penalty=[(0, 1000), (1000, 0)]),
+                FeeScheduleState(imbalance_penalty=[(0, 50), (1000, 0)]),
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
-            expected_transferred_amounts=[amount + fee, (amount + fee) * 2, (amount + fee) * 2],
+            expected_transferred_amounts=[amount + fee, amount + fee + 3, amount + fee + 3],
         ),
     ]
 
@@ -641,6 +636,9 @@ def test_mediated_transfer_with_fees(
 
     with route_patch, disable_max_mediation_fee_patch:
         transfer_and_assert_path(
-            path=raiden_network, token_address=token_address, amount=amount, identifier=2
+            path=raiden_network,
+            token_address=token_address,
+            amount=amount,
+            identifier=PaymentID(2),
         )
     assert_balances(case["expected_transferred_amounts"])
