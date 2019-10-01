@@ -1,4 +1,5 @@
 import json
+import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
@@ -41,16 +42,31 @@ def reveal_secret_with_resolver(
         "expiration": secret_request_event.expiration,
         "payment_recipient": to_hex(raiden.address),
         "chain_id": chain_state.chain_id,
-        "chain_height": chain_state.block_number,
     }
 
-    try:
-        response = requests.post(raiden.config["resolver_endpoint"], json=request)
-    except requests.exceptions.RequestException:
-        return False
+    # loop until we get a valid response from the resolver or until timeout
+    while True:
+        current_state = raiden.wal.state_manager.current_state
+        assert isinstance(current_state, ChainState)
 
-    if response.status_code != HTTPStatus.OK:
-        return False
+        if secret_request_event.expiration < current_state.block_number:
+            return False
+
+        response = None
+
+        try:
+            # before calling resolver, update block height
+            request["chain_height"] = chain_state.block_number
+            response = requests.post(raiden.config["resolver_endpoint"], json=request)
+        except requests.exceptions.RequestException:
+            pass
+
+        if response is not None:
+            if response.status_code == HTTPStatus.OK:
+                break
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return False
+        time.sleep(5)
 
     state_change = ReceiveSecretReveal(
         sender=secret_request_event.recipient,
