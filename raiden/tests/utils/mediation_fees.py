@@ -71,7 +71,7 @@ def imbalance_fee_sender(
 
 def fee_sender(
     fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
+) -> FeeAmount:
     """Returns the mediation fee for this channel when transferring the given amount"""
     imbalance_fee = imbalance_fee_sender(fee_schedule=fee_schedule, amount=amount, balance=balance)
     flat_fee = fee_schedule.flat
@@ -81,7 +81,7 @@ def fee_sender(
 
 def fee_receiver(
     fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
+) -> FeeAmount:
     """Returns the mediation fee for this channel when receiving the given amount"""
 
     def fee_in(imbalance_fee: FeeAmount) -> FeeAmount:
@@ -136,15 +136,11 @@ def get_initial_payment_for_final_target_amount(
 
             balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
             fee_out = fee_sender(fee_schedule=fee_schedule_out, balance=balance_out, amount=total)
-            if fee_out is None:
-                return None
 
             total += fee_out  # type: ignore
 
             balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
             fee_in = fee_receiver(fee_schedule=fee_schedule_in, balance=balance_in, amount=total)
-            if fee_in is None:
-                return None
 
             total += fee_in  # type: ignore
 
