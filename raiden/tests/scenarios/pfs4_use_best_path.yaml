@@ -52,10 +52,11 @@ scenario:
       - serial:
           name: "Test providing routes"
           tasks:
+            - wait_blocks: 2
             # Check that the payment goes through from 0 to 3
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount was tranferred
+            # Assert that correct amount was transferred
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
