@@ -481,4 +481,3 @@ def test_update_channel_reveal_timeout():
     )
 
     assert iteration.new_state.reveal_timeout == valid_reveal_timeout
-======= end
