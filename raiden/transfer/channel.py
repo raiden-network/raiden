@@ -1911,7 +1911,11 @@ def handle_action_set_reveal_timeout(
     events: List[Event] = list()
 
     is_valid_reveal_timeout = (
-        state_change.reveal_timeout > 0
+        # This has to account for the bare minimum for block & transaction propagation
+        # + the min amount of blocks expected for that transaction to be mined according
+        # to fastest gas strategy where a transaction takes roughly 60 seconds to
+        # be mined, which is roughly equal to 7 blocks.
+        state_change.reveal_timeout >= 7
         and channel_state.settle_timeout >= state_change.reveal_timeout * 2
     )
 
