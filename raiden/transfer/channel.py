@@ -224,6 +224,8 @@ def is_channel_usable_for_new_transfer(
     - The channel has capacity.
     - The number of locks can be claimed on-chain.
     - The transfer amount does not overflow.
+    - The settlement window is large enough to allow the secret to be
+      registered on-chain.
     - lock_timeout, if provided, is within allowed range (reveal_timeout, settle_timeout]
 
     The number of locks has to be checked because the gas usage will increase
@@ -238,9 +240,18 @@ def is_channel_usable_for_new_transfer(
         and lock_timeout > channel_state.reveal_timeout
     )
 
+    # The settle_timeout can be chosen independently by our partner. That means
+    # it is possible for a malicious partner to choose a settlement timeout so
+    # small that it is not possible to register the secret on-chain.
+    #
+    # This is true for version 0.25.0 of the smart contracts, since there is
+    # nothing the client can do to prevent the channel from being open the only
+    # option is to ignore the channel.
+    is_valid_settle_timeout = channel_state.settle_timeout >= channel_state.reveal_timeout * 2
+
     channel_usable = (
         get_status(channel_state) == ChannelState.STATE_OPENED
-        and channel_state.settle_timeout >= channel_state.reveal_timeout * 2
+        and is_valid_settle_timeout
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
