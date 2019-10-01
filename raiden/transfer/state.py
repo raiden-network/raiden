@@ -372,9 +372,6 @@ class NettingChannelState(State):
         typecheck(self.open_transaction, TransactionExecutionStatus)
         typecheck(self.canonical_identifier.channel_identifier, T_ChannelID)
 
-        if self.reveal_timeout >= self.settle_timeout:
-            raise ValueError("reveal_timeout must be smaller than settle_timeout")
-
         if self.our_state.address == self.partner_state.address:
             raise ValueError("it is illegal to open a channel with itself")
 

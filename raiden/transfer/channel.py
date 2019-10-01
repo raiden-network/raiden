@@ -240,6 +240,7 @@ def is_channel_usable_for_new_transfer(
 
     channel_usable = (
         get_status(channel_state) == ChannelState.STATE_OPENED
+        and channel_state.settle_timeout >= channel_state.reveal_timeout * 2
         and pending_transfers < MAXIMUM_PENDING_TRANSFERS
         and transfer_amount <= distributable
         and is_valid_amount(channel_state.our_state, transfer_amount)
