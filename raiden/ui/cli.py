@@ -28,6 +28,8 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
     RAIDEN_CONTRACT_VERSION,
 )
 from raiden.utils import get_system_spec
@@ -210,6 +212,23 @@ def options(func):
             default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
             show_default=True,
             type=click.FloatRange(min=0.1),
+        ),
+        option_group(
+            "Channel-specific Options",
+            option(
+                "--default-reveal-timeout",
+                help="Sets the default reveal timeout to be used to newly created channels",
+                default=DEFAULT_REVEAL_TIMEOUT,
+                show_default=True,
+                type=click.IntRange(min=20),
+            ),
+            option(
+                "--default-settle-timeout",
+                help="Sets the default settle timeout to be used to newly created channels",
+                default=DEFAULT_SETTLE_TIMEOUT,
+                show_default=True,
+                type=click.IntRange(min=20),
+            ),
         ),
         option_group(
             "Ethereum Node Options",
