@@ -1,4 +1,6 @@
 import pytest
+from hypothesis import given
+from hypothesis.strategies import integers, just
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.tests.unit.transfer.test_channel import make_hash_time_lock_state
@@ -7,6 +9,7 @@ from raiden.tests.utils.factories import (
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
 )
+from raiden.tests.utils.mediation_fees import get_initial_payment_for_final_target_amount
 from raiden.transfer.mediated_transfer.mediation_fee import (
     NUM_DISCRETISATION_POINTS,
     FeeScheduleState,
@@ -19,6 +22,7 @@ from raiden.utils.mediation_fees import ppm_fee_per_channel
 from raiden.utils.typing import (
     Balance,
     FeeAmount,
+    PaymentAmount,
     PaymentWithFeeAmount,
     ProportionalFeeAmount,
     TokenAmount,
@@ -227,7 +231,14 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
 
 @pytest.mark.parametrize(
     "flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
-    [(0, 0, 10_000, 50_000, 50_000 + 2_000)],
+    [
+        # The higher the imbalance fee, the stronger the impact of the fee interation
+        (0, 0, 10_000, 50_000, 50_000 + 2_000),
+        (0, 0, 20_000, 50_000, 50_000 + 3_995),
+        (0, 0, 30_000, 50_000, 50_000 + 5_908),
+        (0, 0, 40_000, 50_000, 50_000 + 7_600),
+        (0, 0, 50_000, 50_000, 50_000 + 9_050),
+    ],
 )
 def test_get_lock_amount_after_fees_imbalanced_channel(
     flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
@@ -266,3 +277,65 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
         lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
+
+
+@given(
+    integers(min_value=0, max_value=100),
+    integers(min_value=0, max_value=10_000),
+    integers(min_value=0, max_value=50_000),
+    just(10_000),
+)
+def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
+    """ Tests mediation fee deduction. """
+    balance = TokenAmount(100_000)
+    prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
+    imbalance_fee = calculate_imbalance_fees(
+        channel_capacity=balance, proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee)
+    )
+    payer_channel = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+            partner_state=NettingChannelEndStateProperties(balance=balance),
+            fee_schedule=FeeScheduleState(
+                flat=FeeAmount(flat_fee),
+                proportional=prop_fee_per_channel,
+                imbalance_penalty=imbalance_fee,
+            ),
+        )
+    )
+    payer_channel_backwards = factories.create(
+        NettingChannelStateProperties(
+            partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+            our_state=NettingChannelEndStateProperties(balance=balance),
+            fee_schedule=FeeScheduleState(
+                flat=FeeAmount(flat_fee),
+                proportional=prop_fee_per_channel,
+                imbalance_penalty=imbalance_fee,
+            ),
+        )
+    )
+    payee_channel = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance),
+            partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+            fee_schedule=FeeScheduleState(
+                flat=FeeAmount(flat_fee),
+                proportional=prop_fee_per_channel,
+                imbalance_penalty=imbalance_fee,
+            ),
+        )
+    )
+
+    fee_calculation = get_initial_payment_for_final_target_amount(
+        final_amount=PaymentAmount(amount), channels=[payer_channel_backwards, payee_channel]
+    )
+    assert fee_calculation
+
+    amount_after_fees = get_lock_amount_after_fees(
+        lock=make_hash_time_lock_state(amount=fee_calculation.total_amount),
+        payer_channel=payer_channel,
+        payee_channel=payee_channel,
+    )
+    assert amount_after_fees
+
+    assert abs(amount - amount_after_fees) < 100
