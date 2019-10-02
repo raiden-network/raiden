@@ -302,8 +302,7 @@ def test_fees_are_updated_during_startup(
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
-    # with 5% 400imbalance fee
-    print(channel_state.fee_schedule.imbalance_penalty)
+    # with 5% imbalance fee
     full_imbalance_penalty = [
         (0, 20),
         (20, 18),
