@@ -35,6 +35,8 @@ nodes:
     proportional-imbalance-fee:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
 
 # This is the MS3 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. Before the monitoring trigger block is passed node1 gets back online.
@@ -61,12 +63,12 @@ scenario:
 
       ## node1 gets back online before the MS reacts
       ## node1 should call updateNonClosingBalanceProof in this case and the MS wont react
-      - wait_blocks: 20
+      - wait_blocks: 10
       - start_node: 1
 
       ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 500 = 400
       ## But we just need to check for the event from node1 before the monitoring service reacts
-      - wait_blocks: 20
+      - wait_blocks: 10
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -75,6 +77,6 @@ scenario:
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
       ## Settlement timeout is 500 blocks, but we already waited 40 blocks.
-      - wait_blocks: 461
+      - wait_blocks: 20
       # will fail for now since channel was closed by node1. We should add functionality to assert a fail
       - assert_ms_claim: {channel_info_key: "MS Test Channel", must_claim: False}
