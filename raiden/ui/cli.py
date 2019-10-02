@@ -461,7 +461,7 @@ def options(func):
                     "Set the worst-case imbalance fee relative to the channels capacity "
                     "in parts-per-million (10^-6) for a certain token address."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
                 multiple=True,
             ),
         ),
