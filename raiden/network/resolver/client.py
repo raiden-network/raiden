@@ -58,8 +58,7 @@ def reveal_secret_with_resolver(
 
         if secret_request_event.expiration < current_state.block_number:
             log.debug(
-                "Stopped using resolver, transfer expired",
-                resolver_endpoint=resolver_endpoint
+                "Stopped using resolver, transfer expired", resolver_endpoint=resolver_endpoint
             )
             return False
 
@@ -80,8 +79,7 @@ def reveal_secret_with_resolver(
         gevent.sleep(5)
 
     log.debug(
-        "Got secret from resolver, dispatching secret reveal",
-        resolver_endpoint=resolver_endpoint
+        "Got secret from resolver, dispatching secret reveal", resolver_endpoint=resolver_endpoint
     )
     state_change = ReceiveSecretReveal(
         sender=secret_request_event.recipient,
