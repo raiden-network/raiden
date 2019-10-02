@@ -80,7 +80,10 @@ def fee_sender(
 
 
 def fee_receiver(
-    fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
+    fee_schedule: FeeScheduleState,
+    balance: Balance,
+    amount: PaymentWithFeeAmount,
+    iterations: int = 2,
 ) -> FeeAmount:
     """Returns the mediation fee for this channel when receiving the given amount"""
 
@@ -95,11 +98,13 @@ def fee_receiver(
             )
         )
 
-    imbalance_fee = imbalance_fee_receiver(
-        fee_schedule=fee_schedule,
-        amount=PaymentWithFeeAmount(amount - fee_in(imbalance_fee=FeeAmount(0))),
-        balance=balance,
-    )
+    imbalance_fee = FeeAmount(0)
+    for _ in range(iterations):
+        imbalance_fee = imbalance_fee_receiver(
+            fee_schedule=fee_schedule,
+            amount=PaymentWithFeeAmount(amount + fee_in(imbalance_fee=imbalance_fee)),
+            balance=balance,
+        )
 
     return fee_in(imbalance_fee=imbalance_fee)
 
