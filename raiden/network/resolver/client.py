@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import gevent
 import requests
+import structlog
 from eth_utils import to_bytes, to_hex
 
 from raiden.storage.wal import WriteAheadLog
@@ -18,12 +19,18 @@ if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
 
 
+log = structlog.get_logger(__name__)
+
+
 def reveal_secret_with_resolver(
     raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
 ) -> bool:
 
-    if "resolver_endpoint" not in raiden.config:
+    resolver_endpoint = raiden.config.get("resolver_endpoint")
+    if not resolver_endpoint:
         return False
+
+    log.debug("Using resolver to fetch secret", resolver_endpoint=resolver_endpoint)
 
     assert isinstance(raiden.wal, WriteAheadLog), "RaidenService has not been started"
     current_state = raiden.wal.state_manager.current_state
@@ -50,6 +57,10 @@ def reveal_secret_with_resolver(
         current_state = views.state_from_raiden(raiden)
 
         if secret_request_event.expiration < current_state.block_number:
+            log.debug(
+                "Stopped using resolver, transfer expired",
+                resolver_endpoint=resolver_endpoint
+            )
             return False
 
         response = None
@@ -57,7 +68,7 @@ def reveal_secret_with_resolver(
         try:
             # before calling resolver, update block height
             request["chain_height"] = chain_state.block_number
-            response = requests.post(raiden.config["resolver_endpoint"], json=request)
+            response = requests.post(resolver_endpoint, json=request)
         except requests.exceptions.RequestException:
             pass
 
@@ -68,6 +79,10 @@ def reveal_secret_with_resolver(
                 return False
         gevent.sleep(5)
 
+    log.debug(
+        "Got secret from resolver, dispatching secret reveal",
+        resolver_endpoint=resolver_endpoint
+    )
     state_change = ReceiveSecretReveal(
         sender=secret_request_event.recipient,
         secret=Secret(to_bytes(hexstr=json.loads(response.content)["secret"])),
