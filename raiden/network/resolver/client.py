@@ -71,10 +71,16 @@ def reveal_secret_with_resolver(
         except requests.exceptions.RequestException:
             pass
 
+        # no response means the resolver could not be reached and we should try again
         if response is not None:
             if response.status_code == HTTPStatus.OK:
+                # request succeeded so we can break the loop and use the secret
                 break
-            if response.status_code == HTTPStatus.NOT_FOUND:
+            elif response.status_code == HTTPStatus.SERVICE_UNAVAILABLE:
+                # treat SERVICE UNAVAILABLE as if the resolver could not be reached and try again
+                pass
+            else:
+                # on any other status code, treat the request as having failed and return False
                 return False
         gevent.sleep(5)
 
