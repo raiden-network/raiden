@@ -151,7 +151,7 @@ def calculate_imbalance_fees(
     c = max_imbalance_fee
     o = channel_capacity / 2
     b = s * o / c
-    b = min(b, 100)  # limit exponent to keep numerical stability
+    b = min(b, 10)  # limit exponent to keep numerical stability
     a = c / o ** b
 
     def f(x: TokenAmount) -> FeeAmount:
