@@ -1,4 +1,4 @@
-FROM python:3.7
+FROM python:3.7-stretch
 
 # these are defined in .travis.yml and passed here in the makefile
 ARG SOLC_URL_LINUX
@@ -17,26 +17,23 @@ RUN wget -nv -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && \
     rm geth.tar.gz
 
 
-ADD requirements*.txt /tmp/
-ADD constraints.txt /tmp/
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+ADD requirements/requirements.txt /tmp/
 WORKDIR /tmp
 
-RUN pip install -U 'pip<19.0.0' setuptools setuptools_scm
-RUN pip install -r requirements.txt -c constraints.txt
-RUN pip install pyinstaller
+
+RUN pip install -U 'pip<19.0.0' setuptools pip-tools
+RUN pip-sync requirements.txt
 
 ADD . /raiden
 
 WORKDIR /raiden
-RUN git fetch --tags | true
-
-
-# build contracts and web_ui
-RUN python setup.py build
+RUN git fetch --tags || true
 
 # install raiden
-RUN pip install -c constraints.txt .
-
+RUN make install && pip install pyinstaller
 
 ARG ARCHIVE_TAG
 ARG ARCHITECTURE_TAG

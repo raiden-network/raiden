@@ -1,19 +1,24 @@
-from collections import Mapping
+from collections.abc import Mapping
 
 import gevent
 
 from raiden.raiden_service import RaidenService
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
-from raiden.utils.typing import Any, Dict, List, Optional
+from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
+from raiden.utils.typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar
 
 NOVALUE = object()
+T = TypeVar("T")
+SC = TypeVar("SC", bound=StateChange)
+TM = TypeVar("TM", bound=Mapping)
 
 
-def check_dict_nested_attrs(item: Dict, dict_data: Dict) -> bool:
+def check_dict_nested_attrs(item: Mapping, dict_data: Mapping) -> bool:
     """ Checks the values from `dict_data` are contained in `item`
 
     >>> d = {'a': 1, 'b': {'c': 2}}
-    >>> check_dict_nested_attrs(d, {'a': 1)
+    >>> check_dict_nested_attrs(d, {'a': 1})
     True
     >>> check_dict_nested_attrs(d, {'b': {'c': 2}})
     True
@@ -35,7 +40,7 @@ def check_dict_nested_attrs(item: Dict, dict_data: Dict) -> bool:
     return True
 
 
-def check_nested_attrs(item: Any, attributes: Dict) -> bool:
+def check_nested_attrs(item: Any, attributes: Mapping) -> bool:
     """ Checks the attributes from `item` match the values defined in `attributes`.
 
     >>> from collections import namedtuple
@@ -64,7 +69,9 @@ def check_nested_attrs(item: Any, attributes: Dict) -> bool:
     return True
 
 
-def search_for_item(item_list: List, item_type: Any, attributes: Dict) -> Optional[Any]:
+def search_for_item(
+    item_list: Iterable[T], item_type: Type[T], attributes: Mapping
+) -> Optional[T]:
     """ Search for the first item of type `item_type` with `attributes` in
     `item_list`.
 
@@ -78,37 +85,42 @@ def search_for_item(item_list: List, item_type: Any, attributes: Dict) -> Option
 
 
 def raiden_events_search_for_item(
-    raiden: RaidenService, item_type: Event, attributes: Dict
+    raiden: RaidenService, item_type: Type[Event], attributes: Mapping
 ) -> Optional[Event]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.
     """
+    assert raiden.wal, "RaidenService must be started"
     return search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
 
 
 def raiden_state_changes_search_for_item(
-    raiden: RaidenService, item_type: StateChange, attributes: Dict
-) -> Optional[StateChange]:
+    raiden: RaidenService, item_type: Type[SC], attributes: Mapping
+) -> Optional[SC]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.
     """
-    return search_for_item(
-        raiden.wal.storage.get_statechanges_by_identifier(0, "latest"), item_type, attributes
-    )
+    assert raiden.wal, "RaidenService must be started"
+
+    for item in raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES):
+        if isinstance(item, item_type) and check_nested_attrs(item, attributes):
+            return item
+
+    return None
 
 
-def must_have_event(event_list: List, dict_data: Dict):
+def must_have_event(event_list: Iterable[TM], dict_data: TM) -> Optional[TM]:
     for item in event_list:
         if isinstance(item, Mapping) and check_dict_nested_attrs(item, dict_data):
             return item
     return None
 
 
-def must_have_events(event_list: List, *args) -> bool:
+def must_have_events(event_list: List[TM], *args) -> bool:
     for dict_data in args:
         item = must_have_event(event_list, dict_data)
         if not item:
@@ -117,9 +129,23 @@ def must_have_events(event_list: List, *args) -> bool:
     return True
 
 
+def has_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> bool:
+    for event in events:
+        for event_type in event_types:
+            if isinstance(event, event_type):
+                return True
+    else:
+        return False
+
+
+def has_unlock_failure(raiden: RaidenService) -> bool:
+    events = raiden.wal.storage.get_events()  # type: ignore
+    return has_event_of_types(events, (EventUnlockFailed, EventUnlockClaimFailed))
+
+
 def wait_for_raiden_event(
-    raiden: RaidenService, item_type: Event, attributes: Dict, retry_timeout: float
-) -> Event:
+    raiden: RaidenService, item_type: Type[Event], attributes: Mapping, retry_timeout: float
+) -> Optional[Event]:
     """Wait until an event is seen in the WAL events
 
     Note:
@@ -133,8 +159,8 @@ def wait_for_raiden_event(
 
 
 def wait_for_state_change(
-    raiden: RaidenService, item_type: StateChange, attributes: Dict, retry_timeout: float
-) -> StateChange:
+    raiden: RaidenService, item_type: Type[StateChange], attributes: Mapping, retry_timeout: float
+) -> Optional[StateChange]:
     """Wait until a state change is seen in the WAL
 
     Note:

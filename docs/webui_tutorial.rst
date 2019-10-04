@@ -4,6 +4,9 @@ Web Application Tutorial
 .. toctree::
   :maxdepth: 2
 
+.. NOTE::
+      We are currently reworking our documentation for Raiden and just finished updating this tutorial for the web application. You can view the updated web application tutorial in this `new but incomplete version of the documentation <https://docs.raiden.network/the-raiden-web-interface/>`_.
+
 In order to quickly give an overview and idea of what Raiden is capable of, a web application has been created. This application utilizes the :doc:`Raiden REST API endpoints <rest_api>` to allow the user to interact with token networks, make token payments, see the current status of open channels along with closing and settling channels to name some of the functionalities. For a more specific guide of the API itself see the :doc:`API Walkthrough <api_walkthrough>`.
 
 The main focus of the web application is to display functionality. If you want to contribute, don't hesitate to create a `pull request <https://github.com/raiden-network/webui/pulls>`_.

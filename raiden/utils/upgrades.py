@@ -8,12 +8,6 @@ import filelock
 import structlog
 
 from raiden.constants import RAIDEN_DB_VERSION
-from raiden.storage.migrations.v16_to_v17 import upgrade_v16_to_v17
-from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
-from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
-from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
-from raiden.storage.migrations.v20_to_v21 import upgrade_v20_to_v21
-from raiden.storage.migrations.v21_to_v22 import upgrade_v21_to_v22
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
 from raiden.utils.typing import Callable, List, NamedTuple
@@ -24,14 +18,7 @@ class UpgradeRecord(NamedTuple):
     function: Callable
 
 
-UPGRADES_LIST = [
-    UpgradeRecord(from_version=16, function=upgrade_v16_to_v17),
-    UpgradeRecord(from_version=17, function=upgrade_v17_to_v18),
-    UpgradeRecord(from_version=18, function=upgrade_v18_to_v19),
-    UpgradeRecord(from_version=19, function=upgrade_v19_to_v20),
-    UpgradeRecord(from_version=20, function=upgrade_v20_to_v21),
-    UpgradeRecord(from_version=21, function=upgrade_v21_to_v22),
-]
+UPGRADES_LIST: List[UpgradeRecord] = []
 
 
 log = structlog.get_logger(__name__)
@@ -137,7 +124,6 @@ class UpgradeManager:
         assert match, f'Database name "{base_name}" does not match our format'
 
         self._current_db_filename = Path(db_filename)
-        self._current_version = get_file_version(self._current_db_filename)
         self._kwargs = kwargs
 
     def run(self):
@@ -189,28 +175,29 @@ class UpgradeManager:
         with get_file_lock(from_file), get_file_lock(target_file):
             _copy(from_file, target_file)
 
-            storage = SQLiteStorage(target_file)
+            # Only instantiate `SQLiteStorage` after the copy. Otherwise
+            # `_copy` will deadlock because only one connection is allowed to
+            # `target_file`.
 
-            log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
+            with SQLiteStorage(target_file) as storage:
+                log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
 
-            try:
-                version_iteration = from_version
+                try:
+                    version_iteration = from_version
 
-                with storage.transaction():
-                    for upgrade_record in UPGRADES_LIST:
-                        if upgrade_record.from_version < from_version:
-                            continue
+                    with storage.transaction():
+                        for upgrade_record in UPGRADES_LIST:
+                            if upgrade_record.from_version < from_version:
+                                continue
 
-                        version_iteration = upgrade_record.function(
-                            storage=storage,
-                            old_version=version_iteration,
-                            current_version=RAIDEN_DB_VERSION,
-                            **self._kwargs,
-                        )
+                            version_iteration = upgrade_record.function(
+                                storage=storage,
+                                old_version=version_iteration,
+                                current_version=RAIDEN_DB_VERSION,
+                                **self._kwargs,
+                            )
 
-                    update_version(storage, RAIDEN_DB_VERSION)
-            except BaseException as e:
-                log.error(f"Failed to upgrade database: {e}")
-                raise
-
-            storage.conn.close()
+                        update_version(storage, RAIDEN_DB_VERSION)
+                except BaseException as e:
+                    log.error(f"Failed to upgrade database: {e}")
+                    raise

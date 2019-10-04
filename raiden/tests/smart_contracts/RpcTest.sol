@@ -1,12 +1,20 @@
 pragma solidity ^0.5.4;
 
 contract RpcTest {
-    function fail() pure public {
+    function fail_require() pure public {
         require(false);
+    }
+
+    function fail_assert() pure public {
+        assert(false);
     }
 
     function ret() pure public returns (uint) {
         return 1;
+    }
+
+    function ret_str() pure public returns (string memory) {
+        return "";
     }
 
     function loop(uint reps) pure public returns (uint) {

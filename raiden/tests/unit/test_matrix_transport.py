@@ -16,6 +16,7 @@ from raiden.network.transport.matrix.utils import (
     login_or_register,
     make_client,
     make_room_alias,
+    my_place_or_yours,
     sort_servers_closest,
     validate_userid_signature,
 )
@@ -166,7 +167,7 @@ def test_sort_servers_closest(monkeypatch):
 
     server_count = 9
     sorted_servers = sort_servers_closest([f"https://server{i}.xyz" for i in range(server_count)])
-    rtts = [rtt for (_, rtt) in sorted_servers]
+    rtts = list(sorted_servers.values())
 
     assert len(sorted_servers) <= server_count
     assert all(rtts) and rtts == sorted(rtts)
@@ -207,3 +208,12 @@ def test_make_room_alias():
     assert make_room_alias(1, "discovery") == "raiden_mainnet_discovery"
     assert make_room_alias(3, "0xdeadbeef", "0xabbacada") == "raiden_ropsten_0xdeadbeef_0xabbacada"
     assert make_room_alias(1337, "monitoring") == "raiden_1337_monitoring"
+
+
+def test_invite_tiebreaker():
+    address = str("a" * 32).encode("utf-8")
+    address1 = str("b" * 32).encode("utf-8")
+    address2 = str("c" * 32).encode("utf-8")
+
+    assert my_place_or_yours(address, address1) == address
+    assert my_place_or_yours(address1, address2) == address1

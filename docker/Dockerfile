@@ -8,11 +8,11 @@
 #
 #   docker build . -t raiden
 
-FROM python:3 as builder
+FROM python:3.7 as builder
 
 # use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
 ARG REPO=raiden-network/raiden
-ARG RAIDENVERSION=master
+ARG RAIDENVERSION=develop
 
 # This is a "hack" to automatically invalidate the cache in case there are new commits
 ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
@@ -22,10 +22,14 @@ RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO} /app/raiden
 
 RUN python3 -m venv /opt/venv
 
-RUN /opt/venv/bin/pip3 install -c /app/raiden/constraints.txt -r /app/raiden/requirements.txt /app/raiden
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app/raiden
+
+RUN make install
 
 
-FROM python:3-slim as runner
+FROM python:3.7-slim as runner
 
 COPY --from=builder /opt/venv /opt/venv
 

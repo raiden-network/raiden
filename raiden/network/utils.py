@@ -1,4 +1,5 @@
 import errno
+import json
 import socket
 import sys
 from contextlib import closing
@@ -8,17 +9,21 @@ from time import sleep
 
 import psutil
 import requests
-from requests import RequestException
 
-from raiden.utils.typing import Iterable, Optional, Port
+from raiden.utils.typing import Iterator, Optional, Port
 
 LOOPBACK = "127.0.0.1"
 
+
+def get_response_json(response):
+    return json.loads(response.content)
+
+
 # The solution based on psutils does not work on MacOS because it needs
 # root access
-if sys.platform == "darwin":
+if sys.platform == "darwin":  # pragma: no cover
 
-    def _unused_ports(initial_port: Optional[int]) -> Iterable[Port]:
+    def _unused_ports(initial_port: Optional[int]) -> Iterator[Port]:
         socket_kind: SocketKind = SocketKind.SOCK_STREAM
 
         if not initial_port:
@@ -59,7 +64,7 @@ if sys.platform == "darwin":
 
 else:
 
-    def _unused_ports(initial_port: Optional[int]) -> Iterable[Port]:
+    def _unused_ports(initial_port: Optional[int]) -> Iterator[Port]:
         initial_port = initial_port or 27854
 
         for port in count(initial_port):
@@ -75,7 +80,7 @@ else:
                 yield Port(port)
 
 
-def get_free_port(initial_port: Optional[int] = None) -> Iterable[Port]:
+def get_free_port(initial_port: Optional[int] = None) -> Iterator[Port]:
     """Find an unused TCP port.
 
     If `initial_port` is passed the function will try to find a port as close as possible.
@@ -99,10 +104,7 @@ def get_http_rtt(
             durations.append(
                 requests.request(method, url, timeout=timeout).elapsed.total_seconds()
             )
-        except (RequestException, OSError):
-            return None
-        except Exception as ex:
-            print(ex)
+        except (OSError, requests.RequestException):
             return None
         # Slight delay to avoid overloading
         sleep(0.125)

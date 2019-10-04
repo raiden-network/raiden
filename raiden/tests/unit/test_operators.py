@@ -1,4 +1,5 @@
-from raiden.messages import Processed
+from raiden.constants import EMPTY_SIGNATURE
+from raiden.messages.synchronization import Processed
 from raiden.tests.utils import factories
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
@@ -9,12 +10,7 @@ from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.utils import sha3
 
 ADDRESS = sha3(b"foo")[:20]
-ADDRESS2 = sha3(b"boo")[:20]
-ADDRESS3 = sha3(b"coo")[:20]
-ADDRESS4 = sha3(b"goo")[:20]
 SECRET = b"secret"
-HASH = sha3(SECRET)
-HASH2 = sha3(b"joo")
 
 
 def test_transfer_statechange_operators():
@@ -40,10 +36,10 @@ def test_transfer_statechange_operators():
 
 
 def test_event_operators():
-    a = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"))
-    b = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"))
-    c = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"target"))
-    d = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"differenttarget"))
+    a = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"), b"0", [])
+    b = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"), b"0", [])
+    c = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"target"), b"0", [])
+    d = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"differenttarget"), b"0", [])
 
     # pylint: disable=unneeded-not
     assert a == b
@@ -78,9 +74,9 @@ def test_message_operators():
     message_identifier = 10
     message_identifier2 = 11
 
-    a = Processed(message_identifier=message_identifier)
-    b = Processed(message_identifier=message_identifier)
-    c = Processed(message_identifier=message_identifier2)
+    a = Processed(message_identifier=message_identifier, signature=EMPTY_SIGNATURE)
+    b = Processed(message_identifier=message_identifier, signature=EMPTY_SIGNATURE)
+    c = Processed(message_identifier=message_identifier2, signature=EMPTY_SIGNATURE)
 
     # pylint: disable=unneeded-not
     assert a == b

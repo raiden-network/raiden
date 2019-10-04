@@ -1,20 +1,30 @@
+version: 2
+
 settings:
   gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      # url: https://pfs-kovan.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
 
 token:
 
 nodes:
-  commands:
-    #start: "docker start raiden_{:02d}"
-    #stop: "docker stop raiden_{:02d}"
-    #kill: "docker kill raiden_{:02d}"
-    stop: "pkill -f '127.0.0.1:50{:02d}'"
-    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
-    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
-  range:
-    first: 1
-    last: 4
-    template: "localhost:50{:02d}"
+  mode: managed
+  count: 4
+  ## add path to Raiden virtual env
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-eth-address: "0x0bae0289AAA26845224F528F9B9DefE69e01606E"
+    pathfinding-max-fee: 10
 
 scenario:
   serial:

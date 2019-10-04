@@ -11,24 +11,18 @@ import gevent
 import gevent.monkey
 import structlog
 from gevent.event import AsyncResult
-from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 
 from raiden import constants, settings
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
-from raiden.exceptions import (
-    APIServerPortInUseError,
-    EthNodeCommunicationError,
-    EthNodeInterfaceError,
-    RaidenError,
-    RaidenServicePortInUseError,
-)
+from raiden.exceptions import APIServerPortInUseError, EthNodeInterfaceError, RaidenError
 from raiden.log_config import configure_logging
-from raiden.network.sockfactory import SocketFactory
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
+from raiden.utils.typing import Port
 
 from .app import run_app
 from .config import dump_cmd_options, dump_config, dump_module
@@ -67,6 +61,7 @@ class NodeRunner:
             log_json=self._options["log_json"],
             log_file=self._options["log_file"],
             disable_debug_logfile=self._options["disable_debug_logfile"],
+            debug_log_file_name=self._options["debug_logfile_name"],
         )
 
         log.info("Starting Raiden", **get_system_spec())
@@ -78,6 +73,8 @@ class NodeRunner:
         from raiden.api.python import RaidenAPI
 
         config = deepcopy(App.DEFAULT_CONFIG)
+        config["reveal_timeout"] = self._options["default_reveal_timeout"]
+        config["settle_timeout"] = self._options["default_settle_timeout"]
         if self._options.get("extra_config", dict()):
             merge_dict(config, self._options["extra_config"])
             del self._options["extra_config"]
@@ -93,7 +90,7 @@ class NodeRunner:
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
             app_ = run_app(**self._options)
-        except (EthNodeCommunicationError, RequestsConnectionError):
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RuntimeError as e:
@@ -118,6 +115,10 @@ class NodeRunner:
         if self._options["rpc"]:
             rest_api = RestAPI(self._raiden_api)
             (api_host, api_port) = split_endpoint(self._options["api_address"])
+
+            if not api_port:
+                api_port = Port(settings.DEFAULT_HTTP_SERVER_PORT)
+
             api_server = APIServer(
                 rest_api,
                 config={"host": api_host, "port": api_port},
@@ -161,7 +162,7 @@ class NodeRunner:
         # spawn a greenlet to handle the periodic check for the network id
         tasks.append(
             gevent.spawn(
-                check_network_id, app_.raiden.chain.network_id, app_.raiden.chain.client.web3
+                check_network_id, app_.raiden.rpc_client.chain_id, app_.raiden.rpc_client.web3
             )
         )
 
@@ -177,7 +178,7 @@ class NodeRunner:
         self._startup_hook()
 
         # wait for interrupt
-        event = AsyncResult()
+        event: "AsyncResult[None]" = AsyncResult()
 
         def sig_set(sig=None, _frame=None):
             event.set(sig)
@@ -193,7 +194,7 @@ class NodeRunner:
         try:
             event.get()
             print("Signal received. Shutting down ...")
-        except (EthNodeCommunicationError, RequestsConnectionError):
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RaidenError as ex:
@@ -216,6 +217,8 @@ class NodeRunner:
         finally:
             self._shutdown_hook()
 
+            app_.stop()
+
             def stop_task(task):
                 try:
                     if isinstance(task, Runnable):
@@ -234,32 +237,9 @@ class NodeRunner:
         return app_
 
 
-class UDPRunner(NodeRunner):
-    def run(self):
-        super().run()
-
-        (listen_host, listen_port) = split_endpoint(self._options["listen_address"])
-        try:
-            factory = SocketFactory(listen_host, listen_port, strategy=self._options["nat"])
-            with factory as mapped_socket:
-                self._options["mapped_socket"] = mapped_socket
-                app = self._start_services()
-
-        except RaidenServicePortInUseError:
-            click.secho(
-                "ERROR: Address %s:%s is in use. "
-                "Use --listen-address <host:port> to specify port to listen on."
-                % (listen_host, listen_port),
-                fg="red",
-            )
-            sys.exit(1)
-        return app
-
-
 class MatrixRunner(NodeRunner):
     def run(self):
         super().run()
-        self._options["mapped_socket"] = None
         return self._start_services()
 
 
@@ -268,6 +248,10 @@ class EchoNodeRunner(NodeRunner):
         super().__init__(options, ctx)
         self._token_address = token_address
         self._echo_node = None
+
+    def run(self):
+        super().run()
+        return self._start_services()
 
     @property
     def welcome_string(self):

@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, Tuple
 
 from eth_utils import decode_hex, keccak, remove_0x_prefix
 from web3.utils.abi import map_abi_data
@@ -8,14 +8,9 @@ from web3.utils.normalizers import abi_address_to_hex
 sha3 = keccak
 
 
-def pack_data(abi_types: List[str], values: List[Any]) -> bytes:
+def pack_data(*args: Tuple[Any, str]) -> bytes:
     """Normalize data and pack them into a byte array"""
-    if len(abi_types) != len(values):
-        raise ValueError(
-            "Length mismatch between provided abi types and values.  Got "
-            "{0} types and {1} values.".format(len(abi_types), len(values))
-        )
-
+    values, abi_types = zip(*args)
     normalized_values = map_abi_data([abi_address_to_hex], abi_types, values)
 
     return decode_hex(

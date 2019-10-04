@@ -5,15 +5,13 @@ from enum import Enum
 import pytest
 from eth_utils import remove_0x_prefix
 
-from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
+from raiden.constants import Environment
 from raiden.network.utils import get_free_port
-from raiden.settings import (
-    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    DEFAULT_RETRY_TIMEOUT,
-    DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-    DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
-)
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.tests.fixtures.constants import DEFAULT_BALANCE
+from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.tests import unique_path
 from raiden.utils import sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -24,7 +22,6 @@ DUPLICATED_BRACKETS = str.maketrans({"{": "{{", "}": "}}"})
 
 
 class TransportProtocol(Enum):
-    UDP = "udp"
     MATRIX = "matrix"
 
 
@@ -111,6 +108,23 @@ def random_marker():
 
 
 @pytest.fixture
+def logs_storage(request, tmpdir):
+    """Returns the path where debugging data should be saved.
+
+    Use this to preserve the databases and logs necessary to debug test
+    failures on the CI system.
+    """
+    # A shortened path is necessary because some system have limits on the path
+    # length
+    short_path = shortened_artifacts_storage(request.node) or str(tmpdir)
+
+    # A unique path is necssary because flaky tests are executed multiple
+    # times, and the state of the previous run must not interfere with the new
+    # run.
+    return unique_path(short_path)
+
+
+@pytest.fixture
 def deposit():
     """ Raiden chain default deposit. """
     # Arbitrary initial balance for each channel, using a small number for
@@ -156,31 +170,6 @@ def retries_before_backoff():
 
 
 @pytest.fixture
-def throttle_capacity():
-    return DEFAULT_TRANSPORT_THROTTLE_CAPACITY
-
-
-@pytest.fixture
-def throttle_fill_rate():
-    return DEFAULT_TRANSPORT_THROTTLE_FILL_RATE
-
-
-@pytest.fixture
-def nat_invitation_timeout():
-    return 5
-
-
-@pytest.fixture
-def nat_keepalive_retries():
-    return 2
-
-
-@pytest.fixture
-def nat_keepalive_timeout():
-    return 1
-
-
-@pytest.fixture
 def privatekey_seed(request):
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.
@@ -189,8 +178,13 @@ def privatekey_seed(request):
 
 
 @pytest.fixture
-def token_amount(number_of_nodes):
-    total_per_node = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT * 4
+def account_genesis_eth_balance():
+    return DEFAULT_BALANCE
+
+
+@pytest.fixture
+def token_amount(number_of_nodes, deposit):
+    total_per_node = 3 * (deposit + 1)
     total_token = total_per_node * number_of_nodes
     return total_token
 
@@ -262,9 +256,14 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 
 
 @pytest.fixture(scope="session")
-def port_generator(request):
+def port_generator(request, worker_id):
     """ count generator used to get a unique port number. """
-    return get_free_port(request.config.getoption("base_port"))
+    if worker_id == "master":
+        # xdist is not in use to run parallel tests
+        port_offset = 0
+    else:
+        port_offset = int(worker_id.replace("gw", "")) * 1000
+    return get_free_port(request.config.getoption("base_port") + port_offset)
 
 
 @pytest.fixture
@@ -281,14 +280,6 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
     the p2p protocol.
     """
     return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
-
-
-@pytest.fixture
-def raiden_udp_ports(number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the raiden apps for the udp
-    transport.
-    """
-    return [next(port_generator) for _ in range(number_of_nodes)]
 
 
 @pytest.fixture
@@ -321,19 +312,12 @@ def transport_protocol(transport):
 
 
 @pytest.fixture
-def skip_if_not_udp(request):
-    """Skip the test if not run with UDP transport"""
-    if request.config.option.transport in ("udp", "all"):
-        return
-    pytest.skip("This test works only with UDP transport")
-
-
-@pytest.fixture
-def skip_if_not_matrix(request):
-    """Skip the test if not run with Matrix transport"""
-    if request.config.option.transport in ("matrix", "all"):
-        return
-    pytest.skip("This test works only with Matrix transport")
+def blockchain_query_interval():
+    """
+    Config setting (interval after which to check for new block.)  Set to this low value for the
+    integration tests, where we use a block time of 1 second.
+    """
+    return 0.5
 
 
 @pytest.fixture
@@ -355,3 +339,9 @@ def skip_if_not_geth(blockchain_type):
     """Skip the test if it is run with a Geth node"""
     if blockchain_type != "geth":
         pytest.skip("This test works only with geth.")
+
+
+@pytest.fixture
+def start_raiden_apps():
+    """Determines if the raiden apps created at test setup should also be started"""
+    return True

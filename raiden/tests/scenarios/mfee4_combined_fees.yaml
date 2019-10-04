@@ -1,0 +1,82 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_min: 100_000_000_000_000_000_000
+  balance_fund: 100_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 4
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    flat-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 100
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 10_000  # 1% proportional fee
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 20_000  # 2% imbalance fee on channel balance
+
+## This is the MFEE4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
+## whether a path is returned. It also checks that correct fees are deducted.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000}
+      - serial:
+          name: "Test providing routes"
+          tasks:
+            - wait_blocks: 2
+            # Check that the PFS returns a path from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 500_000_000_000_000_000, expected_http_status: 200}
+
+            ## Check that the path is indeed the expected one
+            - assert_pfs_history:
+                source: 0
+                request_count: 1
+                target: 3
+                expected_routes:
+                  - [0, 1, 2, 3]
+
+            - wait_blocks: 2
+            # 41_963_768_101_996_008 TKN fees are calculated which are 8.4% of the initial payment, 5% margin are added
+            # This results in a total fee of 44_061_956_507_095_808
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 455_938_043_492_904_366, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_544_061_956_507_095_634, state: "opened"}
+
+            # update comment ...
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_064_586_391_421_968, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_935_413_608_578_032, state: "opened"}
+
+            # update comment ...
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_254_201_118_912_876, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_745_798_881_087_124, state: "opened"}

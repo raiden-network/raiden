@@ -1,23 +1,43 @@
+import json
 from http import HTTPStatus
+from typing import TYPE_CHECKING
 
+import gevent
 import requests
+import structlog
 from eth_utils import to_bytes, to_hex
 
-from raiden.raiden_service import RaidenService
 from raiden.storage.wal import WriteAheadLog
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.transfer.state import ChainState
+from raiden.utils import Secret
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService
+
+
+log = structlog.get_logger(__name__)
 
 
 def reveal_secret_with_resolver(
-    raiden: RaidenService, secret_request_event: SendSecretRequest
+    raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
 ) -> bool:
 
-    if "resolver_endpoint" not in raiden.config:
+    resolver_endpoint = raiden.config.get("resolver_endpoint")
+    if not resolver_endpoint:
         return False
+
+    log.debug("Using resolver to fetch secret", resolver_endpoint=resolver_endpoint)
 
     assert isinstance(raiden.wal, WriteAheadLog), "RaidenService has not been started"
     current_state = raiden.wal.state_manager.current_state
+
+    if current_state is None:
+        return False
+
     task = current_state.payment_mapping.secrethashes_to_task[secret_request_event.secrethash]
     token = task.target_state.transfer.token
 
@@ -29,20 +49,41 @@ def reveal_secret_with_resolver(
         "payment_sender": to_hex(secret_request_event.recipient),
         "expiration": secret_request_event.expiration,
         "payment_recipient": to_hex(raiden.address),
-        "reveal_timeout": raiden.config["reveal_timeout"],
-        "settle_timeout": raiden.config["settle_timeout"],
+        "chain_id": chain_state.chain_id,
     }
 
-    try:
-        response = requests.post(raiden.config["resolver_endpoint"], json=request)
-    except requests.exceptions.RequestException:
-        return False
+    # loop until we get a valid response from the resolver or until timeout
+    while True:
+        current_state = views.state_from_raiden(raiden)
 
-    if response is None or response.status_code != HTTPStatus.OK:
-        return False
+        if secret_request_event.expiration < current_state.block_number:
+            log.debug(
+                "Stopped using resolver, transfer expired", resolver_endpoint=resolver_endpoint
+            )
+            return False
 
-    state_change = ReceiveSecretReveal(
-        to_bytes(hexstr=response.json()["secret"]), secret_request_event.recipient
+        response = None
+
+        try:
+            # before calling resolver, update block height
+            request["chain_height"] = chain_state.block_number
+            response = requests.post(resolver_endpoint, json=request)
+        except requests.exceptions.RequestException:
+            pass
+
+        if response is not None:
+            if response.status_code == HTTPStatus.OK:
+                break
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return False
+        gevent.sleep(5)
+
+    log.debug(
+        "Got secret from resolver, dispatching secret reveal", resolver_endpoint=resolver_endpoint
     )
-    raiden.handle_and_track_state_change(state_change)
+    state_change = ReceiveSecretReveal(
+        sender=secret_request_event.recipient,
+        secret=Secret(to_bytes(hexstr=json.loads(response.content)["secret"])),
+    )
+    raiden.handle_and_track_state_changes([state_change])
     return True

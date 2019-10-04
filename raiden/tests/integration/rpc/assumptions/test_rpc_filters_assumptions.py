@@ -4,7 +4,7 @@ from raiden.utils import safe_gas_limit
 
 def test_filter_start_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
@@ -35,7 +35,7 @@ def test_filter_start_block_inclusive(deploy_client):
 def test_filter_end_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block
     until and including end_block. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time

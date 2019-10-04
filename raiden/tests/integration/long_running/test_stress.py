@@ -1,6 +1,7 @@
-import logging
+import time
 from http import HTTPStatus
 from itertools import combinations, count
+from typing import Sequence
 
 import gevent
 import grequests
@@ -8,82 +9,59 @@ import pytest
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
+from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
-from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.typing import (
+    Address,
+    BlockNumber,
+    Iterator,
+    List,
+    Port,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    Tuple,
+)
 
 log = structlog.get_logger(__name__)
 
 
-def _url_for(apiserver, endpoint, **kwargs):
+def iwait_and_get(items: Sequence[gevent.Greenlet]) -> None:
+    """ Iteratively wait and get on passed greenlets.
+
+    This ensures exceptions in the greenlets are re-raised as soon as possible.
+    """
+    for item in gevent.iwait(items):
+        item.get()
+
+
+def _url_for(apiserver: APIServer, endpoint: str, **kwargs) -> str:
     # url_for() expects binary address so we have to convert here
     for key, val in kwargs.items():
         if isinstance(val, str) and val.startswith("0x"):
             kwargs[key] = to_canonical_address(val)
 
     with apiserver.flask_app.app_context():
-        return url_for("v1_resources.{}".format(endpoint), **kwargs)
+        return url_for(f"v1_resources.{endpoint}", **kwargs)
 
 
-def _trimmed_logging(logger_level_config):
-    structlog.reset_defaults()
-
-    logger_level_config = logger_level_config or dict()
-    logger_level_config.setdefault("filelock", "ERROR")
-    logger_level_config.setdefault("", "DEBUG")
-
-    processors = [
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-    ]
-
-    logging.config.dictConfig(
-        {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "plain": {
-                    "()": structlog.stdlib.ProcessorFormatter,
-                    "processor": structlog.dev.ConsoleRenderer(colors=False),
-                    "foreign_pre_chain": processors,
-                }
-            },
-            "handlers": {
-                "default": {
-                    "class": "logging.StreamHandler",
-                    "level": "DEBUG",
-                    "formatter": "plain",
-                }
-            },
-            "loggers": {"": {"handlers": ["default"], "propagate": True}},
-        }
-    )
-    structlog.configure(
-        processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
-        wrapper_class=structlog.stdlib.BoundLogger,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
-    )
-
-
-def start_apiserver(raiden_app, rest_api_port_number):
+def start_apiserver(raiden_app: App, rest_api_port_number: Port) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api, config={"host": "localhost", "port": rest_api_port_number})
 
     # required for url_for
-    api_server.flask_app.config["SERVER_NAME"] = "localhost:{}".format(rest_api_port_number)
+    api_server.flask_app.config["SERVER_NAME"] = f"localhost:{rest_api_port_number}"
 
     api_server.start()
 
@@ -92,35 +70,28 @@ def start_apiserver(raiden_app, rest_api_port_number):
     return api_server
 
 
-def start_apiserver_for_network(raiden_network, port_generator):
+def start_apiserver_for_network(
+    raiden_network: List[App], port_generator: Iterator[Port]
+) -> List[APIServer]:
     return [start_apiserver(app, next(port_generator)) for app in raiden_network]
 
 
-def restart_app(app):
-    host_port = (
-        app.raiden.config["transport"]["udp"]["host"],
-        app.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)  # pylint: disable=protected-access
-    new_transport = UDPTransport(
-        app.raiden.address,
-        app.discovery,
-        socket,
-        app.raiden.transport.throttle_policy,
-        app.raiden.config["transport"]["udp"],
-    )
+def restart_app(app: App) -> App:
+    new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
     app = App(
         config=app.config,
-        chain=app.raiden.chain,
-        query_start_block=0,
+        rpc_client=app.raiden.rpc_client,
+        proxy_manager=app.raiden.proxy_manager,
+        query_start_block=BlockNumber(0),
         default_one_to_n_address=app.raiden.default_one_to_n_address,
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
         default_service_registry=app.raiden.default_service_registry,
+        default_msc_address=app.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
-        discovery=app.raiden.discovery,
+        routing_mode=RoutingMode.PRIVATE,
     )
 
     app.start()
@@ -128,7 +99,7 @@ def restart_app(app):
     return app
 
 
-def restart_network(raiden_network, retry_timeout):
+def restart_network(raiden_network: List[App], retry_timeout: float) -> List[App]:
     for app in raiden_network:
         app.stop()
 
@@ -145,7 +116,12 @@ def restart_network(raiden_network, retry_timeout):
     return new_network
 
 
-def restart_network_and_apiservers(raiden_network, api_servers, port_generator, retry_timeout):
+def restart_network_and_apiservers(
+    raiden_network: List[App],
+    api_servers: List[APIServer],
+    port_generator: Iterator[Port],
+    retry_timeout: float,
+) -> Tuple[List[App], List[APIServer]]:
     """Stop an app and start it back"""
     for rest_api in api_servers:
         rest_api.stop()
@@ -156,11 +132,17 @@ def restart_network_and_apiservers(raiden_network, api_servers, port_generator, 
     return (new_network, new_servers)
 
 
-def address_from_apiserver(apiserver):
+def address_from_apiserver(apiserver: APIServer) -> Address:
     return apiserver.rest_api.raiden_api.address
 
 
-def transfer_and_assert(server_from, server_to, token_address, identifier, amount):
+def transfer_and_assert(
+    server_from: APIServer,
+    server_to: APIServer,
+    token_address: TokenAddress,
+    identifier: int,
+    amount: TokenAmount,
+) -> None:
     url = _url_for(
         server_from,
         "token_target_paymentresource",
@@ -172,30 +154,42 @@ def transfer_and_assert(server_from, server_to, token_address, identifier, amoun
     log.debug("PAYMENT REQUEST", url=url, json=json)
 
     request = grequests.post(url, json=json)
-    response = request.send().response
 
-    assert (
-        getattr(request, "exception", None) is None
-        and response is not None
-        and response.status_code == HTTPStatus.OK
-        and response.headers["Content-Type"] == "application/json"
-    )
+    start = time.monotonic()
+    response = request.send().response
+    duration = time.monotonic() - start
+
+    log.debug("PAYMENT RESPONSE", url=url, json=json, response=response, duration=duration)
+
+    assert getattr(request, "exception", None) is None
+    assert response is not None
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["Content-Type"] == "application/json"
 
 
 def sequential_transfers(
-    server_from, server_to, number_of_transfers, token_address, identifier_generator
-):
+    server_from: APIServer,
+    server_to: APIServer,
+    number_of_transfers: int,
+    token_address: TokenAddress,
+    identifier_generator: Iterator[int],
+) -> None:
     for _ in range(number_of_transfers):
         transfer_and_assert(
             server_from=server_from,
             server_to=server_to,
             token_address=token_address,
             identifier=next(identifier_generator),
-            amount=1,
+            amount=TokenAmount(1),
         )
 
 
-def stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit):
+def stress_send_serial_transfers(
+    rest_apis: List[APIServer],
+    token_address: TokenAddress,
+    identifier_generator: Iterator[int],
+    deposit: TokenAmount,
+) -> None:
     """Send `deposit` transfers of value `1` one at a time, without changing
     the initial capacity.
     """
@@ -232,13 +226,18 @@ def stress_send_serial_transfers(rest_apis, token_address, identifier_generator,
         )
 
 
-def stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit):
+def stress_send_parallel_transfers(
+    rest_apis: List[APIServer],
+    token_address: TokenAddress,
+    identifier_generator: Iterator[int],
+    deposit: TokenAmount,
+) -> None:
     """Send `deposit` transfers in parallel, without changing the initial capacity.
     """
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
     # deplete the channels in one direction
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -253,7 +252,7 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     )
 
     # deplete the channels in the backwards direction
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -268,7 +267,7 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     )
 
     # reset the balances balances by sending the "extra" deposit forward
-    gevent.wait(
+    iwait_and_get(
         [
             gevent.spawn(
                 sequential_transfers,
@@ -284,12 +283,15 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
 
 
 def stress_send_and_receive_parallel_transfers(
-    rest_apis, token_address, identifier_generator, deposit
-):
+    rest_apis: List[APIServer],
+    token_address: TokenAddress,
+    identifier_generator: Iterator[int],
+    deposit: TokenAmount,
+) -> None:
     """Send transfers of value one in parallel"""
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
-    foward_transfers = [
+    forward_transfers = [
         gevent.spawn(
             sequential_transfers,
             server_from=server_from,
@@ -313,16 +315,18 @@ def stress_send_and_receive_parallel_transfers(
         for server_to, server_from in pairs
     ]
 
-    gevent.wait(foward_transfers + backwards_transfers)
+    iwait_and_get(forward_transfers + backwards_transfers)
 
 
-def assert_channels(raiden_network, token_network_identifier, deposit):
+def assert_channels(
+    raiden_network: List[App], token_network_address: TokenNetworkAddress, deposit: TokenAmount
+) -> None:
     pairs = list(zip(raiden_network, raiden_network[1:] + [raiden_network[0]]))
 
     for first, second in pairs:
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             first,
             deposit,
             [],
@@ -335,37 +339,29 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
-@pytest.mark.parametrize("deposit", [5])
+@pytest.mark.parametrize("deposit", [2])
 @pytest.mark.parametrize("reveal_timeout", [15])
 @pytest.mark.parametrize("settle_timeout", [120])
 def test_stress(
-    request,
-    raiden_network,
-    deposit,
-    retry_timeout,
-    token_addresses,
-    port_generator,
-    skip_if_not_udp,  # pylint: disable=unused-argument
-):
-
-    config_converter = LogLevelConfigType()
-    logging_levels = config_converter.convert(
-        value=request.config.option.log_config or "", param=None, ctx=None
-    )
-    _trimmed_logging(logging_levels)
-
+    raiden_network: List[App],
+    deposit: TokenAmount,
+    retry_timeout: float,
+    token_addresses: List[TokenAddress],
+    port_generator: Iterator[Port],
+) -> None:
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
 
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(raiden_network[0]),
         raiden_network[0].raiden.default_registry.address,
         token_address,
     )
+    assert token_network_address
 
     for _ in range(2):
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
@@ -373,7 +369,7 @@ def test_stress(
             raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
@@ -381,7 +377,7 @@ def test_stress(
             raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(raiden_network, token_network_identifier, deposit)
+        assert_channels(raiden_network, token_network_address, deposit)
 
         stress_send_and_receive_parallel_transfers(
             rest_apis, token_address, identifier_generator, deposit

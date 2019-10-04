@@ -12,8 +12,12 @@ Raiden is a payment channel implementation which provides scalable, low latency,
 Installation
 ============
 
-The preferred way to install Raiden is downloading a self contained application bundle from the
-`GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
+To install Raiden you can either:
+
+    * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_
+    * Download a self contained application bundle from the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_
+
+**If you're installing Raiden from the self contained application bundle the following sections will detail how to set up Raiden on various platforms.**
 
 Linux
 *****
@@ -122,16 +126,15 @@ Navigate to the directory::
 
     cd raiden
 
-It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for Raiden (requires python3.7) and install all python dependencies there.
+It's strongly advised to create a virtualenv_ for Raiden (requires python3.7) and install all python dependencies there.
 
 After you have done that you can proceed to install the dependencies::
 
     make install-dev
-    # or alternatively, manually:
-    # pip install -c constraints-dev.txt -r requirements-dev.txt -e .
 
 You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
+.. _virtualenv: https://docs.python.org/3/library/venv.html
 
 macOS
 *****
@@ -160,18 +163,27 @@ In order to use Raiden correctly and safely there are some things that need to b
 - **Ethereum Client Always Online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
 - **Ethereum Client can not be changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
 - **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
+- **"Wormhole Attack" is possible** When your Raiden node plays the role of a mediator, so-called "wormhole attack" is possible. Under this attack, even though the whole payment succeeds, your incoming and outgoing capacities will be locked until the expiration, and the attackers gain mediation fees. However, such an attacker can also avoid your node altogether, and avoid locking their capacities.
 - **Be patient**: Do not mash buttons in the webUI and do not shut down the client while on-chain transactions are on the fly and have not yet been confirmed.
 
 Firing it up
 =============
 
+To fire up Raiden you need at least
+ 1. a synced **Ethereum Node** - using geth, parity or infura
+ 2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
+ 3. the address of your favorite **pathfinding service** - local routing is possible but no recommended
 
-Using geth
-**********
+We will provide you with the necessary cli arguments step by step. Full example is at the end of the page.
+
+1. and 2. The synced Ethereum Node & Keystore
+*********************************************
+
+- **Using geth**
 
 Run the Ethereum client and let it sync::
 
-    geth --syncmode fast --rpc --rpcapi eth,net,web3,txpool
+    geth --syncmode fast --rpc --rpcapi eth,net,web3
 
 .. note::
     When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.
@@ -182,10 +194,9 @@ If problems arise for above method, please see `the Ropsten README <https://gith
 
 Then launch Raiden with the default testnet keystore path::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --pathfinding-service-address $PFS_ADDRESS
 
-Using parity
-************
+- **Using parity**
 
 Run the client and let it sync::
 
@@ -194,29 +205,76 @@ Run the client and let it sync::
 .. note::
     When you want to use a testnet add the ``--chain ropsten`` or ``--chain kovan`` flags or set the network id with ``--network-id`` directly.
 
-.. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the `--no-warp` option.
+.. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the ``--no-warp`` option.
 
 After syncing the chain, an existing Ethereum account can be used or a new one can be generated using ``parity-ethkey``.
 After account creation, launch Raiden with the path of your keystore supplied::
 
-    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
+    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test --pathfinding-service-address $PFS_ADDRESS
 
 .. _using_rpc-endpoint:
 
-Using --eth-rpc-endpoint/Infura
-*******************************
+- **Using Infura**
 
 .. warning::
     Raiden may fail during restarts when Infura is used. This can happen because Raiden does not know about transactions in the memory pool and therefore new transactions might reuse these nonces. This will lead to a node crash.
 
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://mainnet.infura.io/v3/<yourToken>"
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>" --pathfinding-service-address $PFS_ADDRESS
 
 .. note::
     When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
+3. The Pathfinding Address
+***************************
+
+Raiden provides a pathfinding service for efficient transfer routing. The default option when starting the client is with the pathfinding service to be paid in RDN tokens.
+
+There are pathfinding services running on every testnet at the moment, some that charge fees and some that are for free.
+
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Testnet    | pfs with fees                                            | pfs without fees                                |
++============+==========================================================+=================================================+
+| Görli      | https://pfs-goerli-with-fee.services-dev.raiden.network  | https://pfs-goerli.services-dev.raiden.network  |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Ropsten    | https://pfs-ropsten-with-fee.services-dev.raiden.network | https://pfs-ropsten.services-dev.raiden.network |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Kovan      | https://pfs-kovan-with-fee.services-dev.raiden.network   | https://pfs-kovan.services-dev.raiden.network   |
++------------+----------------------------------------------------------+-------------------------------------------------+
+| Rinkeby    | https://pfs-rinkeby-with-fee.services-dev.raiden.network | https://pfs-rinkeby.services-dev.raiden.network |
++------------+----------------------------------------------------------+-------------------------------------------------+
+
+To start Raiden you need to provide a valid pathfinding service address, e.g. for Görli::
+
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://goerli.infura.io/v3/<yourToken>" --pathfinding-service-address "https://pfs-goerli.services-dev.raiden.network"
+
 
 Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface.
+
+
+Optional CLI arguments
+***************************
+
+In this section we will see how some optional CLI arguments work and what you can achieve by using them.
+
+Logging configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+By default raiden keeps a "debug" log file so that people who have not configured logging but are facing problems can still provide us with some logs to debug their problems.
+
+For expert users of raiden who want to configure proper logging we recommend disabling the debug log file and configuring normal logging appropriately.
+
+To disable the log file the ``--disable-debug-logfile`` argument should be passed.
+
+To specify the logging level add: ``--log-config ":debug"`` if you want all debug statements to be logged. The logging level can actually be configured down to the module level through this argument.
+
+To provide the filename for the logs use ``--log-file XXX`` where ``XXX`` is the full path and filename to the log you want to create or append to. Note that Raiden uses a python `WatchedFileHandler <https://docs.python.org/3/library/logging.handlers.html#watchedfilehandler>`__ for this log. That means that if you or your system moves the logfile (for example due to log rotation) then Raiden will detect that and close and reopen the log file handler with the same name.
+
+Finally by default the output of the logs are in plain readable text format. In order to make them machine readable and parsable json add the ``--log-json`` argument.
+
+Summing up these are the arguments you need to append if you want to disable the debug log and want to configure normal logging for up to debug statement in json inside a file called ``raiden.log``
+
+``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``

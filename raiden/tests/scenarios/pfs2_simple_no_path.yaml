@@ -5,29 +5,36 @@ settings:
   chain: any
   services:
     pfs:
-      # url: https://pfs-kovan.services-dev.raiden.network
-      url: http://localhost:6000
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
     udc:
       enable: true
       token:
         deposit: true
 
 token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
 
 nodes:
   mode: managed
   count: 4
-  ## add path to Raiden virtual env
+  raiden_version: local
 
   default_options:
     gas-price: fast
     environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 10
+    pathfinding-max-fee: 100
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
 
-## This is the PFS1 scenario. It creates a network with topology A <-> B <-> C <-> D and checks
-## whether a path is returned.
+## This is the PFS2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
+## that no path is returned since there is no capacity in the direction from 3 to 0.
 
 scenario:
   serial:
@@ -35,17 +42,26 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 1000}
-            - open_channel: {from: 1, to: 2, total_deposit: 1000}
-            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
       - serial:
           name: "Test providing routes"
           tasks:
-            # Check that the PFS returns a path from A to D
-            - assert_pfs_routes: {from: 3, to: 0, amount: 10, expected_paths: 0}
+            # Check that the transfer fails, when there is no path from 3 to 0 
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 409}
 
-            ## Check that the path is indeed the expected one
+            # Assert that correct amount was tranferred
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+
+            # Check that IOU is created despite no available path
+            - assert_pfs_iou: {source: 3, amount: 100}
+
+            ## Check that no path was returned
             - assert_pfs_history:
                 source: 3
                 request_count: 1
                 target: 0
+                routes_count: 0

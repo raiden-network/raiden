@@ -3,8 +3,8 @@ import random
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentReceivedSuccess, SendProcessed
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     SendSecretRequest,
@@ -28,7 +28,6 @@ from raiden.utils.typing import (
     List,
     Optional,
     TokenAmount,
-    TokenNetworkID,
 )
 
 
@@ -66,7 +65,7 @@ def events_for_onchain_secretreveal(
     transfer = target_state.transfer
     expiration = transfer.lock.expiration
 
-    safe_to_wait, _ = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
+    safe_to_wait = is_safe_to_wait(expiration, channel_state.reveal_timeout, block_number)
     secret_known_offchain = channel.is_secret_known_offchain(
         channel_state.partner_state, transfer.lock.secrethash
     )
@@ -91,10 +90,11 @@ def handle_inittarget(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles an ActionInitTarget state change. """
+    iteration: TransitionResult[Optional[TargetTransferState]]
     transfer = state_change.transfer
-    route = state_change.route
+    route = state_change.from_hop
 
     assert channel_state.identifier == transfer.balance_proof.channel_identifier
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
@@ -111,7 +111,7 @@ def handle_inittarget(
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(route, transfer)
 
-        safe_to_wait, _ = is_safe_to_wait(
+        safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
         )
 
@@ -124,12 +124,12 @@ def handle_inittarget(
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
                 recipient=Address(recipient),
-                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
                 amount=transfer.lock.amount,
                 expiration=transfer.lock.expiration,
                 secrethash=transfer.lock.secrethash,
+                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
             )
             channel_events.append(secret_request)
 
@@ -159,9 +159,7 @@ def handle_offchain_secretreveal(
 ) -> TransitionResult[TargetTransferState]:
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
-        state_change=state_change,
-        transfer_secrethash=target_state.transfer.lock.secrethash,
-        secret=state_change.secret,
+        state_change=state_change, transfer_secrethash=target_state.transfer.lock.secrethash
     )
     has_transfer_expired = channel.is_transfer_expired(
         transfer=target_state.transfer, affected_channel=channel_state, block_number=block_number
@@ -174,7 +172,7 @@ def handle_offchain_secretreveal(
             secrethash=state_change.secrethash,
         )
 
-        route = target_state.route
+        route = target_state.from_hop
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
@@ -182,9 +180,9 @@ def handle_offchain_secretreveal(
 
         reveal = SendSecretReveal(
             recipient=recipient,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=target_state.secret,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
 
         iteration = TransitionResult(target_state, [reveal])
@@ -203,9 +201,7 @@ def handle_onchain_secretreveal(
 ) -> TransitionResult[TargetTransferState]:
     """ Validates and handles a ContractReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
-        state_change=state_change,
-        transfer_secrethash=target_state.transfer.lock.secrethash,
-        secret=state_change.secret,
+        state_change=state_change, transfer_secrethash=target_state.transfer.lock.secrethash
     )
 
     if valid_secret:
@@ -226,7 +222,7 @@ def handle_unlock(
     target_state: TargetTransferState,
     state_change: ReceiveUnlock,
     channel_state: NettingChannelState,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
     balance_proof_sender = state_change.balance_proof.sender
 
@@ -236,8 +232,8 @@ def handle_unlock(
     if is_valid:
         transfer = target_state.transfer
         payment_received_success = EventPaymentReceivedSuccess(
-            payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
+            token_network_registry_address=channel_state.token_network_registry_address,
+            token_network_address=channel_state.token_network_address,
             identifier=transfer.payment_identifier,
             amount=TokenAmount(transfer.lock.amount),
             initiator=transfer.initiator,
@@ -249,8 +245,8 @@ def handle_unlock(
 
         send_processed = SendProcessed(
             recipient=balance_proof_sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=state_change.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])
@@ -273,11 +269,11 @@ def handle_block(
     lock = transfer.lock
 
     secret_known = channel.is_secret_known(channel_state.partner_state, lock.secrethash)
-    lock_has_expired, _ = channel.is_lock_expired(
+    lock_has_expired = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
-        lock_expiration_threshold=channel.get_receiver_expiration_threshold(lock),
+        lock_expiration_threshold=channel.get_receiver_expiration_threshold(lock.expiration),
     )
 
     if lock_has_expired and target_state.state != "expired":
@@ -304,7 +300,7 @@ def handle_lock_expired(
     state_change: ReceiveLockExpired,
     channel_state: NettingChannelState,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state, state_change=state_change, block_number=block_number
@@ -330,7 +326,7 @@ def state_transition(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
-) -> TransitionResult[TargetTransferState]:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 

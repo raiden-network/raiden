@@ -5,26 +5,21 @@ import click
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import Environment, RoutingMode
-from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
-from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
-from raiden.network.pathfinding import configure_pfs_or_exit
+from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
+from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
+from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.network.throttle import TokenBucket
-from raiden.network.transport import UDPTransport
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.ui.checks import (
-    check_discovery_registration_gas,
     check_pfs_configuration,
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
-    CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -35,15 +30,6 @@ from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployment_info,
 )
-
-
-def environment_type_to_contracts_version(environment_type: Environment) -> str:
-    if environment_type == Environment.DEVELOPMENT:
-        contracts_version = DEVELOPMENT_CONTRACT_VERSION
-    else:
-        contracts_version = RED_EYES_CONTRACT_VERSION
-
-    return contracts_version
 
 
 def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
@@ -58,7 +44,7 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
     print(f"Raiden is running in {environment_type.value.lower()} mode")
 
 
-def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str, Any]:
+def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
@@ -69,7 +55,7 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str
     check_raiden_environment(network_id, environment_type)
 
     contracts: Dict[str, Any] = dict()
-    contracts_version = environment_type_to_contracts_version(environment_type)
+    contracts_version = RAIDEN_CONTRACT_VERSION
 
     config["contracts_path"] = contracts_precompiled_path(contracts_version)
 
@@ -85,7 +71,7 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str
     return contracts
 
 
-def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
+def handle_contract_code_mismatch(mismatch_exception: ContractCodeMismatch) -> None:
     click.secho(f"{str(mismatch_exception)}. Please update your Raiden installation.", fg="red")
     sys.exit(1)
 
@@ -115,12 +101,11 @@ class Proxies(NamedTuple):
 
 def setup_proxies_or_exit(
     config: Dict[str, Any],
-    tokennetwork_registry_contract_address: Address,
+    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
     secret_registry_contract_address: Address,
-    endpoint_registry_contract_address: Address,
     user_deposit_contract_address: Address,
     service_registry_contract_address: Address,
-    blockchain_service: BlockChainService,
+    proxy_manager: ProxyManager,
     contracts: Dict[str, Any],
     routing_mode: RoutingMode,
     pathfinding_service_address: str,
@@ -139,38 +124,41 @@ def setup_proxies_or_exit(
     environment_type = config["environment_type"]
 
     check_smart_contract_addresses(
-        environment_type,
-        node_network_id,
-        tokennetwork_registry_contract_address,
-        secret_registry_contract_address,
-        endpoint_registry_contract_address,
-        contracts,
+        environment_type=environment_type,
+        node_network_id=node_network_id,
+        tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
+        secret_registry_contract_address=secret_registry_contract_address,
+        contracts=contracts,
     )
+
+    token_network_registry = None
     try:
-        registered_address: Address
         if tokennetwork_registry_contract_address is not None:
-            registered_address = Address(tokennetwork_registry_contract_address)
+            registered_address = tokennetwork_registry_contract_address
         else:
             registered_address = to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
             )
-        token_network_registry = blockchain_service.token_network_registry(registered_address)
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
+        token_network_registry = proxy_manager.token_network_registry(registered_address)
+    except ContractCodeMismatch as e:
+        handle_contract_code_mismatch(e)
     except AddressWithoutCode:
-        handle_contract_no_code("token network registry", tokennetwork_registry_contract_address)
+        handle_contract_no_code(
+            "token network registry", Address(tokennetwork_registry_contract_address)
+        )
     except AddressWrongContract:
         handle_contract_wrong_address(
-            "token network registry", tokennetwork_registry_contract_address
+            "token network registry", Address(tokennetwork_registry_contract_address)
         )
 
+    secret_registry = None
     try:
-        secret_registry = blockchain_service.secret_registry(
+        secret_registry = proxy_manager.secret_registry(
             secret_registry_contract_address
             or to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
         )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
+    except ContractCodeMismatch as e:
+        handle_contract_code_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code("secret registry", secret_registry_contract_address)
     except AddressWrongContract:
@@ -190,12 +178,12 @@ def setup_proxies_or_exit(
     )
     if should_use_user_deposit:
         try:
-            user_deposit = blockchain_service.user_deposit(
+            user_deposit = proxy_manager.user_deposit(
                 user_deposit_contract_address
                 or to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
             )
-        except ContractVersionMismatch as e:
-            handle_contract_version_mismatch(e)
+        except ContractCodeMismatch as e:
+            handle_contract_code_mismatch(e)
         except AddressWithoutCode:
             handle_contract_no_code("user deposit", user_deposit_contract_address)
         except AddressWrongContract:
@@ -204,35 +192,50 @@ def setup_proxies_or_exit(
     service_registry = None
     if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
         try:
-            service_registry = blockchain_service.service_registry(
+            service_registry = proxy_manager.service_registry(
                 service_registry_contract_address
                 or to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
             )
-        except ContractVersionMismatch as e:
-            handle_contract_version_mismatch(e)
+        except ContractCodeMismatch as e:
+            handle_contract_code_mismatch(e)
         except AddressWithoutCode:
             handle_contract_no_code("service registry", service_registry_contract_address)
         except AddressWrongContract:
             handle_contract_wrong_address("secret registry", service_registry_contract_address)
 
+    # By now these should be set or Raiden aborted
+    assert token_network_registry, "TokenNetworkRegistry needs to be set"
+    assert secret_registry, "SecretRegistry needs to be set"
+
     if routing_mode == RoutingMode.PFS:
         check_pfs_configuration(
-            routing_mode, environment_type, service_registry, pathfinding_service_address
+            service_registry=service_registry,
+            pathfinding_service_address=pathfinding_service_address,
         )
 
-        pfs_config = configure_pfs_or_exit(
-            pfs_address=pathfinding_service_address,
+        pfs_info = configure_pfs_or_exit(
+            pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
+            node_network_id=node_network_id,
+            token_network_registry_address=token_network_registry.address,
+            pathfinding_max_fee=config["services"]["pathfinding_max_fee"],
         )
         msg = "Eth address of selected pathfinding service is unknown."
-        assert pfs_config.eth_address is not None, msg
-        config["services"]["pathfinding_service_address"] = pfs_config.url
-        config["services"]["pathfinding_eth_address"] = pfs_config.eth_address
-        config["services"]["pathfinding_fee"] = pfs_config.fee
+        assert pfs_info.payment_address is not None, msg
+
+        # Only check that PFS is registered in production mode
+        if environment_type == Environment.PRODUCTION:
+            check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
+
+        config["pfs_config"] = PFSConfig(
+            info=pfs_info,
+            maximum_fee=config["services"]["pathfinding_max_fee"],
+            iou_timeout=config["services"]["pathfinding_iou_timeout"],
+            max_paths=config["services"]["pathfinding_max_paths"],
+        )
     else:
-        config["services"]["pathfinding_service_address"] = None
-        config["services"]["pathfinding_eth_address"] = None
+        config["pfs_config"] = None
 
     proxies = Proxies(
         token_network_registry=token_network_registry,
@@ -241,32 +244,3 @@ def setup_proxies_or_exit(
         service_registry=service_registry,
     )
     return proxies
-
-
-def setup_udp_or_exit(
-    config, blockchain_service, address, contracts, endpoint_registry_contract_address
-):
-    check_discovery_registration_gas(blockchain_service, address)
-    try:
-        dicovery_proxy = blockchain_service.discovery(
-            endpoint_registry_contract_address
-            or to_canonical_address(contracts[CONTRACT_ENDPOINT_REGISTRY]["address"])
-        )
-        discovery = ContractDiscovery(blockchain_service.node_address, dicovery_proxy)
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code("Endpoint Registry", endpoint_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address("Endpoint Registry", endpoint_registry_contract_address)
-
-    throttle_policy = TokenBucket(
-        config["transport"]["udp"]["throttle_capacity"],
-        config["transport"]["udp"]["throttle_fill_rate"],
-    )
-
-    transport = UDPTransport(
-        address, discovery, config["socket"], throttle_policy, config["transport"]["udp"]
-    )
-
-    return transport, discovery

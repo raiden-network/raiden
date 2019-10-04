@@ -1,25 +1,28 @@
+version: 2
+
 settings:
-  ###either `fast`, `medium` or an integer (in wei)
-  gas_price: `fast`
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
 
 token:
-  ## To re-use an existing token give an address
-  #address: "0x9CBA8b93C3A61F9417332B0e58E613f0F1168C2c"
-
-  decimals: 18
-  balance_min: 99_999_000_000_000_000_000
-
 
 nodes:
-  commands:
-    stop: "pkill -f '127.0.0.1:50{:02d}'"
-    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
-    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
-  range:
-    first: 1
-    last: 2
-    template: "localhost:50{:02d}"
+  mode: managed
+  count: 2
 
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 10
 
 ## Fund / Top up channel
 scenario:

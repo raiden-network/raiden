@@ -1,4 +1,0 @@
-keystore_root: "{{ raiden_root }}_keystore"
-keystore_file_date: 2017-07-01
-
-# `keystore_password` and `keystore_priv_seed` are in vault encrypted `vars/main.yml`

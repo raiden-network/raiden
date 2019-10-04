@@ -31,6 +31,7 @@ def test_transaction_rollback(tmp_path):
             with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=1000):
                 storage.update_version()
                 raise RuntimeError()
+
     assert storage.get_version() == RAIDEN_DB_VERSION
 
 

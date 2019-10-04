@@ -2,33 +2,40 @@ from collections import defaultdict
 from unittest.mock import patch
 
 import structlog
+from eth_utils import to_checksum_address
 from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
-from raiden.messages import Message
+from raiden.messages.abstract import Message
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
 from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
 from raiden.transfer.state import ChainState
-from raiden.utils import pex, typing
+from raiden.utils.typing import Dict, List, NamedTuple, SecretHash
 
 log = structlog.get_logger(__name__)
 
 
-class MessageWaiting(typing.NamedTuple):
+class MessageWaiting(NamedTuple):
     attributes: dict
     message_type: type
     async_result: AsyncResult
 
 
-class Hold(typing.NamedTuple):
+class HoldWait(NamedTuple):
+    event_type: type
+    async_result: AsyncResult
+    attributes: Dict
+
+
+class Holding(NamedTuple):
     event: RaidenEvent
     chain_state: ChainState
     event_type: type
     async_result: AsyncResult
-    attributes: typing.Dict
+    attributes: Dict
 
 
 class WaitForMessage(MessageHandler):
@@ -66,47 +73,56 @@ class HoldRaidenEventHandler(EventHandler):
 
     def __init__(self, wrapped_handler: EventHandler):
         self.wrapped = wrapped_handler
-        self.eventtype_to_holds = defaultdict(list)
+        self.eventtype_to_waitingholds: Dict[type, List[HoldWait]] = defaultdict(list)
+        self.eventtype_to_holdings: Dict[type, List[Holding]] = defaultdict(list)
 
     def on_raiden_event(self, raiden: RaidenService, chain_state: ChainState, event: RaidenEvent):
-        holds = self.eventtype_to_holds[type(event)]
-        found = None
-
-        for pos, hold in enumerate(holds):
+        event_type = type(event)
+        # First check that there are no overlapping holds, otherwise the test
+        # is likely flaky. It should either reuse the hold for the same event
+        # or different holds must match a unique event.
+        for hold in self.eventtype_to_holdings[event_type]:
             if check_nested_attrs(event, hold.attributes):
                 msg = (
-                    "Same event emitted twice, should not happen. "
-                    "Either there is a bug in the state machine or "
-                    "the hold.attributes is too generic and multiple "
-                    "different events are matching."
+                    f"Matching event of type {event.__class__.__name__} emitted "
+                    f"twice, this should not happen. Either there is a bug in the "
+                    f"state machine or the hold.attributes is too generic and "
+                    f"multiple different events are matching. Event: {event} "
+                    f"Attributes: {hold.attributes}"
                 )
-                assert hold.event is None, msg
+                raise RuntimeError(msg)
 
-                newhold = hold._replace(event=event, chain_state=chain_state)
-                found = (pos, newhold)
+        waitingholds = self.eventtype_to_waitingholds[event_type]
+        for pos, waiting_hold in enumerate(waitingholds):
+
+            # If it is a match:
+            # - Delete the waiting hold and add it to the holding
+            # - Do not dispatch the event
+            # - Notify the test by setting the async_result
+            if check_nested_attrs(event, waiting_hold.attributes):
+                holding = Holding(
+                    event=event,
+                    chain_state=chain_state,
+                    event_type=waiting_hold.event_type,
+                    async_result=waiting_hold.async_result,
+                    attributes=waiting_hold.attributes,
+                )
+                del self.eventtype_to_waitingholds[event_type][pos]
+                self.eventtype_to_holdings[event_type].append(holding)
+                waiting_hold.async_result.set(event)
                 break
-
-        if found is not None:
-            hold = found[1]
-            holds[found[0]] = found[1]
-            hold.async_result.set(event)
         else:
+            # Only dispatch the event if it didn't match any of the holds
             self.wrapped.on_raiden_event(raiden, chain_state, event)
 
-    def hold(self, event_type: type, attributes: typing.Dict) -> AsyncResult:
-        hold = Hold(
-            event=None,
-            chain_state=None,
-            event_type=event_type,
-            async_result=AsyncResult(),
-            attributes=attributes,
-        )
-        self.eventtype_to_holds[event_type].append(hold)
+    def hold(self, event_type: type, attributes: Dict) -> AsyncResult:
+        hold = HoldWait(event_type=event_type, async_result=AsyncResult(), attributes=attributes)
+        self.eventtype_to_waitingholds[event_type].append(hold)
         log.debug(f"Hold for {event_type.__name__} with {attributes} created.")
         return hold.async_result
 
     def release(self, raiden: RaidenService, event: RaidenEvent):
-        holds = self.eventtype_to_holds[type(event)]
+        holds = self.eventtype_to_holdings[type(event)]
         found = None
 
         for pos, hold in enumerate(holds):
@@ -123,21 +139,21 @@ class HoldRaidenEventHandler(EventHandler):
 
         hold = holds.pop(found[0])
         self.wrapped.on_raiden_event(raiden, hold.chain_state, event)
-        log.debug(f"{event} released.", node=pex(raiden.address))
+        log.debug(f"{event} released.", node=to_checksum_address(raiden.address))
 
-    def hold_secretrequest_for(self, secrethash: typing.SecretHash) -> AsyncResult:
+    def hold_secretrequest_for(self, secrethash: SecretHash) -> AsyncResult:
         return self.hold(SendSecretRequest, {"secrethash": secrethash})
 
-    def hold_unlock_for(self, secrethash: typing.SecretHash):
+    def hold_unlock_for(self, secrethash: SecretHash):
         return self.hold(SendBalanceProof, {"secrethash": secrethash})
 
-    def release_secretrequest_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
-        for hold in self.eventtype_to_holds[SendSecretRequest]:
+    def release_secretrequest_for(self, raiden: RaidenService, secrethash: SecretHash):
+        for hold in self.eventtype_to_holdings[SendSecretRequest]:
             if hold.attributes["secrethash"] == secrethash:
                 self.release(raiden, hold.event)
 
-    def release_unlock_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
-        for hold in self.eventtype_to_holds[SendBalanceProof]:
+    def release_unlock_for(self, raiden: RaidenService, secrethash: SecretHash):
+        for hold in self.eventtype_to_holdings[SendBalanceProof]:
             if hold.attributes["secrethash"] == secrethash:
                 self.release(raiden, hold.event)
 
@@ -161,4 +177,6 @@ def dont_handle_node_change_network_state():
     def empty_state_transition(chain_state, state_change):  # pylint: disable=unused-argument
         return TransitionResult(chain_state, list())
 
-    return patch("raiden.transfer.node.handle_node_change_network_state", empty_state_transition)
+    return patch(
+        "raiden.transfer.node.handle_action_change_node_network_state", empty_state_transition
+    )

@@ -1,0 +1,79 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000
+
+nodes:
+  mode: managed
+  count: 4
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    flat-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      # For every 1000 TKN transferred 10 TKN is paid as fee
+      - 10_000
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+
+## This is the MFEE2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
+## whether a path is returned. It also checks that correct proportional mediation fees are deducted
+## and received by the mediating parties. For every 1000 TKNs tranferred a fee of 10 TKN is expected.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
+      - serial:
+          name: "Test providing routes"
+          tasks:
+            - wait_blocks: 2
+            # Check that the PFS returns a path from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+
+            ## Check that the path is indeed the expected one
+            - assert_pfs_history:
+                source: 0
+                request_count: 1
+                target: 3
+                expected_routes:
+                  - [0, 1, 2, 3]
+
+            # Fees are set to 10 TKN per 1000 transferred. Hence for 10000, 100 TKN fee
+            # should be paid, plus a 1% fee of fees per mediator.
+            # balance_minus_fee = deposit - transfer_amount - (transfer_amount / prop_fee * amount_of_hubs_to_target)
+            # balance_minus_fee_and_fee_margin = balance_minus_fee - (transfer_amount / prop_fee / 100 * fee_margin)
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_789, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211, state: "opened"}
+
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_890, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_110, state: "opened"}
+
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_990, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_010, state: "opened"}

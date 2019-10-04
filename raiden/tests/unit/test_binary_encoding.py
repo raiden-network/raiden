@@ -4,9 +4,9 @@ import pytest
 
 from raiden import constants
 from raiden.exceptions import InvalidSignature
-from raiden.messages import Ping, Processed, decode
+from raiden.messages.healthcheck import Ping
+from raiden.messages.synchronization import Processed
 from raiden.tests.utils import factories
-from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = factories.make_privkey_address()
@@ -14,7 +14,11 @@ signer = LocalSigner(PRIVKEY)
 
 
 def test_signature():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
     assert ping.sender == ADDRESS
 
@@ -40,41 +44,32 @@ def test_signature():
 
 
 def test_encoding():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
-    decoded_ping = decode(ping.encode())
-    assert isinstance(decoded_ping, Ping)
-    assert decoded_ping.sender == ADDRESS == ping.sender
-    assert ping.nonce == decoded_ping.nonce
-    assert ping.signature == decoded_ping.signature
-    assert ping.cmdid == decoded_ping.cmdid
-    assert ping.hash == decoded_ping.hash
+    assert ping.sender == ADDRESS
 
 
 def test_hash():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
-    data = ping.encode()
-    msghash = sha3(data)
-    decoded_ping = decode(data)
-    assert sha3(decoded_ping.encode()) == msghash
 
 
 def test_processed():
     message_identifier = random.randint(0, constants.UINT64_MAX)
-    processed_message = Processed(message_identifier=message_identifier)
+    processed_message = Processed(
+        message_identifier=message_identifier, signature=constants.EMPTY_SIGNATURE
+    )
     processed_message.sign(signer)
     assert processed_message.sender == ADDRESS
-
     assert processed_message.message_identifier == message_identifier
-
-    data = processed_message.encode()
-    decoded_processed_message = decode(data)
-
-    assert decoded_processed_message.message_identifier == message_identifier
-    assert processed_message.message_identifier == message_identifier
-    assert decoded_processed_message.sender == processed_message.sender
-    assert sha3(decoded_processed_message.encode()) == sha3(data)
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -92,7 +87,7 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
             fee=fee,
         )
     )
-    assert decode(mediated_transfer.encode()) == mediated_transfer
+    mediated_transfer._data_to_sign()  # Just test that packing works without exceptions.
 
 
 @pytest.mark.parametrize("amount", [0, constants.UINT256_MAX])
@@ -108,4 +103,4 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    assert decode(refund_transfer.encode()) == refund_transfer
+    refund_transfer._data_to_sign()  # Just test that packing works without exceptions.

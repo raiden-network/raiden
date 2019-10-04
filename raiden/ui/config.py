@@ -2,8 +2,7 @@ import inspect
 from enum import Enum
 
 import pytoml
-
-from raiden.utils.serialization import serialize_bytes
+from eth_utils import to_hex
 
 builtin_types = (int, str, bool, tuple)
 
@@ -21,7 +20,7 @@ def _clean_non_serializables(data):
             value = _clean_non_serializables(value)
 
         if isinstance(value, bytes):
-            value = serialize_bytes(value)
+            value = to_hex(value)
 
         if isinstance(value, tuple):
             value = list(value)

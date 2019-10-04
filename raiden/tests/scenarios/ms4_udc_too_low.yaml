@@ -1,0 +1,105 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  # Adapt to chain used
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+        min_balance: 9000
+        balance_per_node: 10000
+        # MS reward is 5 * 10 ** 18 tokens, so less than that must be deposited
+        max_funding: 10000
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 2
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+
+## This scenario tests that the MS does not kick in, if the node requesting monitoring does
+## not have enough funds deposited in the UDC. A channel is opened between node0 and node1.
+## A couple of transfers take place and node1 then goes offline. Node0 calls close and node1
+## stays offline. It is then expected that the MS does not kick in, since node1 does not have
+## enough tokens deposited.
+
+scenario:
+  serial:
+    tasks:
+      - serial:
+          name: "Open channel between node0 and node1"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+      - serial:
+          name: "Make 10 payments from node0 to node1"
+          repeat: 10
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 50_000_000_000_000_000, expected_http_status: 200}
+      - serial:
+          name: "Make monitor request"
+          tasks:
+            - wait_blocks: 1
+            - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
+      - serial:
+          name: "Stop node1"
+          tasks:
+            - stop_node: 1
+      - serial:
+          name: "node0 closes the channel"
+          tasks:
+            - close_channel: {from: 0, to: 1}
+      - serial:
+          name: "Wait for channel close and assert that it is closed"
+          tasks:
+            - wait_blocks: 1
+            - assert: {from: 0 ,to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 0}
+
+      - serial:
+          name: "Wait for MS to not react"
+          tasks:
+            # The MS reacts within the settle_timeout
+            - wait_blocks: 40
+            # Note that 0 events are expected
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 0
+                event_args: {closing_participant: 0}
+
+      - serial:
+          name: "Wait for remaining timeout period to expire and check again that MS did not react"
+          tasks:
+            # Monitored channel must be settled before the monitoring service can claim its reward
+            # To make sure the transactions gets mined in time, 10 additional blocks are added
+            - wait_blocks: 5
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 0
+                event_args: {closing_participant: 0}

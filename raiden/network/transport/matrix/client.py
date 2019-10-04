@@ -13,9 +13,13 @@ from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 from matrix_client.room import Room as MatrixRoom
 from matrix_client.user import User
+from requests import Response
 from requests.adapters import HTTPAdapter
 
 log = structlog.get_logger(__name__)
+
+
+SHUTDOWN_TIMEOUT = 35
 
 
 class Room(MatrixRoom):
@@ -111,10 +115,13 @@ class GMatrixHttpApi(MatrixHttpApi):
     ) -> None:
         super().__init__(*args, **kwargs)
 
+        self.server_ident: Optional[str] = None
+
         http_adapter = HTTPAdapter(pool_maxsize=pool_maxsize)
         https_adapter = HTTPAdapter(pool_maxsize=pool_maxsize)
         self.session.mount("http://", http_adapter)
         self.session.mount("https://", https_adapter)
+        self.session.hooks["response"].append(self._record_server_ident)
 
         self._long_paths = long_paths
         if long_paths:
@@ -156,7 +163,8 @@ class GMatrixHttpApi(MatrixHttpApi):
                 )
                 gevent.sleep(delay)
         else:
-            raise last_ex
+            if last_ex:
+                raise last_ex
 
     def send_to_device(self, event_type, messages, txn_id=None):  # pylint: disable=unused-argument
         started = time.time()
@@ -179,15 +187,21 @@ class GMatrixHttpApi(MatrixHttpApi):
                 )
                 gevent.sleep(delay)
         else:
-            raise last_ex
+            if last_ex:
+                raise last_ex
+
+    def _record_server_ident(
+        self, response: Response, *args, **kwargs  # pylint: disable=unused-argument
+    ):
+        self.server_ident = response.headers.get("Server")
 
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
 
     sync_filter: str
-    sync_thread: gevent.Greenlet = None
-    _handle_thread: gevent.Greenlet = None
+    sync_thread: Optional[gevent.Greenlet] = None
+    _handle_thread: Optional[gevent.Greenlet] = None
 
     def __init__(
         self,
@@ -217,6 +231,7 @@ class GMatrixClient(MatrixClient):
             retry_delay=http_retry_delay,
             long_paths=("/sync",),
         )
+        self.api.validate_certificate(valid_cert_check)
 
     def listen_forever(
         self,
@@ -280,11 +295,28 @@ class GMatrixClient(MatrixClient):
         self.should_listen = False
         if self.sync_thread:
             self.sync_thread.kill()
+            log.debug("Waiting on sync greenlet", current_user=self.user_id)
+            exited = gevent.joinall({self.sync_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True)
+            if not exited:
+                raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
         if self._handle_thread is not None:
+            log.debug("Waiting on handle greenlet", current_user=self.user_id)
+            exited = gevent.joinall(
+                {self._handle_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True
+            )
+            if not exited:
+                raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
             self._handle_thread.get()
+        log.debug("Listener greenlet exited", current_user=self.user_id)
         self.sync_thread = None
         self._handle_thread = None
+
+    def stop(self):
+        self.stop_listener_thread()
+        self.sync_token = None
+        self.should_listen = False
+        self.rooms: Dict[str, Room] = {}
 
     def logout(self):
         super().logout()
@@ -384,28 +416,40 @@ class GMatrixClient(MatrixClient):
             f"GMatrixClient._sync user_id:{self.user_id} sync_token:{prev_sync_token}"
         )
         self._handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
+        log.debug(
+            "Starting handle greenlet",
+            first_sync=is_first_sync,
+            sync_token=prev_sync_token,
+            current_user=self.user_id,
+        )
         self._handle_thread.start()
 
         if self._post_hook_func is not None:
             self._post_hook_func(self.sync_token)
 
     def _handle_response(self, response, first_sync=False):
+        # We must ignore the stop flag during first_sync
+        if not self.should_listen and not first_sync:
+            log.warning(
+                "Aborting handle response", reason="Transport stopped", current_user=self.user_id
+            )
+            return
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
-            for callback in self.presence_listeners.values():
+            for callback in list(self.presence_listeners.values()):
                 self.call(callback, presence_update)
 
         for to_device_message in response["to_device"]["events"]:
-            for listener in self.listeners:
+            for listener in self.listeners[:]:
                 if listener["event_type"] == "to_device":
                     self.call(listener["callback"], to_device_message)
 
         for room_id, invite_room in response["rooms"]["invite"].items():
-            for listener in self.invite_listeners:
+            for listener in self.invite_listeners[:]:
                 self.call(listener, room_id, invite_room["invite_state"])
 
         for room_id, left_room in response["rooms"]["leave"].items():
-            for listener in self.left_listeners:
+            for listener in self.left_listeners[:]:
                 self.call(listener, room_id, left_room)
             if room_id in self.rooms:
                 del self.rooms[room_id]
@@ -465,9 +509,6 @@ class GMatrixClient(MatrixClient):
 
     def set_post_sync_hook(self, hook: Callable[[str], None]):
         self._post_hook_func = hook
-
-    def set_sync_token(self, sync_token: str) -> None:
-        self.sync_token = sync_token
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id

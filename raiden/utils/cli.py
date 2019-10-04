@@ -4,7 +4,6 @@ import re
 import string
 import sys
 from enum import EnumMeta
-from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
 from pathlib import Path
 from string import Template
@@ -12,16 +11,17 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import click
 import requests
-from click import BadParameter, Choice
+from click import BadParameter, Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
+CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"
 LOG_CONFIG_OPTION_NAME = "log_config"
 
 
@@ -103,7 +103,32 @@ class CustomContextMixin:
         return ctx
 
 
-class GroupableOption(click.Option):
+class UsesDefaultValueOptionMixin(click.Option):
+    def full_process_value(self, ctx, value):
+        """
+        Slightly modified copy of ``Option.full_process_value()`` that records which options use
+        default values in ``ctx.meta['raiden.options_using_default']``.
+
+        This is then used in ``apply_config_file()`` to establish precedence between values given
+        via the config file and the cli.
+        """
+        if value is None and self.prompt is not None and not ctx.resilient_parsing:
+            return self.prompt_for_value(ctx)
+
+        value = self.process_value(ctx, value)
+
+        if value is None:
+            value = self.get_default(ctx)
+            if not self.value_is_missing(value):
+                ctx.meta.setdefault(CONTEXT_KEY_DEFAULT_OPTIONS, set()).add(self.name)
+
+        if self.required and self.value_is_missing(value):
+            raise MissingParameter(ctx=ctx, param=self)
+
+        return value
+
+
+class GroupableOption(UsesDefaultValueOptionMixin, click.Option):
     def __init__(
         self,
         param_decls=None,
@@ -143,7 +168,7 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
         grouped_options = groupby(sorted(self.get_params(ctx), key=keyfunc), key=keyfunc)
 
-        options = {}
+        options: Dict = {}
         for option_group, params in grouped_options:
             for param in params:
                 rv = param.get_help_record(ctx)
@@ -178,17 +203,17 @@ def command(name=None, cls=GroupableOptionCommand, **attrs):
 
 
 def group(name=None, **attrs):
-    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})
+    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})  # type: ignore
 
 
 def option(*args, **kwargs):
-    return click.option(*args, **{"cls": GroupableOption, **kwargs})
+    return click.option(*args, **{"cls": GroupableOption, **kwargs})  # type: ignore
 
 
-def option_group(name: str, *options: List[Callable]):
+def option_group(name: str, *options: Callable):
     def decorator(f):
         for option_ in reversed(options):
-            for closure_cell in option_.__closure__:
+            for closure_cell in option_.__closure__:  # type: ignore
                 if isinstance(closure_cell.cell_contents, dict):
                     closure_cell.cell_contents["option_group"] = name
                     break
@@ -204,7 +229,7 @@ class AddressType(click.ParamType):
     def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         try:
             return address_checksum_and_decode(value)
-        except InvalidAddress as e:
+        except InvalidChecksummedAddress as e:
             self.fail(str(e))
 
 
@@ -232,25 +257,6 @@ class LogLevelConfigType(click.ParamType):
         return level_config
 
 
-class NATChoiceType(click.Choice):
-    def convert(self, value, param, ctx):
-        if value.startswith("ext:"):
-            ip, _, port = value[4:].partition(":")
-            try:
-                IPv4Address(ip)
-            except AddressValueError:
-                self.fail("invalid IP address: {}".format(ip), param, ctx)
-            if port:
-                try:
-                    port = int(port, 0)
-                except ValueError:
-                    self.fail("invalid port number: {}".format(port), param, ctx)
-            else:
-                port = None
-            return ip, port
-        return super().convert(value, param, ctx)
-
-
 class NetworkChoiceType(click.Choice):
     def convert(self, value, param, ctx):
         if isinstance(value, int):
@@ -269,9 +275,8 @@ class EnumChoiceType(Choice):
     def __init__(self, enum_type: EnumMeta, case_sensitive=True):
         self._enum_type = enum_type
         # https://github.com/python/typeshed/issues/2942
-        super().__init__(  # type: ignore
-            [choice.value for choice in enum_type],  # type: ignore
-            case_sensitive=case_sensitive,
+        super().__init__(
+            [choice.value for choice in enum_type], case_sensitive=case_sensitive  # type: ignore
         )
 
     def convert(self, value, param, ctx):
@@ -351,6 +356,7 @@ def apply_config_file(
     config_file_option_name="config_file",
 ):
     """ Applies all options set in the config file to `cli_params` """
+    options_using_default = ctx.meta.get(CONTEXT_KEY_DEFAULT_OPTIONS, set())
     paramname_to_param = {param.name: param for param in command_function.params}
     path_params = {
         param.name
@@ -364,7 +370,8 @@ def apply_config_file(
         with config_file_path.open() as config_file:
             config_file_values = load(config_file)
     except OSError as ex:
-        # Silently ignore if 'file not found' and the config file path is the default
+        # Silently ignore if 'file not found' and the config file path is the default and
+        # the option wasn't explicitly supplied on the command line
         config_file_param = paramname_to_param[config_file_option_name]
         config_file_default_path = Path(
             config_file_param.type.expand_default(  # type: ignore
@@ -374,6 +381,7 @@ def apply_config_file(
         default_config_missing = (
             ex.errno == errno.ENOENT
             and config_file_path.resolve() == config_file_default_path.resolve()
+            and config_file_option_name in options_using_default
         )
         if default_config_missing:
             cli_params["config_file"] = None
@@ -411,8 +419,9 @@ def apply_config_file(
                 click.secho(f"Invalid config file setting '{config_name}': {ex}", fg="red")
                 sys.exit(1)
 
-        # Use the config file value if the value from the command line is the default
-        if cli_params[config_name_int] == paramname_to_param[config_name_int].get_default(ctx):
+        # Only use the config file value if the option wasn't explicitly given on the command line
+        option_has_default = paramname_to_param[config_name_int].default is not None
+        if not option_has_default or config_name_int in options_using_default:
             cli_params[config_name_int] = config_value
 
 

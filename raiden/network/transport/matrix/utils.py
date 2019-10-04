@@ -5,47 +5,39 @@ from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    KeysView,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterable, KeysView, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
+from uuid import UUID
 
 import gevent
 import structlog
 from cachetools import LRUCache, cached
-from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    to_canonical_address,
+    to_checksum_address,
+    to_normalized_address,
+)
 from gevent.event import Event
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
+from structlog._config import BoundLoggerLazyProxy
 
-from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
-from raiden.messages import (
-    Message,
-    SignedMessage,
-    decode as message_from_bytes,
-    from_dict as message_from_dict,
-)
+from raiden.exceptions import InvalidSignature, SerializationError, TransportError
+from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
-from raiden.utils import pex
+from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID
+from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 10
 USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
+DISPLAY_NAME_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
 ROOM_NAME_SEPARATOR = "_"
 ROOM_NAME_PREFIX = "raiden"
 
@@ -98,19 +90,36 @@ class UserAddressManager:
         get_user_callable: Callable[[Union[User, str]], User],
         address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
-        stop_event: Optional[Event] = None,
-    ):
+        _log_context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self._client = client
         self._get_user = get_user_callable
         self._address_reachability_changed_callback = address_reachability_changed_callback
         self._user_presence_changed_callback = user_presence_changed_callback
-        self._stop_event = stop_event if stop_event else Event()
+        self._stop_event = Event()
 
-        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
-        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
-        self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._reset_state()
 
-        self._client.add_presence_listener(self._presence_listener)
+        self._log_context = _log_context
+        self._log = None
+        self._listener_id: Optional[UUID] = None
+
+    def start(self) -> None:
+        """ Start listening for presence updates.
+
+        Should be called before ``.login()`` is called on the underlying client. """
+        assert self._listener_id is None, "UserAddressManager.start() called twice"
+        self._stop_event.clear()
+        self._listener_id = self._client.add_presence_listener(self._presence_listener)
+
+    def stop(self) -> None:
+        """ Stop listening on presence updates. """
+        assert self._listener_id is not None, "UserAddressManager.stop() called before start"
+        self._stop_event.set()
+        self._client.remove_presence_listener(self._listener_id)
+        self._listener_id = None
+        self._log = None
+        self._reset_state()
 
     @property
     def known_addresses(self) -> KeysView[Address]:
@@ -162,6 +171,22 @@ class UserAddressManager:
         """
         self._userid_to_presence[user.user_id] = presence
 
+    def populate_userids_for_address(self, address: Address, force: bool = False):
+        """ Populate known user ids for the given ``address`` from the server directory.
+
+        If ``force`` is ``True`` perform the directory search even if there
+        already are known users.
+        """
+        if force or not self.get_userids_for_address(address):
+            self.add_userids_for_address(
+                address,
+                (
+                    user.user_id
+                    for user in self._client.search_user_directory(to_normalized_address(address))
+                    if self._validate_userid_signature(user)
+                ),
+            )
+
     def refresh_address_presence(self, address: Address):
         """
         Update synthesized address presence state from cached user presence states.
@@ -185,14 +210,14 @@ class UserAddressManager:
 
         new_address_reachability = USER_PRESENCE_TO_ADDRESS_REACHABILITY[new_presence]
 
-        if new_address_reachability == self._address_to_reachability.get(address):
+        prev_addresss_reachability = self.get_address_reachability(address)
+        if new_address_reachability == prev_addresss_reachability:
             # Cached address reachability matches new state, do nothing
             return
-        log.debug(
-            "Changing address presence state",
-            current_user=self._user_id,
-            address=to_normalized_address(address),
-            prev_state=self._address_to_reachability.get(address),
+        self.log.debug(
+            "Changing address reachability state",
+            address=to_checksum_address(address),
+            prev_state=prev_addresss_reachability,
             state=new_address_reachability,
         )
         self._address_to_reachability[address] = new_address_reachability
@@ -224,15 +249,43 @@ class UserAddressManager:
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
-        if new_state == self._userid_to_presence.get(user_id):
+        if new_state == self.get_userid_presence(user_id):
             # Cached presence state matches, no action required
             return
 
+        self.log.debug(
+            "Changing user presence state",
+            user_id=user_id,
+            prev_state=self._userid_to_presence.get(user_id),
+            state=new_state,
+        )
         self._userid_to_presence[user_id] = new_state
         self.refresh_address_presence(address)
 
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
+
+    def log_status_message(self):
+        while not self._stop_event.ready():
+            addresses_uids_presence = {
+                to_checksum_address(address): {
+                    user_id: self.get_userid_presence(user_id).value
+                    for user_id in self.get_userids_for_address(address)
+                }
+                for address in self.known_addresses
+            }
+
+            log.debug(
+                "Matrix address manager status",
+                addresses_uids_and_presence=addresses_uids_presence,
+                current_user=self._user_id,
+            )
+            self._stop_event.wait(30)
+
+    def _reset_state(self):
+        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
+        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
+        self._userid_to_presence: Dict[str, UserPresence] = dict()
 
     @property
     def _user_id(self) -> str:
@@ -252,6 +305,20 @@ class UserAddressManager:
     @staticmethod
     def _validate_userid_signature(user: User) -> Optional[Address]:
         return validate_userid_signature(user)
+
+    @property
+    def log(self) -> BoundLoggerLazyProxy:
+        if not self._log:
+            if not hasattr(self._client, "user_id"):
+                return log
+            self._log = log.bind(
+                **{
+                    "current_user": self._user_id,
+                    "node": to_checksum_address(self._user_id.split(":", 1)[0][1:]),
+                    **(self._log_context or {}),
+                }
+            )
+        return self._log
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
@@ -314,7 +381,7 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
                 break
         else:
             raise TransportError("Could neither join nor create a global room")
-
+    log.debug("Joined global room", room=global_room)
     return global_room
 
 
@@ -342,7 +409,7 @@ def login_or_register(
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
-    base_username = to_normalized_address(signer.address)
+    base_username = str(to_normalized_address(signer.address))
     _match_user = re.match(
         f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
     )
@@ -391,7 +458,6 @@ def login_or_register(
             prev_sync_limit = client.set_sync_limit(0)
             client._sync()  # when logging, do initial_sync with limit=0
             client.set_sync_limit(prev_sync_limit)
-            log.debug("Login", homeserver=server_name, server_url=server_url, username=username)
             break
         except MatrixRequestError as ex:
             if ex.code != 403:
@@ -416,9 +482,13 @@ def login_or_register(
     else:
         raise ValueError("Could not register or login!")
 
-    name = encode_hex(signer.sign(client.user_id.encode()))
+    signature_bytes = signer.sign(client.user_id.encode())
+    signature_hex = encode_hex(signature_bytes)
     user = client.get_user(client.user_id)
-    user.set_display_name(name)
+    user.set_display_name(signature_hex)
+    log.debug(
+        "Matrix user login", homeserver=server_name, server_url=server_url, username=username
+    )
     return user
 
 
@@ -435,7 +505,11 @@ def validate_userid_signature(user: User) -> Optional[Address]:
 
     try:
         displayname = user.get_display_name()
-        recovered = recover(data=user.user_id.encode(), signature=decode_hex(displayname))
+        if DISPLAY_NAME_HEX_RE.match(displayname):
+            signature_bytes = decode_hex(displayname)
+        else:
+            return None
+        recovered = recover(data=user.user_id.encode(), signature=Signature(signature_bytes))
         if not (address and recovered and recovered == address):
             return None
     except (
@@ -449,7 +523,7 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     return address
 
 
-def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
+def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     """Sorts a list of servers by http round-trip time
 
     Params:
@@ -466,10 +540,10 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     )
     # these tasks should never raise, returns None on errors
     gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
-    sorted_servers: List[Tuple[str, float]] = sorted(
-        (job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1)
+    sorted_servers: Dict[str, float] = dict(
+        sorted((job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1))
     )
-    log.debug("Matrix homeserver RTT times", rtt_times=sorted_servers)
+    log.debug("Matrix homeserver RTTs", rtts=sorted_servers)
     return sorted_servers
 
 
@@ -483,17 +557,15 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
         GMatrixClient instance for one of the available servers
     """
     if len(servers) > 1:
-        sorted_servers = [server_url for (server_url, _) in sort_servers_closest(servers)]
-        log.info(
-            "Automatically selecting matrix homeserver based on RTT", sorted_servers=sorted_servers
-        )
+        sorted_servers = sort_servers_closest(servers)
+        log.debug("Selecting best matrix server", sorted_servers=sorted_servers)
     elif len(servers) == 1:
-        sorted_servers = servers
+        sorted_servers = {servers[0]: 0}
     else:
         raise TransportError("No valid servers list given")
 
     last_ex = None
-    for server_url in sorted_servers:
+    for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(server_url, *args, **kwargs)
         try:
             client.api._send("GET", "/versions", api_path="/_matrix/client")
@@ -501,6 +573,12 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
             log.warning("Selected server not usable", server_url=server_url, _exception=ex)
             last_ex = ex
         else:
+            log.info(
+                "Using Matrix server",
+                server_url=server_url,
+                server_ident=client.api.server_ident,
+                average_rtt=rtt,
+            )
             break
     else:
         raise TransportError(
@@ -527,79 +605,55 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
 
 
 def validate_and_parse_message(data, peer_address) -> List[Message]:
-    messages = list()
+    messages: List[Message] = list()
 
     if not isinstance(data, str):
         log.warning(
-            "Received ToDevice Message body not a string",
+            "Received Message body not a string",
             message_data=data,
-            peer_address=pex(peer_address),
+            peer_address=to_checksum_address(peer_address),
         )
         return []
 
-    if data.startswith("0x"):
+    for line in data.splitlines():
+        line = line.strip()
+        if not line:
+            continue
         try:
-            message = message_from_bytes(decode_hex(data))
-            if not message:
-                raise InvalidProtocolMessage
-        except (DecodeError, AssertionError) as ex:
+            message = MessageSerializer.deserialize(line)
+        except SerializationError as ex:
             log.warning(
-                "Can't parse ToDevice Message binary data",
-                message_data=data,
-                peer_address=pex(peer_address),
+                "Not a valid Message",
+                message_data=line,
+                peer_address=to_checksum_address(peer_address),
                 _exc=ex,
             )
-            return []
-        except InvalidProtocolMessage as ex:
+            continue
+        if not isinstance(message, SignedMessage):
             log.warning(
-                "Received ToDevice Message binary data is not a valid message",
-                message_data=data,
-                peer_address=pex(peer_address),
-                _exc=ex,
+                "Message not a SignedMessage!",
+                message=message,
+                peer_address=to_checksum_address(peer_address),
             )
-            return []
-        else:
-            messages.append(message)
-
-    else:
-        for line in data.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                message_dict = json.loads(line)
-                message = message_from_dict(message_dict)
-            except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                log.warning(
-                    "Can't parse ToDevice Message data JSON",
-                    message_data=line,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                continue
-            except InvalidProtocolMessage as ex:
-                log.warning(
-                    "ToDevice Message data JSON are not a valid ToDevice Message",
-                    message_data=line,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                continue
-            if not isinstance(message, SignedMessage):
-                log.warning(
-                    "ToDevice Message not a SignedMessage!",
-                    message=message,
-                    peer_address=pex(peer_address),
-                )
-                continue
-            if message.sender != peer_address:
-                log.warning(
-                    "ToDevice Message not signed by sender!",
-                    message=message,
-                    signer=message.sender,
-                    peer_address=pex(peer_address),
-                )
-                continue
-            messages.append(message)
+            continue
+        if message.sender != peer_address:
+            log.warning(
+                "Message not signed by sender!",
+                message=message,
+                signer=message.sender,
+                peer_address=to_checksum_address(peer_address),
+            )
+            continue
+        messages.append(message)
 
     return messages
+
+
+def my_place_or_yours(our_address: Address, partner_address: Address):
+    """Convention to compare two addresses. Compares lexicographical
+    order and returns the preceding address """
+
+    if our_address == partner_address:
+        raise ValueError("Addresses to compare must differ")
+    sorted_addresses = sorted([our_address, partner_address])
+    return our_address if sorted_addresses[0] == our_address else partner_address

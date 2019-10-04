@@ -1,7 +1,7 @@
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
-from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT
+from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.tests.utils import factories
 from raiden.transfer.secret_registry import events_for_onchain_secretreveal
 from raiden.transfer.state import TransactionExecutionStatus
@@ -11,11 +11,15 @@ from raiden.transfer.utils import hash_balance_data
 @pytest.mark.parametrize(
     "values,expected",
     (
-        ((0, 0, EMPTY_HASH), bytes(32)),
         (
-            (1, 5, EMPTY_MERKLE_ROOT),
+            (0, 0, EMPTY_HASH),
+            decode_hex("0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21"),
+        ),
+        (
+            (1, 5, EMPTY_HASH),
             decode_hex("0xc6b26a4554afa01fb3409b3bd6e7605a1c1af45b7e644282c6ebf34eddb6f893"),
         ),
+        ((0, 0, LOCKSROOT_OF_NO_LOCKS), bytes(32)),
     ),
 )
 def test_hash_balance_data(values, expected):

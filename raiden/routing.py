@@ -7,26 +7,29 @@ import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.network.pathfinding import query_paths
+from raiden.messages.metadata import RouteMetadata
+from raiden.network.pathfinding import PFSConfig, query_paths
+from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
+from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.typing import (
     Address,
     ChannelID,
+    FeeAmount,
     InitiatorAddress,
     NamedTuple,
     Optional,
     PaymentAmount,
     TargetAddress,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 def get_best_routes(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Optional[Address],
     from_address: InitiatorAddress,
     to_address: TargetAddress,
@@ -35,13 +38,25 @@ def get_best_routes(
     config: Dict[str, Any],
     privkey: bytes,
 ) -> Tuple[List[RouteState], Optional[UUID]]:
-    services_config = config.get("services", None)
+    pfs_config = config.get("pfs_config", None)
+
+    is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
+    can_use_pfs = pfs_config and one_to_n_address is not None
+
+    log.debug(
+        "Getting route for payment",
+        source=to_checksum_address(from_address),
+        target=to_checksum_address(to_address),
+        amount=amount,
+        target_is_direct_partner=is_direct_partner,
+        can_use_pfs=can_use_pfs,
+    )
 
     # the pfs should not be requested when the target is linked via a direct channel
-    if to_address in views.all_neighbour_nodes(chain_state):
-        neighbours = get_best_routes_internal(
+    if is_direct_partner:
+        internal_routes = get_best_routes_internal(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -49,12 +64,12 @@ def get_best_routes(
         )
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             partner_address=Address(to_address),
         )
 
-        for route_state in neighbours:
-            if to_address == route_state.node_address and (
+        for route_state in internal_routes:
+            if to_address == route_state.next_hop_address and (
                 channel_state
                 # other conditions about e.g. channel state are checked in best routes internal
                 and channel.get_distributable(
@@ -64,20 +79,17 @@ def get_best_routes(
             ):
                 return [route_state], None
 
-    if (
-        services_config
-        and services_config["pathfinding_service_address"] is not None
-        and one_to_n_address is not None
-    ):
+    if can_use_pfs:
+        assert one_to_n_address  # mypy doesn't realize this has been checked above
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
             previous_address=previous_address,
-            config=services_config,
+            pfs_config=pfs_config,
             privkey=privkey,
         )
 
@@ -95,7 +107,7 @@ def get_best_routes(
     return (
         get_best_routes_internal(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -106,15 +118,16 @@ def get_best_routes(
 
 
 class Neighbour(NamedTuple):
-    length: int
+    length: int  # first item used for ordering
     nonrefundable: bool
     partner_address: Address
     channelid: ChannelID
+    route: List[Address]
 
 
 def get_best_routes_internal(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_address: TokenNetworkAddress,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: int,
@@ -131,7 +144,7 @@ def get_best_routes_internal(
 
     available_routes = list()
 
-    token_network = views.get_token_network_by_identifier(chain_state, token_network_id)
+    token_network = views.get_token_network_by_address(chain_state, token_network_address)
 
     if not token_network:
         return list()
@@ -150,13 +163,13 @@ def get_best_routes_internal(
             continue
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state, token_network_id, partner_address
+            chain_state, token_network_address, partner_address
         )
 
         if not channel_state:
             continue
 
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),
@@ -170,14 +183,15 @@ def get_best_routes_internal(
         )
 
         try:
-            length = networkx.shortest_path_length(
+            route = networkx.shortest_path(
                 token_network.network_graph.network, partner_address, to_address
             )
             neighbour = Neighbour(
-                length=length,
+                length=len(route),
                 nonrefundable=nonrefundable,
                 partner_address=partner_address,
                 channelid=channel_state.identifier,
+                route=route,
             )
             heappush(neighbors_heap, neighbour)
         except (networkx.NetworkXNoPath, networkx.NodeNotFound):
@@ -193,31 +207,46 @@ def get_best_routes_internal(
 
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
-        route_state = RouteState(
-            node_address=neighbour.partner_address, channel_identifier=neighbour.channelid
+        # The complete route includes the initiator, add it to the beginning
+        complete_route = [Address(from_address)] + neighbour.route
+
+        # https://github.com/raiden-network/raiden/issues/4751
+        # Internal routing doesn't know how much fees the initiator will be charged,
+        # so it should set a percentage on top of the original amount
+        # for the whole route.
+        estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
+        if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
+            estimated_fee = FeeAmount(0)
+
+        available_routes.append(
+            RouteState(
+                route=complete_route,
+                forward_channel_id=neighbour.channelid,
+                estimated_fee=estimated_fee,
+            )
         )
-        available_routes.append(route_state)
+
     return available_routes
 
 
 def get_best_routes_pfs(
     chain_state: ChainState,
-    token_network_id: TokenNetworkID,
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    config: Dict[str, Any],
+    pfs_config: PFSConfig,
     privkey: bytes,
 ) -> Tuple[bool, List[RouteState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
-            service_config=config,
+            pfs_config=pfs_config,
             our_address=chain_state.our_address,
             privkey=privkey,
             current_block_number=chain_state.block_number,
-            token_network_address=token_network_id,
+            token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
             chain_id=chain_state.chain_id,
             route_from=from_address,
@@ -227,16 +256,18 @@ def get_best_routes_pfs(
     except ServiceRequestFailed as e:
         log_message = e.args[0]
         log_info = e.args[1] if len(e.args) > 1 else {}
-        log.warning(log_message, **log_info)
+        log.warning("An error with the path request occured", log_message=log_message, **log_info)
         return False, [], None
 
     paths = []
     for path_object in pfs_routes:
         path = path_object["path"]
+        estimated_fee = path_object["estimated_fee"]
+        canonical_path = [to_canonical_address(node) for node in path]
 
         # get the second entry, as the first one is the node itself
         # also needs to be converted to canonical representation
-        partner_address = to_canonical_address(path[1])
+        partner_address = canonical_path[1]
 
         # don't route back
         if partner_address == previous_address:
@@ -244,7 +275,7 @@ def get_best_routes_pfs(
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             partner_address=partner_address,
         )
 
@@ -252,7 +283,7 @@ def get_best_routes_pfs(
             continue
 
         # check channel state
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
                 from_address=to_checksum_address(from_address),
@@ -262,7 +293,41 @@ def get_best_routes_pfs(
             continue
 
         paths.append(
-            RouteState(node_address=partner_address, channel_identifier=channel_state.identifier)
+            RouteState(
+                route=canonical_path,
+                forward_channel_id=channel_state.identifier,
+                estimated_fee=estimated_fee,
+            )
         )
 
     return True, paths, feedback_token
+
+
+def resolve_routes(
+    routes: List[RouteMetadata],
+    token_network_address: TokenNetworkAddress,
+    chain_state: ChainState,
+) -> List[RouteState]:
+    """ resolve the forward_channel_id for a given route """
+
+    resolvable = []
+    for route_metadata in routes:
+        if len(route_metadata.route) < 2:
+            continue
+
+        channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_address=token_network_address,
+            partner_address=route_metadata.route[1],
+        )
+
+        if channel_state is not None:
+            resolvable.append(
+                RouteState(
+                    route=route_metadata.route,
+                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+                    # This is only used in the mediator, so fees are set to 0
+                    estimated_fee=FeeAmount(0),
+                )
+            )
+    return resolvable

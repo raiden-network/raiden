@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 import pytest
 import structlog
@@ -133,17 +132,25 @@ def test_redacted_request(capsys, tmpdir):
     assert "access_token=<redacted>" in captured.err
 
 
-def test_redacted_traceback(capsys, tmpdir):
+def test_redacted_state_change(capsys, tmpdir):
     configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
-
-    token = "my_access_token123"
-
-    try:
-        assert False, f"Failed acessing /endpoint?accessToken={token}"
-    except AssertionError:
-        traceback.print_exc()
+    auth_token = (
+        "MDAxZGxvY2F0aW9uIGxvY2FsaG9zdDo2NDAzMwowMDEzaWRlbnRpZmllciBrZXkKMDAxMGNpZCBnZW4gPSAxCjAwN"
+        "GVjaWQgdXNlcl9pZCA9IEAweDYyNjRkYThmMmViOGQ4MDM3NjM2OTEwYzFlYzAzODA0MzhmNGVmZWU6bG9jYWxob3"
+        "N0OjY0MDMzCjAwMTZjaWQgdHlwZSA9IGFjY2VzcwowMDIxY2lkIG5vbmNlID0gSlhjfjI4YVA9clZmbzZUSQowMDJ"
+        "mc2lnbmF0dXJlIKQ1WCUJ-1Mv6rN6yjnb2w5R2BqH7iew7RwFiKuMcYosCg"
+    )
+    auth_user = "@0x0123456789abcdef0123456789abcdef01234567:localhost:64033"
+    state_changes = [
+        {
+            "auth_data": f"{auth_user}/{auth_token}",
+            "_type": "raiden.transfer.state_change.ActionUpdateTransportAuthData",
+        }
+    ]
+    log = structlog.get_logger("raiden.raiden_service")
+    log.debug("State changes", state_changes=state_changes)
 
     captured = capsys.readouterr()
 
-    assert token not in captured.err
-    assert "accessToken=<redacted>" in captured.err
+    assert auth_token not in captured.err
+    assert f"{auth_user}/<redacted>" in captured.err

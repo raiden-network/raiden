@@ -1,31 +1,41 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict
+from dataclasses import dataclass, field
 
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.utils import hash_balance_data
 from raiden.utils.typing import (
+    AdditionalHash,
     Address,
     Any,
+    BalanceHash,
     BlockExpiration,
     BlockHash,
     BlockNumber,
     Callable,
+    ChainID,
     ChannelID,
     Generic,
     List,
+    Locksroot,
     MessageID,
+    Nonce,
     Optional,
+    Signature,
+    T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_ChannelID,
+    T_Keccak256,
+    T_Signature,
+    T_TokenAmount,
+    TokenAmount,
+    TokenNetworkAddress,
     TransactionHash,
     Tuple,
     TypeVar,
+    typecheck,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.transfer.state import BalanceProofSignedState
 
 # Quick overview
 # --------------
@@ -52,6 +62,7 @@ if TYPE_CHECKING:
 # outputs are separated under different class hierarquies (StateChange and Event).
 
 
+@dataclass
 class State:
     """ An isolated state, modified by StateChange messages.
 
@@ -65,9 +76,10 @@ class State:
     - This class is used as a marker for states.
     """
 
-    __slots__ = ()
+    pass
 
 
+@dataclass
 class StateChange:
     """ Declare the transition to be applied in a state object.
 
@@ -85,12 +97,10 @@ class StateChange:
     - This class is used as a marker for state changes.
     """
 
-    __slots__ = ()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {attr: value for attr, value in self.__dict__.items() if not attr.startswith("_")}
+    pass
 
 
+@dataclass
 class Event:
     """ Events produced by the execution of a state change.
 
@@ -106,9 +116,15 @@ class Event:
       upper layer will use the events for.
     """
 
-    __slots__ = ()
+    pass
 
 
+@dataclass
+class TransferTask(State):
+    token_network_address: TokenNetworkAddress
+
+
+@dataclass(frozen=True)
 class SendMessageEvent(Event):
     """ Marker used for events which represent off-chain protocol messages tied
     to a channel.
@@ -117,209 +133,69 @@ class SendMessageEvent(Event):
     not by the state machine
     """
 
-    def __init__(
-        self, recipient: Address, channel_identifier: ChannelID, message_identifier: MessageID
-    ) -> None:
-        # Note that here and only here channel identifier can also be 0 which stands
-        # for the identifier of no channel (i.e. the global queue)
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError("channel identifier must be of type T_ChannelIdentifier")
+    recipient: Address
+    canonical_identifier: CanonicalIdentifier
+    message_identifier: MessageID
+    queue_identifier: QueueIdentifier = field(init=False)
 
-        self.recipient = recipient
-        self.queue_identifier = QueueIdentifier(
-            recipient=recipient, channel_identifier=channel_identifier
+    def __post_init__(self) -> None:
+        queue_identifier = QueueIdentifier(
+            recipient=self.recipient, canonical_identifier=self.canonical_identifier
         )
-        self.message_identifier = message_identifier
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, SendMessageEvent)
-            and self.recipient == other.recipient
-            and self.queue_identifier == other.queue_identifier
-            and self.message_identifier == other.message_identifier
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+        object.__setattr__(self, "queue_identifier", queue_identifier)
 
 
+@dataclass(frozen=True)
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
 
-    def __init__(self, sender: Address) -> None:
-        self.sender = sender
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, AuthenticatedSenderStateChange) and self.sender == other.sender
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    sender: Address
 
 
-class BalanceProofStateChange(AuthenticatedSenderStateChange):
-    """ Marker used for state changes which contain a balance proof. """
-
-    def __init__(self, balance_proof: "BalanceProofSignedState") -> None:
-        super().__init__(sender=balance_proof.sender)
-        self.balance_proof = balance_proof
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, BalanceProofStateChange)
-            and super().__eq__(other)
-            and self.balance_proof == other.balance_proof
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-
+@dataclass(frozen=True)
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
 
-    def __init__(self, triggered_by_block_hash: BlockHash) -> None:
-        if not isinstance(triggered_by_block_hash, T_BlockHash):
-            raise ValueError("triggered_by_block_hash must be of type block_hash")
-        # This is the blockhash for which the event was triggered
-        self.triggered_by_block_hash = triggered_by_block_hash
+    triggered_by_block_hash: BlockHash
 
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, ContractSendEvent)
-            and self.triggered_by_block_hash == other.triggered_by_block_hash
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __post_init__(self) -> None:
+        typecheck(self.triggered_by_block_hash, T_BlockHash)
 
 
+@dataclass(frozen=True)
 class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
     """
 
-    def __init__(self, triggered_by_block_hash: BlockHash, expiration: BlockExpiration) -> None:
-        super().__init__(triggered_by_block_hash)
-        self.expiration = expiration
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            super().__eq__(other)
-            and isinstance(other, ContractSendExpirableEvent)
-            and self.expiration == other.expiration
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    expiration: BlockExpiration
 
 
+@dataclass(frozen=True)
 class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
 
-    def __init__(
-        self, transaction_hash: TransactionHash, block_number: BlockNumber, block_hash: BlockHash
-    ) -> None:
-        if not isinstance(block_number, T_BlockNumber):
-            raise ValueError("block_number must be of type block_number")
-        if not isinstance(block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of type block_hash")
+    transaction_hash: TransactionHash
+    block_number: BlockNumber
+    block_hash: BlockHash
 
-        self.transaction_hash = transaction_hash
-        self.block_number = block_number
-        self.block_hash = block_hash
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, ContractReceiveStateChange)
-            and self.transaction_hash == other.transaction_hash
-            and self.block_number == other.block_number
-            and self.block_hash == other.block_hash
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __post_init__(self) -> None:
+        typecheck(self.block_number, T_BlockNumber)
+        typecheck(self.block_hash, T_BlockHash)
 
 
+T = TypeVar("T", covariant=True)
 ST = TypeVar("ST", bound=State)
 
 
-class StateManager(Generic[ST]):
-    """ The mutable storage for the application state, this storage can do
-    state transitions by applying the StateChanges to the current State.
-    """
-
-    __slots__ = ("state_transition", "current_state")
-
-    def __init__(
-        self,
-        state_transition: Callable[[Optional[ST], StateChange], State],
-        current_state: Optional[ST],
-    ) -> None:
-        """ Initialize the state manager.
-
-        Args:
-            state_transition: function that can apply a StateChange message.
-            current_state: current application state.
-        """
-        if not callable(state_transition):
-            raise ValueError("state_transition must be a callable")
-
-        self.state_transition = state_transition
-        self.current_state = current_state
-
-    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
-        """ Apply the `state_change` in the current machine and return the
-        resulting events.
-
-        Args:
-            state_change: An object representation of a state
-            change.
-
-        Return:
-            A list of events produced by the state transition.
-            It's the upper layer's responsibility to decided how to handle
-            these events.
-        """
-        assert isinstance(state_change, StateChange)
-
-        # the state objects must be treated as immutable, so make a copy of the
-        # current state and pass the copy to the state machine to be modified.
-        next_state = deepcopy(self.current_state)
-
-        # update the current state by applying the change
-        iteration = self.state_transition(next_state, state_change)
-
-        assert isinstance(iteration, TransitionResult)
-
-        self.current_state = iteration.new_state
-        events = iteration.events
-
-        assert isinstance(self.current_state, State)
-        assert all(isinstance(e, Event) for e in events)
-
-        return next_state, events
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, StateManager)
-            and self.state_transition == other.state_transition
-            and self.current_state == other.current_state
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-
-class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
+class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
     """ Representes the result of applying a single state change.
 
     When a task is completed the new_state is set to None, allowing the parent
     task to cleanup after the child.
     """
 
-    __slots__ = ("new_state", "events")
-
-    def __init__(self, new_state: Optional[ST], events: List[Event]) -> None:
+    def __init__(self, new_state: T, events: List[Event]) -> None:
         self.new_state = new_state
         self.events = events
 
@@ -332,3 +208,223 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
+
+
+class StateManager(Generic[ST]):
+    """ The mutable storage for the application state, this storage can do
+    state transitions by applying the StateChanges to the current State.
+    """
+
+    __slots__ = ("state_transition", "current_state")
+
+    def __init__(
+        self,
+        state_transition: Callable[[Optional[ST], StateChange], TransitionResult[ST]],
+        current_state: Optional[ST],
+    ) -> None:
+        """ Initialize the state manager.
+
+        Args:
+            state_transition: function that can apply a StateChange message.
+            current_state: current application state.
+        """
+        if not callable(state_transition):  # pragma: no unittest
+            raise ValueError("state_transition must be a callable")
+
+        self.state_transition = state_transition
+        self.current_state = current_state
+
+    def dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[List[Event]]]:
+        """ Apply the `state_change` in the current machine and return the
+        resulting events.
+
+        Args:
+            state_change: An object representation of a state
+            change.
+
+        Return:
+            A list of events produced by the state transition.
+            It's the upper layer's responsibility to decided how to handle
+            these events.
+        """
+        if not state_changes:
+            raise ValueError("dispatch called with an empty state_changes list")
+
+        # The state objects must be treated as immutable, so make a copy of the
+        # current state and pass the copy to the state machine to be modified.
+        next_state = deepcopy(self.current_state)
+
+        # Update the current state by applying the state changes
+        events: List[List[Event]] = list()
+        for state_change in state_changes:
+            iteration = self.state_transition(next_state, state_change)
+
+            assert isinstance(iteration, TransitionResult)
+            assert all(isinstance(e, Event) for e in iteration.events)
+            assert isinstance(iteration.new_state, State)
+
+            # Skipping the copy because this value is internal
+            events.append(iteration.events)
+            next_state = iteration.new_state
+
+        self.current_state = next_state
+        assert next_state is not None
+
+        return iteration.new_state, events
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, StateManager)
+            and self.state_transition == other.state_transition
+            and self.current_state == other.current_state
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
+
+
+@dataclass
+class BalanceProofUnsignedState(State):
+    """ Balance proof from the local node without the signature. """
+
+    nonce: Nonce
+    transferred_amount: TokenAmount
+    locked_amount: TokenAmount
+    locksroot: Locksroot
+    canonical_identifier: CanonicalIdentifier
+    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
+
+    def __post_init__(self) -> None:
+        typecheck(self.nonce, int)
+        typecheck(self.transferred_amount, T_TokenAmount)
+        typecheck(self.locked_amount, T_TokenAmount)
+        typecheck(self.locksroot, T_Keccak256)
+
+        if self.nonce <= 0:
+            raise ValueError("nonce cannot be zero or negative")
+
+        if self.nonce > UINT64_MAX:
+            raise ValueError("nonce is too large")
+
+        if self.transferred_amount < 0:
+            raise ValueError("transferred_amount cannot be negative")
+
+        if self.transferred_amount > UINT256_MAX:
+            raise ValueError("transferred_amount is too large")
+
+        if len(self.locksroot) != 32:
+            raise ValueError("locksroot must have length 32")
+
+        self.canonical_identifier.validate()
+
+        self.balance_hash = hash_balance_data(
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
+
+    @property
+    def chain_id(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+
+@dataclass
+class BalanceProofSignedState(State):
+    """ Proof of a channel balance that can be used on-chain to resolve
+    disputes.
+    """
+
+    nonce: Nonce
+    transferred_amount: TokenAmount
+    locked_amount: TokenAmount
+    locksroot: Locksroot
+    message_hash: AdditionalHash
+    signature: Signature
+    sender: Address
+    canonical_identifier: CanonicalIdentifier
+    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
+
+    def __post_init__(self) -> None:
+        typecheck(self.nonce, int)
+        typecheck(self.transferred_amount, T_TokenAmount)
+        typecheck(self.locked_amount, T_TokenAmount)
+        typecheck(self.locksroot, T_Keccak256)
+        typecheck(self.message_hash, T_Keccak256)
+        typecheck(self.signature, T_Signature)
+        typecheck(self.sender, T_Address)
+
+        if self.nonce <= 0:
+            raise ValueError("nonce cannot be zero or negative")
+
+        if self.nonce > UINT64_MAX:
+            raise ValueError("nonce is too large")
+
+        if self.transferred_amount < 0:
+            raise ValueError("transferred_amount cannot be negative")
+
+        if self.transferred_amount > UINT256_MAX:
+            raise ValueError("transferred_amount is too large")
+
+        if len(self.locksroot) != 32:
+            raise ValueError("locksroot must have length 32")
+
+        if len(self.message_hash) != 32:
+            raise ValueError("message_hash is an invalid hash")
+
+        if len(self.signature) != 65:
+            raise ValueError("signature is an invalid signature")
+
+        self.canonical_identifier.validate()
+
+        self.balance_hash = hash_balance_data(
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
+
+    @property
+    def chain_id(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+
+class SuccessOrError:
+    """Helper class to be used when you want to test a boolean
+
+    and also collect feedback when the test fails. Initialize with any
+    number of "error message" strings. The object will be considered
+    truthy if there are no error messages.
+    """
+
+    def __init__(self, *error_messages: str) -> None:
+        self.error_messages: List[str] = [msg for msg in error_messages]
+
+    def __bool__(self) -> bool:
+        return self.ok
+
+    @property
+    def ok(self) -> bool:
+        return not bool(self.error_messages)
+
+    @property
+    def fail(self) -> bool:
+        return not self.ok
+
+    @property
+    def as_error_message(self) -> str:
+        return " / ".join(self.error_messages)

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+cd "${BASH_SOURCE%/*}"
+_SCRIPT_NAME=$0 python3 ../tools/pip-compile-wrapper.py "$@"

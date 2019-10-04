@@ -1,0 +1,25 @@
+[report]
+exclude_lines =
+	pragma: no cover
+	pragma: no unittest
+	if TYPE_CHECKING:
+	def __repr__
+	raise NotImplementedError
+	assert not isinstance
+	typecheck
+
+[run]
+branch = True
+include =
+	raiden/*.py
+	raiden/**/*.py
+omit =
+	raiden/tests/**
+
+	# Modules that are not expected to be unit tested
+	raiden/app.py
+	raiden/raiden_service.py
+	raiden/ui/**
+	raiden/network/proxies/**
+	raiden/network/transport/**
+concurrency = gevent

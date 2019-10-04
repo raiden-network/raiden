@@ -1,4 +1,6 @@
 import binascii
+import datetime
+from typing import Any, Optional
 
 from eth_utils import (
     is_0x_prefixed,
@@ -14,11 +16,10 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
-from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH
+from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
-from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
-from raiden.utils import data_decoder, data_encoder
+from raiden.transfer.state import ChannelState, NettingChannelState
 
 
 class InvalidEndpoint(NotFound):
@@ -58,10 +59,10 @@ class AddressField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_checksum_address(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -79,14 +80,18 @@ class AddressField(fields.Field):
         return value
 
 
-class DataField(fields.Field):
-    @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
-        return data_encoder(value)
+class TimeStampField(fields.DateTime):
+    def _serialize(
+        self, value: Optional[datetime.datetime], attr: Any, obj: Any, **kwargs
+    ) -> Optional[str]:
+        if value is not None:
+            return value.isoformat()
+        return None
 
-    @staticmethod
-    def _deserialize(value, attr, data):  # pylint: disable=unused-argument
-        return data_decoder(value)
+    def _deserialize(self, value, attr, data, **kwargs) -> Optional[datetime.datetime]:
+        if value is not None:
+            return datetime.datetime.fromisoformat(value)
+        return None
 
 
 class SecretField(fields.Field):
@@ -99,10 +104,10 @@ class SecretField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_hex(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -122,15 +127,15 @@ class SecretHashField(fields.Field):
         "missing_prefix": "Not a valid hex encoded value, must be 0x prefixed.",
         "invalid_data": "Not a valid hex formated string, contains invalid characters.",
         "invalid_size": (
-            f"Not a valid secrethash, decoded value is not {SECRETHASH_LENGTH} " f"bytes long."
+            f"Not a valid secrethash, decoded value is not {SECRETHASH_LENGTH} bytes long."
         ),
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
         return to_hex(value)
 
-    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail("missing_prefix")
 
@@ -150,8 +155,8 @@ class BaseOpts(SchemaOpts):
     This allows for having the Object the Schema encodes to inside of the class Meta
     """
 
-    def __init__(self, meta):
-        SchemaOpts.__init__(self, meta)
+    def __init__(self, meta, ordered):
+        SchemaOpts.__init__(self, meta, ordered=ordered)
         self.decoding_class = getattr(meta, "decoding_class", None)
 
 
@@ -159,7 +164,7 @@ class BaseSchema(Schema):
     OPTIONS_CLASS = BaseOpts
 
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         # this will depend on the Schema used, which has its object class in
         # the class Meta attributes
         decoding_class = self.opts.decoding_class  # pylint: disable=no-member
@@ -170,7 +175,7 @@ class BaseListSchema(Schema):
     OPTIONS_CLASS = BaseOpts
 
     @pre_load
-    def wrap_data_envelope(self, data):  # pylint: disable=no-self-use
+    def wrap_data_envelope(self, data, **kwargs):  # pylint: disable=no-self-use,unused-argument
         # because the EventListSchema and ChannelListSchema objects need to
         # have some field ('data'), the data has to be enveloped in the
         # internal representation to comply with the Schema
@@ -178,11 +183,11 @@ class BaseListSchema(Schema):
         return data
 
     @post_dump
-    def unwrap_data_envelope(self, data):  # pylint: disable=no-self-use
+    def unwrap_data_envelope(self, data, **kwargs):  # pylint: disable=no-self-use,unused-argument
         return data["data"]
 
     @post_load
-    def make_object(self, data):
+    def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         decoding_class = self.opts.decoding_class  # pylint: disable=no-member
         list_ = data["data"]
         return decoding_class(list_)
@@ -241,9 +246,21 @@ class PartnersPerTokenListSchema(BaseListSchema):
         decoding_class = PartnersPerTokenList
 
 
+class MintTokenSchema(BaseSchema):
+    to = AddressField(required=True)
+    value = fields.Integer(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
+    contract_method = fields.String(
+        validate=validate.OneOf(choices=("increaseSupply", "mint", "mintFor"))
+    )
+
+    class Meta:
+        strict = True
+        decoding_class = dict
+
+
 class ChannelStateSchema(BaseSchema):
     channel_identifier = fields.Integer(attribute="identifier")
-    token_network_identifier = AddressField()
+    token_network_address = AddressField()
     token_address = AddressField()
     partner_address = fields.Method("get_partner_address")
     settle_timeout = fields.Integer()
@@ -251,23 +268,29 @@ class ChannelStateSchema(BaseSchema):
     balance = fields.Method("get_balance")
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
+    total_withdraw = fields.Method("get_total_withdraw")
 
     @staticmethod
-    def get_partner_address(channel_state):
+    def get_partner_address(channel_state: NettingChannelState) -> str:
         return to_checksum_address(channel_state.partner_state.address)
 
     @staticmethod
-    def get_balance(channel_state):
-        return channel.get_distributable(channel_state.our_state, channel_state.partner_state)
+    def get_balance(channel_state: NettingChannelState) -> int:
+        return channel.get_balance(channel_state.our_state, channel_state.partner_state)
 
     @staticmethod
-    def get_state(channel_state):
-        return channel.get_status(channel_state)
+    def get_state(channel_state: NettingChannelState) -> str:
+        return channel.get_status(channel_state).value
 
     @staticmethod
-    def get_total_deposit(channel_state):
+    def get_total_deposit(channel_state: NettingChannelState) -> int:
         """Return our total deposit in the contract for this channel"""
         return channel_state.our_total_deposit
+
+    @staticmethod
+    def get_total_withdraw(channel_state: NettingChannelState) -> int:
+        """Return our total withdraw from this channel"""
+        return channel_state.our_total_withdraw
 
     class Meta:
         strict = True
@@ -277,6 +300,7 @@ class ChannelStateSchema(BaseSchema):
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
+    reveal_timeout = fields.Integer(missing=None)
     settle_timeout = fields.Integer(missing=None)
     total_deposit = fields.Integer(default=None, missing=None)
 
@@ -288,11 +312,17 @@ class ChannelPutSchema(BaseSchema):
 
 class ChannelPatchSchema(BaseSchema):
     total_deposit = fields.Integer(default=None, missing=None)
+    total_withdraw = fields.Integer(default=None, missing=None)
+    reveal_timeout = fields.Integer(default=None, missing=None)
     state = fields.String(
         default=None,
         missing=None,
         validate=validate.OneOf(
-            [CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED]
+            [
+                ChannelState.STATE_CLOSED.value,
+                ChannelState.STATE_OPENED.value,
+                ChannelState.STATE_SETTLED.value,
+            ]
         ),
     )
 
@@ -310,6 +340,7 @@ class PaymentSchema(BaseSchema):
     identifier = fields.Integer(missing=None)
     secret = SecretField(missing=None)
     secret_hash = SecretHashField(missing=None)
+    lock_timeout = fields.Integer(missing=None)
 
     class Meta:
         strict = True
@@ -338,7 +369,7 @@ class EventPaymentSentFailedSchema(BaseSchema):
     event = fields.Constant("EventPaymentSentFailed")
     reason = fields.Str()
     target = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "reason", "target", "log_time")
@@ -352,7 +383,7 @@ class EventPaymentSentSuccessSchema(BaseSchema):
     event = fields.Constant("EventPaymentSentSuccess")
     amount = fields.Integer()
     target = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "amount", "target", "identifier", "log_time")
@@ -366,7 +397,7 @@ class EventPaymentReceivedSuccessSchema(BaseSchema):
     event = fields.Constant("EventPaymentReceivedSuccess")
     amount = fields.Integer()
     initiator = AddressField()
-    log_time = fields.String()
+    log_time = TimeStampField()
 
     class Meta:
         fields = ("block_number", "event", "amount", "initiator", "identifier", "log_time")

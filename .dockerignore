@@ -1,2 +1,6 @@
 dist/
 tools/testnet/.terraform/plugins
+docs/_build
+.mypy_cache
+.eggs
+.pytest_cache

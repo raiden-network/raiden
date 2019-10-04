@@ -1,29 +1,37 @@
+import contextlib
+import datetime
 import json
 import os
+import signal
 import sys
 import textwrap
 import traceback
-from tempfile import mktemp
-from typing import Any, AnyStr, Dict, List, Optional, Tuple
+from copy import deepcopy
+from io import StringIO
+from subprocess import TimeoutExpired
+from tempfile import mkdtemp, mktemp
+from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
-import urllib3
-from mirakuru import ProcessExitedWithError
-from urllib3.exceptions import InsecureRequestWarning
+from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+from raiden.app import App
 from raiden.constants import Environment, EthClient, RoutingMode
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
-from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import (
+    DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+    DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
-    INITIAL_PORT,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
+    RAIDEN_CONTRACT_VERSION,
 )
-from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -31,7 +39,6 @@ from raiden.utils.cli import (
     EnumChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
-    NATChoiceType,
     NetworkChoiceType,
     PathRelativePath,
     apply_config_file,
@@ -41,7 +48,7 @@ from raiden.utils.cli import (
     validate_option_dependencies,
 )
 
-from .runners import EchoNodeRunner, MatrixRunner, UDPRunner
+from .runners import EchoNodeRunner, MatrixRunner
 
 log = structlog.get_logger(__name__)
 
@@ -53,10 +60,6 @@ OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
     "pathfinding-iou-timeout": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
     "enable-monitoring": [("transport", "matrix")],
     "matrix-server": [("transport", "matrix")],
-    "listen-address": [("transport", "udp")],
-    "max-unresponsive-time": [("transport", "udp")],
-    "send-ping-time": [("transport", "udp")],
-    "nat": [("transport", "udp")],
 }
 
 
@@ -66,6 +69,7 @@ def options(func):
     # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
     # for every use
     options_ = [
+        option("--version", hidden=True, is_flag=True, allow_from_autoenv=False),
         option(
             "--datadir",
             help="Directory for storing raiden data.",
@@ -149,13 +153,19 @@ def options(func):
             help="hex encoded address of the User Deposit contract.",
             type=ADDRESS_TYPE,
         ),
+        option(
+            "--monitoring-service-contract-address",
+            help="hex encoded address of the Monitorin Service contract.",
+            type=ADDRESS_TYPE,
+        ),
         option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
             "--transport",
-            help="Transport system to use. UDP is not recommended",
-            type=click.Choice(["udp", "matrix"]),
+            help="Transport system to use.",
+            type=click.Choice(["matrix"]),
             default="matrix",
             show_default=True,
+            hidden=True,
         ),
         option(
             "--network-id",
@@ -196,6 +206,30 @@ def options(func):
             help="Show all configuration values used to control Raiden's behavior",
             is_flag=True,
         ),
+        option(
+            "--blockchain-query-interval",
+            help="Time interval after which to check for new blocks (in seconds)",
+            default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+            show_default=True,
+            type=click.FloatRange(min=0.1),
+        ),
+        option_group(
+            "Channel-specific Options",
+            option(
+                "--default-reveal-timeout",
+                help="Sets the default reveal timeout to be used to newly created channels",
+                default=DEFAULT_REVEAL_TIMEOUT,
+                show_default=True,
+                type=click.IntRange(min=20),
+            ),
+            option(
+                "--default-settle-timeout",
+                help="Sets the default settle timeout to be used to newly created channels",
+                default=DEFAULT_SETTLE_TIMEOUT,
+                show_default=True,
+                type=click.IntRange(min=20),
+            ),
+        ),
         option_group(
             "Ethereum Node Options",
             option(
@@ -235,11 +269,12 @@ def options(func):
                 "--routing-mode",
                 help=(
                     "Specify the routing mode to be used.\n"
-                    '"basic": use local routing\n'
                     '"pfs": use the path finding service\n'
+                    '"local": use local routing, but send updates to the PFS\n'
+                    '"private": use local routing and don\'t send updates to the PFS\n'
                 ),
                 type=EnumChoiceType(RoutingMode),
-                default=RoutingMode.BASIC.value,
+                default=RoutingMode.PFS.value,
                 show_default=True,
             ),
             option(
@@ -282,54 +317,6 @@ def options(func):
             ),
         ),
         option_group(
-            "UDP Transport Options",
-            option(
-                "--listen-address",
-                help='"host:port" for the raiden service to listen on.',
-                default="0.0.0.0:{}".format(INITIAL_PORT),
-                type=str,
-                show_default=True,
-            ),
-            option(
-                "--max-unresponsive-time",
-                help=(
-                    "Max time in seconds for which an address can send no packets and "
-                    "still be considered healthy."
-                ),
-                default=30,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--send-ping-time",
-                help=(
-                    "Time in seconds after which if we have received no message from a "
-                    "node we have a connection with, we are going to send a PING message"
-                ),
-                default=60,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--nat",
-                help=(
-                    "Manually specify method to use for determining public IP / NAT traversal.\n"
-                    "Available methods:\n"
-                    '"auto" - Try UPnP, then STUN, fallback to none\n'
-                    '"upnp" - Try UPnP, fallback to none\n'
-                    '"stun" - Try STUN, fallback to none\n'
-                    '"none" - Use the local interface address '
-                    "(this will likely cause connectivity issues)\n"
-                    '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port '
-                    "number)"
-                ),
-                type=NATChoiceType(["auto", "upnp", "stun", "none", "ext:<IP>[:<PORT>]"]),
-                default="auto",
-                show_default=True,
-                option_group="udp_transport",
-            ),
-        ),
-        option_group(
             "Matrix Transport Options",
             option(
                 "--matrix-server",
@@ -358,10 +345,15 @@ def options(func):
                 "--log-file",
                 help="file path for logging to file",
                 default=None,
-                type=str,
+                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
                 show_default=True,
             ),
             option("--log-json", help="Output log lines in JSON format", is_flag=True),
+            option(
+                "--debug-logfile-name",
+                help="The debug logfile name.",
+                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+            ),
             option(
                 "--disable-debug-logfile",
                 help=(
@@ -389,7 +381,7 @@ def options(func):
             option(
                 "--api-address",
                 help='"host:port" for the RPC server to listen on.',
-                default="127.0.0.1:5001",
+                default=f"127.0.0.1:{DEFAULT_HTTP_SERVER_PORT}",
                 type=str,
                 show_default=True,
             ),
@@ -406,6 +398,19 @@ def options(func):
         option_group(
             "Debugging options",
             option(
+                "--flamegraph",
+                help=("Directory to save stack data used to produce flame graphs."),
+                type=click.Path(
+                    exists=False,
+                    dir_okay=True,
+                    file_okay=False,
+                    writable=True,
+                    resolve_path=True,
+                    allow_dash=False,
+                ),
+                default=None,
+            ),
+            option(
                 "--unrecoverable-error-should-crash",
                 help=(
                     "DO NOT use, unless you know what you are doing. If provided "
@@ -417,7 +422,7 @@ def options(func):
             ),
         ),
         option_group(
-            "Hash Resolver options",
+            "Hash Resolver Options",
             option(
                 "--resolver-endpoint",
                 help=(
@@ -428,6 +433,36 @@ def options(func):
                 default=None,
                 type=str,
                 show_default=True,
+            ),
+        ),
+        option_group(
+            "Mediation Fee Options",
+            option(
+                "--flat-fee",
+                help=(
+                    "Sets the flat fee required for every mediation in wei of the "
+                    "mediated token for a certain token address."
+                ),
+                type=(ADDRESS_TYPE, click.IntRange(min=0)),
+                multiple=True,
+            ),
+            option(
+                "--proportional-fee",
+                help=(
+                    "Mediation fee as ratio of mediated amount in parts-per-million "
+                    "(10^-6) for a certain token address."
+                ),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                multiple=True,
+            ),
+            option(
+                "--proportional-imbalance-fee",
+                help=(
+                    "Set the worst-case imbalance fee relative to the channels capacity "
+                    "in parts-per-million (10^-6) for a certain token address."
+                ),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
+                multiple=True,
             ),
         ),
     ]
@@ -443,6 +478,29 @@ def options(func):
 def run(ctx, **kwargs):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
+    flamegraph = kwargs.pop("flamegraph", None)
+    profiler = None
+
+    if flamegraph:
+        os.makedirs(flamegraph, exist_ok=True)
+
+        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
+
+        now = datetime.datetime.now()
+        stack_path = os.path.join(flamegraph, f"{now:%Y%m%d_%H%M}_stack.data")
+        stack_stream = open(stack_path, "w")
+        flame = FlameGraphCollector(stack_stream)
+        profiler = TraceSampler(flame)
+
+    if kwargs.pop("version", False):
+        click.echo(
+            click.style("Hint: Use ", fg="green")
+            + click.style(f"'{os.path.basename(sys.argv[0])} version'", fg="yellow")
+            + click.style(" instead", fg="green")
+        )
+        ctx.invoke(version, short=True)
+        return
+
     if kwargs["config_file"]:
         apply_config_file(run, kwargs, ctx)
 
@@ -453,9 +511,7 @@ def run(ctx, **kwargs):
         ctx.obj = kwargs
         return
 
-    if kwargs["transport"] == "udp":
-        runner = UDPRunner(kwargs, ctx)
-    elif kwargs["transport"] == "matrix":
+    if kwargs["transport"] == "matrix":
         runner = MatrixRunner(kwargs, ctx)
     else:
         # Shouldn't happen
@@ -518,6 +574,9 @@ def run(ctx, **kwargs):
             fg="red",
         )
         sys.exit(1)
+    finally:
+        if profiler is not None:
+            profiler.stop()
 
 
 @run.command()
@@ -531,6 +590,11 @@ def version(short):
 
 
 @run.command()
+@option(
+    "--report-path",
+    help="Store report at this location instead of a temp file.",
+    type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+)
 @option("--debug", is_flag=True, help="Drop into pdb on errors.")
 @option(
     "--eth-client",
@@ -540,19 +604,46 @@ def version(short):
     help="Which Ethereum client to run for the smoketests",
 )
 @click.pass_context
-def smoketest(ctx, debug, eth_client):
+def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import setup_testchain_and_raiden, run_smoketest
-    from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
+    from raiden.tests.utils.smoketest import (
+        setup_raiden,
+        run_smoketest,
+        setup_matrix_for_smoketest,
+        setup_testchain_for_smoketest,
+    )
+    from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
+    from raiden.utils.debugging import enable_gevent_monitoring_signal
 
-    report_file = mktemp(suffix=".log")
+    step_count = 8
+    step = 0
+    stdout = sys.stdout
+    raiden_stdout = StringIO()
+
+    environment_type = ctx.parent.params["environment_type"]
+    transport = ctx.parent.params["transport"]
+    disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
+    matrix_server = ctx.parent.params["matrix_server"]
+
+    if transport != "matrix":
+        raise RuntimeError(f"Invalid transport type '{transport}'")
+
+    if report_path is None:
+        report_file = mktemp(suffix=".log")
+    else:
+        report_file = report_path
+
+    enable_gevent_monitoring_signal()
+    make_requests_insecure()
+    urllib3.disable_warnings(InsecureRequestWarning)
+
+    click.secho(f"Report file: {report_file}", fg="yellow")
+
     configure_logging(
         logger_level_config={"": "DEBUG"},
         log_file=report_file,
-        disable_debug_logfile=ctx.parent.params["disable_debug_logfile"],
+        disable_debug_logfile=disable_debug_logfile,
     )
-    free_port_generator = get_free_port()
-    click.secho(f"Report file: {report_file}", fg="yellow")
 
     def append_report(subject: str, data: Optional[AnyStr] = None):
         with open(report_file, "a", encoding="UTF-8") as handler:
@@ -568,13 +659,6 @@ def smoketest(ctx, debug, eth_client):
     append_report("Raiden version", json.dumps(get_system_spec()))
     append_report("Raiden log")
 
-    step_count = 7
-    if ctx.parent.params["transport"] == "matrix":
-        step_count = 8
-    step = 0
-
-    stdout = sys.stdout
-
     def print_step(description: str, error: bool = False) -> None:
         nonlocal step
         step += 1
@@ -586,77 +670,107 @@ def smoketest(ctx, debug, eth_client):
             file=stdout,
         )
 
-    print_step("Getting smoketest configuration")
-    contracts_version = environment_type_to_contracts_version(
-        ctx.parent.params["environment_type"]
-    )
+    contracts_version = RAIDEN_CONTRACT_VERSION
 
-    with setup_testchain_and_raiden(
-        transport=ctx.parent.params["transport"],
-        eth_client=eth_client,
-        matrix_server=ctx.parent.params["matrix_server"],
-        contracts_version=contracts_version,
-        print_step=print_step,
-        free_port_generator=free_port_generator,
-    ) as result:
-        args = result["args"]
-        contract_addresses = result["contract_addresses"]
-        token = result["token"]
-        ethereum_nodes = result["ethereum_nodes"]
-        # Also respect environment type
-        args["environment_type"] = ctx.parent.params["environment_type"]
-        for option_ in run.params:
-            if option_.name in args.keys():
-                args[option_.name] = option_.process_value(ctx, args[option_.name])
-            else:
-                args[option_.name] = option_.default
+    try:
+        free_port_generator = get_free_port()
+        ethereum_nodes = None
 
-        port = next(free_port_generator)
+        datadir = mkdtemp()
+        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+            eth_client=eth_client,
+            print_step=print_step,
+            free_port_generator=free_port_generator,
+            base_datadir=datadir,
+            base_logdir=datadir,
+        )
+        matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
+            print_step=print_step, free_port_generator=free_port_generator
+        )
 
-        args["api_address"] = "localhost:" + str(port)
+        # Do not redirect the stdout on a debug session, otherwise the REPL
+        # will also be redirected
+        if debug:
+            stdout_manager = contextlib.nullcontext()
+        else:
+            stdout_manager = contextlib.redirect_stdout(raiden_stdout)
 
-        if args["transport"] == "udp":
-            with SocketFactory("127.0.0.1", port, strategy="none") as mapped_socket:
-                args["mapped_socket"] = mapped_socket
-                success = run_smoketest(
+        with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
+            result = setup_raiden(
+                transport=transport,
+                matrix_server=matrix_server,
+                print_step=print_step,
+                contracts_version=contracts_version,
+                eth_client=testchain["eth_client"],
+                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+                web3=testchain["web3"],
+                base_datadir=testchain["base_datadir"],
+                keystore=testchain["keystore"],
+            )
+
+            args = result["args"]
+            contract_addresses = result["contract_addresses"]
+            ethereum_nodes = testchain["node_executors"]
+            token = result["token"]
+
+            port = next(free_port_generator)
+
+            args["api_address"] = f"localhost:{port}"
+            args["config"] = deepcopy(App.DEFAULT_CONFIG)
+            args["environment_type"] = environment_type
+            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
+            args["one_to_n_contract_address"] = "0x" + "1" * 40
+            args["routing_mode"] = RoutingMode.PRIVATE
+            args["flat_fee"] = ()
+            args["proportional_fee"] = ()
+            args["proportional_imbalance_fee"] = ()
+
+            for option_ in run.params:
+                if option_.name in args.keys():
+                    args[option_.name] = option_.process_value(ctx, args[option_.name])
+                else:
+                    args[option_.name] = option_.default
+
+            try:
+                run_smoketest(
                     print_step=print_step,
-                    append_report=append_report,
                     args=args,
                     contract_addresses=contract_addresses,
                     token=token,
-                    debug=debug,
-                    ethereum_nodes=ethereum_nodes,
                 )
-        elif args["transport"] == "matrix":
-            args["mapped_socket"] = None
-            print_step("Starting Matrix transport")
-            try:
-                with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
-                    # Disable TLS verification so we can connect to the self signed certificate
-                    make_requests_insecure()
-                    urllib3.disable_warnings(InsecureRequestWarning)
-                    args["extra_config"] = {
-                        "transport": {"matrix": {"available_servers": server_urls}}
-                    }
-                    success = run_smoketest(
-                        print_step=print_step,
-                        append_report=append_report,
-                        args=args,
-                        contract_addresses=contract_addresses,
-                        token=token,
-                        debug=debug,
-                        ethereum_nodes=ethereum_nodes,
-                    )
-            except (PermissionError, ProcessExitedWithError, FileNotFoundError):
-                append_report("Matrix server start exception", traceback.format_exc())
-                print_step(
-                    f"Error during smoketest setup, report was written to {report_file}",
-                    error=True,
-                )
-                success = False
-        else:
-            # Shouldn't happen
-            raise RuntimeError(f"Invalid transport type '{args['transport']}'")
+            finally:
+                if ethereum_nodes:
+                    for node_executor in ethereum_nodes:
+                        node = node_executor.process
+                        node.send_signal(signal.SIGINT)
+
+                        try:
+                            node.wait(10)
+                        except TimeoutExpired:
+                            print_step("Ethereum node shutdown unclean, check log!", error=True)
+                            node.kill()
+
+                        if isinstance(node_executor.stdio, tuple):
+                            logfile = node_executor.stdio[1]
+                            logfile.flush()
+                            logfile.seek(0)
+                            append_report("Ethereum Node log output", logfile.read())
+
+        append_report("Raiden Node stdout", raiden_stdout.getvalue())
+
+    except:  # noqa pylint: disable=bare-except
+        if debug:
+            import pdb
+
+            pdb.post_mortem()  # pylint: disable=no-member
+
+        error = traceback.format_exc()
+        append_report("Smoketest execution error", error)
+        print_step("Smoketest execution error", error=True)
+        success = False
+    else:
+        print_step(f"Smoketest successful")
+        success = True
 
     if not success:
         sys.exit(1)

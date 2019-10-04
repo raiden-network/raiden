@@ -10,30 +10,31 @@ from typing import Any, Callable
 import gevent
 from eth_keys import keys
 from eth_utils import (
-    add_0x_prefix,
-    decode_hex,
     encode_hex,
     is_0x_prefixed,
     is_checksum_address,
     remove_0x_prefix,
+    to_canonical_address,
     to_checksum_address,
 )
 from web3 import Web3
 
 import raiden
 from raiden import constants
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils.signing import sha3  # noqa
 from raiden.utils.typing import (
     Address,
     BlockNumber,
     BlockSpecification,
     Dict,
+    Endpoint,
     Host,
     HostPort,
     Iterable,
     List,
     Optional,
+    PaymentID,
     Port,
     PrivateKey,
     PublicKey,
@@ -47,16 +48,12 @@ from raiden.utils.typing import (
 
 
 def random_secret() -> Secret:
-    """ Return a random 32 byte secret except the 0 secret since it's not accepted in the contracts
-    """
-    while True:
-        secret = os.urandom(constants.SECRET_LENGTH)
-        if secret != constants.EMPTY_HASH:
-            return Secret(secret)
+    """ Return a random 32 byte secret"""
+    return Secret(os.urandom(constants.SECRET_LENGTH))
 
 
 def ishash(data: bytes) -> bool:
-    return isinstance(data, bytes) and len(data) == 32
+    return len(data) == 32
 
 
 def address_checksum_and_decode(addr: str) -> Address:
@@ -66,29 +63,12 @@ def address_checksum_and_decode(addr: str) -> Address:
         checksummed according to EIP55 specification
     """
     if not is_0x_prefixed(addr):
-        raise InvalidAddress("Address must be 0x prefixed")
+        raise InvalidChecksummedAddress("Address must be 0x prefixed")
 
     if not is_checksum_address(addr):
-        raise InvalidAddress("Address must be EIP55 checksummed")
+        raise InvalidChecksummedAddress("Address must be EIP55 checksummed")
 
-    addr_bytes = decode_hex(addr)
-    assert len(addr_bytes) in (20, 0)
-    return Address(addr_bytes)
-
-
-def data_encoder(data: bytes, length: int = 0) -> str:
-    data = remove_0x_prefix(encode_hex(data))
-    return add_0x_prefix(data.rjust(length * 2, b"0").decode())
-
-
-def data_decoder(data: str) -> bytes:
-    assert is_0x_prefixed(data)
-    return decode_hex(data)
-
-
-def quantity_encoder(i: int) -> str:
-    """Encode integer quantity `data`."""
-    return hex(i).rstrip("L")
+    return to_canonical_address(addr)
 
 
 def pex(data: bytes) -> str:
@@ -99,19 +79,14 @@ def lpex(lst: Iterable[bytes]) -> List[str]:
     return [pex(l) for l in lst]
 
 
-def host_port_to_endpoint(host: str, port: int) -> str:
-    return "{}:{}".format(host, port)
-
-
-def split_endpoint(endpoint: str) -> HostPort:
+def split_endpoint(endpoint: Endpoint) -> HostPort:
     match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
     if not match:
         raise ValueError("Invalid endpoint", endpoint)
     host, port = match.groups()
-    returned_port = None
-    if port:
-        returned_port = Port(int(port))
-    return Host(host), returned_port
+    if not port:
+        port = "0"
+    return Host(host), Port(int(port))
 
 
 def privatekey_to_publickey(private_key_bin: PrivateKey) -> PublicKey:
@@ -129,12 +104,7 @@ def get_project_root() -> str:
     return os.path.dirname(raiden.__file__)
 
 
-def get_relative_path(file_name: str) -> str:
-    prefix = os.path.commonprefix([os.path.realpath("."), os.path.realpath(file_name)])
-    return file_name.replace(prefix + "/", "")
-
-
-def get_system_spec() -> Dict[str, str]:
+def get_system_spec() -> Dict[str, Any]:
     """Collect information about the system and installation.
     """
     import pkg_resources
@@ -160,6 +130,7 @@ def get_system_spec() -> Dict[str, str]:
 
     system_spec = {
         "raiden": version,
+        "raiden_db_version": constants.RAIDEN_DB_VERSION,
         "python_implementation": platform.python_implementation(),
         "python_version": platform.python_version(),
         "system": system_info,
@@ -198,10 +169,6 @@ def wait_until(func: Callable, wait_for: float = None, sleep_for: float = 0.5) -
     return res
 
 
-def is_frozen() -> bool:
-    return getattr(sys, "frozen", False)
-
-
 def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     """ Split given iterable in pairs [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]"""
     # We are using zip_longest with one clever hack:
@@ -213,9 +180,9 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     return zip_longest(iterator, iterator)
 
 
-def create_default_identifier() -> int:
+def create_default_identifier() -> PaymentID:
     """ Generates a random identifier. """
-    return random.randint(0, constants.UINT64_MAX)
+    return PaymentID(random.randint(0, constants.UINT64_MAX))
 
 
 def merge_dict(to_update: dict, other_dict: dict) -> None:

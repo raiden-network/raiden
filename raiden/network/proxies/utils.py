@@ -1,46 +1,69 @@
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-from eth_utils import to_normalized_address
-from web3.exceptions import BadFunctionCallOutput
+from eth_utils import decode_hex, to_hex
+from structlog import BoundLoggerBase
 
-from raiden.exceptions import AddressWrongContract, ContractVersionMismatch
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils.typing import Address, BlockSpecification, Locksroot, Tuple
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BlockNumber,
+    BlockSpecification,
+    ChannelID,
+    Dict,
+    Generator,
+    Locksroot,
+    NoReturn,
+    Optional,
+    T_BlockHash,
+    Tuple,
+)
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
+from raiden_contracts.contract_manager import ContractManager
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.network.blockchain_service import BlockChainService
+    from raiden.network.proxies.proxy_manager import ProxyManager
+    from raiden.network.proxies.token_network import TokenNetwork
 
 
-def compare_contract_versions(
-    proxy: ContractProxy, expected_version: str, contract_name: str, address: Address
-) -> None:
-    """Compare version strings of a contract.
+def get_channel_participants_from_open_event(
+    token_network: "TokenNetwork",
+    channel_identifier: ChannelID,
+    contract_manager: ContractManager,
+    from_block: BlockNumber,
+) -> Optional[Tuple[Address, Address]]:
+    # For this check it is perfectly fine to use a `latest` block number.
+    # Because the filter is looking just for the OPENED event.
+    to_block = "latest"
 
-    If not matching raise ContractVersionMismatch. Also may raise AddressWrongContract
-    if the contract contains no code."""
-    assert isinstance(expected_version, str)
-    try:
-        deployed_version = proxy.contract.functions.contract_version().call()
-    except BadFunctionCallOutput:
-        raise AddressWrongContract("")
+    filter_args = get_filter_args_for_specific_event_from_channel(
+        token_network_address=token_network.address,
+        channel_identifier=channel_identifier,
+        event_name=ChannelEvent.OPENED,
+        contract_manager=contract_manager,
+        from_block=from_block,
+        to_block=to_block,
+    )
 
-    deployed_version = deployed_version.replace("_", "0")
-    expected_version = expected_version.replace("_", "0")
+    events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
 
-    deployed = [int(x) for x in deployed_version.split(".")]
-    expected = [int(x) for x in expected_version.split(".")]
+    # There must be only one channel open event per channel identifier
+    if len(events) != 1:
+        return None
 
-    if deployed != expected:
-        raise ContractVersionMismatch(
-            f"Provided {contract_name} contract ({to_normalized_address(address)}) "
-            f"version mismatch. Expected: {expected_version} Got: {deployed_version}"
-        )
+    event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0])
+    participant1 = Address(decode_hex(event["args"]["participant1"]))
+    participant2 = Address(decode_hex(event["args"]["participant2"]))
+
+    return participant1, participant2
 
 
 def get_onchain_locksroots(
-    chain: "BlockChainService",
+    proxy_manager: "ProxyManager",
     canonical_identifier: CanonicalIdentifier,
     participant1: Address,
     participant2: Address,
@@ -72,7 +95,7 @@ def get_onchain_locksroots(
     - When channel is settled A must query the blockchain to figure out which
       locksroot was used.
     """
-    payment_channel = chain.payment_channel(canonical_identifier=canonical_identifier)
+    payment_channel = proxy_manager.payment_channel(canonical_identifier=canonical_identifier)
     token_network = payment_channel.token_network
 
     participants_details = token_network.detail_participants(
@@ -89,3 +112,31 @@ def get_onchain_locksroots(
     partner_locksroot = partner_details.locksroot
 
     return our_locksroot, partner_locksroot
+
+
+@contextmanager
+def log_transaction(log: BoundLoggerBase, description: str, details: Dict[Any, Any]) -> Generator:
+    bound_log = log.bind(description=description, **details)
+    try:
+        bound_log.debug("Entered")
+        yield
+    except:  # noqa
+        bound_log.critical("Failed", exc_info=True)
+        raise
+    bound_log.debug("Exited")
+
+
+def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:
+    """Format a message and raise RaidenUnrecoverableError."""
+    # We know that the given address has code because this is checked
+    # in the constructor
+    if isinstance(given_block_identifier, T_BlockHash):
+        given_block_identifier = to_hex(given_block_identifier)
+
+    msg = (
+        f"Either the given address is for a different smart contract, "
+        f"or the contract was not yet deployed at the block "
+        f"{given_block_identifier}. Either way this call should never "
+        f"happened."
+    )
+    raise RaidenUnrecoverableError(msg)

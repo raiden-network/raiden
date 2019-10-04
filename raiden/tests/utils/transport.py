@@ -1,32 +1,30 @@
 import logging
 import os
 import re
-import shutil
-import subprocess
 import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
+from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import ContextManager, Iterator
+from typing import Callable, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from gevent import subprocess
 from twisted.internet import defer
 
-from raiden.utils.http import HTTPExecutor
+from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
+from raiden.utils.typing import Iterable, Port
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
-_SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR", False)
+_SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
 _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath("synapse_config.yaml.template")
 
-
-class MockDiscovery:
-    @staticmethod
-    def get(node_address: bytes):  # pylint: disable=unused-argument
-        return "127.0.0.1:5252"
+SynapseConfig = Tuple[str, Path]
+SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
 class ParsedURL(str):
@@ -111,6 +109,39 @@ class EthAuthProvider:
         return config
 
 
+# Used from within synapse during tests
+class NoTLSFederationMonkeyPatchProvider:
+    """ Dummy auth provider that disables TLS on S2S federation.
+
+    This is used by the integration tests to avoid the need for tls certificates.
+    It's implemented as an auth provider since that's a handy way to inject code into the
+    synapse process.
+
+    It works by replacing ``synapse.crypto.context_factory.ClientTLSOptionsFactory`` with an
+    object that returns ``None`` when instantiated.
+    """
+
+    __version__ = "0.1"
+
+    class NoTLSFactory:
+        def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
+            return None
+
+    def __init__(self, config, account_handler):  # pylint: disable=unused-argument
+        pass
+
+    @defer.inlineCallbacks
+    def check_password(self, user_id, password):  # pylint: disable=unused-argument,no-self-use
+        defer.returnValue(False)
+
+    @staticmethod
+    def parse_config(config):
+        from synapse.crypto import context_factory
+
+        context_factory.ClientTLSOptionsFactory = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
+        return config
+
+
 def make_requests_insecure():
     """
     Prevent `requests` from performing TLS verification.
@@ -123,17 +154,15 @@ def make_requests_insecure():
 
 
 @contextmanager
-def generate_synapse_config() -> ContextManager:
+def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
     # Allows caching of self signed synapse certificates on CI systems
     if _SYNAPSE_BASE_DIR_VAR_NAME in os.environ:
         synapse_base_dir = Path(os.environ[_SYNAPSE_BASE_DIR_VAR_NAME])
         synapse_base_dir.mkdir(parents=True, exist_ok=True)
-        delete_base_dir = False
     else:
         synapse_base_dir = Path(mkdtemp(prefix="pytest-synapse-"))
-        delete_base_dir = True
 
-    def generate_config(port: int):
+    def generate_config(port: int) -> SynapseConfig:
         server_dir = synapse_base_dir.joinpath(f"localhost-{port}")
         server_dir.mkdir(parents=True, exist_ok=True)
 
@@ -159,38 +188,44 @@ def generate_synapse_config() -> ContextManager:
                 cwd=server_dir,
                 timeout=30,
                 check=True,
-                stderr=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
+                stderr=DEVNULL,
+                stdout=DEVNULL,
             )
         return server_name, config_file
 
-    try:
-        yield generate_config
-    finally:
-        if delete_base_dir:
-            shutil.rmtree(synapse_base_dir)
+    yield generate_config
 
 
 @contextmanager
 def matrix_server_starter(
-    free_port_generator: Iterator[int],
+    free_port_generator: Iterable[Port],
     *,
     count: int = 1,
-    config_generator: ContextManager = None,
+    config_generator: SynapseConfigGenerator = None,
     log_context: str = None,
-) -> ContextManager:
+) -> Iterator[List[ParsedURL]]:
     with ExitStack() as exit_stack:
+
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
-        server_urls = []
+
+        server_urls: List[ParsedURL] = []
         for _, port in zip(range(count), free_port_generator):
             server_name, config_file = config_generator(port)
-            server_url = ParsedURL(f"https://{server_name}")
+            server_url = ParsedURL(f"http://{server_name}")
             server_urls.append(server_url)
 
-            synapse_io = subprocess.DEVNULL
+            synapse_cmd = [
+                sys.executable,
+                "-m",
+                "synapse.app.homeserver",
+                f"--server-name={server_name}",
+                f"--config-path={config_file!s}",
+            ]
+
+            synapse_io: EXECUTOR_IO = DEVNULL
             # Used in CI to capture the logs for failure analysis
-            if _SYNAPSE_LOGS_PATH:
+            if _SYNAPSE_LOGS_PATH is not None:
                 log_file_path = Path(_SYNAPSE_LOGS_PATH).joinpath(f"{server_name}.log")
                 log_file_path.parent.mkdir(parents=True, exist_ok=True)
                 log_file = exit_stack.enter_context(log_file_path.open("at"))
@@ -201,25 +236,41 @@ def matrix_server_starter(
                     header = f"{header}: {log_context}"
                 header = f" {header} "
                 log_file.write(f"{header:=^100}\n")
+                log_file.write(f"Cmd: `{' '.join(synapse_cmd)}`\n")
                 log_file.flush()
 
-                synapse_io = subprocess.DEVNULL, log_file, subprocess.STDOUT
+                synapse_io = DEVNULL, log_file, STDOUT
 
-            exit_stack.enter_context(
-                HTTPExecutor(
-                    [
-                        sys.executable,
-                        "-m",
-                        "synapse.app.homeserver",
-                        f"--server-name={server_name}",
-                        f"--config-path={config_file!s}",
-                    ],
-                    url=urljoin(server_url, "/_matrix/client/versions"),
-                    method="GET",
-                    timeout=30,
-                    cwd=config_file.parent,
-                    verify_tls=False,
-                    io=synapse_io,
-                )
+            startup_timeout = 10
+            sleep = 0.1
+
+            executor = HTTPExecutor(
+                synapse_cmd,
+                url=urljoin(server_url, "/_matrix/client/versions"),
+                method="GET",
+                timeout=startup_timeout,
+                sleep=sleep,
+                cwd=config_file.parent,
+                verify_tls=False,
+                io=synapse_io,
             )
+            exit_stack.enter_context(executor)
+
+            # The timeout_limit_teardown is necessary to prevent the build
+            # being killed because of the lack of output, at the same time the
+            # timeout must never happen, because if it does, not all finalizers
+            # are executed, leaving dirty state behind and resulting in test
+            # flakiness.
+            #
+            # Because of this, this value is arbitrarily smaller than the
+            # teardown timeout, forcing the subprocess to be killed on a timely
+            # manner, which should allow the teardown to proceed and finish
+            # before the timeout elapses.
+            teardown_timeout = 0.5
+
+            # The timeout values for the startup and teardown must be
+            # different, however the library doesn't support it. So here we
+            # must poke at the private member and overwrite it.
+            executor._timeout = teardown_timeout
+
         yield server_urls

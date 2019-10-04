@@ -3,20 +3,26 @@ version: 2
 settings:
   gas_price: "fast"
   chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
 
 token:
-  ##address: "0xabEE20bdA7476337ea051Dac011763F6D7eD8d9c"
 
 nodes:
   mode: managed
   count: 7
+
   default_options:
     gas-price: fast
-    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
-    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
-    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
-
-
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 10
 
 scenario:
   serial:

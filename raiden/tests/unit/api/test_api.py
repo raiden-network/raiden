@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 from raiden.api.python import transfer_tasks_view
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.state import (
@@ -9,15 +11,18 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     WaitingTransferState,
 )
-from raiden.transfer.state import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.state import RouteState
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 
 
-def test_list_channelstate_for_tokennetwork(chain_state, payment_network_id, token_id):
+def test_list_channelstate_for_tokennetwork(chain_state, token_network_registry_address, token_id):
     """Regression test for https://github.com/raiden-network/raiden/issues/3257"""
     token_address = token_id
     result = list_channelstate_for_tokennetwork(
-        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
     )
     assert isinstance(result, list)
 
@@ -31,24 +36,28 @@ def test_initiator_task_view():
     transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
-        payment_network_identifier=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
+        token_network_registry_address=factories.UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
-        allocated_fee=0,
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         initiator=transfer.initiator,
         target=transfer.target,
         secret=secret,
+        secrethash=sha256(secret).digest(),
     )
     transfer_state = InitiatorTransferState(
+        route=RouteState(
+            route=[transfer.initiator, transfer.target], forward_channel_id=channel_id
+        ),
         transfer_description=transfer_description,
         channel_identifier=channel_id,
         transfer=transfer,
-        revealsecret=None,
     )
-    payment_state = InitiatorPaymentState({secrethash: transfer_state})
+    payment_state = InitiatorPaymentState(
+        routes=[], initiator_transfers={secrethash: transfer_state}
+    )
     task = InitiatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
     )
     payment_mapping = {secrethash: task}
 
@@ -84,8 +93,13 @@ def test_mediator_task_view():
             )
         )
     )
-    routes = [factories.make_route_from_channel(initiator_channel)]
-    transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=routes)
+    route_state = RouteState(
+        route=[payee_transfer.target],
+        forward_channel_id=initiator_channel.canonical_identifier.channel_identifier,
+    )
+
+    transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=[route_state])
+    # pylint: disable=E1101
     transfer_state1.transfers_pair.append(
         MediationPairState(
             payer_transfer=payer_transfer,
@@ -94,8 +108,7 @@ def test_mediator_task_view():
         )
     )
     task1 = MediatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        mediator_state=transfer_state1,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state1
     )
 
     secret2 = factories.make_secret(2)
@@ -106,11 +119,10 @@ def test_mediator_task_view():
         )
     )
     secrethash2 = transfer2.lock.secrethash
-    transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=routes)
+    transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=[route_state])
     transfer_state2.waiting_transfer = WaitingTransferState(transfer=transfer2)
     task2 = MediatorTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        mediator_state=transfer_state2,
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state2
     )
 
     payment_mapping = {secrethash1: task1, secrethash2: task2}
@@ -140,7 +152,7 @@ def test_target_task_view():
             partner_state=factories.NettingChannelEndStateProperties(address=mediator, balance=100)
         )
     )
-    transfer_state = TargetTransferState(route=None, transfer=transfer, secret=secret)
+    transfer_state = TargetTransferState(from_hop=None, transfer=transfer, secret=secret)
     task = TargetTask(
         canonical_identifier=mediator_channel.canonical_identifier, target_state=transfer_state
     )
@@ -151,5 +163,6 @@ def test_target_task_view():
     assert len(view) == 1
     pending_transfer = view[0]
     assert pending_transfer.get("role") == "target"
+    # pylint: disable=no-member
     assert pending_transfer.get("locked_amount") == str(transfer.balance_proof.locked_amount)
     assert pending_transfer.get("payment_identifier") == str(transfer.payment_identifier)

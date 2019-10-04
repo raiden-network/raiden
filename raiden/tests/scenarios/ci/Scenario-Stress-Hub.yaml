@@ -13,7 +13,6 @@ nodes:
   default_options:
     gas-price: fast
     registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
-    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
     secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
 
 
@@ -110,4 +109,3 @@ scenario:
             - transfer: {from: 9, to: 2, amount: 1, expected_http_status: "(200|408)"}
             - transfer: {from: 9, to: 7, amount: 1, expected_http_status: "(200|408)"}
             - transfer: {from: 9, to: 8, amount: 1, expected_http_status: "(200|408)"}
-

@@ -49,7 +49,7 @@ Raiden Glossary
        The locked amount is the total amount of tokens one participant of a payment channel has locked in pending transfers towards his counterparty
 
    channel capacity
-       A channel's capacity is the sum of the total deposits of both its participants. It is also the sum of the channel participants :term:`balance`.
+       A channel's capacity is the sum of the total deposits minus the sum of the total withdraws of both its participants. It is also the sum of the channel participants :term:`balance`.
 
    balance
        The balance :math:`B_n` of a channel participant :math:`P` is his total deposit :math:`P_d` along with the amount of tokens he received :math:`P_r` minus the amount :math:`P_s` of token he has sent. So :math:`B_n = P_d + P_r - P_s`

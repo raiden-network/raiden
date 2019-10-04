@@ -1,6 +1,7 @@
 import json
 import random
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum, unique
 from uuid import UUID
@@ -8,34 +9,97 @@ from uuid import UUID
 import click
 import requests
 import structlog
-from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.utils import get_response_json
+from raiden.utils import to_rdn
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
     Any,
     BlockNumber,
     BlockSpecification,
+    ChainID,
     Dict,
+    FeeAmount,
     InitiatorAddress,
     List,
-    NamedTuple,
     Optional,
     PaymentAmount,
+    Signature,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
+    TokenNetworkRegistryAddress,
     Tuple,
-    Union,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class PFSInfo:
+    url: str
+    # Price in RAI (RDN wei equivalent)
+    price: TokenAmount
+    chain_id: ChainID
+    token_network_registry_address: TokenNetworkRegistryAddress
+    payment_address: Address
+    message: str
+    operator: str
+    version: str
+
+
+@dataclass
+class PFSConfig:
+    info: PFSInfo
+    maximum_fee: TokenAmount
+    iou_timeout: BlockNumber
+    max_paths: int
+
+
+@dataclass
+class IOU:
+    sender: Address
+    receiver: Address
+    one_to_n_address: Address
+    amount: TokenAmount
+    expiration_block: BlockNumber
+    chain_id: ChainID
+    signature: Optional[Signature] = None
+
+    def sign(self, privkey: bytes) -> None:
+        self.signature = Signature(
+            sign_one_to_n_iou(
+                privatekey=encode_hex(privkey),
+                sender=to_checksum_address(self.sender),
+                receiver=to_checksum_address(self.receiver),
+                amount=self.amount,
+                expiration_block=self.expiration_block,
+                one_to_n_address=to_checksum_address(self.one_to_n_address),
+                chain_id=self.chain_id,
+            )
+        )
+
+    def as_json(self) -> Dict[str, Any]:
+        data = dict(
+            sender=to_checksum_address(self.sender),
+            receiver=to_checksum_address(self.receiver),
+            one_to_n_address=to_checksum_address(self.one_to_n_address),
+            amount=self.amount,
+            expiration_block=self.expiration_block,
+            chain_id=self.chain_id,
+        )
+
+        if self.signature is not None:
+            data["signature"] = to_hex(self.signature)
+
+        return data
 
 
 @unique
@@ -60,6 +124,7 @@ class PFSError(IntEnum):
     IOU_ALREADY_CLAIMED = 2105
     USE_THIS_IOU = 2106
     DEPOSIT_TOO_LOW = 2107
+    NO_ROUTE_FOUND = 2201
 
     @staticmethod
     def is_iou_rejected(error_code):
@@ -69,247 +134,339 @@ class PFSError(IntEnum):
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
-def get_pfs_info(url: str) -> Optional[Dict]:
+def get_pfs_info(url: str) -> PFSInfo:
     try:
         response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
-        return response.json()
-    except (json.JSONDecodeError, requests.exceptions.RequestException):
+        infos = get_response_json(response)
+
+        return PFSInfo(
+            url=url,
+            price=infos["price_info"],
+            chain_id=infos["network_info"]["chain_id"],
+            token_network_registry_address=TokenNetworkRegistryAddress(
+                to_canonical_address(infos["network_info"]["registry_address"])
+            ),
+            payment_address=to_canonical_address(infos["payment_address"]),
+            message=infos["message"],
+            operator=infos["operator"],
+            version=infos["version"],
+        )
+    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError) as e:
+        raise ServiceRequestFailed(str(e)) from e
+
+
+def get_valid_pfs_url(
+    service_registry: ServiceRegistry,
+    index_in_service_registry: int,
+    block_identifier: BlockSpecification,
+    pathfinding_max_fee: FeeAmount,
+) -> Optional[str]:
+    """Returns the URL for the PFS identified by the given index
+
+    Checks validity of registration in the ServiceRegistry contract and
+    checks the price from the PFS' info endpoint.
+
+    Returns PFS URL or None (if any check fails).
+    """
+    address = service_registry.ever_made_deposits(
+        block_identifier=block_identifier, index=index_in_service_registry
+    )
+    if not address:
         return None
 
+    if not service_registry.has_valid_registration(
+        service_address=address, block_identifier=block_identifier
+    ):
+        return None
 
-def get_random_service(
-    service_registry: ServiceRegistry, block_identifier: BlockSpecification
+    url = service_registry.get_service_url(
+        block_identifier=block_identifier, service_address=address
+    )
+    if not url:
+        return None
+    try:
+        pfs_info = get_pfs_info(url)
+    except ServiceRequestFailed:
+        return None
+    if pfs_info.price > pathfinding_max_fee:
+        return None
+    return url
+
+
+def get_random_pfs(
+    service_registry: ServiceRegistry,
+    block_identifier: BlockSpecification,
+    pathfinding_max_fee: FeeAmount,
 ) -> Optional[str]:
     """Selects a random PFS from service_registry.
 
     Returns a tuple of the chosen services url and eth address.
     If there are no PFS in the given registry, it returns (None, None).
     """
-    count = service_registry.service_count(block_identifier=block_identifier)
-    if count == 0:
-        return None
-    index = random.SystemRandom().randint(0, count - 1)
-    address = service_registry.get_service_address(block_identifier=block_identifier, index=index)
-    # We are using the same blockhash for both blockchain queries so the address
-    # should exist for this query. Additionally at the moment there is no way for
-    # services to be removed from the registry.
-    assert address, "address should exist for this index"
-    url = service_registry.get_service_url(
-        block_identifier=block_identifier, service_hex_address=address
+    number_of_addresses = service_registry.ever_made_deposits_len(
+        block_identifier=block_identifier
     )
-    return url
+    indices_to_try = list(range(number_of_addresses))
+    random.shuffle(indices_to_try)
 
+    while indices_to_try:
+        index = indices_to_try.pop()
+        url = get_valid_pfs_url(
+            service_registry=service_registry,
+            index_in_service_registry=index,
+            block_identifier=block_identifier,
+            pathfinding_max_fee=pathfinding_max_fee,
+        )
+        if url:
+            return url
 
-class PFSConfiguration(NamedTuple):
-    url: str
-    eth_address: Optional[str]
-    fee: int
-
-
-def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> str:
-    message = info.get("message", "PFS info request successful.")
-    operator = info.get("operator", "unknown")
-    version = info.get("version", "unknown")
-    chain_id = info.get("network_info", {}).get("chain_id", "unknown")
-    price = info.get("price_info", "0 (no price given by the PFS)")
-    return (
-        f"{message} - You have chosen the pathfinding service at {url}. "
-        f"Operator: {operator}, running version: {version}, chain_id: {chain_id}. "
-        f"Fees will be paid to {eth_address}. For each request we will pay {price}."
-    )
+    return None
 
 
 def configure_pfs_or_exit(
-    pfs_address: Optional[str],
+    pfs_url: str,
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
-) -> PFSConfiguration:
+    node_network_id: ChainID,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    pathfinding_max_fee: FeeAmount,
+) -> PFSInfo:
     """
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
 
-    If pfs_address is None then basic routing must have been requested.
-    If pfs_address is provided we use that.
-    If pfs_address is 'auto' then we randomly choose a PFS address from the registry
-
-    Returns a NamedTuple containing url, eth_address and fee (per paths request) of
-    the selected PFS, or None if we use basic routing instead of a PFS.
+    If pfs_url is provided we use that.
+    If pfs_url is 'auto' then we randomly choose a PFS address from the registry
     """
     msg = "Invalid code path; configure pfs needs routing mode PFS"
     assert routing_mode == RoutingMode.PFS, msg
 
     msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
-    assert pfs_address, msg
-    if pfs_address == "auto":
+    assert pfs_url, msg
+    if pfs_url == "auto":
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
-        pfs_address = get_random_service(
-            service_registry=service_registry, block_identifier=block_hash
+        maybe_pfs_url = get_random_pfs(
+            service_registry=service_registry,
+            block_identifier=block_hash,
+            pathfinding_max_fee=pathfinding_max_fee,
         )
-        if pfs_address is None:
+        if maybe_pfs_url is None:
             click.secho(
                 "The service registry has no registered path finding service "
                 "and we don't use basic routing."
             )
             sys.exit(1)
+        else:
+            pfs_url = maybe_pfs_url
 
-    pathfinding_service_info = get_pfs_info(pfs_address)
-    if not pathfinding_service_info:
+    try:
+        pathfinding_service_info = get_pfs_info(pfs_url)
+    except ServiceRequestFailed as e:
         click.secho(
             f"There is an error with the pathfinding service with address "
-            f"{pfs_address}. Raiden will shut down."
+            f"{pfs_url}. Error Message: {str(e)}. Raiden will shut down."
         )
         sys.exit(1)
-    else:
-        fee = pathfinding_service_info.get("price_info", 0)
-        pfs_eth_address = pathfinding_service_info.get("payment_address", None)
-        if fee > 0 and not pfs_eth_address:
-            click.secho(
-                f"The pathfinding service at {pfs_address} did not provide an eth address "
-                f"to pay it. Raiden will shut down. Please try a different PFS."
-            )
-            sys.exit(1)
-        if fee > 0 and not is_checksum_address(pfs_eth_address):
-            click.secho(
-                f"Invalid reply from pathfinding service {pfs_address}: Payment address "
-                f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut "
-                f"down. Please choose a different PFS."
-            )
-            sys.exit(1)
-        msg = configure_pfs_message(
-            info=pathfinding_service_info, url=pfs_address, eth_address=pfs_eth_address
-        )
-        click.secho(msg)
-        log.info("Using PFS", pfs_info=pathfinding_service_info)
 
-    return PFSConfiguration(url=pfs_address, eth_address=pfs_eth_address, fee=fee)
+    if pathfinding_service_info.price > 0 and not pathfinding_service_info.payment_address:
+        click.secho(
+            f"The pathfinding service at {pfs_url} did not provide an eth address "
+            f"to pay it. Raiden will shut down. Please try a different PFS."
+        )
+        sys.exit(1)
+
+    if not node_network_id == pathfinding_service_info.chain_id:
+        click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
+        click.secho(
+            f"PFS is not operating on the same network "
+            f"({pathfinding_service_info.chain_id}) as your node is ({node_network_id}).\n"
+            f"Raiden will shut down. Please choose a different PFS."
+        )
+        sys.exit(1)
+
+    if pathfinding_service_info.token_network_registry_address != token_network_registry_address:
+        click.secho(f"Invalid reply from pathfinding service {pfs_url}", fg="red")
+        click.secho(
+            f"PFS is not operating on the same Token Network Registry "
+            f"({to_checksum_address(pathfinding_service_info.token_network_registry_address)})"
+            f" as your node is ({to_checksum_address(token_network_registry_address)}).\n"
+            f"Raiden will shut down. Please choose a different PFS."
+        )
+        sys.exit(1)
+    click.secho(
+        f"You have chosen the pathfinding service at {pfs_url}.\n"
+        f"Operator: {pathfinding_service_info.operator}, "
+        f"running version: {pathfinding_service_info.version}, "
+        f"chain_id: {pathfinding_service_info.chain_id}.\n"
+        f"Fees will be paid to {to_checksum_address(pathfinding_service_info.payment_address)}. "
+        f"Each request costs {to_rdn(pathfinding_service_info.price)} RDN.\n"
+        f"Message from the PFS:\n{pathfinding_service_info.message}"
+    )
+
+    log.info("Using PFS", pfs_info=pathfinding_service_info)
+
+    return pathfinding_service_info
+
+
+def check_pfs_for_production(
+    service_registry: Optional[ServiceRegistry], pfs_info: PFSInfo
+) -> None:
+    """ Checks that the PFS in `pfs_info` is registered in the service registry
+    and that the URL matches.
+
+    Should only be called in production mode.
+    """
+    if service_registry is None:
+        click.secho(
+            f"Cannot verify registration of PFS because no service registry is set"
+            f"Raiden will shut down. Please set the service registry."
+        )
+        sys.exit(1)
+
+    pfs_registered = service_registry.has_valid_registration(
+        block_identifier=service_registry.client.get_confirmed_blockhash(),
+        service_address=pfs_info.payment_address,
+    )
+    registered_pfs_url = service_registry.get_service_url(
+        block_identifier=service_registry.client.get_confirmed_blockhash(),
+        service_address=pfs_info.payment_address,
+    )
+    pfs_url_matches = registered_pfs_url == pfs_info.url
+    if not (pfs_registered and pfs_url_matches):
+        click.secho(
+            f"The pathfinding service at {pfs_info.url} is not registered "
+            f"with the service registry at {to_checksum_address(service_registry.address)} "
+            f"or the registered URL ({registered_pfs_url}) doesn't match the given URL "
+            f"{pfs_info.url}. "
+            f"Raiden will shut down. Please try a registered PFS."
+        )
+        sys.exit(1)
 
 
 def get_last_iou(
     url: str,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    token_network_address: TokenNetworkAddress,
     sender: Address,
     receiver: Address,
     privkey: bytes,
-) -> Optional[Dict]:
+) -> Optional[IOU]:
 
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
     signature_data = sender + receiver + Web3.toBytes(text=timestamp)
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
-        return (
-            requests.get(
-                f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
-                params=dict(
-                    sender=to_checksum_address(sender),
-                    receiver=to_checksum_address(receiver),
-                    timestamp=timestamp,
-                    signature=signature,
-                ),
-                timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
-            )
-            .json()
-            .get("last_iou")
+        response = requests.get(
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
+            params=dict(
+                sender=to_checksum_address(sender),
+                receiver=to_checksum_address(receiver),
+                timestamp=timestamp,
+                signature=signature,
+            ),
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
-    except (requests.exceptions.RequestException, ValueError) as e:
+
+        data = json.loads(response.content).get("last_iou")
+
+        if data is None:
+            return None
+
+        return IOU(
+            sender=to_canonical_address(data["sender"]),
+            receiver=to_canonical_address(data["receiver"]),
+            one_to_n_address=to_canonical_address(data["one_to_n_address"]),
+            amount=data["amount"],
+            expiration_block=data["expiration_block"],
+            chain_id=data["chain_id"],
+            signature=Signature(decode_hex(data["signature"])),
+        )
+    except (requests.exceptions.RequestException, ValueError, KeyError) as e:
         raise ServiceRequestFailed(str(e))
 
 
 def make_iou(
-    config: Dict[str, Any],
+    pfs_config: PFSConfig,
     our_address: Address,
     one_to_n_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
-    chain_id: int,
-    offered_fee: TokenAmount = None,
-) -> Dict:
-    expiration = block_number + config["pathfinding_iou_timeout"]
+    chain_id: ChainID,
+    offered_fee: TokenAmount,
+) -> IOU:
+    expiration = BlockNumber(block_number + pfs_config.iou_timeout)
 
-    iou = dict(
-        sender=to_checksum_address(our_address),
-        receiver=config["pathfinding_eth_address"],
-        amount=offered_fee or config["pathfinding_max_fee"],
+    iou = IOU(
+        sender=our_address,
+        receiver=pfs_config.info.payment_address,
+        one_to_n_address=one_to_n_address,
+        amount=offered_fee,
         expiration_block=expiration,
-        one_to_n_address=to_checksum_address(one_to_n_address),
         chain_id=chain_id,
     )
-
-    iou.update(signature=to_hex(sign_one_to_n_iou(privatekey=to_hex(privkey), **iou)))
+    iou.sign(privkey)
 
     return iou
 
 
 def update_iou(
-    iou: Dict[str, Any],
+    iou: IOU,
     privkey: bytes,
     added_amount: TokenAmount = ZERO_TOKENS,
     expiration_block: Optional[BlockNumber] = None,
-) -> Dict[str, Any]:
+) -> IOU:
 
-    expected_signature = to_hex(
+    expected_signature = Signature(
         sign_one_to_n_iou(
             privatekey=to_hex(privkey),
-            expiration_block=iou["expiration_block"],
-            sender=iou["sender"],
-            receiver=iou["receiver"],
-            amount=iou["amount"],
-            one_to_n_address=iou["one_to_n_address"],
-            chain_id=iou["chain_id"],
+            sender=to_checksum_address(iou.sender),
+            receiver=to_checksum_address(iou.receiver),
+            amount=iou.amount,
+            expiration_block=iou.expiration_block,
+            one_to_n_address=to_checksum_address(iou.one_to_n_address),
+            chain_id=iou.chain_id,
         )
     )
-    if iou.get("signature") != expected_signature:
+    if iou.signature != expected_signature:
         raise ServiceRequestFailed(
             "Last IOU as given by the pathfinding service is invalid (signature does not match)"
         )
 
-    iou["amount"] += added_amount
+    iou.amount = TokenAmount(iou.amount + added_amount)
     if expiration_block:
-        iou["expiration_block"] = expiration_block
+        iou.expiration_block = expiration_block
 
-    iou["signature"] = to_hex(
-        sign_one_to_n_iou(
-            privatekey=to_hex(privkey),
-            expiration_block=iou["expiration_block"],
-            sender=iou["sender"],
-            receiver=iou["receiver"],
-            amount=iou["amount"],
-            chain_id=iou["chain_id"],
-            one_to_n_address=iou["one_to_n_address"],
-        )
-    )
+    iou.sign(privkey)
 
     return iou
 
 
 def create_current_iou(
-    config: Dict[str, Any],
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    pfs_config: PFSConfig,
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
     our_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
-    chain_id: int,
-    offered_fee: TokenAmount = None,
+    chain_id: ChainID,
+    offered_fee: TokenAmount,
     scrap_existing_iou: bool = False,
-) -> Dict[str, Any]:
-
-    url = config["pathfinding_service_address"]
+) -> IOU:
 
     latest_iou = None
     if not scrap_existing_iou:
         latest_iou = get_last_iou(
-            url=url,
+            url=pfs_config.info.url,
             token_network_address=token_network_address,
             sender=our_address,
-            receiver=to_canonical_address(config["pathfinding_eth_address"]),
+            receiver=pfs_config.info.payment_address,
             privkey=privkey,
         )
 
     if latest_iou is None:
         return make_iou(
-            config=config,
+            pfs_config=pfs_config,
             our_address=our_address,
             privkey=privkey,
             block_number=block_number,
@@ -318,14 +475,12 @@ def create_current_iou(
             one_to_n_address=one_to_n_address,
         )
     else:
-        added_amount = offered_fee or config["pathfinding_max_fee"]
+        added_amount = offered_fee
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
 def post_pfs_paths(
-    url: str,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
-    payload: Dict[str, Any],
+    url: str, token_network_address: TokenNetworkAddress, payload: Dict[str, Any]
 ) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
         response = requests.post(
@@ -342,7 +497,7 @@ def post_pfs_paths(
     if response.status_code != 200:
         info = {"http_error": response.status_code}
         try:
-            response_json = response.json()
+            response_json = get_response_json(response)
         except ValueError:
             raise ServiceRequestFailed(
                 "Pathfinding service returned error code (malformed json in response)", info
@@ -356,12 +511,12 @@ def post_pfs_paths(
         raise ServiceRequestFailed("Pathfinding service returned error code", info)
 
     try:
-        response_json = response.json()
+        response_json = get_response_json(response)
         return response_json["result"], UUID(response_json["feedback_token"])
     except KeyError:
         raise ServiceRequestFailed(
             "Answer from pathfinding service not understood ('result' field missing)",
-            dict(response=response.json()),
+            dict(response=get_response_json(response)),
         )
     except ValueError:
         raise ServiceRequestFailed(
@@ -371,13 +526,13 @@ def post_pfs_paths(
 
 
 def query_paths(
-    service_config: Dict[str, Any],
+    pfs_config: PFSConfig,
     our_address: Address,
     privkey: bytes,
     current_block_number: BlockNumber,
-    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    token_network_address: TokenNetworkAddress,
     one_to_n_address: Address,
-    chain_id: int,
+    chain_id: ChainID,
     route_from: InitiatorAddress,
     route_to: TargetAddress,
     value: PaymentAmount,
@@ -388,33 +543,42 @@ def query_paths(
     retry in case of a failed request if it makes sense.
     """
 
-    max_paths = service_config["pathfinding_max_paths"]
-    url = service_config["pathfinding_service_address"]
     payload = {
         "from": to_checksum_address(route_from),
         "to": to_checksum_address(route_to),
         "value": value,
-        "max_paths": max_paths,
+        "max_paths": pfs_config.max_paths,
     }
-    offered_fee = service_config.get("pathfinding_fee", service_config["pathfinding_max_fee"])
+    offered_fee = pfs_config.info.price
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
-        payload["iou"] = create_current_iou(
-            config=service_config,
+        if offered_fee > 0:
+            new_iou = create_current_iou(
+                pfs_config=pfs_config,
+                token_network_address=token_network_address,
+                one_to_n_address=one_to_n_address,
+                our_address=our_address,
+                privkey=privkey,
+                chain_id=chain_id,
+                block_number=current_block_number,
+                offered_fee=offered_fee,
+                scrap_existing_iou=scrap_existing_iou,
+            )
+            payload["iou"] = new_iou.as_json()
+
+        log.info(
+            "Requesting paths from Pathfinding Service",
+            url=pfs_config.info.url,
             token_network_address=token_network_address,
-            one_to_n_address=one_to_n_address,
-            our_address=our_address,
-            privkey=privkey,
-            chain_id=chain_id,
-            block_number=current_block_number,
-            offered_fee=offered_fee,
-            scrap_existing_iou=scrap_existing_iou,
+            payload=payload,
         )
 
         try:
             return post_pfs_paths(
-                url=url, token_network_address=token_network_address, payload=payload
+                url=pfs_config.info.url,
+                token_network_address=token_network_address,
+                payload=payload,
             )
         except ServiceRequestIOURejected as error:
             code = error.error_code
@@ -423,12 +587,53 @@ def query_paths(
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
             elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                if offered_fee < service_config["pathfinding_max_fee"]:
-                    offered_fee = service_config["pathfinding_max_fee"]
-                    # TODO: Query the PFS for the fee here instead of using the max fee
-                else:
-                    raise
+                try:
+                    new_info = get_pfs_info(pfs_config.info.url)
+                except ServiceRequestFailed:
+                    raise ServiceRequestFailed("Could not get updated fees from PFS.")
+                if new_info.price > pfs_config.maximum_fee:
+                    raise ServiceRequestFailed("PFS fees too high.")
+                log.info(f"PFS increased fees", new_price=new_info.price)
+                pfs_config.info = new_info
+            elif code == PFSError.NO_ROUTE_FOUND:
+                log.info(f"PFS cannot find a route: {error}.")
+                return list(), None
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
     return list(), None
+
+
+def post_pfs_feedback(
+    routing_mode: RoutingMode,
+    pfs_config: PFSConfig,
+    token_network_address: TokenNetworkAddress,
+    route: List[Address],
+    token: UUID,
+    successful: bool,
+) -> None:
+
+    feedback_disabled = routing_mode == RoutingMode.PRIVATE or pfs_config is None
+    if feedback_disabled:
+        return
+
+    hex_route = [to_checksum_address(address) for address in route]
+    payload = dict(token=token.hex, path=hex_route, success=successful)
+
+    log.info(
+        "Sending routing feedback to Pathfinding Service",
+        url=pfs_config.info.url,
+        token_network_address=token_network_address,
+        payload=payload,
+    )
+
+    try:
+        requests.post(
+            f"{pfs_config.info.url}/api/v1/{to_checksum_address(token_network_address)}/feedback",
+            json=payload,
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        log.warning(
+            f"Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
+        )

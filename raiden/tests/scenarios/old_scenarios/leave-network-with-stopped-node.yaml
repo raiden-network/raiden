@@ -1,18 +1,28 @@
+version: 2
+
 settings:
   gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
 
 nodes:
-  commands:
-    #start: "docker start raiden_{:02d}"
-    #stop: "docker stop raiden_{:02d}"
-    #kill: "docker kill raiden_{:02d}"
-    stop: "pkill -f '127.0.0.1:50{:02d}'"
-    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
-    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
-  range:
-    first: 1
-    last: 3
-    template: "localhost:50{:02d}"
+  mode: managed
+  count: 3
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 10
 
 # Leave network when one of the nodes is down
 scenario:

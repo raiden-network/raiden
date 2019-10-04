@@ -22,14 +22,14 @@ Channel Object
 
     {
        "channel_identifier": 21,
-       "token_network_identifier": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+       "token_network_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
        "balance": 25000000,
        "total_deposit": 35000000,
        "state": "opened",
        "settle_timeout": 500,
-       "reveal_timeout": 40
+       "reveal_timeout": 50
     }
 
 
@@ -45,7 +45,7 @@ A channel object consists of a
 - ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
   token we are trading in the channel.
 
-- ``token_network_identifier`` should be a ``string`` containing the EIP55-encoded address of the
+- ``token_network_address`` should be a ``string`` containing the EIP55-encoded address of the
   token network the channel is part of.
 
 - ``balance`` should be an integer of the amount of the ``token_address`` token we have available for payments.
@@ -104,6 +104,28 @@ Querying Information About Your Raiden Node
 
       {
           "our_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
+      }
+
+.. http:get:: /api/(version)/version
+
+   Query the version of the Raiden instance
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/version HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "version": "0.100.5a1.dev157+geb2af878d"
       }
 
 Deploying
@@ -165,15 +187,16 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 25000000,
               "total_deposit": 35000000,
+              "total_withdraw": 5000000,
               "state": "opened",
-              "settle_timeout": 100,
-              "reveal_timeout": 30
+              "settle_timeout": 500,
+              "reveal_timeout": 50
           }
       ]
 
@@ -200,15 +223,16 @@ Querying Information About Channels and Tokens
 
       [
           {
-              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": 20,
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": 25000000,
               "total_deposit": 35000000,
+              "total_withdraw": 5000000,
               "state": "opened",
-              "settle_timeout": 100,
-              "reveal_timeout": 30
+              "settle_timeout": 500,
+              "reveal_timeout": 50
           }
       ]
 
@@ -235,15 +259,16 @@ Querying Information About Channels and Tokens
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 25000000,
           "total_deposit": 35000000,
+          "total_withdraw": 5000000,
           "state": "opened",
-          "settle_timeout": 100,
-          "reveal_timeout": 30
+          "settle_timeout": 500,
+          "reveal_timeout": 50
       }
 
    :statuscode 200: Successful query
@@ -388,10 +413,9 @@ Querying Information About Channels and Tokens
             "role": "initiator",
             "target": "0x00AF5cBfc8dC76cd599aF623E60F763228906F3E",
             "token_address": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
-            "token_network_identifier": "0x111157460c0F41EfD9107239B7864c062aA8B978",
+            "token_network_address": "0x111157460c0F41EfD9107239B7864c062aA8B978",
             "transferred_amount": "331"
          }
-
       ]
 
    :statuscode 200: Successful query
@@ -421,13 +445,15 @@ Channel Management
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "total_deposit": 35000000,
-          "settle_timeout": 500
+          "settle_timeout": 500,
+          "reveal_timeout": 50
       }
 
    :reqjson address partner_address: The partner we want to open a channel with.
    :reqjson address token_address: The token we want to be used in the channel.
    :reqjson int total_deposit: Total amount of tokens to be deposited to the channel
    :reqjson int settle_timeout: The amount of blocks that the settle timeout should have.
+   :reqjson int reveal_timeout: The amount of blocks that the reveal timeout should have.
 
    The request's payload is a channel object; since it is a new channel, its ``channel_address``
    and ``status`` fields will be ignored and can be omitted.
@@ -446,15 +472,16 @@ Channel Management
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 25000000,
           "total_deposit": 35000000,
+          "total_withdraw": 0,
           "state": "opened",
           "settle_timeout": 500,
-          "reveal_timeout": 30
+          "reveal_timeout": 50
       }
 
    :statuscode 201: Channel created successfully
@@ -492,10 +519,36 @@ Channel Management
           "total_deposit": 100
       }
 
+   **Example Request (withdraw tokens)**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "total_withdraw": 100
+      }
+
+   **Example Request (update channel reveal timeout)**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "reveal_timeout": 50
+      }
+
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
    :reqjson int total_deposit: The increased total deposit
+   :reqjson int total_withdraw: The increased total withdraw
+   :reqjson int reveal_timeout: The new reveal timeout value
 
-   .. note::
+.. note::
       For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
    **Example Response**:
@@ -506,28 +559,29 @@ Channel Management
       Content-Type: application/json
 
       {
-          "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": 20,
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": 25000000,
           "total_deposit": 35000000,
+          "total_withdraw": 5000000,
           "state": "closed",
           "settle_timeout": 500,
-          "reveal_timeout": 30
+          "reveal_timeout": 50
       }
 
    :statuscode 200: Success
    :statuscode 400:
     - The provided JSON is in some way malformed, or
-    - there is nothing to do since neither ``state`` nor ``total_deposit`` have been given, or
+    - there is nothing to do since none of ``state``, ``total_deposit`` or ``total_withdraw`` have been given, or
     - the value of ``state`` is not a valid channel state.
    :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
    :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409:
     - Provided channel does not exist or
-    - ``state`` and ``total_deposit`` have been attempted to update in the same request or
+    - ``state``, ``total_deposit`` and ``total_withdraw`` have been attempted to update in the same request or
     - attempt to deposit token amount lower than on-chain balance of the channel
     - attempt to deposit more tokens than the testing limit
    :statuscode 500: Internal Raiden node error
@@ -562,7 +616,7 @@ Connection Management
               "channels": 3
           },
           "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": 49
+              "funds": 49,
               "sum_deposits": 31,
               "channels": 1
           }
@@ -642,6 +696,8 @@ Connection Management
    .. note::
       Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
+.. _Payments:
+
 Payments
 ========
 
@@ -666,6 +722,8 @@ Payments
 
    :reqjson int amount: Amount to be sent to the target
    :reqjson int identifier: Identifier of the payment (optional)
+   :reqjson int lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
+
 
    **Example Response**:
 
@@ -679,7 +737,9 @@ Payments
           "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
           "amount": 200,
-          "identifier": 42
+          "identifier": 42,
+          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
+          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
 
    :statuscode 200: Successful payment
@@ -689,6 +749,33 @@ Payments
    :statuscode 408: If a timeout happened during the payment
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
    :statuscode 500: Internal Raiden node error
+
+.. note::
+      This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
+      However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
+
+To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "amount": 200,
+          "identifier": 42,
+          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
+          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
+      }
+
+   :reqjson int amount: Amount to be sent to the target
+   :reqjson int identifier: Identifier of the payment (optional)
+   :reqjson string secret: The secret to be used for the payment
+   :reqjson string secret_hash: The secret hash (should be equal to SHA256 of the secret)
+
 
 Querying Events
 ===============
@@ -739,7 +826,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
           {
               "event": "EventPaymentSentSuccess",
               "amount": 20,
-              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7"
+              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
               "identifier": 3,
               "log_time": "2018-10-30T07:10:13.122"
           }
@@ -749,3 +836,54 @@ The format of ``log_time`` is ISO8601 with milliseconds.
   :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
+
+
+API endpoints for testing
+=========================
+
+.. http:post:: /api/(version)/_testing/tokens/(token_address)/mint
+
+   Mint tokens. This requires the token at ``token_address`` to implement a minting method with one of
+   the common interfaces:
+
+   - ``mint(address,uint256)``
+
+   - ``mintFor(uint256,address)``
+
+   - ``increaseSupply(uint256,address)``
+
+   Depending on the token, it may also be necessary to have minter privilege.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/_testing/tokens/0x782CfA3c74332B52c6f6F1758913815128828209/mint HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+         "to": "0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685",
+         "value": 1000,
+         "contract_method": "mintFor"
+      }
+
+   :reqjson address to: The address to assign the minted tokens to.
+   :reqjson int value: The amount of tokens to be minted.
+   :reqjson string contract_method: The name of the contract's minting method. Must be one of
+      ``mintFor``, ``mint`` or ``increaseSupply``. Defaults to ``mintFor``.
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0x90896386c5b218d772c05586bde5c37c9dc90db5de660bba5bd897705c976edb"
+      }
+
+   :statuscode 200: The transaction was successful.
+   :statuscode 400: Something went wrong.
+   :resjson string transaction_hash: The hash of the minting transaction.

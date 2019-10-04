@@ -1,10 +1,8 @@
 import json
 import logging
+from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
 from eth_utils import to_bytes, to_hex
-
-from raiden.utils import sha3
 
 # The code below simulates XUD resolver functionality.
 # It should only be used for testing and should not be used in
@@ -15,10 +13,13 @@ def resolve(request):
 
     preimage = None
 
-    x_secret = "0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e"
-    x_secret_hash = to_hex(sha3(to_bytes(hexstr=x_secret)))
+    if "secrethash" not in request:
+        return preimage
 
-    if request["secret_hash"] == x_secret_hash:
+    x_secret = "0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e"
+    x_secret_hash = to_hex(sha256(to_bytes(hexstr=x_secret)).digest())
+
+    if request["secrethash"] == x_secret_hash:
         preimage = {"secret": x_secret}
 
     return preimage
@@ -43,6 +44,9 @@ def serve():
             except BaseException:
                 self.send_response(400)
                 self.end_headers()
+
+    # TODO: accept port as runtime parameters to allow parallel execution
+    # of multiple resolvers.
 
     httpd = HTTPServer(("localhost", 8000), SimpleHTTPRequestHandler)
     httpd.serve_forever()

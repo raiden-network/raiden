@@ -2,6 +2,59 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc1 <2019-08-12>`
+* :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
+* :feature:`-` The lowest supported geth version is now 1.8.21.
+* :feature:`4976` Geth users no longer need to activate the special txpool RPC api when starting their geth node.
+* :feature:`4917` Added documentation on using Raiden for atomic swaps.
+* :feature:`4860` Update per-channel proportional fee calculation
+* :feature:`4858` Add check for bound in med fee calculation
+* :feature:`4844` Formalize fee calculation
+* :feature:`4815` Exclude direct transfers from fees
+* :bug:`4835` Catch undefined med fee inside the sate machine
+* :bug:`4762` Properly check the withdraw expiration on the TokenNetworkProxy. This gives a better error message to the users and prevents a corner case error.
+* :feature:`4751` Add Fees to internal Routing
+* :feature:`4731` Setting fee defaults for Alderaan
+* :feature:`4654` Define imbalance fees relative to channel balance.
+* :feature:`4697` lock_timeout can be provided when making a payment.
+* :feature:`4653` Allow setting per token network flat fees from CLI
+* :feature:`4653` Allow setting per token network flat mediation fee from CLI.
+* :bug:`4685` Invalidate a withdraw transaction on restart if the channel is closed.
+* :bug:`4560` Formatting of timestamp fields on the API should follow ISO8601.
+* :bug:`4561` Limit and offset should now work properly in the payment API event queries.
+* :bug:`4446` Fix assertion error in 'calculate_imbalance_fees'
+* :feature:`4102` Display progress during syncing the blockchain.
+* :feature:`-` Update WebUI to version 0.10.0 https://github.com/raiden-network/webui/releases/tag/v0.10.0
+* :feature:`-` Added a new api endpoint ``/api/v1/version`` to query the raiden version via the Rest API.
+
+* :release:`0.100.5-a0 <2019-08-12>`
+* :feature:`-` Update WebUI to version 0.9.2 https://github.com/raiden-network/webui/releases/tag/v0.9.2
+* :bug:`4498` Raiden now waits for synchronization with the blockchain events before finishing its startup and opening the API.
+* :bug:`4348` Fix wrong calculation of ``balance`` field of channel information when tokens are locked in payments
+* :bug:`4502` Fix a Raiden crash related to routing feedback
+
+* :release:`0.100.5-dev0 <2019-07-30>`
+* :feature:`4457` Raiden now checks the version of the ethereum node at startup and if it is not supported quits with an appropriate message.
+* :feature:`-` Update WebUI to version 0.9.1 https://github.com/raiden-network/webui/releases/tag/v0.9.1
+* :bug:`4446` Fix problems with the calculation of mediation fees
+* :bug:`4383` Fix locked transfer not being sent due to global queue handling.
+* :bug:`4378` Fix json decoding error that could lead to a crash.
+* :bug:`4373` Fix a deserialization error for imbalance penalty
+* :bug:`4377` The client now sends proper capacity updates to the PFS.
+* :bug:`4301` Providing an endpoint argument without a port no longer leads to a crash.
+
+* :release:`0.100.4 <2019-06-08>`
+* :feature:`4095` Prevent Raiden from sending IOU to PFS when fee is 0
+* :feature:`4088` Check PFS info about registry address, prevent use of a PFS that doesn't support the current network.
+* :feature:`4062` Use PFS requested fee instead of client max fee
+* :bug:`4036` Initiator should check the state of the partner nodes
+* :feature:`3894` Drop support for UDP transport
+* :feature:`3863` Implement permissive source routing
+* :bug:`3778` Fix handling of pruned blocks in proxies.
+* :feature:`3754` Publish mediation fee infos to PFS
+* :feature:`3303` Use direct channels for payments when possible, without asking PFS
+* :feature:`1498` Implement on-chain channel withdraw
+
 * :release:`0.100.3 <2019-05-22>`
 * :feature:`4043` Update raiden-contracts to 0.19.0 with Görli Testnet support
 * :bug:`4024` Fix clearing a channel state iff all unlocks are done by channel participants

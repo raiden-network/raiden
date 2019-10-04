@@ -1,37 +1,44 @@
 # pylint: disable=too-many-lines
-import heapq
 import random
+from typing import TYPE_CHECKING
 
-from eth_utils import encode_hex
+from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
 
-from raiden.constants import (
-    EMPTY_HASH_KECCAK,
-    EMPTY_MERKLE_ROOT,
-    MAXIMUM_PENDING_TRANSFERS,
-    UINT256_MAX,
-)
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.transfer.architecture import Event, StateChange, TransitionResult
-from raiden.transfer.balance_proof import pack_balance_proof
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
+from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
+    EventInvalidActionSetRevealTimeout,
+    EventInvalidActionWithdraw,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
+    EventInvalidReceivedWithdraw,
+    EventInvalidReceivedWithdrawExpired,
+    EventInvalidReceivedWithdrawRequest,
+    SendPFSFeeUpdate,
     SendProcessed,
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
     refund_from_sendmediated,
+)
+from raiden.transfer.mediated_transfer.mediation_fee import (
+    FeeScheduleState,
+    calculate_imbalance_fees,
 )
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -41,41 +48,40 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
 )
-from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
 from raiden.transfer.state import (
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_CLOSING,
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
-    CHANNEL_STATE_SETTLING,
-    CHANNEL_STATE_UNUSABLE,
     CHANNEL_STATES_PRIOR_TO_CLOSED,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    ChannelState,
+    ExpiredWithdrawState,
     HashTimeLockState,
-    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
-    TransactionChannelNewBalance,
+    PendingLocksState,
+    PendingWithdrawState,
+    RouteState,
     TransactionExecutionStatus,
-    TransactionOrder,
     UnlockPartialProofState,
-    make_empty_merkle_tree,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionChannelSetFee,
+    ActionChannelSetRevealTimeout,
+    ActionChannelWithdraw,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
-    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
     ReceiveUnlock,
+    ReceiveWithdrawConfirmation,
+    ReceiveWithdrawExpired,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import pex
+from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -84,15 +90,14 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockHash,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     ChannelID,
+    EncodedData,
     InitiatorAddress,
-    Keccak256,
     List,
-    LockHash,
     Locksroot,
     LockType,
-    MerkleTreeLeaves,
     MessageID,
     NamedTuple,
     Nonce,
@@ -102,20 +107,24 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    SuccessOrError,
+    Signature,
     TargetAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
     Tuple,
     Union,
-    cast,
+    WithdrawAmount,
 )
 
-# This should be changed to `Union[str, MerkleTreeState]`
-MerkletreeOrError = Tuple[bool, Optional[str], Optional[MerkleTreeState]]
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService  # noqa: F401
+
+# This should be changed to `Union[str, PendingLocksState]`
+PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
-SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
+SendUnlockAndPendingLocksState = Tuple[SendBalanceProof, PendingLocksState]
 
 
 class UnlockGain(NamedTuple):
@@ -123,23 +132,132 @@ class UnlockGain(NamedTuple):
     from_partner_locks: TokenAmount
 
 
-def get_sender_expiration_threshold(lock: LockType) -> BlockNumber:
-    """ Returns the block number at which the sender can send the remove expired lock.
+def get_safe_initial_expiration(
+    block_number: BlockNumber, reveal_timeout: BlockTimeout, lock_timeout: BlockTimeout = None
+) -> BlockExpiration:
+    """ Returns the upper bound block expiration number used by the initiator
+    of a transfer or a withdraw.
 
-    The remove lock expired message will be rejected if the expiration block
-    has not been confirmed. Additionally the sender can account for possible
-    delays in the receiver, so a few additional blocks are used to avoid hanging the channel.
+    The `reveal_timeout` defines how many blocks it takes for a transaction to
+    be mined under congestion. The expiration is defined in terms of
+    `reveal_timeout`.
+
+    It must be at least `reveal_timeout` to allow a lock or withdraw to be used
+    on-chain under congestion. Ideally it should not be larger than `2 *
+    reveal_timeout`, otherwise for off-chain transfers Raiden would be slower
+    than blockchain.
     """
-    return BlockNumber(lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
+    if lock_timeout:
+        return BlockExpiration(block_number + lock_timeout)
+
+    return BlockExpiration(block_number + reveal_timeout * 2)
 
 
-def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
-    """ Returns the block number at which a remove lock expired can be accepted.
+def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
+    """ Compute the block at which an expiration message can be sent without
+    worrying about blocking the message queue.
 
-    The receiver must wait for the block at which the lock expires to be confirmed.
-    This is necessary to handle reorgs which could hide a secret registration.
+    The expiry messages will be rejected if the expiration block has not been
+    confirmed. Additionally the sender can account for possible delays in the
+    receiver, so a few additional blocks are used to avoid hanging the channel.
     """
-    return BlockNumber(lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+    return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2)
+
+
+def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
+    """ Returns the block number at which the receiver can accept an expiry
+    message.
+
+    The receiver must wait for the block at which the expired message to be
+    confirmed. This is necessary to handle reorgs, e.g. which could hide a
+    secret registration.
+    """
+    return BlockExpiration(expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+
+
+def is_channel_usable_for_mediation(
+    channel_state: NettingChannelState,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: BlockTimeout,
+) -> bool:
+    """True if the channel can safely used to mediate a transfer for the given
+    parameters.
+
+    This will make sure that:
+
+    - The channel has capacity.
+    - The number of locks can be claimed on-chain.
+    - The transfer amount does not overflow.
+    - The lock expiration is smaller than the settlement window.
+
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
+
+    The lock expiration has to be smaller than the channel's settlement window
+    because otherwise it is possible to employ attacks. Where an attacker open
+    two channels to the victim, with different settlement windows. The channel
+    with lower settlement is used to start a payment to the other channel, if
+    the lock's expiration is allowed to be larger than the settlement window,
+    then the attacker can close and settle the incoming channel before the lock
+    expires, and claim the lock on the outgoing channel by registering the
+    secret on-chain.
+    """
+
+    channel_usable = is_channel_usable_for_new_transfer(
+        channel_state, transfer_amount, lock_timeout
+    )
+    lock_timeout_valid = lock_timeout > 0
+
+    return channel_usable and lock_timeout_valid
+
+
+def is_channel_usable_for_new_transfer(
+    channel_state: NettingChannelState,
+    transfer_amount: PaymentWithFeeAmount,
+    lock_timeout: Optional[BlockTimeout],
+) -> bool:
+    """True if the channel can be used to start a new transfer.
+
+    This will make sure that:
+
+    - The channel has capacity.
+    - The number of locks can be claimed on-chain.
+    - The transfer amount does not overflow.
+    - The settlement window is large enough to allow the secret to be
+      registered on-chain.
+    - lock_timeout, if provided, is within allowed range (reveal_timeout, settle_timeout]
+
+    The number of locks has to be checked because the gas usage will increase
+    linearly with the number of locks in it, this has to be limited to a value
+    lower than the block gas limit constraints.
+    """
+    pending_transfers = get_number_of_pending_transfers(channel_state.our_state)
+    distributable = get_distributable(channel_state.our_state, channel_state.partner_state)
+
+    lock_timeout_valid = lock_timeout is None or (
+        lock_timeout <= channel_state.settle_timeout
+        and lock_timeout > channel_state.reveal_timeout
+    )
+
+    # The settle_timeout can be chosen independently by our partner. That means
+    # it is possible for a malicious partner to choose a settlement timeout so
+    # small that it is not possible to register the secret on-chain.
+    #
+    # This is true for version 0.25.0 of the smart contracts, since there is
+    # nothing the client can do to prevent the channel from being open the only
+    # option is to ignore the channel.
+    is_valid_settle_timeout = channel_state.settle_timeout >= channel_state.reveal_timeout * 2
+
+    channel_usable = (
+        get_status(channel_state) == ChannelState.STATE_OPENED
+        and is_valid_settle_timeout
+        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
+        and transfer_amount <= distributable
+        and is_valid_amount(channel_state.our_state, transfer_amount)
+        and lock_timeout_valid
+    )
+    return channel_usable
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
@@ -153,18 +271,6 @@ def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -
     )
 
 
-def is_deposit_confirmed(channel_state: NettingChannelState, block_number: BlockNumber) -> bool:
-    """True if the block which mined the deposit transaction has been
-    confirmed.
-    """
-    if not channel_state.deposit_transaction_queue:
-        return False
-
-    return is_transaction_confirmed(
-        channel_state.deposit_transaction_queue[0].block_number, block_number
-    )
-
-
 def is_lock_locked(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
     """True if the `secrethash` is for a lock with an unknown secret."""
     return secrethash in end_state.secrethashes_to_lockedlocks
@@ -174,7 +280,7 @@ def is_lock_expired(
     end_state: NettingChannelEndState,
     lock: LockType,
     block_number: BlockNumber,
-    lock_expiration_threshold: BlockNumber,
+    lock_expiration_threshold: BlockExpiration,
 ) -> SuccessOrError:
     """ Determine whether a lock has expired.
 
@@ -186,16 +292,14 @@ def is_lock_expired(
 
     secret_registered_on_chain = lock.secrethash in end_state.secrethashes_to_onchain_unlockedlocks
     if secret_registered_on_chain:
-        return (False, "lock has been unlocked on-chain")
+        return SuccessOrError("lock has been unlocked on-chain")
 
     if block_number < lock_expiration_threshold:
-        msg = (
+        return SuccessOrError(
             f"current block number ({block_number}) is not larger than "
             f"lock.expiration + confirmation blocks ({lock_expiration_threshold})"
         )
-        return (False, msg)
-
-    return (True, None)
+    return SuccessOrError()
 
 
 def is_transfer_expired(
@@ -203,14 +307,23 @@ def is_transfer_expired(
     affected_channel: NettingChannelState,
     block_number: BlockNumber,
 ) -> bool:
-    lock_expiration_threshold = get_sender_expiration_threshold(transfer.lock)
-    has_lock_expired, _ = is_lock_expired(
+    lock_expiration_threshold = get_sender_expiration_threshold(transfer.lock.expiration)
+    has_lock_expired = is_lock_expired(
         end_state=affected_channel.our_state,
         lock=transfer.lock,
         block_number=block_number,
         lock_expiration_threshold=lock_expiration_threshold,
     )
-    return has_lock_expired
+    return has_lock_expired.ok
+
+
+def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
+    """ Determine whether a withdraw has expired.
+
+    The withdraw has expired if the current block exceeds
+    the withdraw's expiration + confirmation blocks.
+    """
+    return block_number >= expiration_threshold
 
 
 def is_secret_known(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
@@ -231,6 +344,50 @@ def is_secret_known_onchain(end_state: NettingChannelEndState, secrethash: Secre
     return secrethash in end_state.secrethashes_to_onchain_unlockedlocks
 
 
+def is_valid_channel_total_withdraw(channel_total_withdraw: TokenAmount) -> bool:
+    """Sanity check for the channel's total withdraw.
+
+    The channel's total deposit is:
+
+        p1.total_deposit + p2.total_deposit
+
+    The channel's total withdraw is:
+
+        p1.total_withdraw + p2.total_withdraw
+
+    The smart contract forces:
+
+        - The channel's total deposit to fit in a UINT256.
+        - The channel's withdraw must be in the range [0,channel_total_deposit].
+
+    Because the `total_withdraw` must be in the range [0,channel_deposit], and
+    the maximum value for channel_deposit is UINT256, the overflow bellow must
+    never happen, otherwise there is a smart contract bug.
+    """
+    return channel_total_withdraw <= UINT256_MAX
+
+
+def is_valid_withdraw(
+    withdraw_request: Union[ReceiveWithdrawRequest, ReceiveWithdrawConfirmation]
+) -> SuccessOrError:
+    """True if the signature of the message corresponds is valid.
+
+    This predicate is intentionally only checking the signature against the
+    message data, and not the expected data. Before this check the fields of
+    the message must be validated.
+    """
+    packed = pack_withdraw(
+        canonical_identifier=withdraw_request.canonical_identifier,
+        participant=withdraw_request.participant,
+        total_withdraw=withdraw_request.total_withdraw,
+        expiration_block=withdraw_request.expiration,
+    )
+
+    return is_valid_signature(
+        data=packed, signature=withdraw_request.signature, sender_address=withdraw_request.sender
+    )
+
+
 def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Optional[Secret]:
     """Returns `secret` if the `secrethash` is for a lock with a known secret."""
     partial_unlock_proof = end_state.secrethashes_to_unlockedlocks.get(secrethash)
@@ -242,13 +399,6 @@ def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Opt
         return partial_unlock_proof.secret
 
     return None
-
-
-def is_transaction_confirmed(
-    transaction_block_number: BlockNumber, blockchain_block_number: BlockNumber
-) -> bool:
-    confirmation_block = transaction_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-    return blockchain_block_number > confirmation_block
 
 
 def is_balance_proof_safe_for_onchain_operations(balance_proof: BalanceProofSignedState,) -> bool:
@@ -269,6 +419,25 @@ def is_valid_amount(
 
 
 def is_valid_signature(
+    data: bytes, signature: Signature, sender_address: Address
+) -> SuccessOrError:
+    try:
+        signer_address = recover(data=data, signature=signature)
+        # InvalidSignature is raised by raiden.utils.signer.recover if signature
+        # is not bytes or has the incorrect length.
+        # ValueError is raised if the PublicKey instantiation failed.
+        # Exception is raised if the public key recovery failed.
+    except Exception:  # pylint: disable=broad-except
+        return SuccessOrError("Signature invalid, could not be recovered.")
+
+    is_correct_sender = sender_address == signer_address
+    if is_correct_sender:
+        return SuccessOrError()
+
+    return SuccessOrError("Signature was valid but the expected address does not match.")
+
+
+def is_valid_balanceproof_signature(
     balance_proof: BalanceProofSignedState, sender_address: Address
 ) -> SuccessOrError:
     balance_hash = hash_balance_data(
@@ -276,7 +445,7 @@ def is_valid_signature(
     )
 
     # The balance proof must be tied to a single channel instance, through the
-    # chain_id, token_network_identifier, and channel_identifier, otherwise the
+    # chain_id, token_network_address, and channel_identifier, otherwise the
     # on-chain contract would be susceptible to replay attacks across channels.
     #
     # The balance proof must also authenticate the offchain balance (blinded in
@@ -288,30 +457,14 @@ def is_valid_signature(
         additional_hash=balance_proof.message_hash,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=balance_proof.chain_id,
-            token_network_address=balance_proof.token_network_identifier,
+            token_network_address=balance_proof.token_network_address,
             channel_identifier=balance_proof.channel_identifier,
         ),
     )
 
-    try:
-        signer_address = recover(data=data_that_was_signed, signature=balance_proof.signature)
-        # InvalidSignature is raised by raiden.utils.signer.recover if signature
-        # is not bytes or has the incorrect length
-        #
-        # ValueError is raised if the PublicKey instantiation failed, let it
-        # propagate because it's a memory pressure problem.
-        #
-        # Exception is raised if the public key recovery failed.
-    except Exception:  # pylint: disable=broad-except
-        msg = "Signature invalid, could not be recovered."
-        return (False, msg)
-
-    is_correct_sender = sender_address == signer_address
-    if is_correct_sender:
-        return (True, None)
-
-    msg = "Signature was valid but the expected address does not match."
-    return (False, msg)
+    return is_valid_signature(
+        data=data_that_was_signed, signature=balance_proof.signature, sender_address=sender_address
+    )
 
 
 def is_balance_proof_usable_onchain(
@@ -332,81 +485,66 @@ def is_balance_proof_usable_onchain(
     """
     expected_nonce = get_next_nonce(sender_state)
 
-    is_valid_signature_, signature_msg = is_valid_signature(
+    is_valid_signature = is_valid_balanceproof_signature(
         received_balance_proof, sender_state.address
     )
-
-    result: SuccessOrError
 
     # TODO: Accept unlock messages if the node has not yet sent a transaction
     # with the balance proof to the blockchain, this will save one call to
     # unlock on-chain for the non-closing party.
-    if get_status(channel_state) != CHANNEL_STATE_OPENED:
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
         # The channel must be opened, otherwise if receiver is the closer, the
         # balance proof cannot be used onchain.
-        msg = f"The channel is already closed."
-        result = (False, msg)
+        return SuccessOrError("The channel is already closed.")
 
     elif received_balance_proof.channel_identifier != channel_state.identifier:
         # Informational message, the channel_identifier **validated by the
         # signature** must match for the balance_proof to be valid.
-        msg = (
+        return SuccessOrError(
             f"channel_identifier does not match. "
             f"expected: {channel_state.identifier} "
             f"got: {received_balance_proof.channel_identifier}."
         )
-        result = (False, msg)
 
-    elif received_balance_proof.token_network_identifier != channel_state.token_network_identifier:
-        # Informational message, the token_network_identifier **validated by
+    elif received_balance_proof.token_network_address != channel_state.token_network_address:
+        # Informational message, the token_network_address **validated by
         # the signature** must match for the balance_proof to be valid.
-        msg = (
-            f"token_network_identifier does not match. "
-            f"expected: {channel_state.token_network_identifier} "
-            f"got: {received_balance_proof.token_network_identifier}."
+        return SuccessOrError(
+            f"token_network_address does not match. "
+            f"expected: {channel_state.token_network_address} "
+            f"got: {received_balance_proof.token_network_address}."
         )
-        result = (False, msg)
 
     elif received_balance_proof.chain_id != channel_state.chain_id:
         # Informational message, the chain_id **validated by the signature**
         # must match for the balance_proof to be valid.
-        msg = (
+        return SuccessOrError(
             f"chain_id does not match channel's "
             f"chain_id. expected: {channel_state.chain_id} "
             f"got: {received_balance_proof.chain_id}."
         )
-        result = (False, msg)
 
     elif not is_balance_proof_safe_for_onchain_operations(received_balance_proof):
         transferred_amount_after_unlock = (
             received_balance_proof.transferred_amount + received_balance_proof.locked_amount
         )
-        msg = (
+        return SuccessOrError(
             f"Balance proof total transferred amount would overflow onchain. "
             f"max: {UINT256_MAX} result would be: {transferred_amount_after_unlock}"
         )
 
-        result = (False, msg)
-
     elif received_balance_proof.nonce != expected_nonce:
         # The nonces must increase sequentially, otherwise there is a
         # synchronization problem.
-        msg = (
+        return SuccessOrError(
             f"Nonce did not change sequentially, expected: {expected_nonce} "
             f"got: {received_balance_proof.nonce}."
         )
 
-        result = (False, msg)
-
-    elif not is_valid_signature_:
+    else:
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
-        result = (False, signature_msg)
-
-    else:
-        result = (True, None)
-
-    return result
+        return is_valid_signature
 
 
 def is_valid_lockedtransfer(
@@ -414,14 +552,14 @@ def is_valid_lockedtransfer(
     channel_state: NettingChannelState,
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
-) -> MerkletreeOrError:
+) -> PendingLocksStateOrError:
     return valid_lockedtransfer_check(
-        channel_state,
-        sender_state,
-        receiver_state,
-        "LockedTransfer",
-        transfer_state.balance_proof,
-        transfer_state.lock,
+        channel_state=channel_state,
+        sender_state=sender_state,
+        receiver_state=receiver_state,
+        message_name="LockedTransfer",
+        received_balance_proof=transfer_state.balance_proof,
+        lock=transfer_state.lock,
     )
 
 
@@ -431,7 +569,7 @@ def is_valid_lock_expired(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     block_number: BlockNumber,
-) -> MerkletreeOrError:
+) -> PendingLocksStateOrError:
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
 
@@ -452,17 +590,19 @@ def is_valid_lock_expired(
     current_balance_proof = get_current_balanceproof(sender_state)
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
     )
 
     if lock:
-        merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
+        pending_locks = compute_locks_without(
+            sender_state.pending_locks, EncodedData(bytes(lock.encoded))
+        )
         expected_locked_amount = current_locked_amount - lock.amount
 
-    result: MerkletreeOrError = (False, None, None)
+    result: PendingLocksStateOrError = (False, None, None)
 
     if secret_registered_on_chain:
         msg = "Invalid LockExpired mesage. Lock was unlocked on-chain."
@@ -471,29 +611,29 @@ def is_valid_lock_expired(
     elif lock is None:
         msg = (
             f"Invalid LockExpired message. "
-            f"Lock with secrethash {pex(secrethash)} is not known."
+            f"Lock with secrethash {to_hex(secrethash)} is not known."
         )
         result = (False, msg, None)
 
-    elif not is_balance_proof_usable:
-        msg = "Invalid LockExpired message. {}".format(invalid_balance_proof_msg)
+    elif not is_valid_balance_proof:
+        msg = f"Invalid LockExpired message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
-    elif merkletree is None:
-        msg = "Invalid LockExpired message. Same lockhash handled twice."
+    elif pending_locks is None:
+        msg = "Invalid LockExpired message. Same lock handled twice."
         result = (False, msg, None)
 
     else:
-        locksroot_without_lock = merkleroot(merkletree)
-        has_expired, lock_expired_message = is_lock_expired(
+        locksroot_without_lock = compute_locksroot(pending_locks)
+        check_lock_expired = is_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
-            lock_expiration_threshold=get_receiver_expiration_threshold(lock),
+            lock_expiration_threshold=get_receiver_expiration_threshold(lock.expiration),
         )
 
-        if not has_expired:
-            msg = f"Invalid LockExpired message. {lock_expired_message}"
+        if not check_lock_expired:
+            msg = f"Invalid LockExpired message. {check_lock_expired.as_error_message}"
             result = (False, msg, None)
 
         elif received_balance_proof.locksroot != locksroot_without_lock:
@@ -526,7 +666,7 @@ def is_valid_lock_expired(
             result = (False, msg, None)
 
         else:
-            result = (True, None, merkletree)
+            result = (True, None, pending_locks)
 
     return result
 
@@ -538,32 +678,32 @@ def valid_lockedtransfer_check(
     message_name: str,
     received_balance_proof: BalanceProofSignedState,
     lock: HashTimeLockState,
-) -> MerkletreeOrError:
+) -> PendingLocksStateOrError:
 
     current_balance_proof = get_current_balanceproof(sender_state)
-    merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
+    pending_locks = compute_locks_with(sender_state.pending_locks, lock)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
     distributable = get_distributable(sender_state, receiver_state)
     expected_locked_amount = current_locked_amount + lock.amount
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
     )
 
-    result: MerkletreeOrError = (False, None, None)
+    result: PendingLocksStateOrError = (False, None, None)
 
-    if not is_balance_proof_usable:
-        msg = f"Invalid {message_name} message. {invalid_balance_proof_msg}"
+    if not is_valid_balance_proof:
+        msg = f"Invalid {message_name} message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
-    elif merkletree is None:
-        msg = "Invalid {} message. Same lockhash handled twice.".format(message_name)
+    elif pending_locks is None:
+        msg = f"Invalid {message_name} message. Same lock handled twice."
         result = (False, msg, None)
 
-    elif _merkletree_width(merkletree) > MAXIMUM_PENDING_TRANSFERS:
+    elif len(pending_locks.locks) > MAXIMUM_PENDING_TRANSFERS:
         msg = (
             f"Invalid {message_name} message. Adding the transfer would exceed the allowed "
             f"limit of {MAXIMUM_PENDING_TRANSFERS} pending transfers per channel."
@@ -571,7 +711,7 @@ def valid_lockedtransfer_check(
         result = (False, msg, None)
 
     else:
-        locksroot_with_lock = merkleroot(merkletree)
+        locksroot_with_lock = compute_locksroot(pending_locks)
 
         if received_balance_proof.locksroot != locksroot_with_lock:
             # The locksroot must be updated to include the new lock
@@ -617,17 +757,8 @@ def valid_lockedtransfer_check(
 
             result = (False, msg, None)
 
-        # if the message contains the keccak of the empty hash it will never be
-        # usable onchain https://github.com/raiden-network/raiden/issues/3091
-        elif lock.secrethash == EMPTY_HASH_KECCAK:
-            msg = (
-                f"Invalid {message_name} message. "
-                "The secrethash is the keccak of 0x0 and will not be usable onchain"
-            )
-            result = (False, msg, None)
-
         else:
-            result = (True, None, merkletree)
+            result = (True, None, pending_locks)
 
     return result
 
@@ -661,8 +792,8 @@ def is_valid_refund(
     sender_state: NettingChannelEndState,
     receiver_state: NettingChannelEndState,
     received_transfer: LockedTransferUnsignedState,
-) -> MerkletreeOrError:
-    is_valid_locked_transfer, msg, merkletree = valid_lockedtransfer_check(
+) -> PendingLocksStateOrError:
+    is_valid_locked_transfer, msg, pending_locks = valid_lockedtransfer_check(
         channel_state,
         sender_state,
         receiver_state,
@@ -677,12 +808,12 @@ def is_valid_refund(
     if not refund_transfer_matches_transfer(refund.transfer, received_transfer):
         return False, "Refund transfer did not match the received transfer", None
 
-    return True, "", merkletree
+    return True, "", pending_locks
 
 
 def is_valid_unlock(
     unlock: ReceiveUnlock, channel_state: NettingChannelState, sender_state: NettingChannelEndState
-) -> MerkletreeOrError:
+) -> PendingLocksStateOrError:
     received_balance_proof = unlock.balance_proof
     current_balance_proof = get_current_balanceproof(sender_state)
 
@@ -692,31 +823,33 @@ def is_valid_unlock(
         msg = "Invalid Unlock message. There is no corresponding lock for {}".format(
             encode_hex(unlock.secrethash)
         )
-
         return (False, msg, None)
 
-    merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
-    if not merkletree:
-        msg = f"Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}"
+    pending_locks = compute_locks_without(
+        sender_state.pending_locks, EncodedData(bytes(lock.encoded))
+    )
+
+    if pending_locks is None:
+        msg = f"Invalid unlock message. The lock is unknown {encode_hex(lock.encoded)}"
         return (False, msg, None)
 
-    locksroot_without_lock = merkleroot(merkletree)
+    locksroot_without_lock = compute_locksroot(pending_locks)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
 
     expected_transferred_amount = current_transferred_amount + TokenAmount(lock.amount)
     expected_locked_amount = current_locked_amount - lock.amount
 
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
+    is_valid_balance_proof = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
         channel_state=channel_state,
         sender_state=sender_state,
     )
 
-    result: MerkletreeOrError = (False, None, None)
+    result: PendingLocksStateOrError = (False, None, None)
 
-    if not is_balance_proof_usable:
-        msg = "Invalid Unlock message. {}".format(invalid_balance_proof_msg)
+    if not is_valid_balance_proof:
+        msg = f"Invalid Unlock message. {is_valid_balance_proof.as_error_message}"
         result = (False, msg, None)
 
     elif received_balance_proof.locksroot != locksroot_without_lock:
@@ -744,15 +877,196 @@ def is_valid_unlock(
         # Unlock messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
-            "Invalid Unlock message. " "Balance proof's wrong locked_amount, expected: {} got: {}."
+            "Invalid Unlock message. Balance proof's wrong locked_amount, expected: {} got: {}."
         ).format(expected_locked_amount, received_balance_proof.locked_amount)
 
         result = (False, msg, None)
 
     else:
-        result = (True, None, merkletree)
+        result = (True, None, pending_locks)
 
     return result
+
+
+def is_valid_action_withdraw(
+    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
+) -> SuccessOrError:
+    balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
+
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        TokenAmount(withdraw.total_withdraw + channel_state.partner_total_withdraw)
+    )
+
+    withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
+        return SuccessOrError("Invalid withdraw, the channel is not opened")
+    elif withdraw_amount <= 0:
+        return SuccessOrError(f"Total withdraw {withdraw.total_withdraw} did not increase")
+    elif balance < withdraw_amount:
+        return SuccessOrError(
+            f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
+        )
+    elif withdraw_overflow:
+        return SuccessOrError(
+            f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
+        )
+    else:
+        return SuccessOrError()
+
+
+def is_valid_withdraw_request(
+    channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
+) -> SuccessOrError:
+
+    expected_nonce = get_next_nonce(channel_state.partner_state)
+    balance = get_balance(sender=channel_state.partner_state, receiver=channel_state.our_state)
+
+    is_valid = is_valid_withdraw(withdraw_request)
+
+    withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_total_withdraw
+
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        TokenAmount(withdraw_request.total_withdraw + channel_state.our_total_withdraw)
+    )
+
+    # The confirming node must accept an expired withdraw request. This is
+    # necessary to clear the requesting node's queue. This is not a security
+    # flaw because the smart contract will not allow the withdraw to happen.
+
+    if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
+        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
+    elif withdraw_request.participant != channel_state.partner_state.address:
+        return SuccessOrError(f"Invalid participant, it must be the partner address")
+    elif withdraw_request.sender != channel_state.partner_state.address:
+        return SuccessOrError(f"Invalid sender, withdraw request must be sent by the partner.")
+    elif withdraw_amount <= 0:
+        return SuccessOrError(f"Total withdraw {withdraw_request.total_withdraw} did not increase")
+    elif balance < withdraw_amount:
+        return SuccessOrError(
+            f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
+        )
+    elif withdraw_request.nonce != expected_nonce:
+        return SuccessOrError(
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {withdraw_request.nonce}."
+        )
+    elif withdraw_overflow:
+        return SuccessOrError(
+            f"The new total_withdraw {withdraw_request.total_withdraw} will cause an overflow"
+        )
+    else:
+        return is_valid
+
+
+def is_valid_withdraw_confirmation(
+    channel_state: NettingChannelState, received_withdraw: ReceiveWithdrawConfirmation
+) -> SuccessOrError:
+    withdraw_state: Optional[
+        Union[ExpiredWithdrawState, PendingWithdrawState]
+    ] = channel_state.our_state.withdraws_pending.get(received_withdraw.total_withdraw)
+
+    if withdraw_state is None:
+        try:
+            withdraw_state = next(
+                candidate
+                for candidate in channel_state.our_state.withdraws_expired
+                if candidate.total_withdraw == received_withdraw.total_withdraw
+            )
+        except StopIteration:
+            pass
+
+    expected_nonce = get_next_nonce(channel_state.partner_state)
+
+    is_valid = is_valid_withdraw(received_withdraw)
+
+    if not withdraw_state:
+        return SuccessOrError(
+            f"Received withdraw confirmation {received_withdraw.total_withdraw} "
+            f"was not found in withdraw states"
+        )
+
+    withdraw_overflow = not is_valid_channel_total_withdraw(
+        TokenAmount(received_withdraw.total_withdraw + channel_state.partner_total_withdraw)
+    )
+
+    # The requesting node must accept an confirmation for an expired withdraw
+    # request. This is necessary to clear the confirming node's queue. At this
+    # point the withdraw is not valid anymore, if the requesting node wishes
+    # wants to withdraw, it will have to request it again.
+
+    if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
+        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
+    elif received_withdraw.total_withdraw != channel_state.our_total_withdraw:
+        return SuccessOrError(
+            f"Total withdraw confirmation {received_withdraw.total_withdraw} "
+            f"does not match our total withdraw {channel_state.our_total_withdraw}"
+        )
+    elif received_withdraw.nonce != expected_nonce:
+        return SuccessOrError(
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {received_withdraw.nonce}."
+        )
+    elif received_withdraw.expiration != withdraw_state.expiration:
+        return SuccessOrError(
+            f"Invalid expiration {received_withdraw.expiration}, withdraw "
+            f"confirmation must use the same confirmation as the request, "
+            f"otherwise the signatures will not match on-chain."
+        )
+    elif received_withdraw.participant != channel_state.our_state.address:
+        return SuccessOrError(
+            f"Invalid participant "
+            f"{to_checksum_address(received_withdraw.participant)}, it must be the "
+            f"same as the sender address "
+            f"{to_checksum_address(channel_state.our_state.address)}"
+        )
+    elif received_withdraw.sender != channel_state.partner_state.address:
+        return SuccessOrError(
+            f"Invalid sender, withdraw confirmation must be sent by the partner."
+        )
+    elif withdraw_overflow:
+        return SuccessOrError(
+            f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
+        )
+    else:
+        return is_valid
+
+
+def is_valid_withdraw_expired(
+    channel_state: NettingChannelState,
+    state_change: ReceiveWithdrawExpired,
+    withdraw_state: PendingWithdrawState,
+    block_number: BlockNumber,
+) -> SuccessOrError:
+    expected_nonce = get_next_nonce(channel_state.partner_state)
+
+    withdraw_expired = is_withdraw_expired(
+        block_number=block_number,
+        expiration_threshold=get_receiver_expiration_threshold(
+            expiration=withdraw_state.expiration
+        ),
+    )
+
+    if not withdraw_expired:
+        return SuccessOrError(
+            f"WithdrawExpired for withdraw that has not yet expired {state_change.total_withdraw}."
+        )
+    elif channel_state.canonical_identifier != state_change.canonical_identifier:
+        return SuccessOrError(f"Invalid canonical identifier provided in WithdrawExpire")
+    elif state_change.sender != channel_state.partner_state.address:
+        return SuccessOrError("Expired withdraw not from partner.")
+    elif state_change.total_withdraw != withdraw_state.total_withdraw:
+        return SuccessOrError(
+            f"WithdrawExpired and local withdraw amounts do not match. Received "
+            f"{state_change.total_withdraw}, local amount "
+            f"{withdraw_state.total_withdraw}"
+        )
+    elif state_change.nonce != expected_nonce:
+        return SuccessOrError(
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {state_change.nonce}."
+        )
+    else:
+        return SuccessOrError()
 
 
 def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
@@ -810,7 +1124,26 @@ def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
     )
 
 
+def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
+    """ Calculates the capacity of the given channel
+
+    For the definition of capacity see
+    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-channel-capacity
+    """
+    return TokenAmount(
+        channel_state.our_total_deposit
+        - channel_state.our_total_withdraw
+        + channel_state.partner_total_deposit
+        - channel_state.partner_total_withdraw
+    )
+
+
 def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> Balance:
+    """ Calculates the balance for a participant in a channel.
+
+    For the definition of balance see
+    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-balance
+    """
     sender_transferred_amount = 0
     receiver_transferred_amount = 0
 
@@ -821,7 +1154,10 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
     return Balance(
-        sender.contract_balance - sender_transferred_amount + receiver_transferred_amount
+        sender.contract_balance
+        - max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
+        - sender_transferred_amount
+        + receiver_transferred_amount
     )
 
 
@@ -830,11 +1166,11 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
 
     if balance_proof:
         locksroot = balance_proof.locksroot
-        nonce = balance_proof.nonce
+        nonce = end_state.nonce
         transferred_amount = balance_proof.transferred_amount
         locked_amount = get_amount_locked(end_state)
     else:
-        locksroot = EMPTY_MERKLE_ROOT
+        locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
         nonce = Nonce(0)
         transferred_amount = TokenAmount(0)
         locked_amount = TokenAmount(0)
@@ -843,12 +1179,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
 
 
 def get_current_nonce(end_state: NettingChannelEndState) -> Nonce:
-    balance_proof = end_state.balance_proof
-
-    if balance_proof:
-        return balance_proof.nonce
-    else:
-        return Nonce(0)
+    return end_state.nonce
 
 
 def get_distributable(
@@ -870,41 +1201,16 @@ def get_distributable(
     return TokenAmount(min(overflow_limit, distributable))
 
 
-def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[MerkleTreeLeaves]:
-    """ Unlock proof for an entire merkle tree of pending locks
+def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[PendingLocksState]:
+    """ Unlock proof for entire pending locks
 
-    The unlock proof contains all the merkle tree data, tightly packed, needed by the token
+    The unlock proof contains all the locks, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
-    if len(end_state.merkletree.layers[LEAVES]) == 0:  # pylint: disable=len-as-condition
+    if len(end_state.pending_locks.locks) == 0:  # pylint: disable=len-as-condition
         return None
-
-    lockhashes_to_locks = dict()
-    lockhashes_to_locks.update(
-        {lock.lockhash: lock for secrethash, lock in end_state.secrethashes_to_lockedlocks.items()}
-    )
-    lockhashes_to_locks.update(
-        {
-            proof.lock.lockhash: proof.lock
-            for secrethash, proof in end_state.secrethashes_to_unlockedlocks.items()
-        }
-    )
-    lockhashes_to_locks.update(
-        {
-            proof.lock.lockhash: proof.lock
-            for secrethash, proof in end_state.secrethashes_to_onchain_unlockedlocks.items()
-        }
-    )
-
-    ordered_locks = [
-        lockhashes_to_locks[LockHash(lockhash)] for lockhash in end_state.merkletree.layers[LEAVES]
-    ]
-
-    # Not sure why the cast is needed here. The error was:
-    # Incompatible return value type
-    # (got "List[HashTimeLockState]", expected "Optional[MerkleTreeLeaves]")
-    return cast(MerkleTreeLeaves, ordered_locks)
+    return end_state.pending_locks
 
 
 def get_lock(
@@ -939,22 +1245,15 @@ def lock_exists_in_either_channel_side(
 
 
 def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
-    if end_state.balance_proof:
-        return Nonce(end_state.balance_proof.nonce + 1)
-
     # 0 must not be used since in the netting contract it represents null.
-    return Nonce(1)
-
-
-def _merkletree_width(merkletree: MerkleTreeState) -> int:
-    return len(merkletree.layers[LEAVES])
+    return Nonce(end_state.nonce + 1)
 
 
 def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -> int:
-    return _merkletree_width(channel_end_state.merkletree)
+    return len(channel_end_state.pending_locks.locks)
 
 
-def get_status(channel_state: NettingChannelState) -> str:
+def get_status(channel_state: NettingChannelState) -> ChannelState:
     if channel_state.settle_transaction:
         finished_successfully = (
             channel_state.settle_transaction.result == TransactionExecutionStatus.SUCCESS
@@ -962,11 +1261,11 @@ def get_status(channel_state: NettingChannelState) -> str:
         running = channel_state.settle_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = CHANNEL_STATE_SETTLED
+            result = ChannelState.STATE_SETTLED
         elif running:
-            result = CHANNEL_STATE_SETTLING
+            result = ChannelState.STATE_SETTLING
         else:
-            result = CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     elif channel_state.close_transaction:
         finished_successfully = (
@@ -975,14 +1274,14 @@ def get_status(channel_state: NettingChannelState) -> str:
         running = channel_state.close_transaction.finished_block_number is None
 
         if finished_successfully:
-            result = CHANNEL_STATE_CLOSED
+            result = ChannelState.STATE_CLOSED
         elif running:
-            result = CHANNEL_STATE_CLOSING
+            result = ChannelState.STATE_CLOSING
         else:
-            result = CHANNEL_STATE_UNUSABLE
+            result = ChannelState.STATE_UNUSABLE
 
     else:
-        result = CHANNEL_STATE_OPENED
+        result = ChannelState.STATE_OPENED
 
     return result
 
@@ -999,7 +1298,7 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None
     """Removes the lock from the indexing structures.
 
     Note:
-        This won't change the merkletree!
+        This won't change the pending locks!
     """
     assert is_lock_pending(end_state, secrethash)
 
@@ -1036,39 +1335,35 @@ def update_contract_balance(end_state: NettingChannelEndState, contract_balance:
         end_state.contract_balance = contract_balance
 
 
-def compute_merkletree_with(
-    merkletree: MerkleTreeState, lockhash: LockHash
-) -> Optional[MerkleTreeState]:
-    """Register the given lockhash with the existing merkle tree."""
-    # Use None to inform the caller the lockshash is already known
-    result = None
-
-    leaves = merkletree.layers[LEAVES]
-    if lockhash not in leaves:
-        leaves = list(leaves)
-        leaves.append(Keccak256(lockhash))
-        result = MerkleTreeState(compute_layers(leaves))
-
-    return result
+def compute_locks_with(
+    locks: PendingLocksState, lock: Union[HashTimeLockState, UnlockPartialProofState]
+) -> Optional[PendingLocksState]:
+    """Register the given lock with as a pending locks."""
+    if bytes(lock.encoded) not in locks.locks:
+        locks = PendingLocksState(list(locks.locks))
+        locks.locks.append(EncodedData(bytes(lock.encoded)))  # pylint: disable=E1101
+        return locks
+    else:
+        return None
 
 
-def compute_merkletree_without(
-    merkletree: MerkleTreeState, lockhash: LockHash
-) -> Optional[MerkleTreeState]:
-    # Use None to inform the caller the lockhash is unknown
-    result = None
+def compute_locks_without(
+    locks: PendingLocksState, lock_encoded: EncodedData
+) -> Optional[PendingLocksState]:
+    # Use None to inform the caller the lock is unknown
+    if lock_encoded in locks.locks:
+        locks = PendingLocksState(list(locks.locks))
+        locks.locks.remove(lock_encoded)
+        return locks
+    else:
+        return None
 
-    leaves = merkletree.layers[LEAVES]
-    if lockhash in leaves:
-        leaves = list(leaves)
-        leaves.remove(Keccak256(lockhash))
 
-        if leaves:
-            result = MerkleTreeState(compute_layers(leaves))
-        else:
-            result = make_empty_merkle_tree()
-
-    return result
+def compute_locksroot(locks: PendingLocksState) -> Locksroot:
+    """ Compute the hash representing all pending locks
+    The hash is submitted in TokenNetwork.settleChannel() call.
+    """
+    return Locksroot(keccak(b"".join(locks.locks)))
 
 
 def create_sendlockedtransfer(
@@ -1080,7 +1375,8 @@ def create_sendlockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
-) -> Tuple[SendLockedTransfer, MerkleTreeState]:
+    route_states: List[RouteState],
+) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
     our_balance_proof = our_state.balance_proof
@@ -1089,15 +1385,15 @@ def create_sendlockedtransfer(
     assert amount <= get_distributable(our_state, partner_state), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     lock = HashTimeLockState(amount=amount, expiration=expiration, secrethash=secrethash)
 
-    merkletree = compute_merkletree_with(channel_state.our_state.merkletree, lock.lockhash)
+    pending_locks = compute_locks_with(channel_state.our_state.pending_locks, lock)
     # The caller must ensure the same lock is not being used twice
-    assert merkletree, "lock is already registered"
+    assert pending_locks, "lock is already registered"
 
-    locksroot = merkleroot(merkletree)
+    locksroot = compute_locksroot(pending_locks)
 
     if our_balance_proof:
         transferred_amount = our_balance_proof.transferred_amount
@@ -1108,10 +1404,11 @@ def create_sendlockedtransfer(
     assert transferred_amount + amount <= UINT256_MAX, msg
 
     token = channel_state.token_address
-    nonce = get_next_nonce(channel_state.our_state)
     recipient = channel_state.partner_state.address
     # the new lock is not registered yet
     locked_amount = TokenAmount(get_amount_locked(our_state) + amount)
+
+    nonce = get_next_nonce(channel_state.our_state)
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1122,17 +1419,23 @@ def create_sendlockedtransfer(
     )
 
     locked_transfer = LockedTransferUnsignedState(
-        payment_identifier, token, balance_proof, lock, initiator, target
+        payment_identifier=payment_identifier,
+        token=token,
+        balance_proof=balance_proof,
+        lock=lock,
+        initiator=initiator,
+        target=target,
+        route_states=route_states,
     )
 
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         transfer=locked_transfer,
+        canonical_identifier=channel_state.canonical_identifier,
     )
 
-    return lockedtransfer, merkletree
+    return lockedtransfer, pending_locks
 
 
 def create_unlock(
@@ -1141,31 +1444,35 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
-) -> SendUnlockAndMerkleTree:
+) -> SendUnlockAndPendingLocksState:
     our_state = channel_state.our_state
 
     msg = "caller must make sure the lock is known"
     assert is_lock_pending(our_state, lock.secrethash), msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     our_balance_proof = our_state.balance_proof
-    msg = "the lock is pending, it must be in the merkletree"
+    msg = "the lock is pending, it must be in the pending locks"
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
-    merkletree = compute_merkletree_without(our_state.merkletree, lock.lockhash)
-    msg = "the lock is pending, it must be in the merkletree"
-    assert merkletree is not None, msg
+    pending_locks = compute_locks_without(
+        our_state.pending_locks, EncodedData(bytes(lock.encoded))
+    )
+    msg = "the lock is pending, it must be in the pending locks"
+    assert pending_locks is not None, msg
 
-    locksroot = merkleroot(merkletree)
+    locksroot = compute_locksroot(pending_locks)
 
     token_address = channel_state.token_address
-    nonce = get_next_nonce(our_state)
     recipient = channel_state.partner_state.address
     # the lock is still registered
     locked_amount = TokenAmount(get_amount_locked(our_state) - lock.amount)
+
+    nonce = get_next_nonce(our_state)
+    channel_state.our_state.nonce = nonce
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1177,15 +1484,15 @@ def create_unlock(
 
     unlock_lock = SendBalanceProof(
         recipient=recipient,
-        channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         token_address=token_address,
         secret=secret,
         balance_proof=balance_proof,
+        canonical_identifier=channel_state.canonical_identifier,
     )
 
-    return unlock_lock, merkletree
+    return unlock_lock, pending_locks
 
 
 def send_lockedtransfer(
@@ -1197,22 +1504,25 @@ def send_lockedtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
+    route_states: List[RouteState],
 ) -> SendLockedTransfer:
-    send_locked_transfer_event, merkletree = create_sendlockedtransfer(
-        channel_state,
-        initiator,
-        target,
-        amount,
-        message_identifier,
-        payment_identifier,
-        expiration,
-        secrethash,
+    send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
+        channel_state=channel_state,
+        initiator=initiator,
+        target=target,
+        amount=amount,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        expiration=expiration,
+        secrethash=secrethash,
+        route_states=route_states,
     )
 
     transfer = send_locked_transfer_event.transfer
     lock = transfer.lock
     channel_state.our_state.balance_proof = transfer.balance_proof
-    channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.nonce = transfer.balance_proof.nonce
+    channel_state.our_state.pending_locks = pending_locks
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return send_locked_transfer_event
@@ -1227,29 +1537,32 @@ def send_refundtransfer(
     payment_identifier: PaymentID,
     expiration: BlockExpiration,
     secrethash: SecretHash,
+    route_state: RouteState,
 ) -> SendRefundTransfer:
     msg = "Refunds are only valid for *known and pending* transfers"
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
-    send_mediated_transfer, merkletree = create_sendlockedtransfer(
-        channel_state,
-        initiator,
-        target,
-        amount,
-        message_identifier,
-        payment_identifier,
-        expiration,
-        secrethash,
+    send_mediated_transfer, pending_locks = create_sendlockedtransfer(
+        channel_state=channel_state,
+        initiator=initiator,
+        target=target,
+        amount=amount,
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        expiration=expiration,
+        secrethash=secrethash,
+        route_states=[route_state],
     )
 
     mediated_transfer = send_mediated_transfer.transfer
     lock = mediated_transfer.lock
 
     channel_state.our_state.balance_proof = mediated_transfer.balance_proof
-    channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.nonce = mediated_transfer.balance_proof.nonce
+    channel_state.our_state.pending_locks = pending_locks
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     refund_transfer = refund_from_sendmediated(send_mediated_transfer)
@@ -1266,12 +1579,12 @@ def send_unlock(
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 
-    unlock, merkletree = create_unlock(
+    unlock, pending_locks = create_unlock(
         channel_state, message_identifier, payment_identifier, secret, lock
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof
-    channel_state.our_state.merkletree = merkletree
+    channel_state.our_state.pending_locks = pending_locks
 
     _del_lock(channel_state.our_state, lock.secrethash)
 
@@ -1301,16 +1614,56 @@ def events_for_close(
     return events
 
 
+def send_withdraw_request(
+    channel_state: NettingChannelState,
+    total_withdraw: WithdrawAmount,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
+) -> List[Event]:
+    events: List[Event] = list()
+
+    if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
+        return events
+
+    nonce = get_next_nonce(channel_state.our_state)
+    expiration = get_safe_initial_expiration(
+        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+    )
+    withdraw_state = PendingWithdrawState(
+        total_withdraw=total_withdraw, nonce=nonce, expiration=expiration
+    )
+
+    channel_state.our_state.nonce = nonce
+    channel_state.our_state.withdraws_pending[withdraw_state.total_withdraw] = withdraw_state
+
+    withdraw_event = SendWithdrawRequest(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_address,
+            channel_identifier=channel_state.identifier,
+        ),
+        recipient=channel_state.partner_state.address,
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        total_withdraw=withdraw_state.total_withdraw,
+        participant=channel_state.our_state.address,
+        nonce=channel_state.our_state.nonce,
+        expiration=withdraw_state.expiration,
+    )
+
+    events.append(withdraw_event)
+
+    return events
+
+
 def create_sendexpiredlock(
     sender_end_state: NettingChannelEndState,
     locked_lock: LockType,
     pseudo_random_generator: random.Random,
     chain_id: ChainID,
-    token_network_identifier: TokenNetworkID,
+    token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     recipient: Address,
-) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:
-    nonce = get_next_nonce(sender_end_state)
+) -> Tuple[Optional[SendLockExpired], Optional[PendingLocksState]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
@@ -1318,12 +1671,16 @@ def create_sendexpiredlock(
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
 
-    merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
+    pending_locks = compute_locks_without(
+        sender_end_state.pending_locks, EncodedData(bytes(locked_lock.encoded))
+    )
 
-    if not merkletree:
+    if not pending_locks:
         return None, None
 
-    locksroot = merkleroot(merkletree)
+    nonce = get_next_nonce(sender_end_state)
+
+    locksroot = compute_locksroot(pending_locks)
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1332,49 +1689,94 @@ def create_sendexpiredlock(
         locksroot=locksroot,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_id,
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
     )
 
     send_lock_expired = SendLockExpired(
         recipient=recipient,
+        canonical_identifier=balance_proof.canonical_identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         balance_proof=balance_proof,
         secrethash=locked_lock.secrethash,
     )
 
-    return send_lock_expired, merkletree
+    return send_lock_expired, pending_locks
 
 
-def events_for_expired_lock(
+def send_lock_expired(
     channel_state: NettingChannelState,
     locked_lock: LockType,
     pseudo_random_generator: random.Random,
 ) -> List[SendLockExpired]:
     msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
-    send_lock_expired, merkletree = create_sendexpiredlock(
+    send_lock_expired, pending_locks = create_sendexpiredlock(
         sender_end_state=channel_state.our_state,
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channel_state.chain_id,
-        token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
     )
 
     if send_lock_expired:
-        assert merkletree, "create_sendexpiredlock should return both message and merkle tree"
-        channel_state.our_state.merkletree = merkletree
+        assert pending_locks, "create_sendexpiredlock should return both message and pending locks"
+        channel_state.our_state.pending_locks = pending_locks
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
+        channel_state.our_state.nonce = send_lock_expired.balance_proof.nonce
 
         _del_unclaimed_lock(channel_state.our_state, locked_lock.secrethash)
 
         return [send_lock_expired]
 
     return []
+
+
+def send_expired_withdraws(
+    channel_state: NettingChannelState,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
+) -> List[SendWithdrawExpired]:
+    events: List[SendWithdrawExpired] = list()
+
+    for withdraw_state in list(channel_state.our_state.withdraws_pending.values()):
+        withdraw_expired = is_withdraw_expired(
+            block_number=block_number,
+            expiration_threshold=get_sender_expiration_threshold(withdraw_state.expiration),
+        )
+
+        # Break on the first non-expired withdraw as the list
+        # of withdraws are ordered and only ealier withdraws
+        # can expire.
+        if not withdraw_expired:
+            break
+
+        nonce = get_next_nonce(channel_state.our_state)
+        channel_state.our_state.nonce = nonce
+
+        channel_state.our_state.withdraws_expired.append(
+            ExpiredWithdrawState(
+                withdraw_state.total_withdraw, withdraw_state.expiration, withdraw_state.nonce
+            )
+        )
+        del channel_state.our_state.withdraws_pending[withdraw_state.total_withdraw]
+
+        events.append(
+            SendWithdrawExpired(
+                recipient=channel_state.partner_state.address,
+                canonical_identifier=channel_state.canonical_identifier,
+                message_identifier=message_identifier_from_prng(pseudo_random_generator),
+                total_withdraw=withdraw_state.total_withdraw,
+                participant=channel_state.our_state.address,
+                expiration=withdraw_state.expiration,
+                nonce=nonce,
+            )
+        )
+    return events
 
 
 def register_secret_endstate(
@@ -1475,13 +1877,196 @@ def handle_action_close(
     return TransitionResult(channel_state, events)
 
 
-def handle_action_set_fee(
-    channel_state: NettingChannelState, set_fee: ActionChannelSetFee
+def handle_action_withdraw(
+    channel_state: NettingChannelState,
+    action_withdraw: ActionChannelWithdraw,
+    pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[NettingChannelState]:
-    msg = "caller must make sure the ids match"
-    assert channel_state.identifier == set_fee.channel_identifier, msg
-    channel_state.mediation_fee = set_fee.mediation_fee
-    return TransitionResult(channel_state, list())
+    events: List[Event] = list()
+    is_valid_withdraw = is_valid_action_withdraw(channel_state, action_withdraw)
+
+    if is_valid_withdraw:
+        events = send_withdraw_request(
+            channel_state=channel_state,
+            total_withdraw=action_withdraw.total_withdraw,
+            block_number=block_number,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    else:
+        error_msg = is_valid_withdraw.as_error_message
+        assert error_msg, "is_valid_action_withdraw should return error msg if not valid"
+        events = [
+            EventInvalidActionWithdraw(
+                attempted_withdraw=action_withdraw.total_withdraw, reason=error_msg
+            )
+        ]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_action_set_reveal_timeout(
+    channel_state: NettingChannelState, state_change: ActionChannelSetRevealTimeout
+) -> TransitionResult[NettingChannelState]:
+    events: List[Event] = list()
+
+    is_valid_reveal_timeout = (
+        # This has to account for the bare minimum for block & transaction propagation
+        # + the min amount of blocks expected for that transaction to be mined according
+        # to fastest gas strategy where a transaction takes roughly 60 seconds to
+        # be mined, which is roughly equal to 7 blocks.
+        state_change.reveal_timeout >= 7
+        and channel_state.settle_timeout >= state_change.reveal_timeout * 2
+    )
+
+    if is_valid_reveal_timeout:
+        channel_state.reveal_timeout = state_change.reveal_timeout
+    else:
+        error_msg = "Settle timeout should be at least twice as large as reveal timeout"
+        events = [
+            EventInvalidActionSetRevealTimeout(
+                reveal_timeout=state_change.reveal_timeout, reason=error_msg
+            )
+        ]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_withdraw_request(
+    channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
+) -> TransitionResult[NettingChannelState]:
+    is_valid = is_valid_withdraw_request(
+        channel_state=channel_state, withdraw_request=withdraw_request
+    )
+    if is_valid:
+        withdraw_state = PendingWithdrawState(
+            total_withdraw=withdraw_request.total_withdraw,
+            nonce=withdraw_request.nonce,
+            expiration=withdraw_request.expiration,
+        )
+        channel_state.partner_state.withdraws_pending[
+            withdraw_state.total_withdraw
+        ] = withdraw_state
+        channel_state.partner_state.nonce = withdraw_request.nonce
+
+        channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
+        send_withdraw = SendWithdrawConfirmation(
+            canonical_identifier=channel_state.canonical_identifier,
+            recipient=channel_state.partner_state.address,
+            message_identifier=withdraw_request.message_identifier,
+            total_withdraw=withdraw_request.total_withdraw,
+            participant=channel_state.partner_state.address,
+            nonce=channel_state.our_state.nonce,
+            expiration=withdraw_state.expiration,
+        )
+
+        events: List[Event] = [send_withdraw]
+    else:
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_request should return error msg if not valid"
+        invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
+            attempted_withdraw=withdraw_request.total_withdraw, reason=error_msg
+        )
+        events = [invalid_withdraw_request]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_withdraw_confirmation(
+    channel_state: NettingChannelState,
+    withdraw: ReceiveWithdrawConfirmation,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+) -> TransitionResult[NettingChannelState]:
+    is_valid = is_valid_withdraw_confirmation(
+        channel_state=channel_state, received_withdraw=withdraw
+    )
+
+    events: List[Event]
+    if is_valid:
+        channel_state.partner_state.nonce = withdraw.nonce
+        events = [
+            SendProcessed(
+                recipient=channel_state.partner_state.address,
+                message_identifier=withdraw.message_identifier,
+                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            )
+        ]
+
+        # Only send the transaction on-chain if there is enough time for the
+        # withdraw transaction to be mined
+        if withdraw.expiration >= block_number - channel_state.reveal_timeout:
+            withdraw_on_chain = ContractSendChannelWithdraw(
+                canonical_identifier=withdraw.canonical_identifier,
+                total_withdraw=withdraw.total_withdraw,
+                partner_signature=withdraw.signature,
+                expiration=withdraw.expiration,
+                triggered_by_block_hash=block_hash,
+            )
+            events.append(withdraw_on_chain)
+    else:
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_confirmation should return error msg if not valid"
+        invalid_withdraw = EventInvalidReceivedWithdraw(
+            attempted_withdraw=withdraw.total_withdraw, reason=error_msg
+        )
+        events = [invalid_withdraw]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_withdraw_expired(
+    channel_state: NettingChannelState,
+    withdraw_expired: ReceiveWithdrawExpired,
+    block_number: BlockNumber,
+) -> TransitionResult:
+    events: List[Event] = list()
+
+    withdraw_state = channel_state.partner_state.withdraws_pending.get(
+        withdraw_expired.total_withdraw
+    )
+
+    if not withdraw_state:
+        invalid_withdraw_expired_msg = (
+            f"Withdraw expired of {withdraw_expired.total_withdraw} "
+            f"did not correspond to previous withdraw request"
+        )
+        return TransitionResult(
+            channel_state,
+            [
+                EventInvalidReceivedWithdrawExpired(
+                    attempted_withdraw=withdraw_expired.total_withdraw,
+                    reason=invalid_withdraw_expired_msg,
+                )
+            ],
+        )
+
+    is_valid = is_valid_withdraw_expired(
+        channel_state=channel_state,
+        state_change=withdraw_expired,
+        withdraw_state=withdraw_state,
+        block_number=block_number,
+    )
+    if is_valid:
+        del channel_state.partner_state.withdraws_pending[withdraw_state.total_withdraw]
+
+        channel_state.partner_state.nonce = withdraw_expired.nonce
+
+        send_processed = SendProcessed(
+            recipient=channel_state.partner_state.address,
+            message_identifier=withdraw_expired.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+        )
+        events = [send_processed]
+    else:
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_withdraw_expired should return error msg if not valid"
+        invalid_withdraw_expired = EventInvalidReceivedWithdrawExpired(
+            attempted_withdraw=withdraw_expired.total_withdraw, reason=error_msg
+        )
+        events = [invalid_withdraw_expired]
+
+    return TransitionResult(channel_state, events)
 
 
 def handle_refundtransfer(
@@ -1490,7 +2075,7 @@ def handle_refundtransfer(
     refund: ReceiveTransferRefund,
 ) -> EventsOrError:
     events: List[Event]
-    is_valid, msg, merkletree = is_valid_refund(
+    is_valid, msg, pending_locks = is_valid_refund(
         refund=refund,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1498,17 +2083,18 @@ def handle_refundtransfer(
         received_transfer=received_transfer,
     )
     if is_valid:
-        assert merkletree, "is_valid_refund should return merkletree if valid"
+        assert pending_locks, "is_valid_refund should return pending locks if valid"
         channel_state.partner_state.balance_proof = refund.transfer.balance_proof
-        channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = refund.transfer.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         lock = refund.transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=refund.transfer.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
         events = [send_processed]
     else:
@@ -1525,7 +2111,7 @@ def handle_receive_lock_expired(
     channel_state: NettingChannelState, state_change: ReceiveLockExpired, block_number: BlockNumber
 ) -> TransitionResult[NettingChannelState]:
     """Remove expired locks from channel states."""
-    is_valid, msg, merkletree = is_valid_lock_expired(
+    is_valid, msg, pending_locks = is_valid_lock_expired(
         state_change=state_change,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1535,16 +2121,17 @@ def handle_receive_lock_expired(
 
     events: List[Event] = list()
     if is_valid:
-        assert merkletree, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
-        channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = state_change.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         _del_unclaimed_lock(channel_state.partner_state, state_change.secrethash)
 
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=state_change.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
         events = [send_processed]
     else:
@@ -1564,26 +2151,27 @@ def handle_receive_lockedtransfer(
 
     The receiver needs to use this method to update the container with a
     _valid_ transfer, otherwise the locksroot will not contain the pending
-    transfer. The receiver needs to ensure that the merkle root has the
+    transfer. The receiver needs to ensure that the locksroot has the
     secrethash included, otherwise it won't be able to claim it.
     """
     events: List[Event]
-    is_valid, msg, merkletree = is_valid_lockedtransfer(
+    is_valid, msg, pending_locks = is_valid_lockedtransfer(
         mediated_transfer, channel_state, channel_state.partner_state, channel_state.our_state
     )
 
     if is_valid:
-        assert merkletree, "is_valid_lock_expired should return merkletree if valid"
+        assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = mediated_transfer.balance_proof
-        channel_state.partner_state.merkletree = merkletree
+        channel_state.partner_state.nonce = mediated_transfer.balance_proof.nonce
+        channel_state.partner_state.pending_locks = pending_locks
 
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=mediated_transfer.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
         events = [send_processed]
     else:
@@ -1603,21 +2191,24 @@ def handle_receive_refundtransfercancelroute(
 
 
 def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
-    is_valid, msg, unlocked_merkletree = is_valid_unlock(
+    is_valid, msg, unlocked_pending_locks = is_valid_unlock(
         unlock, channel_state, channel_state.partner_state
     )
 
     if is_valid:
-        assert unlocked_merkletree, "is_valid_unlock should return merkletree if valid"
+        assert (
+            unlocked_pending_locks is not None
+        ), "is_valid_unlock should return pending locks if valid"
         channel_state.partner_state.balance_proof = unlock.balance_proof
-        channel_state.partner_state.merkletree = unlocked_merkletree
+        channel_state.partner_state.nonce = unlock.balance_proof.nonce
+        channel_state.partner_state.pending_locks = unlocked_pending_locks
 
         _del_lock(channel_state.partner_state, unlock.secrethash)
 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=unlock.message_identifier,
+            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
         )
         events: List[Event] = [send_processed]
     else:
@@ -1629,13 +2220,24 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
 
 
 def handle_block(
-    channel_state: NettingChannelState, state_change: Block, block_number: BlockNumber
+    channel_state: NettingChannelState,
+    state_change: Block,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
     assert state_change.block_number == block_number
 
     events: List[Event] = list()
 
-    if get_status(channel_state) == CHANNEL_STATE_CLOSED:
+    if get_status(channel_state) == ChannelState.STATE_OPENED:
+        expired_withdraws = send_expired_withdraws(
+            channel_state=channel_state,
+            block_number=block_number,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+        events.extend(expired_withdraws)
+
+    if get_status(channel_state) == ChannelState.STATE_CLOSED:
         msg = "channel get_status is STATE_CLOSED, but close_transaction is not set"
         assert channel_state.close_transaction, msg
         msg = "channel get_status is STATE_CLOSED, but close_transaction block number is missing"
@@ -1653,10 +2255,6 @@ def handle_block(
                 triggered_by_block_hash=state_change.block_hash,
             )
             events.append(event)
-
-    while is_deposit_confirmed(channel_state, block_number):
-        order_deposit_transaction = heapq.heappop(channel_state.deposit_transaction_queue)
-        apply_channel_newbalance(channel_state, order_deposit_transaction.transaction)
 
     return TransitionResult(channel_state, events)
 
@@ -1719,7 +2317,7 @@ def handle_channel_updated_transfer(
 
 def handle_channel_settled(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelSettled
-) -> TransitionResult[NettingChannelState]:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
     if state_change.channel_identifier == channel_state.identifier:
@@ -1729,7 +2327,7 @@ def handle_channel_settled(
         partner_locksroot = state_change.partner_onchain_locksroot
 
         should_clear_channel = (
-            our_locksroot == EMPTY_MERKLE_ROOT and partner_locksroot == EMPTY_MERKLE_ROOT
+            our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
         )
 
         if should_clear_channel:
@@ -1740,7 +2338,7 @@ def handle_channel_settled(
 
         onchain_unlock = ContractSendChannelBatchUnlock(
             canonical_identifier=channel_state.canonical_identifier,
-            participant=channel_state.partner_state.address,
+            sender=channel_state.partner_state.address,
             triggered_by_block_hash=state_change.block_hash,
         )
         events.append(onchain_unlock)
@@ -1748,63 +2346,177 @@ def handle_channel_settled(
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_newbalance(
-    channel_state: NettingChannelState,
-    state_change: ContractReceiveChannelNewBalance,
-    block_number: BlockNumber,
+def update_fee_schedule_after_balance_change(
+    channel_state: NettingChannelState, fee_config: MediationFeeConfig
+) -> List[Event]:
+    proportional_imbalance_fee = fee_config.get_proportional_imbalance_fee(
+        channel_state.token_address
+    )
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=get_capacity(channel_state),
+        proportional_imbalance_fee=proportional_imbalance_fee,
+    )
+
+    channel_state.fee_schedule = FeeScheduleState(
+        flat=channel_state.fee_schedule.flat,
+        proportional=channel_state.fee_schedule.proportional,
+        imbalance_penalty=imbalance_penalty,
+    )
+    return [SendPFSFeeUpdate(canonical_identifier=channel_state.canonical_identifier)]
+
+
+def handle_channel_deposit(
+    channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
 ) -> TransitionResult[NettingChannelState]:
-    deposit_transaction = state_change.deposit_transaction
-
-    if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
-        apply_channel_newbalance(channel_state, state_change.deposit_transaction)
-    else:
-        order = TransactionOrder(deposit_transaction.deposit_block_number, deposit_transaction)
-        heapq.heappush(channel_state.deposit_transaction_queue, order)
-
-    events: List[Event] = list()
-    return TransitionResult(channel_state, events)
-
-
-def apply_channel_newbalance(
-    channel_state: NettingChannelState, deposit_transaction: TransactionChannelNewBalance
-) -> None:
-    participant_address = deposit_transaction.participant_address
-    contract_balance = Balance(deposit_transaction.contract_balance)
+    participant_address = state_change.deposit_transaction.participant_address
+    contract_balance = Balance(state_change.deposit_transaction.contract_balance)
 
     if participant_address == channel_state.our_state.address:
         update_contract_balance(channel_state.our_state, contract_balance)
     elif participant_address == channel_state.partner_state.address:
         update_contract_balance(channel_state.partner_state, contract_balance)
 
+    # A deposit changes the total capacity of the channel and as such the fees need to change
+    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, events)
+
+
+def handle_channel_withdraw(
+    channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
+) -> TransitionResult[NettingChannelState]:
+    """ An on-chain total withdraw took place which means that we have to keep
+    track of this not to go lower than the on-chain value. The value is set to
+    onchain_total_withdraw and the corresponding withdraw_state is cleared.
+    """
+    participants = (channel_state.our_state.address, channel_state.partner_state.address)
+    if state_change.participant not in participants:
+        return TransitionResult(channel_state, list())
+
+    if state_change.participant == channel_state.our_state.address:
+        end_state = channel_state.our_state
+    else:
+        end_state = channel_state.partner_state
+
+    withdraw_state = end_state.withdraws_pending.get(state_change.total_withdraw)
+    if withdraw_state:
+        del end_state.withdraws_pending[state_change.total_withdraw]
+
+    end_state.onchain_total_withdraw = state_change.total_withdraw
+
+    # A withdraw changes the total capacity of the channel and as such the fees need to change
+    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, events)
+
 
 def handle_channel_batch_unlock(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
-) -> TransitionResult[NettingChannelState]:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
     new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(channel_state) == CHANNEL_STATE_SETTLED:
+    if get_status(channel_state) == ChannelState.STATE_SETTLED:
 
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state
 
         # partner is the address of the sender
-        if state_change.partner == our_state.address:
-            our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
-        elif state_change.partner == partner_state.address:
-            partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+        if state_change.sender == our_state.address:
+            our_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
+        elif state_change.sender == partner_state.address:
+            partner_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
 
         # only clear the channel state once all unlocks have been done
-        no_unlock_left_to_do = (
-            our_state.onchain_locksroot == EMPTY_MERKLE_ROOT
-            and partner_state.onchain_locksroot == EMPTY_MERKLE_ROOT
-        )
+        no_unlock_left_to_do = our_state.onchain_locksroot == Locksroot(
+            LOCKSROOT_OF_NO_LOCKS
+        ) and partner_state.onchain_locksroot == Locksroot(LOCKSROOT_OF_NO_LOCKS)
+
         if no_unlock_left_to_do:
             new_channel_state = None
 
     return TransitionResult(new_channel_state, events)
+
+
+def sanity_check(channel_state: NettingChannelState) -> None:
+    """Some of the checks bellow are tautologies for the current version of the
+    codebase. However they are kept in there to check the constraints if/when
+    the code changes.
+    """
+    partner_state = channel_state.partner_state
+    our_state = channel_state.our_state
+
+    previous = WithdrawAmount(0)
+    for total_withdraw, withdraw_state in our_state.withdraws_pending.items():
+        assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
+        assert total_withdraw == withdraw_state.total_withdraw
+        previous = withdraw_state.total_withdraw
+
+    our_balance = get_balance(our_state, partner_state)
+    partner_balance = get_balance(partner_state, our_state)
+
+    msg = (
+        "The balance can never be negative, that would be equivalent to a loan or a double spend."
+    )
+    assert our_balance >= 0, msg
+    assert partner_balance >= 0, msg
+
+    channel_capacity = get_capacity(channel_state)
+    msg = "The whole deposit of the channel has to be accounted for."
+    assert our_balance + partner_balance == channel_capacity, msg
+
+    our_locked = get_amount_locked(our_state)
+    partner_locked = get_amount_locked(partner_state)
+    (our_bp_locksroot, _, _, our_bp_locked_amount) = get_current_balanceproof(our_state)
+    (partner_bp_locksroot, _, _, partner_bp_locked_amount) = get_current_balanceproof(
+        partner_state
+    )
+
+    msg = (
+        "The sum of the lock's amounts, and the value of the balance proof "
+        "locked_amount must be equal, otherwise settle will not reserve the "
+        "proper amount of tokens."
+    )
+    assert partner_locked == partner_bp_locked_amount, msg
+    assert our_locked == our_bp_locked_amount, msg
+
+    our_distributable = get_distributable(our_state, partner_state)
+    partner_distributable = get_distributable(partner_state, our_state)
+
+    # Because of overflow checks, it is possible for the distributable amount
+    # to be lower than the available balance, therefore the sanity check has to
+    # be lower-than instead of equal-to
+    assert our_distributable + our_locked <= our_balance
+    assert partner_distributable + partner_locked <= partner_balance
+
+    our_locksroot = compute_locksroot(our_state.pending_locks)
+    partner_locksroot = compute_locksroot(partner_state.pending_locks)
+
+    msg = (
+        "The balance proof locks root must match the existing locks, otherwise "
+        "it is not possible to prove on-chain that a given lock was pending."
+    )
+    assert our_locksroot == our_bp_locksroot, msg
+    assert partner_locksroot == partner_bp_locksroot, msg
+
+    msg = "The lock mappings and the pending locks must be synchronized, otherwise there is a bug"
+    for lock in partner_state.secrethashes_to_lockedlocks.values():
+        assert lock.encoded in partner_state.pending_locks.locks, msg
+
+    for partial_unlock in partner_state.secrethashes_to_unlockedlocks.values():
+        assert partial_unlock.encoded in partner_state.pending_locks.locks, msg
+
+    for partial_unlock in partner_state.secrethashes_to_onchain_unlockedlocks.values():
+        assert partial_unlock.encoded in partner_state.pending_locks.locks, msg
+
+    for lock in our_state.secrethashes_to_lockedlocks.values():
+        assert lock.encoded in our_state.pending_locks.locks, msg
+
+    for partial_unlock in our_state.secrethashes_to_unlockedlocks.values():
+        assert partial_unlock.encoded in our_state.pending_locks.locks, msg
+
+    for partial_unlock in our_state.secrethashes_to_onchain_unlockedlocks.values():
+        assert partial_unlock.encoded in our_state.pending_locks.locks, msg
 
 
 def state_transition(
@@ -1812,15 +2524,20 @@ def state_transition(
     state_change: StateChange,
     block_number: BlockNumber,
     block_hash: BlockHash,
-) -> TransitionResult[NettingChannelState]:
+    pseudo_random_generator: random.Random,
+) -> TransitionResult[Optional[NettingChannelState]]:  # pragma: no unittest
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events: List[Event] = list()
-    iteration: TransitionResult[NettingChannelState] = TransitionResult(channel_state, events)
+    iteration: TransitionResult[Optional[NettingChannelState]] = TransitionResult(
+        channel_state, events
+    )
 
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
-        iteration = handle_block(channel_state, state_change, block_number)
+        iteration = handle_block(
+            channel_state, state_change, block_number, pseudo_random_generator
+        )
     elif type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_action_close(
@@ -1829,9 +2546,19 @@ def state_transition(
             block_number=block_number,
             block_hash=block_hash,
         )
-    elif type(state_change) == ActionChannelSetFee:
-        assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
-        iteration = handle_action_set_fee(channel_state=channel_state, set_fee=state_change)
+    elif type(state_change) == ActionChannelWithdraw:
+        assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_action_withdraw(
+            channel_state=channel_state,
+            action_withdraw=state_change,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+        )
+    elif type(state_change) == ActionChannelSetRevealTimeout:
+        assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
+        iteration = handle_action_set_reveal_timeout(
+            channel_state=channel_state, state_change=state_change
+        )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
         iteration = handle_channel_closed(channel_state, state_change)
@@ -1841,11 +2568,35 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
         iteration = handle_channel_settled(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelNewBalance:
-        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
-        iteration = handle_channel_newbalance(channel_state, state_change, block_number)
+    elif type(state_change) == ContractReceiveChannelDeposit:
+        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
+        iteration = handle_channel_deposit(channel_state, state_change)
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)
+    elif type(state_change) == ContractReceiveChannelWithdraw:
+        assert isinstance(state_change, ContractReceiveChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_channel_withdraw(channel_state=channel_state, state_change=state_change)
+    elif type(state_change) == ReceiveWithdrawRequest:
+        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_request(
+            channel_state=channel_state, withdraw_request=state_change
+        )
+    elif type(state_change) == ReceiveWithdrawConfirmation:
+        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_confirmation(
+            channel_state=channel_state,
+            withdraw=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+        )
+    elif type(state_change) == ReceiveWithdrawExpired:
+        assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_expired(
+            channel_state=channel_state, withdraw_expired=state_change, block_number=block_number
+        )
+
+    if iteration.new_state is not None:
+        sanity_check(iteration.new_state)
 
     return iteration

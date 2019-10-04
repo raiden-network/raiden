@@ -45,10 +45,6 @@
 ### De/serializations:
 *     30k TXs per second
 
-### udp messages per second:
-*     http://nichol.as/asynchronous-servers-in-python
-*     2x20k measured = 40k # 1024 bytes
-
 ```
 Time per round:
 on receive
@@ -125,7 +121,7 @@ c4.8xlarge  60.0 GB     132 units   36 cores    0 GB (EBS only)
 * 1,080,000 transfers / hour
 * .05 hourly 1 ec2 instance
 * 1M transfer / 5ct
-* 100M transfers / 
+* 100M transfers /
 
 **Alternatively:**
 Run the 50K TPS of Visa for a cost of $180 / day (on 150 ec2 instances)

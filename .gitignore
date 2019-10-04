@@ -26,6 +26,10 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+pip-wheel-metadata/
+
+# Local dev-requirements
+requirements/requirements-local.txt
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -47,6 +51,7 @@ coverage.xml
 *,cover
 .pytest_cache/
 mypy-out.txt
+.hypothesis/
 
 # Pyenv
 .python-version

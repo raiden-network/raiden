@@ -5,7 +5,7 @@ from typing import TextIO
 import click
 from eth_utils import to_checksum_address
 
-from raiden.accounts import AccountManager
+from raiden.accounts import AccountManager, KeystoreFileNotFound
 from raiden.utils.typing import AddressHex, PrivateKey
 
 
@@ -26,7 +26,7 @@ def prompt_account(account_manager: AccountManager) -> AddressHex:
         if 0 <= idx < len(addresses):
             return addresses[idx]
 
-        print('\nError: Provided index "{}" is out of bounds\n'.format(idx))
+        print(f'\nError: Provided index "{idx}" is out of bounds\n')
 
 
 def unlock_account_with_passwordfile(
@@ -36,6 +36,9 @@ def unlock_account_with_passwordfile(
 
     try:
         return account_manager.get_privkey(address_hex, password.strip())
+    except KeystoreFileNotFound as e:
+        click.secho(str(e), fg="red")
+        sys.exit(1)
     except ValueError:
         click.secho(f"Incorrect password for {address_hex} in file. Aborting ...", fg="red")
         sys.exit(1)
@@ -47,7 +50,8 @@ def unlock_account_with_passwordprompt(
     tries = 3
     for current in range(tries):
         try:
-            password = getpass.getpass(f"Enter the password to unlock {address_hex}: ")
+            checksum_address = to_checksum_address(address_hex)
+            password = getpass.getpass(f"Enter the password to unlock {checksum_address}: ")
             return account_manager.get_privkey(address_hex, password)
         except ValueError:
             print(

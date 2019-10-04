@@ -1,12 +1,13 @@
 import os.path
 import re
+from pathlib import Path
 
 from raiden.utils.typing import List, Optional
 
 VERSION_RE = re.compile(r"^v(\d+)_log[.]db$")
 
 
-def latest_db_file(paths: List[str]) -> Optional[str]:
+def latest_db_file(paths: List[Path]) -> Optional[Path]:
     """Returns the path with the highest `version` number.
 
     Raises:
@@ -34,10 +35,10 @@ def latest_db_file(paths: List[str]) -> Optional[str]:
     return None
 
 
-def filter_db_names(paths: List[str]) -> List[str]:
+def filter_db_names(paths: List[str]) -> List[Path]:
     """Returns a filtered list of `paths`, where every name matches our format.
 
     Args:
         paths: A list of file names.
     """
-    return [db_path for db_path in paths if VERSION_RE.match(os.path.basename(db_path))]
+    return [Path(db_path) for db_path in paths if VERSION_RE.match(os.path.basename(db_path))]

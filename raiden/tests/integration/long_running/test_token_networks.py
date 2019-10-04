@@ -5,8 +5,10 @@ from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.transfer import channel, views
-from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.transfer.state import ChannelState
+from raiden.utils.typing import PaymentAmount, TokenAmount
 
 
 def wait_for_transaction(receiver, registry_address, token_address, sender_address):
@@ -29,7 +31,7 @@ def wait_for_transaction(receiver, registry_address, token_address, sender_addre
 
 def is_channel_open_and_funded(channel_state):
     return (
-        channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        channel.get_status(channel_state) == ChannelState.STATE_OPENED
         and channel_state.our_state.contract_balance > 0
     )
 
@@ -63,23 +65,12 @@ def saturated_count(connection_managers, registry_address, token_address):
 # TODO: add test scenarios for
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels
-# - Check if this test needs to be adapted for the matrix transport
-#   layer when activating it again. It might as it depends on the
-#   raiden_network fixture.
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [6])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
 def test_participant_selection(raiden_network, token_addresses):
-    raise_on_failure(
-        raiden_network,
-        run_test_participant_selection,
-        raiden_network=raiden_network,
-        token_addresses=token_addresses,
-    )
-
-
-def run_test_participant_selection(raiden_network, token_addresses):
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     one_to_n_address = raiden_network[0].raiden.default_one_to_n_address
@@ -87,26 +78,26 @@ def run_test_participant_selection(raiden_network, token_addresses):
 
     # connect the first node (will register the token if necessary)
     RaidenAPI(raiden_network[0].raiden).token_network_connect(
-        registry_address=registry_address, token_address=token_address, funds=100
+        registry_address=registry_address, token_address=token_address, funds=TokenAmount(100)
     )
 
     # Test invalid argument values
     with pytest.raises(InvalidAmount):
         RaidenAPI(raiden_network[0].raiden).token_network_connect(
-            registry_address=registry_address, token_address=token_address, funds=-1
+            registry_address=registry_address, token_address=token_address, funds=TokenAmount(-1)
         )
     with pytest.raises(InvalidAmount):
         RaidenAPI(raiden_network[0].raiden).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
-            funds=100,
+            funds=TokenAmount(100),
             joinable_funds_target=2,
         )
     with pytest.raises(InvalidAmount):
         RaidenAPI(raiden_network[0].raiden).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
-            funds=100,
+            funds=TokenAmount(100),
             joinable_funds_target=-1,
         )
 
@@ -119,9 +110,9 @@ def run_test_participant_selection(raiden_network, token_addresses):
     ]
     gevent.wait(connect_greenlets)
 
-    token_network_registry_address = views.get_token_network_identifier_by_token_address(
+    token_network_registry_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
-        payment_network_id=registry_address,
+        token_network_registry_address=registry_address,
         token_address=token_address,
     )
     connection_managers = [
@@ -154,11 +145,11 @@ def run_test_participant_selection(raiden_network, token_addresses):
                 continue
             routes, _ = routing.get_best_routes(
                 chain_state=node_state,
-                token_network_id=network_state.address,
+                token_network_address=network_state.address,
                 one_to_n_address=one_to_n_address,
                 from_address=app.raiden.address,
                 to_address=target.raiden.address,
-                amount=1,
+                amount=PaymentAmount(1),
                 previous_address=None,
                 config={},
                 privkey=b"",  # not used if pfs is not configured
@@ -181,6 +172,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
         )  # choose a fully funded channel from sender
         if sender_channel:
             break
+    assert sender_channel
     registry_address = sender.default_registry.address
 
     receiver = next(
@@ -196,46 +188,48 @@ def run_test_participant_selection(raiden_network, token_addresses):
         partner_address=sender.address,
     )
     assert len(receiver_channel) == 1
-    receiver_channel = receiver_channel[0]
 
-    exception = ValueError("partner not reachable")
-    with gevent.Timeout(30, exception=exception):
-        waiting.wait_for_healthy(sender, receiver.address, 1)
+    with gevent.Timeout(30, exception=ValueError("partner not reachable")):
+        waiting.wait_for_healthy(sender, receiver.address, PaymentAmount(1))
 
-    amount = 1
-    RaidenAPI(sender).transfer_and_wait(
-        registry_address, token_address, amount, receiver.address, transfer_timeout=10
-    )
+    with watch_for_unlock_failures(*raiden_network):
+        amount = PaymentAmount(1)
+        RaidenAPI(sender).transfer_and_wait(
+            registry_address, token_address, amount, receiver.address, transfer_timeout=10
+        )
 
-    exception = ValueError("timeout while waiting for incoming transaction")
-    with gevent.Timeout(30, exception=exception):
-        wait_for_transaction(receiver, registry_address, token_address, sender.address)
+        with gevent.Timeout(
+            30, exception=ValueError("timeout while waiting for incoming transaction")
+        ):
+            wait_for_transaction(receiver, registry_address, token_address, sender.address)
 
     # test `leave()` method
     connection_manager = connection_managers[0]
 
     timeout = (
-        sender_channel.settle_timeout * connection_manager.raiden.chain.estimate_blocktime() * 10
+        sender_channel.settle_timeout
+        * connection_manager.raiden.proxy_manager.estimate_blocktime()
+        * 10
     )
     assert timeout > 0
 
     channels = views.list_channelstate_for_tokennetwork(
         chain_state=views.state_from_raiden(connection_manager.raiden),
-        payment_network_id=registry_address,
+        token_network_registry_address=registry_address,
         token_address=token_address,
     )
     channel_identifiers = [channel.identifier for channel in channels]
 
-    exception = ValueError("timeout while waiting for leave")
-    with gevent.Timeout(timeout, exception=exception):
+    with gevent.Timeout(timeout, exception=ValueError("timeout while waiting for leave")):
         # sender leaves the network
         RaidenAPI(sender).token_network_leave(registry_address, token_address)
 
-    exception = ValueError(f"Channels didnt get settled after {timeout}")
-    with gevent.Timeout(timeout, exception=exception):
+    with gevent.Timeout(
+        timeout, exception=ValueError(f"Channels didnt get settled after {timeout}")
+    ):
         waiting.wait_for_settle(
             raiden=connection_manager.raiden,
-            payment_network_id=registry_address,
+            token_network_registry_address=registry_address,
             token_address=token_address,
             channel_ids=channel_identifiers,
             retry_timeout=0.1,

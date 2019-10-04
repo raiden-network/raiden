@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
-from raiden.messages import LockedTransfer, RefundTransfer
+from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner
 
@@ -24,7 +24,10 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
             transferred_amount=transferred_amount,
         )
     )
-    assert LockedTransfer.from_dict(mediated_transfer.to_dict()) == mediated_transfer
+
+    mediated_transfer.sign(signer)
+    data = JSONSerializer.serialize(mediated_transfer)
+    assert JSONSerializer.deserialize(data) == mediated_transfer
 
 
 @pytest.mark.parametrize("amount", [0, UINT256_MAX])
@@ -40,4 +43,8 @@ def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_
             transferred_amount=transferred_amount,
         )
     )
-    assert RefundTransfer.from_dict(refund_transfer.to_dict()) == refund_transfer
+
+    refund_transfer.sign(signer)
+
+    data = JSONSerializer.serialize(refund_transfer)
+    assert JSONSerializer.deserialize(data) == refund_transfer

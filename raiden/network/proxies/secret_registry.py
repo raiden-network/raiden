@@ -2,7 +2,13 @@ from typing import List
 
 import gevent
 import structlog
-from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    event_abi_to_log_topic,
+    is_binary_address,
+    to_checksum_address,
+)
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -12,15 +18,17 @@ from raiden.constants import (
     RECEIPT_FAILURE_CODE,
 )
 from raiden.exceptions import (
-    InvalidAddress,
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.proxies.utils import compare_contract_versions
-from raiden.network.rpc.client import StatelessFilter, check_address_has_code
-from raiden.utils import pex, safe_gas_limit, sha3
+from raiden.network.proxies.utils import log_transaction
+from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
+from raiden.utils import safe_gas_limit
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
+    Address,
+    Any,
     BlockNumber,
     BlockSpecification,
     Dict,
@@ -32,30 +40,36 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import ContractManager
 
-log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+log = structlog.get_logger(__name__)
 
 
 class SecretRegistry:
-    def __init__(self, jsonrpc_client, secret_registry_address, contract_manager: ContractManager):
+    def __init__(
+        self,
+        jsonrpc_client: JSONRPCClient,
+        secret_registry_address: Address,
+        contract_manager: ContractManager,
+    ) -> None:
         if not is_binary_address(secret_registry_address):
-            raise InvalidAddress("Expected binary address format for secret registry")
+            raise ValueError("Expected binary address format for secret registry")
 
         self.contract_manager = contract_manager
-        check_address_has_code(jsonrpc_client, secret_registry_address, CONTRACT_SECRET_REGISTRY)
+        check_address_has_code(
+            client=jsonrpc_client,
+            address=secret_registry_address,
+            contract_name=CONTRACT_SECRET_REGISTRY,
+            expected_code=decode_hex(
+                contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
+            ),
+        )
 
         proxy = jsonrpc_client.new_contract_proxy(
-            self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-            to_normalized_address(secret_registry_address),
+            abi=self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
+            contract_address=secret_registry_address,
         )
 
         # There should be only one smart contract deployed, to avoid race
         # conditions for on-chain unlocks.
-        compare_contract_versions(
-            proxy=proxy,
-            expected_version=contract_manager.contracts_version,
-            contract_name=CONTRACT_SECRET_REGISTRY,
-            address=secret_registry_address,
-        )
 
         self.address = secret_registry_address
         self.proxy = proxy
@@ -68,10 +82,10 @@ class SecretRegistry:
         self.open_secret_transactions: Dict[Secret, AsyncResult] = dict()
         self._open_secret_transactions_lock = Semaphore()
 
-    def register_secret(self, secret: Secret):
+    def register_secret(self, secret: Secret) -> None:
         self.register_secret_batch([secret])
 
-    def register_secret_batch(self, secrets: List[Secret]):
+    def register_secret_batch(self, secrets: List[Secret]) -> None:
         """Register a batch of secrets. Check if they are already registered at
         the given block identifier."""
         secrets_to_register = list()
@@ -94,7 +108,7 @@ class SecretRegistry:
             verification_block_hash = self.client.get_confirmed_blockhash()
 
             for secret in secrets:
-                secrethash = sha3(secret)
+                secrethash = sha256_secrethash(secret)
                 secrethash_hex = encode_hex(secrethash)
 
                 # Do the local test on `open_secret_transactions` first, then
@@ -127,20 +141,24 @@ class SecretRegistry:
         # for the gas estimation and the transaction, however the
         # synchronization data is limited to the open_secret_transactions
         log_details = {
-            "node": pex(self.node_address),
-            "contract": pex(self.address),
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
             "secrethashes": secrethashes_to_register,
             "secrethashes_not_sent": secrethashes_not_sent,
         }
 
-        if not secrets_to_register:
-            log.debug("registerSecretBatch skipped, waiting for transactions", **log_details)
+        with log_transaction(log, "register_secret_batch", log_details):
+            if secrets_to_register:
+                self._register_secret_batch(secrets_to_register, transaction_result, log_details)
 
             gevent.joinall(wait_for, raise_error=True)
 
-            log.info("registerSecretBatch successful", **log_details)
-            return
-
+    def _register_secret_batch(
+        self,
+        secrets_to_register: List[Secret],
+        transaction_result: AsyncResult,
+        log_details: Dict[Any, Any],
+    ) -> None:
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block, "registerSecretBatch", secrets_to_register
@@ -153,15 +171,13 @@ class SecretRegistry:
             gas_limit = safe_gas_limit(
                 gas_limit, len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH
             )
-
-            log.debug("registerSecretBatch called", **log_details)
+            log_details["gas_limit"] = gas_limit
 
             try:
                 transaction_hash = self.proxy.transact(
                     "registerSecretBatch", gas_limit, secrets_to_register
                 )
-                self.client.poll(transaction_hash)
-                receipt = self.client.get_transaction_receipt(transaction_hash)
+                receipt = self.client.poll(transaction_hash)
             except Exception as e:  # pylint: disable=broad-except
                 msg = f"Unexpected exception {e} at sending registerSecretBatch transaction."
 
@@ -216,7 +232,6 @@ class SecretRegistry:
                         "compiler bug was hit."
                     )
 
-                log.critical(error, **log_details)
                 exception = RaidenUnrecoverableError(error)
                 transaction_result.set_exception(exception)
                 raise exception
@@ -236,12 +251,12 @@ class SecretRegistry:
             if gas_limit:
                 assert msg, "Unexpected control flow, an exception should have been raised."
                 error = (
-                    f"Sending the the transaction for registerSecretBatch failed with: `{msg}`. "
-                    f"This happens if the same ethereum account is being used by more than one "
-                    f"program which is not supported."
+                    f"Sending the the transaction for registerSecretBatch "
+                    f"failed with: `{msg}`.  This happens if the same ethereum "
+                    f"account is being used by more than one program which is not "
+                    f"supported."
                 )
 
-                log.critical(error, **log_details)
                 exception = RaidenUnrecoverableError(error)
                 transaction_result.set_exception(exception)
                 raise exception
@@ -262,7 +277,6 @@ class SecretRegistry:
             )
             error = "Call to registerSecretBatch couldn't be done"
 
-            log.critical(error, **log_details)
             exception = RaidenRecoverableError(error)
             transaction_result.set_exception(exception)
             raise exception
@@ -270,12 +284,6 @@ class SecretRegistry:
         # The local **MUST** transaction_result be set before waiting for the
         # other results, otherwise we have a dead-lock
         transaction_result.set(transaction_hash)
-
-        if wait_for:
-            log.info("registerSecretBatch waiting for pending", **log_details)
-            gevent.joinall(wait_for, raise_error=True)
-
-        log.info("registerSecretBatch successful", **log_details)
 
     def get_secret_registration_block_by_secrethash(
         self, secrethash: SecretHash, block_identifier: BlockSpecification
@@ -321,8 +329,8 @@ class SecretRegistry:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
         )
-        topics = [encode_hex(event_abi_to_log_topic(event_abi))]
+        topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
-            self.address, topics=topics, from_block=from_block, to_block=to_block
+            contract_address=self.address, topics=topics, from_block=from_block, to_block=to_block
         )

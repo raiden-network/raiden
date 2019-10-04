@@ -5,15 +5,15 @@ import time
 
 import gevent
 import IPython
-from eth_utils import decode_hex, to_checksum_address
+from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
-from raiden.utils import typing
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.utils import TokenAddress, typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
@@ -30,23 +30,18 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ("gevent",)
 
 
 def print_usage():
-    print(
-        "\t{}use `{}raiden{}` to interact with the raiden service.".format(OKBLUE, HEADER, OKBLUE)
-    )
-    print("\tuse `{}chain{}` to interact with the blockchain.".format(HEADER, OKBLUE))
-    print("\tuse `{}discovery{}` to find raiden nodes.".format(HEADER, OKBLUE))
+    print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
+    print(f"\tuse `{HEADER}chain{OKBLUE}` to interact with the blockchain.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
             HEADER, OKBLUE
         )
     )
-    print("\tuse `{}denoms{}` for ether calculations".format(HEADER, OKBLUE))
-    print(
-        "\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(HEADER, OKBLUE)
-    )
-    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(HEADER, OKBLUE))
-    print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(HEADER, OKBLUE))
-    print("\ttype `{}usage(){}` to see this help again.".format(HEADER, OKBLUE))
+    print(f"\tuse `{HEADER}denoms{OKBLUE}` for ether calculations")
+    print(f"\tuse `{HEADER}lastlog(n){OKBLUE}` to see n lines of log-output. [default 10] ")
+    print(f"\tuse `{HEADER}lasterr(n){OKBLUE}` to see n lines of stderr. [default 1]")
+    print(f"\tuse `{HEADER}help(<topic>){OKBLUE}` for help on a specific topic.")
+    print(f"\ttype `{HEADER}usage(){OKBLUE}` to see this help again.")
     print("\n" + ENDC)
 
 
@@ -130,15 +125,12 @@ class Console(gevent.Greenlet):
             for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
-        tools = ConsoleTools(
-            self.app.raiden, self.app.discovery, self.app.config["settle_timeout"]
-        )
+        tools = ConsoleTools(self.app.raiden, self.app.config["settle_timeout"])
 
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
-            "chain": self.app.raiden.chain,
-            "discovery": self.app.discovery,
+            "proxy_manager": self.app.raiden.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,
@@ -155,11 +147,10 @@ class Console(gevent.Greenlet):
 
 
 class ConsoleTools:
-    def __init__(self, raiden_service, discovery, settle_timeout):
+    def __init__(self, raiden_service, settle_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
         self._api = RaidenAPI(raiden_service)
-        self._discovery = discovery
         self.settle_timeout = settle_timeout
 
     def create_token(
@@ -215,34 +206,27 @@ class ConsoleTools:
         """ Register a token with the raiden token manager.
 
         Args:
-            registry_address: registry address
-            token_address_hex (string): a hex encoded token address.
+            registry_address_hex: a hex encoded registry address.
+            token_address_hex: a hex encoded token address.
 
         Returns:
-
             The token network proxy.
         """
-        registry_address = decode_hex(registry_address_hex)
-        token_address = decode_hex(token_address_hex)
+        registry_address = to_canonical_address(registry_address_hex)
+        token_address = TokenAddress(to_canonical_address(token_address_hex))
 
-        registry = self._raiden.chain.token_network_registry(registry_address)
-        contracts_version = self._raiden.contract_manager.contracts_version
+        registry = self._raiden.proxy_manager.token_network_registry(registry_address)
 
-        if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
-            token_network_address = registry.add_token_with_limits(
-                token_address=token_address,
-                channel_participant_deposit_limit=UINT256_MAX,
-                token_network_deposit_limit=UINT256_MAX,
-            )
-        else:
-            token_network_address = registry.add_token_without_limits(token_address=token_address)
-
-        # Register the channel manager with the raiden registry
-        waiting.wait_for_payment_network(
+        token_network_address = registry.add_token(
+            token_address=token_address,
+            channel_participant_deposit_limit=UINT256_MAX,
+            token_network_deposit_limit=UINT256_MAX,
+        )
+        waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout
         )
 
-        return self._raiden.chain.token_network(token_network_address)
+        return self._raiden.proxy_manager.token_network(token_network_address)
 
     def open_channel_with_funding(
         self,
@@ -268,11 +252,6 @@ class ConsoleTools:
         registry_address = decode_hex(registry_address_hex)
         peer_address = decode_hex(peer_address_hex)
         token_address = decode_hex(token_address_hex)
-        try:
-            self._discovery.get(peer_address)
-        except KeyError:
-            print("Error: peer {} not found in discovery".format(peer_address_hex))
-            return None
 
         self._api.channel_open(
             registry_address, token_address, peer_address, settle_timeout=settle_timeout
@@ -294,14 +273,14 @@ class ConsoleTools:
         """
         contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.web3.eth.getCode(to_checksum_address(contract_address))
+        result = self._raiden.rpc_client.web3.eth.getCode(to_checksum_address(contract_address))
 
         current_time = time.time()
         while not result:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.chain.client.web3.eth.getCode(
+            result = self._raiden.rpc_client.web3.eth.getCode(
                 to_checksum_address(contract_address)
             )
             gevent.sleep(0.5)

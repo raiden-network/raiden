@@ -1,53 +1,50 @@
 import gevent
 import pytest
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
+from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
+from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     transfer,
     transfer_and_assert_path,
 )
 from raiden.transfer import views
+from raiden.transfer.events import ContractSendChannelWithdraw
+from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import create_default_identifier
+from raiden.utils import BlockNumber, create_default_identifier
+from raiden.utils.typing import PaymentID, TokenAmount
 
 
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_happy_case(
-    raiden_network,
-    number_of_nodes,
-    deposit,
-    token_addresses,
-    network_wait,
-    skip_if_not_udp,  # pylint: disable=unused-argument
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state, payment_network_id, token_address
+    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
     )
 
     # make a few transfers from app0 to app2
     amount = 1
     spent_amount = deposit - 2
-    identifier = 0
     for identifier in range(spent_amount):
         transfer_and_assert_path(
             path=raiden_network,
@@ -57,101 +54,47 @@ def test_recovery_happy_case(
             timeout=network_wait * number_of_nodes,
         )
 
-    app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
-
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
-
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = WaitForMessage()
-
-    app0_restart = App(
-        config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
-        default_registry=app0.raiden.default_registry,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=app0.raiden.discovery,
-    )
-
     app0.stop()
-    del app0  # from here on the app0_restart should be used
 
-    app0_restart.start()
+    waiting.wait_for_network_state(
+        app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, network_wait
+    )
+
+    app0.start()
 
     assert_synced_channel_state(
-        token_network_identifier,
-        app0_restart,
-        deposit - spent_amount,
-        [],
-        app1,
-        deposit + spent_amount,
-        [],
+        token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
     assert_synced_channel_state(
-        token_network_identifier,
-        app1,
-        deposit - spent_amount,
-        [],
-        app2,
-        deposit + spent_amount,
-        [],
+        token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
-    waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
+    waiting.wait_for_healthy(app0.raiden, app1.raiden.address, network_wait)
+    waiting.wait_for_healthy(app1.raiden, app0.raiden.address, network_wait)
 
-    transfer(
-        initiator_app=app2,
-        target_app=app0_restart,
+    transfer_and_assert_path(
+        path=raiden_network[::-1],
         token_address=token_address,
         amount=amount,
         identifier=create_default_identifier(),
-        timeout=network_wait * number_of_nodes * 2,
+        timeout=network_wait * number_of_nodes,
     )
-    transfer(
-        initiator_app=app0_restart,
-        target_app=app2,
+
+    transfer_and_assert_path(
+        path=raiden_network,
         token_address=token_address,
         amount=amount,
         identifier=create_default_identifier(),
-        timeout=network_wait * number_of_nodes * 2,
+        timeout=network_wait * number_of_nodes,
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
-        app0_restart,
-        deposit - spent_amount,
-        [],
-        app1,
-        deposit + spent_amount,
-        [],
+        token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
-        app1,
-        deposit - spent_amount,
-        [],
-        app2,
-        deposit + spent_amount,
-        [],
+        token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
 
@@ -159,24 +102,18 @@ def test_recovery_happy_case(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_unhappy_case(
-    raiden_network,
-    number_of_nodes,
-    deposit,
-    token_addresses,
-    network_wait,
-    skip_if_not_udp,  # pylint: disable=unused-argument
-    retry_timeout,
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait, retry_timeout
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state, payment_network_id, token_address
+    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
     )
 
     # make a few transfers from app0 to app2
-    amount = 1
+    amount = TokenAmount(1)
     spent_amount = deposit - 2
     for identifier in range(spent_amount):
         transfer(
@@ -184,24 +121,13 @@ def test_recovery_unhappy_case(
             target_app=app2,
             token_address=token_address,
             amount=amount,
-            identifier=identifier,
+            identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
         )
 
     app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
 
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
 
     app0.stop()
 
@@ -229,29 +155,31 @@ def test_recovery_unhappy_case(
 
     app0_restart = App(
         config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
+        rpc_client=app0.raiden.rpc_client,
+        proxy_manager=app0.raiden.proxy_manager,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
+        default_msc_address=app0.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
+        routing_mode=RoutingMode.PRIVATE,
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
 
-    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0, to_identifier="latest"
+    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_STATE_CHANGES
     )
 
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
         {
-            "token_network_identifier": token_network_identifier,
+            "token_network_address": token_network_address,
             "channel_identifier": channel01.identifier,
         },
     )
@@ -260,12 +188,7 @@ def test_recovery_unhappy_case(
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_recovery_blockchain_events(
-    raiden_network,
-    token_addresses,
-    network_wait,
-    skip_if_not_udp,  # pylint: disable=unused-argument
-):
+def test_recovery_blockchain_events(raiden_network, token_addresses, network_wait):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
     app sees the change
@@ -274,19 +197,8 @@ def test_recovery_blockchain_events(
     token_address = token_addresses[0]
 
     app0.raiden.stop()
-    host_port = (
-        app0.raiden.config["transport"]["udp"]["host"],
-        app0.raiden.config["transport"]["udp"]["port"],
-    )
-    socket = server._udp_socket(host_port)
 
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config["transport"]["udp"],
-    )
+    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(
@@ -297,23 +209,23 @@ def test_recovery_blockchain_events(
 
     app0.stop()
 
-    gevent.sleep(1)
-
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
+        rpc_client=app0.raiden.rpc_client,
+        proxy_manager=app0.raiden.proxy_manager,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
+        default_msc_address=app0.raiden.default_msc_address,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
+        routing_mode=RoutingMode.PRIVATE,
     )
 
     del app0  # from here on the app0_restart should be used
@@ -323,7 +235,84 @@ def test_recovery_blockchain_events(
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
     waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
-    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        0, "latest"
+    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
+        RANGE_ALL_STATE_CHANGES
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
+
+
+@pytest.mark.parametrize("deposit", [2])
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
+    raiden_network, token_addresses, network_wait, number_of_nodes, retry_timeout
+):
+    """ A test case related to https://github.com/raiden-network/raiden/issues/4639
+    Where a node sends a withdraw transaction, is stopped before the transaction is completed.
+    Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
+    execute the pending withdraw transaction and fails because the channel was closed.
+    Expected behaviour: Channel closed state change should cancel a withdraw transaction.
+    Buggy behaviour: The channel closure isn't detected on recovery and
+    the on-chain transaction fails.
+    """
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+
+    # Prevent the withdraw transaction from being sent on-chain. This
+    # will keep the transaction in the pending list
+    send_channel_withdraw_event = app0.raiden.raiden_event_handler.hold(
+        ContractSendChannelWithdraw, {}
+    )
+
+    channel_state = views.get_channelstate_for(
+        chain_state=views.state_from_app(app0),
+        token_network_registry_address=app0.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=app1.raiden.address,
+    )
+    assert channel_state, "Channel does not exist"
+
+    app0.raiden.withdraw(canonical_identifier=channel_state.canonical_identifier, total_withdraw=1)
+
+    timeout = network_wait * number_of_nodes
+    with gevent.Timeout(seconds=timeout):
+        send_channel_withdraw_event.wait()
+
+    msg = "A withdraw transaction should be in the pending transactions list"
+    chain_state = views.state_from_app(app0)
+    assert search_for_item(
+        item_list=chain_state.pending_transactions,
+        item_type=ContractSendChannelWithdraw,
+        attributes={"total_withdraw": 1},
+    ), msg
+
+    app0.raiden.stop()
+    app0.stop()
+
+    app1_api = RaidenAPI(app1.raiden)
+    app1_api.channel_close(
+        registry_address=app0.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=app0.raiden.address,
+    )
+
+    waiting.wait_for_close(
+        raiden=app1.raiden,
+        token_network_registry_address=app1.raiden.default_registry.address,
+        token_address=token_address,
+        channel_ids=[channel_state.identifier],
+        retry_timeout=retry_timeout,
+    )
+
+    app0.raiden.start()
+
+    chain_state = views.state_from_app(app0)
+
+    msg = "The withdraw transaction should have been invalidated on restart."
+    assert (
+        search_for_item(
+            item_list=chain_state.pending_transactions,
+            item_type=ContractSendChannelWithdraw,
+            attributes={"total_withdraw": 1},
+        )
+        is None
+    ), msg

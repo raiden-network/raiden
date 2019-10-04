@@ -1,10 +1,12 @@
 from eth_utils import decode_hex, encode_hex
 from web3 import Web3
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import Address, ChannelID
 from raiden_contracts.constants import MessageTypeId
+
+LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
 
 
 class BalanceProof:
@@ -28,7 +30,7 @@ class BalanceProof:
         signature: str = None,
         transferred_amount: int = None,
         locked_amount: int = 0,
-        locksroot: str = "0x%064x" % 0,
+        locksroot: str = LOCKSROOT_OF_NO_LOCKS_AS_STRING,
     ):
         self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address
@@ -53,16 +55,13 @@ class BalanceProof:
 
     def serialize_bin(self, msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF):
         return pack_data(
-            ["address", "uint256", "uint256", "uint256", "bytes32", "uint256", "bytes32"],
-            [
-                self.token_network_address,
-                self.chain_id,
-                msg_type.value,
-                self.channel_identifier,
-                decode_hex(self.balance_hash),
-                self.nonce,
-                decode_hex(self.additional_hash),
-            ],
+            (self.token_network_address, "address"),
+            (self.chain_id, "uint256"),
+            (msg_type.value, "uint256"),
+            (self.channel_identifier, "uint256"),
+            (decode_hex(self.balance_hash), "bytes32"),
+            (self.nonce, "uint256"),
+            (decode_hex(self.additional_hash), "bytes32"),
         )
 
     @property

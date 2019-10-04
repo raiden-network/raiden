@@ -1,50 +1,65 @@
 import os
 import sys
 from copy import copy
+from tempfile import mkdtemp
 
 import pexpect
 import pytest
 
 from raiden.constants import Environment, EthClient
-from raiden.settings import RED_EYES_CONTRACT_VERSION
+from raiden.settings import RAIDEN_CONTRACT_VERSION
+from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
-
-
-@pytest.fixture(scope="session")
-def testchain_provider(blockchain_type, port_generator):
-    eth_client = EthClient(blockchain_type)
-    chain_manager = setup_testchain(
-        eth_client=eth_client, print_step=lambda x: None, free_port_generator=port_generator
-    )
-
-    with chain_manager as testchain:
-        yield testchain
+from raiden.utils.typing import Any, ContextManager, Dict
 
 
 @pytest.fixture(scope="module")
 def cli_tests_contracts_version():
-    return RED_EYES_CONTRACT_VERSION
+    return RAIDEN_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")
-def raiden_testchain(testchain_provider, cli_tests_contracts_version):
+def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_version):
     import time
 
     start_time = time.monotonic()
+    eth_client = EthClient(blockchain_type)
 
-    result = setup_raiden(
-        transport="matrix",
-        matrix_server="auto",
-        print_step=lambda x: None,
-        contracts_version=cli_tests_contracts_version,
-        testchain_setup=testchain_provider,
+    # The private chain data is always discarded on the CI
+    tmpdir = mkdtemp()
+    base_datadir = str(tmpdir)
+
+    # Save the Ethereum node's logs, if needed for debugging
+    base_logdir = os.path.join(get_artifacts_storage() or str(tmpdir), blockchain_type)
+    os.makedirs(base_logdir, exist_ok=True)
+
+    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain(
+        eth_client=eth_client,
+        free_port_generator=port_generator,
+        base_datadir=base_datadir,
+        base_logdir=base_logdir,
     )
-    args = result["args"]
-    # The setup of the testchain returns a TextIOWrapper but
-    # for the tests we need a filename
-    args["password_file"] = args["password_file"].name
-    print("setup_raiden took", time.monotonic() - start_time)
-    return args
+
+    with testchain_manager as testchain:
+        result = setup_raiden(
+            transport="matrix",
+            matrix_server="auto",
+            print_step=lambda x: None,
+            contracts_version=cli_tests_contracts_version,
+            eth_client=testchain["eth_client"],
+            eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+            web3=testchain["web3"],
+            base_datadir=testchain["base_datadir"],
+            keystore=testchain["keystore"],
+        )
+        result["ethereum_nodes"] = testchain["node_executors"]
+
+        args = result["args"]
+        # The setup of the testchain returns a TextIOWrapper but
+        # for the tests we need a filename
+        args["password_file"] = args["password_file"].name
+        print("setup_raiden took", time.monotonic() - start_time)
+        yield args
 
 
 @pytest.fixture()
@@ -58,7 +73,7 @@ def changed_args():
 
 
 @pytest.fixture()
-def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environment_type):
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -70,26 +85,22 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
         for k, v in changed_args.items():
             initial_args[k] = v
 
+    # This assumes that there is only one Raiden instance per CLI test
+    base_logfile = os.path.join(logs_storage, "raiden_nodes", "cli_test.log")
+
+    os.makedirs(os.path.dirname(base_logfile), exist_ok=True)
+
     args = [
         "--gas-price",
         "1000000000",
         "--no-sync-check",
-        "--tokennetwork-registry-contract-address",
-        initial_args["tokennetwork_registry_contract_address"],
-        "--secret-registry-contract-address",
-        initial_args["secret_registry_contract_address"],
-        "--endpoint-registry-contract-address",
-        initial_args["endpoint_registry_contract_address"],
-        "--disable-debug-logfile",
+        f"--debug-logfile-name={base_logfile}",
+        "--routing-mode",
+        "local",
     ]
 
     if environment_type == Environment.DEVELOPMENT.value:
-        args += [
-            "--service-registry-contract-address",
-            initial_args["service_registry_contract_address"],
-            "--environment-type",
-            environment_type,
-        ]
+        args += ["--environment-type", environment_type]
 
     for arg_name, arg_value in initial_args.items():
         if arg_name == "sync_check":

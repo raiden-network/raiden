@@ -6,15 +6,27 @@ from eth_tester import EthereumTester, PyEVMBackend
 from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
 
-from raiden.constants import TRANSACTION_GAS_LIMIT
-from raiden.transfer.balance_proof import pack_balance_proof
+from raiden.constants import TRANSACTION_GAS_LIMIT_UPPER_BOUND
+from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signer import LocalSigner
-from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
-from raiden_contracts.utils.utils import get_pending_transfers_tree
+from raiden.utils.typing import (
+    AdditionalHash,
+    ChainID,
+    ChannelID,
+    Dict,
+    Locksroot,
+    Nonce,
+    TokenAmount,
+)
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
+from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree
 
 pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
+CHAIN_ID = ChainID(1)
+TEST_SETTLE_TIMEOUT_MIN = 65
 
 
 class ContractTester:
@@ -35,9 +47,11 @@ class ContractTester:
                 )
         else:
             self.accounts = self.tester.get_accounts()
-        self.contract_manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-        self.name_to_creation_hash = dict()
-        self.name_to_contract = dict()
+        self.contract_manager = ContractManager(
+            contracts_precompiled_path(RAIDEN_CONTRACT_VERSION)
+        )
+        self.name_to_creation_hash: Dict[str, bytes] = dict()
+        self.name_to_contract: Dict[str, str] = dict()
 
     def deploy_contract(self, name, **kwargs):
         raise NotImplementedError("needs refactoring")
@@ -67,7 +81,7 @@ class ContractTester:
         # return self.web3.eth.getTransactionReceipt(tx_hash)
 
 
-def find_max_pending_transfers(gas_limit):
+def find_max_pending_transfers(gas_limit) -> None:
     """Measure gas consumption of TokenNetwork.unlock() depending on number of
     pending transfers and find the maximum number of pending transfers so
     gas_limit is not exceeded."""
@@ -78,7 +92,7 @@ def find_max_pending_transfers(gas_limit):
 
     tester.deploy_contract(
         "HumanStandardToken",
-        _initialAmount=100000,
+        _initialAmount=100_000,
         _decimalUnits=3,
         _tokenName="SomeToken",
         _tokenSymbol="SMT",
@@ -88,9 +102,12 @@ def find_max_pending_transfers(gas_limit):
         "TokenNetwork",
         _token_address=tester.contract_address("HumanStandardToken"),
         _secret_registry=tester.contract_address("SecretRegistry"),
-        _chain_id=1,
+        _chain_id=CHAIN_ID,
         _settlement_timeout_min=100,
         _settlement_timeout_max=200,
+        _deprecation_executor=tester.accounts[0],
+        _channel_participant_deposit_limit=10000,
+        _token_network_deposit_limit=10000,
     )
 
     tester.call_transaction("HumanStandardToken", "transfer", _to=tester.accounts[1], _value=10000)
@@ -103,7 +120,7 @@ def find_max_pending_transfers(gas_limit):
         settle_timeout=150,
     )
 
-    channel_identifier = int(encode_hex(receipt["logs"][0]["topics"][1]), 16)
+    channel_identifier = ChannelID(int(encode_hex(receipt["logs"][0]["topics"][1]), 16))
 
     tester.call_transaction(
         "HumanStandardToken",
@@ -145,29 +162,33 @@ def find_max_pending_transfers(gas_limit):
     enough = 0
     too_much = 1024
 
-    nonce = 10
-    additional_hash = urandom(32)
-    token_network_identifier = tester.contract_address("TokenNetwork")
+    nonce = Nonce(10)
+    additional_hash = AdditionalHash(urandom(32))
+    token_network_address = tester.contract_address("TokenNetwork")
 
     while enough + 1 < too_much:
         tree_size = (enough + too_much) // 2
         tester.tester.revert_to_snapshot(before_closing)
 
         pending_transfers_tree = get_pending_transfers_tree(
-            tester.web3, unlockable_amounts=[1] * tree_size
+            tester.web3, unlockable_amounts=[1] * tree_size, expired_amounts=[]
         )
 
-        balance_hash = hash_balance_data(3000, 2000, pending_transfers_tree.merkle_root)
-        # FIXME: outdated
+        balance_hash = hash_balance_data(
+            transferred_amount=TokenAmount(3000),
+            locked_amount=TokenAmount(2000),
+            locksroot=Locksroot(pending_transfers_tree.hash_of_packed_transfers),
+        )
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=CHAIN_ID,
+            token_network_address=token_network_address,
+            channel_identifier=ChannelID(channel_identifier),
+        )
         data_to_sign = pack_balance_proof(
-            nonce=nonce,
+            nonce=Nonce(nonce),
             balance_hash=balance_hash,
             additional_hash=additional_hash,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=1,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-            ),
+            canonical_identifier=canonical_identifier,
         )
         signature = LocalSigner(tester.private_keys[1]).sign(data=data_to_sign)
 
@@ -195,7 +216,7 @@ def find_max_pending_transfers(gas_limit):
             participant2=tester.accounts[1],
             participant2_transferred_amount=3000,
             participant2_locked_amount=2000,
-            participant2_locksroot=pending_transfers_tree.merkle_root,
+            participant2_locksroot=pending_transfers_tree.hash_of_packed_transfers,
         )
 
         receipt = tester.call_transaction(
@@ -217,4 +238,4 @@ def find_max_pending_transfers(gas_limit):
 
 
 if __name__ == "__main__":
-    find_max_pending_transfers(TRANSACTION_GAS_LIMIT)
+    find_max_pending_transfers(TRANSACTION_GAS_LIMIT_UPPER_BOUND)

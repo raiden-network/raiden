@@ -3,7 +3,6 @@ import os
 import platform
 import socket
 import ssl
-import subprocess
 import time
 from http.client import HTTPSConnection
 from json import JSONDecodeError
@@ -12,11 +11,13 @@ from typing import IO, Any, Callable, List, Optional, Tuple, Union
 from urllib.parse import urlunparse
 
 import structlog
+from gevent import subprocess
 from mirakuru.base import ENV_UUID
-from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError
+from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError, TimeoutExpired
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
 T_IO_OR_INT = Union[IO, int]
+EXECUTOR_IO = Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]
 
 log = structlog.get_logger(__name__)
 
@@ -30,7 +31,7 @@ class HTTPExecutor(MiHTTPExecutor):
         url: str,
         status: str = r"^2\d\d$",
         method: str = "HEAD",
-        io: Optional[Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]] = None,
+        io: Optional[EXECUTOR_IO] = None,
         cwd: Union[str, PathLike] = None,
         verify_tls: bool = True,
         **kwargs,
@@ -124,6 +125,47 @@ class HTTPExecutor(MiHTTPExecutor):
             raise
         return self
 
+    def kill(self):
+        STDOUT = subprocess.STDOUT  # pylint: disable=no-member
+
+        ps_param = "fax"
+        if platform.system() == "Darwin":
+            # BSD ``ps`` doesn't support the ``f`` flag
+            ps_param = "ax"
+
+        ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
+
+        log.debug("Executor process: killing process", command=self.command)
+        log.debug("Executor process: current processes", ps_fax=ps_fax)
+
+        super().kill()
+
+        ps_fax = subprocess.check_output(["ps", ps_param], stderr=STDOUT)
+
+        log.debug("Executor process: process killed", command=self.command)
+        log.debug("Executor process: current processes", ps_fax=ps_fax)
+
+    def wait_for(self, wait_for):
+        while self.check_timeout():
+            log.debug(
+                "Executor process: waiting",
+                command=self.command,
+                until=self._endtime,
+                now=time.time(),
+            )
+            if wait_for():
+                log.debug(
+                    "Executor process: waiting ended",
+                    command=self.command,
+                    until=self._endtime,
+                    now=time.time(),
+                )
+                return self
+            time.sleep(self._sleep)
+
+        self.kill()
+        raise TimeoutExpired(self, timeout=self._timeout)
+
     def running(self) -> bool:
         """ Include pre_start_check in running, so stop will wait for the underlying listener """
         return super().running() or self.pre_start_check()
@@ -192,3 +234,8 @@ class JSONRPCExecutor(HTTPExecutor):
             log.warning("Executor process: invalid response", command=self.command, error=ex)
             return False
         return True
+
+    def stop(self):
+        log.debug("Executor process: stopping process", command=self.command)
+        super().stop()
+        log.debug("Executor process: process stopped", command=self.command)

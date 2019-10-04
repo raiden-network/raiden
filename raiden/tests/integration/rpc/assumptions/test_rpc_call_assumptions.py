@@ -1,14 +1,15 @@
 import pytest
 from eth_utils import decode_hex, to_checksum_address
+from web3.exceptions import BadFunctionCallOutput
 
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract, get_test_contract
+from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
 
 def test_call_invalid_selector(deploy_client):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
     """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
@@ -43,27 +44,49 @@ def test_call_with_a_block_number_before_smart_contract_deployed(deploy_client):
     """ A JSON RPC call using a block number where the smart contract was not
     yet deployed should raise.
     """
-    contract_path, contracts = get_test_contract("RpcTest.sol")
-    contract_proxy, receipt = deploy_client.deploy_solidity_contract(
-        "RpcTest",
-        contracts,
-        libraries=dict(),
-        constructor_parameters=None,
-        contract_path=contract_path,
-    )
+    contract_proxy, receipt = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     deploy_block = receipt["blockNumber"]
     assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_block) == 1
 
-    with pytest.raises(Exception):
+    with pytest.raises(BadFunctionCallOutput):
         contract_proxy.contract.functions.ret().call(block_identifier=deploy_block - 1)
+
+
+def test_call_which_returns_a_string_before_smart_contract_deployed(deploy_client):
+    """ A JSON RPC call using a block number where the smart contract was not
+    yet deployed should raise, even if the ABI of the function returns an empty
+    string.
+    """
+    contract_proxy, receipt = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    deploy_block = receipt["blockNumber"]
+    assert contract_proxy.contract.functions.ret_str().call(block_identifier=deploy_block) == ""
+
+    with pytest.raises(BadFunctionCallOutput):
+        contract_proxy.contract.functions.ret_str().call(block_identifier=deploy_block - 1)
+
+
+def test_call_works_with_blockhash(deploy_client):
+    """ A JSON RPC call works with a block number or blockhash. """
+    contract_proxy, receipt = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    deploy_blockhash = receipt["blockHash"]
+    assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_blockhash) == 1
+
+    deploy_block = receipt["blockNumber"]
+    assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_block) == 1
 
 
 def test_call_throws(deploy_client):
     """ A JSON RPC call to a function that throws/gets reverted returns the empty string. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client, "RpcTest")
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
-    call = contract_proxy.contract.functions.fail().call
+
+    call = contract_proxy.contract.functions.fail_assert().call
+    assert call() == []
+
+    call = contract_proxy.contract.functions.fail_require().call
     assert call() == []

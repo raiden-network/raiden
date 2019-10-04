@@ -5,7 +5,7 @@ from raiden.utils.typing import BlockNumber, Callable
 from raiden.waiting import wait_for_block
 
 
-def _timeout_task(
+def _timeout_task(  # pragma: no unittest
     throw: Callable,
     exception_to_throw: Exception,
     raiden: RaidenService,
@@ -16,7 +16,7 @@ def _timeout_task(
     throw(exception_to_throw)
 
 
-class BlockTimeout:
+class BlockTimeout:  # pragma: no unittest
     def __init__(
         self,
         exception_to_throw,

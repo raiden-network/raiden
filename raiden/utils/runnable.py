@@ -1,7 +1,9 @@
 from typing import Any, Sequence
 
 import structlog
-from gevent import Greenlet
+from gevent import Greenlet, GreenletExit
+
+from raiden.utils.typing import Callable
 
 log = structlog.get_logger(__name__)
 
@@ -13,7 +15,7 @@ class Runnable:
     In the future, when proper restart is implemented, may be replaced by actual greenlet
     """
 
-    greenlet: Greenlet = None
+    greenlet: Greenlet
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
 
@@ -70,7 +72,28 @@ class Runnable:
         )
         if not self.greenlet:
             return
-        self.greenlet.kill(subtask.exception)
+
+        exception = subtask.exception or GreenletExit()
+        self.greenlet.kill(exception)
+
+    def _schedule_new_greenlet(
+        self, func: Callable, *args, in_seconds_from_now: int = None, **kwargs
+    ) -> Greenlet:
+        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
+
+        def on_success(greenlet):
+            if greenlet in self.greenlets:
+                self.greenlets.remove(greenlet)
+
+        greenlet = Greenlet(func, *args, **kwargs)
+        greenlet.link_exception(self.on_error)
+        greenlet.link_value(on_success)
+        self.greenlets.append(greenlet)
+        if in_seconds_from_now:
+            greenlet.start_later(in_seconds_from_now)
+        else:
+            greenlet.start()
+        return greenlet
 
     # redirect missing members to underlying greenlet for compatibility
     # but better use greenlet directly for now, to make use of the c extension optimizations

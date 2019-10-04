@@ -4,7 +4,7 @@ version: 2.1
 templates:
   filter-tag-templates: &only-tagged-version-filter
     tags:
-      only: /^v\d+\.\d+\.\d+(\-rc\d+)?$/
+      only: /^v\d+\.\d+\.\d+((?:\-|\.)?(a(?:lpha)?|b(?:eta)?|rc|dev)(?:\-|\.)?\d*)?$/
     branches:
       ignore: /.*/
 
@@ -19,10 +19,10 @@ templates:
       type: enum
       enum: ["small", "medium", "medium+", "large", "xlarge"]
     transport-layer:
-      description: "transmission protocol used, udp or matrix"
-      default: "udp"
+      description: "transmission protocol used, matrix"
+      default: "matrix"
       type: enum
-      enum: ["udp", "matrix"]
+      enum: ["matrix"]
     environment-type:
       description: "Environment configuration to be used."
       default: "production"
@@ -39,12 +39,16 @@ templates:
       type: string
 
   default-environment: &default-environment
-    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz'
-    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.22-7fa3509e.tar.gz'
-    GETH_VERSION: '1.8.22'
-    PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.3.3/x86_64-unknown-linux-gnu/parity'
-    PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.3.3/x86_64-apple-darwin/parity'
-    PARITY_VERSION: 'v2.3.3'
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.2-e76047e9.tar.gz'
+    GETH_MD5_LINUX: 'bc7f6837a0fdbbecac36fc3bc4c3d3ae'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.2-e76047e9.tar.gz'
+    GETH_MD5_MACOS: 'f97d506a0c27d970fb67337f008d74e7'
+    GETH_VERSION: '1.9.2'
+    PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-unknown-linux-gnu/parity'
+    PARITY_SHA256_LINUX: '9c1934728da62b0246af5cc189fe760b77e60b6811da0dbb536d1958d92153ad'
+    PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-apple-darwin/parity'
+    PARITY_SHA256_MACOS: '1deb0d9dcf3eef2fee32867a200ddb65c9343071b6e4e39660d8837184b164e3'
+    PARITY_VERSION: 'v2.5.5'
     SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.5.4/solc-static-linux'
     SOLC_VERSION: 'v0.5.4'
 
@@ -122,8 +126,9 @@ commands:
           name: Link platform local binaries
           command: |
             export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
-            [[ -d ~/.local-${OS_NAME} ]] && ln -s ~/.local-${OS_NAME} ~/.local || true
-            [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -s ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
+            rm -rf ~/.local
+            [[ -d ~/.local-${OS_NAME} ]] && ln -sfn ~/.local-${OS_NAME} ~/.local || true
+            [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -sfn ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
 
   prepare-system:
     steps:
@@ -134,7 +139,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -147,11 +152,12 @@ commands:
           command: |
             export LOCAL_BASE=~/.local-${OS_NAME}
             .circleci/fetch_geth_parity_solc.sh
-            ln -s ${LOCAL_BASE} ~/.local
+            ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
-            - "~/.local-*"
+            - "~/.local-LINUX"
+            - "~/.local-MACOS"
       - run:
           name: Fetch PR Base Commit
           command: source .circleci/fetch_pr_base_commit.sh
@@ -173,8 +179,10 @@ commands:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - 'python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}'
-          - 'python-deps-v2-{{ arch }}-<< parameters.py-version >>-'
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+# hack: solving a inter-PR cache problem
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-2uPiIM_pNv5neMjXtHsw_aV6BQGcFOekCBcy7TJEkhI=
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
@@ -188,13 +196,16 @@ commands:
           name: Installing dependencies
           command: |
             . ${VENV_PATH}/bin/activate
-            pip install -U 'pip<19.0.0' wheel
-            pip install -c constraints-dev.txt readme_renderer pyinstaller s3cmd
-            pip install -c constraints-dev.txt -r requirements-dev.txt -e .
+            pip config set global.progress_bar off
+            pip install -U 'pip<19.0.0' wheel pip-tools
+            pushd requirements
+            pip-sync requirements-ci.txt _raiden-dev.txt
+            popd
       - save_cache:
-          key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
+          key: python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
-          - "~/venv-<< parameters.py-version >>-*"
+          - "~/venv-<< parameters.py-version >>-LINUX"
+          - "~/venv-<< parameters.py-version >>-MACOS"
       - save_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
           paths:
@@ -261,6 +272,7 @@ jobs:
     executor:
       name: docker
       py-version: << parameters.py-version >>
+      resource: xlarge
 
     steps:
       - attach-and-link:
@@ -270,9 +282,24 @@ jobs:
       - run:
           name: Validate CircleCI Config
           command: python tools/check_circleci_config.py
+
+      # Do not compare across PRs, otherwise a PR that is fixing linting errors
+      # will make unrelated PRs fail.
+      - restore_cache:
+          keys:
+            - lint-cache-v2-{{ .Branch }}-
+            - lint-cache-v2-develop-
       - run:
           name: Run Lint
           command: make lint
+      - run:
+          name: Decreasing linting errors
+          command: .circleci/enforce_decreasing_lint_errors.sh
+      # a new cache has to be generated on every run because they are immutable
+      - save_cache:
+          key: lint-cache-v2-{{ .Branch }}-{{ .BuildNum }}
+          paths:
+          - "~/lint-cache"
 
   smoketest:
     parameters:
@@ -294,7 +321,11 @@ jobs:
             set -x
       - run:
           name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
-          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >>
+          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
+
+      - store_artifacts:
+          path: /tmp/smoketest.log
+          destination: smoketest-logs
 
   test:
     parameters:
@@ -302,7 +333,7 @@ jobs:
       test-type:
         description: "type of test"
         type: enum
-        enum: ["integration", "unit", "fuzz"]
+        enum: ["fuzz", "integration", "mocked", "unit"]
       parallelism:
         description: "number of containers to be used in parallel for this test"
         default: 1
@@ -315,7 +346,7 @@ jobs:
     environment:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
-      RAIDEN_TESTS_ETH_LOGSDIR: /tmp/eth/logs
+      RAIDEN_TESTS_LOGSDIR: /tmp/tests/logs
       COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
@@ -336,47 +367,19 @@ jobs:
           name: Prepare coverage
           command: |
             mkdir -p ${COVERAGE_DIR}
-            rm ${COVERAGE_DIR}/.coverage* || true
+            rm ${COVERAGE_DIR}/.coverage.* || true
       - run:
           name: Select tests
-          command: |
-            pytest \
-              raiden/tests/<< parameters.test-type >> \
-              --collect-only \
-              --quiet \
-              --blockchain-type=<< parameters.blockchain-type >> \
-              --transport=<< parameters.transport-layer >> \
-              << parameters.additional-args >> \
-              | \
-            grep '::' | \
-            circleci tests split --split-by=timings --timings-type=testname | \
-            grep '::' > selected-tests.txt
-
-            cat selected-tests.txt
+          command: .circleci/select_tests.sh "raiden/tests/<< parameters.test-type >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
 
       - run:
           name: Run tests
           command: |
-            mkdir -p test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>
-            coverage run \
-              --include="~/raiden/**/*" \
-              --parallel-mode \
-              --module pytest \
-              raiden/tests \
-              -vvvvvv \
-              --log-config='raiden:DEBUG' \
-              --random \
-              --junit-xml=test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>/results.xml \
-              --blockchain-type=<< parameters.blockchain-type >> \
-              --transport=<< parameters.transport-layer >> \
-              --select-fail-on-missing \
-              --select-from-file selected-tests.txt \
-              << parameters.additional-args >>
-
+            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
       - run:
           name: Store coverage
           command: |
-            mv .coverage* ${COVERAGE_DIR}
+            mv .coverage.* ${COVERAGE_DIR}
 
       - persist_to_workspace:
           root: "~"
@@ -405,7 +408,7 @@ jobs:
           destination: synapse-logs
 
       - store_artifacts:
-          path: /tmp/eth/logs
+          path: /tmp/tests/logs
           destination: eth-logs
 
   finalize:
@@ -482,7 +485,7 @@ jobs:
           command: |
             source .circleci/get_archive_tag.sh
             make bundle-docker
-            echo raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-linux-<<parameters.architecture>>.txt
+            echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-${RELEASE_TYPE}-linux-<<parameters.architecture>>.txt
       - persist_to_workspace:
           root: "~"
           paths:
@@ -514,7 +517,7 @@ jobs:
           command: |
             pyinstaller --noconfirm --clean raiden.spec
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
-            echo raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-macOS-x86_64.txt
+            echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-${RELEASE_TYPE}-macOS-x86_64.txt
       - persist_to_workspace:
           root: "~"
           paths:
@@ -586,7 +589,9 @@ jobs:
       - config-path
       - run:
           name: upload-to-digitalocean
-          command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
+          command: |
+            .circleci/get_archive_tag.sh
+            .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
 
   deploy-github-release:
     parameters:
@@ -672,24 +677,6 @@ workflows:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "production"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
-          name: smoketest-udp-development-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "development"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
           name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -720,7 +707,13 @@ workflows:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
-          blockchain-type: "geth"
+          requires:
+            - lint-3.7
+
+      - test:
+          name: test-mocked-3.7
+          py-version: "3.7"
+          test-type: "mocked"
           requires:
             - lint-3.7
 
@@ -728,27 +721,9 @@ workflows:
           name: test-fuzz-3.7
           py-version: "3.7"
           test-type: "fuzz"
-          blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
-
-      - test:
-          name: test-integration-udp-geth-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-geth-3.7
@@ -759,30 +734,12 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
-
-      - test:
-          name: test-integration-udp-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
+            - test-mocked-3.7
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -793,19 +750,16 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - finalize:
           requires:
-            - test-integration-udp-geth-3.7
             - test-integration-matrix-geth-3.7
-            - test-integration-udp-parity-3.7
             - test-integration-matrix-parity-3.7
 
   deploy-release:
@@ -930,24 +884,6 @@ workflows:
           - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "production"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
-          name: smoketest-udp-development-geth-3.7
-          py-version: "3.7"
-          transport-layer: "udp"
-          environment-type: "development"
-          blockchain-type: "geth"
-          requires:
-            - lint-3.7
-
-      - smoketest:
           name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -978,7 +914,13 @@ workflows:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
-          blockchain-type: "geth"
+          requires:
+            - lint-3.7
+
+      - test:
+          name: test-mocked-3.7
+          py-version: "3.7"
+          test-type: "mocked"
           requires:
             - lint-3.7
 
@@ -986,27 +928,9 @@ workflows:
           name: test-fuzz-3.7
           py-version: "3.7"
           test-type: "fuzz"
-          blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
-
-      - test:
-          name: test-integration-udp-geth-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-geth-3.7
@@ -1017,30 +941,12 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
-
-      - test:
-          name: test-integration-udp-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
-            - smoketest-matrix-production-geth-3.7
-            - smoketest-matrix-development-geth-3.7
-            - smoketest-matrix-development-parity-3.7
-            - test-unit-3.7
-            - test-fuzz-3.7
+            - test-mocked-3.7
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -1051,19 +957,16 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-udp-production-geth-3.7
-            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
+            - test-mocked-3.7
 
       - finalize:
           requires:
-          - test-integration-udp-geth-3.7
           - test-integration-matrix-geth-3.7
-          - test-integration-udp-parity-3.7
           - test-integration-matrix-parity-3.7
 
       - build-binary-linux:
