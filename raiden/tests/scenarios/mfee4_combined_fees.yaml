@@ -13,8 +13,8 @@ settings:
 
 token:
   address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
-  balance_min: 1_000_000
-  balance_fund: 1_000_000
+  balance_min: 100_000_000_000_000_000_000
+  balance_fund: 100_000_000_000_000_000_000
 
 nodes:
   mode: managed
@@ -35,7 +35,7 @@ nodes:
       - 10_000  # 1% proportional fee
     proportional-imbalance-fee:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
-      - 10_000  # 1% imbalance fee on channel balance
+      - 20_000  # 2% imbalance fee on channel balance
 
 ## This is the MFEE4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
 ## whether a path is returned. It also checks that correct fees are deducted.
@@ -46,18 +46,18 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 0, total_deposit: 100_000}
-            - open_channel: {from: 1, to: 2, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 1, total_deposit: 100_000}
-            - open_channel: {from: 2, to: 3, total_deposit: 100_000}
-            - open_channel: {from: 3, to: 2, total_deposit: 100_000}
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000}
       - serial:
           name: "Test providing routes"
           tasks:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
-            - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - transfer: {from: 0, to: 3, amount: 500_000_000_000_000_000, expected_http_status: 200}
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -67,15 +67,16 @@ scenario:
                 expected_routes:
                   - [0, 1, 2, 3]
 
-            # 487 TKN fees are calculated, 5% margin of that is 24 TKN
-            # This results in a total fee of 511
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_489, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000, balance: 11_0511, state: "opened"}
+            - wait_blocks: 2
+            # 41_963_768_101_996_008 TKN fees are calculated which are 8.4% of the initial payment, 5% margin are added
+            # This results in a total fee of 44_061_956_507_095_808
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 455_938_043_492_904_366, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_544_061_956_507_095_634, state: "opened"}
 
-            # 511 TKN fees
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_737, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000, balance: 11_0263, state: "opened"}
+            # update comment ...
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_064_586_391_421_968, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_935_413_608_578_032, state: "opened"}
 
-            # 263 TKN fees
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_980, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000, balance: 110_020, state: "opened"}
+            # update comment ...
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_254_201_118_912_876, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_745_798_881_087_124, state: "opened"}
