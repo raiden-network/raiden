@@ -2,30 +2,30 @@
 Changelog
 =========
 
-* :feature:`4860` Update per-channel proportional fee calculation
-* :feature:`4858` Add check for bound in med fee calculation
-* :feature:`4844` Formalize fee calculation
-* :feature:`4815` Exclude direct transfers from fees
-* :feature:`4751` Add Fees to internal Routing
-* :feature:`4653` Allow setting per token network flat fees from CLI
-* :feature:`4731` Setting fee defaults for Alderaan
-* :bug:`4835` Catch undefined med fee inside the sate machine
-* :bug:`4446` Fix assertion error in 'calculate_imbalance_fees'
-
+* :release:`0.200.0-rc1 <2019-08-12>`
 * :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
 * :feature:`-` The lowest supported geth version is now 1.8.21.
 * :feature:`4976` Geth users no longer need to activate the special txpool RPC api when starting their geth node.
 * :feature:`4917` Added documentation on using Raiden for atomic swaps.
-* :feature:`-` Added a new api endpoint ``/api/v1/version`` to query the raiden version via the Rest API.
-* :feature:`4697` lock_timeout can be provided when making a payment.
+* :feature:`4860` Update per-channel proportional fee calculation
+* :feature:`4858` Add check for bound in med fee calculation
+* :feature:`4844` Formalize fee calculation
+* :feature:`4815` Exclude direct transfers from fees
+* :bug:`4835` Catch undefined med fee inside the sate machine
 * :bug:`4762` Properly check the withdraw expiration on the TokenNetworkProxy. This gives a better error message to the users and prevents a corner case error.
-* :feature:`4102` Display progress during syncing the blockchain.
+* :feature:`4751` Add Fees to internal Routing
+* :feature:`4731` Setting fee defaults for Alderaan
 * :feature:`4654` Define imbalance fees relative to channel balance.
+* :feature:`4697` lock_timeout can be provided when making a payment.
+* :feature:`4653` Allow setting per token network flat fees from CLI
 * :feature:`4653` Allow setting per token network flat mediation fee from CLI.
 * :bug:`4685` Invalidate a withdraw transaction on restart if the channel is closed.
 * :bug:`4560` Formatting of timestamp fields on the API should follow ISO8601.
 * :bug:`4561` Limit and offset should now work properly in the payment API event queries.
+* :bug:`4446` Fix assertion error in 'calculate_imbalance_fees'
+* :feature:`4102` Display progress during syncing the blockchain.
 * :feature:`-` Update WebUI to version 0.10.0 https://github.com/raiden-network/webui/releases/tag/v0.10.0
+* :feature:`-` Added a new api endpoint ``/api/v1/version`` to query the raiden version via the Rest API.
 
 * :release:`0.100.5-a0 <2019-08-12>`
 * :feature:`-` Update WebUI to version 0.9.2 https://github.com/raiden-network/webui/releases/tag/v0.9.2
