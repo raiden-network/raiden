@@ -2,6 +2,16 @@
 Changelog
 =========
 
+* :feature:`4860` Update per-channel proportional fee calculation
+* :feature:`4858` Add check for bound in med fee calculation
+* :feature:`4844` Formalize fee calculation
+* :feature:`4815` Exclude direct transfers from fees
+* :feature:`4751` Add Fees to internal Routing
+* :feature:`4653` Allow setting per token network flat fees from CLI
+* :feature:`4731` Setting fee defaults for Alderaan
+* :bug:`4835` Catch undefined med fee inside the sate machine
+* :bug:`4446` Fix assertion error in 'calculate_imbalance_fees'
+
 * :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
 * :feature:`-` The lowest supported geth version is now 1.8.21.
 * :feature:`4976` Geth users no longer need to activate the special txpool RPC api when starting their geth node.
