@@ -232,7 +232,7 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
 @pytest.mark.parametrize(
     "flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
     [
-        # The higher the imbalance fee, the stronger the impact of the fee interation
+        # The higher the imbalance fee, the stronger the impact of the fee iteration
         (0, 0, 10_000, 50_000, 50_000 + 2_000),
         (0, 0, 20_000, 50_000, 50_000 + 3_995),
         (0, 0, 30_000, 50_000, 50_000 + 5_908),
