@@ -972,7 +972,7 @@ class MatrixTransport(Runnable):
 
             # Handle the case where an empty room was found
             if not member_ids & online_user_ids:
-                for peer in peers:
+                for peer in set(peers) - member_ids:
                     self._invite_user_to_room_with_retries(peer, room)
                 member_ids = {member.user_id for member in room.get_joined_members()}
 
@@ -1025,7 +1025,7 @@ class MatrixTransport(Runnable):
                 peer_address=to_checksum_address(address),
             )
         else:
-            self.log.error(
+            self.log.debug(
                 "Successfully created new room",
                 room=room,
                 users_currently_online=online_user_ids,
@@ -1061,6 +1061,7 @@ class MatrixTransport(Runnable):
         """ Obtain a public, canonically named (if possible) room and invite peers """
         # retrieve address from invitees implicitly, is constant for all invitees
         assert self._raiden_service is not None  # Extra assertion for mypy
+        room = None
         address = validate_userid_signature(invitees[0])
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
@@ -1096,29 +1097,28 @@ class MatrixTransport(Runnable):
                 self.log.debug("Joined public room", room=room)
                 break
 
-            # if can't, try creating it
-            try:
-                room = self._client.create_room(room_name, invitees=invitees_uids, is_public=True)
-            except MatrixRequestError as error:
-                if error.code == 409:
-                    msg = (
-                        "Error creating room, "
-                        "seems to have been created by peer meanwhile, retrying."
-                    )
-                else:
-                    msg = "Error creating room, retrying."
-
-                self.log.debug(
-                    msg, room_name=room_name, error=error.content, error_code=error.code
+        # if can't, try creating it
+        try:
+            room = self._client.create_room(room_name, invitees=invitees_uids, is_public=True)
+        except MatrixRequestError as error:
+            if error.code == 409:
+                msg = (
+                    "Error creating room, "
+                    "seems to have been created by peer meanwhile, retrying."
                 )
             else:
-                self.log.debug("Room created successfully", room=room, invitees=invitees)
-                break
+                msg = "Error creating room, retrying."
+
+            self.log.debug(msg, room_name=room_name, error=error.content, error_code=error.code)
         else:
+            self.log.debug("Room created successfully", room=room, invitees=invitees)
+            return room
+
+        if not room:
             # if can't join nor create, create an unnamed one
             room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
             self.log.warning(
-                "Could not create nor join a named room. Successfuly created an unnamed one",
+                "Could not create nor join a named room. Successfully created an unnamed one",
                 room=room,
                 invitees=invitees,
             )
