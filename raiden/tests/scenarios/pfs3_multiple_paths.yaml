@@ -52,7 +52,9 @@ scenario:
           name: "Test providing routes"
           tasks:
             # Check that the payment goes through from 0 to 3
+            - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - wait_blocks: 1
 
             # Assert that correct amount was tranferred
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
