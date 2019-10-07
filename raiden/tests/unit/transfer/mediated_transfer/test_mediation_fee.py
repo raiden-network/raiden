@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis.strategies import integers
 
 from raiden.exceptions import UndefinedMediationFee
@@ -285,8 +285,10 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     integers(min_value=0, max_value=10_000),
     integers(min_value=0, max_value=50_000),
     integers(min_value=1, max_value=90_000),
+    integers(min_value=1, max_value=100_000),
+    integers(min_value=1, max_value=100_000),
 )
-def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
+def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ Tests mediation fee deduction.
 
     First we're doing a PFS-like calculation going backwards from the target
@@ -294,15 +296,20 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
     the fees from a mediator's point of view and check if `amount_with_fees -
     fees = amount`.
     """
-    balance = TokenAmount(100_000)
+    # Find examples where there is a reasonable chance of succeeding
+    amount = int(min(amount, balance1 * 0.95 - 1, balance2 * 0.95 - 1))
+    assume(amount > 0)
+
+    total_balance = TokenAmount(100_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
-        channel_capacity=balance, proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee)
+        channel_capacity=total_balance,
+        proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee),
     )
     payer_channel = factories.create(
         NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
-            partner_state=NettingChannelEndStateProperties(balance=balance),
+            our_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
+            partner_state=NettingChannelEndStateProperties(balance=balance1),
             fee_schedule=FeeScheduleState(
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
@@ -312,8 +319,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
     )
     payer_channel_backwards = factories.create(
         NettingChannelStateProperties(
-            partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
-            our_state=NettingChannelEndStateProperties(balance=balance),
+            our_state=NettingChannelEndStateProperties(balance=balance1),
+            partner_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
             fee_schedule=FeeScheduleState(
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
@@ -323,8 +330,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
     )
     payee_channel = factories.create(
         NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(balance=balance),
-            partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+            our_state=NettingChannelEndStateProperties(balance=balance2),
+            partner_state=NettingChannelEndStateProperties(balance=total_balance - balance2),
             fee_schedule=FeeScheduleState(
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
@@ -337,6 +344,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
     fee_calculation = get_initial_payment_for_final_target_amount(
         final_amount=PaymentAmount(amount), channels=[payer_channel_backwards, payee_channel]
     )
+    assume(fee_calculation)  # There is not enough capacity for the payment in all cases
     assert fee_calculation
 
     # How much would a mediator send to the target? Ideally exactly `amount`.
@@ -345,7 +353,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
-    assert abs(amount - amount_without_margin_after_fees) < 1 + amount / 1_000
+    assume(amount_without_margin_after_fees)  # We might lack capacity for the payment
+    assert abs(amount - amount_without_margin_after_fees) <= 3 + amount / 500
 
     # If we add the fee margin, the mediator must always send at least `amount` to the target!
     amount_with_fee_and_margin = calculate_safe_amount_with_fee(
@@ -356,4 +365,5 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
+    assume(amount_with_margin_after_fees)  # We might lack capacity to add margins
     assert amount_with_margin_after_fees >= amount

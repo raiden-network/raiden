@@ -44,6 +44,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState, InitiatorTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -192,11 +193,9 @@ def test_next_route():
 def test_init_with_usable_routes():
     transfer_amount = TokenAmount(1000)
     flat_fee = FeeAmount(20)
-    expected_fee_margin = int(flat_fee * DEFAULT_MEDIATION_FEE_MARGIN)  # == 1
+    expected_balance = calculate_safe_amount_with_fee(transfer_amount, flat_fee)
     properties = factories.NettingChannelStateProperties(
-        our_state=factories.NettingChannelEndStateProperties(
-            balance=TokenAmount(transfer_amount + flat_fee + expected_fee_margin)
-        )
+        our_state=factories.NettingChannelEndStateProperties(balance=TokenAmount(expected_balance))
     )
     channels = factories.make_channel_set([properties])
     pseudo_random_generator = random.Random()
@@ -234,11 +233,8 @@ def test_init_with_usable_routes():
     expiration = channel.get_safe_initial_expiration(block_number, channels[0].reveal_timeout)
 
     assert transfer.balance_proof.token_network_address == channels[0].token_network_address
-    assert (
-        transfer.balance_proof.locked_amount
-        == transfer_description.amount + flat_fee + expected_fee_margin
-    )
-    assert transfer.lock.amount == transfer_description.amount + flat_fee + expected_fee_margin
+    assert transfer.balance_proof.locked_amount == expected_balance
+    assert transfer.lock.amount == expected_balance
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == transfer_description.secrethash
     # pylint: disable=E1101
@@ -532,9 +528,7 @@ def test_refund_transfer_with_reroute():
     channels = channels_setup(TokenAmount(transfer_amount * 2), our_address, refund_address)
 
     fee_1 = 20
-    expected_fee_margin_1 = int(fee_1 * DEFAULT_MEDIATION_FEE_MARGIN)
     fee_3 = 40
-    expected_fee_margin_3 = int(fee_3 * DEFAULT_MEDIATION_FEE_MARGIN)
 
     routes = channels.get_routes()
     routes[0].estimated_fee = fee_1  # this one will be tried first and fail
@@ -557,11 +551,9 @@ def test_refund_transfer_with_reroute():
     original_transfer = initiator_state.transfer
 
     # Check that fees for route 1 have been set correctly
-    assert (
-        original_transfer.balance_proof.locked_amount
-        == transfer_amount + fee_1 + expected_fee_margin_1
-    )
-    assert original_transfer.lock.amount == transfer_amount + fee_1 + expected_fee_margin_1
+    amount_with_fee_and_margin1 = calculate_safe_amount_with_fee(transfer_amount, fee_1)
+    assert original_transfer.balance_proof.locked_amount == amount_with_fee_and_margin1
+    assert original_transfer.lock.amount == amount_with_fee_and_margin1
 
     refund_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
@@ -621,11 +613,9 @@ def test_refund_transfer_with_reroute():
     assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
 
     # Check that fees for route 3 have been set correctly
-    assert (
-        new_transfer.transfer.balance_proof.locked_amount
-        == transfer_amount + fee_3 + expected_fee_margin_3
-    )
-    assert new_transfer.transfer.lock.amount == transfer_amount + fee_3 + expected_fee_margin_3
+    amount_with_fee_and_margin3 = calculate_safe_amount_with_fee(transfer_amount, fee_3)
+    assert new_transfer.transfer.balance_proof.locked_amount == amount_with_fee_and_margin3
+    assert new_transfer.transfer.lock.amount == amount_with_fee_and_margin3
 
     initiator_state = get_transfer_at_index(iteration.new_state, 0)
     assert initiator_state is not None
@@ -1972,3 +1962,10 @@ def test_initiator_init():
         assert service.route_to_feedback_token[tuple(route_states[0].route)] == feedback_token
 
         assert state.routes == route_states
+
+
+def test_calculate_safe_amount_with_fee():
+    assert calculate_safe_amount_with_fee(1, 0) == 1
+    assert calculate_safe_amount_with_fee(1000, 0) == 1000
+    assert 1000 <= calculate_safe_amount_with_fee(1000, 1) < 1005
+    assert 2000 < calculate_safe_amount_with_fee(1000, 1000) < 2100
