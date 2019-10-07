@@ -3,7 +3,7 @@ from web3 import Web3
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import Address, ChannelID
+from raiden.utils.typing import ChannelID, TokenNetworkAddress
 from raiden_contracts.constants import MessageTypeId
 
 LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
@@ -22,7 +22,7 @@ class BalanceProof:
     def __init__(
         self,
         channel_identifier: ChannelID,
-        token_network_address: Address,
+        token_network_address: TokenNetworkAddress,
         balance_hash: str = None,
         nonce: int = 0,
         additional_hash: str = "0x%064x" % 0,

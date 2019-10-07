@@ -17,8 +17,8 @@ from raiden.tests.utils.transfer import assert_synced_channel_state, watch_for_u
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
-from raiden.utils import BlockNumber, create_default_identifier
-from raiden.utils.typing import TokenAmount
+from raiden.utils import create_default_identifier
+from raiden.utils.typing import BlockNumber, TokenAmount
 
 
 @raise_on_failure

@@ -23,8 +23,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import BlockNumber, create_default_identifier
-from raiden.utils.typing import PaymentID, TokenAmount
+from raiden.utils import create_default_identifier
+from raiden.utils.typing import BlockNumber, PaymentID, TokenAmount
 
 
 @pytest.mark.parametrize("deposit", [10])

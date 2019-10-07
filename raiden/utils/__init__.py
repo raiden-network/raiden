@@ -17,7 +17,6 @@ from eth_utils import (
     to_canonical_address,
     to_checksum_address,
 )
-from web3 import Web3
 
 import raiden
 from raiden import constants
@@ -25,8 +24,6 @@ from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils.signing import sha3  # noqa
 from raiden.utils.typing import (
     Address,
-    BlockNumber,
-    BlockSpecification,
     Dict,
     Endpoint,
     Host,
@@ -39,8 +36,6 @@ from raiden.utils.typing import (
     PrivateKey,
     PublicKey,
     Secret,
-    T_BlockHash,
-    T_BlockNumber,
     TokenAddress,
     Tuple,
     Union,
@@ -219,20 +214,3 @@ def safe_gas_limit(*estimates: int) -> int:
 def to_rdn(rei: int) -> float:
     """ Convert REI value to RDN. """
     return rei / 10 ** 18
-
-
-def block_specification_to_number(block: BlockSpecification, web3: Web3) -> BlockNumber:
-    """ Converts a block specification to an actual block number """
-    if isinstance(block, str):
-        msg = f"string block specification can't contain {block}"
-        assert block in ("latest", "pending"), msg
-        number = web3.eth.getBlock(block)["number"]
-    elif isinstance(block, T_BlockHash):
-        number = web3.eth.getBlock(block)["number"]
-    elif isinstance(block, T_BlockNumber):
-        number = block
-    else:
-        if __debug__:
-            raise AssertionError(f"Unknown type {type(block)} given for block specification")
-
-    return BlockNumber(number)

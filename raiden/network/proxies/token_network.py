@@ -15,7 +15,6 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.constants import (
     EMPTY_HASH,
     EMPTY_SIGNATURE,
-    GENESIS_BLOCK_NUMBER,
     LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
     UINT256_MAX,
@@ -2656,11 +2655,7 @@ class TokenNetwork:
 
             raise RaidenRecoverableError("Settle failed for an unknown reason")
 
-    def all_events_filter(
-        self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
-    ) -> StatelessFilter:
+    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract
 
         Args:
@@ -2671,10 +2666,7 @@ class TokenNetwork:
             The filter instance.
         """
         return self.client.new_filter(
-            contract_address=Address(self.address),
-            topics=None,
-            from_block=from_block,
-            to_block=to_block,
+            contract_address=Address(self.address), topics=None, from_block=from_block
         )
 
     def _check_for_outdated_channel(

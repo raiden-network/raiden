@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     BlockHash,
+    BlockNumber,
     BlockSpecification,
     CompiledContract,
     Nonce,
@@ -664,19 +665,14 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: Optional[List[Optional[str]]],
-        from_block: BlockSpecification,
-        to_block: BlockSpecification,
+        from_block: BlockNumber,
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
-        logs_blocks_sanity_check(from_block, to_block)
         return StatelessFilter(
             self.web3,
-            {
-                "fromBlock": from_block,
-                "toBlock": to_block,
-                "address": to_checksum_address(contract_address),
-                "topics": topics,
-            },
+            from_block=from_block,
+            contract_address=to_checksum_address(contract_address),
+            topics=topics,
         )
 
     def get_filter_events(

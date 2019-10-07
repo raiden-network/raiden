@@ -173,19 +173,6 @@ class ActionInitChain(StateChange):
 
 
 @dataclass(frozen=True)
-class ActionNewTokenNetwork(StateChange):
-    """ Registers a new token network.
-    A token network corresponds to a channel manager smart contract.
-    """
-
-    token_network_registry_address: TokenNetworkRegistryAddress
-    token_network: TokenNetworkState
-
-    def __post_init__(self) -> None:
-        typecheck(self.token_network, TokenNetworkState)
-
-
-@dataclass(frozen=True)
 class ContractReceiveChannelDeposit(ContractReceiveStateChange):
     """ A channel to which this node IS a participant had a deposit. """
 

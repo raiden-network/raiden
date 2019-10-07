@@ -1,8 +1,10 @@
 from typing import Optional
 
-from web3.utils.filters import Filter
-
-from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
+from raiden.blockchain.filters import (
+    StatelessFilter,
+    decode_event,
+    get_filter_args_for_specific_event_from_channel,
+)
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.network.proxies.utils import get_channel_participants_from_open_event
@@ -264,9 +266,7 @@ class PaymentChannel:
             given_block_identifier=block_identifier,
         )
 
-    def all_events_filter(
-        self, from_block: BlockSpecification, to_block: BlockSpecification
-    ) -> Filter:
+    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
 
         channel_topics: List[Optional[str]] = [
             None,  # event topic is any
@@ -280,7 +280,6 @@ class PaymentChannel:
             contract_address=Address(self.token_network.address),
             topics=channel_topics,
             from_block=from_block,
-            to_block=to_block,
         )
 
         return channel_filter
