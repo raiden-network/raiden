@@ -39,17 +39,17 @@ nodes:
       - 0
     default-settle-timeout: 40
     default-reveal-timeout: 20
-    node_options:
-      0:
-        matrix-server: https://transport01.raiden.network
-      1:
-        matrix-server: https://transport02.raiden.network
-      2:
-        matrix-server: https://transport03.raiden.network
-      3:
-        matrix-server: https://transport01.raiden.network
-      4:
-        matrix-server: https://transport02.raiden.network
+  node_options:
+    0:
+      matrix-server: https://transport01.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+    2:
+      matrix-server: https://transport03.raiden.network
+    3:
+      matrix-server: https://transport01.raiden.network
+    4:
+      matrix-server: https://transport02.raiden.network
 
 scenario:
   serial:
