@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
+
 * :release:`0.200.0-rc1 <2019-08-12>`
 * :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
 * :feature:`-` The lowest supported geth version is now 1.8.21.
