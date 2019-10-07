@@ -65,8 +65,7 @@ def calculate_safe_amount_with_fee(
     small margin that is added to increase the likelihood of payments succeeding in
     conditions where channels are used for multiple payments.
     """
-    # `max` is taken as `estimated_fee` can be negative
-    fee_margin = round(max(estimated_fee, FeeAmount(0)) * DEFAULT_MEDIATION_FEE_MARGIN)
+    fee_margin = round(abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN)
     return PaymentWithFeeAmount(payment_amount + estimated_fee + fee_margin)
 
 

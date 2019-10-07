@@ -113,6 +113,10 @@ class FeesCalculation(NamedTuple):
     total_amount: PaymentWithFeeAmount
     mediation_fees: List[FeeAmount]
 
+    @property
+    def amount_without_fees(self) -> PaymentAmount:
+        return PaymentAmount(self.total_amount - sum(self.mediation_fees))
+
 
 def get_initial_payment_for_final_target_amount(
     final_amount: PaymentAmount, channels: List[NettingChannelState]
