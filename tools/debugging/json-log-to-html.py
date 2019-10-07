@@ -11,7 +11,6 @@ import json
 import webbrowser
 from collections import Counter, namedtuple
 from copy import copy
-from dataclasses import dataclass
 from datetime import datetime
 from html import escape
 from itertools import chain
