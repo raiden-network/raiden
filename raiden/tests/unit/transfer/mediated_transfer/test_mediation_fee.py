@@ -1,6 +1,6 @@
 import pytest
 from hypothesis import given
-from hypothesis.strategies import integers, just
+from hypothesis.strategies import integers
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.tests.unit.transfer.test_channel import make_hash_time_lock_state
@@ -10,6 +10,7 @@ from raiden.tests.utils.factories import (
     NettingChannelStateProperties,
 )
 from raiden.tests.utils.mediation_fees import get_initial_payment_for_final_target_amount
+from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import (
     NUM_DISCRETISATION_POINTS,
     FeeScheduleState,
@@ -283,10 +284,16 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     integers(min_value=0, max_value=100),
     integers(min_value=0, max_value=10_000),
     integers(min_value=0, max_value=50_000),
-    just(10_000),
+    integers(min_value=1, max_value=90_000),
 )
 def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
-    """ Tests mediation fee deduction. """
+    """ Tests mediation fee deduction.
+
+    First we're doing a PFS-like calculation going backwards from the target
+    amount to get the amount that the initiator has to send. Then we calculate
+    the fees from a mediator's point of view and check if `amount_with_fees -
+    fees = amount`.
+    """
     balance = TokenAmount(100_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
@@ -326,16 +333,27 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount):
         )
     )
 
+    # How much do we need to send so that the target receives `amount`? PFS-like calculation.
     fee_calculation = get_initial_payment_for_final_target_amount(
         final_amount=PaymentAmount(amount), channels=[payer_channel_backwards, payee_channel]
     )
     assert fee_calculation
 
-    amount_after_fees = get_lock_amount_after_fees(
+    # How much would a mediator send to the target? Ideally exactly `amount`.
+    amount_without_margin_after_fees = get_lock_amount_after_fees(
         lock=make_hash_time_lock_state(amount=fee_calculation.total_amount),
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
-    assert amount_after_fees
+    assert abs(amount - amount_without_margin_after_fees) < 1 + amount / 1_000
 
-    assert abs(amount - amount_after_fees) < 100
+    # If we add the fee margin, the mediator must always send at least `amount` to the target!
+    amount_with_fee_and_margin = calculate_safe_amount_with_fee(
+        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+    )
+    amount_with_margin_after_fees = get_lock_amount_after_fees(
+        lock=make_hash_time_lock_state(amount=amount_with_fee_and_margin),
+        payer_channel=payer_channel,
+        payee_channel=payee_channel,
+    )
+    assert amount_with_margin_after_fees >= amount
