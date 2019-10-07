@@ -30,6 +30,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.utils import sha3
@@ -161,10 +162,11 @@ def test_mediated_transfer_with_entire_deposit(
     )
 
     fee1 = int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC)
+    fee_margin1 = calculate_fee_margin(deposit, fee1)
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=deposit - fee1,
+        amount=deposit - fee1 - fee_margin1,
         identifier=1,
         timeout=network_wait * number_of_nodes,
     )
@@ -194,11 +196,12 @@ def test_mediated_transfer_with_entire_deposit(
 
     app2_capacity = 2 * deposit - fee1
     fee2 = int(round(app2_capacity * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
+    fee_margin2 = calculate_fee_margin(app2_capacity, fee2)
     reverse_path = list(raiden_network[::-1])
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
-        amount=app2_capacity - fee2,
+        amount=app2_capacity - fee2 - fee_margin2,
         identifier=2,
         timeout=network_wait * number_of_nodes,
     )

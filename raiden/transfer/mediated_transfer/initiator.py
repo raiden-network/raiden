@@ -56,6 +56,23 @@ from raiden.utils.typing import (
 )
 
 
+def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount) -> FeeAmount:
+    if estimated_fee == 0:
+        # If the total fees are zero, we assume that no fees are set. If the
+        # fees sum up to zero incidentally, we're should add a margin, but we
+        # can't detect that case.
+        return FeeAmount(0)
+
+    return FeeAmount(
+        int(
+            round(
+                abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
+                + payment_amount * MAX_MEDIATION_FEE_PERC * 0.01
+            )
+        )
+    )
+
+
 def calculate_safe_amount_with_fee(
     payment_amount: PaymentAmount, estimated_fee: FeeAmount
 ) -> PaymentWithFeeAmount:
@@ -69,17 +86,9 @@ def calculate_safe_amount_with_fee(
     for imbalance fees. See
     https://github.com/raiden-network/raiden-services/issues/569.
     """
-    if estimated_fee == 0:
-        # If the total fees are zero, we assume that no fees are set. If the
-        # fees sum up to zero incidentally, we're should add a margin, but we
-        # can't detect that case.
-        return PaymentWithFeeAmount(payment_amount)
-
-    fee_margin = round(
-        abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
-        + payment_amount * MAX_MEDIATION_FEE_PERC * 0.01
+    return PaymentWithFeeAmount(
+        payment_amount + estimated_fee + calculate_fee_margin(payment_amount, estimated_fee)
     )
-    return PaymentWithFeeAmount(payment_amount + estimated_fee + fee_margin)
 
 
 def events_for_unlock_lock(
