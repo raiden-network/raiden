@@ -5,6 +5,7 @@ from raiden.settings import (
     DEFAULT_MEDIATION_FEE_MARGIN,
     DEFAULT_WAIT_BEFORE_LOCK_REMOVAL,
     MAX_MEDIATION_FEE_PERC,
+    PAYMENT_AMOUNT_BASED_FEE_MARGIN,
 )
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
@@ -67,7 +68,7 @@ def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount
         int(
             round(
                 abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
-                + payment_amount * MAX_MEDIATION_FEE_PERC * 0.01
+                + payment_amount * MAX_MEDIATION_FEE_PERC * PAYMENT_AMOUNT_BASED_FEE_MARGIN
             )
         )
     )
