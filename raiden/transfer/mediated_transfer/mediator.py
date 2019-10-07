@@ -272,7 +272,7 @@ def get_lock_amount_after_fees(
     amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
 
     if amount_after_fees <= 0:
-        # The node can't cover its mediations fees from the tranferred amount.
+        # The node can't cover its mediations fees from the transferred amount.
         return None
 
     return amount_after_fees
