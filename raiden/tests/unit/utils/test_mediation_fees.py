@@ -33,9 +33,11 @@ def test_prepare_mediation_fee_config_flat_fee(cli_flat_fee, expected_channel_fl
         cli_token_to_flat_fee=((token_address, cli_flat_fee),),
         cli_token_to_proportional_fee=((token_address, ProportionalFeeAmount(0)),),
         cli_token_to_proportional_imbalance_fee=((token_address, ProportionalFeeAmount(0)),),
+        cli_cap_mediation_fees=False,
     )
 
     assert fee_config.get_flat_fee(token_address) == expected_channel_flat_fee
+    assert fee_config.cap_meditation_fees is False
 
 
 @pytest.mark.parametrize(
@@ -55,6 +57,7 @@ def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
         cli_token_to_flat_fee=(),
         cli_token_to_proportional_fee=((token_address, ProportionalFeeAmount(cli_prop_fee)),),
         cli_token_to_proportional_imbalance_fee=((token_address, ProportionalFeeAmount(0)),),
+        cli_cap_mediation_fees=False,
     )
 
     cli_prop_fee_ratio = cli_prop_fee / 1e6

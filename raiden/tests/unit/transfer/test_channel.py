@@ -435,8 +435,8 @@ def test_update_fee_schedule_after_balance_change():
     fee_config = prepare_mediation_fee_config(
         cli_token_to_flat_fee=(),
         cli_token_to_proportional_fee=(),
-        # 5%
-        cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 50_000),),
+        cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 50_000),),  # 5%
+        cli_cap_mediation_fees=True,
     )
     events = update_fee_schedule_after_balance_change(channel_state, fee_config)
     assert isinstance(events[0], SendPFSFeeUpdate)
