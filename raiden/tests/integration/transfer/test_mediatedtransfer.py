@@ -402,8 +402,9 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
-    fee = FeeAmount(5)
     amount = PaymentAmount(100)
+    fee = FeeAmount(5)
+    fee_margin = calculate_fee_margin(amount, fee)
 
     app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app1.raiden),
@@ -449,7 +450,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     msg = "App0 should have locked the amount + fee"
     lock_amount = app0_app1_channel_state.our_state.secrethashes_to_lockedlocks[secrethash].amount
-    assert lock_amount == amount + fee, msg
+    assert lock_amount == amount + fee + fee_margin, msg
 
     secret_request_received.wait()
 

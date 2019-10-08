@@ -29,6 +29,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
     SendRefundTransfer,
 )
+from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
@@ -63,7 +64,8 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
 
     refund_amount = deposit // 2
     refund_fees = calculate_fee_for_amount(refund_amount)
-    refund_amount_with_fees = refund_amount + refund_fees
+    fee_margin = calculate_fee_margin(refund_amount, refund_fees)
+    refund_amount_with_fees = refund_amount + refund_fees + fee_margin
     identifier = 1
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, refund_amount, app2.raiden.address, identifier
@@ -178,7 +180,9 @@ def test_refund_transfer(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(amount_refund)
+    fee = calculate_fee_for_amount(amount_refund)
+    fee_margin = calculate_fee_margin(amount_refund, fee)
+    amount_refund_with_fees = amount_refund + fee + fee_margin
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
@@ -370,7 +374,9 @@ def test_different_view_of_last_bp_during_unlock(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(50)
+    fee = calculate_fee_for_amount(amount_refund)
+    fee_margin = calculate_fee_margin(amount_refund, fee)
+    amount_refund_with_fees = amount_refund + fee + fee_margin
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app2.raiden.address, identifier_refund
     )
@@ -584,7 +590,9 @@ def test_refund_transfer_after_2nd_hop(
     # app2 -> app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    amount_refund_with_fees = amount_refund + calculate_fee_for_amount(amount_refund)
+    fee = calculate_fee_for_amount(amount_refund)
+    fee_margin = calculate_fee_margin(amount_refund, fee)
+    amount_refund_with_fees = amount_refund + fee + fee_margin
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, amount_refund, app3.raiden.address, identifier_refund
     )
