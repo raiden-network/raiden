@@ -354,6 +354,9 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
         payee_channel=payee_channel,
     )
     assume(amount_without_margin_after_fees)  # We might lack capacity for the payment
+    # Check against a reasonable allowed error (composed of an absolute and a
+    # relative part). We should go down with these values, but having it pass
+    # in all cases is more important than being picky, right now.
     assert abs(amount - amount_without_margin_after_fees) <= 3 + amount / 500
 
     # We don't handle the case where mediation fees cancel each other out exactly to zero, yet.
