@@ -44,6 +44,7 @@ T = TypeVar("T", bound="FeeScheduleState")
 @dataclass
 class FeeScheduleState(State):
     # pylint: disable=not-an-iterable
+    cap_fees: bool = True
     flat: FeeAmount = FeeAmount(0)
     proportional: ProportionalFeeAmount = ProportionalFeeAmount(0)  # as micros, e.g. 1% = 0.01e6
     imbalance_penalty: Optional[List[Tuple[TokenAmount, FeeAmount]]] = None

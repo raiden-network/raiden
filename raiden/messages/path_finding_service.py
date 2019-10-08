@@ -84,6 +84,7 @@ class PFSFeeUpdate(SignedMessage):
             (self.canonical_identifier.token_network_address, "address"),
             (self.canonical_identifier.channel_identifier, "uint256"),
             (self.updating_participant, "address"),
+            (self.fee_schedule.cap_fees, "bool"),
             (self.fee_schedule.flat, "uint256"),
             (self.fee_schedule.proportional, "uint256"),
             (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
