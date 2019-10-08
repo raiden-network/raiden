@@ -1,0 +1,2 @@
+#!/bin/sh
+docker build --build-arg RAIDENVERSION=${SOURCE_BRANCH} -t $IMAGE_NAME .
