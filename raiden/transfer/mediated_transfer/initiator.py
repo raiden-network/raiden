@@ -1,4 +1,5 @@
 import random
+from math import ceil
 
 from raiden.constants import ABSENT_SECRET
 from raiden.settings import (
@@ -66,7 +67,7 @@ def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount
 
     return FeeAmount(
         int(
-            round(
+            ceil(
                 abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
                 + payment_amount * PAYMENT_AMOUNT_BASED_FEE_MARGIN
             )
