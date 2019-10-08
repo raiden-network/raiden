@@ -68,7 +68,7 @@ def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount
         int(
             round(
                 abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
-                + payment_amount * MAX_MEDIATION_FEE_PERC * PAYMENT_AMOUNT_BASED_FEE_MARGIN
+                + payment_amount * PAYMENT_AMOUNT_BASED_FEE_MARGIN
             )
         )
     )

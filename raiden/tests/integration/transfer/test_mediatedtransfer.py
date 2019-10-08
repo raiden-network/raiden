@@ -11,7 +11,6 @@ from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretReques
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.routing import get_best_routes_internal
 from raiden.settings import (
-    DEFAULT_MEDIATION_FEE_MARGIN,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
 )
@@ -507,10 +506,9 @@ def test_mediated_transfer_with_fees(
                 pending_locks1=[],
             )
 
-    fee_without_margin = FeeAmount(20)
-    fee = round(fee_without_margin * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
-
     amount = PaymentAmount(35)
+    fee_without_margin = FeeAmount(20)
+    fee = fee_without_margin + calculate_fee_margin(amount, fee_without_margin)
 
     no_fees = FeeScheduleState(flat=0, proportional=0, imbalance_penalty=None)
     cases = [
