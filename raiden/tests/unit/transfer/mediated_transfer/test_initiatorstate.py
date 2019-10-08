@@ -44,7 +44,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
+from raiden.transfer.mediated_transfer.initiator import (
+    calculate_fee_margin,
+    calculate_safe_amount_with_fee,
+)
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState, InitiatorTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -131,9 +134,10 @@ def setup_initiator_tests(
     """Commonly used setup code for initiator manager and channel"""
     prng = random.Random()
 
+    fee_margin = calculate_fee_margin(amount, allocated_fee)
     properties = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties(
-            balance=amount + allocated_fee, address=our_address
+            balance=amount + allocated_fee + fee_margin, address=our_address
         ),
         partner_state=factories.NettingChannelEndStateProperties(
             balance=partner_balance, address=partner_address
@@ -1735,9 +1739,11 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
 
     initiator_state.received_secret_request = False
 
+    # Now make the amount so small that the SecretRequest becomes invalid. We
+    # need to subtract two tokens because one is covered by the fee margin.
     state_change_2 = ReceiveSecretRequest(
         payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        amount=setup.lock.amount - fee_amount - 1,  # Now the amount becomes too small
+        amount=setup.lock.amount - fee_amount - 2,
         expiration=setup.lock.expiration,
         secrethash=setup.lock.secrethash,
         sender=UNIT_TRANSFER_TARGET,

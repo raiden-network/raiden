@@ -209,7 +209,9 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
 
     # This channel has enough balance to cover the transfer
     funded_channel = make_mediated_transfer_state_change(
-        transfer_amount=10, allocated_fee_amount=2, channel_capacity=TokenAmount(12)
+        transfer_amount=10,
+        allocated_fee_amount=1,
+        channel_capacity=TokenAmount(12),  # one more to have room for the fee margin
     )
     assert search_for_item(funded_channel.events, EventPaymentSentFailed, {}) is None
     assert search_for_item(funded_channel.events, SendLockedTransfer, {}) is not None
