@@ -92,7 +92,9 @@ def test_imbalance_penalty():
             (TokenAmount(0), FeeAmount(10)),
             (TokenAmount(50), FeeAmount(0)),
             (TokenAmount(100), FeeAmount(20)),
-        ]
+        ],
+        # Here we also test negative imbalance fees
+        cap_fees=False,
     )
 
     for x1, amount, expected_fee_payee, expected_fee_payer in [
@@ -231,18 +233,25 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
 
 
 @pytest.mark.parametrize(
-    "flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
+    "cap_fees, flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
     [
+        # No capping of the mediation fees
         # The higher the imbalance fee, the stronger the impact of the fee iteration
-        (0, 0, 10_000, 50_000, 50_000 + 2_000),
-        (0, 0, 20_000, 50_000, 50_000 + 3_995),
-        (0, 0, 30_000, 50_000, 50_000 + 5_908),
-        (0, 0, 40_000, 50_000, 50_000 + 7_600),
-        (0, 0, 50_000, 50_000, 50_000 + 9_050),
+        (False, 0, 0, 10_000, 50_000, 50_000 + 2_000),
+        (False, 0, 0, 20_000, 50_000, 50_000 + 3_995),
+        (False, 0, 0, 30_000, 50_000, 50_000 + 5_908),
+        (False, 0, 0, 40_000, 50_000, 50_000 + 7_600),
+        (False, 0, 0, 50_000, 50_000, 50_000 + 9_050),
+        # Capping of mediation fees
+        (True, 0, 0, 10_000, 50_000, 50_000),
+        (True, 0, 0, 20_000, 50_000, 50_000),
+        (True, 0, 0, 30_000, 50_000, 50_000),
+        (True, 0, 0, 40_000, 50_000, 50_000),
+        (True, 0, 0, 50_000, 50_000, 50_000),
     ],
 )
 def test_get_lock_amount_after_fees_imbalanced_channel(
-    flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
+    cap_fees, flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
 ):
     """ Tests mediation fee deduction. """
     balance = TokenAmount(100_000)
@@ -256,6 +265,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
             our_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
             partner_state=NettingChannelEndStateProperties(balance=balance),
             fee_schedule=FeeScheduleState(
+                cap_fees=cap_fees,
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
                 imbalance_penalty=imbalance_fee,
@@ -267,6 +277,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
             our_state=NettingChannelEndStateProperties(balance=balance),
             partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
             fee_schedule=FeeScheduleState(
+                cap_fees=cap_fees,
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
                 imbalance_penalty=imbalance_fee,
@@ -311,6 +322,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
             our_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
             partner_state=NettingChannelEndStateProperties(balance=balance1),
             fee_schedule=FeeScheduleState(
+                cap_fees=False,
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
                 imbalance_penalty=imbalance_fee,
@@ -322,6 +334,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
             our_state=NettingChannelEndStateProperties(balance=balance1),
             partner_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
             fee_schedule=FeeScheduleState(
+                cap_fees=False,
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
                 imbalance_penalty=imbalance_fee,
@@ -333,6 +346,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
             our_state=NettingChannelEndStateProperties(balance=balance2),
             partner_state=NettingChannelEndStateProperties(balance=total_balance - balance2),
             fee_schedule=FeeScheduleState(
+                cap_fees=False,
                 flat=FeeAmount(flat_fee),
                 proportional=prop_fee_per_channel,
                 imbalance_penalty=imbalance_fee,

@@ -59,6 +59,13 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
+    def _cap_fee(self, fee: FeeAmount) -> FeeAmount:
+        """ Caps `fee` to 0 if negative and `cap_fees` is `True`. """
+        if self.cap_fees and fee < 0:
+            return FeeAmount(0)
+
+        return fee
+
     def imbalance_fee(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
         if self._penalty_func:
             # Total channel balance - node balance = balance (used as x-axis for the penalty)
@@ -77,7 +84,7 @@ class FeeScheduleState(State):
 
         flat_fee = self.flat
         prop_fee = int(round(amount * self.proportional / 1e6))
-        return FeeAmount(flat_fee + prop_fee + imbalance_fee)
+        return self._cap_fee(FeeAmount(flat_fee + prop_fee + imbalance_fee))
 
     def fee_payee(
         self, amount: PaymentWithFeeAmount, balance: Balance, iterations: int = 2
@@ -95,7 +102,7 @@ class FeeScheduleState(State):
                 amount=PaymentWithFeeAmount(amount - fee_out(imbalance_fee)), balance=balance
             )
 
-        return fee_out(imbalance_fee)
+        return self._cap_fee(fee_out(imbalance_fee))
 
     def reversed(self: T) -> T:
         if not self.imbalance_penalty:
