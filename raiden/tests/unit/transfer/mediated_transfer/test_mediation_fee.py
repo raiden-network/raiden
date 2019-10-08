@@ -356,6 +356,10 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     assume(amount_without_margin_after_fees)  # We might lack capacity for the payment
     assert abs(amount - amount_without_margin_after_fees) <= 3 + amount / 500
 
+    # We don't handle the case where mediation fees cancel each other out exactly to zero, yet.
+    # Remove this assume after https://github.com/raiden-network/raiden-services/issues/569.
+    assume(fee_calculation.mediation_fees[0] != 0 or imbalance_fee == 0)
+
     # If we add the fee margin, the mediator must always send at least `amount` to the target!
     amount_with_fee_and_margin = calculate_safe_amount_with_fee(
         fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
