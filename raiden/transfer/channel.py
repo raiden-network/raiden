@@ -2358,6 +2358,7 @@ def update_fee_schedule_after_balance_change(
     )
 
     channel_state.fee_schedule = FeeScheduleState(
+        cap_fees=channel_state.fee_schedule.cap_fees,
         flat=channel_state.fee_schedule.flat,
         proportional=channel_state.fee_schedule.proportional,
         imbalance_penalty=imbalance_penalty,
