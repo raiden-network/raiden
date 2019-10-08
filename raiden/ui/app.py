@@ -181,6 +181,7 @@ def run_app(
     proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
+    cap_mediation_fees: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -211,6 +212,7 @@ def run_app(
         cli_token_to_flat_fee=flat_fee,
         cli_token_to_proportional_fee=proportional_fee,
         cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
+        cli_cap_mediation_fees=cap_mediation_fees,
     )
 
     config["console"] = console

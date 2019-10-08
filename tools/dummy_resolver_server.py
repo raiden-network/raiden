@@ -2,6 +2,7 @@ import json
 import logging
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
 from eth_utils import to_bytes, to_hex
 
 # The code below simulates XUD resolver functionality.

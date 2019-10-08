@@ -464,6 +464,12 @@ def options(func):
                 type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
                 multiple=True,
             ),
+            option(
+                "--cap-mediation-fees/--no-cap-mediation-fees",
+                help="Cap the mediation fees to never get negative.",
+                default=True,
+                show_default=True,
+            ),
         ),
     ]
 
