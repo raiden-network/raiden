@@ -61,7 +61,7 @@ from raiden.utils.typing import (
 def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount) -> FeeAmount:
     if estimated_fee == 0:
         # If the total fees are zero, we assume that no fees are set. If the
-        # fees sum up to zero incidentally, we're should add a margin, but we
+        # fees sum up to zero incidentally, we should add a margin, but we
         # can't detect that case.
         return FeeAmount(0)
 
