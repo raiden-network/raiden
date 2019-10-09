@@ -76,7 +76,7 @@ def fee_sender(
     imbalance_fee = imbalance_fee_sender(fee_schedule=fee_schedule, amount=amount, balance=balance)
     flat_fee = fee_schedule.flat
     prop_fee = int(round(amount * fee_schedule.proportional / 1e6))
-    return FeeAmount(flat_fee + prop_fee + imbalance_fee)
+    return fee_schedule.calculate_capped_fee(FeeAmount(flat_fee + prop_fee + imbalance_fee))
 
 
 def fee_receiver(
@@ -106,7 +106,7 @@ def fee_receiver(
             balance=balance,
         )
 
-    return fee_in(imbalance_fee=imbalance_fee)
+    return fee_schedule.calculate_capped_fee(fee_in(imbalance_fee=imbalance_fee))
 
 
 class FeesCalculation(NamedTuple):
