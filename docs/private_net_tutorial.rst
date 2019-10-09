@@ -182,9 +182,9 @@ Before we deploy the other contracts, we need a token contract for service payme
 .. code:: bash
 
  (env) $ python -m raiden_contracts.deploy token --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-supply 10000000000 --token-name ServiceToken --token-decimals 18 --token-symbol SVT --contracts-version $VERSION
-{
+ {
     "CustomToken": "0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
-}
+ }
 
 We use the address of this token to deploy service contracts.
 
