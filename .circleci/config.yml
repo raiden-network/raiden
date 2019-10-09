@@ -301,6 +301,25 @@ jobs:
           paths:
           - "~/lint-cache"
 
+  build-docs:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor:
+      name: docker
+      py-version: << parameters.py-version >>
+
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+
+      - run:
+          name: Build documentation
+          command: make docs
+
   smoketest:
     parameters:
       <<: *parameter-templates
@@ -676,6 +695,12 @@ workflows:
           requires:
             - prepare-python-linux-3.7
 
+      - build-docs:
+          name: build-docs-3.7
+          py-version: "3.7"
+          requires:
+            - prepare-python-linux-3.7
+
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
@@ -882,6 +907,12 @@ workflows:
           py-version: "3.7"
           requires:
           - prepare-python-linux-3.7
+
+      - build-docs:
+          name: build-docs-3.7
+          py-version: "3.7"
+          requires:
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
