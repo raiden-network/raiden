@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
 * :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
 
 * :release:`0.200.0-rc1 <2019-08-12>`
