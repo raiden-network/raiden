@@ -570,7 +570,7 @@ def query_paths(
         log.info(
             "Requesting paths from Pathfinding Service",
             url=pfs_config.info.url,
-            token_network_address=token_network_address,
+            token_network_address=to_checksum_address(token_network_address),
             payload=payload,
         )
 
