@@ -463,7 +463,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
 
 @raise_on_failure
-@pytest.mark.parametrize("case_no", range(7))
+@pytest.mark.parametrize("case_no", range(8))
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [4])
 def test_mediated_transfer_with_fees(
@@ -585,15 +585,26 @@ def test_mediated_transfer_with_fees(
         # for every token transferred as a reward for moving the channel into a
         # better state. This causes the target to receive more than the `amount
         # + fees` which is sent by the initiator.
-        # transferred amount is 55, so 3 token get added from imbnalance fee
+        # transferred amount is 55, so 3 token get added from imbalance fee
+        # Here we also need to disable fee capping
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(imbalance_penalty=[(0, 50), (1000, 0)]),
+                FeeScheduleState(cap_fees=False, imbalance_penalty=[(0, 50), (1000, 0)]),
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, amount + fee + 3, amount + fee + 3],
+        ),
+        # Same case as above, but with fee capping enabled
+        dict(
+            fee_schedules=[
+                no_fees,
+                FeeScheduleState(cap_fees=True, imbalance_penalty=[(0, 50), (1000, 0)]),
+                no_fees,
+            ],
+            incoming_fee_schedules=[no_fees, no_fees, no_fees],
+            expected_transferred_amounts=[amount + fee, amount + fee, amount + fee],
         ),
     ]
 
