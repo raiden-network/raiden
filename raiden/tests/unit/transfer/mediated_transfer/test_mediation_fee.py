@@ -92,19 +92,26 @@ def test_imbalance_penalty():
             (TokenAmount(0), FeeAmount(10)),
             (TokenAmount(50), FeeAmount(0)),
             (TokenAmount(100), FeeAmount(20)),
-        ],
-        # Here we also test negative imbalance fees
-        cap_fees=False,
+        ]
     )
 
-    for x1, amount, expected_fee_payee, expected_fee_payer in [
-        (0, 50, -6, 10),
-        (50, 50, 12, -20),
-        (0, 10, -2, 2),
-        (10, 10, -2, 2),
-        (0, 20, -5, 4),
-        (40, 15, 0, 0),
+    for cap_fees, x1, amount, expected_fee_payee, expected_fee_payer in [
+        # Uncapped fees
+        (False, 0, 50, -6, 10),
+        (False, 50, 50, 12, -20),
+        (False, 0, 10, -2, 2),
+        (False, 10, 10, -2, 2),
+        (False, 0, 20, -5, 4),
+        (False, 40, 15, 0, 0),
+        # Capped fees
+        (True, 0, 50, 0, 10),
+        (True, 50, 50, 12, 0),
+        (True, 0, 10, 0, 2),
+        (True, 10, 10, 0, 2),
+        (True, 0, 20, 0, 4),
+        (True, 40, 15, 0, 0),
     ]:
+        v_schedule.cap_fees = cap_fees
         x2 = x1 + amount
         assert v_schedule.fee_payee(
             balance=Balance(100 - x1), amount=PaymentWithFeeAmount(amount)
