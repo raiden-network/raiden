@@ -4,7 +4,7 @@ import traceback
 from copy import deepcopy
 from datetime import datetime
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import click
 import gevent
@@ -100,7 +100,9 @@ class NodeRunner:
             click.secho(str(e), fg="red")
             sys.exit(1)
 
-        tasks = [app_.raiden]  # RaidenService takes care of Transport and AlarmTask
+        tasks: List[Runnable] = [
+            app_.raiden
+        ]  # RaidenService takes care of Transport and AlarmTask
 
         domain_list = []
         if self._options["rpccorsdomain"]:

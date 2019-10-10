@@ -1,6 +1,7 @@
 import json
 import sys
 from itertools import count
+from typing import Any
 
 import gevent
 import pkg_resources
@@ -14,7 +15,7 @@ from raiden.network.rpc.client import JSONRPCClient
 
 
 def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
-    def get_result():
+    def get_result() -> Any:
         response = requests.get(
             url,
             headers={

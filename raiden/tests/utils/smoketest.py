@@ -49,6 +49,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     Any,
+    BlockNumber,
     Callable,
     ChainID,
     Dict,
@@ -375,7 +376,7 @@ def run_smoketest(
         api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
         api_server.start()
 
-        block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
         # prerequisite checks. Wait a bit here to make sure that the confirmed
         # block hash contains the deployed token network or else things break

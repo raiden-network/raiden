@@ -1,5 +1,6 @@
 import inspect
 from enum import Enum
+from typing import Any, Dict
 
 import pytoml
 from eth_utils import to_hex
@@ -7,7 +8,7 @@ from eth_utils import to_hex
 builtin_types = (int, str, bool, tuple)
 
 
-def _clean_non_serializables(data):
+def _clean_non_serializables(data: Dict) -> Dict:
     copy = {}
     for key, value in data.items():
         if callable(value):
@@ -41,17 +42,17 @@ def _clean_non_serializables(data):
     return copy
 
 
-def dump_config(config):
+def dump_config(config: Dict) -> None:
     print(pytoml.dumps({"configs": _clean_non_serializables(config)}))
     print()
 
 
-def dump_cmd_options(options):
+def dump_cmd_options(options: Dict) -> None:
     print(pytoml.dumps({"options": _clean_non_serializables(options)}))
     print()
 
 
-def dump_module(header, module):
+def dump_module(header: str, module: Any) -> None:
     attribs = dict()
     for name, value in inspect.getmembers(module):
         if name.isupper():
