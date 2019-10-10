@@ -10,6 +10,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
+from raiden.app import App
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     MONITORING_BROADCASTING_ROOM,
@@ -76,7 +77,7 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config: Dict, routing_mode: RoutingMode):
+def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTransport:
     if config["transport"]["matrix"].get("available_servers") is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
@@ -183,9 +184,8 @@ def run_app(
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
-):
+) -> App:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
-    from raiden.app import App
 
     token_network_registry_deployed_at: Optional[BlockNumber]
     smart_contracts_start_at: BlockNumber
