@@ -10,7 +10,11 @@ from raiden.storage.serialization.fields import (
 )
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SerializedSQLiteStorage
 from raiden.tests.utils import factories
-from raiden.transfer.events import SendWithdrawRequest
+from raiden.transfer.events import (
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.state_change import ActionInitChain
 
@@ -89,3 +93,52 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
 
     stored_events = storage.get_events()
     assert stored_events[0] == event
+
+
+def test_restore_queueids_to_queues(chain_state, netting_channel_state):
+    """ Test that withdraw messages are restorable if they exist in
+    chain_state.queueids_to_queues.
+    """
+    recipient = netting_channel_state.partner_state.address
+
+    queue_identifier = QueueIdentifier(
+        recipient=recipient, canonical_identifier=netting_channel_state.canonical_identifier
+    )
+
+    messages = [
+        SendWithdrawRequest(
+            recipient=recipient,
+            canonical_identifier=netting_channel_state.canonical_identifier,
+            message_identifier=factories.make_message_identifier(),
+            total_withdraw=1,
+            participant=recipient,
+            expiration=10,
+            nonce=15,
+        ),
+        SendWithdrawConfirmation(
+            recipient=recipient,
+            canonical_identifier=netting_channel_state.canonical_identifier,
+            message_identifier=factories.make_message_identifier(),
+            total_withdraw=1,
+            participant=recipient,
+            expiration=10,
+            nonce=15,
+        ),
+        SendWithdrawExpired(
+            recipient=recipient,
+            canonical_identifier=netting_channel_state.canonical_identifier,
+            message_identifier=factories.make_message_identifier(),
+            total_withdraw=1,
+            participant=recipient,
+            expiration=10,
+            nonce=15,
+        ),
+    ]
+
+    chain_state.queueids_to_queues[queue_identifier] = messages
+
+    serialized_chain_state = JSONSerializer.serialize(chain_state)
+
+    deserialized_chain_state = JSONSerializer.deserialize(serialized_chain_state)
+
+    assert chain_state == deserialized_chain_state
