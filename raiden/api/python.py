@@ -608,7 +608,7 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
         total_deposit: TokenAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> None:
         """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
