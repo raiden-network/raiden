@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
 * :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
 * :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
 
