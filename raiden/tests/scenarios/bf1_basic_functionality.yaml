@@ -47,9 +47,9 @@ nodes:
     2:
       matrix-server: https://transport03.raiden.network
     3:
-      matrix-server: https://transport01.raiden.network
+      matrix-server: https://transport04.raiden.network
     4:
-      matrix-server: https://transport02.raiden.network
+      matrix-server: https://transport01.raiden.network
 
 scenario:
   serial:
