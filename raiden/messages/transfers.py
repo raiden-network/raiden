@@ -343,7 +343,6 @@ class LockedTransferBase(EnvelopeMessage):
     lock: Lock
     target: TargetAddress
     initiator: InitiatorAddress
-    fee: int
     metadata: Metadata
 
     def __post_init__(self):
@@ -355,9 +354,6 @@ class LockedTransferBase(EnvelopeMessage):
 
         if len(self.initiator) != 20:
             raise ValueError("initiator is an invalid address")
-
-        if self.fee > UINT256_MAX:
-            raise ValueError("fee is too large")
 
     @overload
     @classmethod
@@ -380,7 +376,6 @@ class LockedTransferBase(EnvelopeMessage):
             expiration=transfer.lock.expiration,
             secrethash=transfer.lock.secrethash,
         )
-        fee = 0
 
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -398,7 +393,6 @@ class LockedTransferBase(EnvelopeMessage):
             lock=lock,
             target=transfer.target,
             initiator=transfer.initiator,
-            fee=fee,
             signature=EMPTY_SIGNATURE,
             metadata=Metadata(
                 routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
@@ -417,7 +411,6 @@ class LockedTransferBase(EnvelopeMessage):
             (self.initiator, "address"),
             (self.lock.secrethash, "bytes32"),
             (self.lock.amount, "uint256"),
-            (self.fee, "uint256"),
         )
 
 

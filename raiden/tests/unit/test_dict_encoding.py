@@ -13,14 +13,12 @@ signer = LocalSigner(PRIVKEY)
 @pytest.mark.parametrize("payment_identifier", [0, UINT64_MAX])
 @pytest.mark.parametrize("nonce", [1, UINT64_MAX])
 @pytest.mark.parametrize("transferred_amount", [0, UINT256_MAX])
-@pytest.mark.parametrize("fee", [0, UINT256_MAX])
-def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, transferred_amount):
+def test_mediated_transfer_min_max(amount, payment_identifier, nonce, transferred_amount):
     mediated_transfer = factories.create(
         factories.LockedTransferProperties(
             amount=amount,
             payment_identifier=payment_identifier,
             nonce=nonce,
-            fee=fee,
             transferred_amount=transferred_amount,
         )
     )

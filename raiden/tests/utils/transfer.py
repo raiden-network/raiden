@@ -978,7 +978,6 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
-        fee=0,
         metadata=transfer_metadata,
     )
     mediated_transfer_msg.sign(signer)
