@@ -1,5 +1,5 @@
 from hashlib import sha256
-from typing import List
+from typing import List, cast
 from unittest.mock import patch
 
 import pytest
@@ -32,8 +32,20 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.utils import sha3
-from raiden.utils.typing import BlockNumber, FeeAmount, PaymentAmount, PaymentID, TokenAmount
+from raiden.utils.typing import (
+    BlockExpiration,
+    BlockNumber,
+    FeeAmount,
+    PaymentAmount,
+    PaymentID,
+    ProportionalFeeAmount,
+    Secret,
+    SecretHash,
+    TargetAddress,
+    TokenAmount,
+)
 from raiden.waiting import wait_for_block
 
 
@@ -51,13 +63,13 @@ def test_mediated_transfer(
         chain_state, token_network_registry_address, token_address
     )
 
-    amount = 10
+    amount = PaymentAmount(10)
     secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
         token_address=token_address,
         amount=amount,
-        identifier=1,
+        identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
     )
 
@@ -99,10 +111,10 @@ def test_locked_transfer_secret_registered_onchain(
         chain_state, token_network_registry_address, token_address
     )
 
-    amount = 1
+    amount = TokenAmount(1)
     target = factories.UNIT_TRANSFER_INITIATOR
-    identifier = 1
-    transfer_secret = sha3(target + b"1")
+    identifier = PaymentID(1)
+    transfer_secret = Secret(sha3(target + b"1"))
 
     secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(secret_registry_address)
     secret_registry_proxy.register_secret(secret=transfer_secret)
@@ -126,7 +138,7 @@ def test_locked_transfer_secret_registered_onchain(
         )
 
     # Test that receiving a transfer with a secret already registered on chain fails
-    expiration = 9999
+    expiration = BlockExpiration(9999)
     locked_transfer = factories.create(
         factories.LockedTransferProperties(
             amount=amount,
@@ -160,13 +172,13 @@ def test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
-    fee1 = int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC)
+    fee1 = FeeAmount(int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
     fee_margin1 = calculate_fee_margin(deposit, fee1)
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
         amount=deposit - fee1 - fee_margin1,
-        identifier=1,
+        identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
     )
 
@@ -194,14 +206,14 @@ def test_mediated_transfer_with_entire_deposit(
         )
 
     app2_capacity = 2 * deposit - fee1
-    fee2 = int(round(app2_capacity * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
+    fee2 = FeeAmount(int(round(app2_capacity * INTERNAL_ROUTING_DEFAULT_FEE_PERC)))
     fee_margin2 = calculate_fee_margin(app2_capacity, fee2)
     reverse_path = list(raiden_network[::-1])
     transfer_and_assert_path(
         path=reverse_path,
         token_address=token_address,
         amount=app2_capacity - fee2 - fee_margin2,
-        identifier=2,
+        identifier=PaymentID(2),
         timeout=network_wait * number_of_nodes,
     )
 
@@ -246,7 +258,7 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
     app2.raiden.message_handler = app2_wait_for_message
 
     secret = factories.make_secret(0)
-    secrethash = sha256(secret).digest()
+    secrethash = SecretHash(sha256(secret).digest())
 
     # Save the messages, these will be processed again
     app1_mediatedtransfer = app1_wait_for_message.wait_for_message(
@@ -370,7 +382,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             factories.LockedTransferProperties(
                 amount=TokenAmount(5),
                 initiator=factories.HOP1,
-                target=factories.HOP2,
+                target=TargetAddress(factories.HOP2),
                 sender=factories.HOP1,
                 pkey=factories.HOP1_KEY,
                 token=token_address,
@@ -402,6 +414,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
     amount = PaymentAmount(100)
     fee = FeeAmount(5)
     fee_margin = calculate_fee_margin(amount, fee)
@@ -411,12 +424,13 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         token_network_address=token_network_address,
         partner_address=app2.raiden.address,
     )
+    assert app1_app2_channel_state
 
     # Let app1 consume all of the allocated mediation fee
     app1_app2_channel_state.fee_schedule = FeeScheduleState(flat=FeeAmount(fee * 2))
 
     secret = factories.make_secret(0)
-    secrethash = sha256(secret).digest()
+    secrethash = SecretHash(sha256(secret).digest())
 
     wait_message_handler = WaitForMessage()
     app0.raiden.message_handler = wait_message_handler
@@ -444,6 +458,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         token_network_address=token_network_address,
         partner_address=app1.raiden.address,
     )
+    assert app0_app1_channel_state
 
     msg = "App0 should have the transfer in secrethashes_to_lockedlocks"
     assert secrethash in app0_app1_channel_state.our_state.secrethashes_to_lockedlocks, msg
@@ -455,7 +470,9 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     secret_request_received.wait()
 
     app0_chain_state = views.state_from_app(app0)
-    initiator_task = app0_chain_state.payment_mapping.secrethashes_to_task[secrethash]
+    initiator_task = cast(
+        InitiatorTask, app0_chain_state.payment_mapping.secrethashes_to_task[secrethash]
+    )
 
     msg = "App0 should have never revealed the secret"
     transfer_state = initiator_task.manager_state.initiator_transfers[secrethash].transfer_state
@@ -479,9 +496,10 @@ def test_mediated_transfer_with_fees(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
 
     def set_fee_schedule(app: App, other_app: App, fee_schedule: FeeScheduleState):
-        channel_state = views.get_channelstate_by_token_network_and_partner(
+        channel_state = views.get_channelstate_by_token_network_and_partner(  # type: ignore
             chain_state=views.state_from_raiden(app.raiden),
             token_network_address=token_network_address,
             partner_address=other_app.raiden.address,
@@ -497,7 +515,7 @@ def test_mediated_transfer_with_fees(
 
     def assert_balances(expected_transferred_amounts=List[int]):
         for i, transferred_amount in enumerate(expected_transferred_amounts):
-            assert_synced_channel_state(
+            assert_synced_channel_state(  # type: ignore
                 token_network_address=token_network_address,
                 app0=apps[i],
                 balance0=deposit - transferred_amount,
@@ -509,9 +527,11 @@ def test_mediated_transfer_with_fees(
 
     amount = PaymentAmount(35)
     fee_without_margin = FeeAmount(20)
-    fee = fee_without_margin + calculate_fee_margin(amount, fee_without_margin)
+    fee = FeeAmount(fee_without_margin + calculate_fee_margin(amount, fee_without_margin))
 
-    no_fees = FeeScheduleState(flat=0, proportional=0, imbalance_penalty=None)
+    no_fees = FeeScheduleState(
+        flat=FeeAmount(0), proportional=ProportionalFeeAmount(0), imbalance_penalty=None
+    )
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
         # result, the target receives the fee.
@@ -528,7 +548,11 @@ def test_mediated_transfer_with_fees(
         ),
         # The first mediator has a proportional fee of 20%
         dict(
-            fee_schedules=[no_fees, FeeScheduleState(proportional=0.20e6), no_fees],
+            fee_schedules=[
+                no_fees,
+                FeeScheduleState(proportional=ProportionalFeeAmount(int(0.20e6))),
+                no_fees,
+            ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
                 amount + fee,
@@ -540,8 +564,8 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(proportional=0.20e6),
-                FeeScheduleState(proportional=0.20e6),
+                FeeScheduleState(proportional=ProportionalFeeAmount(int(0.20e6))),
+                FeeScheduleState(proportional=ProportionalFeeAmount(int(0.20e6))),
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
             expected_transferred_amounts=[
@@ -556,7 +580,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),
+                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),  # type: ignore
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
@@ -571,7 +595,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[no_fees, no_fees, no_fees],
             incoming_fee_schedules=[
-                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),
+                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),  # type: ignore
                 None,
                 None,
             ],
@@ -590,7 +614,9 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(cap_fees=False, imbalance_penalty=[(0, 50), (1000, 0)]),
+                FeeScheduleState(
+                    cap_fees=False, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                ),
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
@@ -600,7 +626,9 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(cap_fees=True, imbalance_penalty=[(0, 50), (1000, 0)]),
+                FeeScheduleState(
+                    cap_fees=True, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                ),
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],

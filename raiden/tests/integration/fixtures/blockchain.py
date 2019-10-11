@@ -37,9 +37,7 @@ def web3(
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
-    keys_to_fund = set(private_keys)
-    keys_to_fund.add(deploy_key)
-    keys_to_fund = sorted(keys_to_fund)
+    keys_to_fund = sorted(set(private_keys + [deploy_key]))
 
     if blockchain_type not in {client.value for client in EthClient}:
         raise ValueError(f"unknown blockchain_type {blockchain_type}")
