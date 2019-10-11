@@ -237,7 +237,7 @@ def _fee_for_payer_channel(
 
 
 def _fee_for_payee_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
+    channel: NettingChannelState, amount: PaymentWithFeeAmount, fee_payer: FeeAmount
 ) -> Optional[FeeAmount]:
     """ Fee deducted by the mediator for an outgoing channel.
 
@@ -246,9 +246,9 @@ def _fee_for_payee_channel(
     after all).
     """
     balance = get_balance(channel.our_state, channel.partner_state)
-
+    # TODO inline
     try:
-        return channel.fee_schedule.fee_payee(amount=amount, balance=balance)
+        return channel.fee_schedule.fee_payee(amount=amount, balance=balance, fee_payer=fee_payer)
     except UndefinedMediationFee:
         return None
 
@@ -262,14 +262,17 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
+    fee_in = _fee_for_payer_channel(channel=payer_channel, amount=lock.amount)
     if fee_in is None:
         return None
-    fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
+    fee_out = _fee_for_payee_channel(
+        channel=payee_channel, amount=PaymentWithFeeAmount(lock.amount - fee_in), fee_payer=fee_in
+    )
     if fee_out is None:
         return None
 
-    amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
+    total_capped_fee = payer_channel.fee_schedule.calculate_capped_fee(fee_in + fee_out)
+    amount_after_fees = PaymentWithFeeAmount(lock.amount - total_capped_fee)
 
     if amount_after_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.

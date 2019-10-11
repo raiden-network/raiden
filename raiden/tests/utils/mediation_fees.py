@@ -83,12 +83,13 @@ def fee_receiver(
     fee_schedule: FeeScheduleState,
     balance: Balance,
     amount: PaymentWithFeeAmount,
+    fee_sender: FeeAmount,
     iterations: int = 2,
 ) -> FeeAmount:
     """Returns the mediation fee for this channel when receiving the given amount"""
 
     def fee_in(imbalance_fee: FeeAmount) -> FeeAmount:
-        return FeeAmount(
+        return fee_schedule.calculate_capped_fee(FeeAmount(
             round(
                 (
                     (amount + fee_schedule.flat + imbalance_fee)
@@ -96,17 +97,21 @@ def fee_receiver(
                 )
                 - amount
             )
-        )
+            # + fee_sender
+        ))
 
     imbalance_fee = FeeAmount(0)
     for _ in range(iterations):
         imbalance_fee = imbalance_fee_receiver(
             fee_schedule=fee_schedule,
-            amount=PaymentWithFeeAmount(amount + fee_in(imbalance_fee=imbalance_fee)),
+            amount=PaymentWithFeeAmount(
+                amount
+                + fee_schedule.calculate_capped_fee(fee_in(imbalance_fee=imbalance_fee))
+            ),
             balance=balance,
         )
 
-    return fee_schedule.calculate_capped_fee(fee_in(imbalance_fee=imbalance_fee))
+    return fee_in(imbalance_fee=imbalance_fee) - fee_sender
 
 
 class FeesCalculation(NamedTuple):
@@ -146,12 +151,16 @@ def get_initial_payment_for_final_target_amount(
             balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
             fee_out = fee_sender(fee_schedule=fee_schedule_out, balance=balance_out, amount=total)
 
-            total += fee_out  # type: ignore
+            # total += fee_out  # type: ignore
 
             balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
-            fee_in = fee_receiver(fee_schedule=fee_schedule_in, balance=balance_in, amount=total)
+            fee_in = fee_receiver(
+                fee_schedule=fee_schedule_in, balance=balance_in, amount=total + fee_out, fee_sender=fee_out
+            )
 
-            total += fee_in  # type: ignore
+            total_capped_fee = fee_schedule_in.calculate_capped_fee(fee_in + fee_out)
+
+            total += total_capped_fee  # type: ignore
 
             fees.append(FeeAmount(fee_out + fee_in))
     except UndefinedMediationFee:

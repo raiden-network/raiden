@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, given, example
 from hypothesis.strategies import integers
 
 from raiden.exceptions import UndefinedMediationFee
@@ -96,32 +96,26 @@ def test_imbalance_penalty():
     )
 
     for cap_fees, x1, amount, expected_fee_payee, expected_fee_payer in [
-        # Uncapped fees
         (False, 0, 50, -6, 10),
         (False, 50, 50, 12, -20),
         (False, 0, 10, -2, 2),
         (False, 10, 10, -2, 2),
         (False, 0, 20, -5, 4),
         (False, 40, 15, 0, 0),
-        # Capped fees
-        (True, 0, 50, 0, 10),
-        (True, 50, 50, 12, 0),
-        (True, 0, 10, 0, 2),
-        (True, 10, 10, 0, 2),
-        (True, 0, 20, 0, 4),
-        (True, 40, 15, 0, 0),
     ]:
         v_schedule.cap_fees = cap_fees
         x2 = x1 + amount
         assert v_schedule.fee_payee(
-            balance=Balance(100 - x1), amount=PaymentWithFeeAmount(amount)
+            balance=Balance(100 - x1), amount=PaymentWithFeeAmount(amount), fee_payer=FeeAmount(0)
         ) == FeeAmount(expected_fee_payee)
         assert v_schedule.fee_payer(
             balance=Balance(100 - x2), amount=PaymentWithFeeAmount(amount)
         ) == FeeAmount(expected_fee_payer)
 
     with pytest.raises(UndefinedMediationFee):
-        v_schedule.fee_payee(balance=Balance(0), amount=PaymentWithFeeAmount(1))
+        v_schedule.fee_payee(
+            balance=Balance(0), amount=PaymentWithFeeAmount(1), fee_payer=FeeAmount(0)
+        )
     with pytest.raises(UndefinedMediationFee):
         v_schedule.fee_payer(balance=Balance(100), amount=PaymentWithFeeAmount(1))
 
@@ -245,10 +239,10 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
         # No capping of the mediation fees
         # The higher the imbalance fee, the stronger the impact of the fee iteration
         (False, 0, 0, 10_000, 50_000, 50_000 + 2_000),
-        (False, 0, 0, 20_000, 50_000, 50_000 + 3_995),
-        (False, 0, 0, 30_000, 50_000, 50_000 + 5_908),
-        (False, 0, 0, 40_000, 50_000, 50_000 + 7_600),
-        (False, 0, 0, 50_000, 50_000, 50_000 + 9_050),
+        (False, 0, 0, 20_000, 50_000, 50_000 + 3_988),
+        (False, 0, 0, 30_000, 50_000, 50_000 + 5_826),
+        (False, 0, 0, 40_000, 50_000, 50_000 + 7_353),
+        (False, 0, 0, 50_000, 50_000, 50_000 + 8_600),
         # Capping of mediation fees
         (True, 0, 0, 10_000, 50_000, 50_000),
         (True, 0, 0, 20_000, 50_000, 50_000),
@@ -306,6 +300,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     integers(min_value=1, max_value=100_000),
     integers(min_value=1, max_value=100_000),
 )
+@example(0, 0, 27558, 48, 52, 70048)
 def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ Tests mediation fee deduction.
 
@@ -395,3 +390,55 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     )
     assume(amount_with_margin_after_fees)  # We might lack capacity to add margins
     assert amount_with_margin_after_fees >= amount
+
+
+@pytest.mark.parametrize(
+    "cap_fees, flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount",
+    [
+        # Capping of mediation fees
+        (True, 0, 0, 10_000, 50_000, 50_000),
+        (True, 0, 0, 20_000, 50_000, 50_000),
+        (True, 0, 0, 30_000, 50_000, 50_000),
+        (True, 0, 0, 40_000, 50_000, 50_000),
+        (True, 0, 0, 50_000, 50_000, 50_000),
+    ],
+)
+def test_get_lock_amount_after_fees_capping(
+    cap_fees, flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
+):
+    """ Tests mediation fee deduction. """
+    balance = TokenAmount(100_000)
+    prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
+    imbalance_fee1 = [(0, 1_000), (2 * balance, 0)]
+    imbalance_fee2 = [(0, 0), (2 * balance, 1_000)]
+    imbalance_fee23 = [(0, 0), (2 * balance, 500)]
+    lock = make_hash_time_lock_state(amount=initial_amount)
+    payer_channel = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance),
+            partner_state=NettingChannelEndStateProperties(balance=balance),
+            fee_schedule=FeeScheduleState(
+                cap_fees=cap_fees,
+                flat=FeeAmount(flat_fee),
+                proportional=prop_fee_per_channel,
+                imbalance_penalty=imbalance_fee2,
+            ),
+        )
+    )
+    payee_channel = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance),
+            partner_state=NettingChannelEndStateProperties(balance=balance),
+            fee_schedule=FeeScheduleState(
+                cap_fees=cap_fees,
+                flat=FeeAmount(flat_fee),
+                proportional=prop_fee_per_channel,
+                imbalance_penalty=imbalance_fee23,
+            ),
+        )
+    )
+
+    locked_after_fees = get_lock_amount_after_fees(
+        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+    )
+    assert locked_after_fees == expected_amount
