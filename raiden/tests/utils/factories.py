@@ -822,7 +822,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     sender = params.pop("sender")
     if params["locksroot"] == LOCKSROOT_OF_NO_LOCKS:
         params["locksroot"] = keccak(lock.as_bytes)
-    params["fee"] = 0
 
     # Dancing with parameters for different LockedState and LockedTransfer classes
     routes = params.pop("routes")
@@ -864,7 +863,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
 
 @dataclass(frozen=True)
 class LockedTransferProperties(LockedTransferSignedStateProperties):
-    fee: FeeAmount = EMPTY
     metadata: Metadata = EMPTY
     TARGET_TYPE = LockedTransfer
 
@@ -872,7 +870,6 @@ class LockedTransferProperties(LockedTransferSignedStateProperties):
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
     **replace(LockedTransferSignedStateProperties.DEFAULTS, locksroot=GENERATE).__dict__,
     metadata=GENERATE,
-    fee=0,
 )
 
 

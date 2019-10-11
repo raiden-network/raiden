@@ -111,7 +111,6 @@ def test_receive_lockedtransfer_invalidnonce(
         lock=Lock(amount=amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
         target=app2.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(
             routes=[RouteMetadata(route=[app1.raiden.address, app2.raiden.address])]
@@ -164,7 +163,6 @@ def test_receive_lockedtransfer_invalidsender(
         lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
         target=app0.raiden.address,
         initiator=other_address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app0.raiden.address])]),
     )
@@ -206,7 +204,6 @@ def test_receive_lockedtransfer_invalidrecipient(
         lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )
@@ -256,7 +253,6 @@ def test_received_lockedtransfer_closedchannel(
         lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )

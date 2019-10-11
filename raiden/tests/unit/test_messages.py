@@ -312,7 +312,6 @@ def invalid_values():
             "transferred_amount": [-1, UINT256_MAX + 1],
             "target": invalid_addresses,
             "initiator": invalid_addresses,
-            "fee": [UINT256_MAX + 1],
         }
     )
 

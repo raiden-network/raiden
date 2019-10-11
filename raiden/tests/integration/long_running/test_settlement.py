@@ -766,7 +766,6 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,

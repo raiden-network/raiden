@@ -153,7 +153,6 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=transferred_amount,
         locked_amount=lock_amount,
-        fee=0,
         recipient=app1.raiden.address,
         locksroot=keccak(lock.as_bytes),
         lock=lock,
