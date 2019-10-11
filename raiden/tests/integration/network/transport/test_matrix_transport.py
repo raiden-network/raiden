@@ -16,7 +16,7 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages.matrix import ToDevice
+from raiden.messages.matrix import PresenceNotification
 from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
@@ -1090,7 +1090,6 @@ def test_send_to_device(matrix_transports):
 
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
-    transport1._receive_to_device = MagicMock()
 
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
@@ -1098,13 +1097,9 @@ def test_send_to_device(matrix_transports):
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
-    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
+    message = PresenceNotification(
+        message_identifier=1, user_presence=2, signature=EMPTY_SIGNATURE
+    )
     transport0._raiden_service.sign(message)
-    transport0.send_to_device(raiden_service1.address, message)
-
-    transport1._receive_to_device.assert_not_called()
-    message = ToDevice(message_identifier=1, signature=EMPTY_SIGNATURE)
-    transport0._raiden_service.sign(message)
-    transport0.send_to_device(raiden_service1.address, message)
-    with gevent.Timeout(2):
-        wait_assert(transport1._receive_to_device.assert_called)
+    transport0.send_presence_notification_to_all_known_peers(message)
+    gevent.sleep(2)

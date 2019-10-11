@@ -23,7 +23,7 @@ from raiden.messages.abstract import (
     SignedRetrieableMessage,
 )
 from raiden.messages.healthcheck import Ping, Pong
-from raiden.messages.matrix import ToDevice
+from raiden.messages.matrix import PresenceNotification
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
@@ -334,7 +334,7 @@ class MatrixTransport(Runnable):
         )
 
         self._client.add_invite_listener(self._handle_invite)
-        self._client.add_listener(self._handle_to_device_message, event_type="to_device")
+        self._client.add_listener(self._handle_presence_notification, event_type="to_device")
 
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
@@ -902,12 +902,12 @@ class MatrixTransport(Runnable):
             retrier.enqueue_global(delivered_message)
             self._raiden_service.on_message(message)
 
-    def _receive_to_device(self, to_device: ToDevice):
-        assert to_device.sender is not None, MYPY_ANNOTATION
+    def _receive_to_device(self, presence_notification: PresenceNotification):
+        assert presence_notification.sender is not None, MYPY_ANNOTATION
         self.log.debug(
-            "ToDevice message received",
-            sender=to_checksum_address(to_device.sender),
-            message=to_device,
+            "PresenceNotification message received",
+            sender=to_checksum_address(presence_notification.sender),
+            message=PresenceNotification,
         )
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
@@ -1267,15 +1267,13 @@ class MatrixTransport(Runnable):
         )
         return
 
-    def send_to_device(self, address: Address, message: Message) -> None:
-        """ Sends send-to-device events to a all known devices of a peer without retries. """
-        user_ids = self._address_mgr.get_userids_for_address(address)
+    def send_presence_notification_to_all_known_peers(self, message) -> None:
+        for address in self._address_mgr.known_addresses:
+            user_ids = self._address_mgr.get_userids_for_address(address)
+            data = {user_id: {"*": MessageSerializer.serialize(message)} for user_id in user_ids}
+            self._client.api.send_to_device("m.presence_notification", data)
 
-        data = {user_id: {"*": MessageSerializer.serialize(message)} for user_id in user_ids}
-
-        return self._client.api.send_to_device("m.to_device_message", data)
-
-    def _handle_to_device_message(self, event):
+    def _handle_presence_notification(self, event):
         """
         Handles to_device_message sent to us.
         - validates peer_whitelisted
@@ -1285,13 +1283,12 @@ class MatrixTransport(Runnable):
         sender_id = event["sender"]
 
         if (
-            event["type"] != "m.to_device_message"
+            event["type"] != "m.presence_notification"
             or self._stop_event.ready()
             or sender_id == self._user_id
         ):
             # Ignore non-messages and our own messages
             return False
-
         user = self._get_user(sender_id)
         peer_address = validate_userid_signature(user)
         if not peer_address:
@@ -1329,18 +1326,18 @@ class MatrixTransport(Runnable):
             return False
 
         self.log.debug(
-            "Incoming ToDevice Messages",
+            "Incoming PresenceNotification Messages",
             messages=messages,
             sender=to_checksum_address(peer_address),
             sender_user=user,
         )
 
         for message in messages:
-            if isinstance(message, ToDevice):
+            if isinstance(message, PresenceNotification):
                 self._receive_to_device(message)
             else:
                 log.warning(
-                    "Received Message is not of type ToDevice, invalid",
+                    "Received Message is not of type PresenceNotification, invalid",
                     message=message,
                     peer_address=to_checksum_address(peer_address),
                 )
