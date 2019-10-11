@@ -781,8 +781,8 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
     payment_identifier: PaymentID = EMPTY
     token: TokenAddress = EMPTY
     secret: Secret = EMPTY
-    sender: Address = EMPTY
-    recipient: Address = EMPTY
+    sender: InitiatorAddress = EMPTY
+    recipient: TargetAddress = EMPTY
     pkey: bytes = EMPTY
     message_identifier: MessageID = EMPTY
     routes: List[List[Address]] = EMPTY
