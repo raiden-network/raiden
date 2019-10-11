@@ -52,7 +52,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
-    FeeAmount,
     List,
     LockType,
     NodeNetworkStateMap,
@@ -222,63 +221,71 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def _fee_for_payer_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an incoming channel.
+def calculate_fees(
+    incoming_amount: PaymentWithFeeAmount,
+    estimated_outgoing_amount: PaymentWithFeeAmount,
+    payer_channel: NettingChannelState,
+    payee_channel: NettingChannelState,
+) -> Optional[PaymentWithFeeAmount]:
+    fee_schedule_in = payer_channel.fee_schedule
+    fee_schedule_out = payee_channel.fee_schedule
+    balance_in = get_balance(payer_channel.our_state, payer_channel.partner_state)
+    balance_out = get_balance(payee_channel.our_state, payee_channel.partner_state)
 
-    The `amount` is the total incoming amount without any fees deducted.
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
+    flat_fee_in = fee_schedule_in.flat
+    flat_fee_out = fee_schedule_out.flat
+
+    proportional_fee_in = int(round(incoming_amount * fee_schedule_in.proportional / 1e6))
+    proportional_fee_out = int(round(estimated_outgoing_amount * fee_schedule_out.proportional / 1e6))
+
     try:
-        return channel.fee_schedule.fee_payer(amount, balance)
+        imbalance_fee_in = fee_schedule_in.imbalance_fee(
+            amount=PaymentWithFeeAmount(-incoming_amount), balance=balance_in
+        )
+        imbalance_fee_out = fee_schedule_out.imbalance_fee(
+            amount=estimated_outgoing_amount, balance=balance_out
+        )
     except UndefinedMediationFee:
         return None
 
+    total_fees = (
+        flat_fee_in
+        + flat_fee_out
+        + proportional_fee_in
+        + proportional_fee_out
+        + imbalance_fee_in
+        + imbalance_fee_out
+    )
 
-def _fee_for_payee_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount, fee_payer: FeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an outgoing channel.
+    # FIXME: this doesn't belong to fee schedule
+    if fee_schedule_in.cap_fees:
+        total_fees = max(0, total_fees)
 
-    The `amount` is the incoming amount where the incoming fee is already
-    deducted, but the outgoing fee isn't (that's what this function does,
-    after all).
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
-    # TODO inline
-    try:
-        return channel.fee_schedule.fee_payee(amount=amount, balance=balance, fee_payer=fee_payer)
-    except UndefinedMediationFee:
-        return None
-
+    return PaymentWithFeeAmount(incoming_amount - total_fees)
 
 def get_lock_amount_after_fees(
-    lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
+    incoming_amount: PaymentWithFeeAmount,
+    payer_channel: NettingChannelState,
+    payee_channel: NettingChannelState,
+    iterations: int = 2
 ) -> Optional[PaymentWithFeeAmount]:
     """
-    Return the lock.amount after fees are taken.
-
-    Fees are taken only for the outgoing channel, which is the one with
-    collateral locked from this node.
+    Return the amount after fees are taken, `None` if the calculation fails.
     """
-    fee_in = _fee_for_payer_channel(channel=payer_channel, amount=lock.amount)
-    if fee_in is None:
-        return None
-    fee_out = _fee_for_payee_channel(
-        channel=payee_channel, amount=PaymentWithFeeAmount(lock.amount - fee_in), fee_payer=fee_in
-    )
-    if fee_out is None:
-        return None
+    estimated_outgoing_amount = incoming_amount  # Start value for first iteration
+    for _ in range(iterations):
+        estimated_outgoing_amount = calculate_fees(
+            incoming_amount=incoming_amount,
+            estimated_outgoing_amount=estimated_outgoing_amount,
+            payer_channel=payer_channel,
+            payee_channel=payee_channel,
+        )
 
-    total_capped_fee = payer_channel.fee_schedule.calculate_capped_fee(fee_in + fee_out)
-    amount_after_fees = PaymentWithFeeAmount(lock.amount - total_capped_fee)
-
-    if amount_after_fees <= 0:
+    if estimated_outgoing_amount <= 0:
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return amount_after_fees
+    return estimated_outgoing_amount
 
 
 def sanity_check(
@@ -411,7 +418,9 @@ def forward_transfer_pair(
         return None, []
 
     amount_after_fees = get_lock_amount_after_fees(
-        payer_transfer.lock, payer_channel, payee_channel
+        incoming_amount=payer_transfer.lock.amount,
+        payer_channel=payer_channel,
+        payee_channel=payee_channel,
     )
     if not amount_after_fees:
         return None, []

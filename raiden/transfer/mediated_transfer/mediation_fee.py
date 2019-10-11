@@ -79,55 +79,55 @@ class FeeScheduleState(State):
 
         return FeeAmount(0)
 
-    def fee_payer(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        imbalance_fee = self.imbalance_fee(amount=PaymentWithFeeAmount(-amount), balance=balance)
-
-        flat_fee = self.flat
-        prop_fee = int(round(amount * self.proportional / 1e6))
-        # No capping of the fee here. `fee_payee` takes care of that and iterates towards
-        # the correct result.
-        return FeeAmount(flat_fee + prop_fee + imbalance_fee)
-
-    def fee_payee(
-        self,
-        amount: PaymentWithFeeAmount,
-        balance: Balance,
-        fee_payer: FeeAmount,
-        iterations: int = 2,
-    ) -> FeeAmount:
-        # Here `fee_payer` is included to correctly iterate using the capped fees
-        def fee_out(imbalance_fee: FeeAmount) -> FeeAmount:
-            return (
-                FeeAmount(
-                    round(
-                        amount
-                        - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
-                    )
-                    # + fee_payer
-                )
-            )
-
-        imbalance_fee = FeeAmount(0)
-        for _ in range(iterations):
-            imbalance_fee = self.imbalance_fee(
-                amount=PaymentWithFeeAmount(amount - self.calculate_capped_fee(fee_out(imbalance_fee))), balance=balance
-            )
-
-        fee_out_after_iteration = fee_out(imbalance_fee)
-        return FeeAmount(fee_out_after_iteration - fee_payer)
-
-    def reversed(self: T) -> T:
-        if not self.imbalance_penalty:
-            return replace(self)
-        max_penalty = max(penalty for x, penalty in self.imbalance_penalty)
-        reversed_instance = replace(
-            self,
-            imbalance_penalty=[
-                (x, FeeAmount(max_penalty - penalty)) for x, penalty in self.imbalance_penalty
-            ],
-        )
-        self._update_penalty_func()
-        return reversed_instance
+    # def fee_payer(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
+    #     imbalance_fee = self.imbalance_fee(amount=PaymentWithFeeAmount(-amount), balance=balance)
+    #
+    #     flat_fee = self.flat
+    #     prop_fee = int(round(amount * self.proportional / 1e6))
+    #     # No capping of the fee here. `fee_payee` takes care of that and iterates towards
+    #     # the correct result.
+    #     return FeeAmount(flat_fee + prop_fee + imbalance_fee)
+    #
+    # def fee_payee(
+    #     self,
+    #     amount: PaymentWithFeeAmount,
+    #     balance: Balance,
+    #     fee_payer: FeeAmount,
+    #     iterations: int = 2,
+    # ) -> FeeAmount:
+    #     # Here `fee_payer` is included to correctly iterate using the capped fees
+    #     def fee_out(imbalance_fee: FeeAmount) -> FeeAmount:
+    #         return FeeAmount(
+    #             round(
+    #                 amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
+    #             )
+    #             # + fee_payer
+    #         )
+    #
+    #     imbalance_fee = FeeAmount(0)
+    #     for _ in range(iterations):
+    #         imbalance_fee = self.imbalance_fee(
+    #             amount=PaymentWithFeeAmount(
+    #                 amount - self.calculate_capped_fee(fee_out(imbalance_fee))
+    #             ),
+    #             balance=balance,
+    #         )
+    #
+    #     fee_out_after_iteration = fee_out(imbalance_fee)
+    #     return FeeAmount(fee_out_after_iteration - fee_payer)
+    #
+    # def reversed(self: T) -> T:
+    #     if not self.imbalance_penalty:
+    #         return replace(self)
+    #     max_penalty = max(penalty for x, penalty in self.imbalance_penalty)
+    #     reversed_instance = replace(
+    #         self,
+    #         imbalance_penalty=[
+    #             (x, FeeAmount(max_penalty - penalty)) for x, penalty in self.imbalance_penalty
+    #         ],
+    #     )
+    #     self._update_penalty_func()
+    #     return reversed_instance
 
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:

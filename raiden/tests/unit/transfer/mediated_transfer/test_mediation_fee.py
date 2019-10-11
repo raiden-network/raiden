@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import assume, given, example
+from hypothesis import assume, example, given
 from hypothesis.strategies import integers
 
 from raiden.exceptions import UndefinedMediationFee
@@ -186,7 +186,7 @@ def test_rebalancing_fee_calculation():
     [
         # pure flat fee
         (50, 0, 1000, 1000 - 50 - 50),
-        # proprtional fee
+        # proportional fee
         (0, 1_000_000, 2000, 1000),  # 100% per hop mediation fee
         (0, 100_000, 1100, 1000),  # 10% per hop mediation fee
         (0, 50_000, 1050, 1000),  # 5% per hop mediation fee
@@ -228,7 +228,7 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
     )
 
     locked_after_fees = get_lock_amount_after_fees(
-        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
 
@@ -239,10 +239,10 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
         # No capping of the mediation fees
         # The higher the imbalance fee, the stronger the impact of the fee iteration
         (False, 0, 0, 10_000, 50_000, 50_000 + 2_000),
-        (False, 0, 0, 20_000, 50_000, 50_000 + 3_988),
-        (False, 0, 0, 30_000, 50_000, 50_000 + 5_826),
-        (False, 0, 0, 40_000, 50_000, 50_000 + 7_353),
-        (False, 0, 0, 50_000, 50_000, 50_000 + 8_600),
+        (False, 0, 0, 20_000, 50_000, 50_000 + 3_995),
+        (False, 0, 0, 30_000, 50_000, 50_000 + 5_907),
+        (False, 0, 0, 40_000, 50_000, 50_000 + 7_589),
+        (False, 0, 0, 50_000, 50_000, 50_000 + 9_000),
         # Capping of mediation fees
         (True, 0, 0, 10_000, 50_000, 50_000),
         (True, 0, 0, 20_000, 50_000, 50_000),
@@ -287,7 +287,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     )
 
     locked_after_fees = get_lock_amount_after_fees(
-        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
 
@@ -365,7 +365,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 
     # How much would a mediator send to the target? Ideally exactly `amount`.
     amount_without_margin_after_fees = get_lock_amount_after_fees(
-        lock=make_hash_time_lock_state(amount=fee_calculation.total_amount),
+        incoming_amount=fee_calculation.total_amount,
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
@@ -384,7 +384,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
         fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
     )
     amount_with_margin_after_fees = get_lock_amount_after_fees(
-        lock=make_hash_time_lock_state(amount=amount_with_fee_and_margin),
+        incoming_amount=amount_with_fee_and_margin,
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
@@ -439,6 +439,6 @@ def test_get_lock_amount_after_fees_capping(
     )
 
     locked_after_fees = get_lock_amount_after_fees(
-        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
