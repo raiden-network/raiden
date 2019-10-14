@@ -235,7 +235,7 @@ class GMatrixClient(MatrixClient):
 
     def listen_forever(
         self,
-        timeout_ms: int = 30000,
+        timeout_ms: int = 20000,
         exception_handler: Callable[[Exception], None] = None,
         bad_sync_timeout: int = 5,
     ):
@@ -275,7 +275,7 @@ class GMatrixClient(MatrixClient):
                 else:
                     raise
 
-    def start_listener_thread(self, timeout_ms: int = 30000, exception_handler: Callable = None):
+    def start_listener_thread(self, timeout_ms: int = 20000, exception_handler: Callable = None):
         """
         Start a listener greenlet to listen for events in the background.
         Args:
