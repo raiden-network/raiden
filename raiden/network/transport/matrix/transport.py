@@ -90,7 +90,7 @@ class _RetryQueue(Runnable):
         # generator that tells if the message should be sent now
         expiration_generator: Iterator[bool]
 
-    def __init__(self, transport: "MatrixTransport", receiver: Address):
+    def __init__(self, transport: "MatrixTransport", receiver: Address) -> None:
         self.transport = transport
         self.receiver = receiver
         self._message_queue: List[_RetryQueue._MessageData] = list()
@@ -100,7 +100,7 @@ class _RetryQueue(Runnable):
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
 
     @property
-    def log(self):
+    def log(self) -> Any:
         return self.transport.log
 
     @staticmethod
@@ -121,7 +121,7 @@ class _RetryQueue(Runnable):
             while now() < _next:  # yield False while next is still in the future
                 yield False
 
-    def enqueue(self, queue_identifier: QueueIdentifier, message: Message):
+    def enqueue(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """ Enqueue a message to be sent, and notify main loop """
         assert queue_identifier.recipient == self.receiver
         with self._lock:
@@ -153,7 +153,7 @@ class _RetryQueue(Runnable):
             )
         self.notify()
 
-    def enqueue_global(self, message: Message):
+    def enqueue_global(self, message: Message) -> None:
         """ Helper to enqueue a message in the global queue (e.g. Delivered) """
         self.enqueue(
             queue_identifier=QueueIdentifier(
@@ -162,12 +162,12 @@ class _RetryQueue(Runnable):
             message=message,
         )
 
-    def notify(self):
+    def notify(self) -> None:
         """ Notify main loop to check if anything needs to be sent """
         with self._lock:
             self._notify_event.set()
 
-    def _check_and_send(self):
+    def _check_and_send(self) -> None:
         """Check and send all pending/queued messages that are not waiting on retry timeout
 
         After composing the to-be-sent message, also message queue from messages that are not
@@ -247,7 +247,7 @@ class _RetryQueue(Runnable):
             )
             self.transport._send_raw(self.receiver, "\n".join(message_texts))
 
-    def _run(self):
+    def _run(self) -> None:  # type: ignore
         msg = f"_RetryQueue started before transport._raiden_service is set"
         assert self.transport._raiden_service is not None, msg
         self.greenlet.name = (
@@ -265,10 +265,10 @@ class _RetryQueue(Runnable):
             # wait up to retry_interval (or to be notified) before checking again
             self._notify_event.wait(self.transport._config["retry_interval"])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.greenlet.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>"
 
 
@@ -277,7 +277,7 @@ class MatrixTransport(Runnable):
     _room_sep = "_"
     log = log
 
-    def __init__(self, config: dict):
+    def __init__(self, config: Dict[str, Any]) -> None:
         super().__init__()
         self._uuid = uuid4()
         self._config = config
@@ -342,7 +342,7 @@ class MatrixTransport(Runnable):
 
         self._message_handler: Optional[MessageHandler] = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self._raiden_service is not None:
             node = f" node:{to_checksum_address(self._raiden_service.address)}"
         else:
@@ -355,7 +355,7 @@ class MatrixTransport(Runnable):
         raiden_service: "RaidenService",
         message_handler: MessageHandler,
         prev_auth_data: Optional[str],
-    ):
+    ) -> None:
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")
         self.log.debug("Matrix starting")
@@ -399,7 +399,7 @@ class MatrixTransport(Runnable):
 
         self._inventory_rooms()
 
-        def on_success(greenlet):
+        def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 
@@ -427,16 +427,17 @@ class MatrixTransport(Runnable):
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
 
-    def _process_queued_invites(self):
+    def _process_queued_invites(self) -> None:
         if self._invite_queue:
             self.log.debug("Processing queued invites", queued_invites=len(self._invite_queue))
             for room_id, state in self._invite_queue:
                 self._handle_invite(room_id, state)
             self._invite_queue.clear()
 
-    def _run(self):
+    def _run(self) -> None:  # type: ignore
         """ Runnable main method, perform wait on long-running subtasks """
         # dispatch auth data on first scheduling after start
+        assert self._raiden_service is not None, "_raiden_service not set"
         state_change = ActionUpdateTransportAuthData(f"{self._user_id}/{self._client.api.token}")
         self.greenlet.name = (
             f"MatrixTransport._run node:{to_checksum_address(self._raiden_service.address)}"
@@ -454,7 +455,7 @@ class MatrixTransport(Runnable):
             self.stop()  # ensure cleanup and wait on subtasks
             raise
 
-    def stop(self):
+    def stop(self) -> None:
         """ Try to gracefully stop the greenlet synchronously
 
         Stop isn't expected to re-raise greenlet _run exception
@@ -494,7 +495,7 @@ class MatrixTransport(Runnable):
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
-    def whitelist(self, address: Address):
+    def whitelist(self, address: Address) -> None:
         """Whitelist peer address to receive communications from
 
         This may be called before transport is started, to ensure events generated during
@@ -503,7 +504,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Whitelist", address=to_checksum_address(address))
         self._address_mgr.add_address(address)
 
-    def start_health_check(self, node_address):
+    def start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
 
         It also whitelists the address to answer invites and listen for messages
@@ -528,7 +529,7 @@ class MatrixTransport(Runnable):
             # representing the target node
             self._address_mgr.refresh_address_presence(node_address)
 
-    def send_async(self, queue_identifier: QueueIdentifier, message: Message):
+    def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
 
         It may be called before transport is started, to initialize message queues
@@ -567,8 +568,8 @@ class MatrixTransport(Runnable):
         self._global_send_queue.put((room, message))
         self._global_send_event.set()
 
-    def _global_send_worker(self):
-        def _send_global(room_name, serialized_message):
+    def _global_send_worker(self) -> None:
+        def _send_global(room_name: str, serialized_message: str) -> None:
             if not any(suffix in room_name for suffix in self._config["global_rooms"]):
                 raise RuntimeError(
                     f'Send global called on non-global room "{room_name}". '
@@ -581,16 +582,16 @@ class MatrixTransport(Runnable):
                 )
                 self._global_rooms[room_name] = room
 
-            assert self._global_rooms.get(room_name), f"Unknown global room: {room_name!r}"
+            existing_room = self._global_rooms.get(room_name)
+            assert existing_room, f"Unknown global room: {room_name!r}"
 
-            room = self._global_rooms[room_name]
             self.log.debug(
                 "Send global",
                 room_name=room_name,
-                room=room,
+                room=existing_room,
                 data=serialized_message.replace("\n", "\\n"),
             )
-            room.send_text(serialized_message)
+            existing_room.send_text(serialized_message)
 
         while not self._stop_event.ready():
             self._global_send_event.clear()
@@ -626,14 +627,14 @@ class MatrixTransport(Runnable):
 
     @property
     def chain_id(self) -> ChainID:
-        assert self._raiden_service is not None
+        assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.rpc_client.chain_id
 
     @property
     def _private_rooms(self) -> bool:
         return bool(self._config.get("private_rooms"))
 
-    def _inventory_rooms(self):
+    def _inventory_rooms(self) -> None:
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
@@ -654,7 +655,7 @@ class MatrixTransport(Runnable):
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
 
-    def _handle_invite(self, room_id: _RoomID, state: dict):
+    def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
         """ Join rooms invited by whitelisted partners """
         if self._stop_event.ready():
             return
@@ -756,7 +757,7 @@ class MatrixTransport(Runnable):
             inviting_address=to_checksum_address(peer_address),
         )
 
-    def _handle_message(self, room, event) -> bool:
+    def _handle_message(self, room: Room, event: Dict[str, Any]) -> bool:
         """ Handle text messages sent to listening rooms """
         if (
             event["type"] != "m.room.message"
@@ -866,7 +867,7 @@ class MatrixTransport(Runnable):
 
         return True
 
-    def _receive_delivered(self, delivered: Delivered):
+    def _receive_delivered(self, delivered: Delivered) -> None:
         assert delivered.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "Delivered message received",
@@ -874,11 +875,11 @@ class MatrixTransport(Runnable):
             message=delivered,
         )
 
-        assert self._raiden_service is not None
+        assert self._raiden_service is not None, "_raiden_service not set"
         self._raiden_service.on_message(delivered)
 
-    def _receive_message(self, message: Union[SignedRetrieableMessage, Processed]):
-        assert self._raiden_service is not None
+    def _receive_message(self, message: Union[SignedRetrieableMessage, Processed]) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
         assert message.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "Message received",
@@ -902,7 +903,7 @@ class MatrixTransport(Runnable):
             retrier.enqueue_global(delivered_message)
             self._raiden_service.on_message(message)
 
-    def _receive_to_device(self, to_device: ToDevice):
+    def _receive_to_device(self, to_device: ToDevice) -> None:
         assert to_device.sender is not None, MYPY_ANNOTATION
         self.log.debug(
             "ToDevice message received",
@@ -924,11 +925,11 @@ class MatrixTransport(Runnable):
             retrier.greenlet.link_exception(self.on_error)
         return self._address_to_retrier[receiver]
 
-    def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message):
+    def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         retrier = self._get_retrier(queue_identifier.recipient)
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
-    def _send_raw(self, receiver_address: Address, data: str):
+    def _send_raw(self, receiver_address: Address, data: str) -> None:
         with self._getroom_lock:
             room = self._get_room_for_address(receiver_address)
         if not room:
@@ -942,7 +943,9 @@ class MatrixTransport(Runnable):
         )
         room.send_text(data)
 
-    def _get_room_for_address(self, address: Address, allow_missing_peers=False) -> Optional[Room]:
+    def _get_room_for_address(
+        self, address: Address, allow_missing_peers: bool = False
+    ) -> Optional[Room]:
         if self._stop_event.ready():
             return None
         address_hex = to_normalized_address(address)
@@ -963,7 +966,7 @@ class MatrixTransport(Runnable):
                     return room
                 self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
 
-        assert self._raiden_service is not None
+        assert self._raiden_service is not None, "_raiden_service not set"
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
@@ -1031,14 +1034,14 @@ class MatrixTransport(Runnable):
         self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
         return room
 
-    def _is_room_global(self, room):
+    def _is_room_global(self, room: Room) -> bool:
         return any(
             suffix in room_alias
             for suffix in self._config["global_rooms"]
             for room_alias in room.aliases
         )
 
-    def _get_private_room(self, invitees: List[User]):
+    def _get_private_room(self, invitees: List[User]) -> Room:
         """ Create an anonymous, private room and invite peers """
         room = self._client.create_room(
             None, invitees=[user.user_id for user in invitees], is_public=False
@@ -1046,7 +1049,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Creating private room", room=room, invitees=invitees)
         return room
 
-    def _get_public_room(self, room_name, invitees: List[User]):
+    def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
         """ Obtain a public, canonically named (if possible) room and invite peers """
         room_name_full = f"#{room_name}:{self._server_name}"
         invitees_uids = [user.user_id for user in invitees]
@@ -1108,15 +1111,17 @@ class MatrixTransport(Runnable):
 
         return room
 
-    def _user_presence_changed(self, user: User, _presence: UserPresence):
+    def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
         # maybe inviting user used to also possibly invite user's from presence changes
-        assert self._raiden_service is not None  # make mypy happy
+        assert self._raiden_service is not None, "_raiden_service not set"
         greenlet = self._schedule_new_greenlet(self._maybe_invite_user, user)
         greenlet.name = (
             f"invite node:{to_checksum_address(self._raiden_service.address)} user:{user}"
         )
 
-    def _address_reachability_changed(self, address: Address, reachability: AddressReachability):
+    def _address_reachability_changed(
+        self, address: Address, reachability: AddressReachability
+    ) -> None:
         if reachability is AddressReachability.REACHABLE:
             node_reachability = NetworkState.REACHABLE
             # _QueueRetry.notify when partner comes online
@@ -1130,11 +1135,11 @@ class MatrixTransport(Runnable):
         else:
             raise TypeError(f'Unexpected reachability state "{reachability}".')
 
-        assert self._raiden_service is not None  # make mypy happy
+        assert self._raiden_service is not None, "_raiden_service not set"
         state_change = ActionChangeNodeNetworkState(address, node_reachability)
         self._raiden_service.handle_and_track_state_changes([state_change])
 
-    def _maybe_invite_user(self, user: User):
+    def _maybe_invite_user(self, user: User) -> None:
         peer_address = validate_userid_signature(user)
         if not peer_address:
             return
@@ -1163,7 +1168,7 @@ class MatrixTransport(Runnable):
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
-        assert self._raiden_service is not None
+        assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 
     def _get_user(self, user: Union[User, str]) -> User:
@@ -1185,7 +1190,9 @@ class MatrixTransport(Runnable):
             user = self._client.get_user(user_id)
         return user
 
-    def _set_room_id_for_address(self, address: Address, room_id: Optional[_RoomID] = None):
+    def _set_room_id_for_address(
+        self, address: Address, room_id: Optional[_RoomID] = None
+    ) -> None:
         """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms
 
         If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
@@ -1251,7 +1258,7 @@ class MatrixTransport(Runnable):
 
             return room_ids
 
-    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
+    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]) -> None:
         """
         Checks for rooms we've joined and which partner isn't health-checked and leave.
 
@@ -1265,7 +1272,6 @@ class MatrixTransport(Runnable):
             "network.raiden.rooms",  # back from cast in _set_room_id_for_address
             cast(Dict[str, Any], _address_to_room_ids),
         )
-        return
 
     def send_to_device(self, address: Address, message: Message) -> None:
         """ Sends send-to-device events to a all known devices of a peer without retries. """
@@ -1275,7 +1281,7 @@ class MatrixTransport(Runnable):
 
         return self._client.api.send_to_device("m.to_device_message", data)
 
-    def _handle_to_device_message(self, event):
+    def _handle_to_device_message(self, event: Dict[str, Any]) -> bool:
         """
         Handles to_device_message sent to us.
         - validates peer_whitelisted
