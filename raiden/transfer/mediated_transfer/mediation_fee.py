@@ -1,4 +1,5 @@
 from bisect import bisect_right
+from copy import copy
 from dataclasses import dataclass, field, replace
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
@@ -116,6 +117,64 @@ class FeeScheduleState(State):
         )
         self._update_penalty_func()
         return reversed_instance
+
+    @staticmethod
+    def mediation_fee_func(
+        schedule_in: "FeeScheduleState",
+        schedule_out: "FeeScheduleState",
+        balance_in: Balance,
+        balance_out: Balance,
+        capacity_in: TokenAmount,  # TODO: rename
+        amount_with_fees: PaymentWithFeeAmount,
+        cap_fees: bool,
+    ) -> Interpolate:
+        if amount_with_fees > capacity_in:
+            raise UndefinedMediationFee()
+        if balance_out == 0:
+            raise UndefinedMediationFee()
+
+        # Add dummy penalty funcs if none are set
+        if not schedule_in._penalty_func:
+            schedule_in = copy(schedule_in)
+            schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
+        if not schedule_out._penalty_func:
+            schedule_out = copy(schedule_out)
+            schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
+
+        # Collect all relevant x values (edges of piece wise linear sections)
+        all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
+            balance_out - x for x in schedule_out._penalty_func.x_list
+        ]
+        limited_x_vals = (max(min(x, balance_out, capacity_in), 0) for x in all_x_vals)
+        x_list = sorted(set(limited_x_vals))
+
+        # Sum up fees where amount_with_fees is fixed and x is amount without fees
+        try:
+            fixed_fees = (
+                schedule_in.flat
+                + schedule_out.flat
+                + schedule_in.proportional / 1e6 * amount_with_fees
+                + schedule_in._penalty_func(balance_in + amount_with_fees)
+                - schedule_in._penalty_func(balance_in)
+            )
+
+            y_list = [
+                fixed_fees
+                + schedule_out.proportional / 1e6 * x
+                + (
+                    schedule_out._penalty_func(balance_out - x)
+                    - schedule_out._penalty_func(balance_out)
+                )
+                for x in x_list
+            ]
+        except ValueError:
+            raise UndefinedMediationFee()
+
+        if cap_fees:
+            # TODO: imprecise
+            y_list = [max(y, 0) for y in y_list]
+
+        return Interpolate(x_list, y_list)
 
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:
