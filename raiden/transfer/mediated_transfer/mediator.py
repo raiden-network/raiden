@@ -1144,6 +1144,7 @@ def handle_block(
     mediator_state: MediatorTransferState,
     state_change: Block,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
     """ After Raiden learns about a new block this function must be called to
@@ -1502,6 +1503,7 @@ def state_transition(
             mediator_state=mediator_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
 
