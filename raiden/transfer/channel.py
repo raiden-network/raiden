@@ -207,6 +207,7 @@ def is_channel_usable_for_mediation(
     channel_usable = is_channel_usable_for_new_transfer(
         channel_state, transfer_amount, lock_timeout
     )
+    # FIXME: different definition of valid lock timeout than elsewhere
     lock_timeout_valid = lock_timeout > 0
 
     return channel_usable and lock_timeout_valid
