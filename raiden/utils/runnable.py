@@ -99,6 +99,3 @@ class Runnable:
     # but better use greenlet directly for now, to make use of the c extension optimizations
     def __getattr__(self, item: str) -> Any:
         return getattr(self.greenlet, item)
-
-    def __bool__(self) -> bool:
-        return bool(self.greenlet)
