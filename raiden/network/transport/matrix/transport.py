@@ -23,7 +23,7 @@ from raiden.messages.abstract import (
     SignedRetrieableMessage,
 )
 from raiden.messages.healthcheck import Ping, Pong
-from raiden.messages.matrix import PresenceNotification
+from raiden.messages.matrix import ReachabilityNotification
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
@@ -334,8 +334,7 @@ class MatrixTransport(Runnable):
         )
 
         self._client.add_invite_listener(self._handle_invite)
-        self._client.add_listener(self._handle_presence_notification, event_type="to_device")
-
+        self._client.add_listener(self._handle_reachability_announcement, event_type="to_device")
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
@@ -409,9 +408,7 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
         self._schedule_new_greenlet(self._address_mgr.log_status_message)
-
         self._client.set_presence_state(UserPresence.ONLINE.value)
-
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
             if not retrier:
@@ -426,6 +423,9 @@ class MatrixTransport(Runnable):
 
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
+        self._schedule_new_greenlet(
+            self.reachability_announcement, AddressReachability.REACHABLE, in_seconds_from_now=1
+        )
 
     def _process_queued_invites(self):
         if self._invite_queue:
@@ -902,14 +902,6 @@ class MatrixTransport(Runnable):
             retrier.enqueue_global(delivered_message)
             self._raiden_service.on_message(message)
 
-    def _receive_to_device(self, presence_notification: PresenceNotification):
-        assert presence_notification.sender is not None, MYPY_ANNOTATION
-        self.log.debug(
-            "PresenceNotification message received",
-            sender=to_checksum_address(presence_notification.sender),
-            message=PresenceNotification,
-        )
-
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
         if receiver not in self._address_to_retrier:
@@ -1267,23 +1259,33 @@ class MatrixTransport(Runnable):
         )
         return
 
-    def send_presence_notification_to_all_known_peers(self, message) -> None:
-        for address in self._address_mgr.known_addresses:
-            user_ids = self._address_mgr.get_userids_for_address(address)
-            data = {user_id: {"*": MessageSerializer.serialize(message)} for user_id in user_ids}
-            self._client.api.send_to_device("m.presence_notification", data)
+    def reachability_announcement(self, reachability: AddressReachability) -> None:
+        if self._raiden_service:
+            while not self._stop_event.ready():
+                self.log.debug("Announcing reachability to all known peers")
+                message = ReachabilityNotification(
+                    address_reachability=reachability.value, signature=EMPTY_SIGNATURE
+                )
+                self._raiden_service.sign(message)
+                for address in self._address_mgr.known_addresses:
+                    user_ids = self._address_mgr.get_userids_for_address(address)
+                    data = {
+                        user_id: {"*": MessageSerializer.serialize(message)}
+                        for user_id in user_ids
+                    }
+                    self._client.api.send_to_device("m.reachability_notification", data)
+                self._stop_event.wait(10)
 
-    def _handle_presence_notification(self, event):
+    def _handle_reachability_announcement(self, event):
         """
-        Handles to_device_message sent to us.
+        Handles reachability_announcements sent to us.
         - validates peer_whitelisted
         - validates userid_signature
-        Todo: Currently doesnt do anything but logging when a to device message is received.
         """
         sender_id = event["sender"]
 
         if (
-            event["type"] != "m.presence_notification"
+            event["type"] != "m.reachability_notification"
             or self._stop_event.ready()
             or sender_id == self._user_id
         ):
@@ -1293,7 +1295,8 @@ class MatrixTransport(Runnable):
         peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
-                "To_device_message from invalid user displayName signature", peer_user=user.user_id
+                "ReachabilityNotification from invalid user displayName signature",
+                peer_user=user.user_id,
             )
             return False
 
@@ -1301,24 +1304,11 @@ class MatrixTransport(Runnable):
         if not self._address_mgr.is_address_known(peer_address):
             # user not start_health_check'ed
             self.log.debug(
-                "ToDevice Message from non-whitelisted peer - ignoring",
+                "ReachabilityNotification Message from non-whitelisted peer - ignoring",
                 sender=user,
                 sender_address=to_checksum_address(peer_address),
             )
             return False
-
-        is_peer_reachable = self._address_mgr.get_address_reachability(peer_address) is (
-            AddressReachability.REACHABLE
-        )
-
-        if not is_peer_reachable:
-            self.log.debug(
-                "Forcing presence update",
-                peer_address=to_checksum_address(peer_address),
-                user_id=sender_id,
-            )
-            self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
-            self._address_mgr.refresh_address_presence(peer_address)
 
         messages = validate_and_parse_message(event["content"], peer_address)
 
@@ -1326,15 +1316,38 @@ class MatrixTransport(Runnable):
             return False
 
         self.log.debug(
-            "Incoming PresenceNotification Messages",
+            "Incoming ReachabilityNotification Messages",
             messages=messages,
             sender=to_checksum_address(peer_address),
             sender_user=user,
         )
 
         for message in messages:
-            if isinstance(message, PresenceNotification):
-                self._receive_to_device(message)
+            if isinstance(message, ReachabilityNotification):
+                assert message.sender is not None, MYPY_ANNOTATION
+                message_reachability = AddressReachability(message.address_reachability)
+
+                is_consistent_reachability = (
+                    self._address_mgr.get_address_reachability(peer_address)
+                    is message_reachability
+                )
+
+                if not is_consistent_reachability:
+                    self.log.error(
+                        "ReachabilityNotification message is inconsistent with known "
+                        "server reachability - Forcing presence update",
+                        peer_address=to_checksum_address(message.sender),
+                        user_id=sender_id,
+                        message=message,
+                        message_reachability=message_reachability,
+                    )
+                    self._address_mgr.refresh_address_presence(peer_address)
+                self.log.debug(
+                    "ReachabilityNotification received",
+                    sender=to_checksum_address(peer_address),
+                    reachability=message_reachability,
+                )
+
             else:
                 log.warning(
                     "Received Message is not of type PresenceNotification, invalid",

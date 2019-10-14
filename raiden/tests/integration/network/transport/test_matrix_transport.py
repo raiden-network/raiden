@@ -16,7 +16,6 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages.matrix import PresenceNotification
 from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
@@ -1080,7 +1079,11 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
-def test_send_to_device(matrix_transports):
+def test_send_reachability_notification(matrix_transports):
+    """
+    Basic test to test reachability notifications work
+    in case of incorrect user PresenceTracking
+    """
     transport0, transport1 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
@@ -1097,9 +1100,14 @@ def test_send_to_device(matrix_transports):
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
-    message = PresenceNotification(
-        message_identifier=1, user_presence=2, signature=EMPTY_SIGNATURE
-    )
-    transport0._raiden_service.sign(message)
-    transport0.send_presence_notification_to_all_known_peers(message)
-    gevent.sleep(2)
+    wait_for_peer_reachable(transport0, raiden_service1.address)
+    wait_for_peer_reachable(transport1, raiden_service0.address)
+
+    # Simulate a UserPresence bug by manually setting the reachability to UNREACHABLE
+    transport0._address_mgr._address_to_reachability[
+        raiden_service1.address
+    ] = AddressReachability.UNREACHABLE
+    # Assert the effect on transport0
+    wait_for_peer_unreachable(transport0, raiden_service1.address)
+    # Assert that transport0 recovers the correct reachability
+    wait_for_peer_reachable(transport0, raiden_service1.address)
