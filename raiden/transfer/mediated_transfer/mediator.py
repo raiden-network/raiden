@@ -672,14 +672,21 @@ def events_for_expired_pairs(
             )
             events.append(unlock_claim_failed)
 
-    if waiting_transfer and waiting_transfer.state != "expired":
-        waiting_transfer.state = "expired"
-        unlock_claim_failed = EventUnlockClaimFailed(
-            waiting_transfer.transfer.payment_identifier,
-            waiting_transfer.transfer.lock.secrethash,
-            "lock expired",
+    if waiting_transfer:
+        expiration_threshold = channel.get_receiver_expiration_threshold(
+            waiting_transfer.transfer.lock.expiration
         )
-        events.append(unlock_claim_failed)
+        should_waiting_transfer_expire = (
+            waiting_transfer.state != "expired" and expiration_threshold <= block_number
+        )
+        if should_waiting_transfer_expire:
+            waiting_transfer.state = "expired"
+            unlock_claim_failed = EventUnlockClaimFailed(
+                waiting_transfer.transfer.payment_identifier,
+                waiting_transfer.transfer.lock.secrethash,
+                "lock expired",
+            )
+            events.append(unlock_claim_failed)
 
     return events
 
@@ -1189,10 +1196,10 @@ def handle_block(
                 mediator_state.waiting_transfer = None
 
     expired_locks_events = events_to_remove_expired_locks(
-        mediator_state,
-        channelidentifiers_to_channels,
-        state_change.block_number,
-        pseudo_random_generator,
+        mediator_state=mediator_state,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        block_number=state_change.block_number,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     secret_reveal_events = events_for_onchain_secretreveal_if_dangerzone(
