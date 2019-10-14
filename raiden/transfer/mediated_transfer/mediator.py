@@ -13,6 +13,8 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
+    SendLockedTransfer,
+    SendRefundTransfer,
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -1154,6 +1156,38 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
+
+    mediate_events: List[Event] = []
+    if mediator_state.waiting_transfer:
+        secrethash = mediator_state.waiting_transfer.transfer.lock.secrethash
+        payer_channel = channelidentifiers_to_channels.get(
+            mediator_state.waiting_transfer.transfer.balance_proof.channel_identifier
+        )
+        if payer_channel is not None:
+            # If the transfer is waiting, because its expiry was later than the settlement timeout
+            # of the channel, we can retry the mediation on a new block. The call to
+            # `mediate_transfer` will re-evaluate the timeouts and mediate if possible.
+            mediation_attempt = mediate_transfer(
+                state=mediator_state,
+                candidate_route_states=mediator_state.routes,
+                payer_channel=payer_channel,
+                channelidentifiers_to_channels=channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+                pseudo_random_generator=pseudo_random_generator,
+                payer_transfer=mediator_state.waiting_transfer.transfer,
+                block_number=state_change.block_number,
+            )
+            mediator_state = mediation_attempt.new_state
+            mediate_events = mediation_attempt.events
+            success_filter = lambda event: (
+                isinstance(event, (SendLockedTransfer, SendRefundTransfer))
+                and event.transfer.lock.secrethash == secrethash
+            )
+
+            mediation_happened = any(filter(success_filter, mediate_events))
+            if mediation_happened:
+                mediator_state.waiting_transfer = None
+
     expired_locks_events = events_to_remove_expired_locks(
         mediator_state,
         channelidentifiers_to_channels,
@@ -1177,7 +1211,8 @@ def handle_block(
     )
 
     iteration = TransitionResult(
-        mediator_state, unlock_fail_events + secret_reveal_events + expired_locks_events
+        mediator_state,
+        mediate_events + unlock_fail_events + secret_reveal_events + expired_locks_events,
     )
 
     return iteration
