@@ -98,10 +98,7 @@ Agreement). Our CLA bot will help you with that after you created a pull
 request. If you or your employer do not hold the whole copyright of the
 authorship submitted we can not accept your contribution.
 
-For frequent contributors with write access to the repository we have a set of labels to put on Pull Requests to signal to our colleagues what the current state of the PR is. These are:
-
-- [Dev: Please Review](https://github.com/raiden-network/raiden/labels/dev%3A%20Please%20Review) to a Pull Request that is currently ready for a reviewer to have a look at.
-- [Dev: Work in Progress](https://github.com/raiden-network/raiden/labels/dev%3A%20Work%20In%20Progress) to a Pull Request that is either not yet ready for review or is getting PR review suggestions applied by the author until it's ready for review again.
+When you make a PR that's not ready for a review, open a Draft PR. To open a Draft PR, find a small triangle on the green button. Otherwise, if you opena a non-Draft PR, a reviewer will be automatically assigned to your PR.
 
 ### Pull Request Reviews
 
