@@ -530,6 +530,12 @@ def test_mediated_transfer_with_fees(
     no_fees = FeeScheduleState(
         flat=FeeAmount(0), proportional=ProportionalFeeAmount(0), imbalance_penalty=None
     )
+    no_fees_no_cap = FeeScheduleState(
+        flat=FeeAmount(0),
+        proportional=ProportionalFeeAmount(0),
+        imbalance_penalty=None,
+        cap_fees=False,
+    )
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
         # result, the target receives the fee.
@@ -578,7 +584,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),  # type: ignore
+                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),  # type: ignore
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
@@ -593,7 +599,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[no_fees, no_fees, no_fees],
             incoming_fee_schedules=[
-                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),  # type: ignore
+                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),  # type: ignore
                 None,
                 None,
             ],
@@ -613,11 +619,11 @@ def test_mediated_transfer_with_fees(
             fee_schedules=[
                 no_fees,
                 FeeScheduleState(
-                    cap_fees=False, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                    cap_fees=False, imbalance_penalty=[(0, 0), (1000, 50)]  # type: ignore
                 ),
                 no_fees,
             ],
-            incoming_fee_schedules=[no_fees, no_fees, no_fees],
+            incoming_fee_schedules=[no_fees_no_cap, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, amount + fee + 3, amount + fee + 3],
         ),
         # Same case as above, but with fee capping enabled
@@ -625,7 +631,7 @@ def test_mediated_transfer_with_fees(
             fee_schedules=[
                 no_fees,
                 FeeScheduleState(
-                    cap_fees=True, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                    cap_fees=True, imbalance_penalty=[(0, 0), (1000, 50)]  # type: ignore
                 ),
                 no_fees,
             ],

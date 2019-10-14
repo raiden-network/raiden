@@ -17,6 +17,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferSignedState,
@@ -62,6 +63,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    TokenAmount,
     Tuple,
     Union,
     cast,
@@ -264,14 +266,52 @@ def get_lock_amount_after_fees(
     Fees are taken only for the outgoing channel, which is the one with
     collateral locked from this node.
     """
-    fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
-    if fee_in is None:
-        return None
-    fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
-    if fee_out is None:
+    payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
+    payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
+    capacity_in = TokenAmount(
+        payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
+    )
+    assert payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+    try:
+        fee_func = FeeScheduleState.mediation_fee_func(
+            payer_channel.fee_schedule,
+            payee_channel.fee_schedule,
+            payer_balance,
+            payee_balance,
+            capacity_in,
+            lock.amount,
+            cap_fees=payer_channel.fee_schedule.cap_fees,
+        )
+    except UndefinedMediationFee:
         return None
 
-    amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
+    def angle_bisector(i: int) -> float:
+        x = fee_func.x_list[i]
+        return lock.amount - x
+
+    i = len(fee_func.x_list) - 1
+    y = fee_func.y_list[i]
+    if y < angle_bisector(i):
+        # TODO: can this happen? Should we throw an exception?
+        return None
+    while y >= angle_bisector(i):
+        i -= 1
+        y = fee_func.y_list[i]
+        # if i < 0:
+        #     # Not enough capacity to send
+        #     return None
+    try:
+        # We found the linear section where the solution is. Now interpolate!
+        x1 = fee_func.x_list[i]
+        x2 = fee_func.x_list[i + 1]
+        y1 = fee_func.y_list[i]
+        y2 = fee_func.y_list[i + 1]
+        slope = (y2 - y1) / (x2 - x1)
+        amount_without_fees = (x1 * slope + lock.amount - y1) / (1 + slope)
+    except UndefinedMediationFee:
+        return None
+
+    amount_after_fees = PaymentWithFeeAmount(int(round(amount_without_fees)))
 
     if amount_after_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.
