@@ -1814,6 +1814,105 @@ def test_filter_reachable_routes():
     assert possible_routes[1] not in filtered_routes
 
 
+def test_resume_waiting_transfer():
+    """ Test that a mediator who has a waiting_transfer
+    set (the transfer couldn't be sent forward or backward
+    due to availability or capacity or timeout issues) will retry
+    mediating the waiting_transfer as soon as this transfer's
+    lock expiration becomes valid.
+    """
+    setup = factories.make_transfers_pair(2)
+
+    # Also add transfer sender channel
+    partner_state = factories.NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER)
+    payer_channel = factories.create(
+        factories.NettingChannelStateProperties(partner_state=partner_state)
+    )
+    setup.channels.channels.append(payer_channel)
+
+    from_hop = factories.make_hop_from_channel(payer_channel)
+    possible_routes = setup.channels.get_routes()
+
+    # we received a transfer has an expiry set to a larger value than our settle_timeout.
+    # The `is_channel_usable_for_new_transfer` would return False because of the above.
+    # Therefore, we assign this transfer to `waiting_transfer` and wait until the current block
+    # falls into the range `reveal_timeout > lock expiration >= settle_timeout`
+    lock_expiration = UNIT_SETTLE_TIMEOUT + 3
+    received_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            amount=1,
+            expiration=lock_expiration,
+            canonical_identifier=payer_channel.canonical_identifier,
+        )
+    )
+
+    # we simulate that the initial transfer came too early (from our point of view)
+    # so it went into `waiting_transfer` state
+    # this can happen, when reveal_timeout is around `settle_timeout / 2` and the
+    # receiving node is slightly behind with the blockchain sync
+    # see: https://github.com/raiden-network/raiden/issues/4998
+    transition_result = mediator.state_transition(
+        mediator_state=None,
+        state_change=ActionInitMediator(
+            from_hop=from_hop,
+            route_states=possible_routes,
+            from_transfer=received_transfer,
+            sender=payer_channel.partner_state.address,
+            balance_proof=received_transfer.balance_proof,
+        ),
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+    )
+    mediator_state = transition_result.new_state
+    assert mediator_state.waiting_transfer is not None
+
+    too_early_block = Block(block_number=2, gas_limit=1, block_hash=factories.make_block_hash())
+    iteration = mediator.state_transition(
+        mediator_state=mediator_state,
+        state_change=too_early_block,
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+    )
+
+    assert iteration.events == []
+
+    late_enough_block = Block(block_number=3, gas_limit=1, block_hash=factories.make_block_hash())
+
+    iteration = mediator.state_transition(
+        mediator_state=mediator_state,
+        state_change=late_enough_block,
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+        block_hash=too_early_block.block_hash,
+    )
+    # A LockedTransfer is expected
+    assert search_for_item(
+        iteration.events,
+        SendLockedTransfer,
+        {
+            "recipient": HOP2,
+            "transfer": {
+                "lock": {
+                    "amount": 1,
+                    "expiration": UNIT_SETTLE_TIMEOUT + 3,
+                    "secrethash": received_transfer.lock.secrethash,
+                },
+                "balance_proof": {"nonce": 1, "transferred_amount": 0, "locked_amount": 1},
+            },
+        },
+    )
+    # waiting_transfer should have been cleaned
+    assert mediator_state.waiting_transfer is None
+
+
 def test_node_change_network_state_reachable_node():
     """ Test that a mediator who has a waiting_transfer
     set (the transfer couldn't be sent forward or backward
