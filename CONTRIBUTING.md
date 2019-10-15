@@ -98,7 +98,7 @@ Agreement). Our CLA bot will help you with that after you created a pull
 request. If you or your employer do not hold the whole copyright of the
 authorship submitted we can not accept your contribution.
 
-When you make a PR that's not ready for a review, open a Draft PR. To open a Draft PR, find a small triangle on the green button. Otherwise, if you open a a non-Draft PR, a reviewer will be automatically assigned to your PR.
+When you make a PR that's not ready for a review, open a Draft PR. To open a Draft PR, find a small triangle on the green button. Otherwise, if you open a non-Draft PR, a reviewer will be automatically assigned to your PR.
 
 ### Pull Request Reviews
 
