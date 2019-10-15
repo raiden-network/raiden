@@ -1,4 +1,3 @@
-from hashlib import sha256
 from typing import List, cast
 from unittest.mock import patch
 
@@ -18,6 +17,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -33,7 +33,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.utils import sha3
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
     BlockNumber,
@@ -41,8 +41,6 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     ProportionalFeeAmount,
-    Secret,
-    SecretHash,
     TargetAddress,
     TokenAmount,
 )
@@ -114,7 +112,7 @@ def test_locked_transfer_secret_registered_onchain(
     amount = TokenAmount(1)
     target = factories.UNIT_TRANSFER_INITIATOR
     identifier = PaymentID(1)
-    transfer_secret = Secret(sha3(target + b"1"))
+    transfer_secret = make_secret()
 
     secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(secret_registry_address)
     secret_registry_proxy.register_secret(secret=transfer_secret)
@@ -258,7 +256,7 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
     app2.raiden.message_handler = app2_wait_for_message
 
     secret = factories.make_secret(0)
-    secrethash = SecretHash(sha256(secret).digest())
+    secrethash = sha256_secrethash(secret)
 
     # Save the messages, these will be processed again
     app1_mediatedtransfer = app1_wait_for_message.wait_for_message(
@@ -430,7 +428,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     app1_app2_channel_state.fee_schedule = FeeScheduleState(flat=FeeAmount(fee * 2))
 
     secret = factories.make_secret(0)
-    secrethash = SecretHash(sha256(secret).digest())
+    secrethash = sha256_secrethash(secret)
 
     wait_message_handler = WaitForMessage()
     app0.raiden.message_handler = wait_message_handler
