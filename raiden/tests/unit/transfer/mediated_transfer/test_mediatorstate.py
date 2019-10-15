@@ -2104,7 +2104,6 @@ def test_imbalance_penalty_with_barely_sufficient_balance():
     assert pair
 
 
-@pytest.mark.skip(reason="TODO")
 def test_imbalance_penalty_prevents_transfer():
     """
     In this case the imbalance fee is negative and increases the amount
@@ -2118,16 +2117,18 @@ def test_imbalance_penalty_prevents_transfer():
     This test verifies that we choose option 2.
     """
     # Will reward payment with the amount of 1 token per 10 transferred token!
-    imbalance_penalty = [(0, 100), (1000, 0)]
+    imbalance_penalty = [(0, 0), (1000, 100)]
     pair, _ = _foward_transfer_pair(
         10,
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=10),
-            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            fee_schedule=FeeScheduleState(cap_fees=False),
         ),
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=10),
-            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            fee_schedule=FeeScheduleState(
+                flat=0, imbalance_penalty=imbalance_penalty, cap_fees=False
+            ),
         ),
     )
     assert not pair
