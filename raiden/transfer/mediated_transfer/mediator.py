@@ -271,7 +271,9 @@ def get_lock_amount_after_fees(
     capacity_in = TokenAmount(
         payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
     )
-    assert payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+    assert (
+        payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+    ), "Both channels must have the same cap_fees setting for the same mediator."
     try:
         fee_func = FeeScheduleState.mediation_fee_func(
             payer_channel.fee_schedule,
