@@ -55,7 +55,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
-    FeeAmount,
     List,
     LockType,
     NodeNetworkStateMap,
@@ -224,37 +223,6 @@ def get_pending_transfer_pairs(
         or pair.payer_state not in STATE_TRANSFER_FINAL
     )
     return pending_pairs
-
-
-def _fee_for_payer_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an incoming channel.
-
-    The `amount` is the total incoming amount without any fees deducted.
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
-    try:
-        return channel.fee_schedule.fee_payer(amount, balance)
-    except UndefinedMediationFee:
-        return None
-
-
-def _fee_for_payee_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an outgoing channel.
-
-    The `amount` is the incoming amount where the incoming fee is already
-    deducted, but the outgoing fee isn't (that's what this function does,
-    after all).
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
-
-    try:
-        return channel.fee_schedule.fee_payee(amount=amount, balance=balance)
-    except UndefinedMediationFee:
-        return None
 
 
 def get_lock_amount_after_fees(
