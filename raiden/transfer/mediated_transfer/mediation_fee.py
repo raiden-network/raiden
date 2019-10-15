@@ -38,6 +38,9 @@ class Interpolate:  # pylint: disable=too-few-public-methods
         i = bisect_right(self.x_list, x) - 1
         return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
 
+    def __repr__(self) -> str:
+        return f"Interpolate({self.x_list}, {self.y_list})"
+
 
 T = TypeVar("T", bound="FeeScheduleState")
 
