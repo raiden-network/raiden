@@ -66,6 +66,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     Block,
@@ -1931,6 +1932,30 @@ def handle_action_set_reveal_timeout(
     return TransitionResult(channel_state, events)
 
 
+def handle_action_set_fee_schedule(
+    channel_state: NettingChannelState, state_change: ActionChannelSetFeeSchedule
+) -> TransitionResult[NettingChannelState]:
+
+    events: List[Event] = []
+    proportional_imbalance_fee = state_change.fee_config.get_proportional_imbalance_fee(
+        channel_state.token_address
+    )
+    imbalance_penalty = calculate_imbalance_fees(
+        channel_capacity=get_capacity(channel_state),
+        proportional_imbalance_fee=proportional_imbalance_fee,
+    )
+
+    channel_state.fee_schedule = FeeScheduleState(
+        cap_fees=state_change.fee_schedule.cap_fees,
+        flat=state_change.fee_schedule.flat,
+        proportional=state_change.fee_schedule.proportional,
+        imbalance_penalty=imbalance_penalty,
+    )
+
+    events.append(SendPFSFeeUpdate(canonical_identifier=channel_state.canonical_identifier))
+    return TransitionResult(channel_state, events)
+
+
 def handle_receive_withdraw_request(
     channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
 ) -> TransitionResult[NettingChannelState]:
@@ -2557,6 +2582,11 @@ def state_transition(
     elif type(state_change) == ActionChannelSetRevealTimeout:
         assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
         iteration = handle_action_set_reveal_timeout(
+            channel_state=channel_state, state_change=state_change
+        )
+    elif type(state_change) == ActionChannelSetFeeSchedule:
+        assert isinstance(state_change, ActionChannelSetFeeSchedule), MYPY_ANNOTATION
+        iteration = handle_action_set_fee_schedule(
             channel_state=channel_state, state_change=state_change
         )
     elif type(state_change) == ContractReceiveChannelClosed:

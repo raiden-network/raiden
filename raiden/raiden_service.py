@@ -77,6 +77,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, HopState, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
@@ -998,7 +999,7 @@ class RaidenService(Runnable):
                 token_address=token_address,
             )
 
-            for channel in channels:
+            for channel in [c for c in channels if c.fee_schedule is None]:
                 # get the flat fee for this network if set, otherwise the default
                 flat_fee = fee_config.get_flat_fee(channel.token_address)
                 proportional_fee = fee_config.get_proportional_fee(channel.token_address)
@@ -1240,6 +1241,16 @@ class RaidenService(Runnable):
         )
 
         self.handle_and_track_state_changes([action_set_channel_reveal_timeout])
+
+    def set_fee_schedule(
+        self, canonical_identifier: CanonicalIdentifier, fee_schedule: FeeScheduleState
+    ) -> None:
+        action_set_fee_schedule = ActionChannelSetFeeSchedule(
+            canonical_identifier=canonical_identifier,
+            fee_schedule=fee_schedule,
+            fee_config=self.config["mediation_fees"],
+        )
+        self.handle_and_track_state_changes([action_set_fee_schedule])
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(

@@ -10,6 +10,7 @@ from raiden.transfer.architecture import (
     StateChange,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
@@ -241,6 +242,23 @@ class ActionChannelSetRevealTimeout(StateChange):
 
     canonical_identifier: CanonicalIdentifier
     reveal_timeout: BlockTimeout
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
+@dataclass(frozen=True)
+class ActionChannelSetFeeSchedule(StateChange):
+    """ Change the fee schedule of a given channel. """
+
+    canonical_identifier: CanonicalIdentifier
+    fee_schedule: FeeScheduleState
+    fee_config: MediationFeeConfig
 
     @property
     def channel_identifier(self) -> ChannelID:

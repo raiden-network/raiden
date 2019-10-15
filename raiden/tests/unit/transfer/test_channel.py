@@ -29,6 +29,7 @@ from raiden.transfer.channel import (
     update_fee_schedule_after_balance_change,
 )
 from raiden.transfer.events import EventInvalidActionSetRevealTimeout, SendPFSFeeUpdate
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
@@ -37,6 +38,7 @@ from raiden.transfer.state import (
     UnlockPartialProofState,
 )
 from raiden.transfer.state_change import (
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -44,7 +46,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import sha3
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
-from raiden.utils.typing import BlockExpiration, TokenAmount
+from raiden.utils.typing import BlockExpiration, BlockNumber, TokenAmount
 
 
 def _channel_and_transfer(num_pending_locks):
@@ -441,6 +443,52 @@ def test_update_fee_schedule_after_balance_change():
     events = update_fee_schedule_after_balance_change(channel_state, fee_config)
     assert isinstance(events[0], SendPFSFeeUpdate)
     assert channel_state.fee_schedule.imbalance_penalty[0] == (0, 5)
+
+
+def test_set_fee_schedule():
+    pseudo_random_generator = random.Random()
+
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=100),
+            partner_state=NettingChannelEndStateProperties(balance=0),
+        )
+    )
+
+    fee_schedule = FeeScheduleState(cap_fees=False, flat=42, proportional=1000)
+
+    fee_config = prepare_mediation_fee_config(
+        cli_token_to_flat_fee=(),
+        cli_token_to_proportional_fee=(),
+        cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 50_000),),  # 5%
+        cli_cap_mediation_fees=True,
+    )
+
+    state_change = ActionChannelSetFeeSchedule(
+        canonical_identifier=channel_state.canonical_identifier,
+        fee_schedule=fee_schedule,
+        fee_config=fee_config,
+    )
+
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=state_change,
+        block_number=BlockNumber(1),
+        block_hash=make_block_hash(),
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+    assert iteration.new_state, "Setting fee did not return the updated channel state"
+
+    updated_fee_schedule = iteration.new_state.fee_schedule
+
+    assert updated_fee_schedule.cap_fees == fee_schedule.cap_fees, "Failed to update cap_fees"
+    assert updated_fee_schedule.flat == fee_schedule.flat, "Failed to update flat fee attribute"
+    assert (
+        updated_fee_schedule.proportional == fee_schedule.proportional
+    ), "Failed to update proportional attribute"
+    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
+    assert updated_fee_schedule.imbalance_penalty[0] == (0, 5)
 
 
 def test_update_channel_reveal_timeout():

@@ -432,7 +432,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         json={"total_deposit": -1000},
     )
     response = request.send().response
-    assert_proper_response(response, HTTPStatus.CONFLICT)
+    assert_proper_response(response, HTTPStatus.BAD_REQUEST)
 
     # let's deposit on the first channel
     request = grequests.patch(
@@ -2527,3 +2527,54 @@ def test_api_set_reveal_timeout(
     assert channel_state
 
     assert channel_state.reveal_timeout == reveal_timeout
+
+
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("deposit", [0])
+def test_api_set_fee_schedule(
+    api_server_test_instance, raiden_network, token_addresses, settle_timeout
+):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    partner_address = app1.raiden.address
+
+    fee_schedule_data = dict(flat=25, proportional=1000)
+    reveal_timeout_data = settle_timeout + 1
+
+    # Trying to PATCH two attributes at the same time results in a CONFLICT error response
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json={"fee_schedule": fee_schedule_data, "reveal_timeout": reveal_timeout_data},
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # Correct PATCH
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json={"fee_schedule": fee_schedule_data},
+    )
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+    )
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app0.raiden),
+        token_network_address=token_network_address,
+        partner_address=app1.raiden.address,
+    )
+
+    assert channel_state.fee_schedule.flat == fee_schedule_data["flat"]
+    assert channel_state.fee_schedule.proportional == fee_schedule_data["proportional"]
