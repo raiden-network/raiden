@@ -37,6 +37,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -811,6 +812,43 @@ class RaidenAPI:  # pragma: no unittest
 
         self.raiden.set_channel_reveal_timeout(
             canonical_identifier=channel_state.canonical_identifier, reveal_timeout=reveal_timeout
+        )
+
+    def set_fee_schedule(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        partner_address: Address,
+        fee_schedule: FeeScheduleState,
+    ):
+        chain_state = views.state_from_raiden(self.raiden)
+
+        token_addresses = views.get_token_identifiers(chain_state, registry_address)
+        channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if not is_binary_address(token_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in channel deposit"
+            )
+
+        if not is_binary_address(partner_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel deposit"
+            )
+
+        if token_address not in token_addresses:
+            raise UnknownTokenAddress("Unknown token address")
+
+        if channel_state is None:
+            raise NonexistingChannel("No channel with partner_address for the given token")
+
+        self.raiden.set_fee_schedule(
+            canonical_identifier=channel_state.canonical_identifier, fee_schedule=fee_schedule
         )
 
     def channel_close(

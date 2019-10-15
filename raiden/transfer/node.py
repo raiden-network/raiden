@@ -45,6 +45,7 @@ from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNe
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
@@ -805,6 +806,13 @@ def handle_state_change(
             )
         elif type(state_change) == ActionChannelSetRevealTimeout:
             assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
+            iteration = subdispatch_by_canonical_id(
+                chain_state=chain_state,
+                canonical_identifier=state_change.canonical_identifier,
+                state_change=state_change,
+            )
+        elif type(state_change) == ActionChannelSetFeeSchedule:
+            assert isinstance(state_change, ActionChannelSetFeeSchedule), MYPY_ANNOTATION
             iteration = subdispatch_by_canonical_id(
                 chain_state=chain_state,
                 canonical_identifier=state_change.canonical_identifier,

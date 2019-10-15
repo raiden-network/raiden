@@ -19,6 +19,7 @@ from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersP
 from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import ChannelState, NettingChannelState
 
 
@@ -258,6 +259,19 @@ class MintTokenSchema(BaseSchema):
         decoding_class = dict
 
 
+class FeeScheduleSchema(BaseSchema):
+    cap_fees = fields.Boolean()
+    flat = fields.Integer(missing=0, validate=validate.Range(min=0, max=UINT256_MAX))
+    proportional = fields.Integer(missing=0, validate=validate.Range(min=0, max=1e21))
+    imbalance_penalty = fields.List(
+        fields.Tuple((fields.Integer(), fields.Integer())), dump_only=True
+    )
+
+    class Meta:
+        strict = True
+        decoding_class = FeeScheduleState
+
+
 class ChannelStateSchema(BaseSchema):
     channel_identifier = fields.Integer(attribute="identifier")
     token_network_address = AddressField()
@@ -265,6 +279,7 @@ class ChannelStateSchema(BaseSchema):
     partner_address = fields.Method("get_partner_address")
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
+    fee_schedule = fields.Nested(FeeScheduleSchema, missing=None)
     balance = fields.Method("get_balance")
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
@@ -303,6 +318,7 @@ class ChannelPutSchema(BaseSchema):
     reveal_timeout = fields.Integer(missing=None)
     settle_timeout = fields.Integer(missing=None)
     total_deposit = fields.Integer(default=None, missing=None)
+    fee_schedule = fields.Nested(FeeScheduleSchema)
 
     class Meta:
         strict = True
@@ -314,6 +330,7 @@ class ChannelPatchSchema(BaseSchema):
     total_deposit = fields.Integer(default=None, missing=None)
     total_withdraw = fields.Integer(default=None, missing=None)
     reveal_timeout = fields.Integer(default=None, missing=None)
+    fee_schedule = fields.Nested(FeeScheduleSchema, default=None, missing=None)
     state = fields.String(
         default=None,
         missing=None,

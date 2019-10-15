@@ -250,6 +250,10 @@ class InvalidBlockNumberInput(RaidenError):
     """Raised when the user provided a block number that is  < 0 or > UINT64_MAX"""
 
 
+class InvalidFeeSchedule(RaidenError):
+    """Raised when the user provided invalid parameters for fee schedule"""
+
+
 class NoStateForBlockIdentifier(RaidenError):
     """
     Raised when we attempt to provide a block identifier older
