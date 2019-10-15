@@ -72,7 +72,7 @@ def test_prepare_mediation_fee_config_prop_fee(cli_prop_fee):
 
 @pytest.mark.parametrize(
     "flat_fee, prop_fee, balance, final_amount, initial_amount, expected_fees",
-    [(10, 0, 100, 50, 70, [20]), (0, 100_000, 1000, 100, 110, [10])],
+    [(1, 0, 100, 50, 52, [2]), (10, 0, 100, 50, 70, [20]), (0, 100_000, 1000, 100, 110, [10])],
 )
 def test_get_initial_payment_for_final_target_amount(
     flat_fee: FeeAmount,
@@ -89,8 +89,8 @@ def test_get_initial_payment_for_final_target_amount(
                 canonical_identifier=factories.create(
                     CanonicalIdentifierProperties(channel_identifier=ChannelID(1))
                 ),
-                our_state=NettingChannelEndStateProperties(balance=balance),
-                partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+                our_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
+                partner_state=NettingChannelEndStateProperties(balance=balance),
                 fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee),
             ),
             NettingChannelStateProperties(
