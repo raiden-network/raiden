@@ -71,6 +71,7 @@ from raiden.exceptions import (
     InvalidAmount,
     InvalidBinaryAddress,
     InvalidBlockNumberInput,
+    InvalidFeeSchedule,
     InvalidNumberInput,
     InvalidRevealTimeout,
     InvalidSecret,
@@ -94,6 +95,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.utils import (
     Endpoint,
@@ -1223,6 +1225,37 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
+    def _set_fee_schedule(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        channel_state: NettingChannelState,
+        fee_schedule: FeeScheduleState,
+    ):
+        log.debug("Set fee schedule")
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+            return api_error(
+                errors="Can't update the fee schedule of a closed channel",
+                status_code=HTTPStatus.CONFLICT,
+            )
+        try:
+            self.raiden_api.set_fee_schedule(
+                registry_address=registry_address,
+                token_address=channel_state.token_address,
+                partner_address=channel_state.partner_state.address,
+                fee_schedule=fee_schedule,
+            )
+        except (NonexistingChannel, UnknownTokenAddress, InvalidBinaryAddress) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
+        except InvalidFeeSchedule as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address, channel_state.token_address, channel_state.partner_state.address
+        )
+
+        result = self.channel_schema.dump(updated_channel_state)
+        return api_response(result=result)
+
     def _close(
         self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
     ) -> Response:
@@ -1261,6 +1294,7 @@ class RestAPI:  # pragma: no unittest
         total_deposit: TokenAmount = None,
         total_withdraw: WithdrawAmount = None,
         reveal_timeout: BlockTimeout = None,
+        fee_schedule: FeeScheduleState = None,
         state: str = None,
     ) -> Response:
         log.debug(
@@ -1274,74 +1308,52 @@ class RestAPI:  # pragma: no unittest
             state=state,
         )
 
-        if reveal_timeout is not None and state is not None:
-            return api_error(
-                errors="Can not update a channel's reveal timeout and state at the same time",
-                status_code=HTTPStatus.CONFLICT,
-            )
+        # Method to get list of attributes that were actually set on the request.
+        settable_attributes = [
+            "total_deposit",
+            "total_withdraw",
+            "reveal_timeout",
+            "fee_schedule",
+            "state",
+        ]
 
-        if total_deposit is not None and state is not None:
-            return api_error(
-                errors="Can not update a channel's total deposit and state at the same time",
-                status_code=HTTPStatus.CONFLICT,
-            )
+        attrs = locals()
+        changed_attributes = {
+            attr: attrs[attr] for attr in settable_attributes if attrs[attr] is not None
+        }
 
-        if total_withdraw is not None and state is not None:
+        if len(changed_attributes) > 1:
+            attribute_name_list = "/".join(changed_attributes.keys())
             return api_error(
-                errors="Can not update a channel's total withdraw and state at the same time",
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        if total_withdraw is not None and total_deposit is not None:
-            return api_error(
-                errors=(
-                    "Can not update a channel's total withdraw "
-                    "and total deposit at the same time"
-                ),
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        if reveal_timeout is not None and total_deposit is not None:
-            return api_error(
-                errors=(
-                    "Can not update a channel's reveal timeout "
-                    "and total deposit at the same time"
-                ),
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        if reveal_timeout is not None and total_withdraw is not None:
-            return api_error(
-                errors=(
-                    "Can not update a channel's reveal timeout "
-                    "and total withdraw at the same time"
-                ),
+                errors=f"Can not update channel's {attribute_name_list} at the same time",
                 status_code=HTTPStatus.CONFLICT,
             )
 
         if total_deposit and total_deposit < 0:
             return api_error(
-                errors="Amount to deposit must not be negative.", status_code=HTTPStatus.CONFLICT
+                errors="Amount to deposit must not be negative.",
+                status_code=HTTPStatus.BAD_REQUEST,
             )
 
         if total_withdraw and total_withdraw < 0:
             return api_error(
-                errors="Amount to withdraw must not be negative.", status_code=HTTPStatus.CONFLICT
+                errors="Amount to withdraw must not be negative.",
+                status_code=HTTPStatus.BAD_REQUEST,
             )
 
-        empty_request = (
-            total_deposit is None
-            and state is None
-            and total_withdraw is None
-            and reveal_timeout is None
+        empty_request = all(
+            (
+                total_deposit is None,
+                state is None,
+                total_withdraw is None,
+                reveal_timeout is None,
+                fee_schedule is None,
+            )
         )
         if empty_request:
+            attribute_name_list = ", ".join((f"'{attr}'" for attr in settable_attributes))
             return api_error(
-                errors=(
-                    "Nothing to do. Should either provide "
-                    "'total_deposit', 'total_withdraw', 'reveal_timeout' or "
-                    "'state' argument"
-                ),
+                errors=("Nothing to do. Should provide one of {attribute_name_list} arguments"),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
@@ -1357,10 +1369,10 @@ class RestAPI:  # pragma: no unittest
                 errors="Requested channel for token {} and partner {} not found".format(
                     to_checksum_address(token_address), to_checksum_address(partner_address)
                 ),
-                status_code=HTTPStatus.CONFLICT,
+                status_code=HTTPStatus.NOT_FOUND,
             )
         except InvalidBinaryAddress as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+            return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
 
         if total_deposit is not None:
             result = self._deposit(registry_address, channel_state, total_deposit)
@@ -1374,6 +1386,9 @@ class RestAPI:  # pragma: no unittest
                 channel_state=channel_state,
                 reveal_timeout=reveal_timeout,
             )
+
+        elif fee_schedule is not None:
+            result = self._set_fee_schedule(registry_address, channel_state, fee_schedule)
 
         elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)

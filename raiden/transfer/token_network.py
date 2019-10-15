@@ -5,6 +5,7 @@ from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ContractReceiveChannelBatchUnlock,
@@ -27,6 +28,7 @@ from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, U
 StateChangeWithChannelID = Union[
     ActionChannelClose,
     ActionChannelWithdraw,
+    ActionChannelSetFeeSchedule,
     ActionChannelSetRevealTimeout,
     ContractReceiveChannelClosed,
     ContractReceiveChannelDeposit,
@@ -112,6 +114,22 @@ def handle_channel_withdraw(
 def handle_channel_set_reveal_timeout(
     token_network_state: TokenNetworkState,
     state_change: ActionChannelSetRevealTimeout,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+def handle_channel_set_fee_schedule(
+    token_network_state: TokenNetworkState,
+    state_change: ActionChannelSetFeeSchedule,
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
@@ -398,6 +416,16 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
+    if type(state_change) == ActionChannelSetFeeSchedule:
+        assert isinstance(state_change, ActionChannelSetFeeSchedule), MYPY_ANNOTATION
+        iteration = handle_channel_set_fee_schedule(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
         iteration = handle_channelnew(
