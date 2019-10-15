@@ -377,18 +377,6 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
             ),
         )
     )
-    payer_channel_backwards = factories.create(
-        NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(balance=balance1),
-            partner_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
-            fee_schedule=FeeScheduleState(
-                cap_fees=False,
-                flat=FeeAmount(flat_fee),
-                proportional=prop_fee_per_channel,
-                imbalance_penalty=imbalance_fee,
-            ),
-        )
-    )
     payee_channel = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=balance2),
@@ -404,7 +392,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 
     # How much do we need to send so that the target receives `amount`? PFS-like calculation.
     fee_calculation = get_initial_payment_for_final_target_amount(
-        final_amount=PaymentAmount(amount), channels=[payer_channel_backwards, payee_channel]
+        final_amount=PaymentAmount(amount), channels=[payer_channel, payee_channel]
     )
     assume(fee_calculation)  # There is not enough capacity for the payment in all cases
     assert fee_calculation
@@ -419,7 +407,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     # Check against a reasonable allowed error (composed of an absolute and a
     # relative part). We should go down with these values, but having it pass
     # in all cases is more important than being picky, right now.
-    assert abs(amount - amount_without_margin_after_fees) <= 3 + amount / 500
+    assert abs(amount - amount_without_margin_after_fees) <= 4 + amount / 500
 
     # We don't handle the case where mediation fees cancel each other out exactly to zero, yet.
     # Remove this assume after https://github.com/raiden-network/raiden-services/issues/569.

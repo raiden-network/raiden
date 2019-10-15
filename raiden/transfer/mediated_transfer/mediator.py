@@ -276,12 +276,12 @@ def get_lock_amount_after_fees(
     ), "Both channels must have the same cap_fees setting for the same mediator."
     try:
         fee_func = FeeScheduleState.mediation_fee_func(
-            payer_channel.fee_schedule,
-            payee_channel.fee_schedule,
-            payer_balance,
-            payee_balance,
-            capacity_in,
-            lock.amount,
+            schedule_in=payer_channel.fee_schedule,
+            schedule_out=payee_channel.fee_schedule,
+            balance_in=payer_balance,
+            balance_out=payee_balance,
+            capacity_in=capacity_in,
+            amount_with_fees=lock.amount,
             cap_fees=payer_channel.fee_schedule.cap_fees,
         )
     except UndefinedMediationFee:

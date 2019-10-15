@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentWithFeeAmount,
     Sequence,
+    TokenAmount,
 )
 
 
@@ -118,6 +119,77 @@ class FeesCalculation(NamedTuple):
         return PaymentAmount(self.total_amount - sum(self.mediation_fees))
 
 
+def get_lock_amount_before_fees(
+    final_amount: PaymentWithFeeAmount,
+    payer_channel: NettingChannelState,
+    payee_channel: NettingChannelState,
+) -> Optional[PaymentWithFeeAmount]:
+    """
+    Return the lock.amount after fees are taken.
+
+    Fees are taken only for the outgoing channel, which is the one with
+    collateral locked from this node.
+    """
+    payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
+    payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
+    capacity_in = TokenAmount(
+        payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
+    )
+    capacity_out = TokenAmount(
+        payee_channel.our_total_deposit + payee_channel.partner_total_deposit - payee_balance
+    )
+    assert (
+        payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+    ), "Both channels must have the same cap_fees setting for the same mediator."
+    try:
+        fee_func = FeeScheduleState.mediation_fee_backwards_func(
+            schedule_in=payer_channel.fee_schedule,
+            schedule_out=payee_channel.fee_schedule,
+            balance_in=payer_balance,
+            balance_out=payee_balance,
+            capacity_in=capacity_in,
+            capacity_out=capacity_out,
+            amount_after_fees=final_amount,
+            cap_fees=payer_channel.fee_schedule.cap_fees,
+        )
+    except UndefinedMediationFee:
+        return None
+
+    def angle_bisector(i: int) -> float:
+        x = fee_func.x_list[i]
+        return x - final_amount
+
+    i = 0  # len(fee_func.x_list) - 1
+    y = fee_func.y_list[i]
+    if y < angle_bisector(i):
+        # TODO: can this happen? Should we throw an exception?
+        return None
+    while y >= angle_bisector(i):
+        i += 1
+        if i == len(fee_func.x_list):
+            # Not enough capacity to send
+            return None
+        y = fee_func.y_list[i]
+    try:
+        # We found the linear section where the solution is. Now interpolate!
+        x1 = fee_func.x_list[i - 1]
+        x2 = fee_func.x_list[i]
+        y1 = fee_func.y_list[i - 1]
+        y2 = fee_func.y_list[i]
+        slope = (y2 - y1) / (x2 - x1)
+        amount_with_fees = (y1 - slope * x1 + final_amount) / (1 - slope)
+    except UndefinedMediationFee:
+        return None
+
+    amount_after_fees = PaymentWithFeeAmount(int(round(amount_with_fees)))
+
+    if amount_after_fees <= 0:
+        # The node can't cover its mediations fees from the transferred amount.
+        return None
+
+    return amount_after_fees
+
+
 def get_initial_payment_for_final_target_amount(
     final_amount: PaymentAmount, channels: List[NettingChannelState]
 ) -> Optional[FeesCalculation]:
@@ -139,21 +211,18 @@ def get_initial_payment_for_final_target_amount(
     try:
         for channel_in, channel_out in reversed(list(window(channels, 2))):
             assert isinstance(channel_in, NettingChannelState)
-            fee_schedule_out = channel_out.fee_schedule
             assert isinstance(channel_out, NettingChannelState)
-            fee_schedule_in = channel_in.fee_schedule
 
-            balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
-            fee_out = fee_sender(fee_schedule=fee_schedule_out, balance=balance_out, amount=total)
+            before_fees = get_lock_amount_before_fees(
+                final_amount=total, payer_channel=channel_in, payee_channel=channel_out
+            )
 
-            total += fee_out  # type: ignore
+            if before_fees is None:
+                return None
 
-            balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
-            fee_in = fee_receiver(fee_schedule=fee_schedule_in, balance=balance_in, amount=total)
-
-            total += fee_in  # type: ignore
-
-            fees.append(FeeAmount(fee_out + fee_in))
+            fee = FeeAmount(before_fees - total)
+            total = PaymentWithFeeAmount(total + fee)
+            fees.append(fee)
     except UndefinedMediationFee:
         return None
 
