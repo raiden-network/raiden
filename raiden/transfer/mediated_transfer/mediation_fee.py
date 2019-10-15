@@ -51,6 +51,42 @@ def sign(x: float) -> int:
         return 1 if x > 0 else -1
 
 
+def _merge_x_values(
+    schedule_in: "FeeScheduleState",
+    schedule_out: "FeeScheduleState",
+    balance_in: Balance,
+    balance_out: Balance,
+    max_x: int,
+) -> List[float]:
+    """ Collect all relevant x values (edges of piece wise linear sections) """
+    assert schedule_in._penalty_func
+    assert schedule_out._penalty_func
+    all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
+        balance_out - x for x in schedule_out._penalty_func.x_list
+    ]
+    limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
+    return sorted(set(limited_x_vals))
+
+
+def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], List[float]]:
+    """ Insert extra points for intersections with x-axis, see `test_fee_capping` """
+    x_list = copy(x_list)
+    y_list = copy(y_list)
+
+    for i in range(len(x_list) - 1):
+        y1, y2 = y_list[i : i + 2]
+        if sign(y1) * sign(y2) == -1:
+            x1, x2 = x_list[i : i + 2]
+            new_x = abs(y1) / abs(y2 - y1) * (x2 - x1)
+            new_index = bisect(x_list, new_x)
+            x_list.insert(new_index, new_x)
+            y_list.insert(new_index, 0)
+
+    # Cap points that are below zero
+    y_list = [max(y, 0) for y in y_list]
+    return x_list, y_list
+
+
 T = TypeVar("T", bound="FeeScheduleState")
 
 
@@ -71,6 +107,15 @@ class FeeScheduleState(State):
             assert isinstance(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
+
+    def _fee(self, balance: Balance, amount: float) -> float:
+        assert self._penalty_func
+        return (
+            self.flat
+            + self.proportional / 1e6 * abs(amount)
+            + self._penalty_func(balance + amount)
+            - self._penalty_func(balance)
+        )
 
     @staticmethod
     def mediation_fee_func(
@@ -95,52 +140,24 @@ class FeeScheduleState(State):
             schedule_out = copy(schedule_out)
             schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
 
-        # Collect all relevant x values (edges of piece wise linear sections)
-        all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
-            balance_out - x for x in schedule_out._penalty_func.x_list
-        ]
-        limited_x_vals = (max(min(x, balance_out, capacity_in), 0) for x in all_x_vals)
-        x_list = sorted(set(limited_x_vals))
+        x_list = _merge_x_values(
+            schedule_in, schedule_out, balance_in, balance_out, max_x=capacity_in
+        )
 
         # Sum up fees where amount_with_fees is fixed and x is amount without fees
         try:
-            fixed_fees = (
-                schedule_in.flat
-                + schedule_out.flat
-                + schedule_in.proportional / 1e6 * amount_with_fees
-                + schedule_in._penalty_func(balance_in + amount_with_fees)
-                - schedule_in._penalty_func(balance_in)
-            )
-
             y_list = [
-                fixed_fees
-                + schedule_out.proportional / 1e6 * x
-                + (
-                    schedule_out._penalty_func(balance_out - x)
-                    - schedule_out._penalty_func(balance_out)
-                )
+                schedule_in._fee(balance_in, amount_with_fees) + schedule_out._fee(balance_out, -x)
                 for x in x_list
             ]
         except ValueError:
             raise UndefinedMediationFee()
 
         if cap_fees:
-            # Insert extra points for intersections with x-axis, see `test_fee_capping`
-            for i in range(len(x_list) - 1):
-                y1, y2 = y_list[i : i + 2]
-                if sign(y1) * sign(y2) == -1:
-                    x1, x2 = x_list[i : i + 2]
-                    new_x = abs(y1) / abs(y2 - y1) * (x2 - x1)
-                    new_index = bisect(x_list, new_x)
-                    x_list.insert(new_index, new_x)
-                    y_list.insert(new_index, 0)
-
-            # Cap points that are below zero
-            y_list = [max(y, 0) for y in y_list]
+            x_list, y_list = _cap_fees(x_list, y_list)
 
         return Interpolate(x_list, y_list)
 
-    # FIXME: merge with `mediation_fee_func`
     @staticmethod
     def mediation_fee_backwards_func(
         schedule_in: "FeeScheduleState",
@@ -165,48 +182,22 @@ class FeeScheduleState(State):
             schedule_out = copy(schedule_out)
             schedule_out._penalty_func = Interpolate([0, balance_out + capacity_out], [0, 0])
 
-        # Collect all relevant x values (edges of piece wise linear sections)
-        all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
-            balance_out - x for x in schedule_out._penalty_func.x_list
-        ]
-        limited_x_vals = (max(min(x, capacity_in), 0) for x in all_x_vals)
-        x_list = sorted(set(limited_x_vals))
+        x_list = _merge_x_values(
+            schedule_in, schedule_out, balance_in, balance_out, max_x=capacity_in
+        )
 
-        # Sum up fees where amount_with_fees is fixed and x is amount without fees
+        # Sum up fees where amount_after_fees is fixed and x is amount with fees
         try:
-            fixed_fees = (
-                schedule_in.flat
-                + schedule_out.flat
-                + schedule_out.proportional / 1e6 * amount_after_fees
-                + schedule_out._penalty_func(balance_out - amount_after_fees)
-                - schedule_out._penalty_func(balance_out)
-            )
-
             y_list = [
-                fixed_fees
-                + schedule_in.proportional / 1e6 * x
-                + (
-                    schedule_in._penalty_func(balance_in + x)
-                    - schedule_in._penalty_func(balance_in)
-                )
+                schedule_in._fee(balance_in, x)
+                + schedule_out._fee(balance_out, -amount_after_fees)
                 for x in x_list
             ]
         except ValueError:
             raise UndefinedMediationFee()
 
         if cap_fees:
-            # Insert extra points for intersections with x-axis, see `test_fee_capping`
-            for i in range(len(x_list) - 1):
-                y1, y2 = y_list[i : i + 2]
-                if sign(y1) == -sign(y2):
-                    x1, x2 = x_list[i : i + 2]
-                    new_x = abs(y1) / abs(y2 - y1) * (x2 - x1)
-                    new_index = bisect(x_list, new_x)
-                    x_list.insert(new_index, new_x)
-                    y_list.insert(new_index, 0)
-
-            # Cap points that are below zero
-            y_list = [max(y, 0) for y in y_list]
+            x_list, y_list = _cap_fees(x_list, y_list)
 
         return Interpolate(x_list, y_list)
 
