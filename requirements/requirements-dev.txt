@@ -131,7 +131,7 @@ pytest==4.6.3
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1             # via matrix-synapse
-raiden-contracts==0.32.0
+raiden-contracts==0.33.1
 raiden-webui==0.10.0
 readme-renderer==24.0
 releases==1.6.1
@@ -176,4 +176,4 @@ zipp==0.5.1               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.2.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
+# setuptools==41.4.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
