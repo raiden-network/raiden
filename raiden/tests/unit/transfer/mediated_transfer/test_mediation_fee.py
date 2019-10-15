@@ -126,6 +126,45 @@ def test_imbalance_penalty():
         v_schedule.fee_payer(balance=Balance(100), amount=PaymentWithFeeAmount(1))
 
 
+def test_fee_capping():
+    r""" Test the capping when one section of the fee function crossed from the
+    positive into negative fees. Here, our fee curve looks like:
+
+        Fee
+        |
+      5 +
+        |\
+        | \
+      0 +--+-----+-> incoming_amount
+        | 25\   100
+        |    \
+        |     \
+        |      \
+        |       \
+    -15 +        \
+        0
+
+    When capping it, we need to insert the intersection point of (25, 0) into
+    our piecewise linear function before capping all y values to zero.
+    Otherwise we would just interpolate between (0, 5) and (100, 0).
+    """
+    schedule = FeeScheduleState(
+        imbalance_penalty=[(TokenAmount(0), FeeAmount(0)), (TokenAmount(100), FeeAmount(20))],
+        flat=FeeAmount(5),
+    )
+    fee_func = FeeScheduleState.mediation_fee_func(
+        schedule_in=FeeScheduleState(),
+        schedule_out=schedule,
+        balance_in=Balance(0),
+        balance_out=Balance(100),
+        capacity_in=TokenAmount(100),
+        amount_with_fees=PaymentWithFeeAmount(5),
+        cap_fees=True,
+    )
+    assert fee_func(30) == 0  # 5 - 6, capped
+    assert fee_func(20) == 5 - 4
+
+
 def test_linspace():
     assert linspace(TokenAmount(0), TokenAmount(4), 5) == [0, 1, 2, 3, 4]
     assert linspace(TokenAmount(0), TokenAmount(4), 4) == [0, 1, 3, 4]

@@ -1,4 +1,4 @@
-from bisect import bisect_right
+from bisect import bisect, bisect_right
 from copy import copy
 from dataclasses import dataclass, field, replace
 from typing import List, Optional, Sequence, Tuple, TypeVar
@@ -40,6 +40,15 @@ class Interpolate:  # pylint: disable=too-few-public-methods
 
     def __repr__(self) -> str:
         return f"Interpolate({self.x_list}, {self.y_list})"
+
+
+def sign(x: float) -> int:
+    """ Sign of input, returns zero on zero input
+    """
+    if x == 0:
+        return 0
+    else:
+        return 1 if x > 0 else -1
 
 
 T = TypeVar("T", bound="FeeScheduleState")
@@ -174,7 +183,17 @@ class FeeScheduleState(State):
             raise UndefinedMediationFee()
 
         if cap_fees:
-            # TODO: imprecise
+            # Insert extra points for intersections with x-axis, see `test_fee_capping`
+            for i in range(len(x_list) - 1):
+                y1, y2 = y_list[i : i + 2]
+                if sign(y1) == -sign(y2):
+                    x1, x2 = x_list[i : i + 2]
+                    new_x = abs(y1) / abs(y2 - y1) * (x2 - x1)
+                    new_index = bisect(x_list, new_x)
+                    x_list.insert(new_index, new_x)
+                    y_list.insert(new_index, 0)
+
+            # Cap points that are below zero
             y_list = [max(y, 0) for y in y_list]
 
         return Interpolate(x_list, y_list)
