@@ -1,7 +1,6 @@
 from itertools import islice
 
 from raiden.exceptions import UndefinedMediationFee
-from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer.channel import get_balance
 from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -68,46 +67,6 @@ def imbalance_fee_sender(
         )
     except ValueError:
         raise UndefinedMediationFee()
-
-
-def fee_sender(
-    fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
-) -> FeeAmount:
-    """Returns the mediation fee for this channel when transferring the given amount"""
-    imbalance_fee = imbalance_fee_sender(fee_schedule=fee_schedule, amount=amount, balance=balance)
-    flat_fee = fee_schedule.flat
-    prop_fee = int(round(amount * fee_schedule.proportional / 1e6))
-    return fee_schedule.calculate_capped_fee(FeeAmount(flat_fee + prop_fee + imbalance_fee))
-
-
-def fee_receiver(
-    fee_schedule: FeeScheduleState,
-    balance: Balance,
-    amount: PaymentWithFeeAmount,
-    iterations: int = 2,
-) -> FeeAmount:
-    """Returns the mediation fee for this channel when receiving the given amount"""
-
-    def fee_in(imbalance_fee: FeeAmount) -> FeeAmount:
-        return FeeAmount(
-            round(
-                (
-                    (amount + fee_schedule.flat + imbalance_fee)
-                    / (1 - fee_schedule.proportional / 1e6)
-                )
-                - amount
-            )
-        )
-
-    imbalance_fee = FeeAmount(0)
-    for _ in range(iterations):
-        imbalance_fee = imbalance_fee_receiver(
-            fee_schedule=fee_schedule,
-            amount=PaymentWithFeeAmount(amount + fee_in(imbalance_fee=imbalance_fee)),
-            balance=balance,
-        )
-
-    return fee_schedule.calculate_capped_fee(fee_in(imbalance_fee=imbalance_fee))
 
 
 class FeesCalculation(NamedTuple):
@@ -262,9 +221,7 @@ def get_amount_for_sending_before_and_after_fees(
 
         total_amount_with_mediator_fees = calculation.total_amount
         mediation_fees = sum(calculation.mediation_fees)
-        estimated_fee = max(
-            mediation_fees, round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_at_target)
-        )
+        estimated_fee = mediation_fees
         estimated_total_amount_at_initiator = calculate_safe_amount_with_fee(
             payment_amount=amount_at_target, estimated_fee=FeeAmount(estimated_fee)
         )

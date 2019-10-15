@@ -1,6 +1,6 @@
 from bisect import bisect, bisect_right
 from copy import copy
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
@@ -71,64 +71,6 @@ class FeeScheduleState(State):
             assert isinstance(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
-
-    def calculate_capped_fee(self, fee: FeeAmount) -> FeeAmount:
-        """ Caps `fee` to 0 if negative and `cap_fees` is `True`. """
-        if self.cap_fees and fee < 0:
-            return FeeAmount(0)
-
-        return fee
-
-    def imbalance_fee(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        if self._penalty_func:
-            # Total channel balance - node balance = balance (used as x-axis for the penalty)
-            balance = self._penalty_func.x_list[-1] - balance
-            try:
-                return FeeAmount(
-                    round(self._penalty_func(balance + amount) - self._penalty_func(balance))
-                )
-            except ValueError:
-                raise UndefinedMediationFee()
-
-        return FeeAmount(0)
-
-    def fee_payer(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        imbalance_fee = self.imbalance_fee(amount=PaymentWithFeeAmount(-amount), balance=balance)
-
-        flat_fee = self.flat
-        prop_fee = int(round(amount * self.proportional / 1e6))
-        return self.calculate_capped_fee(FeeAmount(flat_fee + prop_fee + imbalance_fee))
-
-    def fee_payee(
-        self, amount: PaymentWithFeeAmount, balance: Balance, iterations: int = 2
-    ) -> FeeAmount:
-        def fee_out(imbalance_fee: FeeAmount) -> FeeAmount:
-            return FeeAmount(
-                round(
-                    amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
-                )
-            )
-
-        imbalance_fee = FeeAmount(0)
-        for _ in range(iterations):
-            imbalance_fee = self.imbalance_fee(
-                amount=PaymentWithFeeAmount(amount - fee_out(imbalance_fee)), balance=balance
-            )
-
-        return self.calculate_capped_fee(fee_out(imbalance_fee))
-
-    def reversed(self: T) -> T:
-        if not self.imbalance_penalty:
-            return replace(self)
-        max_penalty = max(penalty for x, penalty in self.imbalance_penalty)
-        reversed_instance = replace(
-            self,
-            imbalance_penalty=[
-                (x, FeeAmount(max_penalty - penalty)) for x, penalty in self.imbalance_penalty
-            ],
-        )
-        self._update_penalty_func()
-        return reversed_instance
 
     @staticmethod
     def mediation_fee_func(
