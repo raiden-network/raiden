@@ -11,6 +11,7 @@ from raiden.blockchain.filters import decode_event
 from raiden.constants import EthClient
 from raiden.exceptions import (
     InsufficientFunds,
+    RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
     TransactionAlreadyPending,
 )
@@ -125,7 +126,9 @@ class ContractProxy:
                         "local transaction pool. Bailing ..."
                     )
 
-            raise e
+            raise RaidenUnrecoverableError(
+                f"Unexpected error in underlying Ethereum node: {str(e)}"
+            )
 
         return tx_hash
 
