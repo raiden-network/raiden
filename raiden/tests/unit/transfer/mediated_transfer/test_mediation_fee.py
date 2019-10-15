@@ -198,8 +198,7 @@ def test_rebalancing_fee_calculation():
         (0, 50_000, 1050, 1000),  # 5% per hop mediation fee
         (0, 10_000, 1010, 1000),  # 1% per hop mediation fee
         (0, 10_000, 101, 100),  # 1% per hop mediation fee
-        # (0, 5_000, 101, 101),  # 0,5% per hop mediation fee gets rounded away # TODO
-        (0, 4_000, 101, 101),  # 0,3% per hop mediation fee gets rounded away
+        (0, 4_990, 100, 100),  # 0,499% per hop mediation fee gets rounded away
         # mixed tests
         (1, 500_000, 1000 + 500 + 2, 1000),
         (10, 500_000, 1000 + 500 + 20, 997),
