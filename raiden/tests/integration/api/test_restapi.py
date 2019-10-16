@@ -18,20 +18,24 @@ from flask import url_for
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import GENESIS_BLOCK_NUMBER, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
-from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
+from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentWithFeeAmount
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -2220,23 +2224,13 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
     )
-    app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(initiator.raiden),
-        token_network_address=token_network_address,
-        partner_address=mediator.raiden.address,
-    )
-    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(mediator.raiden),
-        token_network_address=token_network_address,
-        partner_address=target.raiden.address,
-    )
-    forward_channels = [app0_app1_channel_state, app1_app2_channel_state]
-    amount_to_leave = 150
-    calculation = get_amount_for_sending_before_and_after_fees(
-        amount_to_leave_initiator=amount_to_leave, channels=forward_channels
-    )
 
-    assert calculation, "fees calculation should be succesful"
+    amount_to_send = PaymentWithFeeAmount(150)
+    # Remove when https://github.com/raiden-network/raiden/issues/4982 is tackled
+    expected_fee = FeeAmount(int(amount_to_send * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
+    fee_margin = calculate_fee_margin(amount_to_send, expected_fee)
+    # This is 0,4% of ~150, so ~1.2 which gets rounded to 1
+    actual_fee = 1
     identifier = 42
 
     initiator_server = create_api_server(initiator, 8575)
@@ -2262,7 +2256,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
     initiator.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
-        amount=calculation.amount_to_send,
+        amount=PaymentAmount(amount_to_send - expected_fee - fee_margin),
         target=target.raiden.address,
         identifier=identifier,
         secret=secret,
@@ -2279,11 +2273,9 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
         assert len(content) == 1
         assert content[0]["payment_identifier"] == str(identifier)
         if server == target_server:
-            assert content[0]["locked_amount"] == str(
-                calculation.amount_with_fees - sum(calculation.mediation_fees)
-            )
+            assert content[0]["locked_amount"] == str(amount_to_send - actual_fee)
         else:
-            assert content[0]["locked_amount"] == str(calculation.amount_with_fees)
+            assert content[0]["locked_amount"] == str(amount_to_send)
         assert content[0]["token_address"] == to_checksum_address(token_address)
         assert content[0]["token_network_address"] == to_checksum_address(token_network_address)
 
