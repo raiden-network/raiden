@@ -8,7 +8,7 @@ from raiden.tests.utils.factories import (
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
 )
-from raiden.tests.utils.mediation_fees import get_initial_payment_for_final_target_amount
+from raiden.tests.utils.mediation_fees import get_initial_amount_for_amount_after_fees
 from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import (
     NUM_DISCRETISATION_POINTS,
@@ -396,8 +396,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     )
 
     # How much do we need to send so that the target receives `amount`? PFS-like calculation.
-    fee_calculation = get_initial_payment_for_final_target_amount(
-        final_amount=PaymentAmount(amount), channels=[payer_channel, payee_channel]
+    fee_calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=PaymentAmount(amount), channels=[payer_channel, payee_channel]
     )
     assume(fee_calculation)  # There is not enough capacity for the payment in all cases
     assert fee_calculation
