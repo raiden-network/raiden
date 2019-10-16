@@ -9,7 +9,7 @@ from raiden.tests.utils.factories import (
     NettingChannelStateProperties,
     make_channel_set,
 )
-from raiden.tests.utils.mediation_fees import get_initial_payment_for_final_target_amount
+from raiden.tests.utils.mediation_fees import get_initial_amount_for_amount_after_fees
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.mediation_fees import ppm_fee_per_channel, prepare_mediation_fee_config
 from raiden.utils.typing import (
@@ -104,8 +104,8 @@ def test_get_initial_payment_for_final_target_amount(
         ]
     )
 
-    calculation = get_initial_payment_for_final_target_amount(
-        final_amount=final_amount, channels=channel_set.channels
+    calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=final_amount, channels=channel_set.channels
     )
 
     assert calculation is not None

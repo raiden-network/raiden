@@ -149,11 +149,11 @@ def get_lock_amount_before_fees(
     return amount_after_fees
 
 
-def get_initial_payment_for_final_target_amount(
-    final_amount: PaymentAmount, channels: List[NettingChannelState]
+def get_initial_amount_for_amount_after_fees(
+    amount_after_fees: PaymentAmount, channels: List[NettingChannelState]
 ) -> Optional[FeesCalculation]:
     """ Calculates the payment amount including fees to be supplied to the given
-    channel configuration, so that `final_amount` arrived at the target.
+    channel configuration, so that `amount_after_fees` arrives at the target.
 
     Note: The channels have to be from the view of the mediator, so for the case
         A -> B -> C this should be [B->A, B->C]
@@ -162,10 +162,12 @@ def get_initial_payment_for_final_target_amount(
 
     # No fees in direct transfer
     if len(channels) == 1:
-        return FeesCalculation(total_amount=PaymentWithFeeAmount(final_amount), mediation_fees=[])
+        return FeesCalculation(
+            total_amount=PaymentWithFeeAmount(amount_after_fees), mediation_fees=[]
+        )
 
     # Backpropagate fees in mediation scenario
-    total = PaymentWithFeeAmount(final_amount)
+    total = PaymentWithFeeAmount(amount_after_fees)
     fees: List[FeeAmount] = []
     try:
         for channel_in, channel_out in reversed(list(window(channels, 2))):
@@ -212,8 +214,8 @@ def get_amount_for_sending_before_and_after_fees(
     """
     amount_at_target = amount_to_leave_initiator
     while amount_at_target != 0:
-        calculation = get_initial_payment_for_final_target_amount(
-            final_amount=amount_at_target, channels=channels
+        calculation = get_initial_amount_for_amount_after_fees(
+            amount_after_fees=amount_at_target, channels=channels
         )
         if calculation is None:
             amount_at_target = PaymentAmount(amount_at_target - 1)
