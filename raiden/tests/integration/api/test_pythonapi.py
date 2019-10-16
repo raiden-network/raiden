@@ -117,7 +117,7 @@ def test_raidenapi_channel_lifecycle(
             settle_timeout=lowest_valid_settle_timeout - 1,
         )
 
-    # Make sure a the smallest settle timeout is accepted
+    # Make sure the smallest settle timeout is accepted
     api1.channel_open(
         registry_address=node1.raiden.default_registry.address,
         token_address=token_address,
