@@ -456,8 +456,9 @@ class RaidenAPI:  # pragma: no unittest
         )
         if duplicated_channel:
             raise DuplicatedChannelError(
-                f"A channel with {partner_address} for token {token_address} already exists. "
-                f"(At block: {confirmed_block_identifier})"
+                f"A channel with {to_checksum_address(partner_address)} for token "
+                f"{to_checksum_address(token_address)} already exists. "
+                f"(At blockhash: {confirmed_block_identifier.hex()})"
             )
 
         with self.raiden.gas_reserve_lock:
