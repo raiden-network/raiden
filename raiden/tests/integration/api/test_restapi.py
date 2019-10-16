@@ -31,6 +31,7 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -1371,7 +1372,7 @@ def assert_payment_secret_and_hash(response, payment):
     secret = to_bytes(hexstr=response["secret"])
     assert len(secret) == SECRET_LENGTH
 
-    assert to_bytes(hexstr=response["secret_hash"]) == sha256(secret).digest()
+    assert to_bytes(hexstr=response["secret_hash"]) == sha256_secrethash(secret)
 
 
 def assert_payment_conflict(responses):
@@ -2246,7 +2247,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     mediator.raiden.message_handler = mediator_wait = WaitForMessage()
 
     secret = factories.make_secret()
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
 
     request = grequests.get(
         api_url_for(

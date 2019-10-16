@@ -1,5 +1,4 @@
 import random
-from hashlib import sha256
 
 import gevent
 import pytest
@@ -378,7 +377,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         "expected balances."
     )
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
-    assert lock.secrethash == sha256(secret).digest()
+    assert lock.secrethash == sha256_secrethash(secret)
 
     waiting.wait_for_settle(
         alice_app.raiden,
@@ -608,8 +607,8 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
     target = app1.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -758,8 +757,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
     target = app2.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 

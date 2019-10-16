@@ -85,6 +85,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import LockedAmount
 
@@ -1504,7 +1505,7 @@ def test_get_amount_locked():
     assert channel.get_amount_locked(state) == 23
 
     secret = make_secret(1)
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     lock = HashTimeLockState(amount=21, expiration=100, secrethash=secrethash)
     state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret
@@ -1512,7 +1513,7 @@ def test_get_amount_locked():
     assert channel.get_amount_locked(state) == 44
 
     secret = make_secret(2)
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     lock = HashTimeLockState(amount=19, expiration=100, secrethash=secrethash)
     state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret

@@ -1,4 +1,3 @@
-from hashlib import sha256
 from typing import Dict, List
 
 import gevent
@@ -29,11 +28,13 @@ from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils import sha3, wait_until
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     Balance,
     BlockSpecification,
     ChannelID,
+    Secret,
     TokenNetworkAddress,
 )
 from raiden_contracts.constants import (
@@ -502,8 +503,8 @@ def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     )
 
     target = app1.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     # make an unconfirmed transfer to ensure the nodes have communicated

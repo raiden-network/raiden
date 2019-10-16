@@ -89,7 +89,7 @@ class Lock:
     Args:
         amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
-        secrethash: Hashed secret `sha256(secret).digest()` used to register the transfer,
+        secrethash: Hashed secret used to register the transfer,
         the real `secret` is necessary to release the locked amount.
     """
 
