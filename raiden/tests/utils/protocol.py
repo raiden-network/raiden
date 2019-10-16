@@ -180,3 +180,16 @@ def dont_handle_node_change_network_state():
     return patch(
         "raiden.transfer.node.handle_action_change_node_network_state", empty_state_transition
     )
+
+
+def dont_handle_contract_receive_closed():
+    """
+    Returns a mock context where ContractReceiveChannelClosed is not processed
+    """
+
+    def empty_state_transition(chain_state, state_change):  # pylint: disable=unused-argument
+        return TransitionResult(chain_state, list())
+
+    return patch(
+        "raiden.transfer.node.handle_contract_receive_channel_closed", empty_state_transition
+    )
