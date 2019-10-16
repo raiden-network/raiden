@@ -78,38 +78,33 @@ class FeesCalculation(NamedTuple):
         return PaymentAmount(self.total_amount - sum(self.mediation_fees))
 
 
-def get_lock_amount_before_fees(
+def get_amount_before_fees(
     final_amount: PaymentWithFeeAmount,
-    payer_channel: NettingChannelState,
-    payee_channel: NettingChannelState,
+    payer_balance: Balance,
+    payee_balance: Balance,
+    payer_fee_schedule: FeeScheduleState,
+    payee_fee_schedule: FeeScheduleState,
+    payer_capacity: TokenAmount,
+    payee_capacity: TokenAmount,
 ) -> Optional[PaymentWithFeeAmount]:
-    """
-    Return the lock.amount after fees are taken.
+    """ Return the amount the transfer requires before fees are deducted.
 
-    Fees are taken only for the outgoing channel, which is the one with
-    collateral locked from this node.
+    This function is also used by the PFS. Therefore the parameteres should not be Raiden state
+    objects.
     """
-    payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
-    payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
-    capacity_in = TokenAmount(
-        payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
-    )
-    capacity_out = TokenAmount(
-        payee_channel.our_total_deposit + payee_channel.partner_total_deposit - payee_balance
-    )
     assert (
-        payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+        payer_fee_schedule.cap_fees == payee_fee_schedule.cap_fees
     ), "Both channels must have the same cap_fees setting for the same mediator."
     try:
         fee_func = FeeScheduleState.mediation_fee_backwards_func(
-            schedule_in=payer_channel.fee_schedule,
-            schedule_out=payee_channel.fee_schedule,
+            schedule_in=payer_fee_schedule,
+            schedule_out=payee_fee_schedule,
             balance_in=payer_balance,
             balance_out=payee_balance,
-            capacity_in=capacity_in,
-            capacity_out=capacity_out,
+            capacity_in=payer_capacity,
+            capacity_out=payee_capacity,
             amount_after_fees=final_amount,
-            cap_fees=payer_channel.fee_schedule.cap_fees,
+            cap_fees=payer_fee_schedule.cap_fees,
         )
     except UndefinedMediationFee:
         return None
@@ -174,8 +169,27 @@ def get_initial_amount_for_amount_after_fees(
             assert isinstance(channel_in, NettingChannelState)
             assert isinstance(channel_out, NettingChannelState)
 
-            before_fees = get_lock_amount_before_fees(
-                final_amount=total, payer_channel=channel_in, payee_channel=channel_out
+            payer_balance = get_balance(channel_in.our_state, channel_in.partner_state)
+            payee_balance = get_balance(channel_out.our_state, channel_out.partner_state)
+
+            payer_fee_schedule = channel_in.fee_schedule
+            payee_fee_schedule = channel_out.fee_schedule
+
+            capacity_in = TokenAmount(
+                channel_in.our_total_deposit + channel_in.partner_total_deposit - payer_balance
+            )
+            capacity_out = TokenAmount(
+                channel_out.our_total_deposit + channel_out.partner_total_deposit - payee_balance
+            )
+
+            before_fees = get_amount_before_fees(
+                final_amount=total,
+                payer_balance=payer_balance,
+                payee_balance=payee_balance,
+                payer_fee_schedule=payer_fee_schedule,
+                payee_fee_schedule=payee_fee_schedule,
+                payer_capacity=capacity_in,
+                payee_capacity=capacity_out,
             )
 
             if before_fees is None:
