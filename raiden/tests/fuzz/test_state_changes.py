@@ -52,6 +52,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import random_secret
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import BlockNumber
 
 
@@ -436,7 +437,7 @@ class InitiatorMixin:
         previous_action=init_initiators, secret=secret()  # pylint: disable=no-value-for-parameter
     )
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
-        assume(sha256(secret).digest() != sha256(previous_action.transfer.secret).digest())
+        assume(sha256_secrethash(secret) != sha256_secrethash(previous_action.transfer.secret))
         self._assume_channel_opened(previous_action)
         transfer = deepcopy(previous_action.transfer)
         transfer.secret = secret
@@ -497,7 +498,7 @@ class MediatorMixin:
     def _update_balance_proof_data(self, partner, amount, expiration, secret):
         expected = self._get_balance_proof_data(partner)
         lock = HashTimeLockState(
-            amount=amount, expiration=expiration, secrethash=sha256(secret).digest()
+            amount=amount, expiration=expiration, secrethash=sha256_secrethash(secret)
         )
         expected.update(amount, lock)
         return expected
@@ -513,7 +514,7 @@ class MediatorMixin:
         balance_proof_data = self._update_balance_proof_data(
             initiator_address, amount, self.block_number + 10, secret
         )
-        self.secrethash_to_secret[sha256(secret).digest()] = secret
+        self.secrethash_to_secret[sha256_secrethash(secret)] = secret
 
         return factories.create(
             factories.LockedTransferSignedStateProperties(

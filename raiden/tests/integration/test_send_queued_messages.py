@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 import gevent
 import pytest
 
@@ -18,6 +16,7 @@ from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
 from raiden.utils import create_default_identifier
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import BlockNumber, TokenAmount
 
 
@@ -46,7 +45,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     transfers = []
     for secret_seed in range(number_of_transfers):
         secret = make_secret(secret_seed)
-        secrethash = sha256(secret).digest()
+        secrethash = sha256_secrethash(secret)
         transfers.append((create_default_identifier(), amount_per_transfer, secret, secrethash))
 
         app0.raiden.raiden_event_handler.hold(

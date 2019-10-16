@@ -1,5 +1,4 @@
 import random
-from hashlib import sha256
 
 import gevent
 import pytest
@@ -25,6 +24,7 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancel
 from raiden.utils import PaymentID, sha3
 
 # pylint: disable=too-many-locals
+from raiden.utils.secrethash import sha256_secrethash
 
 
 def open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout):
@@ -136,7 +136,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
 
     payment_identifier = 1
     secret = sha3(b"test_regression_multiple_revealsecret")
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     expiration = app0.raiden.get_block_number() + 100
     lock_amount = 10
     lock = Lock(amount=lock_amount, expiration=expiration, secrethash=secrethash)
