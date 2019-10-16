@@ -333,10 +333,11 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
     # let's create a new channel
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
+    token_address_hex = to_checksum_address(token_address)
     settle_timeout = 1650
     channel_data_obj = {
         "partner_address": first_partner_address,
-        "token_address": to_checksum_address(token_address),
+        "token_address": token_address_hex,
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
     }
@@ -359,8 +360,18 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
-
     token_network_address = json_response["token_network_address"]
+
+    # Now let's try to open the same channel again and see that a proper error is returned
+    request = grequests.put(
+        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+    json_response = get_json_response(response)
+    assert first_partner_address in json_response["errors"]
+    assert token_address_hex in json_response["errors"]
+    assert "b\\" not in json_response["errors"]
 
     # now let's open a channel and make a deposit too
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
