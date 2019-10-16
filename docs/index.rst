@@ -82,7 +82,6 @@ Contents
 
   config_file
   trademarks
-  Raiden Codebase Documentation <./_build/generated/modules>
 
 .. toctree::
   :maxdepth: 1
