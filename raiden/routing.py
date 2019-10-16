@@ -41,7 +41,7 @@ def get_best_routes(
     pfs_config = config.get("pfs_config", None)
 
     is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
-    can_use_pfs = pfs_config and one_to_n_address is not None
+    can_use_pfs = pfs_config is not None and one_to_n_address is not None
 
     log.debug(
         "Getting route for payment",
