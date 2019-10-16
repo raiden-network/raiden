@@ -17,7 +17,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     calculate_imbalance_fees,
     linspace,
 )
-from raiden.transfer.mediated_transfer.mediator import get_lock_amount_after_fees
+from raiden.transfer.mediated_transfer.mediator import get_amount_after_fees
 from raiden.utils.mediation_fees import ppm_fee_per_channel
 from raiden.utils.typing import (
     Balance,
@@ -279,8 +279,8 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
         )
     )
 
-    locked_after_fees = get_lock_amount_after_fees(
-        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+    locked_after_fees = get_amount_after_fees(
+        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
 
@@ -338,8 +338,8 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
         )
     )
 
-    locked_after_fees = get_lock_amount_after_fees(
-        lock=lock, payer_channel=payer_channel, payee_channel=payee_channel
+    locked_after_fees = get_amount_after_fees(
+        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
     )
     assert locked_after_fees == expected_amount
 
@@ -403,8 +403,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     assert fee_calculation
 
     # How much would a mediator send to the target? Ideally exactly `amount`.
-    amount_without_margin_after_fees = get_lock_amount_after_fees(
-        lock=make_hash_time_lock_state(amount=fee_calculation.total_amount),
+    amount_without_margin_after_fees = get_amount_after_fees(
+        incoming_amount=fee_calculation.total_amount,
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
@@ -419,8 +419,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     amount_with_fee_and_margin = calculate_safe_amount_with_fee(
         fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
     )
-    amount_with_margin_after_fees = get_lock_amount_after_fees(
-        lock=make_hash_time_lock_state(amount=amount_with_fee_and_margin),
+    amount_with_margin_after_fees = get_amount_after_fees(
+        incoming_amount=amount_with_fee_and_margin,
         payer_channel=payer_channel,
         payee_channel=payee_channel,
     )
