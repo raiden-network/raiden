@@ -19,7 +19,6 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import (
-    HashTimeLockState,
     LockedTransferSignedState,
     LockedTransferUnsignedState,
     MediationPairState,
@@ -225,15 +224,13 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def get_lock_amount_after_fees(
-    lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
+def get_amount_after_fees(
+    incoming_amount: PaymentWithFeeAmount,
+    payer_channel: NettingChannelState,
+    payee_channel: NettingChannelState,
 ) -> Optional[PaymentWithFeeAmount]:
-    """
-    Return the lock.amount after fees are taken.
+    """ Return the amount after fees are taken. """
 
-    Fees are taken only for the outgoing channel, which is the one with
-    collateral locked from this node.
-    """
     payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
     payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
     capacity_in = TokenAmount(
@@ -249,7 +246,7 @@ def get_lock_amount_after_fees(
             balance_in=payer_balance,
             balance_out=payee_balance,
             capacity_in=capacity_in,
-            amount_with_fees=lock.amount,
+            amount_with_fees=incoming_amount,
             cap_fees=payer_channel.fee_schedule.cap_fees,
         )
     except UndefinedMediationFee:
@@ -257,7 +254,7 @@ def get_lock_amount_after_fees(
 
     def angle_bisector(i: int) -> float:
         x = fee_func.x_list[i]
-        return lock.amount - x
+        return incoming_amount - x
 
     i = len(fee_func.x_list) - 1
     y = fee_func.y_list[i]
@@ -277,7 +274,7 @@ def get_lock_amount_after_fees(
         y1 = fee_func.y_list[i]
         y2 = fee_func.y_list[i + 1]
         slope = (y2 - y1) / (x2 - x1)
-        amount_without_fees = (x1 * slope + lock.amount - y1) / (1 + slope)
+        amount_without_fees = (x1 * slope + incoming_amount - y1) / (1 + slope)
     except UndefinedMediationFee:
         return None
 
@@ -419,8 +416,10 @@ def forward_transfer_pair(
     if not payee_channel:
         return None, []
 
-    amount_after_fees = get_lock_amount_after_fees(
-        payer_transfer.lock, payer_channel, payee_channel
+    amount_after_fees = get_amount_after_fees(
+        incoming_amount=payer_transfer.lock.amount,
+        payer_channel=payer_channel,
+        payee_channel=payee_channel,
     )
     if not amount_after_fees:
         return None, []
