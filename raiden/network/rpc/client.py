@@ -605,7 +605,7 @@ class JSONRPCClient:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
-        Consider the following reorg, were a transaction is mined at block B,
+        Consider the following reorg, where a transaction is mined at block B,
         but it is not mined in the canonical chain A-C-D:
 
              A -> B   D
