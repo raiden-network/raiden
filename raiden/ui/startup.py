@@ -13,7 +13,11 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import RAIDEN_CONTRACT_VERSION
-from raiden.ui.checks import check_pfs_configuration, check_smart_contract_addresses
+from raiden.ui.checks import (
+    check_pfs_configuration,
+    check_raiden_environment,
+    check_smart_contract_addresses,
+)
 from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
@@ -46,6 +50,10 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict
     If an invalid combination of network id and environment type is provided, exits
     the program with an error
     """
+    environment_type = config["environment_type"]
+
+    check_raiden_environment(network_id, environment_type)
+
     contracts: Dict[str, Any] = dict()
     contracts_version = RAIDEN_CONTRACT_VERSION
 
