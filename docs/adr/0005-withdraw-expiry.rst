@@ -67,20 +67,20 @@ Complex:
   `total_withdraw=10`.
 - Alice requests a withdraw of another 10 tokens. `total_withdraw=20`.
 - Alice requests a withdraw of another 20 tokens. `total_withdraw=40`.
-- Alice withdraw states look as follows
-```
-[
-  {
-    "total_withdraw": 10,
-  },
-  {
-    "total_withdraw": 20,
-  }
-  {
-    "total_withdraw": 30,
-  }
-]
-```
+- Alice withdraw states look as follows::
+
+    [
+      {
+        "total_withdraw": 10,
+      },
+      {
+        "total_withdraw": 20,
+      }
+      {
+        "total_withdraw": 30,
+      }
+    ]
+
 - Bob does not confirm any withdraw.
 - Alice sends Bob a `WithdrawExpired` message for the first withdraw request which had a `total_withdraw=10`.
   Before sending `WithdrawExpired`, Alice clears the expired withdraw state `total_withdraw=10`. However, that doesn't affect Alice's `total_withdraw`
