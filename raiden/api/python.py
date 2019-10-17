@@ -820,7 +820,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address,
         fee_schedule: FeeScheduleState,
-    ):
+    ) -> None:
         chain_state = views.state_from_raiden(self.raiden)
 
         token_addresses = views.get_token_identifiers(chain_state, registry_address)
