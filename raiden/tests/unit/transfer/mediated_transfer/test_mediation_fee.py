@@ -17,7 +17,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     calculate_imbalance_fees,
     linspace,
 )
-from raiden.transfer.mediated_transfer.mediator import get_amount_after_fees
+from raiden.transfer.mediated_transfer.mediator import get_amount_without_fees
 from raiden.utils.mediation_fees import ppm_fee_per_channel
 from raiden.utils.typing import (
     Balance,
@@ -266,21 +266,21 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
     """ Tests mediation fee deduction. """
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     lock = make_hash_time_lock_state(amount=initial_amount)
-    payer_channel = factories.create(
+    channel_in = factories.create(
         NettingChannelStateProperties(
             partner_state=NettingChannelEndStateProperties(balance=TokenAmount(2000)),
             fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee_per_channel),
         )
     )
-    payee_channel = factories.create(
+    channel_out = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=TokenAmount(2000)),
             fee_schedule=FeeScheduleState(flat=flat_fee, proportional=prop_fee_per_channel),
         )
     )
 
-    locked_after_fees = get_amount_after_fees(
-        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
+    locked_after_fees = get_amount_without_fees(
+        amount_with_fees=lock.amount, channel_in=channel_in, channel_out=channel_out
     )
     assert locked_after_fees == expected_amount
 
@@ -313,7 +313,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
         channel_capacity=balance, proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee)
     )
     lock = make_hash_time_lock_state(amount=initial_amount)
-    payer_channel = factories.create(
+    channel_in = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
             partner_state=NettingChannelEndStateProperties(balance=balance),
@@ -325,7 +325,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
             ),
         )
     )
-    payee_channel = factories.create(
+    channel_out = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=balance),
             partner_state=NettingChannelEndStateProperties(balance=TokenAmount(0)),
@@ -338,8 +338,8 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
         )
     )
 
-    locked_after_fees = get_amount_after_fees(
-        incoming_amount=lock.amount, payer_channel=payer_channel, payee_channel=payee_channel
+    locked_after_fees = get_amount_without_fees(
+        amount_with_fees=lock.amount, channel_in=channel_in, channel_out=channel_out
     )
     assert locked_after_fees == expected_amount
 
@@ -370,7 +370,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
         channel_capacity=total_balance,
         proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee),
     )
-    payer_channel = factories.create(
+    channel_in = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
             partner_state=NettingChannelEndStateProperties(balance=balance1),
@@ -382,7 +382,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
             ),
         )
     )
-    payee_channel = factories.create(
+    channel_out = factories.create(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=balance2),
             partner_state=NettingChannelEndStateProperties(balance=total_balance - balance2),
@@ -397,16 +397,16 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 
     # How much do we need to send so that the target receives `amount`? PFS-like calculation.
     fee_calculation = get_initial_amount_for_amount_after_fees(
-        amount_after_fees=PaymentAmount(amount), channels=[payer_channel, payee_channel]
+        amount_after_fees=PaymentAmount(amount), channels=[channel_in, channel_out]
     )
     assume(fee_calculation)  # There is not enough capacity for the payment in all cases
     assert fee_calculation
 
     # How much would a mediator send to the target? Ideally exactly `amount`.
-    amount_without_margin_after_fees = get_amount_after_fees(
-        incoming_amount=fee_calculation.total_amount,
-        payer_channel=payer_channel,
-        payee_channel=payee_channel,
+    amount_without_margin_after_fees = get_amount_without_fees(
+        amount_with_fees=fee_calculation.total_amount,
+        channel_in=channel_in,
+        channel_out=channel_out,
     )
     assume(amount_without_margin_after_fees)  # We might lack capacity for the payment
     assert abs(amount - amount_without_margin_after_fees) <= 1  # Equal except for rounding errors
@@ -419,10 +419,8 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     amount_with_fee_and_margin = calculate_safe_amount_with_fee(
         fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
     )
-    amount_with_margin_after_fees = get_amount_after_fees(
-        incoming_amount=amount_with_fee_and_margin,
-        payer_channel=payer_channel,
-        payee_channel=payee_channel,
+    amount_with_margin_after_fees = get_amount_without_fees(
+        amount_with_fees=amount_with_fee_and_margin, channel_in=channel_in, channel_out=channel_out
     )
     assume(amount_with_margin_after_fees)  # We might lack capacity to add margins
     assert amount_with_margin_after_fees >= amount

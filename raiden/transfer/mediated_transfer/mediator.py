@@ -252,33 +252,33 @@ def find_intersection(fee_func: Interpolate, line: Callable[[int], float]) -> Op
     return (yl1 - yf1) * (x2 - x1) / ((yf2 - yf1) - (yl2 - yl1)) + x1
 
 
-def get_amount_after_fees(
-    incoming_amount: PaymentWithFeeAmount,
-    payer_channel: NettingChannelState,
-    payee_channel: NettingChannelState,
+def get_amount_without_fees(
+    amount_with_fees: PaymentWithFeeAmount,
+    channel_in: NettingChannelState,
+    channel_out: NettingChannelState,
 ) -> Optional[PaymentWithFeeAmount]:
     """ Return the amount after fees are taken. """
 
-    payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
-    payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
+    balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
+    balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
     receivable = TokenAmount(
-        payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
+        channel_in.our_total_deposit + channel_in.partner_total_deposit - balance_in
     )
     assert (
-        payer_channel.fee_schedule.cap_fees == payee_channel.fee_schedule.cap_fees
+        channel_in.fee_schedule.cap_fees == channel_out.fee_schedule.cap_fees
     ), "Both channels must have the same cap_fees setting for the same mediator."
     try:
         fee_func = FeeScheduleState.mediation_fee_func(
-            schedule_in=payer_channel.fee_schedule,
-            schedule_out=payee_channel.fee_schedule,
-            balance_in=payer_balance,
-            balance_out=payee_balance,
+            schedule_in=channel_in.fee_schedule,
+            schedule_out=channel_out.fee_schedule,
+            balance_in=balance_in,
+            balance_out=balance_out,
             receivable=receivable,
-            amount_with_fees=incoming_amount,
-            cap_fees=payer_channel.fee_schedule.cap_fees,
+            amount_with_fees=amount_with_fees,
+            cap_fees=channel_in.fee_schedule.cap_fees,
         )
         amount_without_fees = find_intersection(
-            fee_func, lambda i: incoming_amount - fee_func.x_list[i]
+            fee_func, lambda i: amount_with_fees - fee_func.x_list[i]
         )
     except UndefinedMediationFee:
         return None
@@ -421,10 +421,10 @@ def forward_transfer_pair(
     if not payee_channel:
         return None, []
 
-    amount_after_fees = get_amount_after_fees(
-        incoming_amount=payer_transfer.lock.amount,
-        payer_channel=payer_channel,
-        payee_channel=payee_channel,
+    amount_after_fees = get_amount_without_fees(
+        amount_with_fees=payer_transfer.lock.amount,
+        channel_in=payer_channel,
+        channel_out=payee_channel,
     )
     if not amount_after_fees:
         return None, []
