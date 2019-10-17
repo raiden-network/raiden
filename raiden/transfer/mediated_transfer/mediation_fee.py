@@ -87,6 +87,62 @@ def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], Li
     return x_list, y_list
 
 
+def _mediation_fee_func(
+    schedule_in: "FeeScheduleState",
+    schedule_out: "FeeScheduleState",
+    balance_in: Balance,
+    balance_out: Balance,
+    capacity_in: TokenAmount,  # TODO: rename
+    amount_with_fees: Optional[PaymentWithFeeAmount],
+    amount_without_fees: Optional[PaymentWithFeeAmount],
+    cap_fees: bool,
+) -> Interpolate:
+    """ Returns a function which calculates total_mediation_fee(x)
+
+    Either `amount_with_fees` or `amount_without_fees` must be given while the
+    other one is None. The returned function will depend on the value that is
+    not given.
+    """
+    assert amount_with_fees is None or amount_without_fees is None
+    if balance_out == 0:
+        raise UndefinedMediationFee()
+
+    # Add dummy penalty funcs if none are set
+    if not schedule_in._penalty_func:
+        schedule_in = copy(schedule_in)
+        schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
+    if not schedule_out._penalty_func:
+        schedule_out = copy(schedule_out)
+        schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
+
+    x_list = _merge_x_values(
+        schedule_in,
+        schedule_out,
+        balance_in,
+        balance_out,
+        max_x=capacity_in if amount_with_fees is not None else balance_out,
+    )
+    print("b", x_list)
+
+    # Sum up fees where either `amount_with_fees` or `amount_without_fees` is
+    # fixed and the other one is represented by `x`.
+    try:
+        y_list = [
+            schedule_in._fee(balance_in, x if amount_with_fees is None else amount_with_fees)
+            + schedule_out._fee(
+                balance_out, -x if amount_without_fees is None else -amount_without_fees
+            )
+            for x in x_list
+        ]
+    except ValueError:
+        raise UndefinedMediationFee()
+
+    if cap_fees:
+        x_list, y_list = _cap_fees(x_list, y_list)
+
+    return Interpolate(x_list, y_list)
+
+
 T = TypeVar("T", bound="FeeScheduleState")
 
 
@@ -128,34 +184,16 @@ class FeeScheduleState(State):
         cap_fees: bool,
     ) -> Interpolate:
         """ Returns a function which calculates total_mediation_fee(amount_without_fees) """
-        if balance_out == 0:
-            raise UndefinedMediationFee()
-
-        # Add dummy penalty funcs if none are set
-        if not schedule_in._penalty_func:
-            schedule_in = copy(schedule_in)
-            schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
-        if not schedule_out._penalty_func:
-            schedule_out = copy(schedule_out)
-            schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
-
-        x_list = _merge_x_values(
-            schedule_in, schedule_out, balance_in, balance_out, max_x=capacity_in
+        return _mediation_fee_func(
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            capacity_in=capacity_in,
+            amount_with_fees=amount_with_fees,
+            amount_without_fees=None,
+            cap_fees=cap_fees,
         )
-
-        # Sum up fees where amount_with_fees is fixed and x is amount without fees
-        try:
-            y_list = [
-                schedule_in._fee(balance_in, amount_with_fees) + schedule_out._fee(balance_out, -x)
-                for x in x_list
-            ]
-        except ValueError:
-            raise UndefinedMediationFee()
-
-        if cap_fees:
-            x_list, y_list = _cap_fees(x_list, y_list)
-
-        return Interpolate(x_list, y_list)
 
     @staticmethod
     def mediation_fee_backwards_func(
@@ -168,35 +206,16 @@ class FeeScheduleState(State):
         cap_fees: bool,
     ) -> Interpolate:
         """ Returns a function which calculates total_mediation_fee(amount_with_fees) """
-        if balance_out == 0:
-            raise UndefinedMediationFee()
-
-        # Add dummy penalty funcs if none are set
-        if not schedule_in._penalty_func:
-            schedule_in = copy(schedule_in)
-            schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
-        if not schedule_out._penalty_func:
-            schedule_out = copy(schedule_out)
-            schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
-
-        x_list = _merge_x_values(
-            schedule_in, schedule_out, balance_in, balance_out, max_x=balance_out
+        return _mediation_fee_func(
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            capacity_in=capacity_in,
+            amount_with_fees=None,
+            amount_without_fees=amount_without_fees,
+            cap_fees=cap_fees,
         )
-
-        # Sum up fees where amount_after_fees is fixed and x is amount with fees
-        try:
-            y_list = [
-                schedule_in._fee(balance_in, x)
-                + schedule_out._fee(balance_out, -amount_without_fees)
-                for x in x_list
-            ]
-        except ValueError:
-            raise UndefinedMediationFee()
-
-        if cap_fees:
-            x_list, y_list = _cap_fees(x_list, y_list)
-
-        return Interpolate(x_list, y_list)
 
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:
