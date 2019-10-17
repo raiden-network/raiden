@@ -87,7 +87,7 @@ from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import LockedAmount
+from raiden.utils.typing import EncodedData, LockedAmount
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",
@@ -1234,7 +1234,7 @@ def pending_locks_from_packed_data(packed: bytes) -> PendingLocksState:
     locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.locks.append(lock.as_bytes)  # pylint: disable=E1101
+        locks.locks.append(EncodedData(lock.as_bytes))  # pylint: disable=E1101
     return locks
 
 
