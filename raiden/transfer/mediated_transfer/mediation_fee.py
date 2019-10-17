@@ -116,11 +116,11 @@ def _mediation_fee_func(
         schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
 
     x_list = _merge_x_values(
-        schedule_in,
-        schedule_out,
-        balance_in,
-        balance_out,
-        max_x=receivable if amount_with_fees is not None else balance_out,
+        schedule_in=schedule_in,
+        schedule_out=schedule_out,
+        balance_in=balance_in,
+        balance_out=balance_out,
+        max_x=receivable if amount_with_fees is None else balance_out,
     )
 
     # Sum up fees where either `amount_with_fees` or `amount_without_fees` is
