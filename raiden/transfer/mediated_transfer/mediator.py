@@ -261,7 +261,7 @@ def get_amount_after_fees(
 
     payer_balance = get_balance(payer_channel.our_state, payer_channel.partner_state)
     payee_balance = get_balance(payee_channel.our_state, payee_channel.partner_state)
-    capacity_in = TokenAmount(
+    receivable = TokenAmount(
         payer_channel.our_total_deposit + payer_channel.partner_total_deposit - payer_balance
     )
     assert (
@@ -273,7 +273,7 @@ def get_amount_after_fees(
             schedule_out=payee_channel.fee_schedule,
             balance_in=payer_balance,
             balance_out=payee_balance,
-            capacity_in=capacity_in,
+            receivable=receivable,
             amount_with_fees=incoming_amount,
             cap_fees=payer_channel.fee_schedule.cap_fees,
         )
