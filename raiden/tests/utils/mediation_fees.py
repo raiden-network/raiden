@@ -4,6 +4,7 @@ from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.channel import get_balance
 from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediator import find_intersection
 from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     Balance,
@@ -104,42 +105,17 @@ def get_amount_before_fees(
             amount_without_fees=final_amount,
             cap_fees=payer_fee_schedule.cap_fees,
         )
+        amount_with_fees = find_intersection(fee_func, lambda i: fee_func.x_list[i] - final_amount)
     except UndefinedMediationFee:
         return None
 
-    def angle_bisector(i: int) -> float:
-        x = fee_func.x_list[i]
-        return x - final_amount
-
-    i = 0  # len(fee_func.x_list) - 1
-    y = fee_func.y_list[i]
-    if y < angle_bisector(i):
-        # TODO: can this happen? Should we throw an exception?
+    if amount_with_fees is None:
         return None
-    while y > angle_bisector(i):
-        i += 1
-        if i == len(fee_func.x_list):
-            # Not enough capacity to send
-            return None
-        y = fee_func.y_list[i]
-    try:
-        # We found the linear section where the solution is. Now interpolate!
-        x1 = fee_func.x_list[i - 1]
-        x2 = fee_func.x_list[i]
-        y1 = fee_func.y_list[i - 1]
-        y2 = fee_func.y_list[i]
-        slope = (y2 - y1) / (x2 - x1)
-        amount_with_fees = (y1 - slope * x1 + final_amount) / (1 - slope)
-    except UndefinedMediationFee:
-        return None
-
-    amount_after_fees = PaymentWithFeeAmount(int(round(amount_with_fees)))
-
-    if amount_after_fees <= 0:
+    if amount_with_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return amount_after_fees
+    return PaymentWithFeeAmount(int(round(amount_with_fees)))
 
 
 def get_initial_amount_for_amount_after_fees(
