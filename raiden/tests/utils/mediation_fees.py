@@ -116,7 +116,7 @@ def get_amount_before_fees(
     if y < angle_bisector(i):
         # TODO: can this happen? Should we throw an exception?
         return None
-    while y >= angle_bisector(i):
+    while y > angle_bisector(i):
         i += 1
         if i == len(fee_func.x_list):
             # Not enough capacity to send
