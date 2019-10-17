@@ -27,7 +27,7 @@ class PFSCapacityUpdate(SignedMessage):
     other_capacity: TokenAmount
     reveal_timeout: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
@@ -74,7 +74,7 @@ class PFSFeeUpdate(SignedMessage):
     fee_schedule: FeeScheduleState
     timestamp: datetime
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
@@ -95,7 +95,7 @@ class PFSFeeUpdate(SignedMessage):
         )
 
     @classmethod
-    def from_channel_state(cls, channel_state: NettingChannelState):
+    def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSFeeUpdate":
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,

@@ -2,6 +2,7 @@ from raiden.messages.transfers import EnvelopeMessage, LockedTransferBase
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
+from raiden.utils.typing import AdditionalHash
 
 
 def balanceproof_from_envelope(envelope_message: EnvelopeMessage) -> BalanceProofSignedState:
@@ -11,7 +12,7 @@ def balanceproof_from_envelope(envelope_message: EnvelopeMessage) -> BalanceProo
         transferred_amount=envelope_message.transferred_amount,
         locked_amount=envelope_message.locked_amount,
         locksroot=envelope_message.locksroot,
-        message_hash=envelope_message.message_hash,
+        message_hash=AdditionalHash(envelope_message.message_hash),
         signature=envelope_message.signature,
         sender=envelope_message.sender,
         canonical_identifier=CanonicalIdentifier(

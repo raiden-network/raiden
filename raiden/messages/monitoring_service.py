@@ -37,7 +37,7 @@ class SignedBlindedBalanceProof:
     signature: Signature
     non_closing_signature: Optional[Signature] = field(default=EMPTY_SIGNATURE)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.signature == EMPTY_SIGNATURE:
             raise ValueError("balance proof is not signed")
 
@@ -100,10 +100,10 @@ class RequestMonitoring(SignedMessage):
     non_closing_participant: Address
     non_closing_signature: Optional[Signature] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         typecheck(self.balance_proof, SignedBlindedBalanceProof)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self._data_to_sign(), self.signature, self.non_closing_signature))
 
     @classmethod
@@ -127,7 +127,6 @@ class RequestMonitoring(SignedMessage):
             non_closing_participant=non_closing_participant,
             monitoring_service_contract_address=monitoring_service_contract_address,
         )
-        return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
 
     @property
     def reward_proof_signature(self) -> Optional[Signature]:
@@ -146,7 +145,7 @@ class RequestMonitoring(SignedMessage):
         )
         return packed
 
-    def sign(self, signer: Signer):
+    def sign(self, signer: Signer) -> None:
         """This method signs twice:
             - the `non_closing_signature` for the balance proof update
             - the `reward_proof_signature` for the monitoring request

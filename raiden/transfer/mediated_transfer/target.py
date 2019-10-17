@@ -27,6 +27,7 @@ from raiden.utils.typing import (
     BlockNumber,
     List,
     Optional,
+    PaymentAmount,
     TokenAmount,
 )
 
@@ -126,7 +127,7 @@ def handle_inittarget(
                 recipient=Address(recipient),
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
-                amount=transfer.lock.amount,
+                amount=PaymentAmount(transfer.lock.amount),
                 expiration=transfer.lock.expiration,
                 secrethash=transfer.lock.secrethash,
                 canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,

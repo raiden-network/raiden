@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.abstract import SignedMessage, SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
+from raiden.transfer.architecture import SendMessageEvent
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import ClassVar, MessageID
 
@@ -44,7 +45,7 @@ class Processed(SignedRetrieableMessage):
     message_identifier: MessageID
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendMessageEvent) -> "Processed":
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
     def _data_to_sign(self) -> bytes:
