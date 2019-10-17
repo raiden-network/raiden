@@ -2134,51 +2134,6 @@ def test_imbalance_penalty_prevents_transfer():
     assert not pair
 
 
-@pytest.mark.skip(reason="Should be impossible")
-def test_outdated_imbalance_penalty_at_transfer():
-    """
-    Test that having an outdated (for older capacity) imbalance penalty fee
-    during a transfer where we have sufficient balance does not throw an
-    UndefinedMediationFee exception from the state machine.
-
-    Regression test for https://github.com/raiden-network/raiden/issues/4835
-    """
-    payer_transfer = create(
-        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
-    )
-
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=5, proportional_imbalance_fee=4000
-    )
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=10),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=10),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-        ]
-    )
-
-    pair, _ = mediator.forward_transfer_pair(
-        payer_transfer=payer_transfer,
-        payer_channel=channels[0],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
-        channelidentifiers_to_channels=channels.channel_map,
-        pseudo_random_generator=random.Random(),
-        block_number=2,
-    )
-    # Up for discussion: Shouldn't this transfer actually succeed? If the imbalance fee
-    # is outdated for some reason and we can't calculate it shouldn't we just
-    # omit it and mediate without it as a mediator? Or is the current behaviour
-    # from this PR, namely to not mediate the transfer, okay?
-    assert not pair
-
-
 def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
     fee = FeeAmount(0)  # Fee handling for refunds is currently undefined, so set it to 0 for now.
