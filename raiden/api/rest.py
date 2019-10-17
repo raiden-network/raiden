@@ -1227,12 +1227,6 @@ class RestAPI:  # pragma: no unittest
         channel_state: NettingChannelState,
         fee_schedule: FeeScheduleState,
     ):
-        log.debug("Set fee schedule")
-        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
-            return api_error(
-                errors="Can't update the fee schedule of a closed channel",
-                status_code=HTTPStatus.CONFLICT,
-            )
         try:
             self.raiden_api.set_fee_schedule(
                 registry_address=registry_address,
@@ -1243,6 +1237,8 @@ class RestAPI:  # pragma: no unittest
         except (NonexistingChannel, UnknownTokenAddress, InvalidBinaryAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except InvalidFeeSchedule as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except UnexpectedChannelState as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(

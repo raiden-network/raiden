@@ -831,6 +831,11 @@ class RaidenAPI:  # pragma: no unittest
             partner_address=partner_address,
         )
 
+        assert channel_state, "channel not found"
+
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+            raise UnexpectedChannelState("Can not update the fee schedule of a closed channel")
+
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress(
                 "Expected binary address format for token in channel deposit"

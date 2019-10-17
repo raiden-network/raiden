@@ -52,21 +52,15 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MediationFeeConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
-from raiden.transfer.channel import get_capacity
-from raiden.transfer.events import SendPFSFeeUpdate
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.mediation_fee import (
-    FeeScheduleState,
-    calculate_imbalance_fees,
-)
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -419,7 +413,6 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
         self._initialize_whitelists(chain_state)
-        self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_process_events()
 
@@ -980,54 +973,6 @@ class RaidenService(Runnable):
                     transfer = event.transfer
                     if transfer.initiator == self.address:
                         self.transport.whitelist(address=Address(transfer.target))
-
-    def _initialize_channel_fees(self) -> None:
-        """ Initializes the fees of all open channels to the latest set values.
-
-        This includes a recalculation of the dynamic rebalancing fees.
-        """
-        chain_state = views.state_from_raiden(self)
-        fee_config: MediationFeeConfig = self.config["mediation_fees"]
-        token_addresses = views.get_token_identifiers(
-            chain_state=chain_state, token_network_registry_address=self.default_registry.address
-        )
-
-        for token_address in token_addresses:
-            channels = views.get_channelstate_open(
-                chain_state=chain_state,
-                token_network_registry_address=self.default_registry.address,
-                token_address=token_address,
-            )
-
-            for channel in [c for c in channels if c.fee_schedule is None]:
-                # get the flat fee for this network if set, otherwise the default
-                flat_fee = fee_config.get_flat_fee(channel.token_address)
-                proportional_fee = fee_config.get_proportional_fee(channel.token_address)
-                proportional_imbalance_fee = fee_config.get_proportional_imbalance_fee(
-                    channel.token_address
-                )
-                log.info(
-                    "Updating channel fees",
-                    channel=channel.canonical_identifier,
-                    cap_mediation_fees=fee_config.cap_meditation_fees,
-                    flat_fee=flat_fee,
-                    proportional_fee=proportional_fee,
-                    proportional_imbalance_fee=proportional_imbalance_fee,
-                )
-                imbalance_penalty = calculate_imbalance_fees(
-                    channel_capacity=get_capacity(channel),
-                    proportional_imbalance_fee=proportional_imbalance_fee,
-                )
-                channel.fee_schedule = FeeScheduleState(
-                    cap_fees=fee_config.cap_meditation_fees,
-                    flat=flat_fee,
-                    proportional=proportional_fee,
-                    imbalance_penalty=imbalance_penalty,
-                )
-                self.handle_event(
-                    chain_state,
-                    SendPFSFeeUpdate(canonical_identifier=channel.canonical_identifier),
-                )
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
