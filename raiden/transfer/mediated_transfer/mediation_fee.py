@@ -127,8 +127,7 @@ class FeeScheduleState(State):
         amount_with_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
-        if amount_with_fees > capacity_in:
-            raise UndefinedMediationFee()
+        """ Returns a function which calculates total_mediation_fee(amount_without_fees) """
         if balance_out == 0:
             raise UndefinedMediationFee()
 
@@ -164,13 +163,11 @@ class FeeScheduleState(State):
         schedule_out: "FeeScheduleState",
         balance_in: Balance,
         balance_out: Balance,
-        capacity_in: TokenAmount,
-        capacity_out: TokenAmount,  # TODO: rename
-        amount_after_fees: PaymentWithFeeAmount,
+        capacity_in: TokenAmount,  # TODO: rename
+        amount_without_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
-        if amount_after_fees > capacity_in:
-            raise UndefinedMediationFee()
+        """ Returns a function which calculates total_mediation_fee(amount_with_fees) """
         if balance_out == 0:
             raise UndefinedMediationFee()
 
@@ -180,17 +177,17 @@ class FeeScheduleState(State):
             schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
         if not schedule_out._penalty_func:
             schedule_out = copy(schedule_out)
-            schedule_out._penalty_func = Interpolate([0, balance_out + capacity_out], [0, 0])
+            schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
 
         x_list = _merge_x_values(
-            schedule_in, schedule_out, balance_in, balance_out, max_x=capacity_in
+            schedule_in, schedule_out, balance_in, balance_out, max_x=balance_out
         )
 
         # Sum up fees where amount_after_fees is fixed and x is amount with fees
         try:
             y_list = [
                 schedule_in._fee(balance_in, x)
-                + schedule_out._fee(balance_out, -amount_after_fees)
+                + schedule_out._fee(balance_out, -amount_without_fees)
                 for x in x_list
             ]
         except ValueError:
