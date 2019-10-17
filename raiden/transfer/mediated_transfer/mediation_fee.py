@@ -92,7 +92,7 @@ def _mediation_fee_func(
     schedule_out: "FeeScheduleState",
     balance_in: Balance,
     balance_out: Balance,
-    capacity_in: TokenAmount,  # TODO: rename
+    receivable: TokenAmount,
     amount_with_fees: Optional[PaymentWithFeeAmount],
     amount_without_fees: Optional[PaymentWithFeeAmount],
     cap_fees: bool,
@@ -110,7 +110,7 @@ def _mediation_fee_func(
     # Add dummy penalty funcs if none are set
     if not schedule_in._penalty_func:
         schedule_in = copy(schedule_in)
-        schedule_in._penalty_func = Interpolate([0, balance_in + capacity_in], [0, 0])
+        schedule_in._penalty_func = Interpolate([0, balance_in + receivable], [0, 0])
     if not schedule_out._penalty_func:
         schedule_out = copy(schedule_out)
         schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
@@ -120,16 +120,15 @@ def _mediation_fee_func(
         schedule_out,
         balance_in,
         balance_out,
-        max_x=capacity_in if amount_with_fees is not None else balance_out,
+        max_x=receivable if amount_with_fees is not None else balance_out,
     )
-    print("b", x_list)
 
     # Sum up fees where either `amount_with_fees` or `amount_without_fees` is
     # fixed and the other one is represented by `x`.
     try:
         y_list = [
-            schedule_in._fee(balance_in, x if amount_with_fees is None else amount_with_fees)
-            + schedule_out._fee(
+            schedule_in.fee(balance_in, x if amount_with_fees is None else amount_with_fees)
+            + schedule_out.fee(
                 balance_out, -x if amount_without_fees is None else -amount_without_fees
             )
             for x in x_list
@@ -164,7 +163,7 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def _fee(self, balance: Balance, amount: float) -> float:
+    def fee(self, balance: Balance, amount: float) -> float:
         assert self._penalty_func
         return (
             self.flat
@@ -179,7 +178,7 @@ class FeeScheduleState(State):
         schedule_out: "FeeScheduleState",
         balance_in: Balance,
         balance_out: Balance,
-        capacity_in: TokenAmount,  # TODO: rename
+        receivable: TokenAmount,
         amount_with_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
@@ -189,7 +188,7 @@ class FeeScheduleState(State):
             schedule_out=schedule_out,
             balance_in=balance_in,
             balance_out=balance_out,
-            capacity_in=capacity_in,
+            receivable=receivable,
             amount_with_fees=amount_with_fees,
             amount_without_fees=None,
             cap_fees=cap_fees,
@@ -201,7 +200,7 @@ class FeeScheduleState(State):
         schedule_out: "FeeScheduleState",
         balance_in: Balance,
         balance_out: Balance,
-        capacity_in: TokenAmount,  # TODO: rename
+        receivable: TokenAmount,
         amount_without_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
@@ -211,7 +210,7 @@ class FeeScheduleState(State):
             schedule_out=schedule_out,
             balance_in=balance_in,
             balance_out=balance_out,
-            capacity_in=capacity_in,
+            receivable=receivable,
             amount_with_fees=None,
             amount_without_fees=amount_without_fees,
             cap_fees=cap_fees,

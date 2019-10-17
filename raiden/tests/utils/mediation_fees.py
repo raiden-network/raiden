@@ -85,7 +85,7 @@ def get_amount_before_fees(
     payee_balance: Balance,
     payer_fee_schedule: FeeScheduleState,
     payee_fee_schedule: FeeScheduleState,
-    payer_capacity: TokenAmount,
+    receivable_amount: TokenAmount,
 ) -> Optional[PaymentWithFeeAmount]:
     """ Return the amount the transfer requires before fees are deducted.
 
@@ -101,7 +101,7 @@ def get_amount_before_fees(
             schedule_out=payee_fee_schedule,
             balance_in=payer_balance,
             balance_out=payee_balance,
-            capacity_in=payer_capacity,
+            receivable=receivable_amount,
             amount_without_fees=final_amount,
             cap_fees=payer_fee_schedule.cap_fees,
         )
@@ -145,7 +145,7 @@ def get_initial_amount_for_amount_after_fees(
 
             payer_balance = get_balance(channel_in.our_state, channel_in.partner_state)
             payee_balance = get_balance(channel_out.our_state, channel_out.partner_state)
-            capacity_in = TokenAmount(
+            receivable_amount = TokenAmount(
                 channel_in.our_total_deposit + channel_in.partner_total_deposit - payer_balance
             )
 
@@ -155,7 +155,7 @@ def get_initial_amount_for_amount_after_fees(
                 payee_balance=payee_balance,
                 payer_fee_schedule=channel_in.fee_schedule,
                 payee_fee_schedule=channel_out.fee_schedule,
-                payer_capacity=capacity_in,
+                receivable_amount=receivable_amount,
             )
 
             if before_fees is None:

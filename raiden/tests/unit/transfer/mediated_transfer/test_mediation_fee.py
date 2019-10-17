@@ -162,7 +162,7 @@ def test_fee_capping():
         schedule_out=schedule,
         balance_in=Balance(0),
         balance_out=Balance(100),
-        capacity_in=TokenAmount(100),
+        receivable=TokenAmount(100),
         amount_with_fees=PaymentWithFeeAmount(5),
         cap_fees=True,
     )
