@@ -79,33 +79,35 @@ class FeesCalculation(NamedTuple):
         return PaymentAmount(self.total_amount - sum(self.mediation_fees))
 
 
-def get_amount_before_fees(
-    final_amount: PaymentWithFeeAmount,
-    payer_balance: Balance,
-    payee_balance: Balance,
-    payer_fee_schedule: FeeScheduleState,
-    payee_fee_schedule: FeeScheduleState,
+def get_amount_with_fees(
+    amount_without_fees: PaymentWithFeeAmount,
+    balance_in: Balance,
+    balance_out: Balance,
+    schedule_in: FeeScheduleState,
+    schedule_out: FeeScheduleState,
     receivable_amount: TokenAmount,
 ) -> Optional[PaymentWithFeeAmount]:
     """ Return the amount the transfer requires before fees are deducted.
 
-    This function is also used by the PFS. Therefore the parameteres should not be Raiden state
+    This function is also used by the PFS. Therefore the parameters should not be Raiden state
     objects.
     """
     assert (
-        payer_fee_schedule.cap_fees == payee_fee_schedule.cap_fees
+        schedule_in.cap_fees == schedule_out.cap_fees
     ), "Both channels must have the same cap_fees setting for the same mediator."
     try:
         fee_func = FeeScheduleState.mediation_fee_backwards_func(
-            schedule_in=payer_fee_schedule,
-            schedule_out=payee_fee_schedule,
-            balance_in=payer_balance,
-            balance_out=payee_balance,
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
             receivable=receivable_amount,
-            amount_without_fees=final_amount,
-            cap_fees=payer_fee_schedule.cap_fees,
+            amount_without_fees=amount_without_fees,
+            cap_fees=schedule_in.cap_fees,
         )
-        amount_with_fees = find_intersection(fee_func, lambda i: fee_func.x_list[i] - final_amount)
+        amount_with_fees = find_intersection(
+            fee_func, lambda i: fee_func.x_list[i] - amount_without_fees
+        )
     except UndefinedMediationFee:
         return None
 
@@ -143,18 +145,18 @@ def get_initial_amount_for_amount_after_fees(
             assert isinstance(channel_in, NettingChannelState)
             assert isinstance(channel_out, NettingChannelState)
 
-            payer_balance = get_balance(channel_in.our_state, channel_in.partner_state)
-            payee_balance = get_balance(channel_out.our_state, channel_out.partner_state)
+            balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
+            balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
             receivable_amount = TokenAmount(
-                channel_in.our_total_deposit + channel_in.partner_total_deposit - payer_balance
+                channel_in.our_total_deposit + channel_in.partner_total_deposit - balance_in
             )
 
-            before_fees = get_amount_before_fees(
-                final_amount=total,
-                payer_balance=payer_balance,
-                payee_balance=payee_balance,
-                payer_fee_schedule=channel_in.fee_schedule,
-                payee_fee_schedule=channel_out.fee_schedule,
+            before_fees = get_amount_with_fees(
+                amount_without_fees=total,
+                balance_in=balance_in,
+                balance_out=balance_out,
+                schedule_in=channel_in.fee_schedule,
+                schedule_out=channel_out.fee_schedule,
                 receivable_amount=receivable_amount,
             )
 
