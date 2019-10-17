@@ -1,5 +1,7 @@
 import itertools
+import operator
 import random
+from typing import Callable
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer import channel, routes, secret_registry
@@ -17,7 +19,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState, Interpolate
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     LockedTransferUnsignedState,
@@ -224,6 +226,32 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
+def find_intersection(fee_func: Interpolate, line: Callable[[int], float]) -> Optional[float]:
+    """ Returns the x value where both functions intersect
+
+    `fee_func` is a piecewise linear function while `line` is a straight line
+    and takes the one of fee_func's indexes as argument.
+    """
+    i = 0
+    y = fee_func.y_list[i]
+    comp = operator.lt if y < line(i) else operator.gt
+    while comp(y, line(i)):
+        i += 1
+        if i == len(fee_func.x_list):
+            # Not enough capacity to send
+            return None
+        y = fee_func.y_list[i]
+
+    # We found the linear section where the solution is. Now interpolate!
+    x1 = fee_func.x_list[i - 1]
+    x2 = fee_func.x_list[i]
+    yf1 = fee_func.y_list[i - 1]
+    yf2 = fee_func.y_list[i]
+    yl1 = line(i - 1)
+    yl2 = line(i)
+    return (yl1 - yf1) * (x2 - x1) / ((yf2 - yf1) - (yl2 - yl1)) + x1
+
+
 def get_amount_after_fees(
     incoming_amount: PaymentWithFeeAmount,
     payer_channel: NettingChannelState,
@@ -249,42 +277,19 @@ def get_amount_after_fees(
             amount_with_fees=incoming_amount,
             cap_fees=payer_channel.fee_schedule.cap_fees,
         )
+        amount_without_fees = find_intersection(
+            fee_func, lambda i: incoming_amount - fee_func.x_list[i]
+        )
     except UndefinedMediationFee:
         return None
 
-    def angle_bisector(i: int) -> float:
-        x = fee_func.x_list[i]
-        return incoming_amount - x
-
-    i = len(fee_func.x_list) - 1
-    y = fee_func.y_list[i]
-    if y < angle_bisector(i):
-        # TODO: can this happen? Should we throw an exception?
+    if amount_without_fees is None:
         return None
-    while y >= angle_bisector(i):
-        i -= 1
-        y = fee_func.y_list[i]
-        # if i < 0:
-        #     # Not enough capacity to send
-        #     return None
-    try:
-        # We found the linear section where the solution is. Now interpolate!
-        x1 = fee_func.x_list[i]
-        x2 = fee_func.x_list[i + 1]
-        y1 = fee_func.y_list[i]
-        y2 = fee_func.y_list[i + 1]
-        slope = (y2 - y1) / (x2 - x1)
-        amount_without_fees = (x1 * slope + incoming_amount - y1) / (1 + slope)
-    except UndefinedMediationFee:
-        return None
-
-    amount_after_fees = PaymentWithFeeAmount(int(round(amount_without_fees)))
-
-    if amount_after_fees <= 0:
+    if amount_without_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return amount_after_fees
+    return PaymentWithFeeAmount(int(round(amount_without_fees)))
 
 
 def sanity_check(
