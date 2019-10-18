@@ -231,11 +231,14 @@ def find_intersection(fee_func: Interpolate, line: Callable[[int], float]) -> Op
 
     `fee_func` is a piecewise linear function while `line` is a straight line
     and takes the one of fee_func's indexes as argument.
+
+    Returns `None` if there is no intersection within `fee_func`s domain, which
+    indicates a lack of capacity.
     """
     i = 0
     y = fee_func.y_list[i]
-    comp = operator.lt if y < line(i) else operator.gt
-    while comp(y, line(i)):
+    compare = operator.lt if y < line(i) else operator.gt
+    while compare(y, line(i)):
         i += 1
         if i == len(fee_func.x_list):
             # Not enough capacity to send
@@ -284,6 +287,7 @@ def get_amount_without_fees(
         return None
 
     if amount_without_fees is None:
+        # Insufficient capacity
         return None
     if amount_without_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.
