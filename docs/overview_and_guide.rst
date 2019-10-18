@@ -66,6 +66,17 @@ An Ethereum client is required in both cases. The Raiden binary takes the same c
 arguments as the ``raiden`` script.
 
 
+PIP
+***
+
+To get the latest available stable version via `pip`::
+
+    pip install raiden
+
+If you'd like to give the pre-releases a spin, use pip's `--pre` flag::
+
+    pip install --pre raiden
+
 Docker
 ******
 
