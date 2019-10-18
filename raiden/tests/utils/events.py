@@ -11,6 +11,7 @@ from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, Eve
 NOVALUE = object()
 T = TypeVar("T")
 T_Event = TypeVar("T_Event", bound="Event")
+T_StateChange = TypeVar("T_StateChange", bound="StateChange")
 SC = TypeVar("SC", bound=StateChange)
 TM = TypeVar("TM", bound=Mapping)
 
@@ -161,8 +162,11 @@ def wait_for_raiden_event(
 
 
 def wait_for_state_change(
-    raiden: RaidenService, item_type: Type[StateChange], attributes: Mapping, retry_timeout: float
-) -> Optional[StateChange]:
+    raiden: RaidenService,
+    item_type: Type[T_StateChange],
+    attributes: Mapping,
+    retry_timeout: float,
+) -> T_StateChange:
     """Wait until a state change is seen in the WAL
 
     Note:
