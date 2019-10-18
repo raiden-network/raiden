@@ -1,5 +1,3 @@
-from typing import cast
-
 import gevent
 import pytest
 
@@ -266,7 +264,6 @@ def test_refund_transfer(
     receive_lock_expired = wait_for_state_change(
         app0.raiden, ReceiveLockExpired, {"secrethash": secrethash}, retry_timeout
     )
-    receive_lock_expired = cast(ReceiveLockExpired, receive_lock_expired)
     # And also till app1 received the processed
     wait_for_state_change(
         app1.raiden,
@@ -497,7 +494,6 @@ def test_different_view_of_last_bp_during_unlock(
             retry_timeout,
         )
     assert unlock_app0
-    unlock_app0 = cast(ContractReceiveChannelBatchUnlock, unlock_app0)
     assert unlock_app0.returned_tokens == amount_refund_with_fees
     with gevent.Timeout(timeout):
         unlock_app1 = wait_for_state_change(
@@ -507,7 +503,6 @@ def test_different_view_of_last_bp_during_unlock(
             retry_timeout,
         )
     assert unlock_app1
-    unlock_app1 = cast(ContractReceiveChannelBatchUnlock, unlock_app1)
     assert unlock_app1.returned_tokens == amount_refund_with_fees
     final_balance0 = token_proxy.balance_of(app0.raiden.address)
     final_balance1 = token_proxy.balance_of(app1.raiden.address)
