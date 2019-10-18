@@ -294,12 +294,11 @@ class UserAddressManager:
         return user_id
 
     def _fetch_user_presence(self, user_id: str) -> UserPresence:
-        if user_id not in self._userid_to_presence:
-            try:
-                presence = UserPresence(self._client.get_user_presence(user_id))
-            except MatrixRequestError:
-                presence = UserPresence.UNKNOWN
-            self._userid_to_presence[user_id] = presence
+        try:
+            presence = UserPresence(self._client.get_user_presence(user_id))
+        except MatrixRequestError:
+            presence = UserPresence.UNKNOWN
+        self._userid_to_presence[user_id] = presence
         return self._userid_to_presence[user_id]
 
     @staticmethod
