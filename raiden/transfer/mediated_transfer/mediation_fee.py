@@ -77,7 +77,7 @@ def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], Li
         y1, y2 = y_list[i : i + 2]
         if sign(y1) * sign(y2) == -1:
             x1, x2 = x_list[i : i + 2]
-            new_x = abs(y1) / abs(y2 - y1) * (x2 - x1)
+            new_x = x1 + abs(y1) / abs(y2 - y1) * (x2 - x1)
             new_index = bisect(x_list, new_x)
             x_list.insert(new_index, new_x)
             y_list.insert(new_index, 0)

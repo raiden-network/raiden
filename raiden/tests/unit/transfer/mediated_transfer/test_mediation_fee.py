@@ -8,7 +8,10 @@ from raiden.tests.utils.factories import (
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
 )
-from raiden.tests.utils.mediation_fees import get_initial_amount_for_amount_after_fees
+from raiden.tests.utils.mediation_fees import (
+    get_amount_with_fees,
+    get_initial_amount_for_amount_after_fees,
+)
 from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import (
     NUM_DISCRETISATION_POINTS,
@@ -50,27 +53,6 @@ def test_interpolation():
     assert interp(100) == 67.2
 
 
-@pytest.mark.skip("reenable after refactoring")
-def test_basic_fee():
-    """
-    flat_schedule = FeeScheduleState(flat=FeeAmount(2))
-    assert flat_schedule.fee_payer(PaymentWithFeeAmount(10), balance=Balance(0)) == FeeAmount(2)
-
-    prop_schedule = FeeScheduleState(proportional=ProportionalFeeAmount(int(0.01e6)))
-    assert prop_schedule.fee_payer(PaymentWithFeeAmount(40), balance=Balance(0)) == FeeAmount(0)
-    assert prop_schedule.fee_payer(PaymentWithFeeAmount(60), balance=Balance(0)) == FeeAmount(1)
-    assert prop_schedule.fee_payer(PaymentWithFeeAmount(1000), balance=Balance(0)) == FeeAmount(10)
-
-    combined_schedule = FeeScheduleState(
-        flat=FeeAmount(2), proportional=ProportionalFeeAmount(int(0.01e6))
-    )
-    assert combined_schedule.fee_payer(PaymentWithFeeAmount(60), balance=Balance(0)) == FeeAmount(
-        3
-    )
-    """
-
-
-@pytest.mark.skip("reenable after refactoring")
 def test_imbalance_penalty():
     r""" Test an imbalance penalty by moving back and forth
 
@@ -90,7 +72,6 @@ def test_imbalance_penalty():
     check that the calculated fee is the same as before just with the opposite
     sign.
     """
-    """
     v_schedule = FeeScheduleState(
         imbalance_penalty=[
             (TokenAmount(0), FeeAmount(10)),
@@ -98,37 +79,61 @@ def test_imbalance_penalty():
             (TokenAmount(100), FeeAmount(20)),
         ]
     )
+    reverse_schedule = FeeScheduleState(
+        imbalance_penalty=[
+            (TokenAmount(0), FeeAmount(20)),
+            (TokenAmount(50), FeeAmount(0)),
+            (TokenAmount(100), FeeAmount(10)),
+        ]
+    )
 
-    for cap_fees, x1, amount, expected_fee_payee, expected_fee_payer in [
+    for cap_fees, x1, amount, expected_fee_in, expected_fee_out in [
         # Uncapped fees
-        (False, 0, 50, -6, 10),
-        (False, 50, 50, 12, -20),
-        (False, 0, 10, -2, 2),
-        (False, 10, 10, -2, 2),
-        (False, 0, 20, -5, 4),
+        (False, 0, 50, -8, -10),
+        (False, 50, 30, 20, 12),
+        (False, 0, 10, -2, -2),
+        (False, 10, 10, -2, -2),
+        (False, 0, 20, -3, -4),
         (False, 40, 15, 0, 0),
+        (False, 50, 31, None, 12),
+        (False, 100, 1, None, None),
         # Capped fees
-        (True, 0, 50, 0, 10),
-        (True, 50, 50, 12, 0),
-        (True, 0, 10, 0, 2),
-        (True, 10, 10, 0, 2),
-        (True, 0, 20, 0, 4),
+        (True, 0, 50, 0, 0),
+        (True, 50, 30, 20, 12),
+        (True, 0, 10, 0, 0),
+        (True, 10, 10, 0, 0),
+        (True, 0, 20, 0, 0),
         (True, 40, 15, 0, 0),
     ]:
         v_schedule.cap_fees = cap_fees
-        x2 = x1 + amount
-        assert v_schedule.fee_payee(
-            balance=Balance(100 - x1), amount=PaymentWithFeeAmount(amount)
-        ) == FeeAmount(expected_fee_payee)
-        assert v_schedule.fee_payer(
-            balance=Balance(100 - x2), amount=PaymentWithFeeAmount(amount)
-        ) == FeeAmount(expected_fee_payer)
+        amount_with_fees = get_amount_with_fees(
+            amount_without_fees=PaymentWithFeeAmount(amount),
+            balance_in=Balance(x1),
+            balance_out=Balance(100),
+            schedule_in=v_schedule,
+            schedule_out=FeeScheduleState(cap_fees=cap_fees),
+            receivable_amount=TokenAmount(100 - x1),
+        )
+        if expected_fee_in is None:
+            assert amount_with_fees is None
+        else:
+            assert amount_with_fees is not None
+            assert amount_with_fees - amount == FeeAmount(expected_fee_in)
 
-    with pytest.raises(UndefinedMediationFee):
-        v_schedule.fee_payee(balance=Balance(0), amount=PaymentWithFeeAmount(1))
-    with pytest.raises(UndefinedMediationFee):
-        v_schedule.fee_payer(balance=Balance(100), amount=PaymentWithFeeAmount(1))
-    """
+        reverse_schedule.cap_fees = cap_fees
+        amount_with_fees = get_amount_with_fees(
+            amount_without_fees=PaymentWithFeeAmount(amount),
+            balance_in=Balance(0),
+            balance_out=Balance(100 - x1),
+            schedule_in=FeeScheduleState(cap_fees=cap_fees),
+            schedule_out=reverse_schedule,
+            receivable_amount=TokenAmount(100),
+        )
+        if expected_fee_out is None:
+            assert amount_with_fees is None
+        else:
+            assert amount_with_fees is not None
+            assert amount_with_fees - amount == FeeAmount(expected_fee_out)
 
 
 def test_fee_capping():
