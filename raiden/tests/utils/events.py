@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar, cast
 
 import gevent
 
@@ -6,10 +7,10 @@ from raiden.raiden_service import RaidenService
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
-from raiden.utils.typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar
 
 NOVALUE = object()
 T = TypeVar("T")
+T_Event = TypeVar("T_Event", bound="Event")
 SC = TypeVar("SC", bound=StateChange)
 TM = TypeVar("TM", bound=Mapping)
 
@@ -85,15 +86,16 @@ def search_for_item(
 
 
 def raiden_events_search_for_item(
-    raiden: RaidenService, item_type: Type[Event], attributes: Mapping
-) -> Optional[Event]:
+    raiden: RaidenService, item_type: Type[T_Event], attributes: Mapping
+) -> Optional[T_Event]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.
     """
     assert raiden.wal, "RaidenService must be started"
-    return search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
+    event = search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
+    return cast(T_Event, event)
 
 
 def raiden_state_changes_search_for_item(

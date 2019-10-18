@@ -85,11 +85,9 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
         {"transfer": {"lock": {"amount": refund_amount_with_fees}}},
     )
     assert send_lockedtransfer
-    send_lockedtransfer = cast(SendLockedTransfer, send_lockedtransfer)
 
     send_refundtransfer = raiden_events_search_for_item(app1.raiden, SendRefundTransfer, {})
     assert send_refundtransfer
-    send_refundtransfer = cast(SendRefundTransfer, send_lockedtransfer)
 
     with gevent.Timeout(network_wait):
         wait_assert(
@@ -202,12 +200,10 @@ def test_refund_transfer(
         {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
-    send_locked = cast(SendLockedTransfer, send_locked)
     secrethash = send_locked.transfer.lock.secrethash
 
     send_refund = raiden_events_search_for_item(app1.raiden, SendRefundTransfer, {})
     assert send_refund
-    send_refund = cast(SendRefundTransfer, send_refund)
 
     lock = send_locked.transfer.lock
     refund_lock = send_refund.transfer.lock
@@ -400,11 +396,9 @@ def test_different_view_of_last_bp_during_unlock(
         {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
-    send_locked = cast(SendLockedTransfer, send_locked)
     secrethash = send_locked.transfer.lock.secrethash
 
     send_refund = raiden_events_search_for_item(app1.raiden, SendRefundTransfer, {})
-    send_refund = cast(SendRefundTransfer, send_refund)
     assert send_refund
 
     lock = send_locked.transfer.lock
@@ -622,11 +616,9 @@ def test_refund_transfer_after_2nd_hop(
         {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked1
-    send_locked1 = cast(SendLockedTransfer, send_locked1)
 
     send_refund1 = raiden_events_search_for_item(app1.raiden, SendRefundTransfer, {})
     assert send_refund1
-    send_refund1 = cast(SendRefundTransfer, send_refund1)
 
     lock1 = send_locked1.transfer.lock
     refund_lock1 = send_refund1.transfer.lock
@@ -639,11 +631,9 @@ def test_refund_transfer_after_2nd_hop(
         {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked2
-    send_locked2 = cast(SendLockedTransfer, send_locked2)
 
     send_refund2 = raiden_events_search_for_item(app2.raiden, SendRefundTransfer, {})
     assert send_refund2
-    send_refund2 = cast(SendRefundTransfer, send_refund2)
 
     lock2 = send_locked2.transfer.lock
     refund_lock2 = send_refund2.transfer.lock
