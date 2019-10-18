@@ -138,12 +138,23 @@ def address_reachability_callback(address_reachability):
 
 @pytest.fixture
 def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_presence_callback):
+
     address_manager = NonValidatingUserAddressManager(
         client=dummy_matrix_client,
         get_user_callable=dummy_get_user,
         address_reachability_changed_callback=address_reachability_callback,
         user_presence_changed_callback=user_presence_callback,
     )
+
+    def fetch_user_presence(user_id):
+        if user_id in address_manager._userid_to_presence.keys():
+            return address_manager.get_userid_presence(user_id)
+        else:
+            presence = UserPresence(dummy_matrix_client.get_user_presence(user_id))
+            address_manager._userid_to_presence[user_id] = presence
+            return address_manager._userid_to_presence[user_id]
+
+    address_manager._fetch_user_presence = fetch_user_presence
     address_manager.start()
 
     yield address_manager
@@ -251,7 +262,12 @@ def test_user_addr_mgr_fetch_presence(
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
     # We have not provided or forced any explicit user presence,
     # therefore the client will be queried
+    assert dummy_matrix_client._user_presence[USER1_S1_ID] == UserPresence.ONLINE.value
+    assert dummy_matrix_client.get_user_presence(USER1_S1_ID) == UserPresence.ONLINE.value
+
     user_addr_mgr.refresh_address_presence(ADDR1)
+
+    assert user_addr_mgr._userid_to_presence[USER1_S1_ID] == UserPresence.ONLINE
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.REACHABLE
     assert len(user_presence) == 0
@@ -263,7 +279,8 @@ def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability,
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
     # We have not provided or forced any explicit user presence,
     # therefore the client will be queried and return a 404 since we haven't setup a presence
-    user_addr_mgr.refresh_address_presence(ADDR1)
+    with pytest.raises(MatrixRequestError):
+        user_addr_mgr.refresh_address_presence(ADDR1)
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
     assert len(user_presence) == 0
@@ -302,6 +319,7 @@ def test_user_addr_mgr_populate(
     assert user_addr_mgr.get_address_reachability(ADDR2) is AddressReachability.UNKNOWN
 
     dummy_matrix_client._user_presence[USER2_S1_ID] = UserPresence.ONLINE.value
+    dummy_matrix_client._user_presence[USER2_S2_ID] = UserPresence.UNKNOWN.value
 
     user_addr_mgr.refresh_address_presence(ADDR2)
 

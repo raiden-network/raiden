@@ -265,8 +265,14 @@ class UserAddressManager:
         if self._user_presence_changed_callback:
             self._user_presence_changed_callback(user, new_state)
 
-    def log_status_message(self) -> None:
+    def refresh_presence(self) -> None:
         while not self._stop_event.ready():
+            # Refresh our own presence to Online
+            self._client.set_presence_state(UserPresence.ONLINE.value)
+            # Refresh our view of the presence of our peers
+            for address in self.known_addresses:
+                self.refresh_address_presence(address)
+
             addresses_uids_presence = {
                 to_checksum_address(address): {
                     user_id: self.get_userid_presence(user_id).value
@@ -276,7 +282,7 @@ class UserAddressManager:
             }
 
             log.debug(
-                "Matrix address manager status",
+                "Presences refreshed - current Matrix address manager status:",
                 addresses_uids_and_presence=addresses_uids_presence,
                 current_user=self._user_id,
             )
