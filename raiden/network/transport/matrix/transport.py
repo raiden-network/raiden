@@ -408,7 +408,6 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
-        self._schedule_new_greenlet(self._address_mgr.log_status_message)
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -423,6 +422,9 @@ class MatrixTransport(Runnable):
         self._started = True
 
         self.log.debug("Matrix started", config=self._config)
+
+        # Spawn a greenlet to periodically refresh UserPresences
+        self._schedule_new_greenlet(self._address_mgr.refresh_presence, in_seconds_from_now=1)
 
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
