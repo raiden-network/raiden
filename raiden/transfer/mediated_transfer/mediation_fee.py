@@ -22,7 +22,7 @@ class Interpolate:  # pylint: disable=too-few-public-methods
     Based on https://stackoverflow.com/a/7345691/114926
     """
 
-    def __init__(self, x_list: Sequence, y_list: Sequence):
+    def __init__(self, x_list: Sequence, y_list: Sequence) -> None:
         if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
             raise ValueError("x_list must be in strictly ascending order!")
         self.x_list = x_list
@@ -51,7 +51,7 @@ def sign(x: float) -> int:
         return 1 if x > 0 else -1
 
 
-def _merge_x_values(
+def _collect_x_values(
     schedule_in: "FeeScheduleState",
     schedule_out: "FeeScheduleState",
     balance_in: Balance,
@@ -103,7 +103,9 @@ def _mediation_fee_func(
     other one is None. The returned function will depend on the value that is
     not given.
     """
-    assert amount_with_fees is None or amount_without_fees is None
+    assert (
+        amount_with_fees is None or amount_without_fees is None
+    ), "Must be called with either amount_with_fees or amount_without_fees as None"
     if balance_out == 0:
         raise UndefinedMediationFee()
 
@@ -115,7 +117,7 @@ def _mediation_fee_func(
         schedule_out = copy(schedule_out)
         schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
 
-    x_list = _merge_x_values(
+    x_list = _collect_x_values(
         schedule_in=schedule_in,
         schedule_out=schedule_out,
         balance_in=balance_in,
@@ -164,12 +166,12 @@ class FeeScheduleState(State):
             self._penalty_func = Interpolate(x_list, y_list)
 
     def fee(self, balance: Balance, amount: float) -> float:
-        assert self._penalty_func
         return (
             self.flat
             + self.proportional / 1e6 * abs(amount)
-            + self._penalty_func(balance + amount)
-            - self._penalty_func(balance)
+            + (self._penalty_func(balance + amount) - self._penalty_func(balance))
+            if self._penalty_func
+            else 0
         )
 
     @staticmethod

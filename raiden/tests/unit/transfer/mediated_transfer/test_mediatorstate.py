@@ -2116,7 +2116,7 @@ def test_imbalance_penalty_prevents_transfer():
     target.
     This test verifies that we choose option 2.
     """
-    # Will reward payment with the amount of 1 token per 10 transferred token!
+    # Will reward payment with the amount of 1 token per 10 transferred tokens.
     imbalance_penalty = [(0, 0), (1000, 100)]
     pair, _ = _foward_transfer_pair(
         10,

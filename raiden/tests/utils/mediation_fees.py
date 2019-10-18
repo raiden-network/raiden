@@ -91,6 +91,10 @@ def get_amount_with_fees(
 
     This function is also used by the PFS. Therefore the parameters should not be Raiden state
     objects.
+
+    Returns `None` when there is no payable amount_with_fees. Potential reasons:
+    * not enough capacity
+    * amount_without_fees is so low that it does not even cover the mediation fees
     """
     assert (
         schedule_in.cap_fees == schedule_out.cap_fees
