@@ -1075,5 +1075,7 @@ def block_timeout_for_transfer_by_secrethash(
     )
 
 
-def calculate_fee_for_amount(amount: int) -> int:
-    return round((amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC) * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
+def calculate_fee_for_amount(amount: int) -> FeeAmount:
+    return FeeAmount(
+        round((amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC) * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
+    )
