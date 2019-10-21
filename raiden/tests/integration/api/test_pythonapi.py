@@ -42,7 +42,9 @@ def test_token_addresses(raiden_network, token_addresses):
     last_number = app0.raiden.rpc_client.block_number()
 
     for block_number in range(last_number, 0, -1):
-        code = app0.raiden.rpc_client.web3.eth.getCode(token_network_address, block_number)
+        code = app0.raiden.rpc_client.web3.eth.getCode(
+            account=token_network_address, block_identifier=block_number
+        )
         if code == b"":
             break
     token_network_deploy_block_number = block_number + 1
