@@ -1,5 +1,5 @@
 import pytest
-from eth_utils import encode_hex, to_checksum_address
+from eth_utils import encode_hex
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -12,6 +12,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
+from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenNetworkAddress
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -42,6 +43,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     # make a transfer from app0 to app1 so that app1 is supposed to have a non
@@ -50,8 +52,8 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
-        amount=1,
-        identifier=1,
+        amount=PaymentAmount(1),
+        identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
     )
     # stop app1 - the test uses token_network_contract now
@@ -59,9 +61,9 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     token_network_contract = app1.raiden.proxy_manager.token_network(token_network_address)
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
-        token_network_address=to_checksum_address(token_network_contract.address),
+        token_network_address=TokenNetworkAddress(token_network_contract.address),
         balance_hash=encode_hex(EMPTY_BALANCE_HASH),
-        nonce=0,
+        nonce=Nonce(0),
         chain_id=chain_state.chain_id,
         transferred_amount=0,
     )
@@ -125,14 +127,15 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     transfer(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
-        amount=1,
-        identifier=1,
+        amount=PaymentAmount(1),
+        identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
     )
     # stop app1 - the test uses token_network_contract now

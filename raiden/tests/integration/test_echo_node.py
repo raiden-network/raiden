@@ -13,7 +13,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import wait_until
 from raiden.utils.echo_node import EchoNode
-from raiden.utils.typing import MYPY_ANNOTATION, List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, List, Optional, PaymentAmount, PaymentID
 from raiden.waiting import TransferWaitResult, wait_for_received_transfer_result
 
 log = structlog.get_logger(__name__)
@@ -43,8 +43,8 @@ def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 
     wait_for = list()
     for num, app in enumerate([app0, app1]):
-        amount = 1 + num
-        identifier = 10 ** (num + 1)
+        amount = PaymentAmount(1 + num)
+        identifier = PaymentID(10 ** (num + 1))
         secret, secrethash = make_secret_with_hash()
 
         payment_status = RaidenAPI(app.raiden).transfer_async(
@@ -69,7 +69,7 @@ def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
         with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
             payment_status.payment_done.wait()
 
-        echo_identifier = identifier + amount
+        echo_identifier = PaymentID(identifier + amount)
         msg = (
             f"Response transfer {echo_identifier} from echo node "
             f"{to_checksum_address(echo_app.raiden.address)} to "

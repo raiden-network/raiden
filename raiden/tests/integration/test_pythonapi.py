@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import patch
 
 import gevent
@@ -24,6 +25,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import views
+from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
@@ -35,7 +37,14 @@ from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
-from raiden.utils.typing import BlockNumber, List, TokenAddress, TokenAmount
+from raiden.utils.typing import (
+    BlockNumber,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TokenAddress,
+    TokenAmount,
+)
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
@@ -56,11 +65,13 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 
     registry_address = app1.raiden.default_registry.address
 
-    token_address = deploy_contract_web3(
-        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    token_address = TokenAddress(
+        deploy_contract_web3(
+            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client=app1.raiden.rpc_client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        )
     )
 
     # Wait until Raiden can start using the token contract.
@@ -78,8 +89,8 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
     api1.token_network_register(
         registry_address=registry_address,
         token_address=token_address,
-        channel_participant_deposit_limit=UINT256_MAX,
-        token_network_deposit_limit=UINT256_MAX,
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
     )
     exception = RuntimeError("Did not see the token registration within 30 seconds")
     with gevent.Timeout(seconds=30, exception=exception):
@@ -96,8 +107,8 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
         api1.token_network_register(
             registry_address=registry_address,
             token_address=token_address,
-            channel_participant_deposit_limit=UINT256_MAX,
-            token_network_deposit_limit=UINT256_MAX,
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
         )
 
 
@@ -113,11 +124,13 @@ def test_register_token_insufficient_eth(
 
     registry_address = app1.raiden.default_registry.address
 
-    token_address = deploy_contract_web3(
-        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    token_address = TokenAddress(
+        deploy_contract_web3(
+            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client=app1.raiden.rpc_client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        )
     )
 
     # Wait until Raiden can start using the token contract.
@@ -140,8 +153,8 @@ def test_register_token_insufficient_eth(
         api1.token_network_register(
             registry_address=registry_address,
             token_address=token_address,
-            channel_participant_deposit_limit=UINT256_MAX,
-            token_network_deposit_limit=UINT256_MAX,
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
         )
 
 
@@ -167,11 +180,13 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     event_listeners = app1.raiden.blockchain_events.event_listeners
     app1.raiden.blockchain_events.event_listeners = list()
 
-    token_address = deploy_contract_web3(
-        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-        deploy_client=app1.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    token_address = TokenAddress(
+        deploy_contract_web3(
+            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client=app1.raiden.rpc_client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        )
     )
 
     # Wait until Raiden can start using the token contract.
@@ -195,8 +210,8 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     api0.token_network_register(
         registry_address=registry_address,
         token_address=token_address,
-        channel_participant_deposit_limit=UINT256_MAX,
-        token_network_deposit_limit=UINT256_MAX,
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
     )
     exception = RuntimeError("Did not see the token registration within 30 seconds")
     with gevent.Timeout(seconds=30, exception=exception):
@@ -233,11 +248,14 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     api0 = RaidenAPI(app0.raiden)
 
     old_state = get_channelstate(app0, app1, token_network_address)
-    api0.set_total_channel_deposit(registry_address, token_address, app1.raiden.address, 210)
+    api0.set_total_channel_deposit(
+        registry_address, token_address, app1.raiden.address, TokenAmount(210)
+    )
     new_state = get_channelstate(app0, app1, token_network_address)
 
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
@@ -254,7 +272,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
     # Enforce sandwich encoding. Calling `transfer` with a non binary address
     # raises an exception
     with pytest.raises(InvalidBinaryAddress):
-        RaidenAPI(app0.raiden).transfer(
+        RaidenAPI(app0.raiden).transfer(  # type: ignore
             app0.raiden.default_registry.address,
             token_address,
             10,
@@ -278,7 +296,7 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     taker_amount = 30
 
     identifier = 313
-    RaidenAPI(app1.raiden).expect_token_swap(  # pylint: disable=no-member
+    RaidenAPI(app1.raiden).expect_token_swap(  # type: ignore  # pylint: disable=no-member
         identifier,
         maker_token,
         maker_amount,
@@ -288,7 +306,9 @@ def test_token_swap(raiden_network, deposit, token_addresses):
         taker_address,
     )
 
-    async_result = RaidenAPI(app0.raiden).token_swap_async(  # pylint: disable=no-member
+    async_result = RaidenAPI(  # type: ignore  # pylint: disable=no-member
+        app0.raiden
+    ).token_swap_async(
         identifier,
         maker_token,
         maker_amount,
@@ -319,13 +339,13 @@ def test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
-    amount = 30
+    amount = PaymentAmount(30)
     transfer(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
         amount=amount,
-        identifier=1,
+        identifier=PaymentID(1),
     )
 
     app0_events = RaidenAPI(app0.raiden).get_blockchain_events_channel(
@@ -623,22 +643,26 @@ def test_create_monitoring_request(raiden_network, token_addresses):
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
 
     payment_identifier = create_default_identifier()
     transfer(
         initiator_app=app1,
         target_app=app0,
         token_address=token_address,
-        amount=1,
+        amount=PaymentAmount(1),
         identifier=payment_identifier,
     )
     chain_state = views.state_from_raiden(app0.raiden)
     channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state, token_network_address, app1.raiden.address
     )
-    balance_proof = channel_state.partner_state.balance_proof
+    assert channel_state
+    balance_proof = cast(BalanceProofSignedState, channel_state.partner_state.balance_proof)
     api = RaidenAPI(app0.raiden)
-    request = api.create_monitoring_request(balance_proof=balance_proof, reward_amount=1)
+    request = api.create_monitoring_request(
+        balance_proof=balance_proof, reward_amount=TokenAmount(1)
+    )
     assert request
     as_dict = DictSerializer.serialize(request)
     from_dict = DictSerializer.deserialize(as_dict)

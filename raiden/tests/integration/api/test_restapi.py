@@ -35,7 +35,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentWithFeeAmount
+from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAddress, TokenAmount
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -553,7 +553,7 @@ def test_api_open_and_deposit_race(
     assert check_dict_nested_attrs(json_response, expected_response)
 
     # Prepare the deposit api call
-    deposit_amount = 99
+    deposit_amount = TokenAmount(99)
     request = grequests.patch(
         api_url_for(
             api_server_test_instance,
@@ -565,11 +565,8 @@ def test_api_open_and_deposit_race(
     )
 
     # Spawn two greenlets doing the same deposit request
-    greenlets = set()
-    greenlets.add(gevent.spawn(request.send))
-    greenlets.add(gevent.spawn(request.send))
-    gevent.joinall(greenlets, raise_error=True)
-    greenlets = list(greenlets)
+    greenlets = [gevent.spawn(request.send), gevent.spawn(request.send)]
+    gevent.joinall(set(greenlets), raise_error=True)
     # Make sure that both responses are fine
     g1_response = greenlets[0].get().response
     assert_proper_response(g1_response, HTTPStatus.OK)
@@ -1537,11 +1534,13 @@ def test_get_token_network_for_token(
 ):
     app0 = raiden_network[0]
 
-    new_token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    new_token_address = TokenAddress(
+        deploy_contract_web3(
+            CONTRACT_HUMAN_STANDARD_TOKEN,
+            app0.raiden.rpc_client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        )
     )
 
     # Wait until Raiden can start using the token contract.
@@ -1870,8 +1869,8 @@ def test_api_deposit_limit(
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_payment_events_endpoints(api_server_test_instance, raiden_network, token_addresses):
     app0, app1, app2 = raiden_network
-    amount1 = 10
-    identifier1 = 42
+    amount1 = PaymentAmount(10)
+    identifier1 = PaymentID(42)
     secret1, secrethash1 = factories.make_secret_with_hash()
     token_address = token_addresses[0]
 
@@ -1895,8 +1894,8 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     request.send()
 
     # app0 is sending some tokens to target 2
-    identifier2 = 43
-    amount2 = 10
+    identifier2 = PaymentID(43)
+    amount2 = PaymentAmount(10)
     secret2, secrethash2 = factories.make_secret_with_hash()
     request = grequests.post(
         api_url_for(
@@ -1910,8 +1909,8 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     request.send()
 
     # target1 also sends some tokens to target 2
-    identifier3 = 44
-    amount3 = 5
+    identifier3 = PaymentID(44)
+    amount3 = PaymentAmount(5)
     secret3, secrethash3 = factories.make_secret_with_hash()
     request = grequests.post(
         api_url_for(
@@ -2224,8 +2223,9 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
-    amount_to_send = PaymentWithFeeAmount(150)
+    amount_to_send = PaymentAmount(150)
     # Remove when https://github.com/raiden-network/raiden/issues/4982 is tackled
     expected_fee = FeeAmount(int(amount_to_send * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
     fee_margin = calculate_fee_margin(amount_to_send, expected_fee)
@@ -2525,10 +2525,12 @@ def test_api_set_reveal_timeout(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app0.raiden),
         token_network_address=token_network_address,
         partner_address=app1.raiden.address,
     )
+    assert channel_state
 
     assert channel_state.reveal_timeout == reveal_timeout
