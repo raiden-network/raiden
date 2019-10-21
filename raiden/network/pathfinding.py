@@ -152,7 +152,8 @@ def get_pfs_info(url: str) -> PFSInfo:
             version=infos["version"],
         )
     except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError) as e:
-        raise ServiceRequestFailed(str(e)) from e
+        msg = "Selected Pathfinding service returned unexpected reply"
+        raise ServiceRequestFailed(msg) from e
 
 
 def get_valid_pfs_url(
