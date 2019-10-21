@@ -131,7 +131,7 @@ def test_register_secret_batch_with_pruned_block(
     # Now wait until this block becomes pruned
     pruned_number = c1_proxy_manager.client.block_number()
     c1_proxy_manager.wait_until_block(
-        target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS
+        target_block_number=BlockNumber(pruned_number + STATE_PRUNING_AFTER_BLOCKS)
     )
     secret_registry_batch_happy_path(web3, secret_registry_proxy)
 

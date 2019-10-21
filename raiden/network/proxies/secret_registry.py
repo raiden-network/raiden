@@ -265,7 +265,8 @@ class SecretRegistry:
             #
             # Either of these is a bug. The contract does not use
             # assert/revert, and the account should always be funded
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            assert gas_limit
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="registerSecretBatch",
                 transaction_executed=True,
                 required_gas=gas_limit,

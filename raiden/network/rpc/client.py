@@ -10,7 +10,7 @@ from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
 from web3 import Web3
-from web3.contract import ContractFunction
+from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -40,6 +40,7 @@ from raiden.utils.typing import (
     CompiledContract,
     Nonce,
     PrivateKey,
+    TokenAmount,
     TransactionHash,
 )
 from raiden_contracts.utils.type_aliases import ChainID
@@ -55,8 +56,7 @@ def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpec
     assert is_valid_to, "event log to block can be integer or latest,pending, earliest"
 
 
-def geth_assert_rpc_interfaces(web3: Web3):
-
+def geth_assert_rpc_interfaces(web3: Web3) -> None:
     try:
         web3.version.node
     except ValueError:
@@ -82,8 +82,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
         )
 
 
-def parity_assert_rpc_interfaces(web3: Web3):
-
+def parity_assert_rpc_interfaces(web3: Web3) -> None:
     try:
         web3.version.node
     except ValueError:
@@ -132,7 +131,7 @@ def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce
 
 def check_address_has_code(
     client: "JSONRPCClient", address: Address, contract_name: str = "", expected_code: bytes = None
-):
+) -> None:
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), "latest")
 
@@ -182,7 +181,9 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     return False
 
 
-def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
+def patched_web3_eth_estimate_gas(
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+) -> int:
     """ Temporary workaround until next web3.py release (5.X.X)
 
     Current master of web3.py has this implementation already:
@@ -192,7 +193,7 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
         transaction = assoc(transaction, "from", self.defaultAccount)
 
     if block_identifier is None:
-        params = [transaction]
+        params: List[Any] = [transaction]
     else:
         params = [transaction, block_identifier]
 
@@ -210,7 +211,9 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
     return result
 
 
-def patched_web3_eth_call(self, transaction, block_identifier=None):
+def patched_web3_eth_call(
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+) -> HexBytes:
     if "from" not in transaction and is_checksum_address(self.defaultAccount):
         transaction = assoc(transaction, "from", self.defaultAccount)
 
@@ -230,20 +233,20 @@ def patched_web3_eth_call(self, transaction, block_identifier=None):
 
 
 def estimate_gas_for_function(
-    address,
-    web3,
-    fn_identifier=None,
-    transaction=None,
-    contract_abi=None,
-    fn_abi=None,
-    block_identifier=None,
-    *args,
-    **kwargs,
-):
+    address: Address,
+    web3: Web3,
+    fn_identifier: str = None,
+    transaction: Dict[str, Any] = None,
+    contract_abi: Dict[str, Any] = None,
+    fn_abi: Dict[str, Any] = None,
+    block_identifier: BlockSpecification = None,
+    *args: Any,
+    **kwargs: Any,
+) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     estimate_transaction = prepare_transaction(
-        address,
-        web3,
+        address=address,
+        web3=web3,
         fn_identifier=fn_identifier,
         contract_abi=contract_abi,
         fn_abi=fn_abi,
@@ -264,7 +267,9 @@ def estimate_gas_for_function(
     return gas_estimate
 
 
-def patched_contractfunction_estimateGas(self, transaction=None, block_identifier=None):
+def patched_contractfunction_estimateGas(
+    self: Any, transaction: Dict[str, Any] = None, block_identifier: BlockSpecification = None
+) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
         estimate_gas_transaction: Dict[str, Any] = {}
@@ -303,7 +308,7 @@ def patched_contractfunction_estimateGas(self, transaction=None, block_identifie
     )
 
 
-def monkey_patch_web3(web3, gas_price_strategy):
+def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     try:
         # install caching middleware
         web3.middleware_stack.add(block_hash_cache_middleware)
@@ -346,8 +351,8 @@ class JSONRPCClient:
         gas_price_strategy: Callable = rpc_gas_price_strategy,
         gas_estimate_correction: Callable = lambda gas: gas,
         block_num_confirmations: int = 0,
-        uses_infura=False,
-    ):
+        uses_infura: bool = False,
+    ) -> None:
         if privkey is None or len(privkey) != 32:
             raise ValueError("Invalid private key")
 
@@ -407,22 +412,22 @@ class JSONRPCClient:
             client=version,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<JSONRPCClient "
             f"node:{to_checksum_address(self.address)} nonce:{self._available_nonce}"
             f">"
         )
 
-    def block_number(self):
+    def block_number(self) -> BlockNumber:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def get_block(self, block_identifier: BlockSpecification) -> Dict:
+    def get_block(self, block_identifier: BlockSpecification) -> Dict[str, Any]:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)
 
-    def get_confirmed_blockhash(self):
+    def get_confirmed_blockhash(self) -> BlockHash:
         """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
         confirmed_block_number = self.web3.eth.blockNumber - self.default_block_num_confirmations
         if confirmed_block_number < 0:
@@ -448,7 +453,7 @@ class JSONRPCClient:
         difference = latest_block_number - preconditions_block_number
         return difference < constants.NO_STATE_QUERY_AFTER_BLOCKS
 
-    def balance(self, account: Address):
+    def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), "pending")
 
@@ -500,12 +505,12 @@ class JSONRPCClient:
         """
         return ContractProxy(self, contract=self.new_contract(abi, contract_address))
 
-    def new_contract(self, contract_interface: ABI, contract_address: Address):
+    def new_contract(self, contract_interface: ABI, contract_address: Address) -> Contract:
         return self.web3.eth.contract(
             abi=contract_interface, address=to_checksum_address(contract_address)
         )
 
-    def get_transaction_receipt(self, tx_hash: bytes):
+    def get_transaction_receipt(self, tx_hash: TransactionHash) -> Dict[str, Any]:
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
 
     def deploy_single_contract(
@@ -699,7 +704,7 @@ class JSONRPCClient:
         transaction_executed: bool,
         required_gas: int,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ After estimate gas failure checks if our address has enough balance.
 
         If the account did not have enough ETH balance to execute the,
@@ -721,7 +726,7 @@ class JSONRPCClient:
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
             raise InsufficientFunds(msg)
 
-    def get_checking_block(self):
+    def get_checking_block(self) -> BlockSpecification:
         """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
         In parity doing any call() with the 'pending' block no longer falls back
         to the latest if no pending block is found but throws a mistaken error.

@@ -22,7 +22,7 @@ from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils import privatekey_to_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import ChainID, List, Nonce, PrivateKey, TokenAmount
+from raiden.utils.typing import BlockNumber, ChainID, List, Nonce, PrivateKey, TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId
 from raiden_contracts.contract_manager import ContractManager
 
@@ -113,7 +113,7 @@ def test_payment_channel_proxy_basics(
     # estimate gas and at the time the latest block is the settle timeout block.
     # More info: https://github.com/raiden-network/raiden/pull/3699#discussion_r270477227
     proxy_manager.wait_until_block(
-        target_block_number=client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1
+        target_block_number=BlockNumber(client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
     )
 
     channel_proxy_1.settle(
