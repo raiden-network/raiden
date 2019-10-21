@@ -9,13 +9,14 @@ from time import sleep
 
 import psutil
 import requests
+from requests import Response
 
-from raiden.utils.typing import Iterator, Optional, Port
+from raiden.utils.typing import Any, Iterator, Optional, Port
 
 LOOPBACK = "127.0.0.1"
 
 
-def get_response_json(response):
+def get_response_json(response: Response) -> Any:
     return json.loads(response.content)
 
 
