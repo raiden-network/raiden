@@ -127,7 +127,7 @@ class PFSError(IntEnum):
     NO_ROUTE_FOUND = 2201
 
     @staticmethod
-    def is_iou_rejected(error_code):
+    def is_iou_rejected(error_code: int) -> bool:
         return error_code >= 2100
 
 
