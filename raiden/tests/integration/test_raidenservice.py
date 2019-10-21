@@ -108,8 +108,8 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
     app0.stop()
 
     transport = MatrixTransport(app0.config["transport"]["matrix"])
-    transport.send_async = Mock()
-    transport._send_raw = Mock()
+    transport.send_async = Mock()  # type: ignore
+    transport._send_raw = Mock()  # type: ignore
 
     old_start_transport = transport.start
 
@@ -140,7 +140,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
         old_start_transport(*args, **kwargs)
 
-    transport.start = start_transport
+    transport.start = start_transport  # type: ignore
 
     app0_restart = App(
         config=app0.config,

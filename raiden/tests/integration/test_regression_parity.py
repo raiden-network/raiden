@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 
 from raiden import waiting
@@ -7,9 +9,11 @@ from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.tests.utils.transfer import TransferState, get_channelstate, transfer
 from raiden.transfer import views
+from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_signed_balance_proof
+from raiden.utils.typing import PaymentAmount, PaymentID
 from raiden_contracts.constants import MessageTypeId
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
@@ -44,16 +48,16 @@ def test_locksroot_loading_during_channel_settle_handling(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
-        amount=10,
-        identifier=1,
+        amount=PaymentAmount(10),
+        identifier=PaymentID(1),
         transfer_state=TransferState.SECRET_NOT_REQUESTED,
     )
     transfer(
         initiator_app=app1,
         target_app=app0,
         token_address=token_address,
-        amount=7,
-        identifier=2,
+        amount=PaymentAmount(7),
+        identifier=PaymentID(2),
         transfer_state=TransferState.SECRET_NOT_REQUESTED,
     )
 
@@ -62,12 +66,15 @@ def test_locksroot_loading_during_channel_settle_handling(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
+    assert token_network_address
     channel_state = get_channelstate(
         app0=app0, app1=app1, token_network_address=token_network_address
     )
 
     channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
     balance_proof = channel_state.partner_state.balance_proof
+    assert balance_proof
+    balance_proof = cast(BalanceProofSignedState, balance_proof)
     block_number = app0.raiden.rpc_client.block_number()
 
     closing_data = pack_signed_balance_proof(

@@ -16,6 +16,7 @@ from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState, NetworkState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
+from raiden.utils.typing import TokenAmount
 from raiden_contracts.constants import ChannelEvent
 
 
@@ -41,9 +42,7 @@ def test_token_addresses(raiden_network, token_addresses):
     last_number = app0.raiden.rpc_client.block_number()
 
     for block_number in range(last_number, 0, -1):
-        code = app0.raiden.rpc_client.web3.eth.getCode(
-            to_checksum_address(token_network_address), block_number
-        )
+        code = app0.raiden.rpc_client.web3.eth.getCode(token_network_address, block_number)
         if code == b"":
             break
     token_network_deploy_block_number = block_number + 1
@@ -88,6 +87,7 @@ def test_raidenapi_channel_lifecycle(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(node1), node1.raiden.default_registry.address, token_address
     )
+    assert token_network_address
 
     api1 = RaidenAPI(node1.raiden)
     api2 = RaidenAPI(node2.raiden)
@@ -177,7 +177,7 @@ def test_raidenapi_channel_lifecycle(
             registry_address=registry_address,
             token_address=token_address,
             partner_address=api2.address,
-            total_deposit=0,
+            total_deposit=TokenAmount(0),
         )
     # Load the new state with the deposit
     api1.set_total_channel_deposit(

@@ -17,7 +17,7 @@ from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
 from raiden.utils import create_default_identifier
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.typing import BlockNumber, TokenAmount
+from raiden.utils.typing import BlockNumber, PaymentID, TokenAmount
 
 
 @raise_on_failure
@@ -36,10 +36,11 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
 
     number_of_transfers = 7
     amount_per_transfer = 1
-    total_transferred_amount = amount_per_transfer * number_of_transfers
+    total_transferred_amount = TokenAmount(amount_per_transfer * number_of_transfers)
 
     # Make sure none of the transfers will be sent before the restart
     transfers = []
@@ -71,7 +72,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
         config=app0.config,
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
@@ -201,7 +202,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
 
     # Check that the payment statuses were restored properly after restart
     for identifier in range(spent_amount):
-        identifier = identifier + 1
+        identifier = PaymentID(identifier + 1)
         mapping = app0_restart.raiden.targets_to_identifiers_to_statuses
         status = mapping[app1.raiden.address][identifier]
         assert status.amount == 1

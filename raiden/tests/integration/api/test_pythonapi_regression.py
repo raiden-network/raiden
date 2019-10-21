@@ -5,6 +5,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.utils.typing import PaymentAmount, PaymentID, TargetAddress
 
 
 @raise_on_failure
@@ -29,14 +30,14 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     node2_balance_before = token_proxy.balance_of(api2.address)
 
     # Initialize app2 balance proof and close the channel
-    amount = 10
-    identifier = 42
+    amount = PaymentAmount(10)
+    identifier = PaymentID(42)
     secret, secrethash = factories.make_secret_with_hash()
     assert api1.transfer_and_wait(
         registry_address=registry_address,
         token_address=token_address,
         amount=amount,
-        target=api2.address,
+        target=TargetAddress(api2.address),
         identifier=identifier,
         secret=secret,
         transfer_timeout=10,
