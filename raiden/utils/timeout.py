@@ -1,7 +1,8 @@
 import gevent
+from gevent import Greenlet
 
 from raiden.raiden_service import RaidenService
-from raiden.utils.typing import BlockNumber, Callable
+from raiden.utils.typing import Any, BlockNumber, Callable, Optional
 from raiden.waiting import wait_for_block
 
 
@@ -11,7 +12,7 @@ def _timeout_task(  # pragma: no unittest
     raiden: RaidenService,
     block_number: BlockNumber,
     retry_timeout: float,
-):
+) -> None:
     wait_for_block(raiden, block_number, retry_timeout)
     throw(exception_to_throw)
 
@@ -19,7 +20,7 @@ def _timeout_task(  # pragma: no unittest
 class BlockTimeout:  # pragma: no unittest
     def __init__(
         self,
-        exception_to_throw,
+        exception_to_throw: Exception,
         raiden: RaidenService,
         block_number: BlockNumber,
         retry_timeout: float,
@@ -28,7 +29,7 @@ class BlockTimeout:  # pragma: no unittest
         self.raiden = raiden
         self.block_number = block_number
         self.retry_timeout = retry_timeout
-        self._task = None
+        self._task: Optional[Greenlet] = None
 
     def __enter__(self) -> None:
         self._task = gevent.spawn(
@@ -40,5 +41,6 @@ class BlockTimeout:  # pragma: no unittest
             self.retry_timeout,
         )
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self._task.kill()
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        if self._task:
+            self._task.kill()

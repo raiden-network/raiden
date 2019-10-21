@@ -10,20 +10,20 @@ if TYPE_CHECKING:
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = UNLOCK_TX_GAS_LIMIT
 
 
-def gas_required_for_channel_lifecycle_after_close(gas_measurements: Dict[str, int]):
+def gas_required_for_channel_lifecycle_after_close(gas_measurements: Dict[str, int]) -> int:
     return (
         gas_measurements["TokenNetwork.settleChannel"]
         + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
     )
 
 
-def gas_required_for_channel_lifecycle_after_open(gas_measurements: Dict[str, int]):
+def gas_required_for_channel_lifecycle_after_open(gas_measurements: Dict[str, int]) -> int:
     return gas_measurements[
         "TokenNetwork.closeChannel"
     ] + gas_required_for_channel_lifecycle_after_close(gas_measurements)
 
 
-def gas_required_for_channel_lifecycle_complete(gas_measurements: Dict[str, int]):
+def gas_required_for_channel_lifecycle_complete(gas_measurements: Dict[str, int]) -> int:
     return (
         gas_measurements["TokenNetwork.openChannel"]
         + gas_measurements["TokenNetwork.setTotalDeposit"]
