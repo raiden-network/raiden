@@ -10,7 +10,7 @@ import structlog
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
-from raiden.utils.typing import Callable, List, NamedTuple
+from raiden.utils.typing import Any, Callable, List, NamedTuple
 
 
 class UpgradeRecord(NamedTuple):
@@ -24,12 +24,12 @@ UPGRADES_LIST: List[UpgradeRecord] = []
 log = structlog.get_logger(__name__)
 
 
-def get_file_lock(db_filename: Path):
+def get_file_lock(db_filename: Path) -> filelock.FileLock:
     lock_file_name = f"{db_filename}.lock"
     return filelock.FileLock(lock_file_name)
 
 
-def update_version(storage: SQLiteStorage, version: int):
+def update_version(storage: SQLiteStorage, version: int) -> None:
     cursor = storage.conn.cursor()
     cursor.execute(
         'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)', (str(version),)
@@ -69,7 +69,7 @@ def get_db_version(db_filename: Path) -> int:
     return int(result[0])
 
 
-def _copy(old_db_filename, current_db_filename):
+def _copy(old_db_filename: Path, current_db_filename: Path) -> None:
     old_conn = sqlite3.connect(old_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
     current_conn = sqlite3.connect(current_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
 
@@ -118,7 +118,7 @@ class UpgradeManager:
       to proceed or not.
     """
 
-    def __init__(self, db_filename: str, **kwargs):
+    def __init__(self, db_filename: str, **kwargs: Any) -> None:
         base_name = os.path.basename(db_filename)
         match = VERSION_RE.match(base_name)
         assert match, f'Database name "{base_name}" does not match our format'
@@ -126,7 +126,7 @@ class UpgradeManager:
         self._current_db_filename = Path(db_filename)
         self._kwargs = kwargs
 
-    def run(self):
+    def run(self) -> None:
         # First clear up any partially upgraded databases.
         #
         # A database will be partially upgraded if the process receives a
@@ -166,12 +166,12 @@ class UpgradeManager:
             )
 
         self._upgrade(
-            target_file=str(self._current_db_filename),
+            target_file=self._current_db_filename,
             from_file=latest_db_path,
             from_version=file_version,
         )
 
-    def _upgrade(self, target_file: Path, from_file: Path, from_version: int):
+    def _upgrade(self, target_file: Path, from_file: Path, from_version: int) -> None:
         with get_file_lock(from_file), get_file_lock(target_file):
             _copy(from_file, target_file)
 
