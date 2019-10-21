@@ -60,19 +60,10 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
-def test_register_token(raiden_network, token_amount, contract_manager, retry_timeout):
+def test_register_token(raiden_network, retry_timeout, unregistered_token):
     app1 = raiden_network[0]
-
     registry_address = app1.raiden.default_registry.address
-
-    token_address = TokenAddress(
-        deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-        )
-    )
+    token_address = unregistered_token
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
@@ -117,21 +108,10 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
-def test_register_token_insufficient_eth(
-    raiden_network, token_amount, contract_manager, retry_timeout
-):
+def test_register_token_insufficient_eth(raiden_network, retry_timeout, unregistered_token):
     app1 = raiden_network[0]
-
     registry_address = app1.raiden.default_registry.address
-
-    token_address = TokenAddress(
-        deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-        )
-    )
+    token_address = unregistered_token
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
@@ -163,7 +143,7 @@ def test_register_token_insufficient_eth(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
-def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contract_manager):
+def test_token_registered_race(raiden_chain, retry_timeout, unregistered_token):
     """If a token is registered it must appear on the token list.
 
     If two nodes register the same token one of the transactions will fail. The
@@ -171,6 +151,7 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     token in the token list. Issue: #784
     """
     app0, app1 = raiden_chain
+    token_address = unregistered_token
 
     api0 = RaidenAPI(app0.raiden)
     api1 = RaidenAPI(app1.raiden)
@@ -179,15 +160,6 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     # register at all by watching for the TokenAdded blockchain event.
     event_listeners = app1.raiden.blockchain_events.event_listeners
     app1.raiden.blockchain_events.event_listeners = list()
-
-    token_address = TokenAddress(
-        deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-        )
-    )
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.

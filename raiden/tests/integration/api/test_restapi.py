@@ -35,7 +35,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils import get_system_spec
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAddress, TokenAmount
+from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAmount
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -1531,17 +1531,10 @@ def test_get_token_network_for_token(
     raiden_network,
     contract_manager,
     retry_timeout,
+    unregistered_token,
 ):
     app0 = raiden_network[0]
-
-    new_token_address = TokenAddress(
-        deploy_contract_web3(
-            CONTRACT_HUMAN_STANDARD_TOKEN,
-            app0.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-        )
-    )
+    new_token_address = unregistered_token
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
