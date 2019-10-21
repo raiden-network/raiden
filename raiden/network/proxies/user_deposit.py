@@ -207,10 +207,10 @@ class UserDeposit:
         )
 
         if not gas_limit:
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="deposit",
                 transaction_executed=False,
                 required_gas=self.gas_measurements["UserDeposit.deposit"],
