@@ -73,9 +73,10 @@ class EchoNode:  # pragma: no unittest
 
         self.num_seen_events = 0
         self.received_transfers: Queue[EventPaymentReceivedSuccess] = Queue()
-        self.stop_signal: Optional[
-            bool
-        ] = None  # used to signal REMOVE_CALLBACK and stop echo_workers
+
+        # This is used to signal REMOVE_CALLBACK and stop echo_workers
+        self.stop_signal: Optional[bool] = None
+
         self.greenlets: Set[Greenlet] = set()
         self.lock = BoundedSemaphore()
         self.seen_transfers: Deque[EventPaymentReceivedSuccess] = deque(list(), TRANSFER_MEMORY)
