@@ -10,8 +10,7 @@ from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, Eve
 
 NOVALUE = object()
 T = TypeVar("T")
-T_Event = TypeVar("T_Event", bound="Event")
-T_StateChange = TypeVar("T_StateChange", bound="StateChange")
+TE = TypeVar("TE", bound=Event)
 SC = TypeVar("SC", bound=StateChange)
 TM = TypeVar("TM", bound=Mapping)
 
@@ -87,8 +86,8 @@ def search_for_item(
 
 
 def raiden_events_search_for_item(
-    raiden: RaidenService, item_type: Type[T_Event], attributes: Mapping
-) -> Optional[T_Event]:
+    raiden: RaidenService, item_type: Type[TE], attributes: Mapping
+) -> Optional[TE]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
@@ -96,7 +95,7 @@ def raiden_events_search_for_item(
     """
     assert raiden.wal, "RaidenService must be started"
     event = search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
-    return cast(T_Event, event)
+    return cast(TE, event)
 
 
 def raiden_state_changes_search_for_item(
@@ -162,11 +161,8 @@ def wait_for_raiden_event(
 
 
 def wait_for_state_change(
-    raiden: RaidenService,
-    item_type: Type[T_StateChange],
-    attributes: Mapping,
-    retry_timeout: float,
-) -> T_StateChange:
+    raiden: RaidenService, item_type: Type[SC], attributes: Mapping, retry_timeout: float
+) -> SC:
     """Wait until a state change is seen in the WAL
 
     Note:
