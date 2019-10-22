@@ -105,7 +105,8 @@ def test_get_initial_payment_for_final_target_amount(
     )
 
     calculation = get_initial_amount_for_amount_after_fees(
-        amount_after_fees=final_amount, channels=channel_set.channels
+        amount_after_fees=final_amount,
+        channels=[(channel_set.channels[0], channel_set.channels[1])],
     )
 
     assert calculation is not None

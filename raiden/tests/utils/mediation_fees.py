@@ -1,4 +1,4 @@
-from itertools import islice
+from typing import Tuple
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.channel import get_balance
@@ -9,29 +9,13 @@ from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     Balance,
     FeeAmount,
-    Iterable,
     List,
     NamedTuple,
     Optional,
     PaymentAmount,
     PaymentWithFeeAmount,
-    Sequence,
     TokenAmount,
 )
-
-
-def window(seq: Sequence, n: int = 2) -> Iterable[tuple]:
-    """Returns a sliding window (of width n) over data from the iterable
-    s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...
-    See https://stackoverflow.com/a/6822773/114926
-    """
-    remaining_elements = iter(seq)
-    result = tuple(islice(remaining_elements, n))
-    if len(result) == n:
-        yield result
-    for elem in remaining_elements:
-        result = result[1:] + (elem,)
-        yield result
 
 
 def imbalance_fee_receiver(
@@ -125,27 +109,22 @@ def get_amount_with_fees(
 
 
 def get_initial_amount_for_amount_after_fees(
-    amount_after_fees: PaymentAmount, channels: List[NettingChannelState]
+    amount_after_fees: PaymentAmount,
+    channels: List[Tuple[NettingChannelState, NettingChannelState]],
 ) -> Optional[FeesCalculation]:
     """ Calculates the payment amount including fees to be supplied to the given
     channel configuration, so that `amount_after_fees` arrives at the target.
 
     Note: The channels have to be from the view of the mediator, so for the case
-        A -> B -> C this should be [B->A, B->C]
+        A -> B -> C this should be [(B->A, B->C)]
     """
-    assert len(channels) >= 1, "Need at least one channel"
-
-    # No fees in direct transfer
-    if len(channels) == 1:
-        return FeesCalculation(
-            total_amount=PaymentWithFeeAmount(amount_after_fees), mediation_fees=[]
-        )
+    assert len(channels) >= 1, "Need at least one channel pair"
 
     # Backpropagate fees in mediation scenario
     total = PaymentWithFeeAmount(amount_after_fees)
     fees: List[FeeAmount] = []
     try:
-        for channel_in, channel_out in reversed(list(window(channels, 2))):
+        for channel_in, channel_out in reversed(channels):
             assert isinstance(channel_in, NettingChannelState)
             assert isinstance(channel_out, NettingChannelState)
 
@@ -190,7 +169,8 @@ class PaymentAmountCalculation(NamedTuple):
 
 
 def get_amount_for_sending_before_and_after_fees(
-    amount_to_leave_initiator: PaymentAmount, channels: List[NettingChannelState]
+    amount_to_leave_initiator: PaymentAmount,
+    channels: List[Tuple[NettingChannelState, NettingChannelState]],
 ) -> Optional[PaymentAmountCalculation]:
     """
     Calculates the amount needed to be sent by the initiator (before fees) in

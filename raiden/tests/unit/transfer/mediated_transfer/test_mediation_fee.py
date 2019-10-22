@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import pytest
 from hypothesis import assume, given
 from hypothesis.strategies import integers
@@ -402,7 +404,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 
     # How much do we need to send so that the target receives `amount`? PFS-like calculation.
     fee_calculation = get_initial_amount_for_amount_after_fees(
-        amount_after_fees=PaymentAmount(amount), channels=[channel_in, channel_out]
+        amount_after_fees=PaymentAmount(amount), channels=[(channel_in, channel_out)]
     )
     assume(fee_calculation)  # There is not enough capacity for the payment in all cases
     assert fee_calculation
