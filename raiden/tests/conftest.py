@@ -1,22 +1,5 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 from gevent import monkey  # isort:skip # noqa
-
-monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
-
-import signal  # isort:skip # noqa
-import pytest  # isort:skip
-
-# Execute these before the other imports because rewrites can't work after the
-# module has been imported.
-pytest.register_assert_rewrite("raiden.tests.utils.eth_node")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.factories")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.messages")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.network")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.protocol")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.smoketest")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.transfer")  # isort:skip
-
 import contextlib
 import datetime
 import os
@@ -26,6 +9,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import List, Tuple, Union
 
 import gevent
 import structlog
@@ -46,6 +30,23 @@ from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 from raiden.utils.debugging import enable_gevent_monitoring_signal
 from raiden.utils.ethereum_clients import is_supported_client
+
+monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
+
+import signal  # isort:skip # noqa
+import pytest  # isort:skip
+
+# Execute these before the other imports because rewrites can't work after the
+# module has been imported.
+pytest.register_assert_rewrite("raiden.tests.utils.eth_node")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.factories")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.messages")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.network")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.protocol")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.smoketest")  # isort:skip
+pytest.register_assert_rewrite("raiden.tests.utils.transfer")  # isort:skip
+
 
 log = structlog.get_logger()
 
@@ -504,8 +505,8 @@ def pytest_generate_tests(metafunc):
 
     if "transport" in fixtures:
         parmeterize_private_rooms = True
-        transport_and_privacy = list()
-        number_of_transports = list()
+        transport_and_privacy: List[Tuple[str, Union[bool, List[bool]]]] = list()
+        number_of_transports: List[int] = list()
 
         # Filter existing parametrization which is already done in the test
         for mark in metafunc.definition.own_markers:
