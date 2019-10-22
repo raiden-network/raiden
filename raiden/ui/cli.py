@@ -443,7 +443,8 @@ def options(func: Callable) -> Callable:
                 "--flat-fee",
                 help=(
                     "Sets the flat fee required for every mediation in wei of the "
-                    "mediated token for a certain token address."
+                    "mediated token for a certain token address. Must be bigger "
+                    "or equal to zero."
                 ),
                 type=(ADDRESS_TYPE, click.IntRange(min=0)),
                 multiple=True,
@@ -452,16 +453,18 @@ def options(func: Callable) -> Callable:
                 "--proportional-fee",
                 help=(
                     "Mediation fee as ratio of mediated amount in parts-per-million "
-                    "(10^-6) for a certain token address."
+                    "(10^-6) for a certain token address. "
+                    "Must be in [0, 1_000_000]."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=400_000)),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=1_000_000)),
                 multiple=True,
             ),
             option(
                 "--proportional-imbalance-fee",
                 help=(
                     "Set the worst-case imbalance fee relative to the channels capacity "
-                    "in parts-per-million (10^-6) for a certain token address."
+                    "in parts-per-million (10^-6) for a certain token address. "
+                    "Must be in [0, 50_000]."
                 ),
                 type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
                 multiple=True,
