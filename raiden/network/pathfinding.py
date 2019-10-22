@@ -587,6 +587,8 @@ def query_paths(
             )
         except ServiceRequestIOURejected as error:
             code = error.error_code
+            log.debug("Pathfinding Service rejected IOU", error=error)
+
             if retries == 0 or code in (PFSError.WRONG_IOU_RECIPIENT, PFSError.DEPOSIT_TOO_LOW):
                 raise
             elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
