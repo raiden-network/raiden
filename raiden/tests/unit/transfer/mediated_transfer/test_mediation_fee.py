@@ -23,6 +23,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     linspace,
 )
 from raiden.transfer.mediated_transfer.mediator import get_amount_without_fees
+from raiden.transfer.state import NettingChannelState
 from raiden.utils.mediation_fees import ppm_fee_per_channel
 from raiden.utils.typing import (
     Balance,
@@ -431,3 +432,144 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     )
     assume(amount_with_margin_after_fees)  # We might lack capacity to add margins
     assert amount_with_margin_after_fees >= amount
+
+
+def running_sum(a):
+    total = 0
+    for item in a:
+        total += item
+        yield total
+
+
+def make_channel_pair(
+    fee_schedule: FeeScheduleState, balance1: int = 0, balance2: int = 0
+) -> Tuple[NettingChannelState, NettingChannelState]:
+    balance1 = TokenAmount(balance1)
+    balance2 = TokenAmount(balance2)
+    return (
+        factories.create(
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=balance2),
+                partner_state=NettingChannelEndStateProperties(balance=balance1),
+                fee_schedule=fee_schedule,
+            )
+        ),
+        factories.create(
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(balance=balance1),
+                partner_state=NettingChannelEndStateProperties(balance=balance2),
+                fee_schedule=fee_schedule,
+            )
+        ),
+    )
+
+
+def test_mfee1():
+    """ Unit test for the fee calculation in the mfee1_flat_fee scenario """
+    amount = 10_000
+    deposit = 100_000
+    flat_fee = 100 // 2
+    fee_schedule = FeeScheduleState(flat=FeeAmount(flat_fee))
+    channels = make_channel_pair(fee_schedule, deposit)
+
+    # How much do we need to send so that the target receives `amount`? PFS-like calculation.
+    fee_calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=PaymentAmount(amount), channels=[channels, channels]
+    )
+    assert fee_calculation
+    amount_with_margin = calculate_safe_amount_with_fee(
+        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+    )
+    assert amount_with_margin == 10_211
+
+    # print values for scenario
+    print(deposit - amount_with_margin, amount_with_margin)
+    for med_fee in running_sum(fee_calculation.mediation_fees):
+        print(deposit - amount_with_margin + med_fee, amount_with_margin - med_fee)
+
+
+def test_mfee2():
+    """ Unit test for the fee calculation in the mfee2_proportional_fees scenario """
+    amount = 10_000
+    deposit = 100_000
+    prop_fee = ppm_fee_per_channel(ProportionalFeeAmount(10_000))
+    fee_schedule = FeeScheduleState(proportional=ProportionalFeeAmount(prop_fee))
+    channels = make_channel_pair(fee_schedule, deposit)
+
+    # How much do we need to send so that the target receives `amount`? PFS-like calculation.
+    fee_calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=PaymentAmount(amount), channels=[channels, channels]
+    )
+    assert fee_calculation
+    amount_with_margin = calculate_safe_amount_with_fee(
+        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+    )
+    assert amount_with_margin == 10_213
+
+    # print values for scenario
+    print(deposit - amount_with_margin, amount_with_margin)
+    for med_fee in running_sum(fee_calculation.mediation_fees):
+        print(deposit - amount_with_margin + med_fee, amount_with_margin - med_fee)
+
+
+def test_mfee3():
+    """ Unit test for the fee calculation in the mfee3_only_imbalance_fees scenario """
+    amount = 500_000_000_000_000_000
+    deposit = TokenAmount(1_000_000_000_000_000_000)
+    imbalance_penalty = calculate_imbalance_fees(deposit, ProportionalFeeAmount(10_000))
+    fee_schedule = FeeScheduleState(imbalance_penalty=imbalance_penalty, cap_fees=False)
+    channels = make_channel_pair(fee_schedule, deposit)
+
+    # How much do we need to send so that the target receives `amount`? PFS-like calculation.
+    fee_calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=PaymentAmount(amount), channels=[channels]
+    )
+    assert fee_calculation
+    amount_with_margin = calculate_safe_amount_with_fee(
+        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+    )
+    assert amount_with_margin == 480_850_038_799_922_400
+
+    # print values for scenario
+    print("{:_} {:_}".format(deposit - amount_with_margin, amount_with_margin))
+    for med_fee in running_sum(fee_calculation.mediation_fees):
+        print(
+            "{:_} {:_}".format(
+                deposit - amount_with_margin + med_fee, amount_with_margin - med_fee
+            )
+        )
+
+
+def test_mfee4():
+    """ Unit test for the fee calculation in the mfee4_combined_fees scenario """
+    amount = 500_000_000_000_000_000
+    deposit = 1_000_000_000_000_000_000
+    imbalance_penalty = calculate_imbalance_fees(
+        TokenAmount(deposit * 2), ProportionalFeeAmount(20_000)
+    )
+    fee_schedule = FeeScheduleState(
+        flat=FeeAmount(100),
+        proportional=ProportionalFeeAmount(10_000),
+        imbalance_penalty=imbalance_penalty,
+        cap_fees=False,
+    )
+    channels = make_channel_pair(fee_schedule, deposit, deposit)
+
+    # How much do we need to send so that the target receives `amount`? PFS-like calculation.
+    fee_calculation = get_initial_amount_for_amount_after_fees(
+        amount_after_fees=PaymentAmount(amount), channels=[channels, channels]
+    )
+    assert fee_calculation
+    amount_with_margin = calculate_safe_amount_with_fee(
+        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+    )
+    assert amount_with_margin == 555_452_155_494_633_177
+
+    # print values for scenario
+    print("{:_} {:_}".format(deposit - amount_with_margin, deposit + amount_with_margin))
+    for med_fee in running_sum(fee_calculation.mediation_fees):
+        print(
+            "{:_} {:_}".format(
+                deposit - amount_with_margin + med_fee, deposit + amount_with_margin - med_fee
+            )
+        )
