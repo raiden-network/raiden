@@ -454,7 +454,7 @@ def options(func: Callable) -> Callable:
                     "Mediation fee as ratio of mediated amount in parts-per-million "
                     "(10^-6) for a certain token address."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                type=(ADDRESS_TYPE, click.IntRange(min=0, max=400_000)),
                 multiple=True,
             ),
             option(
