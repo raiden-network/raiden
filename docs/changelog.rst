@@ -5,6 +5,7 @@ Changelog
 * :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
 * :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
 * :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
+* :feature:`-` Update WebUI to version 0.10.1 https://github.com/raiden-network/webui/releases/tag/v0.10.1
 
 * :release:`0.200.0-rc1 <2019-08-12>`
 * :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
