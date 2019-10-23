@@ -47,7 +47,7 @@ class SendWithdrawRequest(SendMessageEvent):
 
     def __repr__(self) -> str:
         return (
-            f"SendWithdrawRequest< "
+            f"{self.__class__.__name__}< "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
             f">"
@@ -65,7 +65,7 @@ class SendWithdrawConfirmation(SendMessageEvent):
 
     def __repr__(self) -> str:
         return (
-            f"SendWithdrawConfirmation< "
+            f"{self.__class__.__name__}< "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
             f">"
@@ -83,7 +83,7 @@ class SendWithdrawExpired(SendMessageEvent):
 
     def __repr__(self) -> str:
         return (
-            f"SendWithdrawExpired< "
+            f"{self.__class__.__name__}< "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
             f">"
@@ -109,7 +109,7 @@ class ContractSendChannelWithdraw(ContractSendEvent):
 
     def __repr__(self) -> str:
         return (
-            f"ContractSendChannelWithdraw< "
+            f"{self.__class__.__name__}< "
             f"canonical_identifier: {self.canonical_identifier} "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"partner_signature: {to_hex(self.partner_signature)} "
@@ -230,7 +230,7 @@ class EventPaymentSentSuccess(Event):
     def __repr__(self) -> str:
         route_str = ",".join(to_checksum_address(x) for x in self.route)
         return (
-            f"EventPaymentSentSuccess< "
+            f"{self.__class__.__name__}< "
             f"token_network_address: {to_checksum_address(self.token_network_address)} "
             f"identifier: {self.identifier} amount: {self.amount} "
             f"target: {to_checksum_address(self.target)} "
@@ -257,7 +257,7 @@ class EventPaymentSentFailed(Event):
 
     def __repr__(self) -> str:
         return (
-            f"EventPaymentSentFailed< "
+            f"{self.__class__.__name__}< "
             f"token_network_address: {to_checksum_address(self.token_network_address)} "
             f"identifier: {self.identifier} "
             f"target: {to_checksum_address(self.target)} "
@@ -292,7 +292,7 @@ class EventPaymentReceivedSuccess(Event):
 
     def __repr__(self) -> str:
         return (
-            f"EventPaymentReceivedSuccess< "
+            f"{self.__class__.__name__}< "
             f"token_network_address: {to_checksum_address(self.token_network_address)} "
             f"identifier: {self.identifier} amount: {self.amount} "
             f"initiator: {to_checksum_address(self.initiator)} "
@@ -317,7 +317,7 @@ class EventInvalidReceivedLockExpired(Event):
 
     def __repr__(self) -> str:
         return (
-            f"EventInvalidReceivedLockExpired< "
+            f"{self.__class__.__name__}< "
             f"secrethash: {to_hex(self.secrethash)} "
             f"reason: {self.reason} "
             f">"
@@ -341,7 +341,7 @@ class EventInvalidReceivedUnlock(Event):
 
     def __repr__(self) -> str:
         return (
-            f"EventInvalidReceivedUnlock< "
+            f"{self.__class__.__name__}< "
             f"secrethash: {to_hex(self.secrethash)} "
             f"reason: {self.reason} "
             f">"
