@@ -1146,11 +1146,11 @@ class RaidenService(Runnable):
 
         log.debug(
             "Mediated transfer",
-            node=self.address,
-            target=target,
+            node=to_checksum_address(self.address),
+            target=to_checksum_address(target),
             amount=amount,
             identifier=identifier,
-            token_network_address=token_network_address,
+            token_network_address=to_checksum_address(token_network_address),
         )
 
         # We must check if the secret was registered against the latest block,
