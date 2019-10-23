@@ -406,7 +406,7 @@ class BalanceProofSignedState(State):
 
     def __repr__(self) -> str:
         return (
-            f"BalanceProofSignedState< "
+            f"{self.__class__.__name__}< "
             f"nonce: {self.nonce} transferred_amount: {self.transferred_amount} "
             f"locked_amount: {self.locked_amount} locksroot: {to_hex(self.locksroot)} "
             f"message_hash: {to_hex(self.message_hash)} signature: {to_hex(self.signature)} "
