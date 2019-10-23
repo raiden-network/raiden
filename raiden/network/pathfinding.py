@@ -634,7 +634,7 @@ def post_pfs_feedback(
     log.info(
         "Sending routing feedback to Pathfinding Service",
         url=pfs_config.info.url,
-        token_network_address=token_network_address,
+        token_network_address=to_checksum_address(token_network_address),
         payload=payload,
     )
 
