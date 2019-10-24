@@ -10,6 +10,7 @@ from raiden.transfer.state import (
     TokenNetworkRegistryState,
     TokenNetworkState,
 )
+from raiden.utils.typing import BlockNumber, TokenAmount
 
 # pylint: disable=redefined-outer-name
 
@@ -41,7 +42,7 @@ def token_network_registry_address():
 
 @pytest.fixture
 def chain_state(our_address):
-    block_number = 1
+    block_number = BlockNumber(1)
 
     return ChainState(
         pseudo_random_generator=random.Random(),
@@ -103,9 +104,11 @@ def netting_channel_state(chain_state, token_network_state, token_network_regist
     channel_state = factories.create(
         factories.NettingChannelStateProperties(
             our_state=factories.NettingChannelEndStateProperties(
-                balance=10, address=chain_state.our_address
+                balance=TokenAmount(10), address=chain_state.our_address
             ),
-            partner_state=factories.NettingChannelEndStateProperties(balance=10, address=partner),
+            partner_state=factories.NettingChannelEndStateProperties(
+                balance=TokenAmount(10), address=partner
+            ),
             token_address=token_network_state.token_address,
             token_network_registry_address=token_network_registry_state.address,
             canonical_identifier=canonical_identifier,
