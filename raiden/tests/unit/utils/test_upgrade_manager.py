@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,19 +7,19 @@ from raiden.storage.versions import VERSION_RE
 from raiden.utils.upgrades import delete_dbs_with_failed_migrations
 
 
-def _return_valid_db_version(db_filename):
-    version = int(VERSION_RE.match(db_filename).group(1))
+def _return_valid_db_version(db_filename: Path):
+    match = VERSION_RE.match(str(db_filename))
+    assert match, "No version number found in db file name"
+    version = int(match.group(1))
     return version
 
 
 def _return_smaller_db_version(db_filename):
-    version = int(VERSION_RE.match(db_filename).group(1)) - 1
-    return version
+    return _return_valid_db_version(db_filename) - 1
 
 
 def _return_higher_db_version(db_filename):
-    version = int(VERSION_RE.match(db_filename).group(1)) + 1
-    return version
+    return _return_valid_db_version(db_filename) + 1
 
 
 class GetLockMock:
@@ -40,7 +41,7 @@ def test_delete_dbs_with_failed_migrations(monkeypatch):
     This is testing that nothing else is removed, since it's crucial that the
     wrong database is not deleted.
     """
-    file_names = ["v1_log.db", "v11_log.db", "v9_log.db", "v9999_log.db"]
+    file_names = [Path("v1_log.db"), Path("v11_log.db"), Path("v9_log.db"), Path("v9999_log.db")]
 
     exists_mock = MagicMock(return_value=True)
     monkeypatch.setattr("raiden.utils.upgrades.get_file_lock", GetLockMock)
