@@ -1,5 +1,8 @@
+from typing import cast
+
 from raiden.api.python import transfer_tasks_view
 from raiden.tests.utils import factories
+from raiden.transfer.architecture import TransferTask
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     InitiatorTransferState,
@@ -10,9 +13,10 @@ from raiden.transfer.mediated_transfer.state import (
     WaitingTransferState,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.typing import PaymentID, TokenAmount
 
 
 def test_list_channelstate_for_tokennetwork(chain_state, token_network_registry_address, token_id):
@@ -35,7 +39,7 @@ def test_initiator_task_view():
     transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
-        token_network_registry_address=factories.UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
+        token_network_registry_address=factories.UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
         payment_identifier=transfer.payment_identifier,
         amount=transfer.balance_proof.locked_amount,
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
@@ -58,7 +62,7 @@ def test_initiator_task_view():
     task = InitiatorTask(
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
     )
-    payment_mapping = {secrethash: task}
+    payment_mapping = {secrethash: cast(TransferTask, task)}
 
     view = transfer_tasks_view(payment_mapping)
 
@@ -74,13 +78,13 @@ def test_initiator_task_view():
 def test_mediator_task_view():
     """Same as above for mediator tasks."""
     secret1 = factories.make_secret(1)
-    locked_amount1 = 11
+    locked_amount1 = TokenAmount(11)
     payee_transfer = factories.create(
         factories.LockedTransferUnsignedStateProperties(secret=secret1)
     )
     payer_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
-            secret=secret1, payment_identifier=1, locked_amount=locked_amount1
+            secret=secret1, payment_identifier=PaymentID(1), locked_amount=locked_amount1
         )
     )
     secrethash1 = payee_transfer.lock.secrethash
@@ -88,7 +92,7 @@ def test_mediator_task_view():
     initiator_channel = factories.create(
         factories.NettingChannelStateProperties(
             partner_state=factories.NettingChannelEndStateProperties(
-                address=initiator, balance=100
+                address=initiator, balance=TokenAmount(100)
             )
         )
     )
@@ -111,10 +115,10 @@ def test_mediator_task_view():
     )
 
     secret2 = factories.make_secret(2)
-    locked_amount2 = 13
+    locked_amount2 = TokenAmount(13)
     transfer2 = factories.create(
         factories.LockedTransferSignedStateProperties(
-            secret=secret2, payment_identifier=2, locked_amount=locked_amount2
+            secret=secret2, payment_identifier=PaymentID(2), locked_amount=locked_amount2
         )
     )
     secrethash2 = transfer2.lock.secrethash
@@ -124,7 +128,10 @@ def test_mediator_task_view():
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS, mediator_state=transfer_state2
     )
 
-    payment_mapping = {secrethash1: task1, secrethash2: task2}
+    payment_mapping = {
+        secrethash1: cast(TransferTask, task1),
+        secrethash2: cast(TransferTask, task2),
+    }
     view = transfer_tasks_view(payment_mapping)
 
     assert len(view) == 2
@@ -148,14 +155,23 @@ def test_target_task_view():
     mediator = factories.make_address()
     mediator_channel = factories.create(
         factories.NettingChannelStateProperties(
-            partner_state=factories.NettingChannelEndStateProperties(address=mediator, balance=100)
+            partner_state=factories.NettingChannelEndStateProperties(
+                address=mediator, balance=TokenAmount(100)
+            )
         )
     )
-    transfer_state = TargetTransferState(from_hop=None, transfer=transfer, secret=secret)
+    transfer_state = TargetTransferState(
+        from_hop=HopState(
+            channel_identifier=mediator_channel.canonical_identifier.channel_identifier,
+            node_address=mediator,
+        ),
+        transfer=transfer,
+        secret=secret,
+    )
     task = TargetTask(
         canonical_identifier=mediator_channel.canonical_identifier, target_state=transfer_state
     )
-    payment_mapping = {secrethash: task}
+    payment_mapping = {secrethash: cast(TransferTask, task)}
 
     view = transfer_tasks_view(payment_mapping)
 
