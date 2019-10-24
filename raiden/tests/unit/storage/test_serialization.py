@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import pytest
 
@@ -17,6 +18,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.state_change import ActionInitChain
+from raiden.utils.typing import BlockExpiration, BlockNumber, ChainID, Nonce, WithdrawAmount
 
 
 def assert_roundtrip(field, value):
@@ -61,7 +63,7 @@ def test_bytes_field_roundtrip():
 
 
 def test_events_loaded_from_storage_should_deserialize(tmp_path):
-    filename = f"{tmp_path}/v{RAIDEN_DB_VERSION}_log.db"
+    filename = Path(f"{tmp_path}/v{RAIDEN_DB_VERSION}_log.db")
     storage = SerializedSQLiteStorage(filename, serializer=JSONSerializer())
 
     # Satisfy the foreign-key constraint for state change ID
@@ -69,10 +71,10 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
         [
             ActionInitChain(
                 pseudo_random_generator=random.Random(),
-                block_number=1,
-                block_hash=b"",
+                block_number=BlockNumber(1),
+                block_hash=factories.make_block_hash(),
                 our_address=factories.make_address(),
-                chain_id=1,
+                chain_id=ChainID(1),
             )
         ]
     )
@@ -84,10 +86,10 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
         recipient=recipient,
         canonical_identifier=canonical_identifier,
         message_identifier=factories.make_message_identifier(),
-        total_withdraw=1,
+        total_withdraw=WithdrawAmount(1),
         participant=participant,
-        expiration=10,
-        nonce=15,
+        expiration=BlockExpiration(10),
+        nonce=Nonce(15),
     )
     storage.write_events([(ids[0], event)])
 
@@ -105,34 +107,19 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
         recipient=recipient, canonical_identifier=netting_channel_state.canonical_identifier
     )
 
+    msg_args = dict(
+        recipient=recipient,
+        canonical_identifier=netting_channel_state.canonical_identifier,
+        message_identifier=factories.make_message_identifier(),
+        total_withdraw=WithdrawAmount(1),
+        participant=recipient,
+        expiration=BlockExpiration(10),
+        nonce=Nonce(15),
+    )
     messages = [
-        SendWithdrawRequest(
-            recipient=recipient,
-            canonical_identifier=netting_channel_state.canonical_identifier,
-            message_identifier=factories.make_message_identifier(),
-            total_withdraw=1,
-            participant=recipient,
-            expiration=10,
-            nonce=15,
-        ),
-        SendWithdrawConfirmation(
-            recipient=recipient,
-            canonical_identifier=netting_channel_state.canonical_identifier,
-            message_identifier=factories.make_message_identifier(),
-            total_withdraw=1,
-            participant=recipient,
-            expiration=10,
-            nonce=15,
-        ),
-        SendWithdrawExpired(
-            recipient=recipient,
-            canonical_identifier=netting_channel_state.canonical_identifier,
-            message_identifier=factories.make_message_identifier(),
-            total_withdraw=1,
-            participant=recipient,
-            expiration=10,
-            nonce=15,
-        ),
+        SendWithdrawRequest(**msg_args),
+        SendWithdrawConfirmation(**msg_args),
+        SendWithdrawExpired(**msg_args),
     ]
 
     chain_state.queueids_to_queues[queue_identifier] = messages
