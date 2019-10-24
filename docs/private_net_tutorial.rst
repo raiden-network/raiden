@@ -167,16 +167,16 @@ Now we can start deploying the Raiden smart contracts on the private chain.
  <snip>/priv_chain
  (env) $ python -m raiden_contracts.deploy raiden --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --contracts-version $VERSION --max-token-networks $MAX_UINT256
  {
-     "EndpointRegistry": "0x6c9c647B37dC96a9916306db39403917f2deE247",
      "SecretRegistry": "0x6436d3B7205F18044a320403b1Cd0FfFd7e5D998",
      "TokenNetworkRegistry": "0xC5e4a9189ac801077317CD6BCFA643677897D15B"
  }
 
-We will use the address of TokenNetworkRegistry later, so let's remember it.
+We will use these addresses later, so let's remember them.
 
 .. code:: bash
 
  (env) $ export TokenNetworkRegistry="0xC5e4a9189ac801077317CD6BCFA643677897D15B"
+ (env) $ export SecretRegistry="0x6436d3B7205F18044a320403b1Cd0FfFd7e5D998"
 
 Before we deploy the other contracts, we need a token contract for service payments.
 
@@ -193,6 +193,15 @@ We use the address of this token to deploy service contracts.
 
  (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
  (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256 --service-deposit-bump-numerator 5 --service-deposit-bump-denominator 4 --service-deposit-decay-constant 100000000 --initial-service-deposit-price 100000000000 --service-deposit-min-price 1000 --service-registration-duration 234000000 --contracts-version $VERSION --token-network-registry-address $TokenNetworkRegistry
+
+From the output, we remember the address of the ServiceRegistry and OneToN.
+
+.. code:: bash
+
+ (env) $ export ServiceRegistry="0xeFcf15fcD4F4aDC67a2c2B6De5D1F18C361f0e88"
+ (env) $ export OneToN="0x764962b404fB6cDf546cC11bCA67A3b4b07EdB98"
+ (env) $ export MonitoringService="0xEB37af64251F36da45903Ea829D2C64B9D9Ae9C2"
+
 
 We deploy another Token contract that's going to be transferred on Raiden network.
 
@@ -225,7 +234,6 @@ Find the relevant contract addresses.
 
 .. code:: bash
 
- (env) $ export SecretRegistry=0xbF45e5a082Be39692c800D985e9c45F49aE26d69
  (env) $ export DeployerAddress="0x35ebA3Dc57D2A66D378638B19A7CEb194dc29eb6"
 
 Store the password associated with the private key.
@@ -238,4 +246,4 @@ And you can start the Raiden client:
 
 .. code:: bash
 
- (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --password-file passwd_file  --console --no-sync-check --accept-disclaimer --tokennetwork-registry-contract-address $TokenNetworkRegistry --secret-registry-contract-address  $SecretRegistry
+ (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --tokennetwork-registry-contract-address $TokenNetworkRegistry --secret-registry-contract-address  $SecretRegistry --routing-mode local --one-to-n-contract-address $OneToN --monitoring-service-contract-address $MonitoringService --password-file passwd_file
