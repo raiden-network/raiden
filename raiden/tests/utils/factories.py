@@ -323,7 +323,9 @@ UNIT_CANONICAL_ID = CanonicalIdentifier(
 UNIT_OUR_KEY = b"ourourourourourourourourourourou"
 UNIT_OUR_ADDRESS = privatekey_to_address(UNIT_OUR_KEY)
 
-UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER = b"tokennetworkregistryidentifier"
+UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS = TokenNetworkRegistryAddress(
+    b"tokennetworkregistryidentifier"
+)
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
 UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
@@ -505,7 +507,7 @@ class NettingChannelStateProperties(Properties):
 NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=CanonicalIdentifierProperties.DEFAULTS,
     token_address=UNIT_TOKEN_ADDRESS,
-    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     fee_schedule=FeeScheduleStateProperties.DEFAULTS,
@@ -530,7 +532,7 @@ class TransferDescriptionProperties(Properties):
 
 
 TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
-    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
