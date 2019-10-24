@@ -19,7 +19,16 @@ from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 from raiden.app import App
-from raiden.constants import Environment, EthClient, RoutingMode
+from raiden.constants import (
+    FLAT_MED_FEE_MIN,
+    IMBALANCE_MED_FEE_MAX,
+    IMBALANCE_MED_FEE_MIN,
+    PROPORTIONAL_MED_FEE_MAX,
+    PROPORTIONAL_MED_FEE_MIN,
+    Environment,
+    EthClient,
+    RoutingMode,
+)
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
@@ -444,9 +453,9 @@ def options(func: Callable) -> Callable:
                 help=(
                     "Sets the flat fee required for every mediation in wei of the "
                     "mediated token for a certain token address. Must be bigger "
-                    "or equal to zero."
+                    f"or equal to {FLAT_MED_FEE_MIN}."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0)),
+                type=(ADDRESS_TYPE, click.IntRange(min=FLAT_MED_FEE_MIN)),
                 multiple=True,
             ),
             option(
@@ -454,9 +463,12 @@ def options(func: Callable) -> Callable:
                 help=(
                     "Mediation fee as ratio of mediated amount in parts-per-million "
                     "(10^-6) for a certain token address. "
-                    "Must be in [0, 1_000_000]."
+                    f"Must be in [{PROPORTIONAL_MED_FEE_MIN}, {PROPORTIONAL_MED_FEE_MAX}]."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=1_000_000)),
+                type=(
+                    ADDRESS_TYPE,
+                    click.IntRange(min=PROPORTIONAL_MED_FEE_MIN, max=PROPORTIONAL_MED_FEE_MAX),
+                ),
                 multiple=True,
             ),
             option(
@@ -464,9 +476,12 @@ def options(func: Callable) -> Callable:
                 help=(
                     "Set the worst-case imbalance fee relative to the channels capacity "
                     "in parts-per-million (10^-6) for a certain token address. "
-                    "Must be in [0, 50_000]."
+                    f"Must be in [{IMBALANCE_MED_FEE_MIN}, {IMBALANCE_MED_FEE_MAX}]."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
+                type=(
+                    ADDRESS_TYPE,
+                    click.IntRange(min=IMBALANCE_MED_FEE_MIN, max=IMBALANCE_MED_FEE_MAX),
+                ),
                 multiple=True,
             ),
             option(

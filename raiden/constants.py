@@ -178,3 +178,11 @@ WETH_TOKEN_ADDRESS = TokenAddress(
 DAI_TOKEN_ADDRESS = TokenAddress(
     to_canonical_address("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359")
 )
+
+FLAT_MED_FEE_MIN = 0
+PROPORTIONAL_MED_FEE_MIN = 0
+# This needs to limit the total slope of the fee function < 1
+# This is also the per-hop fee, so the actual value per-channel is X / (2 + X)
+PROPORTIONAL_MED_FEE_MAX = 1_000_000
+IMBALANCE_MED_FEE_MIN = 0
+IMBALANCE_MED_FEE_MAX = 50_000
