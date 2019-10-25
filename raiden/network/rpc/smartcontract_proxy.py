@@ -10,7 +10,7 @@ from raiden import constants
 from raiden.blockchain.filters import decode_event
 from raiden.constants import EthClient
 from raiden.exceptions import (
-    InsufficientFunds,
+    InsufficientEth,
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
     TransactionAlreadyPending,
@@ -95,7 +95,10 @@ class ContractProxy:
         except ValueError as e:
             action = inspect_client_error(e, self.rpc_client.eth_node)
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
-                raise InsufficientFunds("Insufficient ETH for transaction")
+                raise InsufficientEth(
+                    "Transaction failed due to insufficient ETH balance. "
+                    "Please top up your ETH account."
+                )
             elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
                 raise ReplacementTransactionUnderpriced(
                     "Transaction was rejected. This is potentially "

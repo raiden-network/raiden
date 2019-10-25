@@ -286,6 +286,13 @@ class InsufficientGasReserve(RaidenError):
     """
 
 
+class InsufficientEth(RaidenError):
+    """ Raised when an on-chain action failed because we could not pay for
+    the gas. (The case we try to avoid with `InsufficientGasReserve`
+    exceptions.)
+    """
+
+
 class BrokenPreconditionError(RaidenError):
     """ Raised when the chain doesn't satisfy transaction preconditions
     that proxies check at the specified block.
