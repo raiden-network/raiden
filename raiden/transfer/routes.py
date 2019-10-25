@@ -1,17 +1,21 @@
-from raiden.transfer.state import NetworkState, RouteState
+from raiden.transfer.state import RouteState
 from raiden.utils.typing import ChannelID, List, NodeNetworkStateMap
 
 
 def filter_reachable_routes(
-    route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
+    route_states: List[RouteState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,  # pylint: disable=unused-argument
 ) -> List[RouteState]:
     """ This function makes sure we use reachable routes only. """
 
-    return [
-        route
-        for route in route_states
-        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NetworkState.REACHABLE
-    ]
+    return route_states
+
+    # Temporarily skipped, see https://github.com/raiden-network/raiden/issues/5156
+    # return [
+    #     route
+    #     for route in route_states
+    #     if nodeaddresses_to_networkstates.get(route.next_hop_address) == NetworkState.REACHABLE
+    # ]
 
 
 def filter_acceptable_routes(
