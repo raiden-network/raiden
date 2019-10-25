@@ -523,6 +523,7 @@ class MatrixTransport(Runnable):
                 if validate_userid_signature(user) == node_address
             }
             self._address_mgr.add_userids_for_address(node_address, user_ids)
+            self._get_room_for_address(node_address)
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
@@ -966,18 +967,10 @@ class MatrixTransport(Runnable):
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
         online_user_ids = self._address_mgr.get_online_user_ids_for_address(address)
-        for room_id in room_ids:
-            room = self._client.rooms[room_id]
+        while room_ids:
+            room = self._client.rooms[room_ids.pop()]
             member_ids = {member.user_id for member in room.get_joined_members()}
 
-            # Handle the case where an empty room was found
-            if not member_ids & online_user_ids:
-                for peer in set(peers) - member_ids:
-                    self._invite_user_to_room_with_retries(peer, room)
-                member_ids = {member.user_id for member in room.get_joined_members()}
-
-            # Do only return a room where no currently online user is listening
-            # before all rooms have been checked for an online peer
             if member_ids & online_user_ids:
                 self.log.debug(
                     "Existing room",
@@ -986,8 +979,14 @@ class MatrixTransport(Runnable):
                     listening_peers=member_ids & online_user_ids,
                 )
                 return room
-            else:
-                self.log.error(
+
+            # Handle the case where an empty room was found only after all other rooms we're tried.
+            # Re-invite the peers in case we got whitelisted in the meantime and return it.
+            elif not room_ids:
+                for peer in set(peers) - member_ids:
+                    self._invite_user_to_room_with_retries(peer, room)
+
+                self.log.warning(
                     "No online user listening to current room",
                     room=room,
                     users_currently_online=online_user_ids,
@@ -1017,7 +1016,7 @@ class MatrixTransport(Runnable):
 
         member_ids = {member.user_id for member in room.get_joined_members()}
         if not online_user_ids & member_ids:
-            self.log.error(
+            self.log.warning(
                 "No online user listening to current room",
                 room=room,
                 users_currently_online=online_user_ids,
@@ -1387,7 +1386,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.get_userid_presence(user.user_id)
             in {UserPresence.ONLINE, UserPresence.UNKNOWN}
         ):
-            self.log.error(
+            self.log.warning(
                 "User to be invited is not online, trying to invite nonetheless",
                 room=room,
                 user_id=user.user_id,
@@ -1425,7 +1424,7 @@ class MatrixTransport(Runnable):
                 raise last_ex  # re-raise if couldn't succeed in retries
             else:
                 # Inform the client, that currently no one listens:
-                self.log.error(
+                self.log.warning(
                     "Peer has not joined from invite yet, should join eventually",
                     room=room,
                     user_id=user.user_id,
