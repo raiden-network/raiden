@@ -35,6 +35,7 @@ from raiden.network.transport.matrix.utils import (
     login_or_register,
     make_client,
     make_room_alias,
+    my_place_or_yours,
     validate_and_parse_message,
     validate_userid_signature,
 )
@@ -523,7 +524,10 @@ class MatrixTransport(Runnable):
                 if validate_userid_signature(user) == node_address
             }
             self._address_mgr.add_userids_for_address(node_address, user_ids)
-            self._get_room_for_address(node_address)
+
+            # Check if we should invite or if we should be invited to evade room creation races
+            if my_place_or_yours(self._raiden_service.address, node_address) is not node_address:
+                self._get_room_for_address(node_address)
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node

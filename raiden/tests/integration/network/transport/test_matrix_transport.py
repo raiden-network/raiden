@@ -168,6 +168,8 @@ def test_matrix_message_sync(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler)
 
     raiden_service1.handle_and_track_state_changes = MagicMock()
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
 
     transport0.start(raiden_service0, message_handler, None)
     transport1.start(raiden_service1, message_handler, None)
@@ -223,6 +225,7 @@ def test_matrix_message_sync(matrix_transports):
         transport0.send_async(queue_identifier, message)
 
     # Should fetch the 5 messages sent while transport1 was offline
+    transport1.whitelist(transport0._raiden_service.address)
     transport1.start(transport1._raiden_service, message_handler, latest_auth_data)
     transport1.start_health_check(transport0._raiden_service.address)
 
@@ -399,6 +402,15 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
     raiden_service2 = MockRaidenService(message_handler2)
+
+    transport0.whitelist(raiden_service1.address)
+    transport0.whitelist(raiden_service2.address)
+
+    transport1.whitelist(raiden_service0.address)
+    transport1.whitelist(raiden_service2.address)
+
+    transport2.whitelist(raiden_service0.address)
+    transport2.whitelist(raiden_service1.address)
 
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
@@ -631,29 +643,152 @@ def test_pfs_broadcast_messages(
 
 
 @pytest.mark.parametrize(
-    "private_rooms, expected_join_rule",
+    ("private_rooms", "expected_join_rule0", "expected_join_rule1"),
     [
-        [[True, True], "invite"],
-        [[True, False], "invite"],
-        [[False, True], "public"],
-        [[False, False], "public"],
+        [[True, True], "invite", "invite"],
+        [[True, False], "invite", "invite"],
+        [[False, True], "public", "invite"],
     ],
 )
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
-def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_rule):
+def test_matrix_invite_private_room_happy_case(
+    matrix_transports, expected_join_rule0, expected_join_rule1
+):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
 
     transport0, transport1 = matrix_transports
 
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
+    with Timeout(20):
+        while True:
+            try:
+                room_state0 = transport0._client.api.get_room_state(room_id0)
+                break
+            except MatrixRequestError:
+                gevent.sleep(0.1)
+
+    join_rule0 = [
+        event["content"].get("join_rule")
+        for event in room_state0
+        if event["type"] == "m.room.join_rules"
+    ][0]
+
+    assert join_rule0 == expected_join_rule0
+
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
+    with Timeout(20):
+        while True:
+            try:
+                room_state1 = transport1._client.api.get_room_state(room_id1)
+                break
+            except MatrixRequestError:
+                gevent.sleep(0.1)
+
+    join_rule1 = [
+        event["content"].get("join_rule")
+        for event in room_state1
+        if event["type"] == "m.room.join_rules"
+    ][0]
+
+    assert join_rule1 == expected_join_rule1
+
+
+@pytest.mark.parametrize(
+    ("private_rooms", "expected_join_rule0", "expected_join_rule1"),
+    [
+        [[True, True], "invite", "invite"],
+        [[True, False], "invite", "invite"],
+        [[False, True], "public", "invite"],
+    ],
+)
+@pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("number_of_transports", [2])
+def test_matrix_invite_private_room_unhappy_case_1(
+    matrix_transports, expected_join_rule0, expected_join_rule1
+):
+    raiden_service0 = MockRaidenService(None)
+    raiden_service1 = MockRaidenService(None)
+
+    transport0, transport1 = matrix_transports
+
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
+    transport0.start(raiden_service0, raiden_service0.message_handler, None)
+    transport1.start(raiden_service1, raiden_service1.message_handler, None)
+
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
+
+    with Timeout(20):
+        while True:
+            try:
+                room_state0 = transport0._client.api.get_room_state(room_id0)
+                break
+            except MatrixRequestError:
+                gevent.sleep(0.1)
+
+    join_rule0 = [
+        event["content"].get("join_rule")
+        for event in room_state0
+        if event["type"] == "m.room.join_rules"
+    ][0]
+
+    assert join_rule0 == expected_join_rule0
+
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
+    with Timeout(20):
+        while True:
+            try:
+                room_state1 = transport1._client.api.get_room_state(room_id1)
+                break
+            except MatrixRequestError:
+                gevent.sleep(0.1)
+
+    join_rule1 = [
+        event["content"].get("join_rule")
+        for event in room_state1
+        if event["type"] == "m.room.join_rules"
+    ][0]
+
+    assert join_rule1 == expected_join_rule1
+
+
+@pytest.mark.parametrize(
+    ("private_rooms", "expected_join_rule"),
+    [[[True, True], "invite"], [[True, False], "invite"], [[False, True], "public"]],
+)
+@pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("number_of_transports", [2])
+def test_matrix_invite_private_room_unhappy_case_2(matrix_transports, expected_join_rule):
+    raiden_service0 = MockRaidenService(None)
+    raiden_service1 = MockRaidenService(None)
+
+    transport0, transport1 = matrix_transports
+
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
+    transport0.start(raiden_service0, raiden_service0.message_handler, None)
+    transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
     room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+
+    assert is_reachable(transport1, raiden_service0.address)
+    assert is_reachable(transport0, raiden_service1.address)
+
+    transport1.stop()
+    wait_for_peer_unreachable(transport0, raiden_service1.address)
+
+    assert not is_reachable(transport0, raiden_service1.address)
+
+    transport1.whitelist(raiden_service0.address)
+    transport1.start(raiden_service1, raiden_service1.message_handler, None)
+
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
@@ -688,76 +823,16 @@ def test_matrix_invite_private_room_happy_case(matrix_transports, expected_join_
 
 
 @pytest.mark.parametrize(
-    "private_rooms, expected_join_rule0, expected_join_rule1",
-    [
-        [[True, True], "invite", "invite"],
-        [[True, False], "invite", "invite"],
-        [[False, True], "public", "public"],
-        [[False, False], "public", "public"],
-    ],
-)
-@pytest.mark.parametrize("matrix_server_count", [2])
-@pytest.mark.parametrize("number_of_transports", [2])
-def test_matrix_invite_private_room_unhappy_case_1(
-    matrix_transports, expected_join_rule0, expected_join_rule1
-):
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
-
-    transport0, transport1 = matrix_transports
-
-    transport0.start(raiden_service0, raiden_service0.message_handler, None)
-    transport1.start(raiden_service1, raiden_service1.message_handler, None)
-
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
-
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state0 = transport0._client.api.get_room_state(room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    join_rule0 = [
-        event["content"].get("join_rule")
-        for event in room_state0
-        if event["type"] == "m.room.join_rules"
-    ][0]
-
-    assert join_rule0 == expected_join_rule0
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state1 = transport1._client.api.get_room_state(room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    join_rule1 = [
-        event["content"].get("join_rule")
-        for event in room_state1
-        if event["type"] == "m.room.join_rules"
-    ][0]
-
-    assert join_rule1 == expected_join_rule1
-
-
-@pytest.mark.parametrize(
     ("private_rooms", "expected_join_rule0", "expected_join_rule1"),
     [
         [[True, True], "invite", "invite"],
         [[True, False], "invite", "invite"],
-        [[False, True], "public", "public"],
-        [[False, False], "public", "public"],
+        [[False, True], "public", "invite"],
     ],
 )
-@pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
-def test_matrix_invite_private_room_unhappy_case_2(
+@pytest.mark.parametrize("matrix_server_count", [2])
+def test_matrix_invite_private_room_unhappy_case_3(
     matrix_transports, expected_join_rule0, expected_join_rule1
 ):
     raiden_service0 = MockRaidenService(None)
@@ -765,31 +840,20 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
     transport0, transport1 = matrix_transports
 
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
 
-    assert is_reachable(transport1, raiden_service0.address)
-    assert is_reachable(transport0, raiden_service1.address)
-
-    print(transport1._client.user_id)
-
-    transport1.stop()
-    wait_for_peer_unreachable(transport0, raiden_service1.address)
-
-    assert not is_reachable(transport0, raiden_service1.address)
-
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
-
-    transport1.start(raiden_service1, raiden_service1.message_handler, None)
-    transport1.start_health_check(raiden_service0.address)
+    wait_for_peer_reachable(transport0, raiden_service1.address)
+    wait_for_peer_reachable(transport1, raiden_service0.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
-                room_state0 = transport0._client.api.get_room_state(room_id)
+                room_state0 = transport0._client.api.get_room_state(room_id0)
                 break
             except MatrixRequestError:
                 gevent.sleep(0.1)
@@ -802,50 +866,6 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
     assert join_rule0 == expected_join_rule0
 
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state1 = transport1._client.api.get_room_state(room_id)
-                break
-            except MatrixRequestError as ex:
-                print(ex, transport0._client.user_id, transport1._client.user_id)
-                gevent.sleep(0.5)
-
-    join_rule1 = [
-        event["content"].get("join_rule")
-        for event in room_state1
-        if event["type"] == "m.room.join_rules"
-    ][0]
-
-    assert join_rule1 == expected_join_rule1
-
-
-@pytest.mark.parametrize(
-    "private_rooms, expected_join_rule",
-    [
-        [[True, True], "invite"],
-        [[True, False], "invite"],
-        [[False, True], "public"],
-        [[False, False], "public"],
-    ],
-)
-@pytest.mark.parametrize("number_of_transports", [2])
-@pytest.mark.parametrize("matrix_server_count", [2])
-def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_join_rule):
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
-
-    transport0, transport1 = matrix_transports
-
-    transport0.start(raiden_service0, raiden_service0.message_handler, None)
-    transport1.start(raiden_service1, raiden_service1.message_handler, None)
-
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
-
-    wait_for_peer_reachable(transport0, raiden_service1.address)
-    wait_for_peer_reachable(transport1, raiden_service0.address)
-
     assert is_reachable(transport1, raiden_service0.address)
     assert is_reachable(transport0, raiden_service1.address)
 
@@ -854,27 +874,27 @@ def test_matrix_invite_private_room_unhappy_case_3(matrix_transports, expected_j
     wait_for_peer_unreachable(transport0, raiden_service1.address)
     assert not is_reachable(transport0, raiden_service1.address)
 
-    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+    transport1.whitelist(raiden_service0.address)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
-    transport1.start_health_check(raiden_service0.address)
 
     transport0.stop()
 
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
-                room_state1 = transport1._client.api.get_room_state(room_id)
+                room_state0 = transport1._client.api.get_room_state(room_id1)
                 break
             except MatrixRequestError:
                 gevent.sleep(0.1)
 
     join_rule1 = [
         event["content"].get("join_rule")
-        for event in room_state1
+        for event in room_state0
         if event["type"] == "m.room.join_rules"
     ][0]
 
-    assert join_rule1 == expected_join_rule
+    assert join_rule1 == expected_join_rule1
 
 
 @pytest.mark.parametrize("matrix_server_count", [3])
@@ -890,6 +910,9 @@ def test_matrix_user_roaming(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
 
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
+
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
 
@@ -903,6 +926,7 @@ def test_matrix_user_roaming(matrix_transports):
     wait_for_peer_unreachable(transport1, raiden_service0.address)
     assert not is_reachable(transport1, raiden_service0.address)
 
+    transport2.whitelist(raiden_service1.address)
     transport2.start(raiden_service0, message_handler0, "")
     transport2.start_health_check(raiden_service1.address)
 
@@ -913,6 +937,7 @@ def test_matrix_user_roaming(matrix_transports):
     wait_for_peer_unreachable(transport1, raiden_service0.address)
     assert not is_reachable(transport1, raiden_service0.address)
 
+    transport0.whitelist(raiden_service1.address)
     transport0.start(raiden_service0, message_handler0, "")
     transport0.start_health_check(raiden_service1.address)
 
@@ -947,6 +972,8 @@ def test_matrix_multi_user_roaming(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler1)
 
     # Both nodes on the same server
+    transport_rs0_0.whitelist(raiden_service1.address)
+    transport_rs1_0.whitelist(raiden_service0.address)
     transport_rs0_0.start(raiden_service0, message_handler0, "")
     transport_rs1_0.start(raiden_service1, message_handler1, "")
 
@@ -962,6 +989,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
+    transport_rs1_1.whitelist(raiden_service0.address)
     transport_rs1_1.start(raiden_service1, message_handler1, "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
@@ -974,6 +1002,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
+    transport_rs1_2.whitelist(raiden_service0.address)
     transport_rs1_2.start(raiden_service1, message_handler1, "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
@@ -985,8 +1014,10 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs0_0.stop()
     transport_rs1_2.stop()
 
+    transport_rs0_1.whitelist(raiden_service1.address)
     transport_rs0_1.start(raiden_service0, message_handler0, "")
     transport_rs0_1.start_health_check(raiden_service1.address)
+    transport_rs1_0.whitelist(raiden_service0.address)
     transport_rs1_0.start(raiden_service1, message_handler1, "")
     transport_rs1_0.start_health_check(raiden_service0.address)
 
@@ -999,6 +1030,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
+    transport_rs1_1.whitelist(raiden_service0.address)
     transport_rs1_1.start(raiden_service1, message_handler1, "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
@@ -1011,6 +1043,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
+    transport_rs1_2.whitelist(raiden_service0.address)
     transport_rs1_2.start(raiden_service1, message_handler1, "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
@@ -1023,8 +1056,10 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs0_1.stop()
     transport_rs1_2.stop()
 
+    transport_rs0_2.whitelist(raiden_service1.address)
     transport_rs0_2.start(raiden_service0, message_handler0, "")
     transport_rs0_2.start_health_check(raiden_service1.address)
+    transport_rs1_0.whitelist(raiden_service0.address)
     transport_rs1_0.start(raiden_service1, message_handler1, "")
     transport_rs1_0.start_health_check(raiden_service0.address)
 
@@ -1037,6 +1072,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
+    transport_rs1_1.whitelist(raiden_service0.address)
     transport_rs1_1.start(raiden_service1, message_handler1, "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
@@ -1049,6 +1085,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
+    transport_rs1_2.whitelist(raiden_service0.address)
     transport_rs1_2.start(raiden_service1, message_handler1, "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
@@ -1072,6 +1109,8 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
 
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
     transport0.start_health_check(raiden_service1.address)
@@ -1093,6 +1132,9 @@ def test_send_to_device(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
     transport1._receive_to_device = MagicMock()
+
+    transport0.whitelist(raiden_service1.address)
+    transport1.whitelist(raiden_service0.address)
 
     transport0.start(raiden_service0, message_handler0, "")
     transport1.start(raiden_service1, message_handler1, "")
