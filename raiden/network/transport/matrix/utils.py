@@ -326,8 +326,8 @@ class UserAddressManager:
         return self._log
 
 
-def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
-    """Join or create a global public room with given name
+def join_broadcast_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
+    """Join or create a broadcast public room with given name
 
     First, try to join room on own server (client-configured one)
     If can't, try to join on each one of servers, and if able, alias it in our server
@@ -348,35 +348,37 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
         if urlparse(s).netloc not in {None, "", our_server_name}
     ]
 
-    our_server_global_room_alias_full = f"#{name}:{servers[0]}"
+    our_server_broadcast_room_alias_full = f"#{name}:{servers[0]}"
 
-    # try joining a global room on any of the available servers, starting with ours
+    # try joining a broadcast room on any of the available servers, starting with ours
     for server in servers:
-        global_room_alias_full = f"#{name}:{server}"
+        broadcast_room_alias_full = f"#{name}:{server}"
         try:
-            global_room = client.join_room(global_room_alias_full)
+            broadcast_room = client.join_room(broadcast_room_alias_full)
         except MatrixRequestError as ex:
             if ex.code not in (403, 404, 500):
                 raise
             log.debug(
-                "Could not join global room", room_alias_full=global_room_alias_full, _exception=ex
+                "Could not join broadcast room",
+                room_alias_full=broadcast_room_alias_full,
+                _exception=ex,
             )
         else:
-            if our_server_global_room_alias_full not in global_room.aliases:
-                # we managed to join a global room, but it's not aliased in our server
-                global_room.add_room_alias(our_server_global_room_alias_full)
-                global_room.aliases.append(our_server_global_room_alias_full)
+            if our_server_broadcast_room_alias_full not in broadcast_room.aliases:
+                # we managed to join a broadcast room, but it's not aliased in our server
+                broadcast_room.add_room_alias(our_server_broadcast_room_alias_full)
+                broadcast_room.aliases.append(our_server_broadcast_room_alias_full)
             break
     else:
-        log.debug("Could not join any global room, trying to create one")
+        log.debug("Could not join any broadcast room, trying to create one")
         for _ in range(JOIN_RETRIES):
             try:
-                global_room = client.create_room(name, is_public=True)
+                broadcast_room = client.create_room(name, is_public=True)
             except MatrixRequestError as ex:
                 if ex.code not in (400, 409):
                     raise
                 try:
-                    global_room = client.join_room(our_server_global_room_alias_full)
+                    broadcast_room = client.join_room(our_server_broadcast_room_alias_full)
                 except MatrixRequestError as ex:
                     if ex.code not in (404, 403):
                         raise
@@ -385,9 +387,9 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
             else:
                 break
         else:
-            raise TransportError("Could neither join nor create a global room")
-    log.debug("Joined global room", room=global_room)
-    return global_room
+            raise TransportError("Could neither join nor create a broadcast room")
+    log.debug("Joined broadcast room", room=broadcast_room)
+    return broadcast_room
 
 
 def login_or_register(
@@ -593,7 +595,7 @@ def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
 
 
 def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
-    """Given a chain_id and any number of suffixes (global room names, pair of addresses),
+    """Given a chain_id and any number of suffixes (broadcast room names, pair of addresses),
     compose and return the canonical room name for raiden network
 
     network name from raiden_contracts.constants.ID_TO_NETWORKNAME is used for name, if available,

@@ -268,7 +268,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
 
 def test_matrix_message_retry(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, global_rooms
+    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, broadcast_rooms
 ):
     """ Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
@@ -282,7 +282,7 @@ def test_matrix_message_retry(
 
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms,
+            "broadcast_rooms": broadcast_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -350,9 +350,9 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, global_rooms
+    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, broadcast_rooms
 ):
-    """join_global_room tries to join on all servers on available_servers config
+    """join_broadcast_room tries to join on all servers on available_servers config
 
     If any of the servers isn't reachable by synapse, it'll return a 500 response, which needs
     to be handled, and if no discovery room is found on any of the available_servers, one in
@@ -360,7 +360,7 @@ def test_join_invalid_discovery(
     """
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms,
+            "broadcast_rooms": broadcast_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -376,7 +376,7 @@ def test_join_invalid_discovery(
     transport.start(raiden_service, raiden_service.message_handler, None)
     transport.log = MagicMock()
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
-    assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
+    assert isinstance(transport._broadcast_rooms.get(discovery_room_name), Room)
 
     transport.stop()
     transport.get()
@@ -420,12 +420,12 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
 
 
 def test_matrix_discovery_room_offline_server(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
+    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, broadcast_rooms
 ):
 
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms,
+            "broadcast_rooms": broadcast_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -438,19 +438,19 @@ def test_matrix_discovery_room_offline_server(
 
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     with gevent.Timeout(1):
-        while not isinstance(transport._global_rooms.get(discovery_room_name), Room):
+        while not isinstance(transport._broadcast_rooms.get(discovery_room_name), Room):
             gevent.sleep(0.1)
 
     transport.stop()
     transport.get()
 
 
-def test_matrix_send_global(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
+def test_matrix_broadcast(
+    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, broadcast_rooms
 ):
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
+            "broadcast_rooms": broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -463,7 +463,7 @@ def test_matrix_send_global(
     gevent.idle()
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport._global_rooms.get(ms_room_name)
+    ms_room = transport._broadcast_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
 
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
@@ -471,8 +471,8 @@ def test_matrix_send_global(
     for i in range(5):
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
-        transport.send_global(MONITORING_BROADCASTING_ROOM, message)
-    transport._schedule_new_greenlet(transport._global_send_worker)
+        transport.broadcast(MONITORING_BROADCASTING_ROOM, message)
+    transport._schedule_new_greenlet(transport._broadcast_worker)
 
     gevent.idle()
 
@@ -486,21 +486,21 @@ def test_matrix_send_global(
     transport.get()
 
 
-def test_monitoring_global_messages(
+def test_monitoring_broadcast_messages(
     local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
     monkeypatch,
-    global_rooms,
+    broadcast_rooms,
 ):
     """
-    Test that RaidenService sends RequestMonitoring messages to global
+    Test that RaidenService broadcast RequestMonitoring messages to
     MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
+            "broadcast_rooms": broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -517,7 +517,7 @@ def test_monitoring_global_messages(
     transport.start(raiden_service, raiden_service.message_handler, None)
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport._global_rooms.get(ms_room_name)
+    ms_room = transport._broadcast_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
@@ -555,22 +555,22 @@ def test_monitoring_global_messages(
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("route_mode", [RoutingMode.LOCAL, RoutingMode.PFS])
-def test_pfs_global_messages(
+def test_pfs_broadcast_messages(
     local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
     monkeypatch,
-    global_rooms,
+    broadcast_rooms,
     route_mode,
 ):
     """
-    Test that RaidenService sends PFSCapacityUpdate messages to global
+    Test that RaidenService broadcasts PFSCapacityUpdate messages to
     PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
         {
-            "global_rooms": global_rooms + [PATH_FINDING_BROADCASTING_ROOM],
+            "broadcast_rooms": broadcast_rooms + [PATH_FINDING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -588,7 +588,7 @@ def test_pfs_global_messages(
     transport.start(raiden_service, raiden_service.message_handler, None)
 
     pfs_room_name = make_room_alias(transport.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport._global_rooms.get(pfs_room_name)
+    pfs_room = transport._broadcast_rooms.get(pfs_room_name)
     assert isinstance(pfs_room, Room)
     pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
 
@@ -616,7 +616,7 @@ def test_pfs_global_messages(
     channel_state = factories.create(factories.NettingChannelStateProperties())
     fee_update = PFSFeeUpdate.from_channel_state(channel_state)
     fee_update.sign(raiden_service.signer)
-    raiden_service.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, fee_update)
+    raiden_service.transport.broadcast(PATH_FINDING_BROADCASTING_ROOM, fee_update)
     with gevent.Timeout(2):
         while pfs_room.send_text.call_count < 2:
             gevent.idle()

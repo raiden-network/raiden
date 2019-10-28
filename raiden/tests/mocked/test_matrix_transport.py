@@ -81,7 +81,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         server="http://none",
         server_name="none",
         available_servers=[],
-        global_rooms=[],
+        broadcast_rooms=[],
         private_rooms=False,
     )
 
