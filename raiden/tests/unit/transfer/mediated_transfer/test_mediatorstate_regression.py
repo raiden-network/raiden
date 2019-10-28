@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
-import pytest
 from eth_utils import keccak
 
 from raiden.messages.decode import balanceproof_from_envelope
@@ -578,7 +577,6 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
 
-@pytest.mark.skip(reason="presence workaround disables filtering")
 def test_regression_unavailable_nodes_must_be_properly_filtered():
     """The list of available routes provided must be filtered based on the
     network status of the partner node.
