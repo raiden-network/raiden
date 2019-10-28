@@ -168,8 +168,6 @@ def test_matrix_message_sync(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler)
 
     raiden_service1.handle_and_track_state_changes = MagicMock()
-    transport0.whitelist(raiden_service1.address)
-    transport1.whitelist(raiden_service0.address)
 
     transport0.start(raiden_service0, message_handler, None)
     transport1.start(raiden_service1, message_handler, None)

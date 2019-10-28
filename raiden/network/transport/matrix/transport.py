@@ -509,6 +509,7 @@ class MatrixTransport(Runnable):
 
         It also whitelists the address to answer invites and listen for messages
         """
+
         self.whitelist(node_address)
         with self._health_lock:
             node_address_hex = to_normalized_address(node_address)
@@ -525,8 +526,10 @@ class MatrixTransport(Runnable):
             }
             self._address_mgr.add_userids_for_address(node_address, user_ids)
 
-            # Check if we should invite or if we should be invited to evade room creation races
-            if my_place_or_yours(self._raiden_service.address, node_address) is not node_address:
+            # Check if we should invite or if we should be invited to evade duplicate rooms
+            # If we don't have an address, don't invite
+            our_place = self._raiden_service.address if self._raiden_service else node_address
+            if my_place_or_yours(our_place, node_address):
                 self._get_room_for_address(node_address)
 
             # Ensure network state is updated in case we already know about the user presences
@@ -1060,7 +1063,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Creating private room", room=room, invitees=invitees)
         return room
 
-    def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
+    def _get_public_room(self, invitees: List[User]) -> Room:
         """ Obtain a public, canonically named (if possible) room and invite peers """
         # retrieve address from invitees implicitly, is constant for all invitees
         assert self._raiden_service is not None  # Extra assertion for mypy
@@ -1369,7 +1372,7 @@ class MatrixTransport(Runnable):
 
         return True
 
-    def _invite_user_to_room_with_retries(self, user: User, room: Room):
+    def _invite_user_to_room_with_retries(self, user: User, room: Room) -> None:
         """
         - Invites a given user to a given room.
         - Logs an error if the user is not online.
