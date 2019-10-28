@@ -55,14 +55,14 @@ def send_pfs_update(
 
     capacity_msg = PFSCapacityUpdate.from_channel_state(channel_state)
     capacity_msg.sign(raiden.signer)
-    raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
+    raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
     log.debug("Sent a PFS Capacity Update", message=capacity_msg, channel_state=channel_state)
 
     if update_fee_schedule:
         fee_msg = PFSFeeUpdate.from_channel_state(channel_state)
         fee_msg.sign(raiden.signer)
 
-        raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
+        raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
         log.debug("Sent a PFS Fee Update", message=fee_msg, channel_state=channel_state)
 
 
@@ -110,4 +110,4 @@ def update_monitoring_service_from_balance_proof(
         monitoring_service_contract_address=raiden.default_msc_address,
     )
     monitoring_message.sign(raiden.signer)
-    raiden.transport.send_global(constants.MONITORING_BROADCASTING_ROOM, monitoring_message)
+    raiden.transport.broadcast(constants.MONITORING_BROADCASTING_ROOM, monitoring_message)

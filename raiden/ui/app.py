@@ -87,12 +87,12 @@ def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTr
 
     # Add PFS broadcast room when not in privat mode
     if routing_mode != RoutingMode.PRIVATE:
-        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["global_rooms"]:
-            config["transport"]["matrix"]["global_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
+        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["broadcast_rooms"]:
+            config["transport"]["matrix"]["broadcast_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
     if config["services"]["monitoring_enabled"] is True:
-        config["transport"]["matrix"]["global_rooms"].append(MONITORING_BROADCASTING_ROOM)
+        config["transport"]["matrix"]["broadcast_rooms"].append(MONITORING_BROADCASTING_ROOM)
 
     try:
         transport = MatrixTransport(config["transport"]["matrix"])

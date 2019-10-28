@@ -51,7 +51,7 @@ class App:  # pylint: disable=too-few-public-methods
                 # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
                 #       and fix the conditional in `raiden.ui.app:_setup_matrix`
                 #       as well as the tests
-                "global_rooms": [DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
+                "broadcast_rooms": [DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
                 "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 "retry_interval": DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
                 "server": "auto",
