@@ -15,7 +15,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockFailed,
@@ -407,7 +407,7 @@ def handle_secretrequest(
             recipient=Address(recipient),
             message_identifier=message_identifier,
             secret=transfer_description.secret,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
 
         initiator_state.transfer_state = "transfer_secret_revealed"

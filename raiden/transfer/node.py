@@ -19,7 +19,7 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     CanonicalIdentifier,
     QueueIdentifier,
 )
@@ -575,7 +575,7 @@ def handle_receive_delivered(
     chain_state: ChainState, state_change: ReceiveDelivered
 ) -> TransitionResult[ChainState]:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_GLOBAL_QUEUE)
+    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_UNORDERED_QUEUE)
     inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
 

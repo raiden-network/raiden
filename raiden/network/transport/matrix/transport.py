@@ -41,7 +41,7 @@ from raiden.network.transport.matrix.utils import (
 from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -153,11 +153,11 @@ class _RetryQueue(Runnable):
             )
         self.notify()
 
-    def enqueue_global(self, message: Message) -> None:
+    def enqueue_unordered(self, message: Message) -> None:
         """ Helper to enqueue a message in the global queue (e.g. Delivered) """
         self.enqueue(
             queue_identifier=QueueIdentifier(
-                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
             ),
             message=message,
         )
@@ -902,7 +902,7 @@ class MatrixTransport(Runnable):
 
         if message.sender:  # Ignore unsigned messages
             retrier = self._get_retrier(message.sender)
-            retrier.enqueue_global(delivered_message)
+            retrier.enqueue_unordered(delivered_message)
             self._raiden_service.on_message(message)
 
     def _receive_to_device(self, to_device: ToDevice) -> None:
