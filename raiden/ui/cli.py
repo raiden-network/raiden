@@ -605,6 +605,12 @@ def run(ctx: Context, **kwargs: Any) -> None:
             profiler.stop()
 
 
+# List of available options, use by the scenario player
+FLAG_OPTIONS = {param.name.replace("_", "-") for param in run.params if param.is_flag}
+FLAG_OPTIONS = FLAG_OPTIONS.union({"no-" + opt for opt in FLAG_OPTIONS})
+KNOWN_OPTIONS = {param.name.replace("_", "-") for param in run.params}.union(FLAG_OPTIONS)
+
+
 @run.command()
 @option("--short", is_flag=True, help="Only display Raiden version")
 def version(short: bool) -> None:
