@@ -55,6 +55,7 @@ scenario:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - wait_blocks: 1  # Wait for balances being up to date
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
