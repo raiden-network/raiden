@@ -1759,7 +1759,6 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     assert search_for_item(iteration.events, SendLockExpired, {})
 
 
-@pytest.mark.skip(reason="presence workaround disables filtering")
 def test_filter_reachable_routes():
     """ Try to mediate a transfer where a node, that is part of the routes_order,
     was unreachable and became reachable before the locked transfer expired.
