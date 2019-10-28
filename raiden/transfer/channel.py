@@ -28,7 +28,7 @@ from raiden.transfer.events import (
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -1988,7 +1988,7 @@ def handle_receive_withdraw_confirmation(
             SendProcessed(
                 recipient=channel_state.partner_state.address,
                 message_identifier=withdraw.message_identifier,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
         ]
 
@@ -2054,7 +2054,7 @@ def handle_receive_withdraw_expired(
         send_processed = SendProcessed(
             recipient=channel_state.partner_state.address,
             message_identifier=withdraw_expired.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2093,7 +2093,7 @@ def handle_refundtransfer(
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
             message_identifier=refund.transfer.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2130,7 +2130,7 @@ def handle_receive_lock_expired(
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
             message_identifier=state_change.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2170,7 +2170,7 @@ def handle_receive_lockedtransfer(
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
             message_identifier=mediated_transfer.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2207,7 +2207,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
             message_identifier=unlock.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events: List[Event] = [send_processed]
     else:

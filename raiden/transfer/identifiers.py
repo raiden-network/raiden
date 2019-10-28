@@ -53,6 +53,6 @@ class QueueIdentifier:
         )
 
 
-CANONICAL_IDENTIFIER_GLOBAL_QUEUE = CanonicalIdentifier(
+CANONICAL_IDENTIFIER_UNORDERED_QUEUE = CanonicalIdentifier(
     ChainID(0), TokenNetworkAddress(EMPTY_ADDRESS), ChannelID(0)
 )

@@ -30,7 +30,7 @@ from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.typing import Address
 
@@ -49,12 +49,12 @@ class MessageHandler:
 def ping_pong_message_success(transport0, transport1):
     queueid0 = QueueIdentifier(
         recipient=transport0._raiden_service.address,
-        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
 
     queueid1 = QueueIdentifier(
         recipient=transport1._raiden_service.address,
-        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
 
     transport0_raiden_queues = views.get_all_messagequeues(
@@ -303,7 +303,7 @@ def test_matrix_message_retry(
     ] = AddressReachability.REACHABLE
 
     queueid = QueueIdentifier(
-        recipient=partner_address, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=partner_address, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
     chain_state = raiden_service.wal.state_manager.current_state
 
@@ -314,7 +314,7 @@ def test_matrix_message_retry(
     message = Processed(message_identifier=0, signature=EMPTY_SIGNATURE)
     transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
-    retry_queue.enqueue_global(message)
+    retry_queue.enqueue_unordered(message)
 
     gevent.idle()
     assert transport._send_raw.call_count == 1
