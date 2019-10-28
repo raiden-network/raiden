@@ -24,7 +24,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
     EthNodeInterfaceError,
-    InsufficientFunds,
+    InsufficientEth,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -707,8 +707,8 @@ class JSONRPCClient:
     ) -> None:
         """ After estimate gas failure checks if our address has enough balance.
 
-        If the account did not have enough ETH balance to execute the,
-        transaction then it raises an `InsufficientFunds` error.
+        If the account did not have enough ETH balance to execute the
+        transaction, it raises an `InsufficientEth` error.
 
         Note:
             This check contains a race condition, it could be the case that a
@@ -724,7 +724,7 @@ class JSONRPCClient:
         if balance < required_balance:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
-            raise InsufficientFunds(msg)
+            raise InsufficientEth(msg)
 
     def get_checking_block(self) -> BlockSpecification:
         """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
