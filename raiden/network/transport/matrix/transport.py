@@ -154,7 +154,7 @@ class _RetryQueue(Runnable):
         self.notify()
 
     def enqueue_unordered(self, message: Message) -> None:
-        """ Helper to enqueue a message in the global queue (e.g. Delivered) """
+        """ Helper to enqueue a message in the unordered queue. """
         self.enqueue(
             queue_identifier=QueueIdentifier(
                 recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
@@ -194,7 +194,7 @@ class _RetryQueue(Runnable):
                 status=status,
             )
             return
-        # sort output by channel_identifier (so global/unordered queue goes first)
+        # sort output by channel_identifier (so queue goes first)
         # inside queue, preserve order in which messages were enqueued
         ordered_queue = sorted(
             self._message_queue, key=lambda d: d.queue_identifier.canonical_identifier
