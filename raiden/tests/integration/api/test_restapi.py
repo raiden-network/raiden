@@ -712,7 +712,7 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
     response = request.send().response
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     json_response = get_json_response(response)
-    assert "Insufficient ETH" in json_response["errors"]
+    assert "insufficient ETH" in json_response["errors"]
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
