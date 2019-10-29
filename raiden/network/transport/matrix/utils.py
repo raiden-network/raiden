@@ -426,6 +426,8 @@ def login_or_register(
         client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
         try:
+            # Test the credentional. Any API that requries authentication
+            # would be enough.
             client.api.get_devices()
         except MatrixRequestError as ex:
             log.debug(
@@ -453,10 +455,16 @@ def login_or_register(
     # try login and register on first 5 possible accounts
     for i in range(JOIN_RETRIES):
         username = base_username
+
+        # Notes:
+        # - The PRNG is initialized with a deterministic seed based on the
+        # user's signature. This allows the node to recover the random userid
+        # even if data is lost.
+        # - The first iteration does not have a random part for the userid,
+        # this is only a small convinience to avoid an unecessary signature.
         if i:
             if not rand:
-                rand = Random()  # deterministic, random secret for username suffixes
-                # initialize rand for seed (which requires a signature) only if/when needed
+                rand = Random()
                 rand.seed(int.from_bytes(signer.sign(b"seed")[-32:], "big"))
             username = f"{username}.{rand.randint(0, 0xffffffff):08x}"
 
