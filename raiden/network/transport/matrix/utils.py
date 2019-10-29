@@ -436,8 +436,13 @@ def login_or_register(
                 _exception=ex,
             )
         else:
+            # Login suceeded. Sync with the server to fetch the inventory rooms
+            # and new invites. At this point the messages themselves should not
+            # be processed because the transport is not fully initialized (i.e.
+            # the callbacks to process the messages are not installed yet), so
+            # limit the sync to preventing fetching the messages.
             prev_sync_limit = client.set_sync_limit(0)
-            client._sync()  # initial_sync
+            client._sync()
             client.set_sync_limit(prev_sync_limit)
             log.debug("Success. Valid previous credentials", user_id=prev_user_id)
             return client.get_user(client.user_id)
