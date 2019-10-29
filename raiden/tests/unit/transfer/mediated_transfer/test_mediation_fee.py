@@ -356,9 +356,9 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     integers(min_value=0, max_value=100),
     integers(min_value=0, max_value=10_000),
     integers(min_value=0, max_value=50_000),
-    integers(min_value=1, max_value=90_000),
-    integers(min_value=1, max_value=100_000),
-    integers(min_value=1, max_value=100_000),
+    integers(min_value=1, max_value=90_000_000_000_000_000),
+    integers(min_value=1, max_value=100_000_000_000_000_000),
+    integers(min_value=1, max_value=100_000_000_000_000_000),
 )
 def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ Tests mediation fee deduction.
@@ -372,7 +372,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     amount = int(min(amount, balance1 * 0.95 - 1, balance2 * 0.95 - 1))
     assume(amount > 0)
 
-    total_balance = TokenAmount(100_000)
+    total_balance = TokenAmount(100_000_000_000_000_000_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
         channel_capacity=total_balance,
@@ -418,10 +418,6 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     )
     assume(amount_without_margin_after_fees)  # We might lack capacity for the payment
     assert abs(amount - amount_without_margin_after_fees) <= 1  # Equal except for rounding errors
-
-    # We don't handle the case where mediation fees cancel each other out exactly to zero, yet.
-    # Remove this assume after https://github.com/raiden-network/raiden-services/issues/569.
-    assume(fee_calculation.mediation_fees[0] != 0 or imbalance_fee == 0)
 
     # If we add the fee margin, the mediator must always send at least `amount` to the target!
     amount_with_fee_and_margin = calculate_safe_amount_with_fee(

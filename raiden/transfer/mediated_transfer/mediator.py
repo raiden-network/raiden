@@ -1,6 +1,7 @@
 import itertools
 import operator
 import random
+from fractions import Fraction
 from typing import Callable
 
 from raiden.exceptions import UndefinedMediationFee
@@ -226,7 +227,7 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def find_intersection(fee_func: Interpolate, line: Callable[[int], float]) -> Optional[float]:
+def find_intersection(fee_func: Interpolate, line: Callable[[int], Fraction]) -> Optional[float]:
     """ Returns the x value where both functions intersect
 
     `fee_func` is a piecewise linear function while `line` is a straight line
