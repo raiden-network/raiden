@@ -11,7 +11,7 @@ from raiden.constants import UINT256_MAX, Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositOverLimit,
-    InsufficientFunds,
+    InsufficientEth,
     InsufficientGasReserve,
     InvalidBinaryAddress,
 )
@@ -128,8 +128,7 @@ def test_register_token_insufficient_eth(raiden_network, retry_timeout, unregist
     # app1.raiden loses all its ETH because it has been naughty
     burn_eth(app1.raiden.rpc_client)
 
-    # At this point we should get an UnrecoverableError due to InsufficientFunds
-    with pytest.raises(InsufficientFunds):
+    with pytest.raises(InsufficientEth):
         api1.token_network_register(
             registry_address=registry_address,
             token_address=token_address,

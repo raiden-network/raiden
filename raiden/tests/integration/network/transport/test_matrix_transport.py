@@ -15,7 +15,7 @@ from raiden.constants import (
     PATH_FINDING_BROADCASTING_ROOM,
     RoutingMode,
 )
-from raiden.exceptions import InsufficientFunds
+from raiden.exceptions import InsufficientEth
 from raiden.messages.matrix import ToDevice
 from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
@@ -261,7 +261,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
     app0.raiden.transport._client.add_presence_listener(make_tx)
 
     exception = ValueError("Exception was not raised from the transport")
-    with pytest.raises(InsufficientFunds), gevent.Timeout(10, exception=exception):
+    with pytest.raises(InsufficientEth), gevent.Timeout(10, exception=exception):
         # Change presence in peer app to trigger callback in app0
         app1.raiden.transport._client.set_presence_state(UserPresence.UNAVAILABLE.value)
         app0.raiden.get()
