@@ -403,6 +403,9 @@ def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
     username = f"{base_username}.{Random().randint(0, 0xffffffff):08x}"
     password = encode_hex(signer.sign(server_name.encode()))
 
+    # Register will call sync internally, however, since this is a new account
+    # and therefore it has no existing events, it is not necessary to set the
+    # sync limit.
     client.register_with_password(username, password)
 
     signature_bytes = signer.sign(client.user_id.encode())
