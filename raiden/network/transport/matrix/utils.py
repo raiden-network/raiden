@@ -426,7 +426,7 @@ def login_or_register(
         client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
         try:
-            # Test the credentional. Any API that requries authentication
+            # Test the credentials. Any API that requires authentication
             # would be enough.
             client.api.get_devices()
         except MatrixRequestError as ex:
