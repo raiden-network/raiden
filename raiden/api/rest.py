@@ -543,7 +543,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
-                errors="Registering a new token is currently disabled in the Ethereum mainnet",
+                errors="Registering a new token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
@@ -587,7 +587,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
-                errors="Minting a token is currently disabled in the Ethereum mainnet",
+                errors="Minting a token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
