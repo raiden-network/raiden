@@ -401,10 +401,10 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    def fake_receive(room, event):  # pylint: disable=unused-argument
-        return True
+    def fake_send(room, event):  # pylint: disable=unused-argument
+        return
 
-    with patch.object(app1.raiden.transport, "_handle_message", side_effect=fake_receive):
+    with patch.object(app1.raiden.transport, "_send_raw", side_effect=fake_send):
         greenlet = gevent.spawn(
             RaidenAPI(app0.raiden).transfer,
             app0.raiden.default_registry.address,
