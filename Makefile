@@ -92,7 +92,7 @@ docs:
 install: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements.txt _raiden.txt
 
-install-dev: check-pip-tools clean-pyc force-pip-version
+install-dev: check-pip-tools clean-pyc force-pip-version osx-detect-proper-python
 	touch requirements/requirements-local.txt
 	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
 	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
@@ -100,6 +100,12 @@ install-dev: check-pip-tools clean-pyc force-pip-version
 # This is necessary to circumvent #4585
 force-pip-version:
 	pip install 'pip<19.2.0'
+
+osx-detect-proper-python:
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Darwin)
+        python -c 'import time; time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)' > /dev/null 2>&1 || echo "Not supported python version. Read https://raiden-network.readthedocs.io/en/latest/macos_install_guide.html#macos-development-setup for details."
+    endif
 
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
