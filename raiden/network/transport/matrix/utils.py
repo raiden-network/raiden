@@ -392,6 +392,34 @@ def join_broadcast_room(client: GMatrixClient, name: str, servers: Sequence[str]
     return broadcast_room
 
 
+def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
+    """ Register a new random userid with the chosen Matrix server. """
+    server_url = client.api.base_url
+    server_name = urlparse(server_url).netloc
+
+    # A deterministic userid cannot be used since that would be allow for an
+    # DoS attack, were an attacker registers the userid before the real user.
+    # To fix this a random number is added to the username.
+    username = f"{base_username}.{Random().randint(0, 0xffffffff):08x}"
+    password = encode_hex(signer.sign(server_name.encode()))
+
+    client.register_with_password(username, password)
+
+    signature_bytes = signer.sign(client.user_id.encode())
+    signature_hex = encode_hex(signature_bytes)
+
+    user = client.get_user(client.user_id)
+    user.set_display_name(signature_hex)
+
+    log.debug(
+        "Matrix new user regsitered",
+        homeserver=server_name,
+        server_url=server_url,
+        username=username,
+    )
+    return user
+
+
 def login_or_register(
     client: GMatrixClient, signer: Signer, prev_user_id: str = None, prev_access_token: str = None
 ) -> User:
@@ -454,62 +482,7 @@ def login_or_register(
             current_server=server_name,
         )
 
-    # password is signed server address
-    password = encode_hex(signer.sign(server_name.encode()))
-    rand = None
-    # try login and register on first 5 possible accounts
-    for i in range(JOIN_RETRIES):
-        username = base_username
-
-        # Notes:
-        # - The PRNG is initialized with a deterministic seed based on the
-        # user's signature. This allows the node to recover the random userid
-        # even if data is lost.
-        # - The first iteration does not have a random part for the userid,
-        # this is only a small convinience to avoid an unecessary signature.
-        if i:
-            if not rand:
-                rand = Random()
-                rand.seed(int.from_bytes(signer.sign(b"seed")[-32:], "big"))
-            username = f"{username}.{rand.randint(0, 0xffffffff):08x}"
-
-        try:
-            client.login(username, password, sync=False)
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()  # when logging, do initial_sync with limit=0
-            client.set_sync_limit(prev_sync_limit)
-            break
-        except MatrixRequestError as ex:
-            if ex.code != 403:
-                raise
-            log.debug(
-                "Could not login. Trying register",
-                homeserver=server_name,
-                server_url=server_url,
-                username=username,
-            )
-            try:
-                client.register_with_password(username, password)
-                log.debug(
-                    "Register", homeserver=server_name, server_url=server_url, username=username
-                )
-                break
-            except MatrixRequestError as ex:
-                if ex.code != 400:
-                    raise
-                log.debug("Username taken. Continuing")
-                continue
-    else:
-        raise ValueError("Could not register or login!")
-
-    signature_bytes = signer.sign(client.user_id.encode())
-    signature_hex = encode_hex(signature_bytes)
-    user = client.get_user(client.user_id)
-    user.set_display_name(signature_hex)
-    log.debug(
-        "Matrix user login", homeserver=server_name, server_url=server_url, username=username
-    )
-    return user
+    return register(client, signer, base_username)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
