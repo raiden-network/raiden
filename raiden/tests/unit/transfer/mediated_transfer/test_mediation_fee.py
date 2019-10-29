@@ -601,14 +601,15 @@ def test_mfee3():
 
 def test_mfee4():
     """ Unit test for the fee calculation in the mfee4_combined_fees scenario """
-    amount = 500_000_000_000_000_000
+    amount = PaymentAmount(500_000_000_000_000_000)
     deposit = 1_000_000_000_000_000_000
+    prop_fee = ppm_fee_per_channel(ProportionalFeeAmount(10_000))
     imbalance_penalty = calculate_imbalance_fees(
         TokenAmount(deposit * 2), ProportionalFeeAmount(20_000)
     )
     fee_schedule = FeeScheduleState(
-        flat=FeeAmount(100),
-        proportional=ProportionalFeeAmount(10_000),
+        flat=FeeAmount(100 // 2),
+        proportional=prop_fee,
         imbalance_penalty=imbalance_penalty,
         cap_fees=False,
     )
@@ -619,14 +620,27 @@ def test_mfee4():
         amount_after_fees=PaymentAmount(amount), channels=[channels, channels]
     )
     assert fee_calculation
+
     amount_with_margin = calculate_safe_amount_with_fee(
-        fee_calculation.amount_without_fees, FeeAmount(sum(fee_calculation.mediation_fees))
+        amount, FeeAmount(sum(fee_calculation.mediation_fees))
     )
-    assert amount_with_margin == 555_452_155_494_633_177
+
+    # Calculate mediation fees for both mediators
+    med_fees = []
+    incoming_amount = amount_with_margin
+    for _ in range(2):
+        outgoing_amount = get_amount_without_fees(
+            amount_with_fees=incoming_amount, channel_in=channels[0], channel_out=channels[1]
+        )
+        assert outgoing_amount
+        med_fees.append(incoming_amount - outgoing_amount)
+        incoming_amount = outgoing_amount
+
+    assert amount_with_margin == 543_503_066_141_505_551
 
     # print values for scenario
     print("{:_} {:_}".format(deposit - amount_with_margin, deposit + amount_with_margin))
-    for med_fee in running_sum(fee_calculation.mediation_fees):
+    for med_fee in running_sum(med_fees):
         print(
             "{:_} {:_}".format(
                 deposit - amount_with_margin + med_fee, deposit + amount_with_margin - med_fee
