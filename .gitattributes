@@ -1,1 +1,2 @@
 *.sol linguist-language=Solidity
+*.py diff=python
