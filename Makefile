@@ -127,4 +127,4 @@ check-venv:
 
 # Ensure pip-tools is installed
 check-pip-tools: check-venv
-	@type pip-compile > /dev/null 2>&1 || (echo "pip-tools is requried. Installing." && python3 -m pip install pip-tools)
+	@type pip-compile > /dev/null 2>&1 || (echo "pip-tools is required. Installing." && python3 -m pip install pip-tools)
