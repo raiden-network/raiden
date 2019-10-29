@@ -7,7 +7,7 @@ Development Setup on macOS
 
 .. :highlight: bash
 
-The following instructions will guide you from a clean installation of macOS to a working source checkout of raiden. Make sure that you are on OSX 10.12 or higher. This is needed since raiden uses the MONOTONICK_CLOCK_RAW attribute as seen `here
+The following instructions will guide you from a clean installation of macOS to a working source checkout of raiden. Make sure that you are on OSX 10.12 or higher. This is needed since raiden uses the MONOTONICK_CLOCK_RAW attribute as seen `here <https://github.com/raiden-network/raiden/issues/4679#issuecomment-526128654>`__
 
 #. Install C/C++ compiler infrastructure::
 
