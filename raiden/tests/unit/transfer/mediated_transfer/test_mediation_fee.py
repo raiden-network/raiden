@@ -1,7 +1,7 @@
 from typing import Tuple
 
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, example, given
 from hypothesis.strategies import integers
 
 from raiden.tests.unit.transfer.test_channel import make_hash_time_lock_state
@@ -428,6 +428,69 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     )
     assume(amount_with_margin_after_fees)  # We might lack capacity to add margins
     assert amount_with_margin_after_fees >= amount
+
+
+@example(flat_fee=0, prop_fee=0, imbalance_fee=1277, amount=1, balance1=33, balance2=481)
+@given(
+    integers(min_value=0, max_value=100),
+    integers(min_value=0, max_value=10_000),
+    integers(min_value=0, max_value=50_000),
+    integers(min_value=1, max_value=90_000_000_000_000_000_000),
+    integers(min_value=1, max_value=100_000_000_000_000_000_000),
+    integers(min_value=1, max_value=100_000_000_000_000_000_000),
+)
+def test_fee_add_remove_invariant(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
+    """ First adding and then removing fees must yield the original value """
+    # Find examples where there is a reasonable chance of succeeding
+    amount = int(min(amount, balance1 * 0.95 - 1, balance2 * 0.95 - 1))
+    assume(amount > 0)
+
+    total_balance = TokenAmount(100_000_000_000_000_000_000)
+    prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
+    imbalance_fee = calculate_imbalance_fees(
+        channel_capacity=total_balance,
+        proportional_imbalance_fee=ProportionalFeeAmount(imbalance_fee),
+    )
+    fee_schedule = FeeScheduleState(
+        cap_fees=False,
+        flat=FeeAmount(flat_fee),
+        proportional=prop_fee_per_channel,
+        imbalance_penalty=imbalance_fee,
+    )
+    channel_in = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=total_balance - balance1),
+            partner_state=NettingChannelEndStateProperties(balance=balance1),
+            fee_schedule=fee_schedule,
+        )
+    )
+    channel_out = factories.create(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance2),
+            partner_state=NettingChannelEndStateProperties(balance=total_balance - balance2),
+            fee_schedule=fee_schedule,
+        )
+    )
+
+    amount_with_fees = get_amount_with_fees(
+        amount_without_fees=amount,
+        schedule_in=channel_in.fee_schedule,
+        schedule_out=channel_out.fee_schedule,
+        receivable_amount=balance1,
+        balance_in=total_balance - balance1,
+        balance_out=balance2,
+    )
+    assume(amount_with_fees)
+    assert amount_with_fees
+    amount_without_fees = get_amount_without_fees(
+        amount_with_fees=amount_with_fees, channel_in=channel_in, channel_out=channel_out
+    )
+    assume(amount_without_fees)
+    fee_in = float(channel_in.fee_schedule.fee(total_balance - balance1, amount_with_fees))
+    fee_out = float(channel_out.fee_schedule.fee(balance2, -amount))
+    print(f"amount: {amount} with_fees: {amount_with_fees} without_fees: {amount_without_fees}")
+    print(f"fee parts: in {fee_in:.2f}, out {fee_out:.2f}, sum {fee_in + fee_out:.2f}")
+    assert amount - 1 <= amount_without_fees <= amount + 1
 
 
 def running_sum(a):
