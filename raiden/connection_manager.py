@@ -13,6 +13,7 @@ from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
+    InsufficientEth,
     InsufficientFunds,
     InvalidAmount,
     InvalidDBData,
@@ -38,6 +39,7 @@ log = structlog.get_logger(__name__)
 RECOVERABLE_ERRORS = (
     DepositMismatch,
     DepositOverLimit,
+    InsufficientEth,
     InsufficientFunds,
     RaidenRecoverableError,
     UnexpectedChannelState,

@@ -63,6 +63,7 @@ from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
+    InsufficientEth,
     InsufficientFunds,
     InsufficientGasReserve,
     InvalidAmount,
@@ -570,7 +571,7 @@ class RestAPI:  # pragma: no unittest
             )
         except conflict_exceptions as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        except InsufficientFunds as e:
+        except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         return api_response(
@@ -660,7 +661,7 @@ class RestAPI:  # pragma: no unittest
             TokenNotRegistered,
         ) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        except (InsufficientFunds, InsufficientGasReserve) as e:
+        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         if total_deposit:
@@ -680,7 +681,7 @@ class RestAPI:  # pragma: no unittest
                     partner_address=partner_address,
                     total_deposit=total_deposit,
                 )
-            except InsufficientFunds as e:
+            except (InsufficientEth, InsufficientFunds) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
             except (NonexistingChannel, UnknownTokenAddress) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
@@ -723,7 +724,7 @@ class RestAPI:  # pragma: no unittest
                 initial_channel_target,
                 joinable_funds_target,
             )
-        except (InsufficientFunds, InsufficientGasReserve) as e:
+        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except (InvalidAmount, InvalidBinaryAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
@@ -1125,7 +1126,7 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_deposit,
             )
-        except InsufficientFunds as e:
+        except (InsufficientEth, InsufficientFunds) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except DepositOverLimit as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
@@ -1173,6 +1174,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        # TODO handle InsufficientEth here
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address, channel_state.token_address, channel_state.partner_state.address
@@ -1239,7 +1241,7 @@ class RestAPI:  # pragma: no unittest
             self.raiden_api.channel_close(
                 registry_address, channel_state.token_address, channel_state.partner_state.address
             )
-        except InsufficientFunds as e:
+        except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         updated_channel_state = self.raiden_api.get_channel(
