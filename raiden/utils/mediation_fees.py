@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 from raiden.constants import DAI_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS
 from raiden.settings import DEFAULT_DAI_FLAT_FEE, DEFAULT_WETH_FLAT_FEE, MediationFeeConfig
 from raiden.utils.typing import Dict, FeeAmount, ProportionalFeeAmount, TokenAddress, Tuple
@@ -13,8 +15,8 @@ def ppm_fee_per_channel(per_hop_fee: ProportionalFeeAmount) -> ProportionalFeeAm
     #converting-per-hop-proportional-fees-in-per-channel-proportional-fees
     for how to get to this formula.
     """
-    per_hop_ratio = per_hop_fee / 1e6
-    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 1e6))
+    per_hop_ratio = Fraction(per_hop_fee, 10 ** 6)
+    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 10 ** 6))
 
 
 def prepare_mediation_fee_config(

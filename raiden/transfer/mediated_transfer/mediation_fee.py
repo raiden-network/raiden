@@ -1,7 +1,8 @@
 from bisect import bisect, bisect_right
 from copy import copy
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence, Tuple, TypeVar
+from fractions import Fraction
+from typing import List, Optional, Sequence, Tuple, TypeVar, Union
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer.architecture import State
@@ -25,24 +26,24 @@ class Interpolate:  # pylint: disable=too-few-public-methods
     def __init__(self, x_list: Sequence, y_list: Sequence) -> None:
         if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
             raise ValueError("x_list must be in strictly ascending order!")
-        self.x_list = x_list
-        self.y_list = y_list
-        intervals = zip(x_list, x_list[1:], y_list, y_list[1:])
+        self.x_list = [Fraction(x) for x in x_list]
+        self.y_list = [Fraction(y) for y in y_list]
+        intervals = zip(self.x_list, self.x_list[1:], y_list, y_list[1:])
         self.slopes = [(y2 - y1) / (x2 - x1) for x1, x2, y1, y2 in intervals]
 
-    def __call__(self, x: float) -> float:
+    def __call__(self, x: float) -> Fraction:
         if not self.x_list[0] <= x <= self.x_list[-1]:
             raise ValueError("x out of bounds!")
         if x == self.x_list[-1]:
             return self.y_list[-1]
         i = bisect_right(self.x_list, x) - 1
-        return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+        return self.y_list[i] + self.slopes[i] * (Fraction(x) - self.x_list[i])
 
     def __repr__(self) -> str:
         return f"Interpolate({self.x_list}, {self.y_list})"
 
 
-def sign(x: float) -> int:
+def sign(x: Union[float, Fraction]) -> int:
     """ Sign of input, returns zero on zero input
     """
     if x == 0:
@@ -57,7 +58,7 @@ def _collect_x_values(
     balance_in: Balance,
     balance_out: Balance,
     max_x: int,
-) -> List[float]:
+) -> List[Fraction]:
     """ Collect all relevant x values (edges of piece wise linear sections) """
     assert schedule_in._penalty_func
     assert schedule_out._penalty_func
@@ -65,10 +66,12 @@ def _collect_x_values(
         balance_out - x for x in schedule_out._penalty_func.x_list
     ]
     limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
-    return sorted(set(limited_x_vals))
+    return sorted({Fraction(x) for x in limited_x_vals})
 
 
-def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], List[float]]:
+def _cap_fees(
+    x_list: List[Fraction], y_list: List[Fraction]
+) -> Tuple[List[Fraction], List[Fraction]]:
     """ Insert extra points for intersections with x-axis, see `test_fee_capping` """
     x_list = copy(x_list)
     y_list = copy(y_list)
@@ -80,10 +83,10 @@ def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], Li
             new_x = x1 + abs(y1) / abs(y2 - y1) * (x2 - x1)
             new_index = bisect(x_list, new_x)
             x_list.insert(new_index, new_x)
-            y_list.insert(new_index, 0)
+            y_list.insert(new_index, Fraction(0))
 
     # Cap points that are below zero
-    y_list = [max(y, 0) for y in y_list]
+    y_list = [max(y, Fraction(0)) for y in y_list]
     return x_list, y_list
 
 
@@ -129,9 +132,11 @@ def _mediation_fee_func(
     # fixed and the other one is represented by `x`.
     try:
         y_list = [
-            schedule_in.fee(balance_in, x if amount_with_fees is None else amount_with_fees)
+            schedule_in.fee(
+                balance_in, x if amount_with_fees is None else Fraction(amount_with_fees)
+            )
             + schedule_out.fee(
-                balance_out, -x if amount_without_fees is None else -amount_without_fees
+                balance_out, -x if amount_without_fees is None else -Fraction(amount_without_fees)
             )
             for x in x_list
         ]
@@ -165,13 +170,13 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def fee(self, balance: Balance, amount: float) -> float:
+    def fee(self, balance: Balance, amount: Fraction) -> Fraction:
         return (
             self.flat
-            + self.proportional / 1e6 * abs(amount)
+            + Fraction(self.proportional, int(1e6)) * Fraction(abs(amount))
             + (self._penalty_func(balance + amount) - self._penalty_func(balance))
             if self._penalty_func
-            else 0
+            else Fraction(0)
         )
 
     @staticmethod
