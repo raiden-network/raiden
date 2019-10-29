@@ -453,21 +453,22 @@ def login(client: GMatrixClient, user_id: str, access_token: str) -> Optional[Us
 
 
 def login_or_register(client: GMatrixClient, signer: Signer, prev_auth_data: str = None) -> User:
-    """Login to a Raiden matrix server with password and displayname proof-of-keys
+    """ Tries to login to a matrix server with the using the provided
+    authentication data. If there is not preexisting authentication data or the
+    authentication fails a new random account is created.
 
-    - Username is in the format: 0x<eth_address>(.<suffix>)?, where the suffix is not required,
-    but a deterministic (per-account) random 8-hex string to prevent DoS by other users registering
-    our address
-    - Password is the signature of the server hostname, verified by the server to prevent account
-    creation spam
-    - Displayname currently is the signature of the whole user_id (including homeserver), to be
-    verified by other peers. May include in the future other metadata such as protocol version
+    - Username is in the format: 0x<eth_address>.<random-suffix>.
+    - Password is the signature of the server hostname, verified by the server
+      to prevent account creation spam.
+    - Displayname currently is the signature of the whole user_id (including
+      homeserver), to be verified by other peers. May include in the future
+      other metadata such as protocol version.
 
     Params:
-        client: GMatrixClient instance configured with desired homeserver
-        signer: raiden.utils.signer.Signer instance for signing password and displayname
-        prev_user_id: (optional) previously persisted client.user_id. Must match signer's account
-        prev_access_token: (optional) previously persisted client.access_token for prev_user_id
+        client: GMatrixClient instance configured with desired homeserver.
+        signer: Signer used to sign the password and displayname.
+        prev_auth_data: Previously persisted authentication using the format "{user}/{password}".
+
     Returns:
         Own matrix_client.User
     """
