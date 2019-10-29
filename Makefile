@@ -92,7 +92,7 @@ docs:
 install: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements.txt _raiden.txt
 
-install-dev: check-pip-tools clean-pyc force-pip-version osx-detect-proper-python
+install-dev: check-pip-tools clean-pyc osx-detect-proper-python force-pip-version
 	touch requirements/requirements-local.txt
 	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
 	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
@@ -102,10 +102,9 @@ force-pip-version:
 	pip install 'pip<19.2.0'
 
 osx-detect-proper-python:
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Darwin)
-        python -c 'import time; time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)' > /dev/null 2>&1 || echo "Not supported python version. Read https://raiden-network.readthedocs.io/en/latest/macos_install_guide.html#macos-development-setup for details."
-    endif
+ifeq ($(shell uname -s),Darwin)
+	python -c 'import time; time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)' > /dev/null 2>&1 || (echo "Not supported python version. Read https://raiden-network.readthedocs.io/en/latest/macos_install_guide.html#macos-development-setup for details."; exit 1)
+endif
 
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
@@ -129,7 +128,7 @@ bundle:
 
 check-venv:
 	@python3 -c 'import sys; sys.exit(not (hasattr(sys, "real_prefix") or sys.base_prefix != sys.prefix))' \
-		|| (echo "It appears you're not working inside a venv / virtualen\nIt's strongly recommended to install raiden into a virtual environment.\nSee the documentation for more details."; exit 1)
+		|| (echo "It appears you're not working inside a venv / virtualenv\nIt's strongly recommended to install raiden into a virtual environment.\nSee the documentation for more details."; exit 1)
 
 # Ensure pip-tools is installed
 check-pip-tools: check-venv
