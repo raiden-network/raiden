@@ -423,9 +423,36 @@ def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
     return user
 
 
-def login_or_register(
-    client: GMatrixClient, signer: Signer, prev_user_id: str = None, prev_access_token: str = None
-) -> User:
+def is_valid_username(base_username: str, server_name: str, user_id: str) -> bool:
+    _match_user = re.match(f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", user_id)
+    return bool(_match_user)
+
+
+def login(client: GMatrixClient, user_id: str, access_token: str) -> Optional[User]:
+    client.set_access_token(user_id=user_id, token=access_token)
+
+    try:
+        # Test the credentional. Any API that requries authentication
+        # would be enough.
+        client.api.get_devices()
+    except MatrixRequestError as ex:
+        log.debug("Couldn't use previous login credentials", prev_user_id=user_id, _exception=ex)
+        return None
+
+    # Login suceeded. Sync with the server to fetch the inventory rooms
+    # and new invites. At this point the messages themselves should not
+    # be processed because the transport is not fully initialized (i.e.
+    # the callbacks to process the messages are not installed yet), so
+    # limit the sync to preventing fetching the messages.
+    prev_sync_limit = client.set_sync_limit(0)
+    client._sync()
+    client.set_sync_limit(prev_sync_limit)
+
+    log.debug("Success. Valid previous credentials", user_id=user_id)
+    return client.get_user(client.user_id)
+
+
+def login_or_register(client: GMatrixClient, signer: Signer, prev_auth_data: str = None) -> User:
     """Login to a Raiden matrix server with password and displayname proof-of-keys
 
     - Username is in the format: 0x<eth_address>(.<suffix>)?, where the suffix is not required,
@@ -448,42 +475,22 @@ def login_or_register(
     server_name = urlparse(server_url).netloc
 
     base_username = str(to_normalized_address(signer.address))
-    _match_user = re.match(
-        f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
-    )
-    if _match_user:  # same user as before
-        assert prev_user_id is not None
-        log.debug("Trying previous user login", user_id=prev_user_id)
-        client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
-        try:
-            # Test the credentials. Any API that requires authentication
-            # would be enough.
-            client.api.get_devices()
-        except MatrixRequestError as ex:
-            log.debug(
-                "Couldn't use previous login credentials, discarding",
-                prev_user_id=prev_user_id,
-                _exception=ex,
-            )
+    if prev_auth_data and prev_auth_data.count("/") == 1:
+        user_id, _, access_token = prev_auth_data.partition("/")
+
+        if is_valid_username(base_username, server_name, user_id):
+            user = login(client, user_id, access_token)
+
+            if user is not None:
+                return user
         else:
-            # Login suceeded. Sync with the server to fetch the inventory rooms
-            # and new invites. At this point the messages themselves should not
-            # be processed because the transport is not fully initialized (i.e.
-            # the callbacks to process the messages are not installed yet), so
-            # limit the sync to preventing fetching the messages.
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()
-            client.set_sync_limit(prev_sync_limit)
-            log.debug("Success. Valid previous credentials", user_id=prev_user_id)
-            return client.get_user(client.user_id)
-    elif prev_user_id:
-        log.debug(
-            "Different server or account, discarding",
-            prev_user_id=prev_user_id,
-            current_address=base_username,
-            current_server=server_name,
-        )
+            log.debug(
+                "Different server or account, discarding",
+                prev_user_id=user_id,
+                current_address=base_username,
+                current_server=server_name,
+            )
 
     return register(client, signer, base_username)
 

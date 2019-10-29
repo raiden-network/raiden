@@ -362,19 +362,9 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
-        prev_user_id: Optional[str]
-        prev_access_token: Optional[str]
-        if prev_auth_data and prev_auth_data.count("/") == 1:
-            prev_user_id, _, prev_access_token = prev_auth_data.partition("/")
-        else:
-            prev_user_id = prev_access_token = None
-
         self._address_mgr.start()
         login_or_register(
-            client=self._client,
-            signer=self._raiden_service.signer,
-            prev_user_id=prev_user_id,
-            prev_access_token=prev_access_token,
+            client=self._client, signer=self._raiden_service.signer, prev_auth_data=prev_auth_data
         )
         self.log = log.bind(
             current_user=self._user_id,
