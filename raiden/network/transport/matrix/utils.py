@@ -397,9 +397,9 @@ def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
-    # A deterministic userid cannot be used since that would be allow for an
-    # DoS attack, were an attacker registers the userid before the real user.
-    # To fix this a random number is added to the username.
+    # A deterministic userid cannot be used since that would allow a DoS
+    # attack, where an attacker registers the userid before the real user.  To
+    # fix this a random number is added to the username.
     username = f"{base_username}.{Random().randint(0, 0xffffffff):08x}"
     password = encode_hex(signer.sign(server_name.encode()))
 
