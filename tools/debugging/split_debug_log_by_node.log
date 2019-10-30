@@ -9,7 +9,7 @@
 # (Running all nodes on the same process makes it easier to use a debugger).
 
 usage() {
-    echo '$0 <raiden-debug-log> <output-dir>';
+    echo "$0 <raiden-debug-log> <output-dir>"
     exit 1
 }
 
@@ -22,24 +22,24 @@ out_dir=$2
     usage
 }
 
-[ ! -f ${full_log} ] && {
+[ ! -f "${full_log}" ] && {
     echo "The argument '${full_log}' must be a log file"
     echo
     usage
 }
 
-[ ! -e ${out_dir} ] && {
-    mkdir -p ${out_dir};
+[ ! -e "${out_dir}" ] && {
+    mkdir -p "${out_dir}"
 }
 
-[ ! -d ${out_dir} ] && {
+[ ! -d "${out_dir}" ] && {
     echo "The argument '${out_dir}' must be a directory"
     echo
     usage
 }
 
-for node_address in $(cat ${full_log} | jq -r '.node' | sort -u | grep -v null); do
-    jq "select(.node==\"${node_address}\")" $full_log > ${out_dir}/${node_address}.log
+for node_address in $(cat "${full_log}" | jq -r '.node' | sort -u | grep -v null); do
+    jq "select(.node==\"${node_address}\")" "${full_log}" > "${out_dir}/${node_address}.log"
 done
 
-jq "select(.node==null)" $full_log > ${out_dir}/unknown.log
+jq "select(.node==null)" "${full_log}" > "${out_dir}/unknown.log"
