@@ -45,7 +45,9 @@ dormant_signal=SIGUSR1
     "${@}"
 
 if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
-    for log in ${RAIDEN_TESTS_LOGSDIR}/*/raiden-debug*.log; do
-        ./tools/debugging/split_debug_log_by_node.log "${log}" "${RAIDEN_TESTS_LOGSDIR}/logs_split/"
+    for test_directory in ${RAIDEN_TESTS_LOGSDIR}/*; do
+        if [ -e ${test_directory}/raiden-debug*.log ]; then
+            ./tools/debugging/split_debug_logs.sh ${test_directory}/raiden-debug*.log "${test_directory}/node_logs/"
+        fi
     done
 fi
