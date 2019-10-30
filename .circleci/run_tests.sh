@@ -43,3 +43,9 @@ dormant_signal=SIGUSR1
     --select-fail-on-missing \
     --select-from-file selected-tests.txt \
     "${@}"
+
+if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
+    for log in ${RAIDEN_TESTS_LOGSDIR}/*/raiden-debug*.log; do
+        ./tools/debugging/split_debug_log_by_node.log ${log} ${RAIDEN_TESTS_LOGSDIR}/logs_split/
+    done
+fi
