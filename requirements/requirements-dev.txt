@@ -51,7 +51,7 @@ fancycompleter==0.8       # via pdbpp
 filelock==3.0.12
 flake8-bugbear==19.3.0
 flake8-tuple==0.4.0
-flake8==3.7.7
+flake8==3.7.9
 flask-cors==3.0.8
 flask-restful==0.3.7
 flask==1.0.3
@@ -176,4 +176,4 @@ zipp==0.5.1               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.4.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
+# setuptools==41.6.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
