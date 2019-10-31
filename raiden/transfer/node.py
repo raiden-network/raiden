@@ -49,6 +49,7 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
+    ActionTokenNetworkSetFeeSchedule,
     ActionUpdateTransportAuthData,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -605,6 +606,46 @@ def handle_action_change_node_network_state(
     return TransitionResult(chain_state, events)
 
 
+def handle_action_set_token_network_fee_schedule(
+    chain_state: ChainState, state_change: ActionTokenNetworkSetFeeSchedule
+) -> TransitionResult[ChainState]:
+    events: List[Event] = []
+
+    token_network_address = state_change.token_network_address
+    fee_schedule = state_change.fee_schedule
+    token_network_registries = chain_state.identifiers_to_tokennetworkregistries
+    token_network_registry_state = token_network_registries[state_change.registry_address]
+
+    if token_network_registry_state is None:
+        return TransitionResult(chain_state, events)
+
+    ids_to_tokens = token_network_registry_state.tokennetworkaddresses_to_tokennetworks
+    token_network_state = ids_to_tokens[token_network_address]
+
+    if token_network_state is not None:
+        token_network_state.fee_schedule = fee_schedule
+        ids_to_tokens[token_network_address] = token_network_state
+
+        channel_list = views.list_channelstate_for_tokennetwork(
+            chain_state=chain_state,
+            token_network_registry_address=state_change.registry_address,
+            token_address=token_network_state.token_address,
+        )
+        for channel_state in channel_list:
+            channel_fee_schedule_change = ActionChannelSetFeeSchedule(
+                canonical_identifier=channel_state.canonical_identifier,
+                fee_schedule=fee_schedule,
+                fee_config=state_change.fee_config,
+            )
+            iteration = subdispatch_by_canonical_id(
+                chain_state=chain_state,
+                canonical_identifier=channel_state.canonical_identifier,
+                state_change=channel_fee_schedule_change,
+            )
+            events.extend(iteration.events)
+    return TransitionResult(chain_state, events)
+
+
 def handle_contract_receive_new_token_network_registry(
     chain_state: ChainState, state_change: ContractReceiveNewTokenNetworkRegistry
 ) -> TransitionResult[ChainState]:
@@ -830,6 +871,9 @@ def handle_state_change(
         elif type(state_change) == ActionInitTarget:
             assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
             iteration = handle_action_init_target(chain_state, state_change)
+        elif type(state_change) == ActionTokenNetworkSetFeeSchedule:
+            assert isinstance(state_change, ActionTokenNetworkSetFeeSchedule), MYPY_ANNOTATION
+            iteration = handle_action_set_token_network_fee_schedule(chain_state, state_change)
         elif type(state_change) == ActionUpdateTransportAuthData:
             assert isinstance(state_change, ActionUpdateTransportAuthData), MYPY_ANNOTATION
             iteration = handle_action_update_transport_auth_data(chain_state, state_change)

@@ -81,6 +81,7 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
+    ActionTokenNetworkSetFeeSchedule,
     Block,
     ContractReceiveNewTokenNetworkRegistry,
 )
@@ -102,6 +103,7 @@ from raiden.utils.typing import (
     SecretHash,
     TargetAddress,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
     WithdrawAmount,
 )
 from raiden.utils.upgrades import UpgradeManager
@@ -1088,6 +1090,20 @@ class RaidenService(Runnable):
 
         return manager
 
+    def set_token_network_fee_schedule(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_network_address: TokenNetworkAddress,
+        fee_schedule: FeeScheduleState,
+    ) -> None:
+        action_set_token_network_fee_schedule = ActionTokenNetworkSetFeeSchedule(
+            registry_address=registry_address,
+            token_network_address=token_network_address,
+            fee_schedule=fee_schedule,
+            fee_config=self.config["mediation_fees"],
+        )
+        self.handle_and_track_state_changes([action_set_token_network_fee_schedule])
+
     def mediated_transfer_async(
         self,
         token_network_address: TokenNetworkAddress,
@@ -1242,7 +1258,7 @@ class RaidenService(Runnable):
 
         self.handle_and_track_state_changes([action_set_channel_reveal_timeout])
 
-    def set_fee_schedule(
+    def set_channel_fee_schedule(
         self, canonical_identifier: CanonicalIdentifier, fee_schedule: FeeScheduleState
     ) -> None:
         action_set_fee_schedule = ActionChannelSetFeeSchedule(

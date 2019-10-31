@@ -41,6 +41,6 @@ repos:
       - id: end-of-file-fixer
       - id: flake8
         args: ["--config=setup.cfg"]
-        additional_dependencies: ["flake8-bugbear==18.8.0", "flake8-tuple", "readme-renderer",]
+        additional_dependencies: ["flake8-bugbear", "flake8-tuple", "readme-renderer",]
       - id: mixed-line-ending
       - id: trailing-whitespace
