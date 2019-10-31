@@ -923,7 +923,6 @@ def test_matrix_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport0, transport1)
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5127")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 def test_matrix_multi_user_roaming(matrix_transports):
