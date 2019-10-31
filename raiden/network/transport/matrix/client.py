@@ -402,6 +402,8 @@ class GMatrixClient(MatrixClient):
 
     def _sync(self, timeout_ms=30000):
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
+        log.debug("Sync called", current_user=self.user_id)
+
         response = self.api.sync(self.sync_token, timeout_ms)
         prev_sync_token = self.sync_token
         self.sync_token = response["next_batch"]
