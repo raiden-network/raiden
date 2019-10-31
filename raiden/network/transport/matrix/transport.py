@@ -1067,7 +1067,6 @@ class MatrixTransport(Runnable):
         """ Obtain a public, canonically named (if possible) room and invite peers """
         # retrieve address from invitees implicitly, is constant for all invitees
         assert self._raiden_service is not None  # Extra assertion for mypy
-        room = None
         address = validate_userid_signature(invitees[0])
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
@@ -1103,24 +1102,26 @@ class MatrixTransport(Runnable):
                 self.log.debug("Joined public room", room=room)
                 break
 
-        # if can't, try creating it
-        try:
-            room = self._client.create_room(room_name, invitees=invitees_uids, is_public=True)
-        except MatrixRequestError as error:
-            if error.code == 409:
-                msg = (
-                    "Error creating room, "
-                    "seems to have been created by peer meanwhile, retrying."
+            # if can't, try creating it
+            try:
+                room = self._client.create_room(room_name, invitees=invitees_uids, is_public=True)
+            except MatrixRequestError as error:
+                if error.code == 409:
+                    msg = (
+                        "Error creating room, "
+                        "seems to have been created by peer meanwhile, retrying."
+                    )
+                else:
+                    msg = "Error creating room, retrying."
+
+                self.log.debug(
+                    msg, room_name=room_name, error=error.content, error_code=error.code
                 )
             else:
-                msg = "Error creating room, retrying."
+                self.log.debug("Room created successfully", room=room, invitees=invitees)
+                return room
 
-            self.log.debug(msg, room_name=room_name, error=error.content, error_code=error.code)
         else:
-            self.log.debug("Room created successfully", room=room, invitees=invitees)
-            return room
-
-        if not room:
             # if can't join nor create, create an unnamed one
             room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
             self.log.warning(
