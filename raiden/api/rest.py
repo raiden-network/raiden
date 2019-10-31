@@ -34,6 +34,7 @@ from raiden.api.v1.encoding import (
     InvalidEndpoint,
     PartnersPerTokenListSchema,
     PaymentSchema,
+    TokenNetworkStateSchema,
 )
 from raiden.api.v1.resources import (
     AddressResource,
@@ -53,6 +54,7 @@ from raiden.api.v1.resources import (
     PendingTransfersResourceByTokenAndPartnerAddress,
     RaidenInternalEventsResource,
     RegisterTokenResource,
+    TokenNetworkStateResource,
     TokensResource,
     VersionResource,
     create_blueprint,
@@ -158,6 +160,7 @@ URLS_V1 = [
         "token_target_paymentresource",
     ),
     ("/tokens", TokensResource),
+    ("/tokens/<hexaddress:token_address>/settings", TokenNetworkStateResource),
     ("/tokens/<hexaddress:token_address>/partners", PartnersResourceByTokenAddress),
     ("/tokens/<hexaddress:token_address>", RegisterTokenResource),
     ("/pending_transfers", PendingTransfersResource, "pending_transfers_resource"),
@@ -529,6 +532,7 @@ class RestAPI:  # pragma: no unittest
     def __init__(self, raiden_api: RaidenAPI) -> None:
         self.raiden_api = raiden_api
         self.channel_schema = ChannelStateSchema()
+        self.token_network_schema = TokenNetworkStateSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.payment_schema = PaymentSchema()
@@ -845,6 +849,43 @@ class RestAPI:  # pragma: no unittest
             pretty_address = to_checksum_address(token_address)
             message = f'No token network registered for token "{pretty_address}"'
             return api_error(message, status_code=HTTPStatus.NOT_FOUND)
+
+    def get_token_network_state_for_token(
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
+    ) -> Response:
+        log.debug(
+            "Getting token network for token",
+            node=to_checksum_address(self.raiden_api.address),
+            token_address=to_checksum_address(token_address),
+        )
+        token_network_state = self.raiden_api.get_token_network_state_for_token_address(
+            registry_address=registry_address, token_address=token_address
+        )
+
+        if token_network_state is not None:
+            return api_response(result=self.token_network_schema.dump(token_network_state))
+        else:
+            pretty_address = to_checksum_address(token_address)
+            message = f'No token network registered for token "{pretty_address}"'
+            return api_error(message, status_code=HTTPStatus.NOT_FOUND)
+
+    def patch_token_network_state(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        fee_schedule: FeeScheduleState = None,
+    ) -> Response:
+        if fee_schedule:
+            self.raiden_api.set_token_network_fee_schedule(
+                registry_address=registry_address,
+                token_address=token_address,
+                fee_schedule=fee_schedule,
+            )
+
+        token_network_state = self.raiden_api.get_token_network_state_for_token_address(
+            registry_address=registry_address, token_address=token_address
+        )
+        return api_response(result=self.token_network_schema.dump(token_network_state))
 
     def get_blockchain_events_network(
         self,
@@ -1225,7 +1266,7 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
-    def _set_fee_schedule(
+    def _set_channel_fee_schedule(
         self,
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
@@ -1238,7 +1279,7 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
         try:
-            self.raiden_api.set_fee_schedule(
+            self.raiden_api.set_channel_fee_schedule(
                 registry_address=registry_address,
                 token_address=channel_state.token_address,
                 partner_address=channel_state.partner_state.address,
@@ -1388,7 +1429,7 @@ class RestAPI:  # pragma: no unittest
             )
 
         elif fee_schedule is not None:
-            result = self._set_fee_schedule(registry_address, channel_state, fee_schedule)
+            result = self._set_channel_fee_schedule(registry_address, channel_state, fee_schedule)
 
         elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)

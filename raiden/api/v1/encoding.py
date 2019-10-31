@@ -26,7 +26,7 @@ from raiden.constants import (
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.transfer.state import ChannelState, NettingChannelState, TokenNetworkState
 
 
 class InvalidEndpoint(NotFound):
@@ -280,6 +280,24 @@ class FeeScheduleSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = FeeScheduleState
+
+
+class TokenNetworkStateSchema(BaseSchema):
+    address = AddressField(dump_only=True)
+    token_address = AddressField(dump_only=True)
+    fee_schedule = fields.Nested(FeeScheduleSchema, missing=None)
+
+    class Meta:
+        strict = True
+        decoding_class = TokenNetworkState
+
+
+class TokenNetworkStatePatchSchema(BaseSchema):
+    fee_schedule = fields.Nested(FeeScheduleSchema, missing=None)
+
+    class Meta:
+        strict = True
+        decoding_class = dict
 
 
 class ChannelStateSchema(BaseSchema):

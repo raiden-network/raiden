@@ -2689,11 +2689,17 @@ def test_api_set_fee_schedule(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+
+    assert token_network_address is not None
+
     channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app0.raiden),
         token_network_address=token_network_address,
         partner_address=app1.raiden.address,
     )
+
+    assert channel_state is not None
+    assert channel_state.fee_schedule is not None
 
     assert channel_state.fee_schedule.flat == fee_schedule_data["flat"]
     assert channel_state.fee_schedule.proportional == fee_schedule_data["proportional"]

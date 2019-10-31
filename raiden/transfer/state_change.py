@@ -268,6 +268,27 @@ class ActionChannelSetFeeSchedule(StateChange):
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
 
+    def __post__init__(self) -> None:
+        typecheck(self.canonical_identifier, CanonicalIdentifier)
+        typecheck(self.fee_schedule, FeeScheduleState)
+        typecheck(self.fee_config, MediationFeeConfig)
+
+
+@dataclass(frozen=True)
+class ActionTokenNetworkSetFeeSchedule(StateChange):
+    """ Change the fee schedule for the whole token network state """
+
+    registry_address: TokenNetworkRegistryAddress
+    token_network_address: TokenNetworkAddress
+    fee_schedule: FeeScheduleState
+    fee_config: MediationFeeConfig
+
+    def __post__init__(self) -> None:
+        typecheck(self.registry_address, TokenNetworkRegistryAddress)
+        typecheck(self.token_network_address, TokenNetworkAddress)
+        typecheck(self.fee_schedule, FeeScheduleState)
+        typecheck(self.fee_config, MediationFeeConfig)
+
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):

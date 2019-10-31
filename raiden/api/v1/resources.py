@@ -11,6 +11,8 @@ from raiden.api.v1.encoding import (
     MintTokenSchema,
     PaymentSchema,
     RaidenEventsRequestSchema,
+    TokenNetworkStatePatchSchema,
+    TokenNetworkStateSchema,
 )
 from raiden.utils import typing
 from raiden.utils.testnet import MintingMethod
@@ -91,6 +93,22 @@ class TokensResource(BaseResource):
         """
         return self.rest_api.get_tokens_list(
             self.rest_api.raiden_api.raiden.default_registry.address
+        )
+
+
+class TokenNetworkStateResource(BaseResource):
+    get_schema = TokenNetworkStateSchema
+    patch_schema = TokenNetworkStatePatchSchema
+
+    def get(self, token_address):
+        return self.rest_api.get_token_network_state_for_token(
+            self.rest_api.raiden_api.raiden.default_registry.address, token_address
+        )
+
+    @use_kwargs(patch_schema, locations=("json",))
+    def patch(self, token_address, **kwargs):
+        return self.rest_api.patch_token_network_state(
+            self.rest_api.raiden_api.raiden.default_registry.address, token_address, **kwargs
         )
 
 
