@@ -197,7 +197,7 @@ class UserAddressManager:
         should **not** generally be used.
         """
         composite_presence = {
-            self._fetch_user_presence(uid) for uid in self._address_to_userids[address]
+            self._fetch_user_presence(uid) for uid in self._address_to_userids[address].copy()
         }
 
         # Iterate over UserPresence in definition order (most to least online) and pick
