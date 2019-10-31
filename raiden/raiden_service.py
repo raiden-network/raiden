@@ -347,6 +347,10 @@ class RaidenService(Runnable):
         )
 
         if self.wal.state_manager.current_state is None:
+            print(
+                "This is the first time Raiden is being used with this address. "
+                "Processing all the events may take some time. Please wait ..."
+            )
             log.debug(
                 "No recoverable state available, creating initial state.",
                 node=to_checksum_address(self.address),
