@@ -1053,6 +1053,7 @@ class MatrixTransport(Runnable):
         """ Obtain a public, canonically named (if possible) room and invite peers """
         room_name_full = f"#{room_name}:{self._server_name}"
         invitees_uids = [user.user_id for user in invitees]
+        error: Optional[Exception] = None
 
         for _ in range(JOIN_RETRIES):
             # try joining room
@@ -1080,7 +1081,7 @@ class MatrixTransport(Runnable):
                 for invitee_id in users_to_invite:
                     room.invite_user(invitee_id)
                 self.log.debug("Joined public room", room=room)
-                break
+                return room
 
             # if can't, try creating it
             try:
@@ -1099,17 +1100,9 @@ class MatrixTransport(Runnable):
                 )
             else:
                 self.log.debug("Room created successfully", room=room, invitees=invitees)
-                break
+                return room
         else:
-            # if can't join nor create, create an unnamed one
-            room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
-            self.log.warning(
-                "Could not create nor join a named room. Successfuly created an unnamed one",
-                room=room,
-                invitees=invitees,
-            )
-
-        return room
+            raise error
 
     def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
         # maybe inviting user used to also possibly invite user's from presence changes
