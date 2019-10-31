@@ -7,8 +7,7 @@ Development Setup on macOS
 
 .. :highlight: bash
 
-The following instructions will guide you from a clean installation of macOS to a working source
-checkout of raiden.
+The following instructions will guide you from a clean installation of macOS to a working source checkout of raiden. Make sure that you are on OSX 10.12 or higher. This is needed since raiden uses the MONOTONICK_CLOCK_RAW attribute as seen `here <https://github.com/raiden-network/raiden/issues/4679#issuecomment-526128654>`__
 
 #. Install C/C++ compiler infrastructure::
 
@@ -21,6 +20,14 @@ checkout of raiden.
     $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
    * Follow the instructions
+
+#. Obtain a MONOTONIC_CLOCK_RAW compatible python version
+
+   The precompiled Python versions for download on python.org are built on a too old macOS version which are not compatible with ``MONOTONIC_CLOCK_RAW``. As such you will have to manually obtain a python binary that supports it. There are three ways to achieve this:
+
+   * Use brew
+   * Use `pyenv <https://realpython.com/intro-to-pyenv/>`__
+   * Use `pythonz <https://github.com/saghul/pythonz>`__
 
 #. Install system packages needed for :code:`raiden` and its dependencies::
 

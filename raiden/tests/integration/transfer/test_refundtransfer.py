@@ -33,6 +33,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
+from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 from raiden.waiting import wait_for_block, wait_for_settle
 
 
@@ -59,7 +60,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
         target_app=app2,
         token_address=token_address,
         amount=deposit,
-        identifier=1,
+        identifier=PaymentID(1),
     )
 
     refund_amount = deposit // 2
@@ -130,8 +131,8 @@ def test_refund_transfer(
     )
 
     # make a transfer to test the path app0 -> app1 -> app2
-    identifier_path = 1
-    amount_path = 1
+    identifier_path = PaymentID(1)
+    amount_path = PaymentAmount(1)
     transfer(
         initiator_app=app0,
         target_app=app2,
@@ -142,8 +143,8 @@ def test_refund_transfer(
     )
 
     # drain the channel app1 -> app2
-    identifier_drain = 2
-    amount_drain = deposit * 8 // 10
+    identifier_drain = PaymentID(2)
+    amount_drain = PaymentAmount(deposit * 8 // 10)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -178,8 +179,8 @@ def test_refund_transfer(
 
     # app0 -> app1 -> app2 is the only available path, but the channel app1 ->
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
-    identifier_refund = 3
-    amount_refund = 50
+    identifier_refund = PaymentID(3)
+    amount_refund = PaymentAmount(50)
     fee = calculate_fee_for_amount(amount_refund)
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
@@ -242,7 +243,7 @@ def test_refund_transfer(
     with dont_handle_lock_expired_mock(app0):
         wait_for_block(
             raiden=app0.raiden,
-            block_number=channel.get_sender_expiration_threshold(lock.expiration) + 1,
+            block_number=BlockNumber(channel.get_sender_expiration_threshold(lock.expiration) + 1),
             retry_timeout=retry_timeout,
         )
         # make sure that app0 still has the payment task for the secrethash
@@ -319,13 +320,14 @@ def test_different_view_of_last_bp_during_unlock(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), token_network_registry_address, token_address
     )
+    assert token_network_address
     token_proxy = app0.raiden.proxy_manager.token(token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
     # make a transfer to test the path app0 -> app1 -> app2
-    identifier_path = 1
-    amount_path = 1
+    identifier_path = PaymentID(1)
+    amount_path = PaymentAmount(1)
     transfer(
         initiator_app=app0,
         target_app=app2,
@@ -336,8 +338,8 @@ def test_different_view_of_last_bp_during_unlock(
     )
 
     # drain the channel app1 -> app2
-    identifier_drain = 2
-    amount_drain = deposit * 8 // 10
+    identifier_drain = PaymentID(2)
+    amount_drain = PaymentAmount(deposit * 8 // 10)
     transfer(
         initiator_app=app1,
         target_app=app2,
@@ -372,8 +374,8 @@ def test_different_view_of_last_bp_during_unlock(
 
     # app0 -> app1 -> app2 is the only available path, but the channel app1 ->
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
-    identifier_refund = 3
-    amount_refund = 50
+    identifier_refund = PaymentID(3)
+    amount_refund = PaymentAmount(50)
     fee = calculate_fee_for_amount(amount_refund)
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
@@ -441,7 +443,7 @@ def test_different_view_of_last_bp_during_unlock(
         # Wait for lock expiration so that app0 sends a LockExpired
         wait_for_block(
             raiden=app0.raiden,
-            block_number=channel.get_sender_expiration_threshold(lock.expiration) + 1,
+            block_number=BlockNumber(channel.get_sender_expiration_threshold(lock.expiration) + 1),
             retry_timeout=retry_timeout,
         )
 
@@ -491,6 +493,7 @@ def test_different_view_of_last_bp_during_unlock(
             {"receiver": app0.raiden.address},
             retry_timeout,
         )
+    assert unlock_app0
     assert unlock_app0.returned_tokens == amount_refund_with_fees
     with gevent.Timeout(timeout):
         unlock_app1 = wait_for_state_change(
@@ -499,6 +502,7 @@ def test_different_view_of_last_bp_during_unlock(
             {"receiver": app1.raiden.address},
             retry_timeout,
         )
+    assert unlock_app1
     assert unlock_app1.returned_tokens == amount_refund_with_fees
     final_balance0 = token_proxy.balance_of(app0.raiden.address)
     final_balance1 = token_proxy.balance_of(app1.raiden.address)
@@ -528,8 +532,8 @@ def test_refund_transfer_after_2nd_hop(
     )
 
     # make a transfer to test the path app0 -> app1 -> app2 -> app3
-    identifier_path = 1
-    amount_path = 1
+    identifier_path = PaymentID(1)
+    amount_path = PaymentAmount(1)
     transfer(
         initiator_app=app0,
         target_app=app3,
@@ -540,8 +544,8 @@ def test_refund_transfer_after_2nd_hop(
     )
 
     # drain the channel app2 -> app3
-    identifier_drain = 2
-    amount_drain = deposit * 8 // 10
+    identifier_drain = PaymentID(2)
+    amount_drain = PaymentAmount(deposit * 8 // 10)
     transfer(
         initiator_app=app2,
         target_app=app3,
@@ -588,8 +592,8 @@ def test_refund_transfer_after_2nd_hop(
     # app0 -> app1 -> app2 > app3 is the only available path, but the channel
     # app2 -> app3 doesn't have capacity, so a refund will be sent on
     # app2 -> app1 -> app0
-    identifier_refund = 3
-    amount_refund = 50
+    identifier_refund = PaymentID(3)
+    amount_refund = PaymentAmount(50)
     fee = calculate_fee_for_amount(amount_refund)
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin

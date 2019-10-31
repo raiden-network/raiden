@@ -334,7 +334,7 @@ class TokenNetworkRegistry:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
             max_token_networks = self.get_max_token_networks(
@@ -364,9 +364,9 @@ class TokenNetworkRegistry:
             required_gas = (
                 gas_limit
                 if gas_limit
-                else self.gas_measurements.get("TokenNetworkRegistry createERC20TokenNetwork")
+                else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",
                 transaction_executed=False,
                 required_gas=required_gas,

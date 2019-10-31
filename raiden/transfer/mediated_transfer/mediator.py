@@ -1,12 +1,14 @@
 import itertools
+import operator
 import random
+from typing import Callable
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnexpectedSecretReveal,
     EventUnlockClaimFailed,
@@ -17,8 +19,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState, Interpolate
 from raiden.transfer.mediated_transfer.state import (
-    HashTimeLockState,
     LockedTransferSignedState,
     LockedTransferUnsignedState,
     MediationPairState,
@@ -54,7 +56,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
-    FeeAmount,
     List,
     LockType,
     NodeNetworkStateMap,
@@ -62,6 +63,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    TokenAmount,
     Tuple,
     Union,
     cast,
@@ -224,60 +226,74 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def _fee_for_payer_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an incoming channel.
+def find_intersection(fee_func: Interpolate, line: Callable[[int], float]) -> Optional[float]:
+    """ Returns the x value where both functions intersect
 
-    The `amount` is the total incoming amount without any fees deducted.
+    `fee_func` is a piecewise linear function while `line` is a straight line
+    and takes the one of fee_func's indexes as argument.
+
+    Returns `None` if there is no intersection within `fee_func`s domain, which
+    indicates a lack of capacity.
     """
-    balance = get_balance(channel.our_state, channel.partner_state)
-    try:
-        return channel.fee_schedule.fee_payer(amount, balance)
-    except UndefinedMediationFee:
-        return None
+    i = 0
+    y = fee_func.y_list[i]
+    compare = operator.lt if y < line(i) else operator.gt
+    while compare(y, line(i)):
+        i += 1
+        if i == len(fee_func.x_list):
+            # Not enough capacity to send
+            return None
+        y = fee_func.y_list[i]
+
+    # We found the linear section where the solution is. Now interpolate!
+    x1 = fee_func.x_list[i - 1]
+    x2 = fee_func.x_list[i]
+    yf1 = fee_func.y_list[i - 1]
+    yf2 = fee_func.y_list[i]
+    yl1 = line(i - 1)
+    yl2 = line(i)
+    return (yl1 - yf1) * (x2 - x1) / ((yf2 - yf1) - (yl2 - yl1)) + x1
 
 
-def _fee_for_payee_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an outgoing channel.
-
-    The `amount` is the incoming amount where the incoming fee is already
-    deducted, but the outgoing fee isn't (that's what this function does,
-    after all).
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
-
-    try:
-        return channel.fee_schedule.fee_payee(amount=amount, balance=balance)
-    except UndefinedMediationFee:
-        return None
-
-
-def get_lock_amount_after_fees(
-    lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
+def get_amount_without_fees(
+    amount_with_fees: PaymentWithFeeAmount,
+    channel_in: NettingChannelState,
+    channel_out: NettingChannelState,
 ) -> Optional[PaymentWithFeeAmount]:
-    """
-    Return the lock.amount after fees are taken.
+    """ Return the amount after fees are taken. """
 
-    Fees are taken only for the outgoing channel, which is the one with
-    collateral locked from this node.
-    """
-    fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
-    if fee_in is None:
+    balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
+    balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
+    receivable = TokenAmount(
+        channel_in.our_total_deposit + channel_in.partner_total_deposit - balance_in
+    )
+    assert (
+        channel_in.fee_schedule.cap_fees == channel_out.fee_schedule.cap_fees
+    ), "Both channels must have the same cap_fees setting for the same mediator."
+    try:
+        fee_func = FeeScheduleState.mediation_fee_func(
+            schedule_in=channel_in.fee_schedule,
+            schedule_out=channel_out.fee_schedule,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            receivable=receivable,
+            amount_with_fees=amount_with_fees,
+            cap_fees=channel_in.fee_schedule.cap_fees,
+        )
+        amount_without_fees = find_intersection(
+            fee_func, lambda i: amount_with_fees - fee_func.x_list[i]
+        )
+    except UndefinedMediationFee:
         return None
-    fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
-    if fee_out is None:
+
+    if amount_without_fees is None:
+        # Insufficient capacity
         return None
-
-    amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
-
-    if amount_after_fees <= 0:
+    if amount_without_fees <= 0:
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return amount_after_fees
+    return PaymentWithFeeAmount(int(round(amount_without_fees)))
 
 
 def sanity_check(
@@ -409,8 +425,10 @@ def forward_transfer_pair(
     if not payee_channel:
         return None, []
 
-    amount_after_fees = get_lock_amount_after_fees(
-        payer_transfer.lock, payer_channel, payee_channel
+    amount_after_fees = get_amount_without_fees(
+        amount_with_fees=payer_transfer.lock.amount,
+        channel_in=payer_channel,
+        channel_out=payee_channel,
     )
     if not amount_after_fees:
         return None, []
@@ -735,7 +753,7 @@ def events_for_secretreveal(
                 recipient=payer_transfer.balance_proof.sender,
                 message_identifier=message_identifier,
                 secret=secret,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
 
             events.append(revealsecret)
@@ -1408,7 +1426,7 @@ def handle_unlock(
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
                         message_identifier=state_change.message_identifier,
-                        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                     )
                     events.append(send_processed)
 

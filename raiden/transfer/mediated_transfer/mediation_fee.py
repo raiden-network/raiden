@@ -1,5 +1,6 @@
-from bisect import bisect_right
-from dataclasses import dataclass, field, replace
+from bisect import bisect, bisect_right
+from copy import copy
+from dataclasses import dataclass, field
 from typing import List, Optional, Sequence, Tuple, TypeVar
 
 from raiden.exceptions import UndefinedMediationFee
@@ -21,7 +22,7 @@ class Interpolate:  # pylint: disable=too-few-public-methods
     Based on https://stackoverflow.com/a/7345691/114926
     """
 
-    def __init__(self, x_list: Sequence, y_list: Sequence):
+    def __init__(self, x_list: Sequence, y_list: Sequence) -> None:
         if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
             raise ValueError("x_list must be in strictly ascending order!")
         self.x_list = x_list
@@ -36,6 +37,111 @@ class Interpolate:  # pylint: disable=too-few-public-methods
             return self.y_list[-1]
         i = bisect_right(self.x_list, x) - 1
         return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+
+    def __repr__(self) -> str:
+        return f"Interpolate({self.x_list}, {self.y_list})"
+
+
+def sign(x: float) -> int:
+    """ Sign of input, returns zero on zero input
+    """
+    if x == 0:
+        return 0
+    else:
+        return 1 if x > 0 else -1
+
+
+def _collect_x_values(
+    schedule_in: "FeeScheduleState",
+    schedule_out: "FeeScheduleState",
+    balance_in: Balance,
+    balance_out: Balance,
+    max_x: int,
+) -> List[float]:
+    """ Collect all relevant x values (edges of piece wise linear sections) """
+    assert schedule_in._penalty_func
+    assert schedule_out._penalty_func
+    all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
+        balance_out - x for x in schedule_out._penalty_func.x_list
+    ]
+    limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
+    return sorted(set(limited_x_vals))
+
+
+def _cap_fees(x_list: List[float], y_list: List[float]) -> Tuple[List[float], List[float]]:
+    """ Insert extra points for intersections with x-axis, see `test_fee_capping` """
+    x_list = copy(x_list)
+    y_list = copy(y_list)
+
+    for i in range(len(x_list) - 1):
+        y1, y2 = y_list[i : i + 2]
+        if sign(y1) * sign(y2) == -1:
+            x1, x2 = x_list[i : i + 2]
+            new_x = x1 + abs(y1) / abs(y2 - y1) * (x2 - x1)
+            new_index = bisect(x_list, new_x)
+            x_list.insert(new_index, new_x)
+            y_list.insert(new_index, 0)
+
+    # Cap points that are below zero
+    y_list = [max(y, 0) for y in y_list]
+    return x_list, y_list
+
+
+def _mediation_fee_func(
+    schedule_in: "FeeScheduleState",
+    schedule_out: "FeeScheduleState",
+    balance_in: Balance,
+    balance_out: Balance,
+    receivable: TokenAmount,
+    amount_with_fees: Optional[PaymentWithFeeAmount],
+    amount_without_fees: Optional[PaymentWithFeeAmount],
+    cap_fees: bool,
+) -> Interpolate:
+    """ Returns a function which calculates total_mediation_fee(x)
+
+    Either `amount_with_fees` or `amount_without_fees` must be given while the
+    other one is None. The returned function will depend on the value that is
+    not given.
+    """
+    assert (
+        amount_with_fees is None or amount_without_fees is None
+    ), "Must be called with either amount_with_fees or amount_without_fees as None"
+    if balance_out == 0:
+        raise UndefinedMediationFee()
+
+    # Add dummy penalty funcs if none are set
+    if not schedule_in._penalty_func:
+        schedule_in = copy(schedule_in)
+        schedule_in._penalty_func = Interpolate([0, balance_in + receivable], [0, 0])
+    if not schedule_out._penalty_func:
+        schedule_out = copy(schedule_out)
+        schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
+
+    x_list = _collect_x_values(
+        schedule_in=schedule_in,
+        schedule_out=schedule_out,
+        balance_in=balance_in,
+        balance_out=balance_out,
+        max_x=receivable if amount_with_fees is None else balance_out,
+    )
+
+    # Sum up fees where either `amount_with_fees` or `amount_without_fees` is
+    # fixed and the other one is represented by `x`.
+    try:
+        y_list = [
+            schedule_in.fee(balance_in, x if amount_with_fees is None else amount_with_fees)
+            + schedule_out.fee(
+                balance_out, -x if amount_without_fees is None else -amount_without_fees
+            )
+            for x in x_list
+        ]
+    except ValueError:
+        raise UndefinedMediationFee()
+
+    if cap_fees:
+        x_list, y_list = _cap_fees(x_list, y_list)
+
+    return Interpolate(x_list, y_list)
 
 
 T = TypeVar("T", bound="FeeScheduleState")
@@ -59,63 +165,58 @@ class FeeScheduleState(State):
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
-    def calculate_capped_fee(self, fee: FeeAmount) -> FeeAmount:
-        """ Caps `fee` to 0 if negative and `cap_fees` is `True`. """
-        if self.cap_fees and fee < 0:
-            return FeeAmount(0)
-
-        return fee
-
-    def imbalance_fee(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        if self._penalty_func:
-            # Total channel balance - node balance = balance (used as x-axis for the penalty)
-            balance = self._penalty_func.x_list[-1] - balance
-            try:
-                return FeeAmount(
-                    round(self._penalty_func(balance + amount) - self._penalty_func(balance))
-                )
-            except ValueError:
-                raise UndefinedMediationFee()
-
-        return FeeAmount(0)
-
-    def fee_payer(self, amount: PaymentWithFeeAmount, balance: Balance) -> FeeAmount:
-        imbalance_fee = self.imbalance_fee(amount=PaymentWithFeeAmount(-amount), balance=balance)
-
-        flat_fee = self.flat
-        prop_fee = int(round(amount * self.proportional / 1e6))
-        return self.calculate_capped_fee(FeeAmount(flat_fee + prop_fee + imbalance_fee))
-
-    def fee_payee(
-        self, amount: PaymentWithFeeAmount, balance: Balance, iterations: int = 2
-    ) -> FeeAmount:
-        def fee_out(imbalance_fee: FeeAmount) -> FeeAmount:
-            return FeeAmount(
-                round(
-                    amount - ((amount - self.flat - imbalance_fee) / (1 + self.proportional / 1e6))
-                )
-            )
-
-        imbalance_fee = FeeAmount(0)
-        for _ in range(iterations):
-            imbalance_fee = self.imbalance_fee(
-                amount=PaymentWithFeeAmount(amount - fee_out(imbalance_fee)), balance=balance
-            )
-
-        return self.calculate_capped_fee(fee_out(imbalance_fee))
-
-    def reversed(self: T) -> T:
-        if not self.imbalance_penalty:
-            return replace(self)
-        max_penalty = max(penalty for x, penalty in self.imbalance_penalty)
-        reversed_instance = replace(
-            self,
-            imbalance_penalty=[
-                (x, FeeAmount(max_penalty - penalty)) for x, penalty in self.imbalance_penalty
-            ],
+    def fee(self, balance: Balance, amount: float) -> float:
+        return (
+            self.flat
+            + self.proportional / 1e6 * abs(amount)
+            + (self._penalty_func(balance + amount) - self._penalty_func(balance))
+            if self._penalty_func
+            else 0
         )
-        self._update_penalty_func()
-        return reversed_instance
+
+    @staticmethod
+    def mediation_fee_func(
+        schedule_in: "FeeScheduleState",
+        schedule_out: "FeeScheduleState",
+        balance_in: Balance,
+        balance_out: Balance,
+        receivable: TokenAmount,
+        amount_with_fees: PaymentWithFeeAmount,
+        cap_fees: bool,
+    ) -> Interpolate:
+        """ Returns a function which calculates total_mediation_fee(amount_without_fees) """
+        return _mediation_fee_func(
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            receivable=receivable,
+            amount_with_fees=amount_with_fees,
+            amount_without_fees=None,
+            cap_fees=cap_fees,
+        )
+
+    @staticmethod
+    def mediation_fee_backwards_func(
+        schedule_in: "FeeScheduleState",
+        schedule_out: "FeeScheduleState",
+        balance_in: Balance,
+        balance_out: Balance,
+        receivable: TokenAmount,
+        amount_without_fees: PaymentWithFeeAmount,
+        cap_fees: bool,
+    ) -> Interpolate:
+        """ Returns a function which calculates total_mediation_fee(amount_with_fees) """
+        return _mediation_fee_func(
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            receivable=receivable,
+            amount_with_fees=None,
+            amount_without_fees=amount_without_fees,
+            cap_fees=cap_fees,
+        )
 
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:

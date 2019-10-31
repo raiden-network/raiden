@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from eth_utils import to_hex
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
@@ -45,6 +45,14 @@ class SendWithdrawRequest(SendMessageEvent):
     expiration: BlockExpiration
     nonce: Nonce
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
+            f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f">"
+        )
+
 
 @dataclass(frozen=True)
 class SendWithdrawConfirmation(SendMessageEvent):
@@ -55,6 +63,14 @@ class SendWithdrawConfirmation(SendMessageEvent):
     expiration: BlockExpiration
     nonce: Nonce
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
+            f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f">"
+        )
+
 
 @dataclass(frozen=True)
 class SendWithdrawExpired(SendMessageEvent):
@@ -64,6 +80,14 @@ class SendWithdrawExpired(SendMessageEvent):
     participant: Address
     nonce: Nonce
     expiration: BlockExpiration
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
+            f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)
@@ -82,6 +106,15 @@ class ContractSendChannelWithdraw(ContractSendEvent):
     @property
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"canonical_identifier: {self.canonical_identifier} "
+            f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
+            f"partner_signature: {to_hex(self.partner_signature)} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)
@@ -194,6 +227,18 @@ class EventPaymentSentSuccess(Event):
     secret: Secret
     route: List[Address]
 
+    def __repr__(self) -> str:
+        route_str = ",".join(to_checksum_address(x) for x in self.route)
+        return (
+            f"{self.__class__.__name__}< "
+            f"token_network_address: {to_checksum_address(self.token_network_address)} "
+            f"identifier: {self.identifier} amount: {self.amount} "
+            f"target: {to_checksum_address(self.target)} "
+            f"secret: {to_hex(self.secret)} "
+            f"route: [{route_str}] "
+            f">"
+        )
+
 
 @dataclass(frozen=True)
 class EventPaymentSentFailed(Event):
@@ -209,6 +254,16 @@ class EventPaymentSentFailed(Event):
     identifier: PaymentID
     target: TargetAddress
     reason: str
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"token_network_address: {to_checksum_address(self.token_network_address)} "
+            f"identifier: {self.identifier} "
+            f"target: {to_checksum_address(self.target)} "
+            f"reason: {self.reason} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)
@@ -235,6 +290,15 @@ class EventPaymentReceivedSuccess(Event):
         if self.amount > UINT256_MAX:
             raise ValueError("transferred_amount is too large")
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"token_network_address: {to_checksum_address(self.token_network_address)} "
+            f"identifier: {self.identifier} amount: {self.amount} "
+            f"initiator: {to_checksum_address(self.initiator)} "
+            f">"
+        )
+
 
 @dataclass(frozen=True)
 class EventInvalidReceivedTransferRefund(Event):
@@ -251,6 +315,14 @@ class EventInvalidReceivedLockExpired(Event):
     secrethash: SecretHash
     reason: str
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"secrethash: {to_hex(self.secrethash)} "
+            f"reason: {self.reason} "
+            f">"
+        )
+
 
 @dataclass(frozen=True)
 class EventInvalidReceivedLockedTransfer(Event):
@@ -266,6 +338,14 @@ class EventInvalidReceivedUnlock(Event):
 
     secrethash: SecretHash
     reason: str
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"secrethash: {to_hex(self.secrethash)} "
+            f"reason: {self.reason} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)

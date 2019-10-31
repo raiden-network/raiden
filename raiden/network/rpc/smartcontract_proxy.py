@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from web3.contract import Contract
@@ -10,11 +10,15 @@ from raiden import constants
 from raiden.blockchain.filters import decode_event
 from raiden.constants import EthClient
 from raiden.exceptions import (
-    InsufficientFunds,
+    InsufficientEth,
+    RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
     TransactionAlreadyPending,
 )
-from raiden.utils import typing
+from raiden.utils.typing import TYPE_CHECKING, Address, BlockSpecification, TransactionHash
+
+if TYPE_CHECKING:
+    from raiden.network.rpc.client import JSONRPCClient
 
 
 class ClientErrorInspectResult(Enum):
@@ -28,7 +32,9 @@ class ClientErrorInspectResult(Enum):
     TRANSACTION_ALREADY_IMPORTED = 7
 
 
-def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErrorInspectResult:
+def inspect_client_error(
+    val_err: ValueError, eth_node: Optional[EthClient]
+) -> ClientErrorInspectResult:
     # both clients return invalid json. They use single quotes while json needs double ones.
     # Also parity may return something like: 'data': 'Internal("Error message")' which needs
     # special processing
@@ -64,32 +70,35 @@ def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErro
 
 
 class ContractProxy:
-    def __init__(self, jsonrpc_client, contract: Contract):
+    def __init__(self, rpc_client: "JSONRPCClient", contract: Contract) -> None:
         if contract is None:
             raise ValueError("Contract must not be None")
-        if jsonrpc_client is None:
+        if rpc_client is None:
             raise ValueError("JSONRPCClient must not be None")
-        self.jsonrpc_client = jsonrpc_client
+        self.rpc_client = rpc_client
         self.contract = contract
 
     def transact(
         self, function_name: str, startgas: int, *args: Any, **kwargs: Any
-    ) -> typing.TransactionHash:
+    ) -> TransactionHash:
         data = ContractProxy.get_transaction_data(
             abi=self.contract.abi, function_name=function_name, args=args, kwargs=kwargs
         )
 
         try:
-            txhash = self.jsonrpc_client.send_transaction(
+            tx_hash = self.rpc_client.send_transaction(
                 to=self.contract.address,
                 startgas=startgas,
                 value=kwargs.pop("value", 0),
                 data=decode_hex(data),
             )
         except ValueError as e:
-            action = inspect_client_error(e, self.jsonrpc_client.eth_node)
+            action = inspect_client_error(e, self.rpc_client.eth_node)
             if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
-                raise InsufficientFunds("Insufficient ETH for transaction")
+                raise InsufficientEth(
+                    "Transaction failed due to insufficient ETH balance. "
+                    "Please top up your ETH account."
+                )
             elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
                 raise ReplacementTransactionUnderpriced(
                     "Transaction was rejected. This is potentially "
@@ -109,29 +118,37 @@ class ContractProxy:
                 # https://github.com/raiden-network/raiden/issues/3211
                 # We will try to not crash by looking into the local parity
                 # transaction pool to retrieve the transaction hash
-                hex_address = to_checksum_address(self.jsonrpc_client.address)
-                txhash = self.jsonrpc_client.parity_get_pending_transaction_hash_by_nonce(
-                    address=hex_address, nonce=self.jsonrpc_client._available_nonce
+                hex_address = to_checksum_address(self.rpc_client.address)
+                maybe_tx_hash = self.rpc_client.parity_get_pending_transaction_hash_by_nonce(
+                    address=hex_address, nonce=self.rpc_client._available_nonce
                 )
-                if txhash:
+                if maybe_tx_hash:
                     raise TransactionAlreadyPending(
                         "Transaction was submitted via parity but parity saw it as"
                         " already pending. Could not find the transaction in the "
                         "local transaction pool. Bailing ..."
                     )
-                return txhash
 
-            raise e
+            raise RaidenUnrecoverableError(
+                f"Unexpected error in underlying Ethereum node: {str(e)}"
+            )
 
-        return txhash
+        return tx_hash
 
     @staticmethod
-    def get_transaction_data(abi: Dict, function_name: str, args: Any = None, kwargs: Any = None):
+    def get_transaction_data(
+        abi: Dict, function_name: str, args: Any = None, kwargs: Any = None
+    ) -> str:
         """Get encoded transaction data"""
         args = args or list()
         fn_abi = find_matching_fn_abi(abi, function_name, args=args, kwargs=kwargs)
         return encode_transaction_data(
-            None, function_name, contract_abi=abi, fn_abi=fn_abi, args=args, kwargs=kwargs
+            web3=None,
+            fn_identifier=function_name,
+            contract_abi=abi,
+            fn_abi=fn_abi,
+            args=args,
+            kwargs=kwargs,
         )
 
     def decode_transaction_input(self, transaction_hash: bytes) -> Dict:
@@ -140,15 +157,19 @@ class ContractProxy:
 
         return self.contract.decode_function_input(transaction["input"])
 
-    def decode_event(self, log: Dict):
+    def decode_event(self, log: Dict[str, Any]) -> Dict[str, Any]:
         return decode_event(self.contract.abi, log)
 
-    def encode_function_call(self, function: str, args: List = None):
+    def encode_function_call(self, function: str, args: List = None) -> str:
         return self.get_transaction_data(self.contract.abi, function, args)
 
     def estimate_gas(
-        self, block_identifier, function: str, *args, **kwargs
-    ) -> typing.Optional[int]:
+        self,
+        block_identifier: Optional[BlockSpecification],
+        function: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
         """Estimate the gas necessary to run the transaction.
 
         Returns `None` transaction would fail because it hit an assert/require,
@@ -156,8 +177,8 @@ class ContractProxy:
         """
 
         fn = getattr(self.contract.functions, function)
-        address = to_checksum_address(self.jsonrpc_client.address)
-        if self.jsonrpc_client.eth_node is constants.EthClient.GETH:
+        address = to_checksum_address(self.rpc_client.address)
+        if self.rpc_client.eth_node is constants.EthClient.GETH:
             # Unfortunately geth does not follow the ethereum JSON-RPC spec and
             # does not accept a block identifier argument for eth_estimateGas
             # parity and py-evm (trinity) do.
@@ -175,7 +196,7 @@ class ContractProxy:
                 transaction={"from": address}, block_identifier=block_identifier
             )
         except ValueError as err:
-            action = inspect_client_error(err, self.jsonrpc_client.eth_node)
+            action = inspect_client_error(err, self.rpc_client.eth_node)
             will_fail = action in (
                 ClientErrorInspectResult.INSUFFICIENT_FUNDS,
                 ClientErrorInspectResult.ALWAYS_FAIL,
@@ -186,5 +207,5 @@ class ContractProxy:
             raise err
 
     @property
-    def contract_address(self):
+    def contract_address(self) -> Address:
         return to_canonical_address(self.contract.address)

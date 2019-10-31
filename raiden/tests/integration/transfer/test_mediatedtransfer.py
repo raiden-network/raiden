@@ -161,7 +161,7 @@ def test_locked_transfer_secret_registered_onchain(
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_mediated_transfer_with_entire_deposit(
     raiden_network, number_of_nodes, token_addresses, deposit, network_wait
-):
+) -> None:
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -170,8 +170,12 @@ def test_mediated_transfer_with_entire_deposit(
         chain_state, token_network_registry_address, token_address
     )
 
+    # The test uses internal routing at the moment, that's why this is set like that.
+    # However, the actual calculated fee is 3 instead of the 4 calculated here, therefore
+    # the amounts are adjusted below
     fee1 = FeeAmount(int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
     fee_margin1 = calculate_fee_margin(deposit, fee1)
+    fee_difference = 1
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
@@ -182,25 +186,25 @@ def test_mediated_transfer_with_entire_deposit(
 
     with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
-            assert_succeeding_transfer_invariants,
-            token_network_address,
-            app0,
-            0,
-            [],
-            app1,
-            deposit * 2,
-            [],
+            func=assert_succeeding_transfer_invariants,
+            token_network_address=token_network_address,
+            app0=app0,
+            balance0=0,
+            pending_locks0=[],
+            app1=app1,
+            balance1=deposit * 2,
+            pending_locks1=[],
         )
     with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
         wait_assert(
-            assert_succeeding_transfer_invariants,
-            token_network_address,
-            app1,
-            fee1,
-            [],
-            app2,
-            deposit * 2 - fee1,
-            [],
+            func=assert_succeeding_transfer_invariants,
+            token_network_address=token_network_address,
+            app0=app1,
+            balance0=fee1 - fee_difference,
+            pending_locks0=[],
+            app1=app2,
+            balance1=deposit * 2 - fee1 + fee_difference,
+            pending_locks1=[],
         )
 
     app2_capacity = 2 * deposit - fee1
@@ -217,25 +221,25 @@ def test_mediated_transfer_with_entire_deposit(
 
     with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
         wait_assert(
-            assert_succeeding_transfer_invariants,
-            token_network_address,
-            app0,
-            2 * deposit - fee2,
-            [],
-            app1,
-            fee2,
-            [],
+            func=assert_succeeding_transfer_invariants,
+            token_network_address=token_network_address,
+            app0=app0,
+            balance0=2 * deposit - fee2 + fee_difference,
+            pending_locks0=[],
+            app1=app1,
+            balance1=fee2 - fee_difference,
+            pending_locks1=[],
         )
     with block_timeout_for_transfer_by_secrethash(app2.raiden, secrethash):
         wait_assert(
-            assert_succeeding_transfer_invariants,
-            token_network_address,
-            app1,
-            deposit * 2,
-            [],
-            app2,
-            0,
-            [],
+            func=assert_succeeding_transfer_invariants,
+            token_network_address=token_network_address,
+            app0=app1,
+            balance0=deposit * 2 - fee_difference,
+            pending_locks0=[],
+            app1=app2,
+            balance1=fee_difference,
+            pending_locks1=[],
         )
 
 
@@ -530,6 +534,12 @@ def test_mediated_transfer_with_fees(
     no_fees = FeeScheduleState(
         flat=FeeAmount(0), proportional=ProportionalFeeAmount(0), imbalance_penalty=None
     )
+    no_fees_no_cap = FeeScheduleState(
+        flat=FeeAmount(0),
+        proportional=ProportionalFeeAmount(0),
+        imbalance_penalty=None,
+        cap_fees=False,
+    )
     cases = [
         # The fee is added by the initiator, but no mediator deducts fees. As a
         # result, the target receives the fee.
@@ -578,7 +588,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[
                 no_fees,
-                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),  # type: ignore
+                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),  # type: ignore
                 no_fees,
             ],
             incoming_fee_schedules=[no_fees, no_fees, no_fees],
@@ -593,7 +603,7 @@ def test_mediated_transfer_with_fees(
         dict(
             fee_schedules=[no_fees, no_fees, no_fees],
             incoming_fee_schedules=[
-                FeeScheduleState(imbalance_penalty=[(0, 200), (1000, 0)]),  # type: ignore
+                FeeScheduleState(imbalance_penalty=[(0, 0), (1000, 200)]),  # type: ignore
                 None,
                 None,
             ],
@@ -613,11 +623,11 @@ def test_mediated_transfer_with_fees(
             fee_schedules=[
                 no_fees,
                 FeeScheduleState(
-                    cap_fees=False, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                    cap_fees=False, imbalance_penalty=[(0, 0), (1000, 50)]  # type: ignore
                 ),
                 no_fees,
             ],
-            incoming_fee_schedules=[no_fees, no_fees, no_fees],
+            incoming_fee_schedules=[no_fees_no_cap, no_fees, no_fees],
             expected_transferred_amounts=[amount + fee, amount + fee + 3, amount + fee + 3],
         ),
         # Same case as above, but with fee capping enabled
@@ -625,7 +635,7 @@ def test_mediated_transfer_with_fees(
             fee_schedules=[
                 no_fees,
                 FeeScheduleState(
-                    cap_fees=True, imbalance_penalty=[(0, 50), (1000, 0)]  # type: ignore
+                    cap_fees=True, imbalance_penalty=[(0, 0), (1000, 50)]  # type: ignore
                 ),
                 no_fees,
             ],

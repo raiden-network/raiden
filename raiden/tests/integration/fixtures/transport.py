@@ -45,9 +45,8 @@ def local_matrix_servers(
         yield server_urls
 
 
-# Beware: the arguments to `global_rooms` should be lists
 @pytest.fixture
-def global_rooms() -> List[str]:
+def broadcast_rooms() -> List[str]:
     return [DISCOVERY_DEFAULT_ROOM]
 
 
@@ -58,7 +57,7 @@ def matrix_transports(
     retry_interval,
     private_rooms,
     number_of_transports,
-    global_rooms,
+    broadcast_rooms,
 ):
     transports = []
     for transport_index in range(number_of_transports):
@@ -66,7 +65,7 @@ def matrix_transports(
         transports.append(
             MatrixTransport(
                 {
-                    "global_rooms": global_rooms,
+                    "broadcast_rooms": broadcast_rooms,
                     "retries_before_backoff": retries_before_backoff,
                     "retry_interval": retry_interval,
                     "server": server,

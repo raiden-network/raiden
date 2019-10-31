@@ -60,8 +60,8 @@ pycryptodome==3.8.2       # via eth-hash, eth-keyfile
 pysha3==1.0.2
 pytoml==0.1.20
 pytz==2019.1              # via flask-restful
-raiden-contracts==0.33.1
-raiden-webui==0.10.0
+raiden-contracts==0.33.3
+raiden-webui==0.10.1
 requests==2.22.0
 rlp==1.1.0                # via eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via py-geth, py-solc

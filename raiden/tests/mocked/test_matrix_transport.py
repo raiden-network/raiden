@@ -6,7 +6,7 @@ import pytest
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix.client import GMatrixClient, Room
+from raiden.network.transport.matrix.client import Room
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
@@ -45,7 +45,8 @@ def skip_userid_validation(monkeypatch):
 @pytest.fixture
 def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
 
-    from raiden.network.transport.matrix.client import User
+    from raiden.network.transport.matrix.client import GMatrixClient, User
+    from raiden.network.transport.matrix.utils import UserPresence
     from raiden.network.transport.matrix import transport as transport_module
 
     monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
@@ -71,13 +72,16 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         assert message
         assert message.sender
 
+    def mock_get_user_presence(self, user_id: str):
+        return UserPresence.ONLINE
+
     config = dict(
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
         server="http://none",
         server_name="none",
         available_servers=[],
-        global_rooms=[],
+        broadcast_rooms=[],
         private_rooms=False,
     )
 
@@ -93,6 +97,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     )
     monkeypatch.setattr(MatrixTransport, "_set_room_id_for_address", mock_set_room_id_for_address)
     monkeypatch.setattr(MatrixTransport, "_receive_message", mock_receive_message)
+    monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
 
     return transport
 

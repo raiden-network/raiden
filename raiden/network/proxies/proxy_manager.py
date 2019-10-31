@@ -116,8 +116,8 @@ class ProxyManager:
         delta = last_timestamp - first_timestamp
         return delta / interval
 
-    def next_block(self) -> int:
-        target_block_number = self.client.block_number() + 1
+    def next_block(self) -> BlockNumber:
+        target_block_number = BlockNumber(self.client.block_number() + 1)
         self.wait_until_block(target_block_number=target_block_number)
         return target_block_number
 

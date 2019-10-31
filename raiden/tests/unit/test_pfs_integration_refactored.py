@@ -67,7 +67,7 @@ def test_get_pfs_info_error():
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
-        assert "Expecting property name enclosed in double quotes:" in str(error.value)
+        assert "Selected Pathfinding Service returned unexpected reply" == str(error.value)
 
     # test RequestException
     with patch.object(requests, "get", side_effect=requests.RequestException()):
@@ -89,4 +89,10 @@ def test_get_pfs_info_error():
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
-        assert "'price_info'" in str(error.value)
+        assert "Selected Pathfinding Service returned unexpected reply" == str(error.value)
+
+    with patch.object(requests, "get", side_effect=requests.exceptions.RequestException):
+        with pytest.raises(ServiceRequestFailed) as error:
+            get_pfs_info("url")
+
+        assert "Selected Pathfinding Service did not respond" == str(error.value)

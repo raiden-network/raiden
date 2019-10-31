@@ -12,7 +12,7 @@ import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
 from raiden.exceptions import TransportError
 from raiden.network.transport.matrix.utils import (
-    join_global_room,
+    join_broadcast_room,
     login_or_register,
     make_client,
     make_room_alias,
@@ -24,8 +24,8 @@ from raiden.tests.utils.factories import make_signer
 from raiden.utils.signer import recover
 
 
-def test_join_global_room():
-    """ join_global_room should try joining, fail and then create global public room """
+def test_join_broadcast_room():
+    """ join_broadcast_room should try joining, fail and then create broadcast public room """
     ownserver = "https://ownserver.com"
     api = Mock()
     api.base_url = ownserver
@@ -43,7 +43,7 @@ def test_join_global_room():
 
     room_name = "raiden_ropsten_discovery"
 
-    room = join_global_room(client=client, name=room_name, servers=["https://invalid.server"])
+    room = join_broadcast_room(client=client, name=room_name, servers=["https://invalid.server"])
     assert client.join_room.call_count == 2  # room not found on own and invalid servers
     client.create_room.assert_called_once_with(room_name, is_public=True)  # created successfuly
     assert room and isinstance(room, Room)

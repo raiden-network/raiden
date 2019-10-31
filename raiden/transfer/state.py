@@ -459,6 +459,7 @@ class TokenNetworkState(State):
     partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
         repr=False, default_factory=lambda: defaultdict(list)
     )
+    fee_schedule: Optional[FeeScheduleState] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)

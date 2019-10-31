@@ -32,6 +32,7 @@ from raiden.api.v1.encoding import (
     InvalidEndpoint,
     PartnersPerTokenListSchema,
     PaymentSchema,
+    TokenNetworkStateSchema,
 )
 from raiden.api.v1.resources import (
     AddressResource,
@@ -51,6 +52,7 @@ from raiden.api.v1.resources import (
     PendingTransfersResourceByTokenAndPartnerAddress,
     RaidenInternalEventsResource,
     RegisterTokenResource,
+    TokenNetworkStateResource,
     TokensResource,
     VersionResource,
     create_blueprint,
@@ -63,6 +65,7 @@ from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
+    InsufficientEth,
     InsufficientFunds,
     InsufficientGasReserve,
     InvalidAmount,
@@ -154,6 +157,7 @@ URLS_V1 = [
         "token_target_paymentresource",
     ),
     ("/tokens", TokensResource),
+    ("/tokens/<hexaddress:token_address>/settings", TokenNetworkStateResource),
     ("/tokens/<hexaddress:token_address>/partners", PartnersResourceByTokenAddress),
     ("/tokens/<hexaddress:token_address>", RegisterTokenResource),
     ("/pending_transfers", PendingTransfersResource, "pending_transfers_resource"),
@@ -526,6 +530,7 @@ class RestAPI:  # pragma: no unittest
     def __init__(self, raiden_api: RaidenAPI) -> None:
         self.raiden_api = raiden_api
         self.channel_schema = ChannelStateSchema()
+        self.token_network_schema = TokenNetworkStateSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.payment_schema = PaymentSchema()
@@ -545,7 +550,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
-                errors="Registering a new token is currently disabled in the Ethereum mainnet",
+                errors="Registering a new token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
@@ -572,7 +577,7 @@ class RestAPI:  # pragma: no unittest
             )
         except conflict_exceptions as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        except InsufficientFunds as e:
+        except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         return api_response(
@@ -589,7 +594,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
-                errors="Minting a token is currently disabled in the Ethereum mainnet",
+                errors="Minting a token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
@@ -662,7 +667,7 @@ class RestAPI:  # pragma: no unittest
             TokenNotRegistered,
         ) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        except (InsufficientFunds, InsufficientGasReserve) as e:
+        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         if total_deposit:
@@ -682,7 +687,7 @@ class RestAPI:  # pragma: no unittest
                     partner_address=partner_address,
                     total_deposit=total_deposit,
                 )
-            except InsufficientFunds as e:
+            except (InsufficientEth, InsufficientFunds) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
             except (NonexistingChannel, UnknownTokenAddress) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
@@ -725,7 +730,7 @@ class RestAPI:  # pragma: no unittest
                 initial_channel_target,
                 joinable_funds_target,
             )
-        except (InsufficientFunds, InsufficientGasReserve) as e:
+        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except (InvalidAmount, InvalidBinaryAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
@@ -842,6 +847,43 @@ class RestAPI:  # pragma: no unittest
             pretty_address = to_checksum_address(token_address)
             message = f'No token network registered for token "{pretty_address}"'
             return api_error(message, status_code=HTTPStatus.NOT_FOUND)
+
+    def get_token_network_state_for_token(
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
+    ) -> Response:
+        log.debug(
+            "Getting token network for token",
+            node=to_checksum_address(self.raiden_api.address),
+            token_address=to_checksum_address(token_address),
+        )
+        token_network_state = self.raiden_api.get_token_network_state_for_token_address(
+            registry_address=registry_address, token_address=token_address
+        )
+
+        if token_network_state is not None:
+            return api_response(result=self.token_network_schema.dump(token_network_state))
+        else:
+            pretty_address = to_checksum_address(token_address)
+            message = f'No token network registered for token "{pretty_address}"'
+            return api_error(message, status_code=HTTPStatus.NOT_FOUND)
+
+    def patch_token_network_state(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        fee_schedule: FeeScheduleState = None,
+    ) -> Response:
+        if fee_schedule:
+            self.raiden_api.set_token_network_fee_schedule(
+                registry_address=registry_address,
+                token_address=token_address,
+                fee_schedule=fee_schedule,
+            )
+
+        token_network_state = self.raiden_api.get_token_network_state_for_token_address(
+            registry_address=registry_address, token_address=token_address
+        )
+        return api_response(result=self.token_network_schema.dump(token_network_state))
 
     def get_blockchain_events_network(
         self,
@@ -1127,7 +1169,7 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_deposit,
             )
-        except InsufficientFunds as e:
+        except (InsufficientEth, InsufficientFunds) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except DepositOverLimit as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
@@ -1175,6 +1217,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        # TODO handle InsufficientEth here
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address, channel_state.token_address, channel_state.partner_state.address
@@ -1221,14 +1264,20 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
-    def _set_fee_schedule(
+    def _set_channel_fee_schedule(
         self,
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         fee_schedule: FeeScheduleState,
     ):
+        log.debug("Set fee schedule")
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+            return api_error(
+                errors="Can't update the fee schedule of a closed channel",
+                status_code=HTTPStatus.CONFLICT,
+            )
         try:
-            self.raiden_api.set_fee_schedule(
+            self.raiden_api.set_channel_fee_schedule(
                 registry_address=registry_address,
                 token_address=channel_state.token_address,
                 partner_address=channel_state.partner_state.address,
@@ -1268,7 +1317,7 @@ class RestAPI:  # pragma: no unittest
             self.raiden_api.channel_close(
                 registry_address, channel_state.token_address, channel_state.partner_state.address
             )
-        except InsufficientFunds as e:
+        except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         updated_channel_state = self.raiden_api.get_channel(
@@ -1380,7 +1429,7 @@ class RestAPI:  # pragma: no unittest
             )
 
         elif fee_schedule is not None:
-            result = self._set_fee_schedule(registry_address, channel_state, fee_schedule)
+            result = self._set_channel_fee_schedule(registry_address, channel_state, fee_schedule)
 
         elif state == ChannelState.STATE_CLOSED.value:
             result = self._close(registry_address, channel_state)

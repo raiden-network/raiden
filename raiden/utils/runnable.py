@@ -77,11 +77,11 @@ class Runnable:
         self.greenlet.kill(exception)
 
     def _schedule_new_greenlet(
-        self, func: Callable, *args, in_seconds_from_now: int = None, **kwargs
+        self, func: Callable, *args: Any, in_seconds_from_now: int = None, **kwargs: Any
     ) -> Greenlet:
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
 
-        def on_success(greenlet):
+        def on_success(greenlet: Greenlet) -> None:
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 

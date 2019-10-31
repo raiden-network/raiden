@@ -10,8 +10,8 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     List,
+    PaymentAmount,
     PaymentID,
-    PaymentWithFeeAmount,
     Secret,
     SecretHash,
     TokenAddress,
@@ -127,7 +127,7 @@ class SendSecretRequest(SendMessageEvent):
     """
 
     payment_identifier: PaymentID
-    amount: PaymentWithFeeAmount
+    amount: PaymentAmount
     expiration: BlockExpiration
     secrethash: SecretHash
 

@@ -44,6 +44,7 @@ from raiden.transfer.state import (
     ChannelState,
     NettingChannelState,
     NetworkState,
+    TokenNetworkState,
 )
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import create_default_identifier
@@ -259,6 +260,40 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         return token_network_address
+
+    def set_token_network_fee_schedule(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: TokenAddress,
+        fee_schedule: FeeScheduleState,
+    ) -> None:
+        chain_state = views.state_from_raiden(self.raiden)
+
+        token_addresses = views.get_token_identifiers(chain_state, registry_address)
+
+        if not is_binary_address(token_address):
+            raise InvalidBinaryAddress("Expected binary address format for token")
+
+        if token_address not in token_addresses:
+            raise UnknownTokenAddress("Unknown token address")
+
+        token_network_address = views.get_token_network_address_by_token_address(
+            chain_state=views.state_from_raiden(self.raiden),
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+        )
+
+        if token_network_address is None:
+            raise UnknownTokenAddress(
+                f"Token {to_checksum_address(token_address)} is not registered "
+                f"with the network {to_checksum_address(registry_address)}."
+            )
+
+        self.raiden.set_token_network_fee_schedule(
+            registry_address=registry_address,
+            token_network_address=token_network_address,
+            fee_schedule=fee_schedule,
+        )
 
     def token_network_connect(
         self,
@@ -814,7 +849,7 @@ class RaidenAPI:  # pragma: no unittest
             canonical_identifier=channel_state.canonical_identifier, reveal_timeout=reveal_timeout
         )
 
-    def set_fee_schedule(
+    def set_channel_fee_schedule(
         self,
         registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
@@ -852,7 +887,7 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        self.raiden.set_fee_schedule(
+        self.raiden.set_channel_fee_schedule(
             canonical_identifier=channel_state.canonical_identifier, fee_schedule=fee_schedule
         )
 
@@ -1014,6 +1049,15 @@ class RaidenAPI:  # pragma: no unittest
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> Optional[TokenNetworkAddress]:
         return views.get_token_network_address_by_token_address(
+            chain_state=views.state_from_raiden(self.raiden),
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+        )
+
+    def get_token_network_state_for_token_address(
+        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
+    ) -> Optional[TokenNetworkState]:
+        return views.get_token_network_by_token_address(
             chain_state=views.state_from_raiden(self.raiden),
             token_network_registry_address=registry_address,
             token_address=token_address,

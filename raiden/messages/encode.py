@@ -47,10 +47,13 @@ def message_from_sendevent(send_event: SendMessageEvent) -> Message:
         assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
         return LockExpired.from_event(send_event)
     elif type(send_event) == SendWithdrawRequest:
+        assert isinstance(send_event, SendWithdrawRequest), MYPY_ANNOTATION
         return WithdrawRequest.from_event(send_event)
     elif type(send_event) == SendWithdrawConfirmation:
+        assert isinstance(send_event, SendWithdrawConfirmation), MYPY_ANNOTATION
         return WithdrawConfirmation.from_event(send_event)
     elif type(send_event) == SendWithdrawExpired:
+        assert isinstance(send_event, SendWithdrawExpired), MYPY_ANNOTATION
         return WithdrawExpired.from_event(send_event)
     elif type(send_event) == SendProcessed:
         assert isinstance(send_event, SendProcessed), MYPY_ANNOTATION

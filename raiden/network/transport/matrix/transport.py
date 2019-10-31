@@ -31,7 +31,7 @@ from raiden.network.transport.matrix.utils import (
     AddressReachability,
     UserAddressManager,
     UserPresence,
-    join_global_room,
+    join_broadcast_room,
     login_or_register,
     make_client,
     make_room_alias,
@@ -41,7 +41,7 @@ from raiden.network.transport.matrix.utils import (
 from raiden.network.transport.utils import timeout_exponential_backoff
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
@@ -153,11 +153,11 @@ class _RetryQueue(Runnable):
             )
         self.notify()
 
-    def enqueue_global(self, message: Message) -> None:
-        """ Helper to enqueue a message in the global queue (e.g. Delivered) """
+    def enqueue_unordered(self, message: Message) -> None:
+        """ Helper to enqueue a message in the unordered queue. """
         self.enqueue(
             queue_identifier=QueueIdentifier(
-                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
             ),
             message=message,
         )
@@ -180,9 +180,11 @@ class _RetryQueue(Runnable):
             self.log.warning("Can't retry", reason="Transport stopped")
             return
 
-        if self.transport._prioritize_global_messages:
-            # During startup global messages have to be sent first
-            self.transport._global_send_queue.join()
+        # On startup protocol messages must be sent only after the monitoring
+        # services are updated. For more details refer to the method
+        # `RaidenService._initialize_monitoring_services_queue`
+        if self.transport._prioritize_broadcast_messages:
+            self.transport._broadcast_queue.join()
 
         self.log.debug("Retrying message", receiver=to_checksum_address(self.receiver))
         status = self.transport._address_mgr.get_address_reachability(self.receiver)
@@ -194,14 +196,10 @@ class _RetryQueue(Runnable):
                 status=status,
             )
             return
-        # sort output by channel_identifier (so global/unordered queue goes first)
-        # inside queue, preserve order in which messages were enqueued
-        ordered_queue = sorted(
-            self._message_queue, key=lambda d: d.queue_identifier.canonical_identifier
-        )
+
         message_texts = [
             data.text
-            for data in ordered_queue
+            for data in self._message_queue
             # if expired_gen generator yields False, message was sent recently, so skip it
             if next(data.expiration_generator)
         ]
@@ -311,8 +309,8 @@ class MatrixTransport(Runnable):
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
-        self._global_rooms: Dict[str, Optional[Room]] = dict()
-        self._global_send_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
+        self._broadcast_rooms: Dict[str, Optional[Room]] = dict()
+        self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
         self._starting = False
@@ -320,8 +318,8 @@ class MatrixTransport(Runnable):
         self._stop_event = Event()
         self._stop_event.set()
 
-        self._global_send_event = Event()
-        self._prioritize_global_messages = True
+        self._broadcast_event = Event()
+        self._prioritize_broadcast_messages = True
 
         self._invite_queue: List[Tuple[_RoomID, dict]] = []
 
@@ -390,12 +388,12 @@ class MatrixTransport(Runnable):
             # this is needed so the rooms are populated before we _inventory_rooms
             self._client._handle_thread.get()
 
-        for suffix in self._config["global_rooms"]:
+        for suffix in self._config["broadcast_rooms"]:
             room_name = make_room_alias(self.chain_id, suffix)  # e.g. raiden_ropsten_discovery
-            room = join_global_room(
+            room = join_broadcast_room(
                 self._client, room_name, self._config.get("available_servers") or ()
             )
-            self._global_rooms[room_name] = room
+            self._broadcast_rooms[room_name] = room
 
         self._inventory_rooms()
 
@@ -408,7 +406,6 @@ class MatrixTransport(Runnable):
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
-        self._schedule_new_greenlet(self._address_mgr.log_status_message)
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -423,6 +420,9 @@ class MatrixTransport(Runnable):
         self._started = True
 
         self.log.debug("Matrix started", config=self._config)
+
+        # Spawn a greenlet to periodically refresh UserPresences
+        self._schedule_new_greenlet(self._address_mgr.refresh_presence, in_seconds_from_now=1)
 
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
@@ -445,7 +445,7 @@ class MatrixTransport(Runnable):
         self._raiden_service.handle_and_track_state_changes([state_change])
         try:
             # waits on _stop_event.ready()
-            self._global_send_worker()
+            self._broadcast_worker()
             # children crashes should throw an exception here
         except gevent.GreenletExit:  # killed without exception
             self._stop_event.set()
@@ -465,7 +465,7 @@ class MatrixTransport(Runnable):
             return
         self.log.debug("Matrix stopping")
         self._stop_event.set()
-        self._global_send_event.set()
+        self._broadcast_event.set()
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -554,39 +554,39 @@ class MatrixTransport(Runnable):
 
         self._send_with_retry(queue_identifier, message)
 
-    def send_global(self, room: str, message: Message) -> None:
-        """Sends a message to one of the global rooms
+    def broadcast(self, room: str, message: Message) -> None:
+        """Broadcast a message to a public room.
 
         These rooms aren't being listened on and therefore no reply could be heard, so these
         messages are sent in a send-and-forget async way.
         The actual room name is composed from the suffix given as parameter and chain name or id
         e.g.: raiden_ropsten_discovery
         Params:
-            room: name suffix as passed in config['global_rooms'] list
+            room: name suffix as passed in config['broadcast_rooms'] list
             message: Message instance to be serialized and sent
         """
-        self._global_send_queue.put((room, message))
-        self._global_send_event.set()
+        self._broadcast_queue.put((room, message))
+        self._broadcast_event.set()
 
-    def _global_send_worker(self) -> None:
-        def _send_global(room_name: str, serialized_message: str) -> None:
-            if not any(suffix in room_name for suffix in self._config["global_rooms"]):
+    def _broadcast_worker(self) -> None:
+        def _broadcast(room_name: str, serialized_message: str) -> None:
+            if not any(suffix in room_name for suffix in self._config["broadcast_rooms"]):
                 raise RuntimeError(
-                    f'Send global called on non-global room "{room_name}". '
-                    f'Known global rooms: {self._config["global_rooms"]}.'
+                    f'Broadcast called on non-public room "{room_name}". '
+                    f'Known public rooms: {self._config["broadcast_rooms"]}.'
                 )
             room_name = make_room_alias(self.chain_id, room_name)
-            if room_name not in self._global_rooms:
-                room = join_global_room(
+            if room_name not in self._broadcast_rooms:
+                room = join_broadcast_room(
                     self._client, room_name, self._config.get("available_servers") or ()
                 )
-                self._global_rooms[room_name] = room
+                self._broadcast_rooms[room_name] = room
 
-            existing_room = self._global_rooms.get(room_name)
-            assert existing_room, f"Unknown global room: {room_name!r}"
+            existing_room = self._broadcast_rooms.get(room_name)
+            assert existing_room, f"Unknown broadcast room: {room_name!r}"
 
             self.log.debug(
-                "Send global",
+                "Broadcast",
                 room_name=room_name,
                 room=existing_room,
                 data=serialized_message.replace("\n", "\\n"),
@@ -594,25 +594,25 @@ class MatrixTransport(Runnable):
             existing_room.send_text(serialized_message)
 
         while not self._stop_event.ready():
-            self._global_send_event.clear()
+            self._broadcast_event.clear()
             messages: Dict[str, List[Message]] = defaultdict(list)
-            while self._global_send_queue.qsize() > 0:
-                room_name, message = self._global_send_queue.get()
+            while self._broadcast_queue.qsize() > 0:
+                room_name, message = self._broadcast_queue.get()
                 messages[room_name].append(message)
             for room_name, messages_for_room in messages.items():
                 message_text = "\n".join(
                     MessageSerializer.serialize(message) for message in messages_for_room
                 )
-                _send_global(room_name, message_text)
+                _broadcast(room_name, message_text)
                 for _ in messages_for_room:
                     # Every message needs to be marked as done.
                     # Unfortunately there's no way to do that in one call :(
                     # https://github.com/gevent/gevent/issues/1436
-                    self._global_send_queue.task_done()
+                    self._broadcast_queue.task_done()
 
-            # Stop prioritizing global messages after initial queue has been emptied
-            self._prioritize_global_messages = False
-            self._global_send_event.wait(self._config["retry_interval"])
+            # Stop prioritizing broadcast messages after initial queue has been emptied
+            self._prioritize_broadcast_messages = False
+            self._broadcast_event.wait(self._config["retry_interval"])
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
@@ -640,12 +640,12 @@ class MatrixTransport(Runnable):
             room_aliases = set(room.aliases)
             if room.canonical_alias:
                 room_aliases.add(room.canonical_alias)
-            room_alias_is_global = any(
-                global_alias in room_alias
-                for global_alias in self._config["global_rooms"]
+            room_alias_is_broadcast = any(
+                broadcast_alias in room_alias
+                for broadcast_alias in self._config["broadcast_rooms"]
                 for room_alias in room_aliases
             )
-            if room_alias_is_global:
+            if room_alias_is_broadcast:
                 continue
             # we add listener for all valid rooms, _handle_message should ignore them
             # if msg sender isn't whitelisted yet
@@ -817,9 +817,9 @@ class MatrixTransport(Runnable):
         # TODO: With the condition in the TODO above restored this one won't have an effect, check
         #       if it can be removed after the above is solved
         if not room_ids or room.room_id != room_ids[0]:
-            if self._is_room_global(room):
-                # This must not happen. Nodes must not listen on global rooms.
-                raise RuntimeError(f"Received message in global room {room.aliases}.")
+            if self._is_broadcast_room(room):
+                # This must not happen. Nodes must not listen on broadcast rooms.
+                raise RuntimeError(f"Received message in broadcast room {room.aliases}.")
             self.log.debug(
                 "Received message triggered new comms room for peer",
                 peer_user=user.user_id,
@@ -900,7 +900,7 @@ class MatrixTransport(Runnable):
 
         if message.sender:  # Ignore unsigned messages
             retrier = self._get_retrier(message.sender)
-            retrier.enqueue_global(delivered_message)
+            retrier.enqueue_unordered(delivered_message)
             self._raiden_service.on_message(message)
 
     def _receive_to_device(self, to_device: ToDevice) -> None:
@@ -955,16 +955,16 @@ class MatrixTransport(Runnable):
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
-            # This loop is used to ignore any global rooms that may have 'polluted' the
+            # This loop is used to ignore any broadcast rooms that may have 'polluted' the
             # user's room cache due to bug #3765
             # Can be removed after the next upgrade that switches to a new TokenNetworkRegistry
             while room_ids:
                 room_id = room_ids.pop(0)
                 room = self._client.rooms[room_id]
-                if not self._is_room_global(room):
+                if not self._is_broadcast_room(room):
                     self.log.debug("Existing room", room=room, members=room.get_joined_members())
                     return room
-                self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
+                self.log.warning("Ignoring broadcast room for peer", room=room, peer=address_hex)
 
         assert self._raiden_service is not None, "_raiden_service not set"
         address_pair = sorted(
@@ -1034,10 +1034,10 @@ class MatrixTransport(Runnable):
         self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
         return room
 
-    def _is_room_global(self, room: Room) -> bool:
+    def _is_broadcast_room(self, room: Room) -> bool:
         return any(
             suffix in room_alias
-            for suffix in self._config["global_rooms"]
+            for suffix in self._config["broadcast_rooms"]
             for room_alias in room.aliases
         )
 
@@ -1176,7 +1176,7 @@ class MatrixTransport(Runnable):
 
         As all users are supposed to be in discovery room, its members dict is used for caching"""
         user_id: str = getattr(user, "user_id", user)
-        discovery_room = self._global_rooms.get(
+        discovery_room = self._broadcast_rooms.get(
             make_room_alias(self.chain_id, DISCOVERY_DEFAULT_ROOM)
         )
         if discovery_room and user_id in discovery_room._members:

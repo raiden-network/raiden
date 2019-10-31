@@ -5,7 +5,7 @@ from raiden.storage.ulid import ULID, ULIDMonotonicFactory
 
 
 def test_ulid_factory():
-    factory = ULIDMonotonicFactory(start=None)
+    factory = ULIDMonotonicFactory(start=None)  # type: ignore
 
     entries = [factory.new()]
 

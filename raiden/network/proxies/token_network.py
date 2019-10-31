@@ -306,11 +306,11 @@ class TokenNetwork:
             settle_timeout=settle_timeout,
         )
         if not gas_limit:
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.openChannel"],
@@ -1072,11 +1072,11 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
@@ -1483,11 +1483,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="total_withdraw",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
@@ -1756,11 +1756,11 @@ class TokenNetwork:
 
                 # The latest block can not be used reliably because of reorgs,
                 # therefore every call using this block has to handle pruned data.
-                failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                failed_at = self.proxy.rpc_client.get_block("latest")
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                self.proxy.rpc_client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.closeChannel"],
@@ -2072,11 +2072,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements[
@@ -2276,11 +2276,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="unlock",
                 transaction_executed=False,
                 required_gas=UNLOCK_TX_GAS_LIMIT,
@@ -2486,7 +2486,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                self.proxy.rpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.settleChannel"],
@@ -2573,7 +2573,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 

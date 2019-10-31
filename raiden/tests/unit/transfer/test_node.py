@@ -23,7 +23,7 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
 )
 from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     CanonicalIdentifier,
     QueueIdentifier,
 )
@@ -442,7 +442,7 @@ def test_inplace_delete_message_queue(chain_state):
     processed_state_change = ReceiveProcessed(sender=sender, message_identifier=message_id)
 
     global_identifier = QueueIdentifier(
-        recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
 
     chain_state.queueids_to_queues[global_identifier] = None
