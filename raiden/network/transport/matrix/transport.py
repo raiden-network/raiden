@@ -984,7 +984,7 @@ class MatrixTransport(Runnable):
             return None
 
         if self._private_rooms:
-            room = self._get_private_room(invitees=peers)
+            room = self._create_private_room(invitees=peers)
         else:
             room = self._get_public_room(room_name, invitees=peers)
 
@@ -1041,7 +1041,7 @@ class MatrixTransport(Runnable):
             for room_alias in room.aliases
         )
 
-    def _get_private_room(self, invitees: List[User]) -> Room:
+    def _create_private_room(self, invitees: List[User]) -> Room:
         """ Create an anonymous, private room and invite peers """
         room = self._client.create_room(
             None, invitees=[user.user_id for user in invitees], is_public=False
@@ -1055,7 +1055,6 @@ class MatrixTransport(Runnable):
         invitees_uids = [user.user_id for user in invitees]
 
         for _ in range(JOIN_RETRIES):
-            # try joining room
             try:
                 room = self._client.join_room(room_name_full)
             except MatrixRequestError as error:
