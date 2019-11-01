@@ -248,7 +248,14 @@ def configure_pfs_or_exit(
     msg = "With PFS routing mode we shouldn't get to configure_pfs with pfs_address being None"
     assert pfs_url, msg
     if pfs_url == "auto":
-        assert service_registry, "Should not get here without a service registry"
+        if service_registry is None:
+            click.secho(
+                "Raiden was started with routing mode set to PFS, the pathfinding service address "
+                "set to 'auto' but no service registry address was given. Either specifically "
+                "provide a PFS address or provide a service registry address."
+            )
+            sys.exit(1)
+
         block_hash = service_registry.client.get_confirmed_blockhash()
         maybe_pfs_url = get_random_pfs(
             service_registry=service_registry,
