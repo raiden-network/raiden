@@ -483,10 +483,6 @@ def test_fee_add_remove_invariant(flat_fee, prop_fee, imbalance_fee, amount, bal
         amount_with_fees=amount_with_fees, channel_in=channel_in, channel_out=channel_out
     )
     assume(amount_without_fees)
-    fee_in = float(channel_in.fee_schedule.fee(total_balance - balance1, amount_with_fees))
-    fee_out = float(channel_out.fee_schedule.fee(balance2, -amount))
-    print(f"amount: {amount} with_fees: {amount_with_fees} without_fees: {amount_without_fees}")
-    print(f"fee parts: in {fee_in:.2f}, out {fee_out:.2f}, sum {fee_in + fee_out:.2f}")
     assert amount - 1 <= amount_without_fees <= amount + 1
 
 
