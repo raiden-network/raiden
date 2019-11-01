@@ -38,8 +38,9 @@ nodes:
       - 10_000  # 1% imbalance fee on channel balance
     no-cap-mediation-fees: true
 
-## This is the MFEE3 scenario. It creates a network with topology 0 -> 1 -> 2 and checks
-## whether a path is returned. It also checks that correct imbalance fees are deducted.
+# Make a transfer over a single mediator with enabled imbalance fees. The
+# channels start at maximum imbalance, which causes negative fees. To test this,
+# the mediator fee capping has been turned off.
 
 scenario:
   serial:
