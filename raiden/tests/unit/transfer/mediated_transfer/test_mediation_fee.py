@@ -1,3 +1,4 @@
+from fractions import Fraction
 from typing import Tuple
 
 import pytest
@@ -50,10 +51,10 @@ def test_interpolation():
     assert interp(90) == 30
     assert interp(99) == 48
 
-    interp = Interpolate((0, 100), (12.35, 67.2))
-    assert interp(0) == 12.35
+    interp = Interpolate((0, 100), (Fraction("12.35"), Fraction("67.2")))
+    assert interp(0) == Fraction("12.35")
     assert interp(50) == pytest.approx((12.35 + 67.2) / 2)
-    assert interp(100) == 67.2
+    assert interp(100) == Fraction("67.2")
 
 
 def test_imbalance_penalty():
