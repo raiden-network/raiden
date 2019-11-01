@@ -65,7 +65,9 @@ scenario:
                 expected_routes:
                   - [0, 1, 2, 3]
 
-            # 200 TKN fees are calculated and margin of 200 * 3% + 10000 * 0.05% = 11
+            # Flat fee: 2 * 100 = 200
+            # Fee margin: fee * 3% + amount * 0.05% = 200 * 3% + 10000 * 0.05% = 11
+            # Amount sent by initiator: 10_000 + 200 + 11 = 10_211
             - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_789, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211, state: "opened"}
 
