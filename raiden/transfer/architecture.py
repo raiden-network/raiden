@@ -61,7 +61,7 @@ from raiden.utils.typing import (
 # - A state_transition function must not produce a result that must be further
 # processed, i.e. the state change must be self contained and the result state
 # tree must be serializable to produce a snapshot. To enforce this inputs and
-# outputs are separated under different class hierarquies (StateChange and Event).
+# outputs are separated under different class hierarchies (StateChange and Event).
 
 
 @dataclass
