@@ -68,7 +68,7 @@ def _collect_x_values(
         balance_out - x for x in schedule_out._penalty_func.x_list
     ]
     limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
-    return sorted({Fraction(x) for x in limited_x_vals})
+    return sorted(set(Fraction(x) for x in limited_x_vals))
 
 
 def _cap_fees(
