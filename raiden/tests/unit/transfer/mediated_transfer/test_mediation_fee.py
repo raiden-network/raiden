@@ -442,10 +442,6 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 )
 def test_fee_add_remove_invariant(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ First adding and then removing fees must yield the original value """
-    # Find examples where there is a reasonable chance of succeeding
-    amount = int(min(amount, balance1 * 0.95 - 1, balance2 * 0.95 - 1))
-    assume(amount > 0)
-
     total_balance = TokenAmount(100_000_000_000_000_000_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
