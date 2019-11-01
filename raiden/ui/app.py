@@ -320,6 +320,18 @@ def run_app(
             fg="yellow",
         )
 
+    monitoring_contract_required = (
+        enable_monitoring and CONTRACT_MONITORING_SERVICE not in contracts
+    )
+    if monitoring_contract_required:
+        click.secho(
+            "Monitoring is enabled but the contract for this ethereum network was not found. "
+            "Please provide monitoring service contract address using "
+            "--monitoring-service-address.",
+            fg="red",
+        )
+        sys.exit(1)
+
     # Only send feedback when PFS is used
     if routing_mode == RoutingMode.PFS:
         event_handler = PFSFeedbackEventHandler(event_handler)
