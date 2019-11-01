@@ -23,15 +23,17 @@ class Interpolate:  # pylint: disable=too-few-public-methods
     Based on https://stackoverflow.com/a/7345691/114926
     """
 
-    def __init__(self, x_list: Sequence, y_list: Sequence) -> None:
+    def __init__(
+        self, x_list: Sequence[Union[Fraction, int]], y_list: Sequence[Union[Fraction, int]]
+    ) -> None:
         if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
             raise ValueError("x_list must be in strictly ascending order!")
-        self.x_list = [Fraction(x) for x in x_list]
-        self.y_list = [Fraction(y) for y in y_list]
+        self.x_list: List[Fraction] = [Fraction(x) for x in x_list]
+        self.y_list: List[Fraction] = [Fraction(y) for y in y_list]
         intervals = zip(self.x_list, self.x_list[1:], y_list, y_list[1:])
-        self.slopes = [(y2 - y1) / (x2 - x1) for x1, x2, y1, y2 in intervals]
+        self.slopes: List[Fraction] = [(y2 - y1) / (x2 - x1) for x1, x2, y1, y2 in intervals]
 
-    def __call__(self, x: float) -> Fraction:
+    def __call__(self, x: Union[Fraction, int]) -> Fraction:
         if not self.x_list[0] <= x <= self.x_list[-1]:
             raise ValueError("x out of bounds!")
         if x == self.x_list[-1]:
