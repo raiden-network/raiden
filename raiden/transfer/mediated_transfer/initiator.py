@@ -368,6 +368,8 @@ def handle_secretrequest(
         and state_change.payment_identifier
         == initiator_state.transfer_description.payment_identifier
     )
+    if not is_message_from_target:
+        return TransitionResult(initiator_state, list())
 
     lock = channel.get_lock(
         channel_state.our_state, initiator_state.transfer_description.secrethash
@@ -377,7 +379,10 @@ def handle_secretrequest(
     # removed.
     assert lock is not None, "channel is does not have the transfer's lock"
 
-    already_received_secret_request = initiator_state.received_secret_request
+    if initiator_state.received_secret_request:
+        # A secret request was received earlier, all subsequent are ignored
+        # as it might be an attack.
+        return TransitionResult(initiator_state, list())
 
     # transfer_description.amount is the actual payment amount without fees.
     # For the transfer to be valid and the unlock allowed the target must
@@ -388,12 +393,7 @@ def handle_secretrequest(
         and initiator_state.transfer_description.secret != ABSENT_SECRET
     )
 
-    if already_received_secret_request and is_message_from_target:
-        # A secret request was received earlier, all subsequent are ignored
-        # as it might be an attack
-        iteration = TransitionResult(initiator_state, list())
-
-    elif is_valid_secretrequest and is_message_from_target:
+    if is_valid_secretrequest:
         # Reveal the secret to the target node and wait for its confirmation.
         # At this point the transfer is not cancellable anymore as either the lock
         # timeouts or a secret reveal is received.
@@ -412,21 +412,15 @@ def handle_secretrequest(
 
         initiator_state.transfer_state = "transfer_secret_revealed"
         initiator_state.received_secret_request = True
-        iteration = TransitionResult(initiator_state, [revealsecret])
-
-    elif not is_valid_secretrequest and is_message_from_target:
+        return TransitionResult(initiator_state, [revealsecret])
+    else:
         initiator_state.received_secret_request = True
         invalid_request = EventInvalidSecretRequest(
             payment_identifier=state_change.payment_identifier,
             intended_amount=initiator_state.transfer_description.amount,
             actual_amount=state_change.amount,
         )
-        iteration = TransitionResult(initiator_state, [invalid_request])
-
-    else:
-        iteration = TransitionResult(initiator_state, list())
-
-    return iteration
+        return TransitionResult(initiator_state, [invalid_request])
 
 
 def handle_offchain_secretreveal(
