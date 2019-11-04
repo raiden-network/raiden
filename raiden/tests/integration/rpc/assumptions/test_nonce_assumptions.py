@@ -17,6 +17,9 @@ def test_transact_is_rejected_if_the_nonce_is_too_low(deploy_client: JSONRPCClie
     # by test_local_transaction_with_zero_gasprice_is_mined)
     deploy_client.poll(txhash)
 
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
     with pytest.raises(ValueError):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
