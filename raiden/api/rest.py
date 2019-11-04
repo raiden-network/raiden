@@ -1349,18 +1349,16 @@ class RestAPI:  # pragma: no unittest
             state=state,
         )
 
-        # Method to get list of attributes that were actually set on the request.
-        settable_attributes = [
-            "total_deposit",
-            "total_withdraw",
-            "reveal_timeout",
-            "fee_schedule",
-            "state",
-        ]
+        patch_arguments = dict(
+            total_deposit=total_deposit,
+            total_withdraw=total_withdraw,
+            reveal_timeout=reveal_timeout,
+            fee_schedule=fee_schedule,
+            state=state,
+        )
 
-        attrs = locals()
         changed_attributes = {
-            attr: attrs[attr] for attr in settable_attributes if attrs[attr] is not None
+            key: value for key, value in patch_arguments.items() if value is not None
         }
 
         if len(changed_attributes) > 1:
@@ -1382,19 +1380,12 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
-        empty_request = all(
-            (
-                total_deposit is None,
-                state is None,
-                total_withdraw is None,
-                reveal_timeout is None,
-                fee_schedule is None,
-            )
-        )
+        empty_request = len(changed_attributes) == 0
+
         if empty_request:
-            attribute_name_list = ", ".join((f"'{attr}'" for attr in settable_attributes))
+            attribute_name_list = "/".join((f"'{attr}'" for attr in patch_arguments.keys()))
             return api_error(
-                errors=("Nothing to do. Should provide one of {attribute_name_list} arguments"),
+                errors=("Nothing to do. Should provide one of {attribute_name_list}"),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
 
