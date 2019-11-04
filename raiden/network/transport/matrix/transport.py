@@ -11,10 +11,10 @@ from eth_utils import is_binary_address, to_checksum_address, to_normalized_addr
 from gevent.event import Event
 from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
-from matrix_client.errors import MatrixRequestError
+from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
-from raiden.exceptions import TransportError
+from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import (
     Message,
@@ -32,7 +32,7 @@ from raiden.network.transport.matrix.utils import (
     UserAddressManager,
     UserPresence,
     join_broadcast_room,
-    login_or_register,
+    login,
     make_client,
     make_room_alias,
     validate_and_parse_message,
@@ -363,20 +363,23 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
-        prev_user_id: Optional[str]
-        prev_access_token: Optional[str]
-        if prev_auth_data and prev_auth_data.count("/") == 1:
-            prev_user_id, _, prev_access_token = prev_auth_data.partition("/")
-        else:
-            prev_user_id = prev_access_token = None
-
         self._address_mgr.start()
-        login_or_register(
-            client=self._client,
-            signer=self._raiden_service.signer,
-            prev_user_id=prev_user_id,
-            prev_access_token=prev_access_token,
-        )
+
+        try:
+            login(
+                client=self._client,
+                signer=self._raiden_service.signer,
+                prev_auth_data=prev_auth_data,
+            )
+        except ValueError:
+            # `ValueError` may be raised if `get_user` provides invalid data to
+            # the `User` constructor. This is either a bug in the login, that
+            # tries to get the user after a failed login, or a bug in the
+            # Matrix SDK.
+            raise RaidenUnrecoverableError("Matrix SDK failed to properly set the userid")
+        except MatrixHttpLibError:
+            raise RaidenUnrecoverableError("The Matrix homeserver seems to be unavailable.")
+
         self.log = log.bind(
             current_user=self._user_id,
             node=to_checksum_address(self._raiden_service.address),

@@ -3,7 +3,7 @@ from raiden.network.transport.matrix.utils import (  # noqa
     AddressReachability,
     UserPresence,
     join_broadcast_room,
-    login_or_register,
+    login,
     make_client,
     make_room_alias,
     sort_servers_closest,

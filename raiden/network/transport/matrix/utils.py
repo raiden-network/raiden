@@ -4,7 +4,6 @@ from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
-from random import Random
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
 from uuid import UUID
@@ -352,124 +351,129 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
         )
 
 
-def login_or_register(
-    client: GMatrixClient, signer: Signer, prev_user_id: str = None, prev_access_token: str = None
-) -> User:
-    """Login to a Raiden matrix server with password and displayname proof-of-keys
+def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
+    """Login for the first time.
 
-    - Username is in the format: 0x<eth_address>(.<suffix>)?, where the suffix is not required,
-    but a deterministic (per-account) random 8-hex string to prevent DoS by other users registering
-    our address
-    - Password is the signature of the server hostname, verified by the server to prevent account
-    creation spam
-    - Displayname currently is the signature of the whole user_id (including homeserver), to be
-    verified by other peers. May include in the future other metadata such as protocol version
+    This relies on the Matrix server having the `eth_auth_provider` plugin
+    installed, the plugin will automatically create the user on the first
+    login. The plugin requires the password to be the signature of the server
+    hostname, verified by the server to prevent account creation spam.
 
-    Params:
-        client: GMatrixClient instance configured with desired homeserver
-        signer: raiden.utils.signer.Signer instance for signing password and displayname
-        prev_user_id: (optional) previously persisted client.user_id. Must match signer's account
-        prev_access_token: (optional) previously persisted client.access_token for prev_user_id
-    Returns:
-        Own matrix_client.User
+    Displayname is the signature of the whole user_id (including homeserver),
+    to be verified by other peers and prevent impersonation attacks.
     """
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
-    base_username = str(to_normalized_address(signer.address))
-    _match_user = re.match(
-        f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
-    )
-    if _match_user:  # same user as before
-        assert prev_user_id is not None
-        log.debug("Trying previous user login", user_id=prev_user_id)
-        client.set_access_token(user_id=prev_user_id, token=prev_access_token)
-
-        try:
-            # Test the credentials. Any API that requires authentication
-            # would be enough.
-            client.api.get_devices()
-        except MatrixRequestError as ex:
-            log.debug(
-                "Couldn't use previous login credentials, discarding",
-                prev_user_id=prev_user_id,
-                _exception=ex,
-            )
-        else:
-            # Login suceeded. Sync with the server to fetch the inventory rooms
-            # and new invites. At this point the messages themselves should not
-            # be processed because the transport is not fully initialized (i.e.
-            # the callbacks to process the messages are not installed yet), so
-            # limit the sync to preventing fetching the messages.
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()
-            client.set_sync_limit(prev_sync_limit)
-            log.debug("Success. Valid previous credentials", user_id=prev_user_id)
-            return client.get_user(client.user_id)
-    elif prev_user_id:
-        log.debug(
-            "Different server or account, discarding",
-            prev_user_id=prev_user_id,
-            current_address=base_username,
-            current_server=server_name,
-        )
-
-    # password is signed server address
+    # The plugin `eth_auth_provider` expects a signature of the server_name as
+    # the user's password.
+    #
+    # For a honest matrix server:
+    #
+    # - This prevents impersonation attacks / name squatting, since the plugin
+    # will validate the username by recovering the adddress from the signature
+    # and check the recovered address and the username matches.
+    #
+    # For a badly configured server (one without the plugin):
+    #
+    # - An attacker can front run and register the username before the honest
+    # user:
+    #    - Because the attacker cannot guess the correct password, when the
+    #    honest node tries to login it will fail, which tells us the server is
+    #    improperly configured and should be blacklisted.
+    #    - The attacker cannot forge a signature to use as a display name, so
+    #    the partner node can tell there is a malicious node trying to
+    #    eavesdrop the conversation and that matrix server should be
+    #    blacklisted.
+    # - The username is available, but because the plugin is not installed the
+    # login will fail since the user is not registered. Here too one can infer
+    # the server is improperly configured and blacklist the server.
     password = encode_hex(signer.sign(server_name.encode()))
-    rand = None
-    # try login and register on first 5 possible accounts
-    for i in range(JOIN_RETRIES):
-        username = base_username
 
-        # Notes:
-        # - The PRNG is initialized with a deterministic seed based on the
-        # user's signature. This allows the node to recover the random userid
-        # even if data is lost.
-        # - The first iteration does not have a random part for the userid,
-        # this is only a small convinience to avoid an unecessary signature.
-        if i:
-            if not rand:
-                rand = Random()
-                rand.seed(int.from_bytes(signer.sign(b"seed")[-32:], "big"))
-            username = f"{username}.{rand.randint(0, 0xffffffff):08x}"
+    # Disabling sync because login is done before the transport is fully
+    # initialized, i.e. the inventory rooms don't have the callbacks installed.
+    client.login(username, password, sync=False)
 
-        try:
-            client.login(username, password, sync=False)
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()  # when logging, do initial_sync with limit=0
-            client.set_sync_limit(prev_sync_limit)
-            break
-        except MatrixRequestError as ex:
-            if ex.code != 403:
-                raise
-            log.debug(
-                "Could not login. Trying register",
-                homeserver=server_name,
-                server_url=server_url,
-                username=username,
-            )
-            try:
-                client.register_with_password(username, password)
-                log.debug(
-                    "Register", homeserver=server_name, server_url=server_url, username=username
-                )
-                break
-            except MatrixRequestError as ex:
-                if ex.code != 400:
-                    raise
-                log.debug("Username taken. Continuing")
-                continue
-    else:
-        raise ValueError("Could not register or login!")
-
+    # Because this is the first login, the display name has to be set, this
+    # prevents the impersonation metioned above. subsequent calls will reuse
+    # the authentication token and the display name will be properly set.
     signature_bytes = signer.sign(client.user_id.encode())
     signature_hex = encode_hex(signature_bytes)
+
     user = client.get_user(client.user_id)
     user.set_display_name(signature_hex)
+
     log.debug(
-        "Matrix user login", homeserver=server_name, server_url=server_url, username=username
+        "Logged to a new server", node=username, homeserver=server_name, server_url=server_url
     )
     return user
+
+
+def is_valid_username(username: str, server_name: str, user_id: str) -> bool:
+    _match_user = re.match(f"^@{re.escape(username)}:{re.escape(server_name)}$", user_id)
+    return bool(_match_user)
+
+
+def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> Optional[User]:
+    """Reuse an existing authentication code.
+
+    If this succeeds it means the user has logged in the past, so we assume the
+    display name is properly set and that there may be rooms open from past
+    executions.
+    """
+    client.set_access_token(user_id=user_id, token=access_token)
+
+    try:
+        # Test the credentional. Any API that requries authentication
+        # would be enough.
+        client.api.get_devices()
+    except MatrixRequestError as ex:
+        log.debug("Couldn't use previous login credentials", prev_user_id=user_id, _exception=ex)
+        return None
+
+    # Login suceeded. Sync with the server to fetch the inventory rooms
+    # and new invites. At this point the messages themselves should not
+    # be processed because the transport is not fully initialized (i.e.
+    # the callbacks to process the messages are not installed yet), so
+    # limit the sync to preventing fetching the messages.
+    prev_sync_limit = client.set_sync_limit(0)
+    client._sync()
+    client.set_sync_limit(prev_sync_limit)
+
+    log.debug("Success. Valid previous credentials", user_id=user_id)
+    return client.get_user(client.user_id)
+
+
+def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] = None) -> User:
+    """ Login with a matrix server.
+
+    Params:
+        client: GMatrixClient instance configured with desired homeserver.
+        signer: Signer used to sign the password and displayname.
+        prev_auth_data: Previously persisted authentication using the format "{user}/{password}".
+    """
+    server_url = client.api.base_url
+    server_name = urlparse(server_url).netloc
+
+    username = str(to_normalized_address(signer.address))
+
+    if prev_auth_data and prev_auth_data.count("/") == 1:
+        user_id, _, access_token = prev_auth_data.partition("/")
+
+        if is_valid_username(username, server_name, user_id):
+            user = login_with_token(client, user_id, access_token)
+
+            if user is not None:
+                return user
+        else:
+            log.debug(
+                "Auth data is invalid, discarding",
+                node=username,
+                user_id=user_id,
+                server_name=server_name,
+            )
+
+    return first_login(client, signer, username)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
