@@ -506,10 +506,10 @@ class MatrixTransport(Runnable):
 
     def start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
-
         It also whitelists the address to answer invites and listen for messages
         """
-
+        msg = "Healthcheck started without raiden_service being set is initialized."
+        assert self._raiden_service, msg
         self.whitelist(node_address)
         with self._health_lock:
             node_address_hex = to_normalized_address(node_address)
@@ -528,8 +528,9 @@ class MatrixTransport(Runnable):
 
             # Check if we should invite or if we should be invited to evade duplicate rooms
             # If we don't have an address, don't invite
-            our_place = self._raiden_service.address if self._raiden_service else node_address
-            if my_place_or_yours(our_place, node_address):
+            if self._raiden_service.address == my_place_or_yours(
+                self._raiden_service.address, node_address
+            ):
                 self._get_room_for_address(node_address)
 
             # Ensure network state is updated in case we already know about the user presences
@@ -941,7 +942,6 @@ class MatrixTransport(Runnable):
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
         room = self._get_room_for_address(receiver_address)
-
         if not room:
             self.log.error("No room for receiver", receiver=to_checksum_address(receiver_address))
             return
@@ -961,21 +961,26 @@ class MatrixTransport(Runnable):
         assert address and self._address_mgr.is_address_known(address), msg
         assert self._raiden_service is not None
 
-        # filter peer_candidates
+        # filter peer_candidates, can be transport servers in the worst case.
         peer_candidates = [
             self._get_user(user) for user in self._client.search_user_directory(address_hex)
         ]
         peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
 
-        if not peers and not allow_missing_peers:
+        if not peers:
             self.log.error("No valid peer found", peer_address=to_checksum_address(address))
             return None
 
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
+
+        # This function is used to get a room which the raiden_service wants to send a message to.
+        # There might be multiple rooms for a given address and/or the corresponding user_ids, some
+        # where only one of them is currently online which is why we _try_ to return a room
+        # where a user for a given address is currently online and a member
         online_user_ids = self._address_mgr.get_online_user_ids_for_address(address)
-        while room_ids:
-            room = self._client.rooms[room_ids.pop()]
+        for room_id in room_ids:
+            room = self._client.rooms[room_id]
             member_ids = {member.user_id for member in room.get_joined_members()}
 
             if member_ids & online_user_ids:
@@ -987,20 +992,21 @@ class MatrixTransport(Runnable):
                 )
                 return room
 
-            # Handle the case where an empty room was found only after all other rooms we're tried.
-            # Re-invite the peers in case we got whitelisted in the meantime and return it.
-            elif not room_ids:
-                for peer in set(peers) - member_ids:
-                    self._invite_user_to_room_with_retries(peer, room)
+        # Handle the case no room with online_users was found after all rooms we're tried.
+        # Re-invite the known user_ids.
+        if room_ids:
+            room = self._client.rooms[room_ids[0]]
+            for peer in set(peers):
+                self._invite_user_to_room_with_retries(peer, room)
 
-                self.log.warning(
-                    "No online user listening to current room",
-                    room=room,
-                    users_currently_online=online_user_ids,
-                    room_members=member_ids,
-                    peer_address=to_checksum_address(address),
-                )
-                return room
+            self.log.warning(
+                "No online user listening to current room",
+                room=room,
+                users_currently_online=online_user_ids,
+                room_members="Unknown",
+                peer_address=to_checksum_address(address),
+            )
+            return room
 
         # no room with expected name => create one and invite peer
 
@@ -1017,6 +1023,9 @@ class MatrixTransport(Runnable):
             room = self._create_private_room(invitees=peers)
         else:
             room = self._get_public_room(invitees=peers)
+
+        if not room.listeners:
+            room.add_listener(self._handle_message, "m.room.message")
 
         for peer in peers:
             self._invite_user_to_room_with_retries(peer, room)
@@ -1042,9 +1051,6 @@ class MatrixTransport(Runnable):
         self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
         self._set_room_id_for_address(address, room.room_id)
 
-        if not room.listeners:
-            room.add_listener(self._handle_message, "m.room.message")
-
         self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
         return room
 
@@ -1066,10 +1072,10 @@ class MatrixTransport(Runnable):
     def _get_public_room(self, invitees: List[User]) -> Room:
         """ Obtain a public, canonically named (if possible) room and invite peers """
         # retrieve address from invitees implicitly, is constant for all invitees
-        assert self._raiden_service is not None  # Extra assertion for mypy
+        assert self._raiden_service is not None, "Raiden_Service not set, cannot creat public room"
         address = validate_userid_signature(invitees[0])
         address_pair = sorted(
-            [to_normalized_address(address) for address in [address, self._raiden_service.address]]
+            [to_normalized_address(address), to_normalized_address(self._raiden_service.address)]
         )
         room_name = make_room_alias(self.chain_id, *address_pair)
         room_name_full = f"#{room_name}:{self._server_name}"
@@ -1386,7 +1392,6 @@ class MatrixTransport(Runnable):
 
         retry_interval = ROOM_JOIN_RETRY_INTERVAL
         join_retries = JOIN_RETRIES
-        last_ex: Optional[Exception] = None
         is_member = False
 
         # user is not online, suppress retries.
@@ -1403,13 +1408,23 @@ class MatrixTransport(Runnable):
             join_retries = 1
 
         for _ in range(join_retries):
-            is_member, last_ex = room.is_member(user)
+            try:
+                is_member = room.is_member(user)
+            except MatrixRequestError:
+                self.log.warning(
+                    "Exception getting room membership, maybe a server is not healthy",
+                    room=room,
+                    user_id=user.user_id,
+                    peer_address=to_checksum_address(address),
+                    exc_info=True,
+                )
+
             if not is_member:
                 try:
                     room.invite_user(user.user_id)
                 except (json.JSONDecodeError, MatrixRequestError):
                     self.log.warning(
-                        "Exception inviting user, maybe their server is not healthy",
+                        "Exception inviting user, maybe a server is not healthy",
                         room=room,
                         user_id=user.user_id,
                         peer_address=to_checksum_address(address),
@@ -1427,14 +1442,11 @@ class MatrixTransport(Runnable):
             else:
                 break
 
-        if not is_member or last_ex:
-            if last_ex:
-                raise last_ex  # re-raise if couldn't succeed in retries
-            else:
-                # Inform the client, that currently no one listens:
-                self.log.warning(
-                    "Peer has not joined from invite yet, should join eventually",
-                    room=room,
-                    user_id=user.user_id,
-                    peer_address=to_checksum_address(address),
-                )
+        if not is_member:
+            # Inform the client, that currently no one listens:
+            self.log.warning(
+                "Peer has not joined from invite yet, should join eventually",
+                room=room,
+                user_id=user.user_id,
+                peer_address=to_checksum_address(address),
+            )
