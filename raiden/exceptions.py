@@ -273,6 +273,10 @@ class TransactionAlreadyPending(RaidenUnrecoverableError):
     """Raised when a transaction is already pending"""
 
 
+class EthereumNonceTooLow(RaidenUnrecoverableError):
+    """Raised when a transaction is rejected because the nonce has been used already."""
+
+
 class ChannelOutdatedError(RaidenError):
     """ Raised when an action is invoked on a channel whose
     identifier has been replaced with a new channel identifier

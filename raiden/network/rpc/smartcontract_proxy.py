@@ -10,6 +10,7 @@ from raiden import constants
 from raiden.blockchain.filters import decode_event
 from raiden.constants import EthClient
 from raiden.exceptions import (
+    EthereumNonceTooLow,
     InsufficientEth,
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
@@ -129,6 +130,10 @@ class ContractProxy:
                         " already pending. Could not find the transaction in the "
                         "local transaction pool. Bailing ..."
                     )
+
+                raise EthereumNonceTooLow(
+                    "Parity rejected the transaction because the nonce has been mined already."
+                )
 
             raise RaidenUnrecoverableError(
                 f"Unexpected error in underlying Ethereum node: {str(e)}"
