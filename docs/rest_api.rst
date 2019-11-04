@@ -16,6 +16,56 @@ JSON Object Encoding
 
 The objects that are sent to and received from the API are JSON-encoded. Following are the common objects used in the API.
 
+
+
+Fee Schedule Object
+===================
+::
+
+   {
+       "cap_fees": true,
+       "flat": 50,
+       "proportional": 1000,
+       "imbalance_penalty": [ [0,60], [1000,21], [2000,6] ... , [10000,35], [12000,75]],
+   }
+
+
+A fee schedule object represents the current established fees that the node wants to collect for mediated transfers. The following parameters can be set:
+
+- ``cap_fees`` should be a ``boolean`` indicating whether the fees paid to mediators should be capped
+- ``flat`` should be an ``integer`` indicating the fee cost (in wei) for every mediated transfer, regardless of transfer amount
+- ``proportional`` should be an ``integer`` indicating the fee cost for the mediated transfer, in parts-per-million of the transfer amount. E.g, a proportional value of 1000 means that the mediator will deduct 0.1% of the transfer value as part of its fees.
+- ``imbalance penalty`` is a list of integer pairs indicating the `imbalance fee curve <glossary.html#term-imbalance-fee>`_
+
+
+Token Network Object
+====================
+
+::
+
+   {
+       "address": "0xDa1fBc048f503635950058953f5c60FC1F564ee6",
+       "fee_schedule": {
+           "cap_fees": true,
+           "flat": 50,
+           "imbalance_penalty": null,
+           "proportional": 1280
+        },
+        "token_address": "0x62083c80353Df771426D209eF578619EE68D5C7A"
+   }
+
+
+
+- ``address`` should be a ``string`` containing the EIP55-encoded address of the
+  token network.
+
+- ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
+  token registered in the token network.
+
+- ``fee_schedule``: represents the `Fee Schedule Object` used for the configuration for all channels in this token network.
+
+
+
 Channel Object
 ===============
 ::
@@ -29,7 +79,13 @@ Channel Object
        "total_deposit": 35000000,
        "state": "opened",
        "settle_timeout": 500,
-       "reveal_timeout": 50
+       "reveal_timeout": 50,
+       "fee_schedule": {
+           "cap_fees": true,
+           "flat": 50,
+           "proportional": 1000,
+           "imbalance_penalty": [ [0,60], [1000,21], [2000,6] ... , [10000,35], [12000,75]],
+       }
     }
 
 
@@ -53,14 +109,20 @@ A channel object consists of a
 - ``total_deposit`` should be an integer of the amount of the ``token_address`` token we have deposited into the contract for this channel.
 
 - ``state`` should be the current state of the channel represented by a string.
-  Possible value are:
-  - ``'opened'``: The channel is open and tokens are tradeable
-  - ``'closed'``: The channel has been closed by a participant
-  - ``'settled'``: The channel has been closed by a participant and also settled.
 
-- ``'settle_timeout'``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
+  Possible values are:
 
-- ``'reveal_timeout'``: The maximum number of blocks allowed between the setting of a hashlock and the revealing of the related secret.
+  * ``'opened'``: The channel is open and tokens are tradeable
+  * ``'closed'``: The channel has been closed by a participant
+  * ``'settled'``: The channel has been closed by a participant and also settled.
+
+- ``settle_timeout``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
+
+- ``reveal_timeout``: The maximum number of blocks allowed between the setting of a hashlock and the revealing of the related secret.
+
+- ``fee_schedule``: represents the `Fee Schedule Object`_ used for mediation transfers on the channel.
+
+
 
 Event Object
 ==============
@@ -196,8 +258,14 @@ Querying Information About Channels and Tokens
               "total_withdraw": 5000000,
               "state": "opened",
               "settle_timeout": 500,
-              "reveal_timeout": 50
-          }
+              "reveal_timeout": 50,
+              "fee_schedule": {
+                  "cap_fees": true,
+                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
+                  "proportional": 1280,
+                  "flat": 50
+                  }
+              }
       ]
 
    :statuscode 200: Successful query
@@ -232,7 +300,14 @@ Querying Information About Channels and Tokens
               "total_withdraw": 5000000,
               "state": "opened",
               "settle_timeout": 500,
-              "reveal_timeout": 50
+              "reveal_timeout": 50,
+              "fee_schedule": {
+                  "cap_fees": true,
+                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
+                  "proportional": 1280,
+                  "flat": 50
+                  }
+              }
           }
       ]
 
@@ -268,7 +343,14 @@ Querying Information About Channels and Tokens
           "total_withdraw": 5000000,
           "state": "opened",
           "settle_timeout": 500,
-          "reveal_timeout": 50
+          "reveal_timeout": 50,
+          "fee_schedule": {
+                  "cap_fees": true,
+                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
+                  "proportional": 1280,
+                  "flat": 50
+                  }
+              }
       }
 
    :statuscode 200: Successful query
@@ -493,7 +575,11 @@ Channel Management
 
 .. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
 
-   This request is used to close a channel or to increase the deposit in it.
+   This request is used to do one of the following:
+   - close a channel
+   - to increase the deposit in it
+   - to make an withdrawal
+   - to set the fee schedule for the channel
 
    **Example Request (close channel)**:
 
@@ -543,10 +629,29 @@ Channel Management
           "reveal_timeout": 50
       }
 
+   **Example Request (set fee schedule)**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "fee_schedule": {
+             "cap_fees": true,
+             "flat": 50,
+             "proportional": 1280
+          }
+      }
+
+
+
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
    :reqjson int total_deposit: The increased total deposit
    :reqjson int total_withdraw: The increased total withdraw
    :reqjson int reveal_timeout: The new reveal timeout value
+   :reqjson object fee_schedule: The desired `Fee Schedule Object`_ (without imbalance_fee attribute)
 
 .. note::
       For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
@@ -574,14 +679,14 @@ Channel Management
    :statuscode 200: Success
    :statuscode 400:
     - The provided JSON is in some way malformed, or
-    - there is nothing to do since none of ``state``, ``total_deposit`` or ``total_withdraw`` have been given, or
+    - ``state``, ``total_deposit``, ``total_withdraw``, ``fee_schedule`` have been attempted to update in the same request or
+    - there is nothing to do since none of ``state``, ``total_deposit``, ``total_withdraw``, ``fee_schedule`` have been given, or
     - the value of ``state`` is not a valid channel state.
    :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
    :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409:
     - Provided channel does not exist or
-    - ``state``, ``total_deposit`` and ``total_withdraw`` have been attempted to update in the same request or
     - attempt to deposit token amount lower than on-chain balance of the channel
     - attempt to deposit more tokens than the testing limit
    :statuscode 500: Internal Raiden node error

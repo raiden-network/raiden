@@ -63,6 +63,9 @@ Raiden Glossary
    balance proof
        Balance proof is any kind of message used in order to cryptographically prove on the blockchain what the latest :term:`transferred amount` and :term:`locked amount` received from a counter party is.
 
+   Imbalance fee
+      TBD
+
    hashlock
        A hashlock is the hashed secret that accompanies a locked message: ``sha3(secret)``.
 
