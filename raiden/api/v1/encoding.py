@@ -16,7 +16,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
-from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX, NULL_ADDRESS_BYTES
+from raiden.constants import NULL_ADDRESS_BYTES, SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import ChannelState, NettingChannelState
