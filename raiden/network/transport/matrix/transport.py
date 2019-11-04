@@ -386,12 +386,6 @@ class MatrixTransport(Runnable):
             transport_uuid=str(self._uuid),
         )
 
-        self.log.debug("Start: handle greenlet", handle_greenlet=self._client._handle_thread)
-        if self._client._handle_thread:
-            # wait on _handle_thread for initial sync
-            # this is needed so the rooms are populated before the _inventory_rooms
-            self._client._handle_thread.get()
-
         self._join_broadcast_rooms()
         self._inventory_rooms()
 
@@ -639,6 +633,21 @@ class MatrixTransport(Runnable):
 
     def _inventory_rooms(self) -> None:
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
+
+        msg = (
+            "Fetching the inventory rooms require the node to be logged in with the Matrix server."
+        )
+        assert self._user_id, msg
+
+        # Sync with the server to fetch the inventory rooms and new invites. At
+        # this point the messages themselves should not be processed because
+        # the transport is not fully initialized (i.e. the callbacks to process
+        # the messages are not installed yet), so limit the sync to preventing
+        # fetching the messages.
+        prev_sync_limit = self._client.set_sync_limit(0)
+        self._client._sync()
+        self._client.set_sync_limit(prev_sync_limit)
+
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
             if room.canonical_alias:
