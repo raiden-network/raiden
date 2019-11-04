@@ -400,7 +400,7 @@ def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
     # A deterministic userid cannot be used since that would allow a DoS
     # attack, where an attacker registers the userid before the real user.  To
     # fix this a random number is added to the username.
-    username = f"{base_username}.{Random().randint(0, 0xffffffff):08x}"
+    username = f"{base_username}:{Random().randint(0, 0xffffffff):08x}"
     password = encode_hex(signer.sign(server_name.encode()))
 
     # Register will call sync internally, however, since this is a new account
@@ -415,7 +415,7 @@ def register(client: GMatrixClient, signer: Signer, base_username: str) -> User:
     user.set_display_name(signature_hex)
 
     log.debug(
-        "Matrix new user regsitered",
+        "Matrix new user registered",
         homeserver=server_name,
         server_url=server_url,
         username=username,
