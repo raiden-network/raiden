@@ -11,7 +11,7 @@ import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
 from raiden.exceptions import TransportError
 from raiden.network.transport.matrix.utils import (
-    login_or_register,
+    login,
     make_client,
     make_room_alias,
     my_place_or_yours,
@@ -22,7 +22,7 @@ from raiden.tests.utils.factories import make_signer
 from raiden.utils.signer import recover
 
 
-def test_login_or_register_default_user():
+def test_login_for_the_first_time_must_set_the_display_name():
     ownserver = "https://ownserver.com"
     api = Mock()
     api.base_url = ownserver
@@ -46,11 +46,11 @@ def test_login_or_register_default_user():
 
     signer = make_signer()
 
-    user = login_or_register(client=client, signer=signer)
+    user = login(client=client, signer=signer)
 
     # client.user_id will be set by login
     assert client.user_id.startswith(f"@{to_normalized_address(signer.address)}")
-    # login_or_register returns our own user object
+    # login returns our own user object
     assert isinstance(user, User)
     # get_user must have been called once to generate above user
     client.get_user.assert_called_once_with(client.user_id)
