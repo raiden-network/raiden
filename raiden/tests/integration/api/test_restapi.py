@@ -335,7 +335,7 @@ def test_api_channel_status_channel_nonexistant(api_server_test_instance, token_
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses, reveal_timeout):
-    # let's create a new channel
+
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
     token_address_hex = to_checksum_address(token_address)
@@ -346,7 +346,15 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
     }
-
+    # First let's try to create channel with the null address and see error is handled
+    channel_data_obj["partner_address"] = "0x0000000000000000000000000000000000000000"
+    request = grequests.put(
+        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.BAD_REQUEST)
+    # now let's really create a new channel
+    channel_data_obj["partner_address"] = first_partner_address
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
