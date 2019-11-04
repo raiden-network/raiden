@@ -128,8 +128,8 @@ def test_token_network_proxy(
         is None
     )
 
-    msg = "Hex encoded addresses are not supported, an exception must be raised"
-    with pytest.raises(ValueError):
+    msg = "Hex encoded addresses are not supported, an assertion must be raised"
+    with pytest.raises(AssertionError):
         c1_token_network_proxy.get_channel_identifier(
             participant1=to_checksum_address(c1_client.address),
             participant2=to_checksum_address(c2_client.address),
