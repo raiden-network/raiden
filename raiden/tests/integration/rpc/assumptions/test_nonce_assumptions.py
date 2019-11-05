@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.exceptions import EthereumNonceTooLow
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
@@ -13,14 +14,14 @@ def test_transact_is_rejected_if_the_nonce_is_too_low(deploy_client: JSONRPCClie
     check_block = deploy_client.get_checking_block()
     txhash = contract_proxy.transact("ret", contract_proxy.estimate_gas(check_block, "ret"))
 
-    # Wait for the transaction to be mined (cuncurrent transactions are tested
+    # Wait for the transaction to be mined (concurrent transactions are tested
     # by test_local_transaction_with_zero_gasprice_is_mined)
     deploy_client.poll(txhash)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
     # instances share the same underlying private key.
-    with pytest.raises(ValueError):
+    with pytest.raises(EthereumNonceTooLow):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
         ).transact("ret", contract_proxy.estimate_gas(check_block, "ret"))
