@@ -343,8 +343,9 @@ class TransactionGuard:
         self._nonce_lock.acquire()
         return self
 
-    def __exit__(self, *args: Any, **kwargs: Any) -> None:
-        self._available_nonce = Nonce(self._available_nonce + 1)
+    def __exit__(self, exc_val: type, *args: Any, **kwargs: Any) -> None:
+        if exc_val is None:
+            self._available_nonce = Nonce(self._available_nonce + 1)
         self._nonce_lock.release()
 
     def send_transaction(
