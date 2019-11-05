@@ -25,6 +25,7 @@ from raiden.exceptions import (
     ContractCodeMismatch,
     EthNodeInterfaceError,
     InsufficientEth,
+    RaidenUnrecoverableError,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -333,6 +334,73 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     Eth.call = patched_web3_eth_call
 
 
+class TransactionSlot:
+    def __init__(self, client: "JSONRPCClient", nonce: Nonce):
+        self._client = client
+        self.nonce = nonce
+        self._sent = False
+
+    def send_transaction(
+        self, to: Address, startgas: int, value: int = 0, data: bytes = b""
+    ) -> TransactionHash:
+        """ Helper to send signed messages.
+
+        This method will use the `privkey` provided in the constructor to
+        locally sign the transaction. This requires an extended server
+        implementation that accepts the variables v, r, and s.
+        """
+        if to == to_canonical_address(NULL_ADDRESS_HEX):
+            warnings.warn("For contract creation the empty string must be used.")
+
+        gas_price = self._client.gas_price()
+
+        transaction = {
+            "data": data,
+            "gas": startgas,
+            "nonce": self.nonce,
+            "value": value,
+            "gasPrice": gas_price,
+        }
+        node_gas_price = self._client.web3.eth.gasPrice
+        log.debug(
+            "Calculated gas price for transaction",
+            node=to_checksum_address(self._client.address),
+            calculated_gas_price=gas_price,
+            node_gas_price=node_gas_price,
+        )
+
+        # add the to address if not deploying a contract
+        if to != b"":
+            transaction["to"] = to_checksum_address(to)
+
+        signed_txn = self._client.web3.eth.account.signTransaction(
+            transaction, self._client.privkey
+        )
+
+        log_details = {
+            "node": to_checksum_address(self._client.address),
+            "nonce": transaction["nonce"],
+            "gasLimit": transaction["gas"],
+            "gasPrice": transaction["gasPrice"],
+        }
+        log.debug("send_raw_transaction called", **log_details)
+
+        tx_hash = self._client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+        log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
+
+        self._sent = True
+
+        return TransactionHash(tx_hash)
+
+    def __del__(self) -> None:
+        if not self._sent:
+            raise RaidenUnrecoverableError(
+                "Transaction slot was not used! This will result in nonce "
+                "synchronization problems."
+            )
+
+
 class JSONRPCClient:
     """ Ethereum JSON RPC client.
 
@@ -433,6 +501,12 @@ class JSONRPCClient:
 
         return self.blockhash_from_blocknumber(confirmed_block_number)
 
+    def get_next_transaction(self) -> TransactionSlot:
+        with self._nonce_lock:
+            slot = TransactionSlot(self, self._available_nonce)
+            self._available_nonce += 1
+            return slot
+
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
         block = self.get_block(block_number)
@@ -530,7 +604,7 @@ class JSONRPCClient:
 
         contract_object = self.web3.eth.contract(abi=contract["abi"], bytecode=contract["bin"])
         contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
-        transaction_hash = self.send_transaction(
+        transaction_hash = self.get_next_transaction().send_transaction(
             to=Address(b""),
             data=contract_transaction["data"],
             startgas=self._gas_estimate_correction(contract_transaction["gas"]),
@@ -552,57 +626,6 @@ class JSONRPCClient:
             self.new_contract_proxy(abi=contract["abi"], contract_address=contract_address),
             receipt,
         )
-
-    def send_transaction(
-        self, to: Address, startgas: int, value: int = 0, data: bytes = b""
-    ) -> TransactionHash:
-        """ Helper to send signed messages.
-
-        This method will use the `privkey` provided in the constructor to
-        locally sign the transaction. This requires an extended server
-        implementation that accepts the variables v, r, and s.
-        """
-        if to == to_canonical_address(NULL_ADDRESS_HEX):
-            warnings.warn("For contract creation the empty string must be used.")
-
-        with self._nonce_lock:
-            nonce = self._available_nonce
-            gas_price = self.gas_price()
-
-            transaction = {
-                "data": data,
-                "gas": startgas,
-                "nonce": nonce,
-                "value": value,
-                "gasPrice": gas_price,
-            }
-            node_gas_price = self.web3.eth.gasPrice
-            log.debug(
-                "Calculated gas price for transaction",
-                node=to_checksum_address(self.address),
-                calculated_gas_price=gas_price,
-                node_gas_price=node_gas_price,
-            )
-
-            # add the to address if not deploying a contract
-            if to != b"":
-                transaction["to"] = to_checksum_address(to)
-
-            signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
-
-            log_details = {
-                "node": to_checksum_address(self.address),
-                "nonce": transaction["nonce"],
-                "gasLimit": transaction["gas"],
-                "gasPrice": transaction["gasPrice"],
-            }
-            log.debug("send_raw_transaction called", **log_details)
-
-            tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-            self._available_nonce += 1
-
-            log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
-            return TransactionHash(tx_hash)
 
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
