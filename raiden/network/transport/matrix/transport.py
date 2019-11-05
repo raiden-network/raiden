@@ -335,7 +335,6 @@ class MatrixTransport(Runnable):
         self._client.add_listener(self._handle_to_device_message, event_type="to_device")
 
         self._health_lock = Semaphore()
-        self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
 
         self._message_handler: Optional[MessageHandler] = None
@@ -930,8 +929,8 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
-        with self._getroom_lock:
-            room = self._get_room_for_address(receiver_address)
+        room = self._get_room_for_address(receiver_address)
+
         if not room:
             self.log.error("No room for receiver", receiver=to_checksum_address(receiver_address))
             return
