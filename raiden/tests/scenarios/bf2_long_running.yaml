@@ -1,0 +1,335 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: goerli
+  services:
+    pfs:
+      url: https://pfs-goerli.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 1_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 5
+  raiden_version: local
+  enable-monitoring: false
+  default_options:
+    gas-price: fast
+    environment-type: development
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+
+scenario:
+  serial:
+    name: "Long running scenario"
+    tasks:
+      - parallel:
+          name: "Create channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 0, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 0, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 0, expected_http_status: 201}
+      - serial:
+          name: "Allow time for nodes to learn about their channels"
+          tasks:
+            - wait: 30
+      - parallel:
+          name: "Verify if channels were opened correctly"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 0, balance: 0,  state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 0,  state: "opened"}
+      - parallel:
+          name: "A B C D make a deposit of 100 to their channels"
+          tasks:
+            - deposit: {from: 0, to: 1, total_deposit: 100}
+            - deposit: {from: 1, to: 0, total_deposit: 100}
+            - deposit: {from: 1, to: 2, total_deposit: 100}
+            - deposit: {from: 2, to: 1, total_deposit: 100}
+            - deposit: {from: 2, to: 3, total_deposit: 101}
+            - deposit: {from: 3, to: 2, total_deposit: 101}
+      - parallel:
+          name: "Checking if the deposit was successful"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
+      - parallel:
+          name: "Deposit to a channel that does not exist"
+          tasks:
+            # Node tries to deposit to an unexisting channel
+            - deposit: {from: 4, to: 3, total_deposit: 20, expected_http_status: 409}
+            # Node tries to deposit less then the total deposit in two of his channels
+            - deposit: {from: 1, to: 0, total_deposit: 50, expected_http_status: 409}
+            - deposit: {from: 1, to: 2, total_deposit: 50, expected_http_status: 409}
+            # Opening a channel, but the channel already exists
+            - open_channel: {from: 1, to: 0, total_deposit: 100, expected_http_status: 409}
+      - serial:
+          name: "Give the nodes time to sync"
+          tasks:
+            - wait: 10
+      - parallel:
+          name: "Checking for the channel state to be unchanged"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
+      - serial:
+          name: "C tries different cases"
+          tasks:
+            - open_channel: {from: 2, to: 4, total_deposit: 0, expected_http_status: 201}
+            - wait: 10
+            - deposit: {from: 2, to: 4, total_deposit: 100}
+            - wait: 10
+            # Try to make a deposit smaller the the amount that was deposited
+            - deposit: {from: 2, to: 4, total_deposit: 30, expected_http_status: 409}
+            # Make a deposit bigger then the deposited amount
+            - deposit: {from: 2, to: 4, total_deposit: 150}
+            - wait: 10
+      - parallel:
+          name: "Verify the channels"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
+            # New channel
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 150, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+      - serial:
+          name: "Continue building the network"
+          tasks:
+            # A opens a channel with E
+            - open_channel: {from: 0, to: 4, total_deposit: 10, expected_http_status: 201}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 10, state: "opened"}
+            # E deposits 25 tokens onto the A - E channel
+            - deposit: {from: 4, to: 0, total_deposit: 25}
+            - wait: 20
+            # A performs a payment to E of 50 tokens (path A<->B<->C<->E)
+            - transfer: {from: 0, to: 4, amount: 50, expected_http_status: 200}
+            - wait: 5
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 50, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 150, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 50, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 150, state: "opened"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
+            # C sends all of its tokens to B (one transfer)
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 200}
+            - wait: 5
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
+            # C tries to send another > 25 tokens payment to B (fail no route with enough capacity)
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 409}
+            - wait: 5
+      - serial:
+          name: "Multiple multi hop payments"
+          repeat: 10
+          tasks:
+            # C sends 10 payments of 1 token to B by using the C <-> E <-> A <-> B route
+            - transfer: {from: 2, to: 1, amount: 1}
+            - wait: 5
+      - serial:
+          name: "Allow nodes to process the payments"
+          tasks:
+            - wait: 3
+      - parallel:
+          name: "Sanity check"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 90, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 60, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 25, balance: 15, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 20, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
+      - serial:
+          name:
+          tasks:
+            # stop node B
+            - stop_node: 1
+            # give it time to shutdown
+            - wait: 10
+      - serial:
+          name: "Multi hop payment 2"
+          tasks:
+            # A sends 10 tokens to C (using the A <-> E <-> C route)
+            - transfer: {from: 0, to: 2, amount: 10}
+            - wait: 5
+      - parallel:
+          name: "Assert transfer was executed correctly"
+          tasks:
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 25, balance: 25, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
+      - parallel:
+          name: "Check edge cases again"
+          tasks:
+            # try to open a channel with an offline node, but the channel already exists
+            - open_channel: {from: 0, to: 1, total_deposit: 200, expected_http_status: 409}
+            # Try to make a payment to an offline node
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
+      - serial:
+          name: "Restarting node B"
+          tasks:
+            - start_node: 1
+      - parallel:
+          name: "Checking for the D <-> C channel state"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
+              #      - serial:
+              # name: "99 payments from D to C in a direct channel"
+              # repeat: 99
+              # tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
+      - transfer: {from: 3, to: 2, amount: 99}
+      - wait: 5
+      - serial:
+          name: "Checking if payments were made successful"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 200, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 2, state: "opened"}
+            # Also A makes a deposit to A <-> B channel
+            - deposit: {from: 0, to: 1, total_deposit: 260}
+            - wait: 10
+      - parallel:
+          name: "Also check if A -> B -> C -> D path has enough capacity for 200 payments of 1 token"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 200, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 2, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 260, balance: 200, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
+      - serial:
+          name: "Closing down channel E <-> C"
+          tasks:
+            - close_channel: {from: 4, to: 2}
+            - wait: 20
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "closed"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "closed"}
+              # - serial:
+        # name: "199 payments from A to D in a channel"
+        # repeat: 199
+        # tasks:
+      - transfer: {from: 0, to: 3, amount: 200}
+      - wait: 5
+      - serial:
+          name: "Let the node get into a stable state"
+          tasks:
+            - wait: 60
+      - parallel:
+          name: "Assert channels after transfers"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 101, balance: 1, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 201, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 260, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 360, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 1, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 199, state: "opened"}
+      - serial:
+          name: "Starting closing edge cases"
+          tasks:
+            # C tries to make a deposit to the channel that is being closed (fail 409)
+            - deposit: {from: 2, to: 4, total_deposit: 200, expected_http_status: 409}
+            # C sends 10 tokens to B
+            - transfer: {from: 2, to: 1, amount: 10}
+            - wait: 5
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 11, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 189, state: "opened"}
+            # B sends 10 tokens to A
+            - transfer: {from: 1, to: 0, amount: 10}
+            - wait: 5
+            - assert: {from: 0, to: 1, total_deposit: 260, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 299, state: "opened"}
+            # E sends 10 tokens to C (A -> B-> C)
+            - transfer: {from: 4, to: 2, amount: 10}
+            - wait: 5
+      - parallel:
+          name: "Assert for the channel states after mediated transfers were completed"
+          tasks:
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 200, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 260, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 309, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 25, balance: 15, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 20, state: "opened"}
+      - serial:
+          name: "E Closes his channel with A"
+          tasks:
+            - close_channel: {from: 4, to: 0}
+            - wait: 5
+      - parallel:
+          name: "Check if channel was closed"
+          tasks:
+            - assert: {from: 4, to: 0, total_deposit: 25, balance: 15, state: "closed"}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 20, state: "closed"}
+      - parallel:
+          name: "All nodes try to make a payment to E"
+          tasks:
+            - transfer: {from: 0, to: 4, amount: 1, expected_http_status: 409}
+            - transfer: {from: 1, to: 4, amount: 1, expected_http_status: 409}
+            - transfer: {from: 2, to: 4, amount: 1, expected_http_status: 409}
+            - transfer: {from: 3, to: 4, amount: 1, expected_http_status: 409}
+      - serial:
+          name: "A and B leave token netwwork"
+          tasks:
+            - leave_network: {from: 0}
+            - leave_network: {from: 1}
+            - wait: 20
+      - serial:
+          name: "Check if the only channel open is C <-> D"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100, balance: 200, state: "opened"}
+      - serial:
+          name: "C closes the channel with D"
+          tasks:
+            - close_channel: {from: 2, to: 3}
+            - wait: 10
+      - parallel:
+          name: "Check final state of the channels"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 100, balance: 0, state: "closed"}
+            - assert: {from: 3, to: 2, total_deposit: 100, balance: 200, state: "closed"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 0, state: "closed"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 200, state: "closed"}
+            - assert: {from: 0, to: 1, total_deposit: 260, balance: 0, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 360, state: "closed"}
+            - assert: {from: 4, to: 0, total_deposit: 25, balance: 15, state: "closed"}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 20, state: "closed"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "closed"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "closed"}
