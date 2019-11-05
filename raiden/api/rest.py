@@ -9,15 +9,17 @@ import gevent
 import gevent.pool
 import structlog
 from eth_utils import encode_hex, to_checksum_address
-from flask import Flask, Response, make_response, request, send_from_directory, url_for
+from flask import Flask, Request, Response, make_response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
 from flask_restful import Api, abort
 from gevent.pywsgi import WSGIServer
 from hexbytes import HexBytes
+from marshmallow import Schema
 from raiden_webui import RAIDEN_WEBUI_PATH
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
+from werkzeug.routing import BaseConverter
 
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.api.objects import AddressList, PartnersPerTokenList
@@ -119,6 +121,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
+    cast,
 )
 
 log = structlog.get_logger(__name__)
@@ -213,13 +216,15 @@ def api_error(errors: Any, status_code: HTTPStatus) -> Response:
 
 
 @parser.error_handler
-def handle_request_parsing_error(err, _req, _schema, _err_status_code, _err_headers):
+def handle_request_parsing_error(
+    err: Any, _req: Request, _schema: Schema, _err_status_code: int, _err_headers: Any
+) -> None:
     """ This handles request parsing errors generated for example by schema
     field validation failing."""
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
 
 
-def endpoint_not_found(e) -> Response:
+def endpoint_not_found(e: Any) -> Response:
     errors = ["invalid endpoint"]
     if isinstance(e, InvalidEndpoint):
         errors.append(e.description)
@@ -285,7 +290,7 @@ def convert_to_serializable(event_list: List) -> List[Dict]:
     return returned_events
 
 
-def restapi_setup_urls(flask_api_context, rest_api, urls):
+def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) -> None:
     for url_tuple in urls:
         if len(url_tuple) == 2:
             route, resource_cls = url_tuple
@@ -302,7 +307,9 @@ def restapi_setup_urls(flask_api_context, rest_api, urls):
         )
 
 
-def restapi_setup_type_converters(flask_app, names_to_converters):
+def restapi_setup_type_converters(
+    flask_app: Flask, names_to_converters: Dict[str, BaseConverter]
+) -> None:
     for key, value in names_to_converters.items():
         flask_app.url_map.converters[key] = value
 
@@ -352,7 +359,9 @@ class APIServer(Runnable):  # pragma: no unittest
         blueprint = create_blueprint()
         flask_api_context = Api(blueprint, prefix=self._api_prefix)
 
-        restapi_setup_type_converters(flask_app, {"hexaddress": HexAddressConverter})
+        restapi_setup_type_converters(
+            flask_app, {"hexaddress": cast(BaseConverter, HexAddressConverter)}
+        )
 
         restapi_setup_urls(flask_api_context, rest_api, URLS_V1)
 
@@ -392,7 +401,9 @@ class APIServer(Runnable):  # pragma: no unittest
         if not self.rest_api.raiden_api.raiden:
             raise RuntimeError("The RaidenService must be started before the API can be used")
 
-    def _serve_webui(self, file_name="index.html"):  # pylint: disable=redefined-builtin
+    def _serve_webui(
+        self, file_name: str = "index.html"
+    ) -> Response:  # pylint: disable=redefined-builtin
         try:
             if not file_name:
                 raise NotFound
@@ -536,7 +547,7 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
 
     @classmethod
-    def get_raiden_version(self):
+    def get_raiden_version(self) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
 
     def register_token(
