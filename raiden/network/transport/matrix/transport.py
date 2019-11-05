@@ -942,9 +942,7 @@ class MatrixTransport(Runnable):
         )
         room.send_text(data)
 
-    def _get_room_for_address(
-        self, address: Address, allow_missing_peers: bool = False
-    ) -> Optional[Room]:
+    def _get_room_for_address(self, address: Address) -> Optional[Room]:
         if self._stop_event.ready():
             return None
         address_hex = to_normalized_address(address)
@@ -978,7 +976,7 @@ class MatrixTransport(Runnable):
 
         # filter peer_candidates
         peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
-        if not peers and not allow_missing_peers:
+        if not peers:
             self.log.error("No valid peer found", peer_address=to_checksum_address(address))
             return None
 
