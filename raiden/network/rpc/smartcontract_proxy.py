@@ -55,6 +55,8 @@ def inspect_client_error(
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
             elif error["message"].startswith("known transaction:"):
                 return ClientErrorInspectResult.TRANSACTION_PENDING
+            elif "nonce too low" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
 
     elif eth_node is EthClient.PARITY:
         if error["code"] == -32010:
@@ -109,30 +111,19 @@ class ContractProxy:
                     "equal to the previous transaction's gas amount"
                 )
             elif action == ClientErrorInspectResult.TRANSACTION_PENDING:
+                # XXX: Add logic to check it is the same transaction (instead
+                # of relying on the error message), and instead of raising an
+                # unrecoverable error proceed as normal with the polling.
+                #
+                # This was previously done, but removed by #4909, and for it to
+                # be finished #2088 has to be implemented.
                 raise TransactionAlreadyPending(
                     "The transaction has already been submitted. Please "
                     "wait until is has been mined or increase the gas price."
                 )
             elif action == ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED:
-                # This is like TRANSACTION_PENDING is for geth but happens in parity
-                # Unlike with geth this can also happen without multiple transactions
-                # being sent via RPC -- due to probably some parity bug:
-                # https://github.com/raiden-network/raiden/issues/3211
-                # We will try to not crash by looking into the local parity
-                # transaction pool to retrieve the transaction hash
-                hex_address = to_checksum_address(self.rpc_client.address)
-                maybe_tx_hash = self.rpc_client.parity_get_pending_transaction_hash_by_nonce(
-                    address=hex_address, nonce=slot.nonce
-                )
-                if maybe_tx_hash:
-                    raise TransactionAlreadyPending(
-                        "Transaction was submitted via parity but parity saw it as"
-                        " already pending. Could not find the transaction in the "
-                        "local transaction pool. Bailing ..."
-                    )
-
                 raise EthereumNonceTooLow(
-                    "Parity rejected the transaction because the nonce has been mined already."
+                    "Transaction reject because the nonce has been already mined."
                 )
 
             raise RaidenUnrecoverableError(
