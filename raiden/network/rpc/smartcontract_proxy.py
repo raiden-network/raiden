@@ -85,53 +85,54 @@ class ContractProxy:
             abi=self.contract.abi, function_name=function_name, args=args, kwargs=kwargs
         )
 
-        try:
-            tx_hash = self.rpc_client.send_transaction(
-                to=self.contract.address,
-                startgas=startgas,
-                value=kwargs.pop("value", 0),
-                data=decode_hex(data),
-            )
-        except ValueError as e:
-            action = inspect_client_error(e, self.rpc_client.eth_node)
-            if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
-                raise InsufficientEth(
-                    "Transaction failed due to insufficient ETH balance. "
-                    "Please top up your ETH account."
+        with self.rpc_client.transaction_guard as guard:
+            try:
+                tx_hash = guard.send_transaction(
+                    to=self.contract.address,
+                    startgas=startgas,
+                    value=kwargs.pop("value", 0),
+                    data=decode_hex(data),
                 )
-            elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
-                raise ReplacementTransactionUnderpriced(
-                    "Transaction was rejected. This is potentially "
-                    "caused by the reuse of the previous transaction "
-                    "nonce as well as paying an amount of gas less than or "
-                    "equal to the previous transaction's gas amount"
-                )
-            elif action == ClientErrorInspectResult.TRANSACTION_PENDING:
-                raise TransactionAlreadyPending(
-                    "The transaction has already been submitted. Please "
-                    "wait until is has been mined or increase the gas price."
-                )
-            elif action == ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED:
-                # This is like TRANSACTION_PENDING is for geth but happens in parity
-                # Unlike with geth this can also happen without multiple transactions
-                # being sent via RPC -- due to probably some parity bug:
-                # https://github.com/raiden-network/raiden/issues/3211
-                # We will try to not crash by looking into the local parity
-                # transaction pool to retrieve the transaction hash
-                hex_address = to_checksum_address(self.rpc_client.address)
-                maybe_tx_hash = self.rpc_client.parity_get_pending_transaction_hash_by_nonce(
-                    address=hex_address, nonce=self.rpc_client._available_nonce
-                )
-                if maybe_tx_hash:
-                    raise TransactionAlreadyPending(
-                        "Transaction was submitted via parity but parity saw it as"
-                        " already pending. Could not find the transaction in the "
-                        "local transaction pool. Bailing ..."
+            except ValueError as e:
+                action = inspect_client_error(e, self.rpc_client.eth_node)
+                if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
+                    raise InsufficientEth(
+                        "Transaction failed due to insufficient ETH balance. "
+                        "Please top up your ETH account."
                     )
+                elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
+                    raise ReplacementTransactionUnderpriced(
+                        "Transaction was rejected. This is potentially "
+                        "caused by the reuse of the previous transaction "
+                        "nonce as well as paying an amount of gas less than or "
+                        "equal to the previous transaction's gas amount"
+                    )
+                elif action == ClientErrorInspectResult.TRANSACTION_PENDING:
+                    raise TransactionAlreadyPending(
+                        "The transaction has already been submitted. Please "
+                        "wait until is has been mined or increase the gas price."
+                    )
+                elif action == ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED:
+                    # This is like TRANSACTION_PENDING is for geth but happens in parity
+                    # Unlike with geth this can also happen without multiple transactions
+                    # being sent via RPC -- due to probably some parity bug:
+                    # https://github.com/raiden-network/raiden/issues/3211
+                    # We will try to not crash by looking into the local parity
+                    # transaction pool to retrieve the transaction hash
+                    hex_address = to_checksum_address(self.rpc_client.address)
+                    maybe_tx_hash = self.rpc_client.parity_get_pending_transaction_hash_by_nonce(
+                        address=hex_address, nonce=guard.available_nonce
+                    )
+                    if maybe_tx_hash:
+                        raise TransactionAlreadyPending(
+                            "Transaction was submitted via parity but parity saw it as"
+                            " already pending. Could not find the transaction in the "
+                            "local transaction pool. Bailing ..."
+                        )
 
-            raise RaidenUnrecoverableError(
-                f"Unexpected error in underlying Ethereum node: {str(e)}"
-            )
+                raise RaidenUnrecoverableError(
+                    f"Unexpected error in underlying Ethereum node: {str(e)}"
+                )
 
         return tx_hash
 
