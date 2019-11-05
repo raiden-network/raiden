@@ -18,8 +18,8 @@ from web3.utils.contracts import prepare_transaction
 from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
-from raiden import constants
 from raiden.blockchain.filters import StatelessFilter
+from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS, EthClient
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
@@ -108,9 +108,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.manager.request_blocking(
-            "parity_nextNonce", ["0x0000000000000000000000000000000000000000"]
-        )
+        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS])
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the parity rpc interface "
@@ -384,11 +382,11 @@ class JSONRPCClient:
             # available nonce
             available_nonce = web3.eth.getTransactionCount(address_checksumed, "pending")
 
-        elif eth_node is constants.EthClient.PARITY:
+        elif eth_node is EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
             available_nonce = parity_discover_next_available_nonce(web3, address_checksumed)
 
-        elif eth_node is constants.EthClient.GETH:
+        elif eth_node is EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(web3, address_checksumed)
 
@@ -451,7 +449,7 @@ class JSONRPCClient:
         preconditions_block = self.web3.eth.getBlock(block_identifier)
         preconditions_block_number = int(preconditions_block["number"])
         difference = latest_block_number - preconditions_block_number
-        return difference < constants.NO_STATE_QUERY_AFTER_BLOCKS
+        return difference < NO_STATE_QUERY_AFTER_BLOCKS
 
     def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
@@ -465,7 +463,7 @@ class JSONRPCClient:
         Checks the local tx pool for a transaction from a particular address and for
         a given nonce. If it exists it returns the transaction hash.
         """
-        assert self.eth_node is constants.EthClient.PARITY
+        assert self.eth_node is EthClient.PARITY
         # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
         transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
         log.debug("RETURNED TRANSACTIONS", transactions=transactions)
@@ -564,7 +562,7 @@ class JSONRPCClient:
         locally sign the transaction. This requires an extended server
         implementation that accepts the variables v, r, and s.
         """
-        if to == to_canonical_address(constants.NULL_ADDRESS):
+        if to == to_canonical_address(NULL_ADDRESS):
             warnings.warn("For contract creation the empty string must be used.")
 
         with self._nonce_lock:
@@ -734,7 +732,7 @@ class JSONRPCClient:
         and use the latest block for checking.
         """
         checking_block = "pending"
-        if self.eth_node is constants.EthClient.PARITY:
+        if self.eth_node is EthClient.PARITY:
             checking_block = "latest"
         return checking_block
 

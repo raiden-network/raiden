@@ -16,7 +16,7 @@ from eth_utils import (
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
-from raiden.constants import GENESIS_BLOCK_NUMBER, SECRET_LENGTH, Environment
+from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
@@ -347,7 +347,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
         "reveal_timeout": reveal_timeout,
     }
     # First let's try to create channel with the null address and see error is handled
-    channel_data_obj["partner_address"] = "0x0000000000000000000000000000000000000000"
+    channel_data_obj["partner_address"] = NULL_ADDRESS
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
