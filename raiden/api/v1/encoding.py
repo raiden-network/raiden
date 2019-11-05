@@ -17,8 +17,8 @@ from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
 from raiden.constants import (
-    NULL_ADDRESS,
     NULL_ADDRESS_BYTES,
+    NULL_ADDRESS_HEX,
     SECRET_LENGTH,
     SECRETHASH_LENGTH,
     UINT256_MAX,
@@ -62,7 +62,7 @@ class AddressField(fields.Field):
         "invalid_checksum": "Not a valid EIP55 encoded address",
         "invalid_data": "Not a valid hex encoded address, contains invalid characters.",
         "invalid_size": "Not a valid hex encoded address, decoded address is not 20 bytes long.",
-        "null_address": f"The {NULL_ADDRESS} address is not accepted",
+        "null_address": f"The {NULL_ADDRESS_HEX} address is not accepted",
     }
 
     @staticmethod
