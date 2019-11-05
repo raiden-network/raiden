@@ -85,8 +85,9 @@ class ContractProxy:
             abi=self.contract.abi, function_name=function_name, args=args, kwargs=kwargs
         )
 
+        slot = self.rpc_client.get_next_transaction()
         try:
-            tx_hash = self.rpc_client.send_transaction(
+            tx_hash = slot.send_transaction(
                 to=self.contract.address,
                 startgas=startgas,
                 value=kwargs.pop("value", 0),
@@ -120,7 +121,7 @@ class ContractProxy:
                 # transaction pool to retrieve the transaction hash
                 hex_address = to_checksum_address(self.rpc_client.address)
                 maybe_tx_hash = self.rpc_client.parity_get_pending_transaction_hash_by_nonce(
-                    address=hex_address, nonce=self.rpc_client._available_nonce
+                    address=hex_address, nonce=slot.nonce
                 )
                 if maybe_tx_hash:
                     raise TransactionAlreadyPending(
