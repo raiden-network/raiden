@@ -14,7 +14,6 @@ from raiden.exceptions import (
     InsufficientEth,
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
-    TransactionAlreadyPending,
 )
 from raiden.utils.typing import TYPE_CHECKING, Address, BlockSpecification, TransactionHash
 
@@ -31,6 +30,18 @@ class ClientErrorInspectResult(Enum):
     TRANSACTION_PENDING = 4
     ALWAYS_FAIL = 5
     TRANSACTION_ALREADY_IMPORTED = 7
+    TRANSACTION_PENDING_OR_ALREADY_IMPORTED = 8
+
+
+# Geth has one error message for resending a transaction from the transaction
+# pool, and another for reusing a nonce of a mined transaction. Parity on the
+# other hand has just a single error message, so these errors have to be
+# grouped. (Tested with Geth 1.9.6 and Parity 2.5.9).
+THE_NONCE_WAS_REUSED = (
+    ClientErrorInspectResult.TRANSACTION_PENDING,
+    ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED,
+    ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED,
+)
 
 
 def inspect_client_error(
@@ -49,23 +60,37 @@ def inspect_client_error(
         if error["code"] == -32000:
             if "insufficient funds" in error["message"]:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
-            elif "always failing transaction" in error["message"]:
+
+            if "always failing transaction" in error["message"]:
                 return ClientErrorInspectResult.ALWAYS_FAIL
-            elif error["message"] == "replacement transaction underpriced":
+
+            if "replacement transaction underpriced" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
-            elif error["message"].startswith("known transaction:"):
+
+            if "known transaction:" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_PENDING
-            elif "nonce too low" in error["message"]:
+
+            if "nonce too low" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
 
     elif eth_node is EthClient.PARITY:
         if error["code"] == -32010:
             if "Insufficient funds" in error["message"]:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
-            elif "another transaction with same nonce in the queue" in error["message"]:
+
+            if "another transaction with same nonce in the queue" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
-            elif "Transaction with the same hash was already imported" in error["message"]:
-                return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
+
+            # This error code is known to be used for pending transactions, it
+            # may also be used for using the nonce of mined transactions.
+            if "Transaction nonce is too low. Try incrementing the nonce." in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED
+
+            # This error code is used for both resending pending transactions
+            # and reusing nonce of mined transactions.
+            if "Transaction with the same hash was already imported" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED
+
         elif error["code"] == -32015 and "Transaction execution error" in error["message"]:
             return ClientErrorInspectResult.ALWAYS_FAIL
 
@@ -110,18 +135,13 @@ class ContractProxy:
                     "nonce as well as paying an amount of gas less than or "
                     "equal to the previous transaction's gas amount"
                 )
-            elif action == ClientErrorInspectResult.TRANSACTION_PENDING:
+            elif action in THE_NONCE_WAS_REUSED:
                 # XXX: Add logic to check it is the same transaction (instead
                 # of relying on the error message), and instead of raising an
                 # unrecoverable error proceed as normal with the polling.
                 #
                 # This was previously done, but removed by #4909, and for it to
                 # be finished #2088 has to be implemented.
-                raise TransactionAlreadyPending(
-                    "The transaction has already been submitted. Please "
-                    "wait until is has been mined or increase the gas price."
-                )
-            elif action == ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED:
                 raise EthereumNonceTooLow(
                     "Transaction reject because the nonce has been already mined."
                 )
