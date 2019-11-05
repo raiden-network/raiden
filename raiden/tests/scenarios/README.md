@@ -27,6 +27,12 @@ It is also tested that a node can be stopped and started again and that it still
 Several nodes perform up to 100 payments.
 In the end it is tested that channels can be closed and that the monitoring service correctly kicks in if a node is offline during closing.
 
+#### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
+It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
+When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+At the same time 100 payments are done in parallel from node4 to node0.
+After all payments have finished it is asserted that all nodes received the correct amounts.
+
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
