@@ -612,6 +612,57 @@ class JSONRPCClient:
             receipt,
         )
 
+    def send_transaction(
+        self, to: Address, startgas: int, value: int = 0, data: bytes = b""
+    ) -> TransactionHash:
+        """ Helper to send signed messages.
+
+        This method will use the `privkey` provided in the constructor to
+        locally sign the transaction. This requires an extended server
+        implementation that accepts the variables v, r, and s.
+        """
+        if to == to_canonical_address(NULL_ADDRESS_HEX):
+            warnings.warn("For contract creation the empty string must be used.")
+
+        with self._nonce_lock:
+            nonce = self._available_nonce
+            gas_price = self.gas_price()
+
+            transaction = {
+                "data": data,
+                "gas": startgas,
+                "nonce": nonce,
+                "value": value,
+                "gasPrice": gas_price,
+            }
+            node_gas_price = self.web3.eth.gasPrice
+            log.debug(
+                "Calculated gas price for transaction",
+                node=to_checksum_address(self.address),
+                calculated_gas_price=gas_price,
+                node_gas_price=node_gas_price,
+            )
+
+            # add the to address if not deploying a contract
+            if to != b"":
+                transaction["to"] = to_checksum_address(to)
+
+            signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
+
+            log_details = {
+                "node": to_checksum_address(self.address),
+                "nonce": transaction["nonce"],
+                "gasLimit": transaction["gas"],
+                "gasPrice": transaction["gasPrice"],
+            }
+            log.debug("send_raw_transaction called", **log_details)
+
+            tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+            self._available_nonce = Nonce(self._available_nonce + 1)
+
+            log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
+            return TransactionHash(tx_hash)
+
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
