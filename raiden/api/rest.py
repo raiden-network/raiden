@@ -1271,7 +1271,7 @@ class RestAPI:  # pragma: no unittest
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
         fee_schedule: FeeScheduleState,
-    ):
+    ) -> Response:
         log.debug("Set fee schedule")
         if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
             return api_error(
