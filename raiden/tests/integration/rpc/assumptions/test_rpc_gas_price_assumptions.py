@@ -4,11 +4,7 @@ from eth_utils import to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.constants import RECEIPT_FAILURE_CODE
-from raiden.exceptions import (
-    EthereumNonceTooLow,
-    ReplacementTransactionUnderpriced,
-    TransactionAlreadyPending,
-)
+from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
@@ -33,7 +29,7 @@ def make_decreasing_gas_price_strategy(gas_price: GasPrice) -> Callable:
 
 
 def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> None:
-    """ If a pending transaction is re-sent the exception `TransactionAlreadyPending` is raised.
+    """ If a pending transaction is re-sent the exception `EthereumNonceTooLow` is raised.
 
     This tests is only sufficient because of the companion test
     `test_resending_mined_transaction_raises` which shows that if the
@@ -61,7 +57,7 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     # Note that it is assumed this runs fast enough so that the first transaction is not
     # mined before second is sent.
     contract_proxy.transact("ret", startgas)
-    with pytest.raises(TransactionAlreadyPending):
+    with pytest.raises(EthereumNonceTooLow):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
         ).transact("ret", startgas)

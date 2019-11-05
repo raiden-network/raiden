@@ -29,7 +29,7 @@ from raiden.constants import (
     EthClient,
     RoutingMode,
 )
-from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
+from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.log_config import configure_logging
 from raiden.network.utils import get_free_port
 from raiden.settings import (
@@ -593,7 +593,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
     try:
         app = runner.run()
         app.stop()
-    except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
+    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as e:
         click.secho(
             "{}. Please make sure that this Raiden node is the "
             "only user of the selected account".format(str(e)),
