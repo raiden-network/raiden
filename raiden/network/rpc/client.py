@@ -608,21 +608,21 @@ class JSONRPCClient:
                 startgas=self._gas_estimate_correction(contract_transaction["gas"]),
             )
 
-            receipt = self.poll(transaction_hash)
-            contract_address = receipt["contractAddress"]
+        receipt = self.poll(transaction_hash)
+        contract_address = receipt["contractAddress"]
 
-            deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
+        deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
 
-            if not deployed_code:
-                raise RuntimeError(
-                    "Deployment of {} failed. "
-                    "Contract address has no code, check gas usage.".format(contract_name)
-                )
-
-            return (
-                self.new_contract_proxy(abi=contract["abi"], contract_address=contract_address),
-                receipt,
+        if not deployed_code:
+            raise RuntimeError(
+                "Deployment of {} failed. "
+                "Contract address has no code, check gas usage.".format(contract_name)
             )
+
+        return (
+            self.new_contract_proxy(abi=contract["abi"], contract_address=contract_address),
+            receipt,
+        )
 
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
