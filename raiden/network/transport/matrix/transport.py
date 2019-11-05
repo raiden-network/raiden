@@ -1167,7 +1167,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 
-    def _get_user(self, user: Union[User, str]) -> User:
+    def _get_user(self, user_or_userid: Union[User, str]) -> User:
         """ Returns a cached `User` instance with the `displayname` set.
 
         This function maintains a cache of `User` instances with the
@@ -1178,20 +1178,38 @@ class MatrixTransport(Runnable):
         All users are supposed to be in discovery room, so just reuse the
         `_members` dict already present from the Matrix SDK.
         """
-        user_id: str = getattr(user, "user_id", user)
+        if isinstance(user_or_userid, User):
+            user = user_or_userid
+            user_id = user.user_id
+            displayname = user.displayname
+        else:
+            user = None
+            user_id = user_or_userid
+            displayname = None
+
+        assert user_id, "user_id must be available"
+
         discovery_room = self._broadcast_rooms.get(
             make_room_alias(self.chain_id, DISCOVERY_DEFAULT_ROOM)
         )
-        if discovery_room and user_id in discovery_room._members:
-            duser = discovery_room._members[user_id]
-            # if handed a User instance with displayname set, update the discovery room cache
-            if getattr(user, "displayname", None):
-                assert isinstance(user, User)
-                duser.displayname = user.displayname
-            user = duser
-        elif not isinstance(user, User):
-            user = self._client.get_user(user_id)
-        return user
+
+        # There is no discovery room to reuse the cache, so just return the
+        # user. This happens when the cache is used before the transport is
+        # fully initialized, e.g. by the `UserAddressManager` thread.
+        if discovery_room is None:
+            return user or self._client.get_user(user_id)
+
+        cached_user = discovery_room._members.setdefault(user_id, user)
+
+        if cached_user.displayname is None:
+            if displayname is not None:
+                cached_user.displayname = displayname
+            else:
+                cached_user.get_display_name()
+
+        assert cached_user.displayname, "The cached user must have a displayname set."
+
+        return cached_user
 
     def _set_room_id_for_address(
         self, address: Address, room_id: Optional[_RoomID] = None
