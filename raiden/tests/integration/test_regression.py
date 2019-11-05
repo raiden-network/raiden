@@ -218,13 +218,13 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
     secret = sha3(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)
 
-    previous_nonce = proxy_manager.client._available_nonce
+    previous_nonce = proxy_manager.client.transaction_guard.available_nonce
     secret_registry.register_secret(secret=secret)
-    assert previous_nonce == proxy_manager.client._available_nonce
+    assert previous_nonce == proxy_manager.client.transaction_guard.available_nonce
 
-    previous_nonce = proxy_manager.client._available_nonce
+    previous_nonce = proxy_manager.client.transaction_guard.available_nonce
     secret_registry.register_secret_batch(secrets=[secret])
-    assert previous_nonce == proxy_manager.client._available_nonce
+    assert previous_nonce == proxy_manager.client.transaction_guard.available_nonce
 
 
 @raise_on_failure

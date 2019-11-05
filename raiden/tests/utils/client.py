@@ -11,5 +11,6 @@ def burn_eth(rpc_client: JSONRPCClient, amount_to_leave: int = 0) -> None:
     web3 = rpc_client.web3
     gas_price = web3.eth.gasPrice
     value = web3.eth.getBalance(address) - gas_price * (21000 + amount_to_leave)
-    transaction_hash = rpc_client.send_transaction(to=Address(HOP1), value=value, startgas=21000)
-    rpc_client.poll(transaction_hash)
+    with rpc_client.transaction_guard as guard:
+        transaction_hash = guard.send_transaction(to=Address(HOP1), value=value, startgas=21000)
+        rpc_client.poll(transaction_hash)
