@@ -396,8 +396,8 @@ class TransactionSlot:
     def __del__(self) -> None:
         if not self._sent:
             raise RaidenUnrecoverableError(
-                "Transaction slot was not used! This will result in nonce "
-                "synchronization problems."
+                f"Transaction nonce {self.nonce} was not used! "
+                f"This will result in nonce synchronization problems."
             )
 
 
