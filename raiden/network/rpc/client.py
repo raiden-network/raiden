@@ -19,7 +19,7 @@ from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
 from raiden.blockchain.filters import StatelessFilter
-from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS, EthClient
+from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS_HEX, EthClient
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
@@ -108,7 +108,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS])
+        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS_HEX])
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the parity rpc interface "
@@ -562,7 +562,7 @@ class JSONRPCClient:
         locally sign the transaction. This requires an extended server
         implementation that accepts the variables v, r, and s.
         """
-        if to == to_canonical_address(NULL_ADDRESS):
+        if to == to_canonical_address(NULL_ADDRESS_HEX):
             warnings.warn("For contract creation the empty string must be used.")
 
         with self._nonce_lock:
