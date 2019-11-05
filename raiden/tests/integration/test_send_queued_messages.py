@@ -210,17 +210,19 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         assert status.token_network_address == token_network_address
 
     app1.start()  # now that our checks are done start app1 again
-    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
 
-    waiting.wait_for_payment_balance(
-        raiden=app1.raiden,
-        token_network_registry_address=token_network_registry_address,
-        token_address=token_address,
-        partner_address=app0_restart.raiden.address,
-        target_address=app1.raiden.address,
-        target_balance=spent_amount,
-        retry_timeout=network_wait,
-    )
+    with watch_for_unlock_failures(*raiden_network):
+        waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
+
+        waiting.wait_for_payment_balance(
+            raiden=app1.raiden,
+            token_network_registry_address=token_network_registry_address,
+            token_address=token_address,
+            partner_address=app0_restart.raiden.address,
+            target_address=app1.raiden.address,
+            target_balance=spent_amount,
+            retry_timeout=network_wait,
+        )
 
     # Check that payments are completed after both nodes come online after restart
     for identifier in range(spent_amount):
