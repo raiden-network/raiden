@@ -270,11 +270,11 @@ class ReplacementTransactionUnderpriced(RaidenError):
 
 
 class TransactionAlreadyPending(RaidenUnrecoverableError):
-    """Raised when a transaction is already pending"""
+    """Raised when a transaction that is in the pool is sent for the second time."""
 
 
 class EthereumNonceTooLow(RaidenUnrecoverableError):
-    """Raised when a transaction is rejected because the nonce has been used already."""
+    """Raised when a new transaction is sent with a nonce that has been used already."""
 
 
 class ChannelOutdatedError(RaidenError):
