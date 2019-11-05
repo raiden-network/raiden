@@ -143,7 +143,7 @@ def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
 def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
 
-    if 'infura.io' in eth_rpc_endpoint:
+    if "infura.io" in eth_rpc_endpoint:
         # Infura needs to have the https scheme
         return f"https://{parsed_eth_rpc_endpoint.netloc}{parsed_eth_rpc_endpoint.path}"
 
@@ -243,7 +243,6 @@ def run_app(
         privkey=privatekey,
         gas_price_strategy=gas_price,
         block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        uses_infura="infura.io" in eth_rpc_endpoint,
     )
 
     token_network_registry_deployed_at = None
