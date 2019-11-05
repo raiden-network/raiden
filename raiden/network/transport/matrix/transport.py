@@ -1238,28 +1238,34 @@ class MatrixTransport(Runnable):
         If filter_private=None, filter according to self._private_rooms
         """
         address_hex: AddressHex = to_checksum_address(address)
+
         with self._account_data_lock:
             room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(address_hex)
-            self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
-            if not room_ids:  # None or empty
-                room_ids = list()
-            if not isinstance(room_ids, list):  # old version, single room
-                room_ids = [room_ids]
 
-            if filter_private is None:
-                filter_private = self._private_rooms
-            if not filter_private:
-                # existing rooms
-                room_ids = [room_id for room_id in room_ids if room_id in self._client.rooms]
-            else:
-                # existing and private rooms
-                room_ids = [
-                    room_id
-                    for room_id in room_ids
-                    if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
-                ]
+        self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
 
-            return room_ids
+        if not room_ids:
+            return list()
+
+        # `account_data` should be private to the user. These values will only
+        # be invalid if there is a bug in Raiden to push invalid data or if the
+        # Matrix server is corrupted/malicous.
+        invalid_input = any(not isinstance(room_id, str) for room_id in room_ids)
+        if invalid_input:
+            log.error("Unexpected account data, ignoring.")
+            return list()
+
+        if filter_private is None:
+            filter_private = self._private_rooms
+
+        if not filter_private:
+            return [room_id for room_id in room_ids if room_id in self._client.rooms]
+
+        return [
+            room_id
+            for room_id in room_ids
+            if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
+        ]
 
     def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]) -> None:
         """
