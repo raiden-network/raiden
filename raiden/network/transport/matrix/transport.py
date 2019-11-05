@@ -1170,9 +1170,16 @@ class MatrixTransport(Runnable):
         return self._raiden_service.signer.sign(data=data)
 
     def _get_user(self, user: Union[User, str]) -> User:
-        """Creates an User from an user_id, if none, or fetch a cached User
+        """ Returns a cached `User` instance with the `displayname` set.
 
-        As all users are supposed to be in discovery room, its members dict is used for caching"""
+        This function maintains a cache of `User` instances with the
+        `displayname` variable set. This can reduce the number of HTTP requests
+        since the displayname is used in multiple places to validate the
+        partner node.
+
+        All users are supposed to be in discovery room, so just reuse the
+        `_members` dict already present from the Matrix SDK.
+        """
         user_id: str = getattr(user, "user_id", user)
         discovery_room = self._broadcast_rooms.get(
             make_room_alias(self.chain_id, DISCOVERY_DEFAULT_ROOM)
