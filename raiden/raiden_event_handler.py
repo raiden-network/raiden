@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import encode_hex, to_checksum_address, to_hex
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
@@ -768,8 +768,8 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         if feedback_token and pfs_config:
             log.debug(
                 "Received event for failed route",
-                route=route_failed_event.route,
-                secrethash=route_failed_event.secrethash,
+                route=[to_checksum_address(node) for node in route_failed_event.route],
+                secrethash=encode_hex(route_failed_event.secrethash),
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
@@ -793,7 +793,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         if feedback_token and pfs_config:
             log.debug(
                 "Received payment success event",
-                route=payment_sent_success_event.route,
+                route=[to_checksum_address(node) for node in payment_sent_success_event.route],
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
