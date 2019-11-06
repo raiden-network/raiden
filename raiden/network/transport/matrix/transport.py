@@ -39,6 +39,7 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.network.transport.utils import timeout_exponential_backoff
+from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
@@ -47,6 +48,7 @@ from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionUpdateTransportAuthData,
 )
+from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -134,7 +136,7 @@ class _RetryQueue(Runnable):
                     "Message already in queue - ignoring",
                     receiver=to_checksum_address(self.receiver),
                     queue=queue_identifier,
-                    message=message,
+                    message=redact_secret(DictSerializer.serialize(message)),
                 )
                 return
             timeout_generator = timeout_exponential_backoff(
@@ -547,7 +549,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Send async",
             receiver_address=to_checksum_address(receiver_address),
-            message=message,
+            message=redact_secret(DictSerializer.serialize(message)),
             queue_identifier=queue_identifier,
         )
 
@@ -855,7 +857,10 @@ class MatrixTransport(Runnable):
 
         for message in messages:
             if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
-                self.log.warning("Received invalid message", message=message)
+                self.log.warning(
+                    "Received invalid message",
+                    message=redact_secret(DictSerializer.serialize(message)),
+                )
             if isinstance(message, Delivered):
                 self._receive_delivered(message)
             elif isinstance(message, Processed):
@@ -871,7 +876,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Delivered message received",
             sender=to_checksum_address(delivered.sender),
-            message=delivered,
+            message=DictSerializer.serialize(delivered),
         )
 
         assert self._raiden_service is not None, "_raiden_service not set"
@@ -883,7 +888,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Message received",
             node=to_checksum_address(self._raiden_service.address),
-            message=message,
+            message=redact_secret(DictSerializer.serialize(message)),
             sender=to_checksum_address(message.sender),
         )
 
@@ -907,7 +912,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "ToDevice message received",
             sender=to_checksum_address(to_device.sender),
-            message=to_device,
+            message=DictSerializer.serialize(to_device),
         )
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
@@ -1356,7 +1361,7 @@ class MatrixTransport(Runnable):
             else:
                 log.warning(
                     "Received Message is not of type ToDevice, invalid",
-                    message=message,
+                    message=redact_secret(DictSerializer.serialize(message)),
                     peer_address=to_checksum_address(peer_address),
                 )
                 continue
