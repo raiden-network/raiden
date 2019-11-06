@@ -255,7 +255,7 @@ scenario:
           name: "Assert channels after transfers"
           tasks:
             - assert: {from: 2, to: 3, total_deposit: 101, balance: 1, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 101, balance: 201, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101, balance: 202, state: "opened"}
             - assert: {from: 0, to: 1, total_deposit: 260, balance: 0, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 360, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100, balance: 1, state: "opened"}
