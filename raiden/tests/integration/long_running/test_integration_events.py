@@ -21,7 +21,11 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    get_channelstate,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
@@ -431,7 +435,7 @@ def test_secret_revealed_on_chain(
         secret=secret,
     )
 
-    with gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
             app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
         )
@@ -471,7 +475,7 @@ def test_secret_revealed_on_chain(
         token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
     )
 
-    with gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
             app2.raiden, ContractReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
         )

@@ -16,6 +16,7 @@ from raiden.tests.utils.protocol import (
     dont_handle_node_change_network_state,
 )
 from raiden.tests.utils.transfer import (
+    assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     calculate_fee_for_amount,
     get_channelstate,
@@ -89,20 +90,27 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
 
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state,
-            token_network_address,
-            app0,
-            deposit,
-            [send_lockedtransfer.transfer.lock],
-            app1,
-            deposit,
-            [send_refundtransfer.transfer.lock],
+            func=assert_synced_channel_state,
+            token_network_address=token_network_address,
+            app0=app0,
+            balance0=deposit,
+            pending_locks0=[send_lockedtransfer.transfer.lock],
+            app1=app1,
+            balance1=deposit,
+            pending_locks1=[send_refundtransfer.transfer.lock],
         )
 
     # This channel was exhausted to force the refund transfer except for the fees
     with gevent.Timeout(network_wait):
         wait_assert(
-            assert_synced_channel_state, token_network_address, app1, 0, [], app2, deposit * 2, []
+            func=assert_succeeding_transfer_invariants,
+            token_network_address=token_network_address,
+            app0=app1,
+            balance0=0,
+            pending_locks0=[],
+            app1=app2,
+            balance1=deposit * 2,
+            pending_locks1=[],
         )
 
 
