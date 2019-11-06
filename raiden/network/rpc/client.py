@@ -335,6 +335,15 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
 
 
 class TransactionSlot:
+    """A poor's man linear type that will check at the runtime that a nonce is
+    used only once.
+
+    This is necessary to avoid problems with nonce synchronization. If a nonce
+    is not used then all subsequent transactions won't be mined, or if a nonce
+    is used more than once, only one transaction will succeed while all others
+    will fail, which is currently not supported by the Raiden node.
+    """
+
     def __init__(self, client: "JSONRPCClient", nonce: Nonce):
         self._client = client
         self.nonce = nonce
@@ -349,6 +358,12 @@ class TransactionSlot:
         locally sign the transaction. This requires an extended server
         implementation that accepts the variables v, r, and s.
         """
+        if self._sent:
+            raise RaidenUnrecoverableError(
+                f"A transaction for this slot has been sent already! "
+                f"Reusing the nonce is a synchronization problem."
+            )
+
         if to == to_canonical_address(NULL_ADDRESS_HEX):
             warnings.warn("For contract creation the empty string must be used.")
 
