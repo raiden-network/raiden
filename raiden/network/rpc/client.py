@@ -349,59 +349,66 @@ class TransactionSlot:
         self.nonce = nonce
         self._sent = False
 
+        # Lock to protect the `_sent` attribute. This is necessary otherwise
+        # the check for a duplicate transaction with the same nonce won't work
+        # due to race conditions.
+        self._sent_lock = Semaphore()
+
     def send_transaction(
         self, to: Address, startgas: int, value: int = 0, data: bytes = b""
     ) -> TransactionHash:
         """ Locally sign the transaction and send it to the network. """
-        if self._sent:
-            raise RaidenUnrecoverableError(
-                f"A transaction for this slot has been sent already! "
-                f"Reusing the nonce is a synchronization problem."
+
+        with self._sent_lock:
+            if self._sent:
+                raise RaidenUnrecoverableError(
+                    f"A transaction for this slot has been sent already! "
+                    f"Reusing the nonce is a synchronization problem."
+                )
+
+            if to == to_canonical_address(NULL_ADDRESS_HEX):
+                warnings.warn("For contract creation the empty string must be used.")
+
+            gas_price = self._client.gas_price()
+
+            transaction = {
+                "data": data,
+                "gas": startgas,
+                "nonce": self.nonce,
+                "value": value,
+                "gasPrice": gas_price,
+            }
+            node_gas_price = self._client.web3.eth.gasPrice
+            log.debug(
+                "Calculated gas price for transaction",
+                node=to_checksum_address(self._client.address),
+                calculated_gas_price=gas_price,
+                node_gas_price=node_gas_price,
             )
 
-        if to == to_canonical_address(NULL_ADDRESS_HEX):
-            warnings.warn("For contract creation the empty string must be used.")
+            # add the to address if not deploying a contract
+            if to != b"":
+                transaction["to"] = to_checksum_address(to)
 
-        gas_price = self._client.gas_price()
+            signed_txn = self._client.web3.eth.account.signTransaction(
+                transaction, self._client.privkey
+            )
 
-        transaction = {
-            "data": data,
-            "gas": startgas,
-            "nonce": self.nonce,
-            "value": value,
-            "gasPrice": gas_price,
-        }
-        node_gas_price = self._client.web3.eth.gasPrice
-        log.debug(
-            "Calculated gas price for transaction",
-            node=to_checksum_address(self._client.address),
-            calculated_gas_price=gas_price,
-            node_gas_price=node_gas_price,
-        )
+            log_details = {
+                "node": to_checksum_address(self._client.address),
+                "nonce": transaction["nonce"],
+                "gasLimit": transaction["gas"],
+                "gasPrice": transaction["gasPrice"],
+            }
+            log.debug("send_raw_transaction called", **log_details)
 
-        # add the to address if not deploying a contract
-        if to != b"":
-            transaction["to"] = to_checksum_address(to)
+            tx_hash = self._client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
 
-        signed_txn = self._client.web3.eth.account.signTransaction(
-            transaction, self._client.privkey
-        )
+            log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
 
-        log_details = {
-            "node": to_checksum_address(self._client.address),
-            "nonce": transaction["nonce"],
-            "gasLimit": transaction["gas"],
-            "gasPrice": transaction["gasPrice"],
-        }
-        log.debug("send_raw_transaction called", **log_details)
+            self._sent = True
 
-        tx_hash = self._client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-
-        log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
-
-        self._sent = True
-
-        return TransactionHash(tx_hash)
+            return TransactionHash(tx_hash)
 
     def __del__(self) -> None:
         if not self._sent:
