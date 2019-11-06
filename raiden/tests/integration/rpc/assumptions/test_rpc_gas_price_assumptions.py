@@ -35,7 +35,7 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     `test_resending_mined_transaction_raises` which shows that if the
     transaction has been mined a different exception is raised.
     """
-    # Use a _fixed_ gas price startegy so that both transactions are identical.
+    # Use a _fixed_ gas price strategy so that both transactions are identical.
     deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
@@ -65,7 +65,7 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
 
 def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
     """ If a mined transaction is re-sent the exception `EthereumNonceTooLow` is raised. """
-    # Use a _fixed_ gas price startegy so that both transactions are identical.
+    # Use a _fixed_ gas price strategy so that both transactions are identical.
     deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
@@ -87,7 +87,7 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     # since a transaction was sent using `deploy_client` above and these two
     # instances share the same underlying private key.
     #
-    # Note that a the same function is called in this test.
+    # Note that the same function is called in this test.
     with pytest.raises(EthereumNonceTooLow):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
@@ -224,7 +224,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
 
 def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
     """ If the same transaction is sent twice a JSON RPC error is raised. """
-    # Use a _decreasing_ gas price startegy so that the second transactions is
+    # Use a _decreasing_ gas price strategy so that the second transactions is
     # lower than the first.
     deploy_client.web3.eth.setGasPriceStrategy(
         make_decreasing_gas_price_strategy(GasPrice(2000000000))
@@ -247,7 +247,7 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
     # since a transaction was sent using `deploy_client` above and these two
     # instances share the same underlying private key.
     #
-    # Note that a the same function is called in this test but the gas is decreasing.
+    # Note that the same function is called in this test but the gas is decreasing.
     with pytest.raises(ReplacementTransactionUnderpriced):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
@@ -255,10 +255,10 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
 
 
 def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
-    """ If the a _new_ transaction but with a lower gas the exception
+    """ If a _new_ transaction is sent but with a lower gas the exception
     `ReplacementTransactionUnderpriced` is raised.
     """
-    # Use a _decreasing_ gas price startegy so that the second transactions is
+    # Use a _decreasing_ gas price strategy so that the second transactions is
     # lower than the first.
     deploy_client.web3.eth.setGasPriceStrategy(
         make_decreasing_gas_price_strategy(GasPrice(2000000000))
@@ -281,7 +281,7 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
     # since a transaction was sent using `deploy_client` above and these two
     # instances share the same underlying private key.
     #
-    # Note that a the same function is called in this test but the gas is decreasing.
+    # Note that the same function is called in this test but the gas is decreasing.
     with pytest.raises(ReplacementTransactionUnderpriced):
         client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address

@@ -82,7 +82,7 @@ def inspect_client_error(
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
 
             # This error code is known to be used for pending transactions, it
-            # may also be used for using the nonce of mined transactions.
+            # may also be used for reusing the nonce of mined transactions.
             if "Transaction nonce is too low. Try incrementing the nonce." in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED
 
@@ -136,14 +136,15 @@ class ContractProxy:
                     "equal to the previous transaction's gas amount"
                 )
             elif action in THE_NONCE_WAS_REUSED:
-                # XXX: Add logic to check it is the same transaction (instead
-                # of relying on the error message), and instead of raising an
-                # unrecoverable error proceed as normal with the polling.
+                # XXX: Add logic to check that it is the same transaction
+                # (instead of relying on the error message), and instead of
+                # raising an unrecoverable error proceed as normal with the
+                # polling.
                 #
                 # This was previously done, but removed by #4909, and for it to
                 # be finished #2088 has to be implemented.
                 raise EthereumNonceTooLow(
-                    "Transaction reject because the nonce has been already mined."
+                    "Transaction rejected because the nonce has been already mined."
                 )
 
             raise RaidenUnrecoverableError(
