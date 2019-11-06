@@ -489,7 +489,7 @@ class JSONRPCClient:
     def get_next_transaction(self) -> TransactionSlot:
         with self._nonce_lock:
             slot = TransactionSlot(self, self._available_nonce)
-            self._available_nonce += 1
+            self._available_nonce = Nonce(self._available_nonce + 1)
             return slot
 
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
