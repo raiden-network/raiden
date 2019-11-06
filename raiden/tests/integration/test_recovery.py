@@ -12,6 +12,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
+    assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     transfer,
     transfer_and_assert_path,
@@ -91,11 +92,11 @@ def test_recovery_happy_case(
         timeout=network_wait * number_of_nodes,
     )
 
-    assert_synced_channel_state(
+    assert_succeeding_transfer_invariants(
         token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
 
-    assert_synced_channel_state(
+    assert_succeeding_transfer_invariants(
         token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
