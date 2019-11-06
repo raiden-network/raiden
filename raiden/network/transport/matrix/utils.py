@@ -238,10 +238,16 @@ class UserAddressManager:
         if event["type"] != "m.presence" or user_id == self._user_id:
             return
 
-        # provide the displayname since that may warm the cache
-        user = self._get_user(User(self._client.api, user_id, event["content"].get("displayname")))
+        try:
+            user = User(self._client.api, user_id, event["content"].get("displayname"))
+        except ValueError:
+            log.error("Matrix server returned an invalid user_id.")
+            return
 
-        address = self._validate_userid_signature(user)
+        # provide the displayname since that may warm the cache
+        cached_user = self._get_user(user)
+
+        address = self._validate_userid_signature(cached_user)
         if not address:
             # Malformed address - skip
             return
@@ -266,7 +272,7 @@ class UserAddressManager:
         self.refresh_address_presence(address)
 
         if self._user_presence_changed_callback:
-            self._user_presence_changed_callback(user, new_state)
+            self._user_presence_changed_callback(cached_user, new_state)
 
     def refresh_presence(self) -> None:
         while not self._stop_event.ready():
