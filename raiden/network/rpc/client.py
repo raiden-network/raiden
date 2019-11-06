@@ -352,12 +352,7 @@ class TransactionSlot:
     def send_transaction(
         self, to: Address, startgas: int, value: int = 0, data: bytes = b""
     ) -> TransactionHash:
-        """ Helper to send signed messages.
-
-        This method will use the `privkey` provided in the constructor to
-        locally sign the transaction. This requires an extended server
-        implementation that accepts the variables v, r, and s.
-        """
+        """ Locally sign the transaction and send it to the network. """
         if self._sent:
             raise RaidenUnrecoverableError(
                 f"A transaction for this slot has been sent already! "
