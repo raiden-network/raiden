@@ -10,6 +10,7 @@ from matrix_client.errors import MatrixRequestError
 
 import raiden
 from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
@@ -445,12 +446,15 @@ def test_matrix_discovery_room_offline_server(
     transport.get()
 
 
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
+)
 def test_matrix_broadcast(
     local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, broadcast_rooms
 ):
     transport = MatrixTransport(
         {
-            "broadcast_rooms": broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
+            "broadcast_rooms": broadcast_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -486,6 +490,9 @@ def test_matrix_broadcast(
     transport.get()
 
 
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
+)
 def test_monitoring_broadcast_messages(
     local_matrix_servers,
     private_rooms,
@@ -555,6 +562,9 @@ def test_monitoring_broadcast_messages(
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("route_mode", [RoutingMode.LOCAL, RoutingMode.PFS])
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+)
 def test_pfs_broadcast_messages(
     local_matrix_servers,
     private_rooms,
@@ -570,7 +580,7 @@ def test_pfs_broadcast_messages(
     """
     transport = MatrixTransport(
         {
-            "broadcast_rooms": broadcast_rooms + [PATH_FINDING_BROADCASTING_ROOM],
+            "broadcast_rooms": broadcast_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],

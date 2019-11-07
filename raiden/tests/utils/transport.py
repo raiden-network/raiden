@@ -5,6 +5,7 @@ import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
+from itertools import chain
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
@@ -12,9 +13,12 @@ from typing import Callable, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
 from twisted.internet import defer
 
+from raiden.network.transport.matrix.client import GMatrixClient
+from raiden.tests.utils.factories import make_signer
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port, Signature
@@ -25,6 +29,51 @@ _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath("synapse_config.yaml.t
 
 SynapseConfig = Tuple[str, Path]
 SynapseConfigGenerator = Callable[[int], SynapseConfig]
+
+
+def new_client(server: "ParsedURL") -> GMatrixClient:
+    server_name = server.netloc
+
+    signer = make_signer()
+    username = str(to_normalized_address(signer.address))
+    password = encode_hex(signer.sign(server_name.encode()))
+
+    client = GMatrixClient(server)
+    client.login(username, password, sync=False)
+
+    return client
+
+
+def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
+    client = new_client(servers[0])
+    room = client.create_room(alias=broadcast_room_name, is_public=True)
+
+    for server in servers[1:]:
+        client = new_client(server)
+
+        # A user must join the room to create the room in the federated server
+        room = client.join_room(room.aliases[0])
+        server_name = server.netloc
+        alias = f"#{broadcast_room_name}:{server_name}"
+
+        msg = "Setting up the room alias must not fail, otherwise the test can not run."
+        assert room.add_room_alias(alias), msg
+
+        room_state = client.api.get_room_state(room.room_id)
+        all_aliases = chain.from_iterable(
+            event["content"]["aliases"]
+            for event in room_state
+            if event["type"] == "m.room.aliases"
+        )
+
+        msg = "The new alias must be added, otherwise the Raiden node won't be able to find it."
+        assert alias in all_aliases, msg
+
+        msg = (
+            "Leaving the room failed. This is done otherwise there would be "
+            "a ghost user in the broadcast room"
+        )
+        assert room.leave(), msg
 
 
 class ParsedURL(str):
@@ -199,6 +248,7 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
 @contextmanager
 def matrix_server_starter(
     free_port_generator: Iterable[Port],
+    broadcast_rooms_aliases: Iterable[str],
     *,
     count: int = 1,
     config_generator: SynapseConfigGenerator = None,
@@ -272,5 +322,8 @@ def matrix_server_starter(
             # different, however the library doesn't support it. So here we
             # must poke at the private member and overwrite it.
             executor._timeout = teardown_timeout
+
+        for broadcast_room_alias in broadcast_rooms_aliases:
+            setup_broadcast_room(server_urls, broadcast_room_alias)
 
         yield server_urls

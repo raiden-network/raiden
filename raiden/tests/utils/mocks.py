@@ -8,6 +8,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -32,7 +33,7 @@ class MockJSONRPCClient:
     def __init__(self, address: Address):
         # To be manually set by each test
         self.balances_mapping: Dict[Address, TokenAmount] = {}
-        self.chain_id = ChainID(17)
+        self.chain_id = ChainID(UNIT_CHAIN_ID)
         self.address = address
 
     @staticmethod

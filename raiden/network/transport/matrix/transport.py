@@ -387,13 +387,7 @@ class MatrixTransport(Runnable):
             # this is needed so the rooms are populated before we _inventory_rooms
             self._client._handle_thread.get()
 
-        for suffix in self._config["broadcast_rooms"]:
-            room_name = make_room_alias(self.chain_id, suffix)  # e.g. raiden_ropsten_discovery
-            room = join_broadcast_room(
-                self._client, room_name, self._config.get("available_servers") or ()
-            )
-            self._broadcast_rooms[room_name] = room
-
+        self._join_broadcast_rooms()
         self._inventory_rooms()
 
         def on_success(greenlet: gevent.Greenlet) -> None:
@@ -576,9 +570,7 @@ class MatrixTransport(Runnable):
                 )
             room_name = make_room_alias(self.chain_id, room_name)
             if room_name not in self._broadcast_rooms:
-                room = join_broadcast_room(
-                    self._client, room_name, self._config.get("available_servers") or ()
-                )
+                room = join_broadcast_room(self._client, f"#{room_name}:{self._server_name}")
                 self._broadcast_rooms[room_name] = room
 
             existing_room = self._broadcast_rooms.get(room_name)
@@ -632,6 +624,13 @@ class MatrixTransport(Runnable):
     @property
     def _private_rooms(self) -> bool:
         return bool(self._config.get("private_rooms"))
+
+    def _join_broadcast_rooms(self) -> None:
+        for suffix in self._config["broadcast_rooms"]:
+            room_name = make_room_alias(self.chain_id, suffix)
+            self._broadcast_rooms[room_name] = join_broadcast_room(
+                self._client, f"#{room_name}:{self._server_name}"
+            )
 
     def _inventory_rooms(self) -> None:
         self.log.debug("Inventory rooms", rooms=self._client.rooms)

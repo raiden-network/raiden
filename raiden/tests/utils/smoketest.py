@@ -225,13 +225,15 @@ def setup_testchain(
 
 @contextmanager
 def setup_matrix_for_smoketest(
-    print_step: Callable, free_port_generator: Iterable[Port]
+    print_step: Callable,
+    free_port_generator: Iterable[Port],
+    broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List["ParsedURL"]]:
     from raiden.tests.utils.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
 
-    with matrix_server_starter(free_port_generator=free_port_generator) as ctx:
+    with matrix_server_starter(free_port_generator, broadcast_rooms_aliases) as ctx:
         yield ctx
 
 

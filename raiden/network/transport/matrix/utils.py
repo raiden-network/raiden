@@ -24,7 +24,12 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from structlog._config import BoundLoggerLazyProxy
 
-from raiden.exceptions import InvalidSignature, SerializationError, TransportError
+from raiden.exceptions import (
+    InvalidSignature,
+    RaidenUnrecoverableError,
+    SerializationError,
+    TransportError,
+)
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
@@ -328,70 +333,25 @@ class UserAddressManager:
         return self._log
 
 
-def join_broadcast_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
-    """Join or create a broadcast public room with given name
+def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
+    """ Join the public broadcast through the alias `broadcast_room_alias`.
 
-    First, try to join room on own server (client-configured one)
-    If can't, try to join on each one of servers, and if able, alias it in our server
-    If still can't, create a public room with name in our server
-
-    Params:
-        client: matrix-python-sdk client instance
-        name: name or alias of the room (without #-prefix or server name suffix)
-        servers: optional: sequence of known/available servers to try to find the room in
-    Returns:
-        matrix's Room instance linked to client
+    When a new Matrix instance is deployed the broadcast room _must_ be created
+    and aliased, Raiden will not use a server that does not have the discovery
+    room properly set. Requiring the setup of the broadcast alias as part of
+    the server setup fixes a serious race condition where multiple discovery
+    rooms are created, which would break the presence checking.
+    See: https://github.com/raiden-network/raiden-transport/issues/46
     """
-    our_server_name = urlparse(client.api.base_url).netloc
-    assert our_server_name, "Invalid client's homeserver url"
-    servers = [our_server_name] + [  # client's own server first
-        urlparse(s).netloc
-        for s in servers
-        if urlparse(s).netloc not in {None, "", our_server_name}
-    ]
-
-    our_server_broadcast_room_alias_full = f"#{name}:{servers[0]}"
-
-    # try joining a broadcast room on any of the available servers, starting with ours
-    for server in servers:
-        broadcast_room_alias_full = f"#{name}:{server}"
-        try:
-            broadcast_room = client.join_room(broadcast_room_alias_full)
-        except MatrixRequestError as ex:
-            if ex.code not in (403, 404, 500):
-                raise
-            log.debug(
-                "Could not join broadcast room",
-                room_alias_full=broadcast_room_alias_full,
-                _exception=ex,
-            )
-        else:
-            if our_server_broadcast_room_alias_full not in broadcast_room.aliases:
-                # we managed to join a broadcast room, but it's not aliased in our server
-                broadcast_room.add_room_alias(our_server_broadcast_room_alias_full)
-                broadcast_room.aliases.append(our_server_broadcast_room_alias_full)
-            break
-    else:
-        log.debug("Could not join any broadcast room, trying to create one")
-        for _ in range(JOIN_RETRIES):
-            try:
-                broadcast_room = client.create_room(name, is_public=True)
-            except MatrixRequestError as ex:
-                if ex.code not in (400, 409):
-                    raise
-                try:
-                    broadcast_room = client.join_room(our_server_broadcast_room_alias_full)
-                except MatrixRequestError as ex:
-                    if ex.code not in (404, 403):
-                        raise
-                else:
-                    break
-            else:
-                break
-        else:
-            raise TransportError("Could neither join nor create a broadcast room")
-    log.debug("Joined broadcast room", room=broadcast_room)
-    return broadcast_room
+    try:
+        return client.join_room(broadcast_room_alias)
+    except MatrixRequestError:
+        raise RaidenUnrecoverableError(
+            f"Could not join broadcast room {broadcast_room_alias}. "
+            f"Make sure the Matrix server you're trying to connect to uses the recommended server "
+            f"setup, esp. the server-side broadcast room creation. "
+            f"See https://github.com/raiden-network/raiden-transport."
+        )
 
 
 def login_or_register(
