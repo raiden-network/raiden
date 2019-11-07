@@ -79,7 +79,7 @@ markupsafe==1.1.1
 marshmallow-dataclass==6.0.0rc4
 marshmallow-enum==1.5.1
 marshmallow-polyfield==5.7
-marshmallow==3.0.0rc8
+marshmallow==3.2.2
 matrix-client==0.3.2
 matrix-synapse==1.4.0rc1
 mccabe==0.6.1             # via flake8, pylint

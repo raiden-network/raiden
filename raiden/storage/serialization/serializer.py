@@ -55,7 +55,7 @@ class DictSerializer(SerializationBase):
             try:
                 schema = SchemaCache.get_or_create_schema(obj.__class__)
                 data = schema.dump(obj)
-            except (TypeError, ValidationError) as ex:
+            except (TypeError, ValidationError, ValueError) as ex:
                 raise SerializationError(f"Can't serialize: {data}") from ex
         elif not isinstance(obj, Mapping):
             raise SerializationError(f"Can only serialize dataclasses or dict-like objects: {obj}")
