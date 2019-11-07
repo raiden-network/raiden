@@ -10,6 +10,7 @@ state changes until a channel is found with the provided token network address a
 The ignored state changes will still be applied, but they will just not be printed out.
 """
 import json
+import os
 import re
 from contextlib import closing
 from itertools import chain
@@ -20,8 +21,9 @@ from eth_utils import encode_hex, is_checksum_address, to_canonical_address
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
-from raiden.transfer import node, views
+from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
+from raiden.transfer.state import NetworkState
 from raiden.utils import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
@@ -29,10 +31,12 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     Iterable,
+    List,
     Nonce,
     Optional,
     SecretHash,
     TokenNetworkAddress,
+    Tuple,
 )
 
 
@@ -81,9 +85,7 @@ class Translator(dict):
             try:
                 return dict.__getitem__(self, alt)
             except KeyError:
-                import pdb
-
-                pdb.set_trace()  # pylint: disable=no-member
+                # breakpoint()
                 raise e
 
     def __call__(self, match):
@@ -142,6 +144,65 @@ def print_events(events: Iterable[Event], translator: Optional[Translator] = Non
         print_attributes(event.__dict__, translator=translator)
 
 
+def print_presence_view(chain_state, translator: Optional[Translator] = None):
+    if translator is None:
+        trans = lambda s: s
+    else:
+        trans = translator.translate
+
+    def network_state_to_color(network_state: NetworkState):
+        if network_state == NetworkState.REACHABLE:
+            return "green"
+        if network_state == NetworkState.UNREACHABLE:
+            return "red"
+        if network_state == NetworkState.UNKNOWN:
+            return "white"
+        return None
+
+    click.secho("Presence:", nl=False, fg="white")
+    for k, v in chain_state.nodeaddresses_to_networkstates.items():
+        click.secho(f" {trans(pex(k))}", fg=network_state_to_color(v), nl=False)
+    click.echo("", nl=True)
+
+
+def get_node_balances(chain_state, token_network_address: TokenNetworkAddress) -> List[Tuple[Any]]:
+    channels = views.list_all_channelstate(chain_state)
+    channels = [
+        channel
+        for channel in channels
+        if channel.canonical_identifier.token_network_address
+        == to_canonical_address(token_network_address)
+    ]
+    balances = [
+        (
+            channel_state.partner_state.address,
+            channel.get_balance(channel_state.our_state, channel_state.partner_state),
+            channel.get_balance(channel_state.partner_state, channel_state.our_state),
+        )
+        for channel_state in channels
+    ]
+    return balances
+
+
+def print_node_balances(
+    chain_state,
+    token_network_address: TokenNetworkAddress,
+    translator: Optional[Translator] = None,
+):
+    if translator is None:
+        trans = lambda s: s
+    else:
+        trans = translator.translate
+    balances = get_node_balances(chain_state, token_network_address)
+    for balance in balances:
+        click.secho(f"{trans(pex(balance[0]))} ->{balance[1]} <-{balance[2]}", fg="blue")
+    click.secho(f"Sum {trans(pex(chain_state.our_address))}: {sum(b[1] for b in balances)}")
+
+
+def print_nl():
+    click.echo("-" * os.get_terminal_size()[0], nl=True)
+
+
 def replay_wal(
     storage: SerializedSQLiteStorage,
     token_network_address: TokenNetworkAddress,
@@ -167,7 +228,7 @@ def replay_wal(
             to_canonical_address(partner_address),
         )
 
-        if not channel_state:
+        if channel_state is None:
             continue
 
         ###
@@ -175,9 +236,16 @@ def replay_wal(
         # An example would be to add `import pdb; pdb.set_trace()`
         # and inspect the state.
         ###
-
         print_state_change(state_change, translator=translator)
         print_events(chain.from_iterable(events), translator=translator)
+
+        # Enable to print color coded presence state of channel partners
+        # print_presence_view(chain_state, translator)
+
+        # Enable to print balances & balance sum with all channel partners
+        # print_node_balances(chain_state, token_network_address, translator)
+
+        print_nl()
 
 
 @click.command(help=__doc__)
