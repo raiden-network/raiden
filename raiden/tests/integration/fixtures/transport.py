@@ -4,6 +4,7 @@ import pytest
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.network.transport import MatrixTransport
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
 from raiden.utils.typing import Optional
@@ -29,14 +30,25 @@ def matrix_server_count():
 
 @pytest.fixture
 def local_matrix_servers(
-    request, transport_protocol, matrix_server_count, synapse_config_generator, port_generator
+    request,
+    transport_protocol,
+    matrix_server_count,
+    synapse_config_generator,
+    port_generator,
+    broadcast_rooms,
+    chain_id,
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]
         return
 
+    broadcast_rooms_aliases = [
+        make_room_alias(chain_id, room_name) for room_name in broadcast_rooms
+    ]
+
     starter = matrix_server_starter(
         free_port_generator=port_generator,
+        broadcast_rooms_aliases=broadcast_rooms_aliases,
         count=matrix_server_count,
         config_generator=synapse_config_generator,
         log_context=request.node.name,

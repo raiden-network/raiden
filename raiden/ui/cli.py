@@ -20,6 +20,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 from raiden.app import App
 from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
     FLAT_MED_FEE_MIN,
     IMBALANCE_MED_FEE_MAX,
     IMBALANCE_MED_FEE_MIN,
@@ -31,6 +32,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.log_config import configure_logging
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
@@ -58,6 +60,7 @@ from raiden.utils.cli import (
     validate_option_dependencies,
 )
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
+from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -720,7 +723,11 @@ def smoketest(
             base_logdir=datadir,
         )
         matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
-            print_step=print_step, free_port_generator=free_port_generator
+            print_step=print_step,
+            free_port_generator=free_port_generator,
+            broadcast_rooms_aliases=[
+                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM)
+            ],
         )
 
         # Do not redirect the stdout on a debug session, otherwise the REPL

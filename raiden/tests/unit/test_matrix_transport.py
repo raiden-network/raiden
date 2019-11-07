@@ -5,14 +5,12 @@ from urllib.parse import urlparse
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from matrix_client.errors import MatrixRequestError
-from matrix_client.room import Room
 from matrix_client.user import User
 
 import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
 from raiden.exceptions import TransportError
 from raiden.network.transport.matrix.utils import (
-    join_broadcast_room,
     login_or_register,
     make_client,
     make_room_alias,
@@ -22,31 +20,6 @@ from raiden.network.transport.matrix.utils import (
 )
 from raiden.tests.utils.factories import make_signer
 from raiden.utils.signer import recover
-
-
-def test_join_broadcast_room():
-    """ join_broadcast_room should try joining, fail and then create broadcast public room """
-    ownserver = "https://ownserver.com"
-    api = Mock()
-    api.base_url = ownserver
-
-    client = Mock()
-    client.api = api
-
-    def create_room(alias, is_public=False, invitees=None):  # pylint: disable=unused-argument
-        room = Room(client, f"!room_id:ownserver.com")
-        room.canonical_alias = alias
-        return room
-
-    client.create_room = Mock(side_effect=create_room)
-    client.join_room = Mock(side_effect=MatrixRequestError(404))
-
-    room_name = "raiden_ropsten_discovery"
-
-    room = join_broadcast_room(client=client, name=room_name, servers=["https://invalid.server"])
-    assert client.join_room.call_count == 2  # room not found on own and invalid servers
-    client.create_room.assert_called_once_with(room_name, is_public=True)  # created successfuly
-    assert room and isinstance(room, Room)
 
 
 def test_login_or_register_default_user():
