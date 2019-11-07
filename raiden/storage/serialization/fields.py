@@ -82,18 +82,14 @@ class QueueIdentifierField(marshmallow.fields.Field):
             f"{canonical_id.channel_identifier}"
         )
 
-    def _serialize(
-        self, queue_identifier: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any
-    ) -> str:
+    def _serialize(self, value: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any) -> str:
         return (
-            f"{to_checksum_address(queue_identifier.recipient)}"
-            f"-{self._canonical_id_to_string(queue_identifier.canonical_identifier)}"
+            f"{to_checksum_address(value.recipient)}"
+            f"-{self._canonical_id_to_string(value.canonical_identifier)}"
         )
 
-    def _deserialize(
-        self, queue_identifier_str: str, attr: Any, data: Any, **kwargs: Any
-    ) -> QueueIdentifier:
-        str_recipient, str_canonical_id = queue_identifier_str.split("-")
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> QueueIdentifier:
+        str_recipient, str_canonical_id = value.split("-")
         return QueueIdentifier(
             to_canonical_address(str_recipient), self._canonical_id_from_string(str_canonical_id)
         )
@@ -142,13 +138,13 @@ class CallablePolyField(PolyField):
 class NetworkXGraphField(marshmallow.fields.Field):
     """ Converts networkx.Graph objects to a string """
 
-    def _serialize(self, graph: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
+    def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
         return json.dumps(
-            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in graph.edges]
+            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in value.edges]
         )
 
-    def _deserialize(self, graph_data: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
-        raw_data = json.loads(graph_data)
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
+        raw_data = json.loads(value)
         canonical_addresses = [
             (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data
         ]
