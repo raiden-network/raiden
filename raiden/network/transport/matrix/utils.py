@@ -30,7 +30,12 @@ from raiden.exceptions import (
     TransportError,
 )
 from raiden.messages.abstract import Message, SignedMessage
-from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.network.transport.matrix.client import (
+    GMatrixClient,
+    Room,
+    User,
+    node_address_from_userid,
+)
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
@@ -285,7 +290,7 @@ class UserAddressManager:
                 for address in self.known_addresses
             }
 
-            log.debug(
+            self.log.debug(
                 "Presences refreshed - current Matrix address manager status:",
                 addresses_uids_and_presence=addresses_uids_presence,
                 current_user=self._user_id,
@@ -317,17 +322,22 @@ class UserAddressManager:
 
     @property
     def log(self) -> BoundLoggerLazyProxy:
-        if not self._log:
-            if not hasattr(self._client, "user_id"):
-                return log
-            self._log = log.bind(
-                **{
-                    "current_user": self._user_id,
-                    "node": to_checksum_address(self._user_id.split(":", 1)[0][1:]),
-                    **(self._log_context or {}),
-                }
-            )
-        return self._log
+        if self._log:
+            return self._log
+
+        context = self._log_context or {}
+
+        # Only cache the logger once the user_id becomes available
+        if hasattr(self._client, "user_id"):
+            context["current_user"] = self._user_id
+            context["node"] = node_address_from_userid(self._user_id)
+
+            bound_log = log.bind(**context)
+            self._log = bound_log
+            return bound_log
+
+        # Apply  the `_log_context` even if the user_id is not yet available
+        return log.bind(**context)
 
 
 def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
@@ -404,7 +414,10 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     user.set_display_name(signature_hex)
 
     log.debug(
-        "Logged to a new server", node=username, homeserver=server_name, server_url=server_url
+        "Logged to a new server",
+        node=to_checksum_address(username),
+        homeserver=server_name,
+        server_url=server_url,
     )
     return user
 
@@ -428,10 +441,19 @@ def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> 
         # would be enough.
         client.api.get_devices()
     except MatrixRequestError as ex:
-        log.debug("Couldn't use previous login credentials", prev_user_id=user_id, _exception=ex)
+        log.debug(
+            "Couldn't use previous login credentials",
+            node=node_address_from_userid(client.user_id),
+            prev_user_id=user_id,
+            _exception=ex,
+        )
         return None
 
-    log.debug("Success. Valid previous credentials", user_id=user_id)
+    log.debug(
+        "Success. Valid previous credentials",
+        node=node_address_from_userid(client.user_id),
+        user_id=user_id,
+    )
     return client.get_user(client.user_id)
 
 
