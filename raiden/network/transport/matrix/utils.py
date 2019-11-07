@@ -269,8 +269,6 @@ class UserAddressManager:
 
     def refresh_presence(self) -> None:
         while not self._stop_event.ready():
-            # Refresh our own presence to Online
-            self._client.set_presence_state(UserPresence.ONLINE.value)
             # Refresh our view of the presence of our peers
             for address in self.known_addresses:
                 self.refresh_address_presence(address)
