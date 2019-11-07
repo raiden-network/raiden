@@ -98,12 +98,14 @@ def get_best_routes(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
             return pfs_routes, pfs_feedback_token
-        else:
-            log.warning(
-                "Request to Pathfinding Service was not successful, "
-                "falling back to internal routing."
-            )
 
+        log.warning(
+            "Request to Pathfinding Service was not successful. "
+            "No routes to the target are found."
+        )
+        return list(), None
+
+    # else non-pfs so let's use internal routing
     return (
         get_best_routes_internal(
             chain_state=chain_state,
