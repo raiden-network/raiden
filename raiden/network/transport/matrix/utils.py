@@ -122,11 +122,11 @@ class UserAddressManager:
         self._reset_state()
 
     @property
-    def known_addresses(self) -> List[Address]:
+    def known_addresses(self) -> Set[Address]:
         """ Return all addresses we keep track of """
         # This must return a copy of the current keys, because the container
         # may be modified while these values are used. Issue: #5240
-        return list(self._address_to_userids)
+        return set(self._address_to_userids)
 
     def is_address_known(self, address: Address) -> bool:
         """ Is the given ``address`` reachability being monitored? """
