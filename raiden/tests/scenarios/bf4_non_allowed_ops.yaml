@@ -1,0 +1,151 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        deposit: true
+        balance_per_node: 100_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 2
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+
+# This is the bf4 scenario. It aims to check that operations that should not be possible to perform, are indeed not possible
+# to perform. It does so by trying some different unallowed operations such as opening the same channel twice, withdrawing more
+# than a node is allowed to, depositing more than the on chain balance, making payments after a channel is closed etc.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channel"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - parallel:
+          name: "Assert after channel opening"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Deposit in the other direction"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - parallel:
+          name: "Assert after deposit"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Try to open already opened channel, expected to not be allowed with 409"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 409}
+      - serial:
+          name: "Send payment of higher amount than available, expected 409"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000_001, lock_timeout: 30, expected_http_status: 409}
+      - parallel:
+          name: "Assert that balance didn't change"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Node1 tries to withdraw more than its balance"
+          tasks:
+            - withdraw: {from: 1, to: 0, total_withdraw: 1_100_000_000_000_000_000, expected_http_status: 409}
+      - serial:
+          name: "Assert that balance didn't change"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Node1 withdraws it entire balance"
+          tasks:
+            - withdraw: {from: 1, to: 0, total_withdraw: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - serial:
+          name: "Assert that balance changed"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "opened"}
+      - serial:
+          name: "Node1 tries to withdraw again"
+          tasks:
+            - withdraw: {from: 1, to: 0, total_withdraw: 1_000_000_000_000_000_000, expected_http_status: 409}
+      - serial:
+          name: "Assert that balance did not change"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "opened"}
+      - serial:
+          name: "Node1 tries to deposit more than it has onchain"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 101_000_000_000_000_000_000, expected_http_status: 409}
+      - parallel:
+          name: "Assert that balance didn't change"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "opened"}
+      - serial: 
+          name: "Close channel"
+          tasks:
+            - close_channel: {from: 0, to: 1, expected_http_status: 200}
+      - parallel:
+          name: "Assert that channel closed"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "closed"}
+      - serial:
+          name: "Node1 tries to deposit after channel close"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 409}
+      - serial:
+          name: "Send payment after channel closed"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000_001, lock_timeout: 30, expected_http_status: 409}
+      - parallel:
+          name: "Assert that balances didn't change"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "closed"}
+      - serial: 
+          name: "Node0 tries to close the channel again"
+          tasks:
+            - close_channel: {from: 0, to: 1, expected_http_status: 409}
+      - parallel:
+          name: "Assert that nothing changed"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "closed"}
+      - parallel:
+          name: "Node1 tries to open the same channel before settlement"
+          tasks:
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 409}
+      - parallel:
+          name: "Assert that nothing changed"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 0, state: "closed"}

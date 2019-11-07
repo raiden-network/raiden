@@ -33,6 +33,11 @@ When all channels are opened and deposits have taken place, 100 payments are sta
 At the same time 100 payments are done in parallel from node4 to node0.
 After all payments have finished it is asserted that all nodes received the correct amounts.
 
+#### [bf4__non_allowed_ops](./bf4_non_allowed_ops.yaml)
+It aims to check that operations that should not be possible to perform, are indeed not possible
+to perform. It does so by trying some different unallowed operations such as opening the same channel twice, withdrawing more
+than a node is allowed to, depositing more than the on chain balance, making payments after a channel is closed etc.
+
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
