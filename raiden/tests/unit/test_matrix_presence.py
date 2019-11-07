@@ -172,7 +172,7 @@ def test_user_addr_mgr_basics(
     # Nothing again, due to using our own user
     dummy_matrix_client.trigger_presence_callback({USER0_ID: UserPresence.ONLINE})
 
-    assert user_addr_mgr.known_addresses == set()
+    assert not user_addr_mgr.known_addresses
     assert not user_addr_mgr.is_address_known(ADDR1)
     assert user_addr_mgr.get_userids_for_address(ADDR1) == set()
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
@@ -182,7 +182,7 @@ def test_user_addr_mgr_basics(
     user_addr_mgr.add_address(ADDR1)
     dummy_matrix_client.trigger_presence_callback({USER1_S1_ID: UserPresence.ONLINE})
 
-    assert user_addr_mgr.known_addresses == {ADDR1}
+    assert list(user_addr_mgr.known_addresses) == [ADDR1]
     assert user_addr_mgr.is_address_known(ADDR1)
     assert user_addr_mgr.get_userids_for_address(ADDR1) == {USER1_S1_ID}
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.REACHABLE
@@ -233,7 +233,7 @@ def test_user_addr_mgr_compound(
 
 def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence):
     assert not user_addr_mgr.is_address_known(ADDR1)
-    assert user_addr_mgr.known_addresses == set()
+    assert not user_addr_mgr.known_addresses
 
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
     # This only updates the internal user presense state, but calls no callbacks and also doesn't

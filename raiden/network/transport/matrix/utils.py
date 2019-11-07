@@ -5,7 +5,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import Any, Callable, Dict, Iterable, KeysView, List, Optional, Sequence, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -122,9 +122,11 @@ class UserAddressManager:
         self._reset_state()
 
     @property
-    def known_addresses(self) -> KeysView[Address]:
+    def known_addresses(self) -> List[Address]:
         """ Return all addresses we keep track of """
-        return self._address_to_userids.keys()
+        # This must return a copy of the current keys, because the container
+        # may be modified while these values are used. Issue: #5240
+        return list(self._address_to_userids)
 
     def is_address_known(self, address: Address) -> bool:
         """ Is the given ``address`` reachability being monitored? """
