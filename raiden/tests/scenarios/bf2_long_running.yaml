@@ -130,7 +130,7 @@ scenario:
             - deposit: {from: 4, to: 0, total_deposit: 25}
             - wait: 20
             # A performs a payment to E of 50 tokens (path A<->B<->C<->E)
-            - transfer: {from: 0, to: 4, amount: 50, expected_http_status: 200}
+            - transfer: {from: 0, to: 4, amount: 50, expected_http_status: 200, lock_timeout: 30}
             - wait: 5
             - assert: {from: 0, to: 1, total_deposit: 100, balance: 50, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 150, state: "opened"}
@@ -139,19 +139,19 @@ scenario:
             - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
             # C sends all of its tokens to B (one transfer)
-            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 200}
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 200, lock_timeout: 30}
             - wait: 5
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
             # C tries to send another > 25 tokens payment to B (fail no route with enough capacity)
-            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 409}
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 409, lock_timeout: 30}
             - wait: 5
       - serial:
           name: "Multiple multi hop payments"
           repeat: 10
           tasks:
             # C sends 10 payments of 1 token to B by using the C <-> E <-> A <-> B route
-            - transfer: {from: 2, to: 1, amount: 1}
+            - transfer: {from: 2, to: 1, amount: 1, lock_timeout: 30}
             - wait: 5
       - serial:
           name: "Allow nodes to process the payments"
@@ -181,7 +181,7 @@ scenario:
           name: "Multi hop payment 2"
           tasks:
             # A sends 10 tokens to C (using the A <-> E <-> C route)
-            - transfer: {from: 0, to: 2, amount: 10}
+            - transfer: {from: 0, to: 2, amount: 10, lock_timeout: 30}
             - wait: 5
       - parallel:
           name: "Assert transfer was executed correctly"
@@ -199,7 +199,7 @@ scenario:
             # try to open a channel with an offline node, but the channel already exists
             - open_channel: {from: 0, to: 1, total_deposit: 200, expected_http_status: 409}
             # Try to make a payment to an offline node
-            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409, lock_timeout: 30}
       - serial:
           name: "Restarting node B"
           tasks:
@@ -215,7 +215,7 @@ scenario:
               # tasks:
             - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
-      - transfer: {from: 3, to: 2, amount: 99}
+      - transfer: {from: 3, to: 2, amount: 99, lock_timeout: 30}
       - wait: 5
       - serial:
           name: "Checking if payments were made successful"
@@ -245,7 +245,7 @@ scenario:
         # name: "199 payments from A to D in a channel"
         # repeat: 199
         # tasks:
-      - transfer: {from: 0, to: 3, amount: 200}
+      - transfer: {from: 0, to: 3, amount: 200, lock_timeout: 30}
       - wait: 5
       - serial:
           name: "Let the node get into a stable state"
@@ -266,17 +266,17 @@ scenario:
             # C tries to make a deposit to the channel that is being closed (fail 409)
             - deposit: {from: 2, to: 4, total_deposit: 200, expected_http_status: 409}
             # C sends 10 tokens to B
-            - transfer: {from: 2, to: 1, amount: 10}
+            - transfer: {from: 2, to: 1, amount: 10, lock_timeout: 30}
             - wait: 5
             - assert: {from: 1, to: 2, total_deposit: 100, balance: 11, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 189, state: "opened"}
             # B sends 10 tokens to A
-            - transfer: {from: 1, to: 0, amount: 10}
+            - transfer: {from: 1, to: 0, amount: 10, lock_timeout: 30}
             - wait: 5
             - assert: {from: 0, to: 1, total_deposit: 260, balance: 10, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 299, state: "opened"}
             # E sends 10 tokens to C (A -> B-> C)
-            - transfer: {from: 4, to: 2, amount: 10}
+            - transfer: {from: 4, to: 2, amount: 10, lock_timeout: 30}
             - wait: 5
       - parallel:
           name: "Assert for the channel states after mediated transfers were completed"
@@ -300,10 +300,10 @@ scenario:
       - parallel:
           name: "All nodes try to make a payment to E"
           tasks:
-            - transfer: {from: 0, to: 4, amount: 1, expected_http_status: 409}
-            - transfer: {from: 1, to: 4, amount: 1, expected_http_status: 409}
-            - transfer: {from: 2, to: 4, amount: 1, expected_http_status: 409}
-            - transfer: {from: 3, to: 4, amount: 1, expected_http_status: 409}
+            - transfer: {from: 0, to: 4, amount: 1, expected_http_status: 409, lock_timeout: 30}
+            - transfer: {from: 1, to: 4, amount: 1, expected_http_status: 409, lock_timeout: 30}
+            - transfer: {from: 2, to: 4, amount: 1, expected_http_status: 409, lock_timeout: 30}
+            - transfer: {from: 3, to: 4, amount: 1, expected_http_status: 409, lock_timeout: 30}
       - serial:
           name: "A and B leave token netwwork"
           tasks:
