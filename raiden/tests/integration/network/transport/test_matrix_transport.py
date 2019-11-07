@@ -160,16 +160,19 @@ def test_matrix_message_sync(matrix_transports):
 
     transport0, transport1 = matrix_transports
 
-    received_messages = set()
+    transport0_messages = set()
+    transport1_messages = set()
 
-    message_handler = MessageHandler(received_messages)
-    raiden_service0 = MockRaidenService(message_handler)
-    raiden_service1 = MockRaidenService(message_handler)
+    transport0_message_handler = MessageHandler(transport0_messages)
+    transport1_message_handler = MessageHandler(transport1_messages)
+
+    raiden_service0 = MockRaidenService(transport0_message_handler)
+    raiden_service1 = MockRaidenService(transport1_message_handler)
 
     raiden_service1.handle_and_track_state_changes = MagicMock()
 
-    transport0.start(raiden_service0, message_handler, None)
-    transport1.start(raiden_service1, message_handler, None)
+    transport0.start(raiden_service0, transport0_message_handler, None)
+    transport1.start(raiden_service1, transport1_message_handler, None)
 
     latest_auth_data = f"{transport1._user_id}/{transport1._client.api.token}"
     update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
@@ -197,13 +200,19 @@ def test_matrix_message_sync(matrix_transports):
         transport0.send_async(queue_identifier, message)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while not len(received_messages) == 10:
+        while not len(transport0_messages) == 5:
             gevent.sleep(0.1)
 
-    assert len(received_messages) == 10
+        while not len(transport1_messages) == 5:
+            gevent.sleep(0.1)
 
+    # transport1 receives the `Processed` messages sent by transport0
     for i in range(5):
-        assert any(getattr(m, "message_identifier", -1) == i for m in received_messages)
+        assert any(m.message_identifier == i for m in transport1_messages)
+
+    # transport0 answers with a `Delivered` for each `Processed`
+    for i in range(5):
+        assert any(m.delivered_message_identifier == i for m in transport0_messages)
 
     # Clear out queue
     raiden0_queues[queue_identifier] = []
@@ -222,17 +231,23 @@ def test_matrix_message_sync(matrix_transports):
         transport0.send_async(queue_identifier, message)
 
     # Should fetch the 5 messages sent while transport1 was offline
-    transport1.start(transport1._raiden_service, message_handler, latest_auth_data)
+    transport1.start(transport1._raiden_service, transport1_message_handler, latest_auth_data)
     transport1.start_health_check(transport0._raiden_service.address)
 
     with gevent.Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while len(set(received_messages)) != 20:
+        while len(transport1_messages) != 10:
             gevent.sleep(0.1)
 
-    assert len(set(received_messages)) == 20
+        while len(transport0_messages) != 10:
+            gevent.sleep(0.1)
 
+    # transport1 receives the 5 new `Processed` messages sent by transport0
     for i in range(10, 15):
-        assert any(getattr(m, "message_identifier", -1) == i for m in received_messages)
+        assert any(m.message_identifier == i for m in transport1_messages)
+
+    # transport0 answers with a `Delivered` for each one of the new `Processed`
+    for i in range(10, 15):
+        assert any(m.delivered_message_identifier == i for m in transport0_messages)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
