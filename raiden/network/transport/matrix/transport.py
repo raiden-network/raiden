@@ -639,14 +639,19 @@ class MatrixTransport(Runnable):
         )
         assert self._user_id, msg
 
-        # Sync with the server to fetch the inventory rooms and new invites. At
-        # this point the messages themselves should not be processed because
-        # the transport is not fully initialized (i.e. the callbacks to process
-        # the messages are not installed yet), so limit the sync to preventing
-        # fetching the messages.
+        # Call sync to fetch the inventory rooms and new invites. At this point
+        # the messages themselves should not be processed because the room
+        # callbacks are not installed yet (this is done bellow). The sync limit
+        # prevents fetching the messages.
         prev_sync_limit = self._client.set_sync_limit(0)
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
+
+        # Wait on the thread from the sync above, to guarantee the rooms are
+        # populated
+        thread = self._client._handle_thread
+        if thread:
+            thread.get()
 
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
