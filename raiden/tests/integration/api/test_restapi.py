@@ -30,6 +30,7 @@ from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, 
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
@@ -1066,7 +1067,8 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
         ),
         json={"amount": amount, "identifier": identifier},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
@@ -1212,7 +1214,8 @@ def test_api_payments_with_secret_no_hash(
         ),
         json={"amount": amount, "identifier": identifier, "secret": secret},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
@@ -1250,7 +1253,8 @@ def test_api_payments_with_hash_no_secret(
         ),
         json={"amount": amount, "identifier": identifier, "secret_hash": secret_hash},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
     assert payment == payment
 
@@ -1305,7 +1309,8 @@ def test_api_payments_with_resolver(
         ),
         json={"amount": amount, "identifier": identifier, "secret": secret},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
     assert payment == payment
 
@@ -1323,7 +1328,8 @@ def test_api_payments_with_resolver(
         ),
         json={"amount": amount, "identifier": identifier, "secret_hash": secret_hash},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
     assert payment == payment
 
@@ -1364,7 +1370,8 @@ def test_api_payments_with_secret_and_hash(
             "secret_hash": secret_hash,
         },
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
@@ -1925,7 +1932,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
     request.send()
 
     exception = ValueError("Waiting for transfer received success in the WAL timed out")
-    with gevent.Timeout(seconds=60, exception=exception):
+    with watch_for_unlock_failures(*raiden_network), gevent.Timeout(
+        seconds=60, exception=exception
+    ):
         result = wait_for_received_transfer_result(
             app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time, secrethash1
         )
@@ -1944,7 +1953,8 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
 
     # test endpoint without (partner and token) for sender
     request = grequests.get(api_url_for(api_server_test_instance, "paymentresource"))
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert must_have_event(
@@ -2447,7 +2457,8 @@ def test_api_payments_with_lock_timeout(api_server_test_instance, raiden_network
         ),
         json={"amount": amount, "identifier": identifier, "lock_timeout": 2 * reveal_timeout},
     )
-    response = request.send().response
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
 
     # try lock_timeout = settle_timeout - should work.
