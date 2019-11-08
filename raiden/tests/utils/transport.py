@@ -8,11 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import Callable, Iterator, List, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
 from gevent import subprocess
+from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
@@ -124,18 +125,23 @@ class NoTLSFederationMonkeyPatchProvider:
     __version__ = "0.1"
 
     class NoTLSFactory:
-        def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
+        def __new__(
+            cls, *args: List[Any], **kwargs: Dict[str, Any]  # pylint: disable=unused-argument
+        ):
             return None
 
-    def __init__(self, config, account_handler):  # pylint: disable=unused-argument
+    def __init__(  # pylint: disable=unused-argument
+        self, config: Dict[str, Any], account_handler: AuthHandler
+    ) -> None:
         pass
 
-    @defer.inlineCallbacks
-    def check_password(self, user_id, password):  # pylint: disable=unused-argument,no-self-use
-        defer.returnValue(False)
+    def check_password(  # pylint: disable=unused-argument,no-self-use
+        self, user_id: str, password: str
+    ) -> bool:
+        return False
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Dict[str, Any]) -> Dict[str, Any]:
         from synapse.crypto import context_factory
 
         context_factory.ClientTLSOptionsFactory = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
