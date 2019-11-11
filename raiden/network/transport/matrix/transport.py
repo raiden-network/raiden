@@ -388,7 +388,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Start: handle greenlet", handle_greenlet=self._client._handle_thread)
         if self._client._handle_thread:
             # wait on _handle_thread for initial sync
-            # this is needed so the rooms are populated before we _inventory_rooms
+            # this is needed so the rooms are populated before the _inventory_rooms
             self._client._handle_thread.get()
 
         self._join_broadcast_rooms()
