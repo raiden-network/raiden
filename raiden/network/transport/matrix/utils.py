@@ -243,9 +243,8 @@ class UserAddressManager:
         if event["type"] != "m.presence" or user_id == self._user_id:
             return
 
-        # provide the displayname since that may warm the cache
-        user = self._get_user(User(self._client.api, user_id, event["content"].get("displayname")))
-
+        user = self._get_user(user_id)
+        user.displayname = event["content"].get("displayname") or user.displayname
         address = self._validate_userid_signature(user)
         if not address:
             # Malformed address - skip
