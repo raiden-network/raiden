@@ -73,6 +73,17 @@ USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
 }
 
 
+def address_from_userid(user_id: str) -> Optional[Address]:
+    match = USERID_RE.match(user_id)
+    if not match:
+        return None
+
+    encoded_address = match.group(1)
+    address: Address = to_canonical_address(encoded_address)
+
+    return address
+
+
 class DisplayNameCache:
     def __init__(self) -> None:
         self._userid_to_displayname: Dict[str, str] = dict()
@@ -85,7 +96,15 @@ class DisplayNameCache:
             if cached_displayname is None:
                 # The cache is cold, query and warm it.
                 if not user.displayname:
-                    user.get_display_name()
+                    # Handles an edge case where the Matrix federation does not
+                    # have the profile for a given userid. The server response
+                    # is roughly:
+                    #
+                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"}
+                    try:
+                        user.get_display_name()
+                    except MatrixRequestError:
+                        return
 
                 if user.displayname is not None:
                     self._userid_to_displayname[user.user_id] = user.displayname
@@ -272,8 +291,22 @@ class UserAddressManager:
         """
         if self._stop_event.ready():
             return
+
         user_id = event["sender"]
+
         if event["type"] != "m.presence" or user_id == self._user_id:
+            return
+
+        address = address_from_userid(user_id)
+
+        # Not a user we've whitelisted, skip. This needs to be on the top of
+        # the function so that we don't request they displayname of users that
+        # are not important for the node. The presence is updated for every
+        # user on the first sync, since every Raiden node is a member of a
+        # broadcast room. This can result in thousands requests to the Matrix
+        # server in the first sync which will lead to slow startup times and
+        # presence problems.
+        if address is None or not self.is_address_known(address):
             return
 
         try:
@@ -282,16 +315,12 @@ class UserAddressManager:
             log.error("Matrix server returned an invalid user_id.")
             return
 
-        self._displayname_cache.warm_users([user])
-
         address = self._validate_userid_signature(user)
         if not address:
-            # Malformed address - skip
             return
 
-        # not a user we've whitelisted, skip
-        if not self.is_address_known(address):
-            return
+        self._displayname_cache.warm_users([user])
+
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
