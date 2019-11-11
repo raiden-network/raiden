@@ -154,3 +154,19 @@ def test_redacted_state_change(capsys, tmpdir):
 
     assert auth_token not in captured.err
     assert f"{auth_user}/<redacted>" in captured.err
+
+
+def test_that_secret_is_redacted(capsys, tmpdir):
+    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+
+    log = structlog.get_logger("raiden.network.transport.matrix.transport")
+
+    secret = "0x74564b5d217c3430713e7c6b643b5b244c6d617a4e350945303960723a7b2d4c"
+    data = f"""{{"secret": "{secret}", "signature": "0x274ec0589b47a85fa8645a4b7fa9f021b3ba7b81e41ab47278c6269089bad7b26f41f233236d994dd86b495791c95e433710365224d390aeb9f7ee427eddb5081b", "message_identifier": "3887369794757038169", "type": "RevealSecret"}}"""  # noqa
+
+    log.debug("Send raw", data=data.replace("\n", "\\n"))
+
+    captured = capsys.readouterr()
+
+    assert secret not in captured.err
+    assert f'"secret": <redacted>' in captured.err
