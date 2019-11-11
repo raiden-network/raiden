@@ -30,7 +30,7 @@ Fee Schedule Object
    }
 
 
-A fee schedule object represents the current established fees that the node wants to collect for mediated transfers. The following parameters can be set:
+A fee schedule object represents the current established fees that the mediator node wants to charge for transfers. The following parameters can be set:
 
 - ``cap_fees`` should be a ``boolean`` indicating whether the fees paid to mediators should be capped
 - ``flat`` should be an ``integer`` indicating the fee cost (in wei) for every mediated transfer, regardless of transfer amount
@@ -62,7 +62,7 @@ Token Network Object
 - ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
   token registered in the token network.
 
-- ``fee_schedule``: represents the `Fee Schedule Object` used for the configuration for all channels in this token network.
+- ``fee_schedule`` represents a `Fee Schedule Object`_ used for the configuration for all channels in this token network.
 
 
 
@@ -261,7 +261,7 @@ Querying Information About Channels and Tokens
               "reveal_timeout": 50,
               "fee_schedule": {
                   "cap_fees": true,
-                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
+                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], [18000,6]], [19000,21], [20000,60]],
                   "proportional": 1280,
                   "flat": 50
                   }
@@ -303,7 +303,7 @@ Querying Information About Channels and Tokens
               "reveal_timeout": 50,
               "fee_schedule": {
                   "cap_fees": true,
-                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
+                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], [18000,6]], [19000,21], [20000,60]],
                   "proportional": 1280,
                   "flat": 50
                   }
@@ -345,12 +345,12 @@ Querying Information About Channels and Tokens
           "settle_timeout": 500,
           "reveal_timeout": 50,
           "fee_schedule": {
-                  "cap_fees": true,
-                  "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], (...),  [18000,6]], [19000,21], [20000,60]],
-                  "proportional": 1280,
-                  "flat": 50
-                  }
+              "cap_fees": true,
+              "imbalance_penalty": [[0,60], [1000, 21], [2000, 6], [18000,6]], [19000,21], [20000,60]],
+              "proportional": 1280,
+              "flat": 50
               }
+          }
       }
 
    :statuscode 200: Successful query
