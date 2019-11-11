@@ -131,18 +131,20 @@ def must_have_events(event_list: List[TM], *args) -> bool:
     return True
 
 
-def has_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> bool:
+def count_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> int:
+    event_count = 0
     for event in events:
-        for event_type in event_types:
-            if isinstance(event, event_type):
-                return True
-    else:
-        return False
+        if any(isinstance(event, event_type) for event_type in event_types):
+            event_count += 1
+    return event_count
 
 
-def has_unlock_failure(raiden: RaidenService) -> bool:
-    events = raiden.wal.storage.get_events()  # type: ignore
-    return has_event_of_types(events, (EventUnlockFailed, EventUnlockClaimFailed))
+def count_unlock_failures(events: List[Event]) -> int:
+    return count_event_of_types(events, (EventUnlockClaimFailed, EventUnlockFailed))
+
+
+def has_unlock_failure(raiden: RaidenService, offset: int = 0) -> bool:
+    return count_unlock_failures(raiden.wal.storage.get_events()) > offset  # type: ignore
 
 
 def wait_for_raiden_event(
