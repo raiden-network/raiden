@@ -340,6 +340,7 @@ def assert_channels(
         )
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4803")
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
