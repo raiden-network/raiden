@@ -1,11 +1,14 @@
 import random
 from pathlib import Path
 
+import marshmallow
 import pytest
 
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.fields import (
+    AddressField,
     BytesField,
+    IntegerToStringField,
     OptionalIntegerToStringField,
     QueueIdentifierField,
 )
@@ -45,8 +48,20 @@ def test_queue_identifier_field_invalid_inputs(queue_identifier):
     # TODO check for address and chain/channel id validity in QueueIdentifier too, add tests here
 
     for string in (wrong_delimiter,):
-        with pytest.raises(ValueError):
+        with pytest.raises(marshmallow.exceptions.ValidationError):
             QueueIdentifierField()._deserialize(string, None, None)
+
+
+def test_deserialize_raises_validation_error_on_dict():
+    for field in [
+        IntegerToStringField(),
+        OptionalIntegerToStringField(),
+        BytesField(),
+        AddressField(),
+        QueueIdentifierField(),
+    ]:
+        with pytest.raises(marshmallow.exceptions.ValidationError):
+            field._deserialize({}, None, None)
 
 
 def test_optional_integer_to_string_field_roundtrip():
