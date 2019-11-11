@@ -5,7 +5,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -69,35 +69,6 @@ USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
 }
 
 
-class DisplayNameCache:
-    def __init__(self) -> None:
-        self._userid_to_displayname: Dict[str, str] = dict()
-
-    def warm_users(self, users: List[User]) -> None:
-        for user in users:
-            user_id = user.user_id
-            cached_displayname = self._userid_to_displayname.get(user_id)
-
-            if cached_displayname is None:
-                # The cache is cold, query and warm it.
-                if not user.displayname:
-                    user.get_display_name()
-
-                if user.displayname is not None:
-                    self._userid_to_displayname[user.user_id] = user.displayname
-
-            elif user.displayname is None:
-                user.displayname = cached_displayname
-
-            elif user.displayname != cached_displayname:
-                log.debug(
-                    "User displayname changed!",
-                    cached=cached_displayname,
-                    current=user.displayname,
-                )
-                self._userid_to_displayname[user.user_id] = user.displayname
-
-
 class UserAddressManager:
     """ Matrix user <-> eth address mapping and user / address reachability helper.
 
@@ -121,13 +92,13 @@ class UserAddressManager:
     def __init__(
         self,
         client: GMatrixClient,
-        displayname_cache: DisplayNameCache,
+        get_user_callable: Callable[[Union[User, str]], User],
         address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
         _log_context: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._client = client
-        self._displayname_cache = displayname_cache
+        self._get_user = get_user_callable
         self._address_reachability_changed_callback = address_reachability_changed_callback
         self._user_presence_changed_callback = user_presence_changed_callback
         self._stop_event = Event()
@@ -278,9 +249,10 @@ class UserAddressManager:
             log.error("Matrix server returned an invalid user_id.")
             return
 
-        self._displayname_cache.warm_users([user])
+        # provide the displayname since that may warm the cache
+        cached_user = self._get_user(user)
 
-        address = self._validate_userid_signature(user)
+        address = self._validate_userid_signature(cached_user)
         if not address:
             # Malformed address - skip
             return
@@ -305,7 +277,7 @@ class UserAddressManager:
         self.refresh_address_presence(address)
 
         if self._user_presence_changed_callback:
-            self._user_presence_changed_callback(user, new_state)
+            self._user_presence_changed_callback(cached_user, new_state)
 
     def refresh_presence(self) -> None:
         while not self._stop_event.ready():

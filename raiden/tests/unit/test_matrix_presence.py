@@ -1,5 +1,5 @@
 import uuid
-from typing import Callable, Dict, Iterator, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 import pytest
 from eth_utils import to_canonical_address
@@ -7,18 +7,13 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.network.transport.matrix import AddressReachability, UserPresence
-from raiden.network.transport.matrix.utils import USERID_RE, DisplayNameCache, UserAddressManager
+from raiden.network.transport.matrix.utils import USERID_RE, UserAddressManager
 from raiden.utils import Address
-
-
-class DummyApi:
-    def get_display_name(self, user_id):  # pylint: disable=no-self-use,unused-argument
-        return None
 
 
 class DummyMatrixClient:
     def __init__(self, user_id: str, user_directory_content: Optional[List[User]] = None):
-        self.api = DummyApi()
+        self.api = None
         self.user_id = user_id
         self._presence_callback: Optional[Callable] = None
         self._user_directory_content = user_directory_content if user_directory_content else []
@@ -67,6 +62,12 @@ class NonValidatingUserAddressManager(UserAddressManager):
         if not match:
             return None
         return to_canonical_address(match.group(1))
+
+
+def dummy_get_user(user_or_id: Union[str, User]) -> User:
+    if isinstance(user_or_id, User):
+        return user_or_id
+    return User(api=None, user_id=user_or_id)
 
 
 ADDR1 = Address(b"\x11" * 20)
@@ -126,7 +127,7 @@ def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_prese
 
     address_manager = NonValidatingUserAddressManager(
         client=dummy_matrix_client,
-        displayname_cache=DisplayNameCache(),
+        get_user_callable=dummy_get_user,
         address_reachability_changed_callback=address_reachability_callback,
         user_presence_changed_callback=user_presence_callback,
     )
