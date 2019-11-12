@@ -9,6 +9,7 @@ from urllib.parse import quote
 import gevent
 import structlog
 from gevent.lock import Semaphore
+from gevent.queue import Empty, Queue
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
@@ -26,6 +27,8 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
+SYNC_TIMEOUT_MS = 30_000
+
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
 MatrixSyncMessages = List[MatrixRoomMessages]
@@ -203,6 +206,7 @@ class GMatrixClient(MatrixClient):
 
     sync_filter: str
     sync_thread: Optional[gevent.Greenlet] = None
+    handle_thread: Optional[gevent.Greenlet] = None
 
     def __init__(
         self,
@@ -223,6 +227,7 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
+        self.response_queue = Queue()
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -316,8 +321,13 @@ class GMatrixClient(MatrixClient):
         """
         assert not self.should_listen and self.sync_thread is None, "Already running"
         self.should_listen = True
+
         self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
         self.sync_thread.name = f"GMatrixClient.listen_forever user_id:{self.user_id}"
+
+        self.handle_thread = gevent.spawn(self._handle_process_worker, self.response_queue)
+        self.handle_thread.name = f"GMatrixClient._handle_process_worker user_id:{self.user_id}"
+        self.handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
 
     def stop_listener_thread(self) -> None:
         """ Kills sync_thread greenlet before joining it """
@@ -388,7 +398,7 @@ class GMatrixClient(MatrixClient):
     def get_user_presence(self, user_id: str) -> Optional[str]:
         return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
-    def _sync(self, timeout_ms: int = 30_000) -> None:
+    def _sync(self, timeout_ms: int = SYNC_TIMEOUT_MS) -> None:
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
         log.debug("Sync called", node=node_address_from_userid(self.user_id), user_id=self.user_id)
 
@@ -445,10 +455,27 @@ class GMatrixClient(MatrixClient):
                 f"poll timeout is {timeout_in_seconds}s."
             )
 
-        # Updating the sync token should only be done after the response has been processed,
-        # otherwise we loose this information from this response in case of a crash.
+        # Updating the sync token should only be done after the response is
+        # saved in the queue, otherwise the data can be lost in a stop/start.
+        self.response_queue.put(response)
         self.sync_token = response["next_batch"]
         self._sync_iteration += 1
+
+    def _handle_process_worker(self, response_queue: Queue) -> None:
+        timeout_in_seconds = SYNC_TIMEOUT_MS / 1000
+
+        while self.should_listen:
+            try:
+                response = response_queue.get(timeout=timeout_in_seconds)
+            except Empty:
+                # If the queue does not have any new items added to it after
+                # the timeout the exception Empty is raised, this timeout is
+                # used to then do a check if the greenlet should continue
+                # running or not
+                continue
+
+            if response is not None:
+                self._handle_response(response)
 
     def _handle_response(self, response: Dict[str, Any], first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
