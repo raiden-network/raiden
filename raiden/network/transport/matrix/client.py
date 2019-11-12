@@ -209,8 +209,8 @@ class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
 
     sync_filter: str
-    sync_thread: Optional[gevent.Greenlet] = None
-    handle_thread: Optional[gevent.Greenlet] = None
+    sync_thread: Optional[Greenlet] = None
+    message_worker: Optional[Greenlet] = None
 
     def __init__(
         self,
@@ -274,6 +274,7 @@ class GMatrixClient(MatrixClient):
         self.should_listen = True
         while self.should_listen:
             try:
+                # may be killed and raise exception from message_worker
                 self._sync(timeout_ms)
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
@@ -330,11 +331,11 @@ class GMatrixClient(MatrixClient):
         self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
         self.sync_thread.name = f"GMatrixClient.listen_forever user_id:{self.user_id}"
 
-        self._handle_thread = gevent.spawn(
+        self.message_worker = gevent.spawn(
             self._handle_process_worker, self.response_queue, self.event_stop
         )
-        self.handle_thread.name = f"GMatrixClient._handle_process_worker user_id:{self.user_id}"
-        self.handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
+        self.message_worker.name = f"GMatrixClient._handle_process_worker user_id:{self.user_id}"
+        self.message_worker.link_exception(lambda g: self.sync_thread.kill(g.exception))
 
     def stop_listener_thread(self) -> None:
         """ Kills sync_thread greenlet before joining it """
@@ -355,12 +356,26 @@ class GMatrixClient(MatrixClient):
                 raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
 
+        if self.message_worker is not None:
+            log.debug(
+                "Waiting on handle greenlet",
+                node=node_address_from_userid(self.user_id),
+                current_user=self.user_id,
+            )
+            exited = gevent.joinall(
+                {self.message_worker}, timeout=SHUTDOWN_TIMEOUT, raise_error=True
+            )
+            if not exited:
+                raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
+            self.message_worker.get()
+
         log.debug(
             "Listener greenlet exited",
             node=node_address_from_userid(self.user_id),
             user_id=self.user_id,
         )
         self.sync_thread = None
+        self.message_worker = None
 
     def stop(self) -> None:
         self.stop_listener_thread()
@@ -478,6 +493,12 @@ class GMatrixClient(MatrixClient):
 
         while True:
             data_or_stop.wait()
+
+            # Clear the event's internal state for the next iteration.
+            #
+            # This *must* be done before any context switch, otherwise cuncurrent
+            # actions can be missed.
+            data_or_stop.clear()
 
             if event_stop.is_set():
                 return

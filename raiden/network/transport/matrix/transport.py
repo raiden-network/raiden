@@ -635,6 +635,14 @@ class MatrixTransport(Runnable):
         msg = "The first sync requires the Matrix client to be properly authenticated."
         assert self._user_id, msg
 
+        msg = (
+            "The sync thread must not be started before the `_inventory_rooms` "
+            "is executed, the listener for the inventory rooms must be set up "
+            "before any messages can be processed."
+        )
+        assert self._client.sync_thread is None, msg
+        assert self._client.message_worker is None, msg
+
         # Call sync to fetch the inventory rooms and new invites. At this point
         # the messages themselves should not be processed because the room
         # callbacks are not installed yet (this is done bellow). The sync limit
@@ -642,13 +650,24 @@ class MatrixTransport(Runnable):
         prev_sync_limit = self._client.set_sync_limit(0)
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
+        # Process the result from the sync executed above
+        response_queue = self._client.response_queue
+        while response_queue:
+            self._client._handle_response(response_queue.get(block=False))
 
     def _initialize_room_inventory(self) -> None:
         msg = "The rooms can only be inventoried after the first sync."
         assert self._client.sync_token, msg
 
-        self.log.debug("Inventory rooms", rooms=self._client.rooms)
+        msg = (
+            "The sync thread must not be started before the `_inventory_rooms` "
+            "is executed, the listener for the inventory rooms must be set up "
+            "before any messages can be processed."
+        )
+        assert self._client.sync_thread is None, msg
+        assert self._client.message_worker is None, msg
 
+        self.log.debug("Inventory rooms", rooms=self._client.rooms)
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
             if room.canonical_alias:
