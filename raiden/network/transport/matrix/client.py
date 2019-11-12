@@ -8,8 +8,10 @@ from urllib.parse import quote
 
 import gevent
 import structlog
+from eth_utils import to_checksum_address
+from gevent import Greenlet
+from gevent.event import Event
 from gevent.lock import Semaphore
-from gevent.queue import Empty, Queue
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
@@ -22,6 +24,7 @@ from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import AddressHex
+from raiden.utils.notifying_queue import NotifyingQueue, event_first_of
 
 log = structlog.get_logger(__name__)
 
@@ -32,6 +35,7 @@ SYNC_TIMEOUT_MS = 30_000
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
 MatrixSyncMessages = List[MatrixRoomMessages]
+JSONResponse = Dict[str, Any]
 
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
@@ -227,7 +231,8 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
-        self.response_queue = Queue()
+        self.response_queue = NotifyingQueue()
+        self.event_stop = Event()
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -325,7 +330,9 @@ class GMatrixClient(MatrixClient):
         self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
         self.sync_thread.name = f"GMatrixClient.listen_forever user_id:{self.user_id}"
 
-        self.handle_thread = gevent.spawn(self._handle_process_worker, self.response_queue)
+        self._handle_thread = gevent.spawn(
+            self._handle_process_worker, self.response_queue, self.event_stop
+        )
         self.handle_thread.name = f"GMatrixClient._handle_process_worker user_id:{self.user_id}"
         self.handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
 
@@ -334,6 +341,8 @@ class GMatrixClient(MatrixClient):
         # when stopping, `kill` will cause the `self.api.sync` call in _sync
         # to raise a connection error. This flag will ensure it exits gracefully then
         self.should_listen = False
+        self.event_stop.set()
+
         if self.sync_thread:
             self.sync_thread.kill()
             log.debug(
@@ -461,23 +470,28 @@ class GMatrixClient(MatrixClient):
         self.sync_token = response["next_batch"]
         self._sync_iteration += 1
 
-    def _handle_process_worker(self, response_queue: Queue) -> None:
-        timeout_in_seconds = SYNC_TIMEOUT_MS / 1000
+    def _handle_process_worker(self, response_queue: NotifyingQueue, event_stop: Event) -> None:
+        if self._post_hook_func is not None and self.sync_token is not None:
+            self._post_hook_func(self.sync_token)
 
-        while self.should_listen:
-            try:
-                response = response_queue.get(timeout=timeout_in_seconds)
-            except Empty:
-                # If the queue does not have any new items added to it after
-                # the timeout the exception Empty is raised, this timeout is
-                # used to then do a check if the greenlet should continue
-                # running or not
-                continue
+        data_or_stop = event_first_of(response_queue, event_stop)
+
+        while True:
+            data_or_stop.wait()
+
+            if event_stop.is_set():
+                return
+
+            # The queue is not empty at this point, so this won't raise Empty.
+            response: JSONResponse = response_queue.get(block=False)
 
             if response is not None:
                 self._handle_response(response)
 
-    def _handle_response(self, response: Dict[str, Any], first_sync: bool = False) -> None:
+            # Clear the event's internal state for the next iteration
+            data_or_stop.clear()
+
+    def _handle_response(self, response: JSONResponse, first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
         if not self.should_listen and not first_sync:
             log.warning(
