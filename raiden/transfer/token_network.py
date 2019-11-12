@@ -380,7 +380,7 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
-    if type(state_change) == ActionChannelWithdraw:
+    elif type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
         iteration = handle_channel_withdraw(
             token_network_state=token_network_state,
@@ -389,7 +389,7 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
-    if type(state_change) == ActionChannelSetRevealTimeout:
+    elif type(state_change) == ActionChannelSetRevealTimeout:
         assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
         iteration = handle_channel_set_reveal_timeout(
             token_network_state=token_network_state,
