@@ -522,6 +522,9 @@ class MatrixTransport(Runnable):
             # representing the target node
             self._address_mgr.refresh_address_presence(node_address)
 
+            # Trigger creation of room between channel participants
+            self._get_room_for_address(node_address)
+
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
 
