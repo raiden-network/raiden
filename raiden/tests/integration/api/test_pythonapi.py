@@ -1,5 +1,4 @@
 from typing import cast
-from unittest.mock import patch
 
 import gevent
 import pytest
@@ -37,6 +36,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
+from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.state import ChannelState, NetworkState
 from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
@@ -355,22 +355,20 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    def fake_receive(room, event):  # pylint: disable=unused-argument
-        return True
+    app1.raiden.raiden_event_handler.hold(SendSecretRequest, {})
 
-    with patch.object(app1.raiden.transport, "_handle_message", side_effect=fake_receive):
-        greenlet = gevent.spawn(
-            RaidenAPI(app0.raiden).transfer,
-            app0.raiden.default_registry.address,
-            token_address,
-            1,
-            target=app1.raiden.address,
-        )
-        waiting.wait_for_block(
-            app0.raiden, app1.raiden.get_block_number() + 2 * reveal_timeout + 1, retry_timeout
-        )
-        greenlet.join(timeout=5)
-        assert not greenlet.value
+    greenlet = gevent.spawn(
+        RaidenAPI(app0.raiden).transfer,
+        app0.raiden.default_registry.address,
+        token_address,
+        1,
+        target=app1.raiden.address,
+    )
+    waiting.wait_for_block(
+        app0.raiden, app1.raiden.get_block_number() + 2 * reveal_timeout + 1, retry_timeout
+    )
+    greenlet.join(timeout=5)
+    assert not greenlet.value
 
 
 @raise_on_failure
