@@ -458,7 +458,17 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
 
 
 def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
-    """Login for the first time.
+    """Login within a server.
+
+    There are multiple cases where a previous auth token can become invalid and
+    a new login is necessary:
+
+    - The server is configured to automatically invalidate tokens after a while
+      (not the default)
+    - A server operator may manually wipe or invalidate existing access tokens
+    - A node may have roamed to a different server (e.g. because the original
+      server was temporarily unavailable) and is now 'returning' to the
+      previously used server.
 
     This relies on the Matrix server having the `eth_auth_provider` plugin
     installed, the plugin will automatically create the user on the first
@@ -510,7 +520,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     user.set_display_name(signature_hex)
 
     log.debug(
-        "Logged to a new server",
+        "Logged in",
         node=to_checksum_address(username),
         homeserver=server_name,
         server_url=server_url,
@@ -533,7 +543,7 @@ def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> 
     client.set_access_token(user_id=user_id, token=access_token)
 
     try:
-        # Test the credentional. Any API that requries authentication
+        # Test the credentials. Any API that requries authentication
         # would be enough.
         client.api.get_devices()
     except MatrixRequestError as ex:
