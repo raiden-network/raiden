@@ -393,8 +393,9 @@ class MatrixTransport(Runnable):
             transport_uuid=str(self._uuid),
         )
 
-        self._join_broadcast_rooms()
-        self._inventory_rooms()
+        self._initialize_first_sync()
+        self._initialize_broadcast_rooms()
+        self._initialize_inventory_rooms()
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -637,21 +638,8 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.rpc_client.chain_id
 
-    def _join_broadcast_rooms(self) -> None:
-        for suffix in self._config.broadcast_rooms:
-            room_name = make_room_alias(self.chain_id, suffix)
-            broadcast_room_alias = f"#{room_name}:{self._server_name}"
-            self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
-            self._broadcast_rooms[room_name] = join_broadcast_room(
-                client=self._client, broadcast_room_alias=broadcast_room_alias
-            )
-
-    def _inventory_rooms(self) -> None:
-        self.log.debug("Inventory rooms", rooms=self._client.rooms)
-
-        msg = (
-            "Fetching the inventory rooms require the node to be logged in with the Matrix server."
-        )
+    def _initialize_first_sync(self) -> None:
+        msg = "The first sync requires the Matrix client to be properly authenticated."
         assert self._user_id, msg
 
         # Call sync to fetch the inventory rooms and new invites. At this point
@@ -661,6 +649,33 @@ class MatrixTransport(Runnable):
         prev_sync_limit = self._client.set_sync_limit(0)
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
+
+    def _initialize_broadcast_rooms(self) -> None:
+        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
+        assert self._user_id, msg
+
+        for suffix in self._config.broadcast_rooms:
+            room_name = make_room_alias(self.chain_id, suffix)
+            broadcast_room_alias = f"#{room_name}:{self._server_name}"
+            self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
+            self._broadcast_rooms[room_name] = join_broadcast_room(
+                client=self._client, broadcast_room_alias=broadcast_room_alias
+            )
+
+    def _initialize_inventory_rooms(self) -> None:
+        msg = (
+            "Fetching the inventory rooms requires the node to be logged in "
+            "with the Matrix server."
+        )
+        assert self._client.sync_token, msg
+
+        msg = (
+            "Fetching the inventory rooms requires the node to be logged in "
+            "with the Matrix server."
+        )
+        assert self._client.sync_token, msg
+
+        self.log.debug("Inventory rooms", rooms=self._client.rooms)
 
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
