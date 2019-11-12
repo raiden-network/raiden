@@ -1,5 +1,5 @@
 import random
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import pytest
 
@@ -54,9 +54,6 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         transport_module, "make_client", lambda url, *a, **kw: GMatrixClient(url[0])
     )
 
-    def mock_get_user(klass, user: Union[User, str]) -> User:  # pylint: disable=unused-argument
-        return User(None, USERID1)
-
     def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
         klass, address: Address, filter_private: bool = None
     ) -> List[str]:
@@ -91,7 +88,6 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
     transport._client.user_id = USERID0
 
-    monkeypatch.setattr(MatrixTransport, "_get_user", mock_get_user)
     monkeypatch.setattr(
         MatrixTransport, "_get_room_ids_for_address", mock_get_room_ids_for_address
     )

@@ -1,5 +1,5 @@
 import uuid
-from typing import Callable, Dict, Iterator, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional
 
 import pytest
 from eth_utils import to_canonical_address
@@ -7,27 +7,18 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.network.transport.matrix import AddressReachability, UserPresence
-from raiden.network.transport.matrix.utils import USERID_RE, UserAddressManager
+from raiden.network.transport.matrix.utils import USERID_RE, DisplayNameCache, UserAddressManager
 from raiden.utils import Address
 
 
-class DummyUser:
-    def __init__(self, user_id: str):
-        self.user_id = user_id
-        self.displayname = "dummy"
-
-    def __eq__(self, other):
-        return isinstance(other, (DummyUser, User)) and self.user_id == other.user_id
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} user_id={self.user_id}>"
-
-    def __hash__(self):
-        return hash(self.user_id)
+class DummyApi:
+    def get_display_name(self, user_id):  # pylint: disable=no-self-use,unused-argument
+        return None
 
 
 class DummyMatrixClient:
-    def __init__(self, user_id: str, user_directory_content: Optional[List[DummyUser]] = None):
+    def __init__(self, user_id: str, user_directory_content: Optional[List[User]] = None):
+        self.api = DummyApi()
         self.user_id = user_id
         self._presence_callback: Optional[Callable] = None
         self._user_directory_content = user_directory_content if user_directory_content else []
@@ -43,7 +34,7 @@ class DummyMatrixClient:
     def remove_presence_listener(self, uid: uuid.UUID) -> None:  # pylint: disable=unused-argument
         self._presence_callback = None
 
-    def search_user_directory(self, term: str) -> Iterator[DummyUser]:
+    def search_user_directory(self, term: str) -> Iterator[User]:
         for user in self._user_directory_content:
             if term in user.user_id:
                 yield user
@@ -78,12 +69,6 @@ class NonValidatingUserAddressManager(UserAddressManager):
         return to_canonical_address(match.group(1))
 
 
-def dummy_get_user(user_or_id: Union[str, User]) -> User:
-    if isinstance(user_or_id, User):
-        return user_or_id
-    return DummyUser(user_id=user_or_id)
-
-
 ADDR1 = Address(b"\x11" * 20)
 ADDR2 = Address(b'""""""""""""""""""""')
 INVALID_USER_ID = "bla:bla"
@@ -92,10 +77,10 @@ USER1_S1_ID = "@0x1111111111111111111111111111111111111111:server1"
 USER1_S2_ID = "@0x1111111111111111111111111111111111111111:server2"
 USER2_S1_ID = "@0x2222222222222222222222222222222222222222:server1"
 USER2_S2_ID = "@0x2222222222222222222222222222222222222222:server2"
-USER1_S1 = DummyUser(USER1_S1_ID)
-USER1_S2 = DummyUser(USER1_S2_ID)
-USER2_S1 = DummyUser(USER2_S1_ID)
-USER2_S2 = DummyUser(USER2_S2_ID)
+USER1_S1 = User(api=None, user_id=USER1_S1_ID)
+USER1_S2 = User(api=None, user_id=USER1_S2_ID)
+USER2_S1 = User(api=None, user_id=USER2_S1_ID)
+USER2_S2 = User(api=None, user_id=USER2_S2_ID)
 
 
 @pytest.fixture
@@ -123,7 +108,7 @@ def address_reachability():
 @pytest.fixture
 def user_presence_callback(user_presence):
     def _callback(user, presence):
-        user_presence[user] = presence
+        user_presence[user.user_id] = presence
 
     return _callback
 
@@ -141,7 +126,7 @@ def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_prese
 
     address_manager = NonValidatingUserAddressManager(
         client=dummy_matrix_client,
-        get_user_callable=dummy_get_user,
+        displayname_cache=DisplayNameCache(),
         address_reachability_changed_callback=address_reachability_callback,
         user_presence_changed_callback=user_presence_callback,
     )
@@ -189,7 +174,7 @@ def test_user_addr_mgr_basics(
     assert len(address_reachability) == 1
     assert address_reachability[ADDR1] is AddressReachability.REACHABLE
     assert len(user_presence) == 1
-    assert user_presence[USER1_S1] is UserPresence.ONLINE
+    assert user_presence[USER1_S1.user_id] is UserPresence.ONLINE
 
 
 def test_user_addr_mgr_compound(
@@ -201,7 +186,7 @@ def test_user_addr_mgr_compound(
     assert user_addr_mgr.get_address_reachability(ADDR1) == AddressReachability.REACHABLE
     assert address_reachability[ADDR1] is AddressReachability.REACHABLE
     assert user_addr_mgr.get_userid_presence(USER1_S1_ID) is UserPresence.ONLINE
-    assert user_presence[USER1_S1] is UserPresence.ONLINE
+    assert user_presence[USER1_S1.user_id] is UserPresence.ONLINE
 
     dummy_matrix_client.trigger_presence_callback({USER1_S1_ID: UserPresence.OFFLINE})
 
@@ -209,7 +194,7 @@ def test_user_addr_mgr_compound(
     assert address_reachability[ADDR1] is AddressReachability.UNREACHABLE
     assert user_addr_mgr.get_userid_presence(USER1_S1_ID) is UserPresence.OFFLINE
     assert user_addr_mgr.get_userid_presence(USER1_S2_ID) is UserPresence.UNKNOWN
-    assert user_presence[USER1_S1] is UserPresence.OFFLINE
+    assert user_presence[USER1_S1.user_id] is UserPresence.OFFLINE
 
     # The duplicate `ONLINE` item is intentional to test both sides of a branch
     for presence in [UserPresence.ONLINE, UserPresence.ONLINE, UserPresence.UNAVAILABLE]:
@@ -219,8 +204,8 @@ def test_user_addr_mgr_compound(
         assert address_reachability[ADDR1] is AddressReachability.REACHABLE
         assert user_addr_mgr.get_userid_presence(USER1_S1_ID) is UserPresence.OFFLINE
         assert user_addr_mgr.get_userid_presence(USER1_S2_ID) is presence
-        assert user_presence[USER1_S1] is UserPresence.OFFLINE
-        assert user_presence[USER1_S2] is presence
+        assert user_presence[USER1_S1.user_id] is UserPresence.OFFLINE
+        assert user_presence[USER1_S2.user_id] is presence
 
     dummy_matrix_client.trigger_presence_callback({USER1_S2_ID: UserPresence.OFFLINE})
     assert user_addr_mgr.get_address_reachability(ADDR1) == AddressReachability.UNREACHABLE

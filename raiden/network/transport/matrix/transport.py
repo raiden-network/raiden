@@ -13,7 +13,7 @@ from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
+from raiden.constants import EMPTY_SIGNATURE
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import (
@@ -29,6 +29,7 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     AddressReachability,
+    DisplayNameCache,
     UserAddressManager,
     UserPresence,
     join_broadcast_room,
@@ -310,6 +311,7 @@ class MatrixTransport(Runnable):
         self.greenlets: List[gevent.Greenlet] = list()
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
+        self._displayname_cache = DisplayNameCache()
 
         self._broadcast_rooms: Dict[str, Optional[Room]] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
@@ -327,7 +329,7 @@ class MatrixTransport(Runnable):
 
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
-            get_user_callable=self._get_user,
+            displayname_cache=self._displayname_cache,
             address_reachability_changed_callback=self._address_reachability_changed,
             user_presence_changed_callback=self._user_presence_changed,
             _log_context={"transport_uuid": str(self._uuid)},
@@ -506,10 +508,9 @@ class MatrixTransport(Runnable):
             node_address_hex = to_normalized_address(node_address)
             self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
 
-            candidates = [
-                self._get_user(user)
-                for user in self._client.search_user_directory(node_address_hex)
-            ]
+            candidates = self._client.search_user_directory(node_address_hex)
+            self._displayname_cache.warm_users(candidates)
+
             user_ids = {
                 user.user_id
                 for user in candidates
@@ -696,7 +697,8 @@ class MatrixTransport(Runnable):
             self.log.debug("Invite: no invite event found", room_id=room_id)
             return  # there should always be one and only one invite membership event for us
         sender = invite_event["sender"]
-        user = self._get_user(sender)
+        user = self._client.get_user(sender)
+        self._displayname_cache.warm_users([user])
         peer_address = validate_userid_signature(user)
 
         if not peer_address:
@@ -790,7 +792,9 @@ class MatrixTransport(Runnable):
             # Ignore our own messages
             return False
 
-        user = self._get_user(sender_id)
+        user = self._client.get_user(sender_id)
+        self._displayname_cache.warm_users([user])
+
         peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
@@ -991,9 +995,8 @@ class MatrixTransport(Runnable):
         room_name = make_room_alias(self.chain_id, *address_pair)
 
         # no room with expected name => create one and invite peer
-        peer_candidates = [
-            self._get_user(user) for user in self._client.search_user_directory(address_hex)
-        ]
+        peer_candidates = self._client.search_user_directory(address_hex)
+        self._displayname_cache.warm_users(peer_candidates)
 
         # filter peer_candidates
         peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
@@ -1188,32 +1191,6 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 
-    def _get_user(self, user: Union[User, str]) -> User:
-        """ Returns a cached `User` instance with the `displayname` set.
-
-        This function maintains a cache of `User` instances with the
-        `displayname` variable set. This can reduce the number of HTTP requests
-        since the displayname is used in multiple places to validate the
-        partner node.
-
-        All users are supposed to be in discovery room, so just reuse the
-        `_members` dict already present from the Matrix SDK.
-        """
-        user_id: str = getattr(user, "user_id", user)
-        discovery_room = self._broadcast_rooms.get(
-            make_room_alias(self.chain_id, DISCOVERY_DEFAULT_ROOM)
-        )
-        if discovery_room and user_id in discovery_room._members:
-            duser = discovery_room._members[user_id]
-            # if handed a User instance with displayname set, update the discovery room cache
-            if getattr(user, "displayname", None):
-                assert isinstance(user, User)
-                duser.displayname = user.displayname
-            user = duser
-        elif not isinstance(user, User):
-            user = self._client.get_user(user_id)
-        return user
-
     def _set_room_id_for_address(
         self, address: Address, room_id: Optional[_RoomID] = None
     ) -> None:
@@ -1328,7 +1305,9 @@ class MatrixTransport(Runnable):
             # Ignore non-messages and our own messages
             return False
 
-        user = self._get_user(sender_id)
+        user = self._client.get_user(sender_id)
+        self._displayname_cache.warm_users([user])
+
         peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
