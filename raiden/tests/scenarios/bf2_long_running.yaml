@@ -76,7 +76,7 @@ scenario:
       - parallel:
           name: "Deposit to a channel that does not exist"
           tasks:
-            # Node tries to deposit to an unexisting channel
+            # Node tries to deposit to an non-existing channel
             - deposit: {from: 4, to: 3, total_deposit: 20, expected_http_status: 409}
             # Node tries to deposit less then the total deposit in two of his channels
             - deposit: {from: 1, to: 0, total_deposit: 50, expected_http_status: 409}
@@ -84,7 +84,7 @@ scenario:
             # Opening a channel, but the channel already exists
             - open_channel: {from: 1, to: 0, total_deposit: 100, expected_http_status: 409}
       - serial:
-          name: "Give the nodes time to sync"
+          name: "Give the nodes time to complete the earlier deposits and channel opening"
           tasks:
             - wait: 10
       - parallel:
@@ -97,7 +97,7 @@ scenario:
             - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
       - serial:
-          name: "C tries different cases"
+          name: "2 tries different cases"
           tasks:
             - open_channel: {from: 2, to: 4, total_deposit: 0, expected_http_status: 201}
             - wait: 10
@@ -209,10 +209,6 @@ scenario:
           tasks:
             - assert: {from: 2, to: 3, total_deposit: 101, balance: 101, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 101, balance: 101, state: "opened"}
-              #      - serial:
-              # name: "99 payments from D to C in a direct channel"
-              # repeat: 99
-              # tasks:
             - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
       - transfer: {from: 3, to: 2, amount: 99, lock_timeout: 30}
@@ -241,10 +237,6 @@ scenario:
             - wait: 20
             - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "closed"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "closed"}
-              # - serial:
-        # name: "199 payments from A to D in a channel"
-        # repeat: 199
-        # tasks:
       - transfer: {from: 0, to: 3, amount: 200, lock_timeout: 30}
       - wait: 5
       - serial:
