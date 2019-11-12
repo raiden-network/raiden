@@ -36,6 +36,7 @@ from raiden.network.transport.matrix.utils import (
     login,
     make_client,
     make_room_alias,
+    my_place_or_yours,
     validate_and_parse_message,
     validate_userid_signature,
 )
@@ -523,7 +524,12 @@ class MatrixTransport(Runnable):
             self._address_mgr.refresh_address_presence(node_address)
 
             # Trigger creation of room between channel participants
-            self._get_room_for_address(node_address)
+            room_creator_address = my_place_or_yours(
+                our_address=self._raiden_service.address,
+                partner_address=node_address
+            )
+            if self._raiden_service.address == room_creator_address:
+                self._get_room_for_address(node_address)
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
