@@ -477,7 +477,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     # For a honest matrix server:
     #
     # - This prevents impersonation attacks / name squatting, since the plugin
-    # will validate the username by recovering the adddress from the signature
+    # will validate the username by recovering the address from the signature
     # and check the recovered address and the username matches.
     #
     # For a badly configured server (one without the plugin):
