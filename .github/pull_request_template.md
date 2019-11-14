@@ -1,6 +1,6 @@
-Fixes: #<issue>
-
 ## Description
+
+Fixes: #<issue>
 
 Please, describe what this PR does in detail:
 - If it's a bug fix, detail the root cause of the bug and how this PR fixes it.
