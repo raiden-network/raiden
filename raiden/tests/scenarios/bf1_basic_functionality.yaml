@@ -214,7 +214,7 @@ scenario:
           name: "Assert after 100 payments from 3 to 0"
           tasks:
             - wait: 100
-            - assert_sum: {from: 0, balance_sum: 1_105_000_000_000_000_000}
+            - assert_sum: {from: 0, balance_sum: 1_995_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_000_000_000_000_000_000}
       - serial:
           name: "Close channel between 0 and 4"
