@@ -802,7 +802,10 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # claim the token from the channel A1 - H
 
     # the attacker settles the contract
-    app2.raiden.proxy_manager.next_block()
+    app2proxymanager = app2.raiden.proxy_manager
+    app2proxymanager.wait_until_block(
+        target_block_number=app2proxymanager.client.block_number() + 1
+    )
 
     attack_channel.netting_channel.settle(token, attack_contract)
 
@@ -820,7 +823,10 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # locked transfer between H-A2 than A1-H. For A2 to acquire the token
     # it needs to make the secret public in the blockchain so it publishes the
     # secret through an event and the Hub is able to require its funds
-    app1.raiden.proxy_manager.next_block()
+    app1proxymanager = app1.raiden.proxy_manager
+    app1proxymanager.wait_until_block(
+        target_block_number=app1proxymanager.client.block_number() + 1
+    )
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
