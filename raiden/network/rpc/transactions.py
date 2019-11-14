@@ -10,7 +10,8 @@ def check_transaction_threw(receipt: Dict[str, Any]) -> Optional[Dict[str, Any]]
        transaction's status indicator is 0x0.
     """
     if "status" not in receipt:
-        raise ValueError(
+        # This should never happen. Raiden checks ethereum client for compatibility at startup
+        raise AssertionError(
             "Transaction receipt does not contain a status field. Upgrade your client"
         )
 
