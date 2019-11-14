@@ -88,7 +88,19 @@ class DisplayNameCache:
     def __init__(self) -> None:
         self._userid_to_displayname: Dict[str, str] = dict()
 
-    def warm_users(self, users: List[User]) -> None:
+    def set_displayname(self, user_id: str, displayname: str) -> None:
+        """ Update displayname cache """
+        if user_id and displayname:
+            self._userid_to_displayname[user_id] = displayname
+
+    def warm_users(self, users: Iterable[User]) -> None:
+        """
+        Update the given user's displayname attributes
+
+        Either update the user objects from the cache or fetch the displayname from the server.
+        If we got a new displayname (either from the given user or fetched from the server) update
+        the cache with it.
+        """
         for user in users:
             user_id = user.user_id
             cached_displayname = self._userid_to_displayname.get(user_id)

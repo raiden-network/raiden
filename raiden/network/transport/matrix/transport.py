@@ -299,11 +299,14 @@ class MatrixTransport(Runnable):
                 config["retry_interval"],
             )
 
+        self._displayname_cache = DisplayNameCache()
+
         self._client: GMatrixClient = make_client(
             available_servers,
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
+            display_name_cache_callback=self._displayname_cache.set_displayname,
         )
         self._server_url = self._client.api.base_url
         self._server_name = config.get("server_name", urlparse(self._server_url).netloc)
@@ -311,7 +314,6 @@ class MatrixTransport(Runnable):
         self.greenlets: List[gevent.Greenlet] = list()
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
-        self._displayname_cache = DisplayNameCache()
 
         self._broadcast_rooms: Dict[str, Optional[Room]] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()

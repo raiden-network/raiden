@@ -222,11 +222,13 @@ class GMatrixClient(MatrixClient):
         http_pool_maxsize: int = 10,
         http_retry_timeout: int = 60,
         http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
+        display_name_cache_callback: Optional[Callable[[str, str], None]] = None,
     ) -> None:
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
         self._post_hook_func: Optional[Callable[[str], None]] = None
         self.token: Optional[str] = None
+        self._display_name_cache_callback = display_name_cache_callback
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -474,7 +476,20 @@ class GMatrixClient(MatrixClient):
                 current_user=self.user_id,
             )
             return
-        # Handle presence after rooms
+
+        if first_sync and self._display_name_cache_callback:
+            # Since presence handling needs to verify the displayname signature but presence events
+            # don't contain the displayname we pre-fill the displayname cache on first sync from
+            # the `m.room.member` events which *do* contain the displayname attribute.
+            for room_events in response["rooms"]["join"].values():
+                for event in room_events["state"]["events"]:
+                    event_content = event["content"]
+                    if event["type"] == "m.room.member" and event_content["membership"] == "join":
+                        self._display_name_cache_callback(
+                            user_id=event["state_key"],
+                            displayname=event_content.get("displayname"),
+                        )
+
         for presence_update in response["presence"]["events"]:
             for callback in list(self.presence_listeners.values()):
                 self.call(callback, presence_update)
