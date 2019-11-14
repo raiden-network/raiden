@@ -169,12 +169,6 @@ class ContractProxy:
             kwargs=kwargs,
         )
 
-    def decode_transaction_input(self, transaction_hash: bytes) -> Dict:
-        """Return inputs of a method call"""
-        transaction = self.contract.web3.eth.getTransaction(transaction_hash)
-
-        return self.contract.decode_function_input(transaction["input"])
-
     def decode_event(self, log: Dict[str, Any]) -> Dict[str, Any]:
         return decode_event(self.contract.abi, log)
 
