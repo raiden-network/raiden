@@ -625,10 +625,6 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.rpc_client.chain_id
 
-    @property
-    def _private_rooms(self) -> bool:
-        return bool(self._config.get("private_rooms"))
-
     def _join_broadcast_rooms(self) -> None:
         for suffix in self._config["broadcast_rooms"]:
             room_name = make_room_alias(self.chain_id, suffix)
@@ -820,12 +816,8 @@ class MatrixTransport(Runnable):
         room_ids = self._get_room_ids_for_address(peer_address)
 
         # TODO: Remove clause after `and` and check if things still don't hang
-        if room.room_id not in room_ids and (self._private_rooms and not room.invite_only):
-            # this should not happen, but is not fatal, as we may not know user yet
-            if self._private_rooms and not room.invite_only:
-                reason = "required private room, but received message in a public"
-            else:
-                reason = "unknown room for user"
+        if room.room_id not in room_ids:
+            reason = "unknown room for user"
             self.log.debug(
                 "Ignoring invalid message",
                 peer_user=user.user_id,
@@ -975,7 +967,6 @@ class MatrixTransport(Runnable):
         msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
         assert address and self._address_mgr.is_address_known(address), msg
 
-        # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
             # This loop is used to ignore any broadcast rooms that may have 'polluted' the
@@ -992,16 +983,10 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         room_creator_address = my_place_or_yours(
-            our_address=self._raiden_service.address,
-            partner_address=address
+            our_address=self._raiden_service.address, partner_address=address
         )
         if self._raiden_service.address != room_creator_address:
             return None
-
-        address_pair = sorted(
-            [to_normalized_address(address) for address in [address, self._raiden_service.address]]
-        )
-        room_name = make_room_alias(self.chain_id, *address_pair)
 
         # no room with expected name => create one and invite peer
         peer_candidates = self._client.search_user_directory(address_hex)
@@ -1013,10 +998,7 @@ class MatrixTransport(Runnable):
             self.log.error("No valid peer found", peer_address=to_checksum_address(address))
             return None
 
-        if self._private_rooms:
-            room = self._create_private_room(invitees=peers)
-        else:
-            room = self._get_public_room(room_name, invitees=peers)
+        room = self._create_private_room(invitees=peers)
 
         peer_ids = self._address_mgr.get_userids_for_address(address)
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
@@ -1209,8 +1191,7 @@ class MatrixTransport(Runnable):
 
         assert not room_id or room_id in self._client.rooms, "Invalid room_id"
         address_hex: AddressHex = to_checksum_address(address)
-        # filter_private=False to preserve public rooms on the list, even if we require privacy
-        room_ids = self._get_room_ids_for_address(address, filter_private=False)
+        room_ids = self._get_room_ids_for_address(address)
 
         with self._account_data_lock:
             # no need to deepcopy, we don't modify lists in-place
@@ -1235,14 +1216,8 @@ class MatrixTransport(Runnable):
                 # dict will be set at the end of _clean_unused_rooms
                 self._leave_unused_rooms(_address_to_room_ids)
 
-    def _get_room_ids_for_address(
-        self, address: Address, filter_private: bool = None
-    ) -> List[_RoomID]:
+    def _get_room_ids_for_address(self, address: Address) -> List[_RoomID]:
         """ Uses GMatrixClient.get_account_data to get updated mapping of address->rooms
-
-        It'll filter only existing rooms.
-        If filter_private=True, also filter out public rooms.
-        If filter_private=None, filter according to self._private_rooms
         """
         address_hex: AddressHex = to_checksum_address(address)
 
@@ -1261,12 +1236,6 @@ class MatrixTransport(Runnable):
         if invalid_input:
             log.error("Unexpected account data, ignoring.")
             return list()
-
-        if filter_private is None:
-            filter_private = self._private_rooms
-
-        if not filter_private:
-            return [room_id for room_id in room_ids if room_id in self._client.rooms]
 
         return [
             room_id

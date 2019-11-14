@@ -55,7 +55,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     )
 
     def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
-        klass, address: Address, filter_private: bool = None
+        klass, address: Address
     ) -> List[str]:
         return ["!roomID:server"]
 
@@ -79,7 +79,6 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         server_name="none",
         available_servers=[],
         broadcast_rooms=[],
-        private_rooms=False,
     )
 
     transport = MatrixTransport(config)

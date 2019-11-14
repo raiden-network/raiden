@@ -10,13 +10,6 @@ from raiden.tests.utils.transport import generate_synapse_config, matrix_server_
 from raiden.utils.typing import Optional
 
 
-@pytest.fixture
-def public_and_private_rooms():
-    """If present in a test, conftest.pytest_generate_tests will parametrize private_rooms fixture
-    """
-    return True
-
-
 @pytest.fixture(scope="session")
 def synapse_config_generator():
     with generate_synapse_config() as generator:
@@ -67,7 +60,6 @@ def matrix_transports(
     local_matrix_servers,
     retries_before_backoff,
     retry_interval,
-    private_rooms,
     number_of_transports,
     broadcast_rooms,
 ):
@@ -83,7 +75,6 @@ def matrix_transports(
                     "server": server,
                     "server_name": server.netloc,
                     "available_servers": local_matrix_servers,
-                    "private_rooms": private_rooms[transport_index],
                 }
             )
         )

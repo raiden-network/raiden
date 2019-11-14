@@ -284,7 +284,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
 
 def test_matrix_message_retry(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, broadcast_rooms
+    local_matrix_servers, retry_interval, retries_before_backoff, broadcast_rooms
 ):
     """ Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
@@ -304,7 +304,6 @@ def test_matrix_message_retry(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
         }
     )
     transport._send_raw = MagicMock()
@@ -366,7 +365,7 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, broadcast_rooms
+    local_matrix_servers, retry_interval, retries_before_backoff, broadcast_rooms
 ):
     """join_broadcast_room tries to join on all servers on available_servers config
 
@@ -382,7 +381,6 @@ def test_join_invalid_discovery(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": ["http://invalid.server"],
-            "private_rooms": private_rooms,
         }
     )
     transport._client.api.retry_timeout = 0
@@ -436,7 +434,7 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
 
 
 def test_matrix_discovery_room_offline_server(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, broadcast_rooms
+    local_matrix_servers, retries_before_backoff, retry_interval, broadcast_rooms
 ):
 
     transport = MatrixTransport(
@@ -447,7 +445,6 @@ def test_matrix_discovery_room_offline_server(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0], "https://localhost:1"],
-            "private_rooms": private_rooms,
         }
     )
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
@@ -465,7 +462,7 @@ def test_matrix_discovery_room_offline_server(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
 )
 def test_matrix_broadcast(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, broadcast_rooms
+    local_matrix_servers, retries_before_backoff, retry_interval, broadcast_rooms
 ):
     transport = MatrixTransport(
         {
@@ -475,7 +472,6 @@ def test_matrix_broadcast(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
         }
     )
     transport.start(MockRaidenService(None), MessageHandler(set()), "")
@@ -509,12 +505,7 @@ def test_matrix_broadcast(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
 )
 def test_monitoring_broadcast_messages(
-    local_matrix_servers,
-    private_rooms,
-    retry_interval,
-    retries_before_backoff,
-    monkeypatch,
-    broadcast_rooms,
+    local_matrix_servers, retry_interval, retries_before_backoff, monkeypatch, broadcast_rooms
 ):
     """
     Test that RaidenService broadcast RequestMonitoring messages to
@@ -528,7 +519,6 @@ def test_monitoring_broadcast_messages(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
         }
     )
     transport._client.api.retry_timeout = 0
@@ -582,7 +572,6 @@ def test_monitoring_broadcast_messages(
 )
 def test_pfs_broadcast_messages(
     local_matrix_servers,
-    private_rooms,
     retry_interval,
     retries_before_backoff,
     monkeypatch,
@@ -601,7 +590,6 @@ def test_pfs_broadcast_messages(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-            "private_rooms": private_rooms,
         }
     )
     transport._client.api.retry_timeout = 0
@@ -651,7 +639,6 @@ def test_pfs_broadcast_messages(
 
     transport.stop()
     transport.get()
-
 
 
 @pytest.mark.parametrize("number_of_transports", [2])
@@ -706,10 +693,7 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
 
     transport0, transport1 = matrix_transports
 
-    room_creator_address = my_place_or_yours(
-        raiden_service0.address,
-        raiden_service1.address,
-    )
+    room_creator_address = my_place_or_yours(raiden_service0.address, raiden_service1.address)
     if room_creator_address == raiden_service0.address:
         inviter_service = raiden_service0
         invitee_service = raiden_service1
@@ -771,10 +755,7 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
 
     transport0, transport1 = matrix_transports
 
-    room_creator_address = my_place_or_yours(
-        raiden_service0.address,
-        raiden_service1.address,
-    )
+    room_creator_address = my_place_or_yours(raiden_service0.address, raiden_service1.address)
     if room_creator_address == raiden_service0.address:
         inviter_service = raiden_service0
         invitee_service = raiden_service1
@@ -1003,7 +984,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_2)
 
 
-@pytest.mark.parametrize("private_rooms", [[True, True]])
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
 def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):

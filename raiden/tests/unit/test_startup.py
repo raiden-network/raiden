@@ -63,7 +63,6 @@ def test_setup_environment():
     config = deepcopy(App.DEFAULT_CONFIG)
     setup_environment(config, Environment.PRODUCTION)
     assert config["environment_type"] == Environment.PRODUCTION
-    assert config["transport"]["matrix"]["private_rooms"] is True
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:

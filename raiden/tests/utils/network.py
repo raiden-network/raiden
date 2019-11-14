@@ -354,7 +354,6 @@ def create_apps(
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     local_matrix_url: Optional[ParsedURL],
-    private_rooms: bool,
     broadcast_rooms: List[str],
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
@@ -401,7 +400,6 @@ def create_apps(
                             "server": local_matrix_url,
                             "server_name": local_matrix_url.netloc,
                             "available_servers": [],
-                            "private_rooms": private_rooms,
                         }
                     },
                 },
