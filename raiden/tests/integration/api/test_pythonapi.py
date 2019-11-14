@@ -58,11 +58,6 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
-# Use a large enough settle timeout to have valid transfer messages
-TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
-    5 + 7 + 7  # reveal timeout  # maker expiration  # taker expiration
-)
-
 
 @raise_on_failure
 @pytest.mark.parametrize("privatekey_seed", ["test_token_registration:{}"])
