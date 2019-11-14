@@ -13,7 +13,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List
 
 import gevent
 import pytest
@@ -504,48 +504,20 @@ def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 
     if "transport" in fixtures:
-        parmeterize_private_rooms = True
-        transport_and_privacy: List[Tuple[str, Union[bool, List[bool]]]] = list()
+        transports: List[str] = list()
         number_of_transports: List[int] = list()
 
         # Filter existing parametrization which is already done in the test
         for mark in metafunc.definition.own_markers:
             if mark.name == "parametrize":
-                # Check if 'private_rooms' gets parameterized
-                if "private_rooms" in mark.args[0]:
-                    parmeterize_private_rooms = False
                 # Check if more than one transport is used
                 if "number_of_transports" == mark.args[0]:
                     number_of_transports = mark.args[1]
 
-        if "public_and_private_rooms" in fixtures:
-            if number_of_transports:
-                transport_and_privacy.extend(
-                    [
-                        ("matrix", [False for _ in range(number_of_transports[0])]),
-                        ("matrix", [True for _ in range(number_of_transports[0])]),
-                    ]
-                )
-            else:
-                transport_and_privacy.extend([("matrix", False), ("matrix", True)])
-        else:
-            if number_of_transports:
-                transport_and_privacy.extend(
-                    [("matrix", [False for _ in range(number_of_transports[0])])]
-                )
-            else:
-                transport_and_privacy.append(("matrix", False))
+        if number_of_transports:
+            transports.extend(["matrix"] * number_of_transports[0])
 
-        if not parmeterize_private_rooms or "private_rooms" not in fixtures:
-            # If the test does not expect the private_rooms parameter or parametrizes
-            # `private_rooms` itself, only give he transport values
-            metafunc.parametrize(
-                "transport",
-                list(set(transport_type for transport_type, _ in transport_and_privacy)),
-            )
-
-        else:
-            metafunc.parametrize("transport,private_rooms", transport_and_privacy)
+        metafunc.parametrize("transport", transports)
 
 
 if sys.platform == "darwin":
