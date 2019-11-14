@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`5278` Always use private rooms in the matrix transport.
 * :feature:`5217` Fully support infura as an underlying ethereum rpc node.
 * :bug:`5064` Display a user-friendly error message when the PFS info request fails.
 * :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
