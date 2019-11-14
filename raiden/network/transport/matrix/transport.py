@@ -716,12 +716,6 @@ class MatrixTransport(Runnable):
             )
             return
 
-        if not self._address_mgr.is_address_known(peer_address):
-            self.log.debug(
-                "Got invited by a non-whitelisted user - ignoring", room_id=room_id, user=user
-            )
-            return
-
         sender_join_events = [
             event
             for event in state["events"]
