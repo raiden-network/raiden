@@ -65,6 +65,18 @@ def run_test_check_json_rpc_geth():
     assert v2 == "0.7.1"
     assert v3 == "0.0.0"
 
+    supported, client, version = is_supported_client("Geth/faultyversion")
+    assert not supported
+    assert not client
+    assert not version
+
+
+def test_check_is_supported_unknown_client():
+    supported, client, version = is_supported_client("Aleth//v1.2.1")
+    assert not supported
+    assert not client
+    assert not version
+
 
 def test_check_json_rpc_geth():
     # Pin the highest supported version for the test purposes
@@ -134,6 +146,11 @@ def run_test_check_json_rpc_parity():
     assert v3 == "0.7.1"
     assert v4 == "0.8.7"
     assert v5 == "0.0.0"
+
+    supported, client, version = is_supported_client("Parity//faultyversion")
+    assert not supported
+    assert not client
+    assert not version
 
 
 def test_check_json_rpc_parity():
