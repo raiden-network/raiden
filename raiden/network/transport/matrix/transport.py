@@ -524,12 +524,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.refresh_address_presence(node_address)
 
             # Trigger creation of room between channel participants
-            room_creator_address = my_place_or_yours(
-                our_address=self._raiden_service.address,
-                partner_address=node_address
-            )
-            if self._raiden_service.address == room_creator_address:
-                self._get_room_for_address(node_address)
+            self._get_room_for_address(node_address)
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
@@ -1001,6 +996,14 @@ class MatrixTransport(Runnable):
                 self.log.warning("Ignoring broadcast room for peer", room=room, peer=address_hex)
 
         assert self._raiden_service is not None, "_raiden_service not set"
+
+        room_creator_address = my_place_or_yours(
+            our_address=self._raiden_service.address,
+            partner_address=address
+        )
+        if self._raiden_service.address != room_creator_address:
+            return None
+
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
