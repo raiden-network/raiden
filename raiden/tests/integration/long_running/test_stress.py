@@ -340,12 +340,11 @@ def assert_channels(
         )
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4803")
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
 @pytest.mark.parametrize("deposit", [2])
-@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("reveal_timeout", [45])
 @pytest.mark.parametrize("settle_timeout", [120])
 def test_stress(
     raiden_network: List[App],
