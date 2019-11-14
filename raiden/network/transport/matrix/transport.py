@@ -520,7 +520,7 @@ class MatrixTransport(Runnable):
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
-            self._address_mgr.refresh_address_presence(node_address)
+            self._address_mgr.refresh_address_presence(node_address, force_refresh=True)
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier

@@ -130,16 +130,6 @@ def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_prese
         address_reachability_changed_callback=address_reachability_callback,
         user_presence_changed_callback=user_presence_callback,
     )
-
-    def fetch_user_presence(user_id):
-        if user_id in address_manager._userid_to_presence.keys():
-            return address_manager.get_userid_presence(user_id)
-        else:
-            presence = UserPresence(dummy_matrix_client.get_user_presence(user_id))
-            address_manager._userid_to_presence[user_id] = presence
-            return address_manager._userid_to_presence[user_id]
-
-    address_manager._fetch_user_presence = fetch_user_presence
     address_manager.start()
 
     yield address_manager
@@ -260,12 +250,47 @@ def test_user_addr_mgr_fetch_presence(
     assert address_reachability[ADDR1] is AddressReachability.REACHABLE
 
 
-def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability, user_presence):
+def test_user_addr_mgr_fetch_presence_force(user_addr_mgr, dummy_matrix_client):
+    """
+    Ensure force refreshing presence from server state works.
+
+    Passing `force_refresh=True` to `refresh_address_presence` must query the server.
+    """
+
+    dummy_matrix_client._user_presence[USER1_S1_ID] = UserPresence.ONLINE.value
+    user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
+    dummy_matrix_client.trigger_presence_callback({USER1_S1_ID: UserPresence.ONLINE})
+
+    # USER1 / ADDR1 presence is now `ONLINE` / `REACHABLE`
+    assert user_addr_mgr.get_userid_presence(USER1_S1_ID) == UserPresence.ONLINE
+    assert user_addr_mgr.get_address_reachability(ADDR1) == AddressReachability.REACHABLE
+
+    # Reset USER1 presence value on the 'server' to `OFFLINE` but don't trigger a presence
+    # callback (e.g. to simulate an intermittent connection issue, etc.)
+    dummy_matrix_client._user_presence[USER1_S1_ID] = UserPresence.OFFLINE.value
+
+    # Local cache will be used, presence state will not change
+    user_addr_mgr.refresh_address_presence(ADDR1, force_refresh=False)
+
+    assert user_addr_mgr.get_userid_presence(USER1_S1_ID) == UserPresence.ONLINE
+    assert user_addr_mgr.get_address_reachability(ADDR1) == AddressReachability.REACHABLE
+
+    # Force updating presence by fetching new state from server
+    user_addr_mgr.refresh_address_presence(ADDR1, force_refresh=True)
+
+    # USER1 / ADDR1 presence is now `OFFLINE` / `UNREACHABLE`
+    assert user_addr_mgr.get_userid_presence(USER1_S1_ID) == UserPresence.OFFLINE
+    assert user_addr_mgr.get_address_reachability(ADDR1) == AddressReachability.UNREACHABLE
+
+
+def test_user_addr_mgr_fetch_presence_unknown_user(
+    user_addr_mgr, address_reachability, user_presence
+):
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
     # We have not provided or forced any explicit user presence,
-    # therefore the client will be queried and return a 404 since we haven't setup a presence
-    with pytest.raises(MatrixRequestError):
-        user_addr_mgr.refresh_address_presence(ADDR1)
+    # therefore the client will be queried and return a 404 which get's turned into an `UNKNOWN`
+    # presence state
+    user_addr_mgr.refresh_address_presence(ADDR1)
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
     assert len(user_presence) == 0

@@ -246,7 +246,7 @@ class UserAddressManager:
                 ),
             )
 
-    def refresh_address_presence(self, address: Address) -> None:
+    def refresh_address_presence(self, address: Address, force_refresh: bool = False) -> None:
         """
         Update synthesized address presence state from cached user presence states.
 
@@ -256,7 +256,8 @@ class UserAddressManager:
         should **not** generally be used.
         """
         composite_presence = {
-            self._fetch_user_presence(uid) for uid in self._address_to_userids[address].copy()
+            self._get_user_presence(uid, fetch_from_server=force_refresh)
+            for uid in self._address_to_userids[address].copy()
         }
 
         # Iterate over UserPresence in definition order (most to least online) and pick
@@ -368,12 +369,13 @@ class UserAddressManager:
         assert user_id, f"{self.__class__.__name__}._user_id accessed before client login"
         return user_id
 
-    def _fetch_user_presence(self, user_id: str) -> UserPresence:
-        try:
-            presence = UserPresence(self._client.get_user_presence(user_id))
-        except MatrixRequestError:
-            presence = UserPresence.UNKNOWN
-        self._userid_to_presence[user_id] = presence
+    def _get_user_presence(self, user_id: str, fetch_from_server: bool = False) -> UserPresence:
+        if fetch_from_server or user_id not in self._userid_to_presence:
+            try:
+                presence = UserPresence(self._client.get_user_presence(user_id))
+            except MatrixRequestError:
+                presence = UserPresence.UNKNOWN
+            self._userid_to_presence[user_id] = presence
         return self._userid_to_presence[user_id]
 
     @staticmethod
