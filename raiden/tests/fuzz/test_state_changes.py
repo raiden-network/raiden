@@ -718,7 +718,7 @@ def test_regression_malicious_secret_request_handled_properly():
     state.teardown()
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="https://github.com/raiden-network/raiden/issues/5292")
 def test_try_secret_request_after_settle_channel():
     state = MultiChannelInitiatorStateMachine()
     state.replay_path = True
