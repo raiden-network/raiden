@@ -356,6 +356,7 @@ class MatrixTransport(Runnable):
         self,
         raiden_service: "RaidenService",
         message_handler: MessageHandler,
+        whitelist: List[Address],
         prev_auth_data: Optional[str],
     ) -> None:
         if not self._stop_event.ready():
@@ -413,6 +414,9 @@ class MatrixTransport(Runnable):
         super().start()  # start greenlet
         self._starting = False
         self._started = True
+
+        for address in whitelist:
+            self.whitelist(address)
 
         self.log.debug("Matrix started", config=self._config)
 
@@ -499,6 +503,9 @@ class MatrixTransport(Runnable):
         self.log.debug("Whitelist", address=to_checksum_address(address))
         self._address_mgr.add_address(address)
 
+        # Trigger creation of room between channel participants
+        self._get_room_for_address(address)
+
     def start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
 
@@ -522,9 +529,6 @@ class MatrixTransport(Runnable):
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             self._address_mgr.refresh_address_presence(node_address)
-
-            # Trigger creation of room between channel participants
-            self._get_room_for_address(node_address)
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
