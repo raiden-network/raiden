@@ -504,7 +504,7 @@ class MatrixTransport(Runnable):
         self._address_mgr.add_address(address)
 
         # Trigger creation of room between channel participants
-        self._get_room_for_address(address)
+        self._get_or_create_room_for_address(address)
 
     def start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
@@ -951,7 +951,7 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
-        room = self._get_room_for_address(receiver_address)
+        room = self._get_or_create_room_for_address(receiver_address)
 
         if not room:
             self.log.error("No room for receiver", receiver=to_checksum_address(receiver_address))
@@ -965,12 +965,6 @@ class MatrixTransport(Runnable):
         room.send_text(data)
 
     def _get_room_for_address(self, address: Address) -> Optional[Room]:
-        if self._stop_event.ready():
-            return None
-        address_hex = to_normalized_address(address)
-        msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
-        assert address and self._address_mgr.is_address_known(address), msg
-
         room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
             # This loop is used to ignore any broadcast rooms that may have 'polluted' the
@@ -982,7 +976,23 @@ class MatrixTransport(Runnable):
                 if not self._is_broadcast_room(room):
                     self.log.debug("Existing room", room=room, members=room.get_joined_members())
                     return room
-                self.log.warning("Ignoring broadcast room for peer", room=room, peer=address_hex)
+                self.log.warning(
+                    "Ignoring broadcast room for peer",
+                    room=room,
+                    peer=to_normalized_address(address),
+                )
+        return None
+
+    def _get_or_create_room_for_address(self, address: Address) -> Optional[Room]:
+        if self._stop_event.ready():
+            return None
+        address_hex = to_normalized_address(address)
+        msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
+        assert address and self._address_mgr.is_address_known(address), msg
+
+        room = self._get_room_for_address(address)
+        if room:
+            return room
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
