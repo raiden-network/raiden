@@ -43,4 +43,4 @@ coverage
 bump2version
 
 # Test support
-matrix-synapse==1.4.0rc1
+matrix-synapse==1.5.1
