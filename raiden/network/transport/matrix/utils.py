@@ -255,12 +255,15 @@ class UserAddressManager:
         This method is only provided to cover an edge case in our use of the Matrix protocol and
         should **not** generally be used.
         """
-        composite_presence = {
-            self._fetch_user_presence(uid) for uid in self._address_to_userids[address].copy()
-        }
+        userids = self._address_to_userids[address].copy()
+        userids_to_presence = {uid: self._fetch_user_presence(uid) for uid in userids}
+        composite_presence = set(userids_to_presence.values())
 
-        # Iterate over UserPresence in definition order (most to least online) and pick
-        # first matching state
+        # A Raiden node may have multiple Matrix users, this happens when
+        # Raiden roams from a Matrix server to another. This loop goes over all
+        # these users and uses the "best" presence. IOW, if there is a single
+        # Matrix user that is reachable, then the Raiden node is considered
+        # reachable.
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
             if presence in composite_presence:
@@ -271,14 +274,16 @@ class UserAddressManager:
 
         prev_addresss_reachability = self.get_address_reachability(address)
         if new_address_reachability == prev_addresss_reachability:
-            # Cached address reachability matches new state, do nothing
             return
+
         self.log.debug(
             "Changing address reachability state",
             address=to_checksum_address(address),
             prev_state=prev_addresss_reachability,
             state=new_address_reachability,
+            userids_to_presence=userids_to_presence,
         )
+
         self._address_to_reachability[address] = new_address_reachability
         self._address_reachability_changed_callback(address, new_address_reachability)
 
