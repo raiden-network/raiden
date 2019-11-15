@@ -25,8 +25,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app/raiden
-
-RUN make install
+RUN git fetch --tags && make install
 
 
 FROM python:3.7-slim as runner
