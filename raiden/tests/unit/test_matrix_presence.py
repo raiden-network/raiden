@@ -231,7 +231,7 @@ def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence)
     assert len(address_reachability) == 0
 
     # Update address presence from previously forced user state
-    user_addr_mgr.refresh_address_presence(ADDR1)
+    user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.REACHABLE
     assert len(user_presence) == 0
@@ -250,7 +250,7 @@ def test_user_addr_mgr_fetch_presence(
     assert dummy_matrix_client._user_presence[USER1_S1_ID] == UserPresence.ONLINE.value
     assert dummy_matrix_client.get_user_presence(USER1_S1_ID) == UserPresence.ONLINE.value
 
-    user_addr_mgr.refresh_address_presence(ADDR1)
+    user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
 
     assert user_addr_mgr._userid_to_presence[USER1_S1_ID] == UserPresence.ONLINE
 
@@ -265,7 +265,7 @@ def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability,
     # We have not provided or forced any explicit user presence,
     # therefore the client will be queried and return a 404 since we haven't setup a presence
     with pytest.raises(MatrixRequestError):
-        user_addr_mgr.refresh_address_presence(ADDR1)
+        user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
     assert len(user_presence) == 0
@@ -291,9 +291,7 @@ def test_user_addr_mgr_fetch_misc(
 
 
 @pytest.mark.parametrize("user_directory_content", [[USER2_S1, USER2_S2]])
-def test_user_addr_mgr_populate(
-    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
-):
+def test_user_addr_mgr_populate(user_addr_mgr, address_reachability, user_presence):
     user_addr_mgr.add_address(ADDR2)
 
     assert user_addr_mgr.get_userids_for_address(ADDR2) == set()
@@ -303,14 +301,14 @@ def test_user_addr_mgr_populate(
     assert user_addr_mgr.get_userids_for_address(ADDR2) == {USER2_S1_ID, USER2_S2_ID}
     assert user_addr_mgr.get_address_reachability(ADDR2) is AddressReachability.UNKNOWN
 
-    dummy_matrix_client._user_presence[USER2_S1_ID] = UserPresence.ONLINE.value
-    dummy_matrix_client._user_presence[USER2_S2_ID] = UserPresence.UNKNOWN.value
+    user_addr_mgr._set_user_presence(USER2_S1_ID, UserPresence.ONLINE)
+    user_addr_mgr._set_user_presence(USER2_S2_ID, UserPresence.UNKNOWN)
 
-    user_addr_mgr.refresh_address_presence(ADDR2)
+    user_addr_mgr.track_address_presence(ADDR2, {USER2_S2_ID, USER2_S2_ID})
 
     assert len(address_reachability) == 1
     assert address_reachability[ADDR2] is AddressReachability.REACHABLE
-    assert len(user_presence) == 0
+    assert len(user_presence) == 2
     assert user_addr_mgr.get_userid_presence(USER2_S1_ID) is UserPresence.ONLINE
     assert user_addr_mgr.get_userid_presence(USER2_S2_ID) is UserPresence.UNKNOWN
 
