@@ -510,7 +510,7 @@ class MatrixTransport(Runnable):
         # This does not reduce latency for target<->initiator communication,
         # since the target may be the node with lower address, and therefore
         # the node that has to create the room.
-        self._get_or_create_room_for_address(address)
+        self._maybe_create_room_for_address(address)
 
     def start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
@@ -948,20 +948,35 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
-        room = self._get_or_create_room_for_address(receiver_address)
+        room = self._get_room_for_address(receiver_address)
 
-        if not room:
+        if room:
+            self.log.debug(
+                "Send raw",
+                receiver=to_checksum_address(receiver_address),
+                room=room,
+                data=data.replace("\n", "\\n"),
+            )
+            room.send_text(data)
+        else:
+            # It is possible there is no room yet. This happens when:
+            #
+            # - The room creation is started by a background thread running
+            # `whitelist`, and the room can be used by a another thread.
+            # - The room should be created by the partner, and this node is waiting
+            # on it.
+            #
+            # This is not a problem since the messages are retried regularly.
             self.log.error("No room for receiver", receiver=to_checksum_address(receiver_address))
-            return
-        self.log.debug(
-            "Send raw",
-            receiver=to_checksum_address(receiver_address),
-            room=room,
-            data=data.replace("\n", "\\n"),
-        )
-        room.send_text(data)
 
     def _get_room_for_address(self, address: Address) -> Optional[Room]:
+        msg = (
+            f"address not health checked: "
+            f"node: {self._user_id}, "
+            f"peer: {to_normalized_address(address)}"
+        )
+        assert address and self._address_mgr.is_address_known(address), msg
+
         room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
             # This loop is used to ignore any broadcast rooms that may have 'polluted' the
@@ -980,24 +995,21 @@ class MatrixTransport(Runnable):
                 )
         return None
 
-    def _get_or_create_room_for_address(self, address: Address) -> Optional[Room]:
+    def _maybe_create_room_for_address(self, address: Address) -> None:
         if self._stop_event.ready():
             return None
-        address_hex = to_normalized_address(address)
-        msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
-        assert address and self._address_mgr.is_address_known(address), msg
 
-        room = self._get_room_for_address(address)
-        if room:
-            return room
+        if self._get_room_for_address(address):
+            return None
 
         assert self._raiden_service is not None, "_raiden_service not set"
+        assert address not in self._room_creation_locks, "The room creation was already started."
 
         # The rooms creation is assymetric, only the node with the lower
         # address is responsible to create the room. This fixes race conditions
         # were the two nodes try to create a room with each other at the same
         # time, leading to communications problems if the nodes choose a
-        # different room as the main room for communication.
+        # different room.
         #
         # This does not introduce a new attack vector, since not creating the
         # room is the same as being unresponsible.
@@ -1005,19 +1017,23 @@ class MatrixTransport(Runnable):
             our_address=self._raiden_service.address, partner_address=address
         )
         if self._raiden_service.address != room_creator_address:
+            self.log.error(
+                "This node should not create the room", peer_address=to_checksum_address(address)
+            )
             return None
 
-        # no room with expected name => create one and invite peer
-        peer_candidates = self._client.search_user_directory(address_hex)
+        peer_candidates = self._client.search_user_directory(to_normalized_address(address))
         self._displayname_cache.warm_users(peer_candidates)
 
-        # filter peer_candidates
         peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
         if not peers:
             self.log.error("No valid peer found", peer_address=to_checksum_address(address))
             return None
 
-        room = self._create_private_room(invitees=peers)
+        room = self._client.create_room(
+            None, invitees=[user.user_id for user in peers], is_public=False
+        )
+        self.log.debug("Created private room", room=room, invitees=peers)
 
         peer_ids = self._address_mgr.get_userids_for_address(address)
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
@@ -1071,14 +1087,6 @@ class MatrixTransport(Runnable):
             for suffix in self._config["broadcast_rooms"]
             for room_alias in room.aliases
         )
-
-    def _create_private_room(self, invitees: List[User]) -> Room:
-        """ Create an anonymous, private room and invite peers """
-        room = self._client.create_room(
-            None, invitees=[user.user_id for user in invitees], is_public=False
-        )
-        self.log.debug("Creating private room", room=room, invitees=invitees)
-        return room
 
     def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
         """ Obtain a public, canonically named (if possible) room and invite peers """
