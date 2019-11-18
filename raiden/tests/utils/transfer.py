@@ -121,7 +121,10 @@ def watch_for_unlock_failures(*apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
     """
 
     def watcher_function():
-        offset = {app.raiden.address: count_unlock_failures(app.raiden) for app in apps}
+        offset = {
+            app.raiden.address: count_unlock_failures(app.raiden.wal.storage.get_events())
+            for app in apps
+        }
         while True:
             for app in apps:
                 assert not has_unlock_failure(app.raiden, offset=offset[app.raiden.address])
