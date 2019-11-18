@@ -684,6 +684,17 @@ class MatrixTransport(Runnable):
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
+        """Handle an invite request.
+
+        Always join a room, even if the partner is not whitelisted. That was
+        previously done to prevent a malicious node from inviting and spamming
+        the user. However, there are cases where nodes trying to create rooms
+        for a channel might race and an invite would be received by one node
+        which did not yet whitelist the inviting node, as a result the invite
+        would wrongfully be ignored. This change removes the whitelist check.
+        To prevent spam, we make sure we ignore presence updates and messages
+        from non-whitelisted nodes.
+        """
         if self._stop_event.ready():
             return
 
