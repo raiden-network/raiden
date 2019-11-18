@@ -492,11 +492,14 @@ class MatrixTransport(Runnable):
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
     def whitelist(self, address: Address) -> None:
-        """Whitelist peer address to receive communications from
+        """Whitelist `address` to accept its messages."""
+        msg = (
+            "Whitelisting can only be done after the Matrix client has been "
+            "logged in. This is necessary because whitelisting will create "
+            "the Matrix room."
+        )
+        assert self.client.token, msg
 
-        This may be called before transport is started, to ensure events generated during
-        start are handled properly.
-        """
         self.log.debug("Whitelist", address=to_checksum_address(address))
         self._address_mgr.add_address(address)
 
