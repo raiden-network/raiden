@@ -13,7 +13,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import List
 
 import gevent
 import pytest
@@ -498,26 +497,6 @@ def pytest_runtest_teardown(item):
 
     signal.setitimer(signal.ITIMER_REAL, 0)
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
-
-
-def pytest_generate_tests(metafunc):
-    fixtures = metafunc.fixturenames
-
-    if "transport" in fixtures:
-        transports: List[str] = list()
-        number_of_transports: List[int] = list()
-
-        # Filter existing parametrization which is already done in the test
-        for mark in metafunc.definition.own_markers:
-            if mark.name == "parametrize":
-                # Check if more than one transport is used
-                if "number_of_transports" == mark.args[0]:
-                    number_of_transports = mark.args[1]
-
-        if number_of_transports:
-            transports.extend(["matrix"] * number_of_transports[0])
-
-        metafunc.parametrize("transport", transports)
 
 
 if sys.platform == "darwin":
