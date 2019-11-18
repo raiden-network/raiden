@@ -246,7 +246,7 @@ class UserAddressManager:
                 ),
             )
 
-    def refresh_address_presence(self, address: Address) -> None:
+    def track_address_presence(self, address: Address, user_ids: Set[str]) -> None:
         """
         Update synthesized address presence state from cached user presence states.
 
@@ -255,20 +255,30 @@ class UserAddressManager:
         This method is only provided to cover an edge case in our use of the Matrix protocol and
         should **not** generally be used.
         """
-        userids = self._address_to_userids[address].copy()
-        userids_to_presence = {uid: self._fetch_user_presence(uid) for uid in userids}
+        self.add_userids_for_address(address, user_ids)
+        userids_to_presence = {}
+        for uid in user_ids:
+            presence = self._fetch_user_presence(uid)
+            userids_to_presence[uid] = presence
+            self._set_user_presence(uid, presence)
+
         log.debug(
             "Fetched user presences",
             address=to_checksum_address(address),
             userids_to_presence=userids_to_presence,
         )
-        composite_presence = set(userids_to_presence.values())
 
+        self._maybe_address_reachability_changed(address)
+
+    def _maybe_address_reachability_changed(self, address) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
         # these users and uses the "best" presence. IOW, if there is a single
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
+        userids = self._address_to_userids[address].copy()
+        composite_presence = {self._userid_to_presence[uid] for uid in userids}
+
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
             if presence in composite_presence:
@@ -334,22 +344,9 @@ class UserAddressManager:
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
-        if new_state == self.get_userid_presence(user_id):
-            # Cached presence state matches, no action required
-            return
 
-        self.log.debug(
-            "Changing user presence state",
-            user_id=user_id,
-            prev_state=self._userid_to_presence.get(user_id),
-            state=new_state,
-        )
-        self._userid_to_presence[user_id] = new_state
-        self.refresh_address_presence(address)
-
-        if self._user_presence_changed_callback:
-            self._user_presence_changed_callback(user, new_state)
-
+        self._set_user_presence(user_id, new_state)
+        self._maybe_address_reachability_changed(address)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
@@ -374,8 +371,20 @@ class UserAddressManager:
             presence = UserPresence.UNKNOWN
             log.exception("Could not fetch user presence")
 
-        self._userid_to_presence[user_id] = presence
-        return self._userid_to_presence[user_id]
+        return presence
+
+    def _set_user_presence(self, user_id: str, presence: UserPresence) -> None:
+        old_presence = self._userid_to_presence.get(user_id)
+        if old_presence != presence:
+            self._userid_to_presence[user_id] = presence
+            self.log.debug(
+                "Changing user presence state",
+                user_id=user_id,
+                prev_state=old_presence,
+                state=presence,
+            )
+            if self._user_presence_changed_callback:
+                self._user_presence_changed_callback(user, presence)
 
     @staticmethod
     def _validate_userid_signature(user: User) -> Optional[Address]:
