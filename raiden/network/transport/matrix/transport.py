@@ -731,8 +731,6 @@ class MatrixTransport(Runnable):
             self.log.debug("Invite: no sender join event", room_id=room_id)
             return  # there should always be one and only one join membership event for the sender
 
-        user.displayname = sender_join_events[0]["content"].get("displayname") or user.displayname
-
         join_rules_events = [
             event for event in state["events"] if event["type"] == "m.room.join_rules"
         ]
