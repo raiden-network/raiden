@@ -842,18 +842,6 @@ class MatrixTransport(Runnable):
             )
             self._set_room_id_for_address(peer_address, room.room_id)
 
-        is_peer_reachable = self._address_mgr.get_address_reachability(peer_address) is (
-            AddressReachability.REACHABLE
-        )
-        if not is_peer_reachable:
-            self.log.debug(
-                "Forcing presence update",
-                peer_address=to_checksum_address(peer_address),
-                user_id=sender_id,
-            )
-            self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
-            self._address_mgr.refresh_address_presence(peer_address)
-
         messages = validate_and_parse_message(event["content"]["body"], peer_address)
 
         if not messages:
@@ -1311,19 +1299,6 @@ class MatrixTransport(Runnable):
                 sender_address=to_checksum_address(peer_address),
             )
             return False
-
-        is_peer_reachable = self._address_mgr.get_address_reachability(peer_address) is (
-            AddressReachability.REACHABLE
-        )
-
-        if not is_peer_reachable:
-            self.log.debug(
-                "Forcing presence update",
-                peer_address=to_checksum_address(peer_address),
-                user_id=sender_id,
-            )
-            self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
-            self._address_mgr.refresh_address_presence(peer_address)
 
         messages = validate_and_parse_message(event["content"], peer_address)
 
