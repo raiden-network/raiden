@@ -791,12 +791,13 @@ class MatrixTransport(Runnable):
 
     def _handle_message(self, room: Room, event: Dict[str, Any]) -> bool:
         """ Handle text messages sent to listening rooms """
-        if (
-            event["type"] != "m.room.message"
-            or event["content"]["msgtype"] != "m.text"
-            or self._stop_event.ready()
-        ):
-            # Ignore non-messages and non-text messages
+        if self._stop_event.ready():
+            return False
+
+        is_valid_type = (
+            event["type"] == "m.room.message" and event["content"]["msgtype"] == "m.text"
+        )
+        if not is_valid_type:
             return False
 
         sender_id = event["sender"]
@@ -811,17 +812,15 @@ class MatrixTransport(Runnable):
         peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
-                "Message from invalid user displayName signature",
+                "Ignoring message from user with an invalid display name signature",
                 peer_user=user.user_id,
                 room=room,
             )
             return False
 
-        # don't proceed if user isn't whitelisted (yet)
         if not self._address_mgr.is_address_known(peer_address):
-            # user not whitelisted
             self.log.debug(
-                "Message from non-whitelisted peer - ignoring",
+                "Ignoring message from non-whitelisted peer",
                 sender=user,
                 sender_address=to_checksum_address(peer_address),
                 room=room,
