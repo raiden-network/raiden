@@ -521,11 +521,9 @@ class MatrixTransport(Runnable):
                 for user in candidates
                 if validate_userid_signature(user) == node_address
             }
-            self._address_mgr.add_userids_for_address(node_address, user_ids)
-
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
-            self._address_mgr.refresh_address_presence(node_address)
+            self._address_mgr.track_address_presence(node_address, user_ids)
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
