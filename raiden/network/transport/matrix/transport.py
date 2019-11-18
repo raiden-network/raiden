@@ -820,16 +820,14 @@ class MatrixTransport(Runnable):
         # rooms we created and invited user, or were invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
 
-        # TODO: Remove clause after `and` and check if things still don't hang
         if room.room_id not in room_ids:
-            reason = "unknown room for user"
             self.log.debug(
                 "Ignoring invalid message",
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
                 room=room,
                 expected_room_ids=room_ids,
-                reason=reason,
+                reason="unknown room for user",
             )
             return False
 
