@@ -1,29 +1,31 @@
 from urllib.parse import urlsplit
 
 import pytest
-from eth_utils import encode_hex, to_normalized_address
+from eth_utils import to_checksum_address
 from matrix_client.errors import MatrixRequestError
 
 from raiden.network.transport.matrix.client import GMatrixClient, User
-from raiden.network.transport.matrix.utils import make_client
+from raiden.network.transport.matrix.utils import (
+    join_broadcast_room,
+    login,
+    make_client,
+    make_room_alias,
+)
 from raiden.tests.utils import factories
-from raiden.utils.signer import LocalSigner
+from raiden.utils.signer import Signer
+from raiden.utils.typing import Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
 USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
 
 
-def create_logged_in_client(server: str) -> GMatrixClient:
-    privkey, _ = factories.make_privkey_address()
-    signer = LocalSigner(privkey)
+def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
     client = make_client([server])
-    server_name = urlsplit(server).netloc
+    signer = factories.make_signer()
 
-    username = str(to_normalized_address(signer.address))
-    password = encode_hex(signer.sign(server_name.encode()))
-    client.login(username, password, sync=False)
+    login(client, signer)
 
-    return client
+    return client, signer
 
 
 def replace_one_letter(s: str) -> str:
@@ -36,7 +38,7 @@ def replace_one_letter(s: str) -> str:
 
 
 def test_assumption_matrix_userid(local_matrix_servers):
-    client = create_logged_in_client(local_matrix_servers[0])
+    client, _ = create_logged_in_client(local_matrix_servers[0])
 
     # userid validation expects a str
     none_user_id = None
@@ -61,6 +63,36 @@ def test_assumption_matrix_userid(local_matrix_servers):
         user.get_display_name()
 
     # The userid is valid and the user exists, this should not raise
-    new_client = create_logged_in_client(local_matrix_servers[0])
+    new_client, _ = create_logged_in_client(local_matrix_servers[0])
     user = User(client.api, new_client.user_id)
     user.get_display_name()
+
+
+@pytest.mark.parametrize("matrix_server_count", [2])
+def test_assumption_search_user_directory_returns_federated_users(chain_id, local_matrix_servers):
+    original_server_url = urlsplit(local_matrix_servers[0]).netloc
+
+    room_alias = make_room_alias(chain_id, "broadcast_test")
+    room_name_full = f"#{room_alias}:{original_server_url}"
+
+    user_room_creator, _ = create_logged_in_client(local_matrix_servers[0])
+    user_room_creator.create_room(room_alias, is_public=True)
+
+    user_federated, _ = create_logged_in_client(local_matrix_servers[1])
+    join_broadcast_room(user_federated, room_name_full)
+
+    addresses = list()
+    for _ in range(1000):
+        user, signer = create_logged_in_client(local_matrix_servers[0])
+        join_broadcast_room(user, room_name_full)
+
+        # Make sure to let the session instance is closed, otherwise there will
+        # be too many file descriptors opened by the underlying urllib3
+        # connection pool.
+        user.api.session.close()
+        del user
+
+        addresses.append(signer.address)
+
+    for address in addresses:
+        assert user_federated.search_user_directory(to_checksum_address(address))
