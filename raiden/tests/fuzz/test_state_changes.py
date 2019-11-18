@@ -418,7 +418,7 @@ class InitiatorMixin:
             self.event("Valid SecretRequest dropped due to previous invalid one.")
         elif self._is_removed(previous_action):
             assert not result.events
-            self.event("Ohterwise valid SecretRequest dropped due to expired lock.")
+            self.event("Otherwise valid SecretRequest dropped due to expired lock.")
         else:
             assert event_types_match(result.events, SendSecretReveal)
             self.event("Valid SecretRequest accepted.")
