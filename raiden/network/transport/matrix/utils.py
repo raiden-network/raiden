@@ -270,14 +270,14 @@ class UserAddressManager:
 
         self._maybe_address_reachability_changed(address)
 
-    def _maybe_address_reachability_changed(self, address) -> None:
+    def _maybe_address_reachability_changed(self, address: Address) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
         # these users and uses the "best" presence. IOW, if there is a single
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
         userids = self._address_to_userids[address].copy()
-        composite_presence = {self._userid_to_presence[uid] for uid in userids}
+        composite_presence = {self._userid_to_presence.get(uid) for uid in userids}
 
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
@@ -296,7 +296,6 @@ class UserAddressManager:
             address=to_checksum_address(address),
             prev_state=prev_addresss_reachability,
             state=new_address_reachability,
-            userids_to_presence=userids_to_presence,
         )
 
         self._address_to_reachability[address] = new_address_reachability
@@ -329,10 +328,9 @@ class UserAddressManager:
         if address is None or not self.is_address_known(address):
             return
 
-        try:
-            user = User(self._client.api, user_id, event["content"].get("displayname"))
-        except ValueError:
-            log.error("Matrix server returned an invalid user_id.")
+        user = self._user_from_id(user_id, event["content"].get("displayname"))
+
+        if not user:
             return
 
         address = self._validate_userid_signature(user)
@@ -359,6 +357,13 @@ class UserAddressManager:
         assert user_id, f"{self.__class__.__name__}._user_id accessed before client login"
         return user_id
 
+    def _user_from_id(self, user_id: str, display_name: Optional[str] = None) -> Optional[User]:
+        try:
+            return User(self._client.api, user_id, display_name)
+        except ValueError:
+            log.error("Matrix server returned an invalid user_id.")
+        return None
+
     def _fetch_user_presence(self, user_id: str) -> UserPresence:
         try:
             presence = UserPresence(self._client.get_user_presence(user_id))
@@ -374,6 +379,10 @@ class UserAddressManager:
         return presence
 
     def _set_user_presence(self, user_id: str, presence: UserPresence) -> None:
+        user = self._user_from_id(user_id)
+        if not user:
+            return
+
         old_presence = self._userid_to_presence.get(user_id)
         if old_presence != presence:
             self._userid_to_presence[user_id] = presence
