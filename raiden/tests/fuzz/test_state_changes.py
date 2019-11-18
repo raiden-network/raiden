@@ -3,7 +3,6 @@ from copy import deepcopy
 from hashlib import sha256
 from random import Random
 
-import pytest
 from hypothesis import assume, event
 from hypothesis.stateful import (
     Bundle,
@@ -295,7 +294,6 @@ class InitiatorMixin:
         self.used_secrets = set()
         self.processed_secret_requests = set()
         self.initiated = set()
-        self.failing_path_2 = False
 
     def _action_init_initiator(self, transfer: TransferDescriptionWithSecretState):
         channel = self.address_to_channel[transfer.target]
@@ -342,8 +340,7 @@ class InitiatorMixin:
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
     def _assume_channel_opened(self, action):
-        if not self.failing_path_2:
-            assume(self.channel_opened(action.transfer.target))
+        assume(self.channel_opened(action.transfer.target))
 
     def _is_removed(self, action):
         expiry = self.expected_expiry[action.transfer.secrethash]
@@ -714,19 +711,5 @@ def test_regression_malicious_secret_request_handled_properly():
     v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
-
-    state.teardown()
-
-
-@pytest.mark.skip(reason="https://github.com/raiden-network/raiden/issues/5292")
-def test_try_secret_request_after_settle_channel():
-    state = MultiChannelInitiatorStateMachine()
-    state.replay_path = True
-    state.failing_path_2 = True
-
-    v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
-    v2 = state.valid_init_initiator(amount=1, partner=v1, payment_id=1, secret=b"\x91" * 32)
-    state.settle_channel(partner=v1)
-    state.valid_secret_request(previous_action=v2)
 
     state.teardown()
