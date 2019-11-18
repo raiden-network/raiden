@@ -420,9 +420,6 @@ class MatrixTransport(Runnable):
 
         self.log.debug("Matrix started", config=self._config)
 
-        # Spawn a greenlet to periodically refresh UserPresences
-        self._schedule_new_greenlet(self._address_mgr.refresh_presence, in_seconds_from_now=1)
-
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
 
