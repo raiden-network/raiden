@@ -684,7 +684,6 @@ class MatrixTransport(Runnable):
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
-        """ Join rooms invited by whitelisted partners """
         if self._stop_event.ready():
             return
 
@@ -693,7 +692,6 @@ class MatrixTransport(Runnable):
             self._invite_queue.append((room_id, state))
             return
 
-        self.log.debug("Got invite", room_id=room_id)
         invite_events = [
             event
             for event in state["events"]
@@ -701,12 +699,14 @@ class MatrixTransport(Runnable):
             and event["content"].get("membership") == "invite"
             and event["state_key"] == self._user_id
         ]
-        invite_event = invite_events[0]
 
-        if not invite_events:
+        if not invite_events or not invite_events[0]:
             self.log.debug("Invite: no invite event found", room_id=room_id)
             return  # there should always be one and only one invite membership event for us
-        sender = invite_event["sender"]
+
+        self.log.debug("Got invite", room_id=room_id)
+
+        sender = invite_events[0]["sender"]
         user = self._client.get_user(sender)
         self._displayname_cache.warm_users([user])
         peer_address = validate_userid_signature(user)
@@ -727,11 +727,11 @@ class MatrixTransport(Runnable):
             and event["state_key"] == sender
         ]
 
-        if not sender_join_events:
+        if not sender_join_events or not sender_join_events[0]:
             self.log.debug("Invite: no sender join event", room_id=room_id)
             return  # there should always be one and only one join membership event for the sender
-        sender_join_event = sender_join_events[0]
-        user.displayname = sender_join_event["content"].get("displayname") or user.displayname
+
+        user.displayname = sender_join_events[0]["content"].get("displayname") or user.displayname
 
         join_rules_events = [
             event for event in state["events"] if event["type"] == "m.room.join_rules"
