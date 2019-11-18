@@ -498,7 +498,7 @@ class MatrixTransport(Runnable):
             "logged in. This is necessary because whitelisting will create "
             "the Matrix room."
         )
-        assert self.client.token, msg
+        assert self._user_id, msg
 
         self.log.debug("Whitelist", address=to_checksum_address(address))
         self._address_mgr.add_address(address)
