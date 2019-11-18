@@ -628,7 +628,6 @@ class MatrixTransport(Runnable):
         for suffix in self._config["broadcast_rooms"]:
             room_name = make_room_alias(self.chain_id, suffix)
             broadcast_room_alias = f"#{room_name}:{self._server_name}"
-
             self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
             self._broadcast_rooms[room_name] = join_broadcast_room(
                 client=self._client, broadcast_room_alias=broadcast_room_alias
