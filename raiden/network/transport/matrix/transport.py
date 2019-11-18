@@ -503,7 +503,13 @@ class MatrixTransport(Runnable):
         self.log.debug("Whitelist", address=to_checksum_address(address))
         self._address_mgr.add_address(address)
 
-        # Trigger creation of room between channel participants
+        # Start the room creation early on. This reduces latency for channel
+        # partners, because by removing the latency of creating the room on the
+        # first message.
+        #
+        # This does not reduce latency for target<->initiator communication,
+        # since the target may be the node with lower address, and therefore
+        # the node that has to create the room.
         self._get_or_create_room_for_address(address)
 
     def start_health_check(self, node_address: Address) -> None:
