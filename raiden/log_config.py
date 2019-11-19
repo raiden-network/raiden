@@ -130,6 +130,27 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     return processor_wrapper
 
 
+def configure_debug_logfile_path(debug_log_file_name: Optional[str]) -> str:
+    """Figure out the full pathname for the debug logfile depending on the user's OS"""
+    if debug_log_file_name is None:
+        time = datetime.datetime.utcnow().isoformat()
+        debug_log_file_name = f"raiden-debug_{time}.log"
+
+    home = os.path.expanduser("~")
+    if home == "~":  # Could not expand user path, just use /tmp
+        datadir = "/tmp"
+    if sys.platform == "darwin":
+        datadir = os.path.join(home, "Library", "Raiden")
+    elif sys.platform == "win32" or sys.platform == "cygwin":
+        datadir = os.path.join(home, "AppData", "Roaming", "Raiden")
+    elif os.name == "posix":
+        datadir = os.path.join(home, ".raiden")
+    else:
+        raise RuntimeError("Unsupported Operating System")
+
+    return os.path.join(datadir, debug_log_file_name)
+
+
 def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
@@ -184,12 +205,10 @@ def configure_logging(
         }
 
     if not disable_debug_logfile:
-        if debug_log_file_name is None:
-            time = datetime.datetime.utcnow().isoformat()
-            debug_log_file_name = f"raiden-debug_{time}.log"
+        debug_logfile_path = configure_debug_logfile_path(debug_log_file_name)
         handlers["debug-info"] = {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": debug_log_file_name,
+            "filename": debug_logfile_path,
             "level": "DEBUG",
             "formatter": "debug",
             "maxBytes": MAX_LOG_FILE_SIZE,
