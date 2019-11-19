@@ -1128,7 +1128,7 @@ def test_api_payments(
     assert_payment_secret_and_hash(json_response, payment)
 
     # Test a payment without providing an identifier
-    payment["amount"] == 1
+    payment["amount"] = 1
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -1145,7 +1145,7 @@ def test_api_payments(
     assert_payment_secret_and_hash(json_response, payment)
 
     # Test that trying out a payment with an amount higher than what is available returns an error
-    payment["amount"] == deposit
+    payment["amount"] = deposit
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -1474,6 +1474,7 @@ def assert_payment_secret_and_hash(response, payment):
 
     secret = to_bytes(hexstr=response["secret"])
     assert len(secret) == SECRET_LENGTH
+    assert payment["amount"] == response["amount"]
 
     assert to_bytes(hexstr=response["secret_hash"]) == sha256_secrethash(secret)
 
