@@ -2,7 +2,7 @@ from fractions import Fraction
 from typing import Tuple
 
 import pytest
-from hypothesis import assume, example, given
+from hypothesis import HealthCheck, assume, example, given, settings
 from hypothesis.strategies import integers
 
 from raiden.tests.unit.transfer.test_channel import make_hash_time_lock_state
@@ -361,6 +361,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
     integers(min_value=1, max_value=100_000_000_000_000_000),
     integers(min_value=1, max_value=100_000_000_000_000_000),
 )
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ Tests mediation fee deduction.
 
@@ -440,6 +441,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
     integers(min_value=1, max_value=100_000_000_000_000_000_000),
     integers(min_value=1, max_value=100_000_000_000_000_000_000),
 )
+@settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_fee_add_remove_invariant(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
     """ First adding and then removing fees must yield the original value """
     total_balance = TokenAmount(100_000_000_000_000_000_000)
