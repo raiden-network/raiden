@@ -9,7 +9,7 @@ import gevent
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from gevent.event import Event
-from gevent.lock import Semaphore
+from gevent.lock import RLock, Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
@@ -343,6 +343,9 @@ class MatrixTransport(Runnable):
         self._account_data_lock = Semaphore()
 
         self._message_handler: Optional[MessageHandler] = None
+
+        # Forbids concurrent room creation.
+        self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
 
     def __repr__(self) -> str:
         if self._raiden_service is not None:
@@ -1021,64 +1024,67 @@ class MatrixTransport(Runnable):
             )
             return None
 
-        peer_candidates = self._client.search_user_directory(to_normalized_address(address))
-        self._displayname_cache.warm_users(peer_candidates)
+        with self.room_creation_lock[address]:
+            peer_candidates = self._client.search_user_directory(to_normalized_address(address))
+            self._displayname_cache.warm_users(peer_candidates)
 
-        peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
-        if not peers:
-            self.log.error("No valid peer found", peer_address=to_checksum_address(address))
-            return None
+            peers = [
+                user for user in peer_candidates if validate_userid_signature(user) == address
+            ]
+            if not peers:
+                self.log.error("No valid peer found", peer_address=to_checksum_address(address))
+                return None
 
-        room = self._client.create_room(
-            None, invitees=[user.user_id for user in peers], is_public=False
-        )
-        self.log.debug("Created private room", room=room, invitees=peers)
-
-        peer_ids = self._address_mgr.get_userids_for_address(address)
-        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-        room_is_empty = not bool(peer_ids & member_ids)
-        if room_is_empty:
-            last_ex: Optional[Exception] = None
-            retry_interval = ROOM_JOIN_RETRY_INTERVAL
-            self.log.debug(
-                "Waiting for peer to join from invite",
-                room=room,
-                peer_address=to_checksum_address(address),
+            room = self._client.create_room(
+                None, invitees=[user.user_id for user in peers], is_public=False
             )
-            for _ in range(JOIN_RETRIES):
-                try:
-                    member_ids = {
-                        member.user_id for member in room.get_joined_members(force_resync=True)
-                    }
-                except MatrixRequestError as e:
-                    last_ex = e
-                room_is_empty = not bool(peer_ids & member_ids)
-                if room_is_empty or last_ex:
-                    if self._stop_event.wait(retry_interval):
+            self.log.debug("Created private room", room=room, invitees=peers)
+
+            peer_ids = self._address_mgr.get_userids_for_address(address)
+            member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
+            room_is_empty = not bool(peer_ids & member_ids)
+            if room_is_empty:
+                last_ex: Optional[Exception] = None
+                retry_interval = ROOM_JOIN_RETRY_INTERVAL
+                self.log.debug(
+                    "Waiting for peer to join from invite",
+                    room=room,
+                    peer_address=to_checksum_address(address),
+                )
+                for _ in range(JOIN_RETRIES):
+                    try:
+                        member_ids = {
+                            member.user_id for member in room.get_joined_members(force_resync=True)
+                        }
+                    except MatrixRequestError as e:
+                        last_ex = e
+                    room_is_empty = not bool(peer_ids & member_ids)
+                    if room_is_empty or last_ex:
+                        if self._stop_event.wait(retry_interval):
+                            break
+                        retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
+                    else:
                         break
-                    retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
-                else:
-                    break
 
-            if room_is_empty or last_ex:
-                if last_ex:
-                    raise last_ex  # re-raise if couldn't succeed in retries
-                else:
-                    # Inform the client, that currently no one listens:
-                    self.log.error(
-                        "Peer has not joined from invite yet, should join eventually",
-                        room=room,
-                        peer_address=to_checksum_address(address),
-                    )
+                if room_is_empty or last_ex:
+                    if last_ex:
+                        raise last_ex  # re-raise if couldn't succeed in retries
+                    else:
+                        # Inform the client, that currently no one listens:
+                        self.log.error(
+                            "Peer has not joined from invite yet, should join eventually",
+                            room=room,
+                            peer_address=to_checksum_address(address),
+                        )
 
-        self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
-        self._set_room_id_for_address(address, room.room_id)
+            self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
+            self._set_room_id_for_address(address, room.room_id)
 
-        if not room.listeners:
-            room.add_listener(self._handle_message, "m.room.message")
+            if not room.listeners:
+                room.add_listener(self._handle_message, "m.room.message")
 
-        self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
-        return room
+            self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
+            return room
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(
