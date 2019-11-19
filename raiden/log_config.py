@@ -148,6 +148,9 @@ def configure_debug_logfile_path(debug_log_file_name: Optional[str]) -> str:
     else:
         raise RuntimeError("Unsupported Operating System")
 
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+
     return os.path.join(datadir, debug_log_file_name)
 
 
