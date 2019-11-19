@@ -70,6 +70,14 @@ def test_assumption_matrix_userid(local_matrix_servers):
 
 @pytest.mark.parametrize("matrix_server_count", [2])
 def test_assumption_search_user_directory_returns_federated_users(chain_id, local_matrix_servers):
+    """The search_user_directory should return federated users.
+
+    This assumption test was added because of issue #5285. The
+    path-finding-service was not functioning properly because the call to
+    `search_user_directory` did not return federated users, only local users.
+    Becaused of that the PFS assumed the users were offline and didn't find any
+    valid routes for the payments.
+    """
     original_server_url = urlsplit(local_matrix_servers[0]).netloc
 
     room_alias = make_room_alias(chain_id, "broadcast_test")
@@ -86,9 +94,9 @@ def test_assumption_search_user_directory_returns_federated_users(chain_id, loca
         user, signer = create_logged_in_client(local_matrix_servers[0])
         join_broadcast_room(user, room_name_full)
 
-        # Make sure to let the session instance is closed, otherwise there will
-        # be too many file descriptors opened by the underlying urllib3
-        # connection pool.
+        # Make sure to close the session instance, otherwise there will be too
+        # many file descriptors opened by the underlying urllib3 connection
+        # pool.
         user.api.session.close()
         del user
 
