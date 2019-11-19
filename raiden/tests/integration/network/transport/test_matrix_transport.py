@@ -665,12 +665,12 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
-    room = transport0._get_or_create_room_for_address(raiden_service1.address)
+    room = transport0._get_room_for_address(raiden_service1.address)
     # Transport0 is on the higher end of the lexical order of the addresses.
     # It did not create the room and therefore we check that the other
     # node creates it.
     if room is None:
-        room = transport1._get_or_create_room_for_address(raiden_service0.address)
+        room = transport1._maybe_create_room_for_address(raiden_service0.address)
     room_id = room.room_id
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
@@ -729,7 +729,7 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
     wait_for_peer_unreachable(inviter_transport, invitee_service.address)
     assert not is_reachable(inviter_transport, invitee_service.address)
 
-    room_id = inviter_transport._get_or_create_room_for_address(invitee_service.address).room_id
+    room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
 
     invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
     invitee_transport.start_health_check(inviter_service.address)
@@ -795,7 +795,7 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
     wait_for_peer_unreachable(inviter_transport, invitee_service.address)
     assert not is_reachable(inviter_transport, invitee_service.address)
 
-    room_id = inviter_transport._get_or_create_room_for_address(invitee_service.address).room_id
+    room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
     invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
     invitee_transport.start_health_check(inviter_service.address)
 
