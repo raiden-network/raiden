@@ -431,8 +431,8 @@ class RaidenService(Runnable):
         # - React to incoming messages
         # - Send pending transactions
         # - Send pending message
-        self.alarm.link_exception(self.on_error)
-        self.transport.link_exception(self.on_error)
+        self.alarm.greenlet.link_exception(self.on_error)
+        self.transport.greenlet.link_exception(self.on_error)
         self._start_transport(chain_state)
         self._start_alarm_task()
 
@@ -470,8 +470,8 @@ class RaidenService(Runnable):
         self.transport.stop()
         self.alarm.stop()
 
-        self.transport.join()
-        self.alarm.join()
+        self.transport.greenlet.join()
+        self.alarm.greenlet.join()
 
         self.blockchain_events.uninstall_all_event_listeners()
 

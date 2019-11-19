@@ -3,7 +3,7 @@ from typing import Any, Sequence
 import structlog
 from gevent import Greenlet, GreenletExit
 
-from raiden.utils.typing import Callable
+from raiden.utils.typing import Callable, List
 
 log = structlog.get_logger(__name__)
 
@@ -25,6 +25,7 @@ class Runnable:
 
         self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
+        self.greenlets: List[Greenlet] = list()
 
     def start(self) -> None:
         """ Synchronously start task
@@ -94,11 +95,6 @@ class Runnable:
         else:
             greenlet.start()
         return greenlet
-
-    # redirect missing members to underlying greenlet for compatibility
-    # but better use greenlet directly for now, to make use of the c extension optimizations
-    def __getattr__(self, item: str) -> Any:
-        return getattr(self.greenlet, item)
 
     def __bool__(self) -> bool:
         return bool(self.greenlet)

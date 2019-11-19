@@ -9,6 +9,7 @@ from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
 import raiden
+from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_SIGNATURE,
@@ -33,7 +34,7 @@ from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, List
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 TIMEOUT_MESSAGE_RECEIVE = 15
@@ -254,7 +255,7 @@ def test_matrix_message_sync(matrix_transports):
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
-    raiden_chain, token_addresses, request
+    raiden_chain: List[App], token_addresses, request
 ):
     """Proxies exceptions must be forwarded by the transport."""
     if request.config.option.usepdb:
@@ -280,7 +281,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
     with pytest.raises(InsufficientEth), gevent.Timeout(10, exception=exception):
         # Change presence in peer app to trigger callback in app0
         app1.raiden.transport._client.set_presence_state(UserPresence.UNAVAILABLE.value)
-        app0.raiden.get()
+        app0.raiden.greenlet.get()
 
 
 def test_matrix_message_retry(
@@ -362,7 +363,7 @@ def test_matrix_message_retry(
             gevent.sleep(0.1)
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 def test_join_invalid_discovery(
@@ -395,7 +396,7 @@ def test_join_invalid_discovery(
     assert isinstance(transport._broadcast_rooms.get(discovery_room_name), Room)
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 @pytest.mark.parametrize("matrix_server_count", [2])
@@ -458,7 +459,7 @@ def test_matrix_discovery_room_offline_server(
             gevent.sleep(0.1)
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 @pytest.mark.parametrize(
@@ -502,7 +503,7 @@ def test_matrix_broadcast(
         assert f'"message_identifier": "{i}"' in call_args_str
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 @pytest.mark.parametrize(
@@ -572,7 +573,7 @@ def test_monitoring_broadcast_messages(
     assert ms_room.send_text.call_count == 1
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
@@ -650,7 +651,7 @@ def test_pfs_broadcast_messages(
     assert msg_data["type"] == "PFSFeeUpdate"
 
     transport.stop()
-    transport.get()
+    transport.greenlet.get()
 
 
 @pytest.mark.parametrize(
