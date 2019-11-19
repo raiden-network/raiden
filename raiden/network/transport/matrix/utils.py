@@ -257,6 +257,11 @@ class UserAddressManager:
         """
         userids = self._address_to_userids[address].copy()
         userids_to_presence = {uid: self._fetch_user_presence(uid) for uid in userids}
+        log.debug(
+            "Fetched user presences",
+            address=to_checksum_address(address),
+            userids_to_presence=userids_to_presence,
+        )
         composite_presence = set(userids_to_presence.values())
 
         # A Raiden node may have multiple Matrix users, this happens when
@@ -387,6 +392,8 @@ class UserAddressManager:
             #   MatrixRequestError: 403:
             #   {"errcode":"M_FORBIDDEN","error":"You are not allowed to see their presence."}
             presence = UserPresence.UNKNOWN
+            log.exception("Could not fetch user presence")
+
         self._userid_to_presence[user_id] = presence
         return self._userid_to_presence[user_id]
 
