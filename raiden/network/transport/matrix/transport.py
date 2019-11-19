@@ -10,6 +10,7 @@ import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock, Semaphore
+from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
@@ -418,8 +419,9 @@ class MatrixTransport(Runnable):
         self._starting = False
         self._started = True
 
-        for address in whitelist:
-            self.whitelist(address)
+        pool = Pool(size=10)
+        greenlets = set(pool.apply_async(self.whitelist, [address]) for address in whitelist)
+        gevent.joinall(greenlets, raise_error=True)
 
         self.log.debug("Matrix started", config=self._config)
 
