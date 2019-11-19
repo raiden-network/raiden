@@ -1019,65 +1019,86 @@ class MatrixTransport(Runnable):
             our_address=self._raiden_service.address, partner_address=address
         )
         if self._raiden_service.address != room_creator_address:
-            self.log.error(
-                "This node should not create the room", peer_address=to_checksum_address(address)
+            self.log.debug(
+                "This node should not create the room",
+                partner_address=to_checksum_address(address),
             )
             return None
 
         with self.room_creation_lock[address]:
-            peer_candidates = self._client.search_user_directory(to_normalized_address(address))
-            self._displayname_cache.warm_users(peer_candidates)
+            candidates = self._client.search_user_directory(to_normalized_address(address))
+            self._displayname_cache.warm_users(candidates)
 
-            peers = [
-                user for user in peer_candidates if validate_userid_signature(user) == address
+            partner_users = [
+                user for user in candidates if validate_userid_signature(user) == address
             ]
-            if not peers:
-                self.log.error("No valid peer found", peer_address=to_checksum_address(address))
+            partner_user_ids = [user.user_id for user in partner_users]
+
+            if not partner_users:
+                self.log.error(
+                    "Partner doesn't have a user", partner_address=to_checksum_address(address)
+                )
+
                 return None
 
-            room = self._client.create_room(
-                None, invitees=[user.user_id for user in peers], is_public=False
-            )
-            self.log.debug("Created private room", room=room, invitees=peers)
+            room = self._client.create_room(None, invitees=partner_user_ids, is_public=False)
+            self.log.debug("Created private room", room=room, invitees=partner_users)
 
-            peer_ids = self._address_mgr.get_userids_for_address(address)
-            member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
-            room_is_empty = not bool(peer_ids & member_ids)
-            if room_is_empty:
-                last_ex: Optional[Exception] = None
-                retry_interval = ROOM_JOIN_RETRY_INTERVAL
+            retry_interval = ROOM_JOIN_RETRY_INTERVAL
+            for _ in range(JOIN_RETRIES):
                 self.log.debug(
-                    "Waiting for peer to join from invite",
+                    "Fetching room members",
                     room=room,
-                    peer_address=to_checksum_address(address),
+                    partner_address=to_checksum_address(address),
                 )
-                for _ in range(JOIN_RETRIES):
-                    try:
-                        member_ids = {
-                            member.user_id for member in room.get_joined_members(force_resync=True)
-                        }
-                    except MatrixRequestError as e:
-                        last_ex = e
-                    room_is_empty = not bool(peer_ids & member_ids)
-                    if room_is_empty or last_ex:
-                        if self._stop_event.wait(retry_interval):
-                            break
-                        retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
-                    else:
-                        break
+                try:
+                    members = room.get_joined_members(force_resync=True)
+                except MatrixRequestError as e:
+                    if e.code < 500:
+                        raise
 
-                if room_is_empty or last_ex:
-                    if last_ex:
-                        raise last_ex  # re-raise if couldn't succeed in retries
-                    else:
-                        # Inform the client, that currently no one listens:
-                        self.log.error(
-                            "Peer has not joined from invite yet, should join eventually",
-                            room=room,
-                            peer_address=to_checksum_address(address),
-                        )
+                # The display name signatures have been validated already.
+                partner_joined = any(member.user_id in partner_user_ids for member in members)
 
-            self._address_mgr.add_userids_for_address(address, {user.user_id for user in peers})
+                if partner_joined:
+                    break
+
+                if self._stop_event.wait(retry_interval):
+                    return None
+
+                retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
+
+                self.log.error(
+                    "Peer has not joined from invite yet, should join eventually",
+                    room=room,
+                    partner_address=to_checksum_address(address),
+                    retry_interval=retry_interval,
+                )
+
+            # Here, the list of valid user ids is composed of
+            # all known partner user ids along with our own.
+            # If our partner roams, the user will be invited to
+            # the room, resulting in multiple user ids for the partner.
+            # If we roam, a new user and room will be created and only
+            # the new user shall be in the room.
+            valid_user_ids = partner_user_ids + [self._client.user_id]
+            has_unexpected_user_ids = any(
+                member.user_id not in valid_user_ids for member in members
+            )
+
+            if has_unexpected_user_ids:
+                self.log.warning(
+                    "Private room has unexpected participants, leaving...",
+                    room=room,
+                    participants=members,
+                )
+                room.leave()
+                return None
+
+            self._address_mgr.add_userids_for_address(
+                address, {user.user_id for user in partner_users}
+            )
+
             self._set_room_id_for_address(address, room.room_id)
 
             if not room.listeners:
@@ -1183,12 +1204,46 @@ class MatrixTransport(Runnable):
         self._raiden_service.handle_and_track_state_changes([state_change])
 
     def _maybe_invite_user(self, user: User) -> None:
+        """ Invite user if necessary.
+
+        - Only the node with the smallest address should do
+          the invites, just like the rule to
+          prevent race conditions while creating the room.
+
+        - Invites are necessary for roaming, when the higher
+          address node roams, a new user is created. Therefore, the new
+          user will not be in the room because the room is private.
+          This newly created user has to be invited.
+        """
+        msg = "Invite user must not be called on a non-started transport"
+        assert self._raiden_service is not None, msg
+
         peer_address = validate_userid_signature(user)
         if not peer_address:
             return
 
         room_ids = self._get_room_ids_for_address(peer_address)
         if not room_ids:
+            return
+
+        if len(room_ids) >= 2:
+            # TODO: Handle malicious partner creating
+            # and additional room.
+            # This cannot lead to loss of funds,
+            # it is just unexpected behavior.
+            self.log.debug(
+                f"Multiple rooms exist with peer",
+                peer_address=to_checksum_address(peer_address),
+                rooms=room_ids,
+            )
+
+        inviter = my_place_or_yours(
+            our_address=self._raiden_service.address, partner_address=peer_address
+        )
+        if inviter != self._raiden_service.address:
+            self.log.debug(
+                "This node is not the inviter", inviter=to_checksum_address(peer_address)
+            )
             return
 
         room = self._client.rooms[room_ids[0]]
