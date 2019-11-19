@@ -707,6 +707,14 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CONFLICT)
 
+    # Try to create channel with the same partner again before previous channnel settles
+    request = grequests.put(
+        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    )
+    # Channel exists and is currently being settled so API request to open channel should fail
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
