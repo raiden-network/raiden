@@ -2429,7 +2429,7 @@ def test_api_withdraw(api_server_test_instance: APIServer, raiden_network, token
     response = request.send().response
     assert_response_with_code(response, HTTPStatus.OK)
 
-    # Withdraw same amount as before
+    # Withdraw same amount as before which would sum up to more than the balance
     request = grequests.patch(
         api_url_for(
             api_server_test_instance,
