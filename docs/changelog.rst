@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`5050` Raiden now works on OSX Catalina. Debug logfile is no longer written in the current directory.
 * :feature:`5278` Always use private rooms in the matrix transport.
 * :feature:`5217` Fully support infura as an underlying ethereum rpc node.
 * :bug:`5064` Display a user-friendly error message when the PFS info request fails.
