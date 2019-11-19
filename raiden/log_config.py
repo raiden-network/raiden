@@ -140,7 +140,7 @@ def configure_debug_logfile_path(debug_log_file_name: Optional[str]) -> str:
     if home == "~":  # Could not expand user path, just use /tmp
         datadir = "/tmp"
     if sys.platform == "darwin":
-        datadir = os.path.join(home, "Library", "Raiden")
+        datadir = os.path.join(home, "Library", "Logs", "Raiden")
     elif sys.platform == "win32" or sys.platform == "cygwin":
         datadir = os.path.join(home, "AppData", "Roaming", "Raiden")
     elif os.name == "posix":
