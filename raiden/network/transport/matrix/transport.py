@@ -1003,7 +1003,6 @@ class MatrixTransport(Runnable):
             return None
 
         assert self._raiden_service is not None, "_raiden_service not set"
-        assert address not in self._room_creation_locks, "The room creation was already started."
 
         # The rooms creation is assymetric, only the node with the lower
         # address is responsible to create the room. This fixes race conditions
