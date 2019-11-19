@@ -100,9 +100,11 @@ class NodeRunner:
             click.secho(str(e), fg="red")
             sys.exit(1)
 
-        tasks: List[Runnable] = [
-            app_.raiden
-        ]  # RaidenService takes care of Transport and AlarmTask
+        gevent_tasks: List[gevent.Greenlet] = list()
+        runnable_tasks: List[Runnable] = list()
+
+        # RaidenService takes care of Transport and AlarmTask
+        runnable_tasks.append(app_.raiden)
 
         domain_list = []
         if self._options["rpccorsdomain"]:
@@ -146,23 +148,26 @@ class NodeRunner:
                     api_host, api_port
                 )
             )
-            tasks.append(api_server)
+            runnable_tasks.append(api_server)
 
         if self._options["console"]:
             from raiden.ui.console import Console
 
             console = Console(app_)
             console.start()
-            tasks.append(console)
+
+            gevent_tasks.append(console)
 
         # spawn a greenlet to handle the version checking
         version = get_system_spec()["raiden"]
-        tasks.append(gevent.spawn(check_version, version))
+
+        gevent_tasks.append(gevent.spawn(check_version, version))
 
         # spawn a greenlet to handle the gas reserve check
-        tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
+        gevent_tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
+
         # spawn a greenlet to handle the periodic check for the network id
-        tasks.append(
+        gevent_tasks.append(
             gevent.spawn(
                 check_network_id, app_.raiden.rpc_client.chain_id, app_.raiden.rpc_client.web3
             )
@@ -173,7 +178,7 @@ class NodeRunner:
         )
         if spawn_user_deposit_task:
             # spawn a greenlet to handle RDN deposits check
-            tasks.append(gevent.spawn(check_rdn_deposits, app_.raiden, app_.user_deposit))
+            gevent_tasks.append(gevent.spawn(check_rdn_deposits, app_.raiden, app_.user_deposit))
 
         # spawn a greenlet to handle the functions
 
@@ -190,8 +195,11 @@ class NodeRunner:
         gevent.signal(signal.SIGINT, sig_set)
 
         # quit if any task exits, successfully or not
-        for task in tasks:
-            task.greenlet.link(event)
+        for runnable in runnable_tasks:
+            runnable.greenlet.link(event)
+
+        for task in gevent_tasks:
+            task.link(event)
 
         try:
             event.get()
@@ -219,19 +227,14 @@ class NodeRunner:
         finally:
             self._shutdown_hook()
 
-            app_.stop()
+            for task in gevent_tasks:
+                task.kill()
 
-            def stop_task(task):
-                try:
-                    if isinstance(task, Runnable):
-                        task.stop()
-                    else:
-                        task.kill()
-                finally:
-                    task.get()  # re-raise
+            for task in runnable_tasks:
+                task.stop()
 
             gevent.joinall(
-                set(gevent.spawn(stop_task, task) for task in tasks),
+                set(gevent_tasks + runnable_tasks),
                 app_.config.get("shutdown_timeout", settings.DEFAULT_SHUTDOWN_TIMEOUT),
                 raise_error=True,
             )
