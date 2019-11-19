@@ -679,6 +679,20 @@ def test_api_open_close_and_settle_channel(
     }
     assert check_dict_nested_attrs(get_json_response(response), expected_response)
 
+    # try closing the channel again
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json={"state": ChannelState.STATE_CLOSED.value},
+    )
+    # Closing the channel again should not work
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+
     # Try sending a payment when channel is closed
     request = grequests.post(
         api_url_for(
