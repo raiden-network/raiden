@@ -165,8 +165,13 @@ def transfer_and_assert(
 
     log.debug("PAYMENT RESPONSE", url=url, json=json, response=response, duration=duration)
 
-    assert getattr(request, "exception", None) is None
     assert response is not None
+
+    expired_lock = response.status_code == HTTPStatus.CONFLICT and "expired" in response.content
+    msg = "Stress test failed due to an expired lock in a transfer."
+    assert not expired_lock, msg
+
+    assert getattr(request, "exception", None) is None
     assert response.status_code == HTTPStatus.OK
     assert response.headers["Content-Type"] == "application/json"
 
