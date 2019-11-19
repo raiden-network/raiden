@@ -679,6 +679,20 @@ def test_api_open_close_and_settle_channel(
     }
     assert check_dict_nested_attrs(get_json_response(response), expected_response)
 
+    # Try sending a payment when channel is closed
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(partner_address),
+        ),
+        json={"amount": 1},
+    )
+    # Payment should not work since channel is closing
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
