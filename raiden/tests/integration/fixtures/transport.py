@@ -87,7 +87,7 @@ def matrix_transports(
     for transport in transports:
         # Calling `get()` on a never started Greenlet will block forever
         if transport._started:
-            transport.get()
+            transport.greenlet.get()
 
 
 @pytest.fixture

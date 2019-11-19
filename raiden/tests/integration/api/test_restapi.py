@@ -15,6 +15,7 @@ from eth_utils import (
 )
 from flask import url_for
 
+from raiden.api.rest import APIServer
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_HEX, SECRET_LENGTH, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
@@ -152,7 +153,7 @@ def test_address_field():
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_payload_with_invalid_addresses(api_server_test_instance, rest_api_port_number):
+def test_payload_with_invalid_addresses(api_server_test_instance: APIServer, rest_api_port_number):
     """ Addresses require leading 0x in the payload. """
     invalid_address = "61c808d82a3ac53231750dadc13c777b59310bd9"
     channel_data_obj = {
@@ -183,7 +184,7 @@ def test_payload_with_invalid_addresses(api_server_test_instance, rest_api_port_
 )
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_crash_on_unhandled_exception(api_server_test_instance):
+def test_crash_on_unhandled_exception(api_server_test_instance: APIServer) -> None:
     """ Crash when an unhandled exception happens on APIServer. """
 
     # as we should not have unhandled exceptions in our endpoints, create one to test
@@ -195,12 +196,12 @@ def test_crash_on_unhandled_exception(api_server_test_instance):
         url = url_for("error_endpoint")
     request = grequests.get(url)
     request.send()
-    api_server_test_instance.get(timeout=10)
+    api_server_test_instance.greenlet.get(timeout=10)
 
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_payload_with_address_invalid_chars(api_server_test_instance):
+def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer):
     """ Addresses cannot have invalid characters in it. """
     invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310bdg"  # g at the end is invalid
     channel_data_obj = {
@@ -217,7 +218,7 @@ def test_payload_with_address_invalid_chars(api_server_test_instance):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_payload_with_address_invalid_length(api_server_test_instance):
+def test_payload_with_address_invalid_length(api_server_test_instance: APIServer):
     """ Encoded addresses must have the right length. """
     invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310b"  # g at the end is invalid
     channel_data_obj = {
@@ -234,7 +235,7 @@ def test_payload_with_address_invalid_length(api_server_test_instance):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_payload_with_address_not_eip55(api_server_test_instance):
+def test_payload_with_address_not_eip55(api_server_test_instance: APIServer):
     """ Provided addresses must be EIP55 encoded. """
     invalid_address = "0xf696209d2ca35e6c88e5b99b7cda3abf316bed69"
     channel_data_obj = {
@@ -251,7 +252,7 @@ def test_payload_with_address_not_eip55(api_server_test_instance):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_query_our_address(api_server_test_instance):
+def test_api_query_our_address(api_server_test_instance: APIServer):
     request = grequests.get(api_url_for(api_server_test_instance, "addressresource"))
     response = request.send().response
     assert_proper_response(response)
@@ -260,7 +261,7 @@ def test_api_query_our_address(api_server_test_instance):
     assert get_json_response(response) == {"our_address": to_checksum_address(our_address)}
 
 
-def test_api_get_raiden_version(api_server_test_instance):
+def test_api_get_raiden_version(api_server_test_instance: APIServer):
     request = grequests.get(api_url_for(api_server_test_instance, "versionresource"))
     response = request.send().response
     assert_proper_response(response)
@@ -272,7 +273,9 @@ def test_api_get_raiden_version(api_server_test_instance):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_timeout):
+def test_api_get_channel_list(
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
 
     request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
@@ -312,7 +315,9 @@ def test_api_get_channel_list(api_server_test_instance, token_addresses, reveal_
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_channel_status_channel_nonexistant(api_server_test_instance, token_addresses):
+def test_api_channel_status_channel_nonexistant(
+    api_server_test_instance: APIServer, token_addresses
+):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
 
@@ -335,7 +340,9 @@ def test_api_channel_status_channel_nonexistant(api_server_test_instance, token_
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses, reveal_timeout):
+def test_api_open_and_deposit_channel(
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+):
 
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
@@ -516,7 +523,7 @@ def test_api_open_and_deposit_channel(api_server_test_instance, token_addresses,
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_and_deposit_race(
-    api_server_test_instance,
+    api_server_test_instance: APIServer,
     raiden_network,
     token_addresses,
     reveal_timeout,
@@ -613,7 +620,7 @@ def test_api_open_and_deposit_race(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_close_and_settle_channel(
-    api_server_test_instance, token_addresses, reveal_timeout
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
@@ -675,7 +682,9 @@ def test_api_open_close_and_settle_channel(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, reveal_timeout):
+def test_api_close_insufficient_eth(
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+):
 
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
@@ -726,7 +735,9 @@ def test_api_close_insufficient_eth(api_server_test_instance, token_addresses, r
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_api_open_channel_invalid_input(api_server_test_instance, token_addresses, reveal_timeout):
+def test_api_open_channel_invalid_input(
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
     settle_timeout = TEST_SETTLE_TIMEOUT_MIN - 1
@@ -761,7 +772,7 @@ def test_api_open_channel_invalid_input(api_server_test_instance, token_addresse
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_channel_state_change_errors(
-    api_server_test_instance, token_addresses, reveal_timeout
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
@@ -912,7 +923,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [2])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
-def test_api_tokens(api_server_test_instance, blockchain_services, token_addresses):
+def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, token_addresses):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address1 = token_addresses[0]
     token_address2 = token_addresses[1]
@@ -953,7 +964,9 @@ def test_api_tokens(api_server_test_instance, blockchain_services, token_address
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_query_partners_by_token(api_server_test_instance, blockchain_services, token_addresses):
+def test_query_partners_by_token(
+    api_server_test_instance: APIServer, blockchain_services, token_addresses
+):
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
     token_address = token_addresses[0]
@@ -1016,7 +1029,9 @@ def test_query_partners_by_token(api_server_test_instance, blockchain_services, 
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_payments_target_error(api_server_test_instance, raiden_network, token_addresses):
+def test_api_payments_target_error(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
@@ -1041,7 +1056,7 @@ def test_api_payments_target_error(api_server_test_instance, raiden_network, tok
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_payments(api_server_test_instance, raiden_network, token_addresses):
+def test_api_payments(api_server_test_instance: APIServer, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
@@ -1075,7 +1090,9 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_timestamp_format(api_server_test_instance, raiden_network, token_addresses):
+def test_api_timestamp_format(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
@@ -1110,7 +1127,7 @@ def test_api_timestamp_format(api_server_test_instance, raiden_network, token_ad
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_secret_hash_errors(
-    api_server_test_instance, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
     amount = 200
@@ -1186,7 +1203,7 @@ def test_api_payments_secret_hash_errors(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_secret_no_hash(
-    api_server_test_instance, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
     amount = 100
@@ -1262,7 +1279,7 @@ def test_api_payments_with_hash_no_secret(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("resolver_ports", [[None, 8000]])
 def test_api_payments_with_resolver(
-    api_server_test_instance, raiden_network, token_addresses, resolvers
+    api_server_test_instance: APIServer, raiden_network, token_addresses, resolvers
 ):
 
     _, app1 = raiden_network
@@ -1336,7 +1353,7 @@ def test_api_payments_with_resolver(
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_secret_and_hash(
-    api_server_test_instance, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
     amount = 100
@@ -1401,7 +1418,9 @@ def assert_payment_conflict(responses):
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_payments_conflicts(api_server_test_instance, raiden_network, token_addresses):
+def test_api_payments_conflicts(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.raiden.address
@@ -1438,7 +1457,11 @@ def test_api_payments_conflicts(api_server_test_instance, raiden_network, token_
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("environment_type", [Environment.PRODUCTION])
 def test_register_token_mainnet(
-    api_server_test_instance, token_amount, token_addresses, raiden_network, contract_manager
+    api_server_test_instance: APIServer,
+    token_amount,
+    token_addresses,
+    raiden_network,
+    contract_manager,
 ):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
@@ -1605,7 +1628,7 @@ def test_get_token_network_for_token(
 @pytest.mark.parametrize("number_of_tokens", [1])
 # For non-red eyes mainnet code set number_of_tokens to 2 and uncomment the code
 # at the end of this test
-def test_get_connection_managers_info(api_server_test_instance, token_addresses):
+def test_get_connection_managers_info(api_server_test_instance: APIServer, token_addresses):
     # check that there are no registered tokens
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
@@ -1662,7 +1685,7 @@ def test_get_connection_managers_info(api_server_test_instance, token_addresses)
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
-def test_connect_insufficient_reserve(api_server_test_instance, token_addresses):
+def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token_addresses):
 
     # Burn all eth and then try to connect to a token network
     burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
@@ -1681,7 +1704,7 @@ def test_connect_insufficient_reserve(api_server_test_instance, token_addresses)
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_network_events(api_server_test_instance, token_addresses):
+def test_network_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
@@ -1712,7 +1735,7 @@ def test_network_events(api_server_test_instance, token_addresses):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_token_events(api_server_test_instance, token_addresses):
+def test_token_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
@@ -1744,7 +1767,7 @@ def test_token_events(api_server_test_instance, token_addresses):
 
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_channel_events(api_server_test_instance, token_addresses):
+def test_channel_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address = token_addresses[0]
@@ -1875,7 +1898,9 @@ def test_api_deposit_limit(
 
 
 @pytest.mark.parametrize("number_of_nodes", [3])
-def test_payment_events_endpoints(api_server_test_instance, raiden_network, token_addresses):
+def test_payment_events_endpoints(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     app0, app1, app2 = raiden_network
     amount1 = PaymentAmount(10)
     identifier1 = PaymentID(42)
@@ -2206,7 +2231,9 @@ def test_payment_events_endpoints(api_server_test_instance, raiden_network, toke
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_channel_events_raiden(api_server_test_instance, raiden_network, token_addresses):
+def test_channel_events_raiden(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
@@ -2324,7 +2351,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
-def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses):
+def test_api_withdraw(api_server_test_instance: APIServer, raiden_network, token_addresses):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     partner_address = app1.raiden.address
@@ -2386,7 +2413,7 @@ def test_api_withdraw(api_server_test_instance, raiden_network, token_addresses)
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("token_contract_name", [CONTRACT_CUSTOM_TOKEN])
-def test_api_testnet_token_mint(api_server_test_instance, token_addresses):
+def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addresses):
     user_address = factories.make_checksum_address()
     token_address = token_addresses[0]
     url = api_url_for(api_server_test_instance, "tokensmintresource", token_address=token_address)
@@ -2424,7 +2451,9 @@ def test_api_testnet_token_mint(api_server_test_instance, token_addresses):
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_payments_with_lock_timeout(api_server_test_instance, raiden_network, token_addresses):
+def test_api_payments_with_lock_timeout(
+    api_server_test_instance: APIServer, raiden_network, token_addresses
+):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
@@ -2491,7 +2520,7 @@ def test_api_payments_with_lock_timeout(api_server_test_instance, raiden_network
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [0])
 def test_api_set_reveal_timeout(
-    api_server_test_instance, raiden_network, token_addresses, settle_timeout
+    api_server_test_instance: APIServer, raiden_network, token_addresses, settle_timeout
 ):
     app0, app1 = raiden_network
     token_address = token_addresses[0]

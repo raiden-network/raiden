@@ -2,6 +2,7 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
+from raiden.app import App
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
@@ -34,7 +35,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
-from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
+from raiden.utils.typing import BlockNumber, List, PaymentAmount, PaymentID, TargetAddress
 from raiden.waiting import wait_for_block, wait_for_settle
 
 
@@ -309,7 +310,7 @@ def test_refund_transfer(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_different_view_of_last_bp_during_unlock(
-    raiden_chain,
+    raiden_chain: List[App],
     number_of_nodes,
     token_addresses,
     deposit,
@@ -388,7 +389,7 @@ def test_different_view_of_last_bp_during_unlock(
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_address, amount_refund, app2.raiden.address, identifier_refund
+        token_network_address, amount_refund, TargetAddress(app2.raiden.address), identifier_refund
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
@@ -445,7 +446,7 @@ def test_different_view_of_last_bp_during_unlock(
     with dont_handle_node_change_network_state():
         # now app1 goes offline
         app1.raiden.stop()
-        app1.raiden.get()
+        app1.raiden.greenlet.get()
         assert not app1.raiden
 
         # Wait for lock expiration so that app0 sends a LockExpired
@@ -477,7 +478,8 @@ def test_different_view_of_last_bp_during_unlock(
 
         on_raiden_event_original(raiden, chain_state, event)
 
-    app1.raiden.raiden_event_handler.on_raiden_event = patched_on_raiden_event
+    setattr(app1.raiden.raiden_event_handler, "on_raiden_event", patched_on_raiden_event)  # NOQA
+
     # and now app1 comes back online
     app1.raiden.start()
     # test for https://github.com/raiden-network/raiden/issues/3216

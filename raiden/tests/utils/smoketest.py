@@ -445,8 +445,8 @@ def run_smoketest(
     finally:
         if api_server is not None:
             api_server.stop()
-            api_server.get()
+            api_server.greenlet.get()
 
         if app is not None:
             app.stop()
-            app.raiden.get()
+            app.raiden.greenlet.get()

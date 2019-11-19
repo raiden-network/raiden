@@ -273,7 +273,7 @@ class AlarmTask(Runnable):
         if self._stop_event:
             self._stop_event.set(True)
         log.debug("Alarm task stopped", node=to_checksum_address(self.rpc_client.address))
-        result = self.join()
+        result = self.greenlet.join()
         # Callbacks should be cleaned after join
         self.callbacks = []
         return result

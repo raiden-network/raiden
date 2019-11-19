@@ -191,7 +191,7 @@ class NodeRunner:
 
         # quit if any task exits, successfully or not
         for task in tasks:
-            task.link(event)
+            task.greenlet.link(event)
 
         try:
             event.get()
