@@ -1056,7 +1056,9 @@ def test_api_payments_target_error(
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_payments(api_server_test_instance: APIServer, raiden_network, token_addresses):
+def test_api_payments(
+    api_server_test_instance: APIServer, raiden_network, token_addresses, deposit
+):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
@@ -1073,6 +1075,7 @@ def test_api_payments(api_server_test_instance: APIServer, raiden_network, token
         "identifier": identifier,
     }
 
+    # Test a normal payment
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -1087,6 +1090,37 @@ def test_api_payments(api_server_test_instance: APIServer, raiden_network, token
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
+
+    # Test a payment without providing an identifier
+    payment["amount"] == 1
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": 1},
+    )
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
+    assert_proper_response(response)
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
+
+    # Test that trying out a payment with an amount higher than what is available returns an error
+    payment["amount"] == deposit
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": deposit},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
 
 
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -1398,7 +1432,7 @@ def test_api_payments_with_secret_and_hash(
 
 def assert_payment_secret_and_hash(response, payment):
     # make sure that payment key/values are part of the response.
-    assert response.items() >= payment.items()
+    assert len(response) == 7
     assert "secret" in response
     assert "secret_hash" in response
 
