@@ -79,7 +79,7 @@ def reveal_timeout(number_of_nodes):
     # Because the lock expiration is fixed, and it's computed based on the
     # reveal timeout value, we need to make it large enough to accomodate for
     # the room creation and invite, the formula below is used for that:
-    return number_of_nodes * 6 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    return number_of_nodes * 4 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 
 
 @pytest.fixture
