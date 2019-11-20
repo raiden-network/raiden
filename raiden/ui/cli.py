@@ -364,8 +364,14 @@ def options(func: Callable) -> Callable:
             ),
             option("--log-json", help="Output log lines in JSON format", is_flag=True),
             option(
-                "--debug-logfile-name",
-                help="The debug logfile name.",
+                "--debug-logfile-path",
+                help=(
+                    "The absolute path to the debug logfile. If not given defaults to:\n"
+                    " - OSX: ~/Library/Logs/Raiden/raiden_debug_XXX.log\n"
+                    " - Windows: ~/Appdata/Roaming/Raiden/raiden_debug_XXX.log\n"
+                    " - Linux: ~/.raiden/raiden_debug_XXX.log\n"
+                    "\nIf there is a problem with expanding home it is placed under /tmp"
+                ),
                 type=click.Path(dir_okay=False, writable=True, resolve_path=True),
             ),
             option(
