@@ -604,3 +604,29 @@ discretion. So the general guidelines are:
   which touch documentation, infrastucture or completely unrelated parts of the
   code then you can freely use **Create a Merge Commit** and save the time of
   rebasing.
+
+### Profiling
+
+The code can be profiled by creating a flamegraph of the codepaths showing how much time is spent in each part of the code. To do that you will need the [flamegraph](https://github.com/brendangregg/FlameGraph) package.
+
+#### Profiling a normal run
+
+A normal run of raiden can be profiled by providing the `--flamegraph /path/to/dir` option. For example:
+
+`python -m raiden --eth-rpc-endpoint http://parity.goerli.ethnodes.brainbot.com:8545 --accept-disclaimer --network-id goerli --keystore-path ~/test_keystore --flamegraph ./TEMP`
+
+The `/path/to/dir` needs to be a directory where the flamegraph stack data will be saved.
+
+Subsequently you can render them to an `.svg` by doing `flamegraph.pl  /path/to/dir/filename_stack.data > flamegraph.svg`
+
+#### Profiling a test run
+
+A test run can be profiled by providing an extra argument to pytest `--profiler=flamegraph-trace`. For example:
+
+`pytest --profiler=flamegraph-trace -xs raiden/tests/integration/api/test_restapi.py::test_api_payments`
+
+Will generate stack data under `/tmp/datetime_stack.data`. Just as before you can render it into a flamegreaph by doing `flamegraph.pl /tmp/datetime_stack.data`.
+
+#### Analyzing Profiling data
+
+You can open the resulting `.svg` file via any viewer capable of reading svg and analyze how much time is spent in each part of the code by studying the flamegraph.
