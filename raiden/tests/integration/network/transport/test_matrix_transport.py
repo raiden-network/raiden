@@ -181,8 +181,8 @@ def test_matrix_message_sync(matrix_transports):
 
     raiden_service1.handle_and_track_state_changes = MagicMock()
 
-    transport0.start(raiden_service0, transport0_message_handler, [], None)
-    transport1.start(raiden_service1, transport1_message_handler, [], None)
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
 
     latest_auth_data = f"{transport1._user_id}/{transport1._client.api.token}"
     update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
@@ -241,7 +241,7 @@ def test_matrix_message_sync(matrix_transports):
         transport0.send_async(queue_identifier, message)
 
     # Should fetch the 5 messages sent while transport1 was offline
-    transport1.start(transport1._raiden_service, transport1_message_handler, [], latest_auth_data)
+    transport1.start(transport1._raiden_service, [], latest_auth_data)
     transport1.start_health_check(transport0._raiden_service.address)
 
     with gevent.Timeout(TIMEOUT_MESSAGE_RECEIVE):
@@ -319,7 +319,7 @@ def test_matrix_message_retry(
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
 
-    transport.start(raiden_service, raiden_service.message_handler, [], None)
+    transport.start(raiden_service, [], None)
     transport.log = MagicMock()
 
     # Receiver is online
@@ -397,7 +397,7 @@ def test_join_invalid_discovery(
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
 
-    transport.start(raiden_service, raiden_service.message_handler, [], None)
+    transport.start(raiden_service, [], None)
     transport.log = MagicMock()
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     assert isinstance(transport._broadcast_rooms.get(discovery_room_name), Room)
@@ -422,9 +422,9 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler1)
     raiden_service2 = MockRaidenService(message_handler2)
 
-    transport0.start(raiden_service0, message_handler0, [], "")
-    transport1.start(raiden_service1, message_handler1, [], "")
-    transport2.start(raiden_service2, message_handler2, [], "")
+    transport0.start(raiden_service0, [], "")
+    transport1.start(raiden_service1, [], "")
+    transport2.start(raiden_service2, [], "")
 
     transport0.start_health_check(raiden_service1.address)
     transport0.start_health_check(raiden_service2.address)
@@ -457,7 +457,7 @@ def test_matrix_discovery_room_offline_server(
             "available_servers": [local_matrix_servers[0], "https://localhost:1"],
         }
     )
-    transport.start(MockRaidenService(None), MessageHandler(set()), [], "")
+    transport.start(MockRaidenService(None), [], "")
 
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     with gevent.Timeout(1):
@@ -484,7 +484,7 @@ def test_matrix_broadcast(
             "available_servers": [local_matrix_servers[0]],
         }
     )
-    transport.start(MockRaidenService(None), MessageHandler(set()), [], "")
+    transport.start(MockRaidenService(None), [], "")
     gevent.idle()
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
@@ -536,7 +536,7 @@ def test_monitoring_broadcast_messages(
     raiden_service = MockRaidenService(None)
     raiden_service.config = dict(services=dict(monitoring_enabled=True))
 
-    transport.start(raiden_service, raiden_service.message_handler, [], None)
+    transport.start(raiden_service, [], None)
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._broadcast_rooms.get(ms_room_name)
@@ -608,7 +608,7 @@ def test_pfs_broadcast_messages(
     raiden_service.config = dict(services=dict(monitoring_enabled=True))
     raiden_service.routing_mode = route_mode
 
-    transport.start(raiden_service, raiden_service.message_handler, [], None)
+    transport.start(raiden_service, [], None)
 
     pfs_room_name = make_room_alias(transport.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_room = transport._broadcast_rooms.get(pfs_room_name)
@@ -660,8 +660,8 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
 
     transport0, transport1 = matrix_transports
 
-    transport0.start(raiden_service0, raiden_service0.message_handler, [], None)
-    transport1.start(raiden_service1, raiden_service1.message_handler, [], None)
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
@@ -717,8 +717,8 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
         inviter_transport = transport1
         invitee_transport = transport0
 
-    inviter_transport.start(inviter_service, inviter_service.message_handler, [], None)
-    invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
+    inviter_transport.start(inviter_service, [], None)
+    invitee_transport.start(invitee_service, [], None)
 
     inviter_transport.start_health_check(invitee_service.address)
     invitee_transport.start_health_check(inviter_service.address)
@@ -732,7 +732,7 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
 
     room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
 
-    invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
+    invitee_transport.start(invitee_service, [], None)
     invitee_transport.start_health_check(inviter_service.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
@@ -779,8 +779,8 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
         inviter_transport = transport1
         invitee_transport = transport0
 
-    inviter_transport.start(inviter_service, inviter_service.message_handler, [], None)
-    invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
+    inviter_transport.start(inviter_service, [], None)
+    invitee_transport.start(invitee_service, [], None)
 
     inviter_transport.start_health_check(invitee_service.address)
     invitee_transport.start_health_check(inviter_service.address)
@@ -797,7 +797,7 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
     assert not is_reachable(inviter_transport, invitee_service.address)
 
     room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
-    invitee_transport.start(invitee_service, invitee_service.message_handler, [], None)
+    invitee_transport.start(invitee_service, [], None)
     invitee_transport.start_health_check(inviter_service.address)
 
     inviter_transport.stop()
@@ -826,8 +826,8 @@ def test_matrix_user_roaming(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
 
-    transport0.start(raiden_service0, message_handler0, [], "")
-    transport1.start(raiden_service1, message_handler1, [], "")
+    transport0.start(raiden_service0, [], "")
+    transport1.start(raiden_service1, [], "")
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
@@ -839,7 +839,7 @@ def test_matrix_user_roaming(matrix_transports):
     wait_for_peer_unreachable(transport1, raiden_service0.address)
     assert not is_reachable(transport1, raiden_service0.address)
 
-    transport2.start(raiden_service0, message_handler0, [], "")
+    transport2.start(raiden_service0, [], "")
     transport2.start_health_check(raiden_service1.address)
 
     assert ping_pong_message_success(transport2, transport1)
@@ -849,7 +849,7 @@ def test_matrix_user_roaming(matrix_transports):
     wait_for_peer_unreachable(transport1, raiden_service0.address)
     assert not is_reachable(transport1, raiden_service0.address)
 
-    transport0.start(raiden_service0, message_handler0, [], "")
+    transport0.start(raiden_service0, [], "")
     transport0.start_health_check(raiden_service1.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
@@ -883,8 +883,8 @@ def test_matrix_multi_user_roaming(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler1)
 
     # Both nodes on the same server
-    transport_rs0_0.start(raiden_service0, message_handler0, [], "")
-    transport_rs1_0.start(raiden_service1, message_handler1, [], "")
+    transport_rs0_0.start(raiden_service0, [], "")
+    transport_rs1_0.start(raiden_service1, [], "")
 
     transport_rs0_0.start_health_check(raiden_service1.address)
     transport_rs1_0.start_health_check(raiden_service0.address)
@@ -898,7 +898,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
-    transport_rs1_1.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
@@ -910,7 +910,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
-    transport_rs1_2.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
@@ -921,8 +921,8 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs0_0.stop()
     transport_rs1_2.stop()
 
-    transport_rs0_1.start(raiden_service0, message_handler0, [], "")
-    transport_rs1_0.start(raiden_service1, message_handler1, [], "")
+    transport_rs0_1.start(raiden_service0, [], "")
+    transport_rs1_0.start(raiden_service1, [], "")
 
     transport_rs0_1.start_health_check(raiden_service1.address)
     transport_rs1_0.start_health_check(raiden_service0.address)
@@ -936,7 +936,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
-    transport_rs1_1.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
@@ -948,7 +948,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
-    transport_rs1_2.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
@@ -960,9 +960,9 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs0_1.stop()
     transport_rs1_2.stop()
 
-    transport_rs0_2.start(raiden_service0, message_handler0, [], "")
+    transport_rs0_2.start(raiden_service0, [], "")
     transport_rs0_2.start_health_check(raiden_service1.address)
-    transport_rs1_0.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_0.start(raiden_service1, [], "")
     transport_rs1_0.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
@@ -974,7 +974,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_0.stop()
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
-    transport_rs1_1.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
@@ -986,7 +986,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport_rs1_1.stop()
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
-    transport_rs1_2.start(raiden_service1, message_handler1, [], "")
+    transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.start_health_check(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
@@ -1008,8 +1008,8 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
 
-    transport0.start(raiden_service0, message_handler0, [], "")
-    transport1.start(raiden_service1, message_handler1, [], "")
+    transport0.start(raiden_service0, [], "")
+    transport1.start(raiden_service1, [], "")
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
@@ -1030,8 +1030,8 @@ def test_send_to_device(matrix_transports):
     raiden_service1 = MockRaidenService(message_handler1)
     transport1._receive_to_device = MagicMock()
 
-    transport0.start(raiden_service0, message_handler0, [], "")
-    transport1.start(raiden_service1, message_handler1, [], "")
+    transport0.start(raiden_service0, [], "")
+    transport1.start(raiden_service1, [], "")
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
