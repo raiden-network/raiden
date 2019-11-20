@@ -1114,67 +1114,6 @@ class MatrixTransport(Runnable):
             for room_alias in room.aliases
         )
 
-    def _get_public_room(self, room_name: str, invitees: List[User]) -> Room:
-        """ Obtain a public, canonically named (if possible) room and invite peers """
-        room_name_full = f"#{room_name}:{self._server_name}"
-        invitees_uids = [user.user_id for user in invitees]
-
-        for _ in range(JOIN_RETRIES):
-            try:
-                room = self._client.join_room(room_name_full)
-            except MatrixRequestError as error:
-                if error.code == 404:
-                    self.log.debug(
-                        f"No room for peer, trying to create",
-                        room_name=room_name_full,
-                        error=error,
-                    )
-                else:
-                    self.log.debug(
-                        f"Error joining room",
-                        room_name=room_name,
-                        error=error.content,
-                        error_code=error.code,
-                    )
-            else:
-                # Invite users to existing room
-                member_ids = {user.user_id for user in room.get_joined_members(force_resync=True)}
-                users_to_invite = set(invitees_uids) - member_ids
-                self.log.debug("Inviting users", room=room, invitee_ids=users_to_invite)
-                for invitee_id in users_to_invite:
-                    room.invite_user(invitee_id)
-                self.log.debug("Joined public room", room=room)
-                break
-
-            # if can't, try creating it
-            try:
-                room = self._client.create_room(room_name, invitees=invitees_uids, is_public=True)
-            except MatrixRequestError as error:
-                if error.code == 409:
-                    msg = (
-                        "Error creating room, "
-                        "seems to have been created by peer meanwhile, retrying."
-                    )
-                else:
-                    msg = "Error creating room, retrying."
-
-                self.log.debug(
-                    msg, room_name=room_name, error=error.content, error_code=error.code
-                )
-            else:
-                self.log.debug("Room created successfully", room=room, invitees=invitees)
-                break
-        else:
-            # if can't join nor create, create an unnamed one
-            room = self._client.create_room(None, invitees=invitees_uids, is_public=True)
-            self.log.warning(
-                "Could not create nor join a named room. Successfuly created an unnamed one",
-                room=room,
-                invitees=invitees,
-            )
-
-        return room
-
     def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
         # maybe inviting user used to also possibly invite user's from presence changes
         assert self._raiden_service is not None, "_raiden_service not set"
