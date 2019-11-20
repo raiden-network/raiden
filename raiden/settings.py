@@ -27,11 +27,11 @@ DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
-        "https://raw.githubusercontent.com/raiden-network/raiden-transport"
+        "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
         "/master/known_servers.main.yaml"
     ),
     Environment.DEVELOPMENT: (
-        "https://raw.githubusercontent.com/raiden-network/raiden-transport"
+        "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
         "/master/known_servers.test.yaml"
     ),
 }
