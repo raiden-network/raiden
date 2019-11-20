@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytest
 import structlog
@@ -115,6 +116,14 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
         assert "test event" in captured.err
         assert "key=value" in captured.err
         assert "foo=bar" in captured.err
+
+
+def test_debug_logfile_invalid_dir():
+    """Test that providing an invalid directory for the debug logfile throws an error"""
+    with pytest.raises(SystemExit):
+        configure_logging(
+            {"": "DEBUG"}, debug_log_file_path=os.path.join("notarealdir", "raiden-debug.log")
+        )
 
 
 def test_redacted_request(capsys, tmpdir):
