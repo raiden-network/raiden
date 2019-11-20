@@ -261,7 +261,7 @@ def logging_level(request, logs_storage):
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file,
         cache_logger_on_first_use=False,
-        debug_log_file_name=debug_path,
+        debug_log_file_path=debug_path,
     )
     log.info("Running test", nodeid=request.node.nodeid)
 

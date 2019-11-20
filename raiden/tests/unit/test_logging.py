@@ -101,7 +101,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
     configure_logging(
         {module: level},
         disable_debug_logfile=disabled_debug,
-        debug_log_file_name=str(tmpdir / "raiden-debug.log"),
+        debug_log_file_path=str(tmpdir / "raiden-debug.log"),
     )
     log = structlog.get_logger(logger).bind(foo="bar")
     log.debug("test event", key="value")
@@ -118,7 +118,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
 
 
 def test_redacted_request(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
     token = "my_access_token123"
 
     # use logging, as 'urllib3/requests'
@@ -133,7 +133,7 @@ def test_redacted_request(capsys, tmpdir):
 
 
 def test_redacted_state_change(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
     auth_token = (
         "MDAxZGxvY2F0aW9uIGxvY2FsaG9zdDo2NDAzMwowMDEzaWRlbnRpZmllciBrZXkKMDAxMGNpZCBnZW4gPSAxCjAwN"
         "GVjaWQgdXNlcl9pZCA9IEAweDYyNjRkYThmMmViOGQ4MDM3NjM2OTEwYzFlYzAzODA0MzhmNGVmZWU6bG9jYWxob3"
@@ -157,7 +157,7 @@ def test_redacted_state_change(capsys, tmpdir):
 
 
 def test_that_secret_is_redacted(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
 
     log = structlog.get_logger("raiden.network.transport.matrix.transport")
 
