@@ -8,6 +8,7 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
 
+import click
 import gevent
 import structlog
 
@@ -130,11 +131,24 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     return processor_wrapper
 
 
-def configure_debug_logfile_path(debug_log_file_name: Optional[str]) -> str:
-    """Figure out the full pathname for the debug logfile depending on the user's OS"""
-    if debug_log_file_name is None:
-        time = datetime.datetime.utcnow().isoformat()
-        debug_log_file_name = f"raiden-debug_{time}.log"
+def configure_debug_logfile_path(debug_log_file_path: Optional[str]) -> str:
+    """Determine the pathname for the debug logfile based on the given argument and user's OS"""
+
+    if debug_log_file_path is not None:
+        given_dir = os.path.basename(debug_log_file_path)
+        if not os.path.isdir(given_dir):
+            click.secho(
+                f"The provided directory {given_dir} for the debug logfilename "
+                f"either does not exist or is not a directory",
+                fg="red",
+            )
+            sys.exit(1)
+
+        return debug_log_file_path
+
+    # From here and on determine default based on user's system
+    time = datetime.datetime.utcnow().isoformat()
+    debug_log_file_name = f"raiden-debug_{time}.log"
 
     home = os.path.expanduser("~")
     if home == "~":  # Could not expand user path, just use /tmp
@@ -160,7 +174,7 @@ def configure_logging(
     log_json: bool = False,
     log_file: str = None,
     disable_debug_logfile: bool = False,
-    debug_log_file_name: str = None,
+    debug_log_file_path: str = None,
     cache_logger_on_first_use: bool = True,
     _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
     _debug_log_file_additional_level_filters: Dict[str, str] = None,
@@ -208,7 +222,7 @@ def configure_logging(
         }
 
     if not disable_debug_logfile:
-        debug_logfile_path = configure_debug_logfile_path(debug_log_file_name)
+        debug_logfile_path = configure_debug_logfile_path(debug_log_file_path)
         handlers["debug-info"] = {
             "class": "logging.handlers.RotatingFileHandler",
             "filename": debug_logfile_path,
