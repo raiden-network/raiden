@@ -168,11 +168,6 @@ class SamePeerAddress(RaidenError):
     """
 
 
-class UnknownAddress(RaidenError):
-    """ Raised when the user provided address is valid but is not from a known
-    node. """
-
-
 class UnknownTokenAddress(RaidenError):
     """ Raised when the token address in unknown. """
 
@@ -205,10 +200,6 @@ class InvalidChannelParticipantDepositLimit(RaidenError):
     """
 
 
-class STUNUnavailableException(RaidenError):
-    pass
-
-
 class EthNodeInterfaceError(RaidenError):
     """ Raised when the underlying ETH node does not support an rpc interface"""
 
@@ -236,10 +227,6 @@ class ContractCodeMismatch(RaidenError):
 
 class APIServerPortInUseError(RaidenError):
     """Raised when API server port is already in use"""
-
-
-class RaidenServicePortInUseError(RaidenError):
-    """Raised when Raiden service port is already in use"""
 
 
 class InvalidDBData(RaidenUnrecoverableError):

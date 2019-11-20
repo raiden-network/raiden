@@ -15,7 +15,6 @@ from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
-from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import (
     Message,
     RetrieableMessage,
@@ -342,8 +341,6 @@ class MatrixTransport(Runnable):
         self._health_lock = Semaphore()
         self._account_data_lock = Semaphore()
 
-        self._message_handler: Optional[MessageHandler] = None
-
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
 
@@ -358,7 +355,6 @@ class MatrixTransport(Runnable):
     def start(  # type: ignore
         self,
         raiden_service: "RaidenService",
-        message_handler: MessageHandler,
         whitelist: List[Address],
         prev_auth_data: Optional[str],
     ) -> None:
@@ -368,7 +364,6 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
-        self._message_handler = message_handler
 
         self._address_mgr.start()
 

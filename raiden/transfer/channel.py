@@ -2183,12 +2183,6 @@ def handle_receive_lockedtransfer(
     return is_valid, events, msg
 
 
-def handle_receive_refundtransfercancelroute(
-    channel_state: NettingChannelState, refund_transfer: LockedTransferSignedState
-) -> EventsOrError:
-    return handle_receive_lockedtransfer(channel_state, refund_transfer)
-
-
 def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
     is_valid, msg, unlocked_pending_locks = is_valid_unlock(
         unlock, channel_state, channel_state.partner_state

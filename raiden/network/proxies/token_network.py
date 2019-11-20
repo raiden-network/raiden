@@ -22,7 +22,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    ChannelOutdatedError,
     DepositOverLimit,
     DuplicatedChannelError,
     InvalidChannelID,
@@ -2665,32 +2664,3 @@ class TokenNetwork:
         return self.client.new_filter(
             contract_address=Address(self.address), topics=None, from_block=from_block
         )
-
-    def _check_for_outdated_channel(
-        self,
-        participant1: Address,
-        participant2: Address,
-        block_identifier: BlockSpecification,
-        channel_identifier: ChannelID,
-    ) -> None:
-        """
-        Checks whether an operation is being executed on a channel
-        between two participants using an old channel identifier
-        """
-        try:
-            onchain_channel_details = self._detail_channel(
-                participant1=participant1,
-                participant2=participant2,
-                block_identifier=block_identifier,
-            )
-        except RaidenRecoverableError:
-            return
-
-        onchain_channel_identifier = onchain_channel_details.channel_identifier
-
-        if onchain_channel_identifier != channel_identifier:
-            raise ChannelOutdatedError(
-                "Current channel identifier is outdated. "
-                f"current={channel_identifier}, "
-                f"new={onchain_channel_identifier}"
-            )

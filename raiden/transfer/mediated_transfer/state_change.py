@@ -134,28 +134,6 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
 
 
 @dataclass(frozen=True)
-class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
-    """ A RefundTransfer message received by the initiator will cancel the current
-    route.
-
-    Args:
-        is_reroute_allowed: indicates if the payment type allows for re-routing.
-            E.g, for token swaps, this should not be allowed.
-    """
-
-    transfer: LockedTransferSignedState
-    secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
-    is_reroute_allowed: bool = field(default=True)
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        typecheck(self.transfer, LockedTransferSignedState)
-
-        object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
-
-
-@dataclass(frozen=True)
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 

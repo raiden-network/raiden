@@ -99,28 +99,6 @@ class PaymentChannel:
         )
         return event["args"]["settle_timeout"]
 
-    def close_block_number(self) -> Optional[BlockNumber]:
-        """ Returns the channel's closed block number. """
-
-        # The closed block number is not in the smart contract storage to save
-        # gas. Therefore get the ChannelClosed event is needed here.
-        filter_args = get_filter_args_for_specific_event_from_channel(
-            token_network_address=self.token_network.address,
-            channel_identifier=self.channel_identifier,
-            event_name=ChannelEvent.CLOSED,
-            contract_manager=self.contract_manager,
-        )
-
-        events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
-        if not events:
-            return None
-
-        assert len(events) == 1
-        event = decode_event(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0]
-        )
-        return event["blockNumber"]
-
     def opened(self, block_identifier: BlockSpecification) -> bool:
         """ Returns if the channel is opened. """
         return self.token_network.channel_is_opened(
