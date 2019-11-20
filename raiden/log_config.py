@@ -135,10 +135,12 @@ def configure_debug_logfile_path(debug_log_file_path: Optional[str]) -> str:
     """Determine the pathname for the debug logfile based on the given argument and user's OS"""
 
     if debug_log_file_path is not None:
-        given_dir = os.path.basename(debug_log_file_path)
-        if not os.path.isdir(given_dir):
+        given_dir = os.path.dirname(debug_log_file_path)
+        # If it's not just a filename relative to the current directory make sure
+        # that the directory exists
+        if given_dir != "" and not os.path.isdir(given_dir):
             click.secho(
-                f"The provided directory {given_dir} for the debug logfilename "
+                f"The provided directory {given_dir} for the debuglog filename "
                 f"either does not exist or is not a directory",
                 fg="red",
             )
