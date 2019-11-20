@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from eth_utils import to_hex
-
 from raiden.exceptions import InvalidSignature
 from raiden.messages.cmdid import CmdId
 from raiden.utils.signer import Signer, recover
@@ -39,9 +37,7 @@ class SignedMessage(AuthenticatedMessage):
         return not self.__eq__(other)
 
     def __repr__(self) -> str:
-        return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=to_hex(hash(self))
-        )
+        return f"<{self.__class__.__name__} ...>"
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed
