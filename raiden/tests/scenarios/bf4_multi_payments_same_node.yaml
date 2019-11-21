@@ -94,8 +94,8 @@ scenario:
             - assert: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 3, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
