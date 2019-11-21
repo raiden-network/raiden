@@ -189,11 +189,12 @@ scenario:
             - assert_sum: {from: 0, balance_sum: 1_905_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_090_000_000_000_000_000}
       - serial:
-          name: "Stop node 0 and wait 10 blocks, then start it again"
+          name: "Stop node 0 and wait 100s, then start it again"
           tasks:
             - stop_node: 0
-            - wait_blocks: 10
+            - wait: 100
             - start_node: 0
+            - wait: 100
       - serial:
           name: "Make 10 payments from 0 to 3 after restart"
           repeat: 10
