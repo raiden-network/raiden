@@ -36,6 +36,7 @@ DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.0
 DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
 # matrix gets spammed with the default retry-interval of 1s, wait a little more
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
+DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 20_000
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
@@ -121,12 +122,11 @@ class MediationFeeConfig:
 class MatrixTransportConfig:
     retries_before_backoff: int
     retry_interval: float
-
     broadcast_rooms: List[str]
-
     server: str
     available_servers: List[str]
-    server_name: Optional[str]
+    server_name: Optional[str] = None
+    sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
 
 
 @dataclass
@@ -171,6 +171,7 @@ class RaidenConfig:
         retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
         server="auto",
         server_name=None,
+        sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     )
 
     shutdown_timeout: int = DEFAULT_SHUTDOWN_TIMEOUT

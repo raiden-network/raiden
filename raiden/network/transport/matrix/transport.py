@@ -401,7 +401,7 @@ class MatrixTransport(Runnable):
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 
-        self._client.start_listener_thread()
+        self._client.start_listener_thread(timeout_ms=self._config.sync_timeout)
         assert isinstance(self._client.sync_thread, gevent.Greenlet)
         self._client.sync_thread.link_exception(self.on_error)
         self._client.sync_thread.link_value(on_success)

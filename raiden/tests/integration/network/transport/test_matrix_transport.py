@@ -1,5 +1,6 @@
 import json
 import random
+from typing import Any, Set
 from unittest.mock import MagicMock
 
 import gevent
@@ -27,6 +28,7 @@ from raiden.network.transport.matrix.utils import UserPresence, make_room_alias,
 from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConfig, ServiceConfig
+from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure
@@ -37,7 +39,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, List, cast
+from raiden.utils.typing import Address, Dict, List, cast
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 TIMEOUT_MESSAGE_RECEIVE = 15
@@ -1076,3 +1078,85 @@ def test_send_to_device(matrix_transports):
     transport0.send_to_device(raiden_service1.address, message)
     with gevent.Timeout(2):
         wait_assert(transport1._receive_to_device.assert_called)
+
+
+@pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+)
+def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
+    """ Ensure the transport doesn't attach a message listener to broadcast rooms. """
+    raiden_service0 = MockRaidenService(None)
+    raiden_service1 = MockRaidenService(None)
+
+    transport0, transport1 = matrix_transports
+
+    # Remove PFS broadcast room from transport1 config so it doesn't join the room
+    transport1._config.broadcast_rooms.remove(PATH_FINDING_BROADCASTING_ROOM)
+
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
+
+    # Re-add the PFS broadcast room to transport1. Since `start()` has already been called
+    # it will not be joined automatically.
+    # We use this fact to wait on the room state to know when transport1 has processed the invite.
+    transport1._config.broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+
+    pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
+
+    # Send a message to the broadcast room, if any transport listens on the room it will throw an
+    # exception
+    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
+    message_text = MessageSerializer.serialize(message)
+    pfs_broadcast_room_t0.send_text(message_text)
+
+    # Invite transport1 user. It should join the room but *not* attach a listener.
+    pfs_broadcast_room_t0.invite_user(transport1._user_id)
+
+    # Wait for transport1 to process the invite
+    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
+        while True:
+            try:
+                room_state0 = transport0._client.api.get_room_state_type(
+                    pfs_broadcast_room_t0.room_id, "m.room.member", transport1._user_id
+                )
+                if room_state0["membership"] == "join":
+                    break
+            except MatrixRequestError:
+                pass
+            # Poll transport1 to ensure the message sent above did not raise an exception
+            try:
+                transport1.greenlet.get(timeout=0.1)
+            except Timeout:
+                pass
+
+    received_messages_t1_pfs: Set[str] = set()
+
+    def _handle_message_t1(_room: Room, event: Dict[str, Any]):
+        received_messages_t1_pfs.add(event["content"]["body"])
+
+    # Attach a message listener on transport1 so we know when the message has reached transport1
+    transport1._client.rooms[pfs_broadcast_room_t0.room_id].add_listener(
+        _handle_message_t1, "m.room.message"
+    )
+
+    # Send another message to the broadcast room, if transport1 listens on the room it will
+    # throw an exception
+    message = Processed(message_identifier=2, signature=EMPTY_SIGNATURE)
+    message_text = MessageSerializer.serialize(message)
+    pfs_broadcast_room_t0.send_text(message_text)
+
+    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
+        while message_text not in received_messages_t1_pfs:
+            gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
+        # Wait for the current transport1 sync loop to complete to ensure all server events
+        # have been processed (making sure no exception is raised late)
+        sync_iteration = transport1._client._sync_iteration
+        while sync_iteration == transport1._client._sync_iteration:
+            gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)

@@ -216,6 +216,10 @@ class GMatrixHttpApi(MatrixHttpApi):
     ) -> None:
         self.server_ident = response.headers.get("Server")
 
+    def get_room_state_type(self, room_id: str, event_type: str, state_key: str) -> Dict[str, Any]:
+        """ Perform GET /rooms/$room_id/state/$event_type/$state_key """
+        return self._send("GET", f"/rooms/{room_id}/state/{event_type}/{state_key}")
+
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
@@ -257,6 +261,9 @@ class GMatrixClient(MatrixClient):
         # Monotonically increasing id to ensure that presence updates are processed in order.
         self._presence_update_ids: Iterator[int] = itertools.count()
         self._worker_pool = gevent.pool.Pool(size=20)
+        # Gets incremented every time a sync loop is completed. This is useful since the sync token
+        # can remain constant over multiple loops (if no events occur).
+        self._sync_iteration = 0
 
     def listen_forever(
         self,
@@ -462,6 +469,7 @@ class GMatrixClient(MatrixClient):
         # Updating the sync token should only be done after the response has been processed,
         # otherwise we loose this information from this response in case of a crash.
         self.sync_token = response["next_batch"]
+        self._sync_iteration += 1
 
     def _handle_response(self, response: Dict[str, Any], first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
