@@ -78,24 +78,24 @@ scenario:
                 name: "Make 100 transfers from 0 to 3"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 4, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
             - serial:
                 name: "Make 100 transfers from 0 to 5"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 4, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
       - parallel:
           name: "Assert balances after transfers"
           tasks:
             # Make sure that all transfers finish
             - wait_blocks: 3
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 800_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 3, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_100_000_000_000_000_000, state: "opened"}
-            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
