@@ -54,7 +54,7 @@ nodes:
 # This is the BF5 scenario. It sets up a simple topology of two nodes and then uses
 # `join_network` to add more nodes to the network. It tests that nodes can join the network
 # with nodes that didn't use `join_network` themselves and that nodes that used `join_network`
-# also deposits in new channels when other nodes open channels with them. Finally it also
+# also deposit in new channels when other nodes open channels with them. Finally it also
 # tests that nodes using `leave_network` have all their open channels closed, when doing so.
 
 scenario:
@@ -126,10 +126,13 @@ scenario:
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
             - transfer: {from: 1, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
             - transfer: {from: 1, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
-      - parallel:
-          name: "Assert after transfers. Should be status quo"
+      - serial:
+          name: "Make sure that all transfers finish"
           tasks:
-            - wait_blocks: 2
+            - wait: 200
+      - parallel:
+          name: "Assert after transfers. Should be the same as before the transfers were made"
+          tasks:
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 2, total_deposit: 0, balance: 0, state: "opened"}
             - assert: {from: 0, to: 3, total_deposit: 0, balance: 0, state: "opened"}
@@ -142,24 +145,10 @@ scenario:
             - assert: {from: 3, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
-      - serial:
-          name: "Node2 and node3 leaves the network"
-          tasks:
-            - leave_network: {from: 2}
-            - leave_network: {from: 3}
       - parallel:
-          name: "Assert that all channels of node2 and 3 are closed"
+          name: "Node2 and node3 leave the network"
           tasks:
-            - wait_blocks: 2
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
-            - assert: {from: 0, to: 2, total_deposit: 0, balance: 0, state: "closed"}
-            - assert: {from: 0, to: 3, total_deposit: 0, balance: 0, state: "closed"}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
-            - assert: {from: 1, to: 2, total_deposit: 0, balance: 0, state: "closed"}
-            - assert: {from: 1, to: 3, total_deposit: 0, balance: 0, state: "closed"}
-            - assert: {from: 2, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 2, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 2, to: 3, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 3, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 3, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 3, to: 2, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
+            # Since the API call waits for close and settle we can only check that the http status code is correct, because
+            # the channels are deleted after settle and hence cannot be asserted on.
+            - leave_network: {from: 2, expected_http_status: 200}
+            - leave_network: {from: 3, expected_http_status: 200}
