@@ -395,7 +395,7 @@ class MatrixTransport(Runnable):
 
         self._initialize_first_sync()
         self._initialize_broadcast_rooms()
-        self._initialize_inventory_rooms()
+        self._initialize_room_inventory()
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -662,22 +662,15 @@ class MatrixTransport(Runnable):
                 client=self._client, broadcast_room_alias=broadcast_room_alias
             )
 
-    def _initialize_inventory_rooms(self) -> None:
-        msg = "The inventory rooms can only be initialized after the first sync."
+    def _initialize_room_inventory(self) -> None:
+        msg = "The rooms can only be inventoried after the first sync."
         assert self._client.sync_token, msg
 
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
 
         for room in self._client.rooms.values():
-            room_aliases = set(room.aliases)
-            if room.canonical_alias:
-                room_aliases.add(room.canonical_alias)
-            room_alias_is_broadcast = any(
-                broadcast_alias in room_alias
-                for broadcast_alias in self._config.broadcast_rooms
-                for room_alias in room_aliases
-            )
-            if room_alias_is_broadcast:
+            if self._is_broadcast_room(room):
+                # Broadcast rooms are write-only, don't listen on them
                 continue
             # we add listener for all valid rooms, _handle_message should ignore them
             # if msg sender isn't whitelisted yet
@@ -778,6 +771,13 @@ class MatrixTransport(Runnable):
 
         assert room is not None, f"joining room {room} failed"
 
+        if self._is_broadcast_room(room):
+            # This shouldn't happen with well behaving nodes but we need to defend against it
+            # Since we already are a member of all broadcast rooms, the `join()` above is in
+            # effect a no-op
+            self.log.warning("Got invite to broadcast room, ignoring", inviting_user=user)
+            return
+
         if not room.listeners:
             room.add_listener(self._handle_message, "m.room.message")
 
@@ -822,6 +822,12 @@ class MatrixTransport(Runnable):
             )
             return False
 
+        if self._is_broadcast_room(room):
+            # This must not happen. Nodes must not listen on broadcast rooms.
+            raise RuntimeError(
+                f"Received message in broadcast room {room.aliases[0]}. Sending user: {user}"
+            )
+
         if not self._address_mgr.is_address_known(peer_address):
             self.log.debug(
                 "Ignoring message from non-whitelisted peer",
@@ -844,21 +850,6 @@ class MatrixTransport(Runnable):
                 reason="unknown room for user",
             )
             return False
-
-        # TODO: With the condition in the TODO above restored this one won't have an effect, check
-        #       if it can be removed after the above is solved
-        if not room_ids or room.room_id != room_ids[0]:
-            if self._is_broadcast_room(room):
-                # This must not happen. Nodes must not listen on broadcast rooms.
-                raise RuntimeError(f"Received message in broadcast room {room.aliases}.")
-            self.log.debug(
-                "Received message triggered new comms room for peer",
-                peer_user=user.user_id,
-                peer_address=to_checksum_address(peer_address),
-                known_user_rooms=room_ids,
-                room=room,
-            )
-            self._set_room_id_for_address(peer_address, room.room_id)
 
         messages = validate_and_parse_message(event["content"]["body"], peer_address)
 
@@ -1146,6 +1137,9 @@ class MatrixTransport(Runnable):
             return room
 
     def _is_broadcast_room(self, room: Room) -> bool:
+        room_aliases = set(room.aliases)
+        if room.canonical_alias:
+            room_aliases.add(room.canonical_alias)
         return any(
             suffix in room_alias
             for suffix in self._config.broadcast_rooms
