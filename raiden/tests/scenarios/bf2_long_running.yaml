@@ -260,7 +260,7 @@ scenario:
             # C sends 10 tokens to B
             - transfer: {from: 2, to: 1, amount: 10_000_000_000_000_000, lock_timeout: 30}
             - wait: 5
-            - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 11_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 189_000_000_000_000_000, state: "opened"}
             # B sends 10 tokens to A
             - transfer: {from: 1, to: 0, amount: 10_000_000_000_000_000, lock_timeout: 30}
