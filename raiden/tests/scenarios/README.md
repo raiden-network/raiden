@@ -27,6 +27,13 @@ It is also tested that a node can be stopped and started again and that it still
 Several nodes perform up to 100 payments.
 In the end it is tested that channels can be closed and that the monitoring service correctly kicks in if a node is offline during closing.
 
+#### [bf2_long_running](./bf2_long_running.yaml)
+
+This is the bf2 long running scenario. This scenario mimics user behaviour for 
+opening channels, depositing, transferring, waiting keeping the raiden node alive for 
+a long time in the process checking whether all distributed system in raiden network 
+work accurately with a sufficiently dirty state of blockchain for a long time.
+
 #### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
 It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
 When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
