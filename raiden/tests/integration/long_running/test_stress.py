@@ -19,6 +19,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
+from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     wait_assert,
@@ -82,6 +83,8 @@ def start_apiserver_for_network(
 
 def restart_app(app: App) -> App:
     new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
+    raiden_event_handler = RaidenEventHandler()
+    hold_handler = HoldRaidenEventHandler(raiden_event_handler)
     app = App(
         config=app.config,
         rpc_client=app.raiden.rpc_client,
@@ -93,7 +96,7 @@ def restart_app(app: App) -> App:
         default_service_registry=app.raiden.default_service_registry,
         default_msc_address=app.raiden.default_msc_address,
         transport=new_transport,
-        raiden_event_handler=RaidenEventHandler(),
+        raiden_event_handler=hold_handler,
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PRIVATE,
     )
@@ -167,7 +170,7 @@ def transfer_and_assert(
 
     assert getattr(request, "exception", None) is None
     assert response is not None
-    assert response.status_code == HTTPStatus.OK
+    assert response.status_code == HTTPStatus.OK, f"Payment failed, reason: {response.content}"
     assert response.headers["Content-Type"] == "application/json"
 
 
