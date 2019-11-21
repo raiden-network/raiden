@@ -5,7 +5,7 @@ import pytest
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.settings import MatrixTransportConfig
+from raiden.settings import DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT, MatrixTransportConfig
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
 from raiden.utils.http import HTTPExecutor
@@ -21,6 +21,11 @@ def synapse_config_generator():
 @pytest.fixture
 def matrix_server_count() -> int:
     return 1
+
+
+@pytest.fixture
+def matrix_sync_timeout() -> int:
+    return DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
 
 
 @pytest.fixture
@@ -71,6 +76,7 @@ def matrix_transports(
     retry_interval: float,
     number_of_transports: int,
     broadcast_rooms: List[str],
+    matrix_sync_timeout: int,
 ) -> Iterable[List[MatrixTransport]]:
     transports = []
     local_matrix_servers_str = [str(server) for server in local_matrix_servers]
@@ -80,12 +86,13 @@ def matrix_transports(
         transports.append(
             MatrixTransport(
                 config=MatrixTransportConfig(
-                    broadcast_rooms=broadcast_rooms,
+                    broadcast_rooms=broadcast_rooms.copy(),
                     retries_before_backoff=retries_before_backoff,
                     retry_interval=retry_interval,
                     server=server,
                     server_name=server.netloc,
                     available_servers=local_matrix_servers_str,
+                    sync_timeout=matrix_sync_timeout,
                 ),
                 environment=Environment.DEVELOPMENT,
             )
