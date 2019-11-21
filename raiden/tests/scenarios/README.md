@@ -29,10 +29,10 @@ In the end it is tested that channels can be closed and that the monitoring serv
 
 #### [bf2_long_running](./bf2_long_running.yaml)
 
-This is the bf2 long running scenario. This scenario mimics user behaviour for 
+This scenario mimics user behaviour for 
 opening channels, depositing, transferring, waiting keeping the raiden node alive for 
-a long time in the process checking whether all distributed system in raiden network 
-work accurately with a sufficiently dirty state of blockchain for a long time.
+a long time in the process checking that the raiden network 
+works accurately with a sufficiently dirty state of blockchain for a long time.
 
 #### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
 It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
