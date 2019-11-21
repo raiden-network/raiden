@@ -170,6 +170,12 @@ class MockRaidenService:
     def sign(self, message):
         message.sign(self.signer)
 
+    def stop(self):
+        self.wal.storage.close()
+
+    def __del__(self):
+        self.stop()
+
 
 def make_raiden_service_mock(
     token_network_registry_address: TokenNetworkRegistryAddress,
