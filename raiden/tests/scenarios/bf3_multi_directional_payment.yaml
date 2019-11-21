@@ -41,7 +41,7 @@ nodes:
     default-reveal-timeout: 20
 
 # This is the bf3 scenario. It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
-# When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+# When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4
 # At the same time 100 payments are done in parallel from node4 to node0.
 # After all payments have finished it is asserted that all nodes received the correct amounts.
 
@@ -90,11 +90,11 @@ scenario:
                 repeat: 100
                 tasks:
                   - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - wait: 100
       - parallel:
           name: "Assert that all balances are the same as before the payments, since same amounts are sent in both directions"
           tasks:
             # Make sure that all transfers finish
-            - wait_blocks: 3
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
@@ -103,4 +103,3 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
-
