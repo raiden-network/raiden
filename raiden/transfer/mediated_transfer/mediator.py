@@ -166,36 +166,6 @@ def has_secret_registration_started(
     return is_secret_registered_onchain or has_pending_transaction
 
 
-def filter_used_routes(
-    transfers_pair: List[MediationPairState], routes: List[RouteState]
-) -> List[RouteState]:
-    """This function makes sure we filter routes that have already been used.
-
-    So in a setup like this, we want to make sure that node 2, having tried to
-    route the transfer through 3 will also try 5 before sending it backwards to 1
-
-    1 -> 2 -> 3 -> 4
-         v         ^
-         5 -> 6 -> 7
-    This function will return routes as provided in their original order.
-    """
-    channelid_to_route = {r.forward_channel_id: r for r in routes}
-    routes_order = {route.next_hop_address: index for index, route in enumerate(routes)}
-
-    for pair in transfers_pair:
-        channelid = pair.payer_transfer.balance_proof.channel_identifier
-        if channelid in channelid_to_route:
-            del channelid_to_route[channelid]
-
-        channelid = pair.payee_transfer.balance_proof.channel_identifier
-        if channelid in channelid_to_route:
-            del channelid_to_route[channelid]
-
-    return sorted(
-        channelid_to_route.values(), key=lambda route: routes_order[route.next_hop_address]
-    )
-
-
 def get_payee_channel(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     transfer_pair: MediationPairState,
@@ -1080,6 +1050,14 @@ def mediate_transfer(
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
     )
 
+    # Makes sure we filter routes that have already been used.
+    #
+    # So in a setup like this, we want to make sure that node 2, having tried to
+    # route the transfer through 3 will also try 5 before sending it backwards to 1
+    #
+    # 1 -> 2 -> 3 -> 4
+    #      v         ^
+    #      5 -> 6 -> 7
     candidate_route_states = routes.filter_acceptable_routes(
         route_states=candidate_route_states, blacklisted_channel_ids=state.refunded_channels
     )
