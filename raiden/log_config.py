@@ -17,7 +17,7 @@ LOG_BLACKLIST: Dict[Pattern, str] = {
     re.compile(
         r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"
     ): r"\1/<redacted>",
-    re.compile(r'"secret": ?"0x[0-9a-fA-F]{64}"'): r'"secret": <redacted>',
+    re.compile(r'"secret": ?"0x[0-9a-fA-F]{64}"'): r'"secret": "<redacted>"',
 }
 DEFAULT_LOG_LEVEL = "INFO"
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
