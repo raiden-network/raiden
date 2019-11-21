@@ -132,7 +132,7 @@ class HoldRaidenEventHandler(EventHandler):
 
         msg = (
             "Cannot release unknown event. "
-            "Either it was never held, the event was not emited yet, "
+            "Either it was never held, or the event was not emitted yet, "
             "or it was released twice."
         )
         assert found is not None, msg
