@@ -55,17 +55,15 @@ def sign(x: Union[float, Fraction]) -> int:
 
 
 def _collect_x_values(
-    schedule_in: "FeeScheduleState",
-    schedule_out: "FeeScheduleState",
+    penalty_func_in: Interpolate,
+    penalty_func_out: Interpolate,
     balance_in: Balance,
     balance_out: Balance,
     max_x: int,
 ) -> List[Fraction]:
     """ Collect all relevant x values (edges of piece wise linear sections) """
-    assert schedule_in._penalty_func
-    assert schedule_out._penalty_func
-    all_x_vals = [x - balance_in for x in schedule_in._penalty_func.x_list] + [
-        balance_out - x for x in schedule_out._penalty_func.x_list
+    all_x_vals = [x - balance_in for x in penalty_func_in.x_list] + [
+        balance_out - x for x in penalty_func_out.x_list
     ]
     limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
     return sorted(set(Fraction(x) for x in limited_x_vals))
@@ -123,8 +121,8 @@ def _mediation_fee_func(
         schedule_out._penalty_func = Interpolate([0, balance_out], [0, 0])
 
     x_list = _collect_x_values(
-        schedule_in=schedule_in,
-        schedule_out=schedule_out,
+        penalty_func_in=schedule_in._penalty_func,
+        penalty_func_out=schedule_out._penalty_func,
         balance_in=balance_in,
         balance_out=balance_out,
         max_x=receivable if amount_with_fees is None else balance_out,
