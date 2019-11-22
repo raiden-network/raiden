@@ -5,7 +5,6 @@ import gevent.monkey
 import structlog
 from eth_account import Account
 from eth_utils import decode_hex
-from matrix_client.errors import MatrixRequestError
 
 from raiden.utils.signer import LocalSigner
 
@@ -32,10 +31,7 @@ def get_private_key(keystore_file, password):
             ).hex()
             return private_key
         except ValueError as error:
-            print(
-                "Could not decode keyfile with given password. Please try again.",
-                str(error),
-            )
+            print("Could not decode keyfile with given password. Please try again.", str(error))
             sys.exit(1)
 
 
@@ -47,15 +43,9 @@ def get_private_key(keystore_file, password):
     help="Path to a keystore file.",
 )
 @click.password_option(
-    "--password",
-    confirmation_prompt=False,
-    help="Password to unlock the keystore file.",
+    "--password", confirmation_prompt=False, help="Password to unlock the keystore file."
 )
-@click.option(
-    "--host",
-    required=True,
-    type=str,
-)
+@click.option("--host", required=True, type=str)
 @click.option(
     "--room-id",
     required=True,
@@ -63,18 +53,9 @@ def get_private_key(keystore_file, password):
     type=str,
 )
 @click.option(
-    "--other-user-id",
-    required=True,
-    default="@xxx:transport01.raiden.network",
-    type=str,
+    "--other-user-id", required=True, default="@xxx:transport01.raiden.network", type=str
 )
-def main(
-    keystore_file: str,
-    password: str,
-    host: str,
-    room_id: str,
-    other_user_id: str,
-):
+def main(keystore_file: str, password: str, host: str, room_id: str, other_user_id: str):
     private_key = get_private_key(keystore_file, password)
     client = GMatrixClient(host)
 
@@ -93,10 +74,10 @@ def main(
 
     while True:
         current_presence = client.get_user_presence(other_user_id)
-        log.warning('User presence', other_user=other_user_id, presence=current_presence)
+        log.warning("User presence", other_user=other_user_id, presence=current_presence)
 
         gevent.sleep(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
