@@ -158,7 +158,6 @@ scenario:
           tasks:
             # node2 sends 10 payments to node1 by using the 2 <-> 4 <-> 0 <-> 1 route
             - transfer: {from: 2, to: 1, amount: 1_000_000_000_000_000, lock_timeout: 30}
-            - wait: 100
       - serial:
           name: "Allow nodes to process the payments"
           tasks:
@@ -226,7 +225,7 @@ scenario:
           tasks:
             - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 2_000_000_000_000_000, state: "opened"}
-            # Also A makes a deposit to A <-> B channel
+            # Also node0 makes a deposit to node0 <-> node1 channel
             - deposit: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000}
             - wait: 100
       - parallel:
@@ -269,12 +268,12 @@ scenario:
             - transfer: {from: 2, to: 1, amount: 10_000_000_000_000_000, lock_timeout: 30}
             - wait: 100
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 189_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 190_000_000_000_000_000, state: "opened"}
             # node1 sends tokens to node0
             - transfer: {from: 1, to: 0, amount: 10_000_000_000_000_000, lock_timeout: 30}
             - wait: 100
             - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 299_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 350_000_000_000_000_000, state: "opened"}
             # node4 sends tokens to node2 (0 -> 1-> 2)
             - transfer: {from: 4, to: 2, amount: 10_000_000_000_000_000, lock_timeout: 30}
             - wait: 100
@@ -284,7 +283,7 @@ scenario:
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 0, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 0, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 309_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 360_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000, balance: 15_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 20_000_000_000_000_000, state: "opened"}
       - serial:
@@ -313,8 +312,8 @@ scenario:
       - serial:
           name: "Check that channel node2 <-> node3 is still open"
           tasks:
-            - assert: {from: 2, to: 3, total_deposit: 100_000_000_000_000_000, balance: 0, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 0, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 202_000_000_000_000_000, state: "opened"}
       - serial:
           name: "node2 closes the channel with node3"
           tasks:
@@ -323,8 +322,8 @@ scenario:
       - parallel:
           name: "Check final state of the channels"
           tasks:
-            - assert: {from: 2, to: 3, total_deposit: 100_000_000_000_000_000, balance: 0, state: "closed"}
-            - assert: {from: 3, to: 2, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
+            - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 0, state: "closed"}
+            - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 202_000_000_000_000_000, state: "closed"}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 0, state: "closed"}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
             - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 0, state: "closed"}
