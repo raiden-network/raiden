@@ -1158,6 +1158,19 @@ def test_api_payments(
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
 
+    # Test that querying the internal events resource works
+    limit = 5
+    request = grequests.get(
+        api_url_for(
+            api_server_test_instance, "raideninternaleventsresource", limit=limit, offset=0
+        )
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    events = response.json()
+    assert len(events) == limit
+    assert all("TimestampedEvent" in event for event in events)
+
 
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_timestamp_format(
