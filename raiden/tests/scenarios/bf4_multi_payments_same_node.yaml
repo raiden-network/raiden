@@ -84,11 +84,11 @@ scenario:
                 repeat: 100
                 tasks:
                   - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      # Make sure that all transfers are finalized before asserting
+      - wait: 100
       - parallel:
           name: "Assert balances after transfers"
           tasks:
-            # Make sure that all transfers finish
-            - wait_blocks: 3
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 800_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
