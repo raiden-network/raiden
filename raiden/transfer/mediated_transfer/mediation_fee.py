@@ -61,7 +61,24 @@ def _collect_x_values(
     balance_out: Balance,
     max_x: int,
 ) -> List[Fraction]:
-    """ Collect all relevant x values (edges of piece wise linear sections) """
+    """ Normalizes the x-axis of the penalty functions around the amount of
+    tokens being transferred.
+
+    A penalty function maps the participant's balance to a fee. These functions
+    are then used to penalize transfers that unbalance the node's channels, and
+    as a consequence incentivize transfers that re-balance the channels.
+
+    Here the x-axis of the penalty functions normalized around the current
+    channel's capacity. So that instead of computing:
+
+        penalty(current_capacity + amount_being_transferred)
+
+    One can simply compute:
+
+        penalty(amount_being_transferred)
+
+    To find the penalty fee for the current transfer.
+    """
     all_x_vals = [x - balance_in for x in penalty_func_in.x_list] + [
         balance_out - x for x in penalty_func_out.x_list
     ]
