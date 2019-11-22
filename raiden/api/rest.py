@@ -281,15 +281,6 @@ def normalize_events_list(old_list: List) -> List:
     return new_list
 
 
-def convert_to_serializable(event_list: List) -> List[Dict]:
-    returned_events = []
-    for event in event_list:
-        new_event = {"event": type(event).__name__}
-        new_event.update(event.__dict__)
-        returned_events.append(new_event)
-    return returned_events
-
-
 def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) -> None:
     for url_tuple in urls:
         if len(url_tuple) == 2:
