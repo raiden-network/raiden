@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc2 <2019-11-25>`
 * :feature:`5050` Raiden's argument --debug-logfile-name has been renamed to --debug-logfile-path to better reflect the argument's function.
 * :bug:`5050` Raiden now works on OSX Catalina. Debug logfile is no longer written in the current directory.
 * :feature:`5278` Always use private rooms in the matrix transport.
