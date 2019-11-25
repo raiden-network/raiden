@@ -324,11 +324,7 @@ scenario:
           tasks:
             - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 0, state: "closed"}
             - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 202_000_000_000_000_000, state: "closed"}
-            - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 0, state: "closed"}
-            - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "closed"}
-            - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 0, state: "closed"}
-            - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 360_000_000_000_000_000, state: "closed"}
-            - assert: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000, balance: 15_000_000_000_000_000, state: "closed"}
-            - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 20_000_000_000_000_000, state: "closed"}
-            - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "closed"}
-            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "closed"}
+            # node1 <-> node2 channels cannot be asserted as node1 leaves which settles all channels of node1
+            # node0 <-> node1 channels cannot be asserted because node0 and node1 both leave the network
+            # node0 <-> node4 channels have long been settled hence cannot be asserted
+            # node2 <-> node4 channels are already settled at this point
