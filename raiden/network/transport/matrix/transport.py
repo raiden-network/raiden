@@ -28,6 +28,7 @@ from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
+    USER_PRESENCE_REACHABLE_STATES,
     AddressReachability,
     DisplayNameCache,
     UserAddressManager,
@@ -948,7 +949,7 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
-        room = self._get_room_for_address(receiver_address)
+        room = self._get_room_for_address(receiver_address, require_online_peer=True)
 
         if room:
             self.log.debug(
@@ -965,34 +966,71 @@ class MatrixTransport(Runnable):
             # `whitelist`, and the room can be used by a another thread.
             # - The room should be created by the partner, and this node is waiting
             # on it.
+            # - No user for the requested address is online
             #
             # This is not a problem since the messages are retried regularly.
-            self.log.error("No room for receiver", receiver=to_checksum_address(receiver_address))
+            self.log.warning(
+                "No room for receiver", receiver=to_checksum_address(receiver_address)
+            )
 
-    def _get_room_for_address(self, address: Address) -> Optional[Room]:
+    def _get_room_for_address(
+        self, address: Address, require_online_peer: bool = False
+    ) -> Optional[Room]:
         msg = (
             f"address not health checked: "
             f"node: {self._user_id}, "
-            f"peer: {to_normalized_address(address)}"
+            f"peer: {to_checksum_address(address)}"
         )
         assert address and self._address_mgr.is_address_known(address), msg
 
+        room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
-        if room_ids:  # if we know any room for this user, use the first one
-            # This loop is used to ignore any broadcast rooms that may have 'polluted' the
-            # user's room cache due to bug #3765
-            # Can be removed after the next upgrade that switches to a new TokenNetworkRegistry
+        if room_ids:
             while room_ids:
                 room_id = room_ids.pop(0)
                 room = self._client.rooms[room_id]
-                if not self._is_broadcast_room(room):
-                    self.log.debug("Existing room", room=room, members=room.get_joined_members())
-                    return room
-                self.log.warning(
-                    "Ignoring broadcast room for peer",
+                if self._is_broadcast_room(room):
+                    self.log.warning(
+                        "Ignoring broadcast room for peer",
+                        room=room,
+                        peer=to_checksum_address(address),
+                    )
+                    continue
+                room_candidates.append(room)
+
+        if room_candidates:
+            if not require_online_peer:
+                # Return the first existing room
+                room = room_candidates[0]
+                self.log.debug(
+                    "Existing room",
                     room=room,
-                    peer=to_normalized_address(address),
+                    members=room.get_joined_members(),
+                    require_online_peer=require_online_peer,
                 )
+                return room
+            else:
+                # The caller needs a room with a peer that is online
+                online_userids = {
+                    user_id
+                    for user_id in self._address_mgr.get_userids_for_address(address)
+                    if self._address_mgr.get_userid_presence(user_id)
+                    in USER_PRESENCE_REACHABLE_STATES
+                }
+                while room_candidates:
+                    room = room_candidates.pop(0)
+                    has_online_peers = online_userids.intersection(
+                        {user.user_id for user in room.get_joined_members()}
+                    )
+                    if has_online_peers:
+                        self.log.debug(
+                            "Existing room",
+                            room=room,
+                            members=room.get_joined_members(),
+                            require_online_peer=require_online_peer,
+                        )
+                        return room
+
         return None
 
     def _maybe_create_room_for_address(self, address: Address) -> None:
@@ -1065,7 +1103,7 @@ class MatrixTransport(Runnable):
 
                 retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
 
-                self.log.error(
+                self.log.debug(
                     "Peer has not joined from invite yet, should join eventually",
                     room=room,
                     partner_address=to_checksum_address(address),
