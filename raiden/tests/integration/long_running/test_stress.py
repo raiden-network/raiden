@@ -19,7 +19,11 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
-from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    wait_assert,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.utils.typing import (
     Address,
@@ -336,6 +340,7 @@ def assert_channels(
         )
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4803")
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])
@@ -363,7 +368,8 @@ def test_stress(
     for _ in range(2):
         assert_channels(raiden_network, token_network_address, deposit)
 
-        stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
+        with watch_for_unlock_failures(*raiden_network):
+            stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network, rest_apis, port_generator, retry_timeout
@@ -371,7 +377,8 @@ def test_stress(
 
         assert_channels(raiden_network, token_network_address, deposit)
 
-        stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
+        with watch_for_unlock_failures(*raiden_network):
+            stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network, rest_apis, port_generator, retry_timeout
@@ -379,9 +386,10 @@ def test_stress(
 
         assert_channels(raiden_network, token_network_address, deposit)
 
-        stress_send_and_receive_parallel_transfers(
-            rest_apis, token_address, identifier_generator, deposit
-        )
+        with watch_for_unlock_failures(*raiden_network):
+            stress_send_and_receive_parallel_transfers(
+                rest_apis, token_address, identifier_generator, deposit
+            )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network, rest_apis, port_generator, retry_timeout

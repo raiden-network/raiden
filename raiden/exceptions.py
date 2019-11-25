@@ -168,11 +168,6 @@ class SamePeerAddress(RaidenError):
     """
 
 
-class UnknownAddress(RaidenError):
-    """ Raised when the user provided address is valid but is not from a known
-    node. """
-
-
 class UnknownTokenAddress(RaidenError):
     """ Raised when the token address in unknown. """
 
@@ -205,10 +200,6 @@ class InvalidChannelParticipantDepositLimit(RaidenError):
     """
 
 
-class STUNUnavailableException(RaidenError):
-    pass
-
-
 class EthNodeInterfaceError(RaidenError):
     """ Raised when the underlying ETH node does not support an rpc interface"""
 
@@ -238,10 +229,6 @@ class APIServerPortInUseError(RaidenError):
     """Raised when API server port is already in use"""
 
 
-class RaidenServicePortInUseError(RaidenError):
-    """Raised when Raiden service port is already in use"""
-
-
 class InvalidDBData(RaidenUnrecoverableError):
     """Raised when the data of the WAL are in an unexpected format"""
 
@@ -269,8 +256,8 @@ class ReplacementTransactionUnderpriced(RaidenError):
     """Raised when a replacement transaction is rejected by the blockchain"""
 
 
-class TransactionAlreadyPending(RaidenUnrecoverableError):
-    """Raised when a transaction is already pending"""
+class EthereumNonceTooLow(RaidenUnrecoverableError):
+    """Raised when a new transaction is sent with a nonce that has been used already."""
 
 
 class ChannelOutdatedError(RaidenError):
@@ -283,6 +270,13 @@ class ChannelOutdatedError(RaidenError):
 class InsufficientGasReserve(RaidenError):
     """ Raised when an action cannot be done because the available balance
     is not sufficient for the lifecycles of all active channels.
+    """
+
+
+class InsufficientEth(RaidenError):
+    """ Raised when an on-chain action failed because we could not pay for
+    the gas. (The case we try to avoid with `InsufficientGasReserve`
+    exceptions.)
     """
 
 

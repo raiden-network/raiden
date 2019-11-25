@@ -55,9 +55,13 @@ class GeventWaitall(BaseChecker):
         for inferred_func in node.func.infer():
             if is_joinall(inferred_func):
 
-                is_every_value_a_set = all(
-                    inferred_first_arg.pytype() == "builtins.set"
-                    for inferred_first_arg in node.args[0].infer()
-                )
+                try:
+                    is_every_value_a_set = all(
+                        inferred_first_arg.pytype() == "builtins.set"
+                        for inferred_first_arg in node.args[0].infer()
+                    )
+                except InferenceError:
+                    is_every_value_a_set = False
+
                 if not is_every_value_a_set:
                     self.add_message(JOINALL_ID, node=node)

@@ -11,7 +11,7 @@ from eth_utils import (
 from web3.exceptions import BadFunctionCallOutput
 from web3.utils.contracts import find_matching_event_abi
 
-from raiden.constants import NULL_ADDRESS, NULL_ADDRESS_BYTES
+from raiden.constants import NULL_ADDRESS_BYTES, NULL_ADDRESS_HEX
 from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidChannelParticipantDepositLimit,
@@ -29,6 +29,7 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    BlockNumber,
     BlockSpecification,
     Dict,
     SecretRegistryAddress,
@@ -89,7 +90,7 @@ class TokenNetworkRegistry:
         ).call(block_identifier=block_identifier)
         address = to_canonical_address(address)
 
-        if is_same_address(address, NULL_ADDRESS):
+        if is_same_address(address, NULL_ADDRESS_HEX):
             return None
 
         return address
@@ -164,7 +165,7 @@ class TokenNetworkRegistry:
                     "The token is already registered in the TokenNetworkRegistry."
                 )
 
-            if deprecation_executor == NULL_ADDRESS:
+            if deprecation_executor == NULL_ADDRESS_HEX:
                 raise BrokenPreconditionError(
                     "The deprecation executor property for the TokenNetworkRegistry is invalid."
                 )
@@ -174,7 +175,7 @@ class TokenNetworkRegistry:
                     "The chain ID property for the TokenNetworkRegistry is invalid."
                 )
 
-            if secret_registry_address == NULL_ADDRESS:
+            if secret_registry_address == NULL_ADDRESS_HEX:
                 raise BrokenPreconditionError(
                     "The secret registry address for the token network is invalid."
                 )
@@ -286,7 +287,7 @@ class TokenNetworkRegistry:
                         "The token was already registered in the TokenNetworkRegistry."
                     )
 
-                if deprecation_executor == NULL_ADDRESS:
+                if deprecation_executor == NULL_ADDRESS_HEX:
                     raise RaidenUnrecoverableError(
                         "The deprecation executor property for the "
                         "TokenNetworkRegistry is invalid."
@@ -297,7 +298,7 @@ class TokenNetworkRegistry:
                         "The chain ID property for the TokenNetworkRegistry is invalid."
                     )
 
-                if secret_registry_address == NULL_ADDRESS:
+                if secret_registry_address == NULL_ADDRESS_HEX:
                     raise RaidenUnrecoverableError(
                         "The secret registry address for the token network is invalid."
                     )
@@ -333,7 +334,7 @@ class TokenNetworkRegistry:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
             max_token_networks = self.get_max_token_networks(
@@ -363,9 +364,9 @@ class TokenNetworkRegistry:
             required_gas = (
                 gas_limit
                 if gas_limit
-                else self.gas_measurements.get("TokenNetworkRegistry createERC20TokenNetwork")
+                else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",
                 transaction_executed=False,
                 required_gas=required_gas,
@@ -384,7 +385,7 @@ class TokenNetworkRegistry:
                     "The token was already registered in the TokenNetworkRegistry."
                 )
 
-            if deprecation_executor == NULL_ADDRESS:
+            if deprecation_executor == NULL_ADDRESS_HEX:
                 raise RaidenUnrecoverableError(
                     "The deprecation executor property for the " "TokenNetworkRegistry is invalid."
                 )
@@ -400,7 +401,7 @@ class TokenNetworkRegistry:
                     f"network Raiden is running on: {self.rpc_client.chain_id}."
                 )
 
-            if secret_registry_address == NULL_ADDRESS:
+            if secret_registry_address == NULL_ADDRESS_HEX:
                 raise RaidenUnrecoverableError(
                     "The secret registry address for the token network is invalid."
                 )
@@ -431,11 +432,7 @@ class TokenNetworkRegistry:
             raise RaidenUnrecoverableError("createERC20TokenNetwork failed for an unknown reason")
         return token_network_address
 
-    def tokenadded_filter(
-        self,
-        from_block: Optional[BlockSpecification] = None,
-        to_block: BlockSpecification = "latest",
-    ) -> StatelessFilter:
+    def tokenadded_filter(self, from_block: Optional[BlockNumber] = None) -> StatelessFilter:
         event_abi = find_matching_event_abi(
             abi=self.metadata.abi, event_name=EVENT_TOKEN_NETWORK_CREATED
         )
@@ -447,10 +444,7 @@ class TokenNetworkRegistry:
 
         registry_address_bin = self.proxy.contract_address
         return self.rpc_client.new_filter(
-            contract_address=registry_address_bin,
-            topics=topics,
-            from_block=from_block,
-            to_block=to_block,
+            contract_address=registry_address_bin, topics=topics, from_block=from_block
         )
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:

@@ -1,8 +1,8 @@
 from collections import defaultdict
-from hashlib import sha256
 
 import gevent
 import pytest
+from web3 import Web3
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
@@ -11,20 +11,21 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
-from raiden.utils import BlockNumber
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.typing import BlockNumber, Dict, List, PrivateKey, Secret
+from raiden_contracts.contract_manager import ContractManager
 
 
-def secret_registry_batch_happy_path(secret_registry_proxy):
+def secret_registry_batch_happy_path(web3: Web3, secret_registry_proxy: SecretRegistry) -> None:
     secrets = [make_secret() for i in range(4)]
-    secrethashes = [sha256(secret).digest() for secret in secrets]
+    secrethashes = [sha256_secrethash(secret) for secret in secrets]
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
     secret_registry_proxy.register_secret_batch(secrets=secrets)
 
     logs = [
         secret_registry_proxy.proxy.decode_event(log)
-        for log in secret_registered_filter.get_all_entries()
+        for log in secret_registered_filter.get_new_entries(web3.eth.blockNumber)
     ]
 
     for secrethash in secrethashes:
@@ -40,7 +41,9 @@ def secret_registry_batch_happy_path(secret_registry_proxy):
         assert block == secret_registered["blockNumber"], msg
 
 
-def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contract_manager):
+def test_register_secret_happy_path(
+    web3: Web3, secret_registry_proxy: SecretRegistry, contract_manager: ContractManager
+) -> None:
     """Test happy path of SecretRegistry with a single secret.
 
     Test that `register_secret` changes the smart contract state by registering
@@ -52,7 +55,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     secret_unregistered = make_secret()
     secrethash_unregistered = sha256_secrethash(secret_unregistered)
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registered_filter = secret_registry_proxy.secret_registered_filter(GENESIS_BLOCK_NUMBER)
 
     assert not secret_registry_proxy.is_secret_registered(
         secrethash=secrethash, block_identifier="latest"
@@ -80,7 +83,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
 
     logs = [
         secret_registry_proxy.proxy.decode_event(encoded_log)
-        for encoded_log in secret_registered_filter.get_all_entries()
+        for encoded_log in secret_registered_filter.get_new_entries(web3.eth.blockNumber)
     ]
     secret_registered = must_have_event(
         logs, {"event": "SecretRevealed", "args": {"secrethash": secrethash}}
@@ -104,14 +107,17 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
     assert block is None, "The secret that was not registered must not change block height!"
 
 
-def test_register_secret_batch_happy_path(secret_registry_proxy):
+def test_register_secret_batch_happy_path(web3: Web3, secret_registry_proxy: SecretRegistry):
     """Test happy path for secret registration batching."""
-    secret_registry_batch_happy_path(secret_registry_proxy)
+    secret_registry_batch_happy_path(web3, secret_registry_proxy)
 
 
 def test_register_secret_batch_with_pruned_block(
-    secret_registry_proxy, web3, private_keys, contract_manager
-):
+    secret_registry_proxy: SecretRegistry,
+    web3: Web3,
+    private_keys: List[PrivateKey],
+    contract_manager: ContractManager,
+) -> None:
     """Test secret registration with a pruned given block."""
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
@@ -125,12 +131,12 @@ def test_register_secret_batch_with_pruned_block(
     # Now wait until this block becomes pruned
     pruned_number = c1_proxy_manager.client.block_number()
     c1_proxy_manager.wait_until_block(
-        target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS
+        target_block_number=BlockNumber(pruned_number + STATE_PRUNING_AFTER_BLOCKS)
     )
-    secret_registry_batch_happy_path(secret_registry_proxy)
+    secret_registry_batch_happy_path(web3, secret_registry_proxy)
 
 
-def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
+def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, monkeypatch):
     """Only one transaction must be sent if multiple greenlets are used to
     register the same secret.
 
@@ -143,7 +149,7 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
         in user code, therefore this behavior is not 100% guaranteed.
     """
     with monkeypatch.context() as m:
-        count = defaultdict(int)
+        count: Dict[Secret, int] = defaultdict(int)
         transact = secret_registry_proxy.proxy.transact
 
         # Using positional arguments with the signature used by SecretRegistry

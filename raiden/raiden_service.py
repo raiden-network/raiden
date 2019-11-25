@@ -347,6 +347,10 @@ class RaidenService(Runnable):
         )
 
         if self.wal.state_manager.current_state is None:
+            print(
+                "This is the first time Raiden is being used with this address. "
+                "Processing all the events may take some time. Please wait ..."
+            )
             log.debug(
                 "No recoverable state available, creating initial state.",
                 node=to_checksum_address(self.address),
@@ -417,7 +421,6 @@ class RaidenService(Runnable):
         self._initialize_payment_statuses(chain_state)
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
-        self._initialize_whitelists(chain_state)
         self._initialize_channel_fees()
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_process_events()
@@ -427,8 +430,8 @@ class RaidenService(Runnable):
         # - React to incoming messages
         # - Send pending transactions
         # - Send pending message
-        self.alarm.link_exception(self.on_error)
-        self.transport.link_exception(self.on_error)
+        self.alarm.greenlet.link_exception(self.on_error)
+        self.transport.greenlet.link_exception(self.on_error)
         self._start_transport(chain_state)
         self._start_alarm_task()
 
@@ -466,8 +469,8 @@ class RaidenService(Runnable):
         self.transport.stop()
         self.alarm.stop()
 
-        self.transport.join()
-        self.alarm.join()
+        self.transport.greenlet.join()
+        self.alarm.greenlet.join()
 
         self.blockchain_events.uninstall_all_event_listeners()
 
@@ -514,10 +517,17 @@ class RaidenService(Runnable):
         assert self.alarm.is_primed(), f"AlarmTask not primed. node:{self!r}"
         assert self.ready_to_process_events, f"Event procossing disable. node:{self!r}"
 
+        whitelist = self._get_initial_whitelist(chain_state)
+        log.debug(
+            "Initializing whitelists",
+            neighbour_nodes=[to_checksum_address(address) for address in whitelist],
+            node=to_checksum_address(self.address),
+        )
+
         self.transport.start(
             raiden_service=self,
-            message_handler=self.message_handler,
             prev_auth_data=chain_state.last_transport_authdata,
+            whitelist=whitelist,
         )
 
         for neighbour in views.all_neighbour_nodes(chain_state):
@@ -955,31 +965,6 @@ class RaidenService(Runnable):
                 non_closing_participant=self.address,
             )
 
-    def _initialize_whitelists(self, chain_state: ChainState) -> None:
-        """ Whitelist neighbors and mediated transfer targets on transport """
-
-        all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
-
-        log.debug(
-            "Initializing whitelists",
-            neighbour_nodes=[to_checksum_address(neighbour) for neighbour in all_neighbour_nodes],
-            node=to_checksum_address(self.address),
-        )
-
-        for neighbour in all_neighbour_nodes:
-            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
-                continue
-            self.transport.whitelist(neighbour)
-
-        events_queues = views.get_all_messagequeues(chain_state)
-
-        for event_queue in events_queues.values():
-            for event in event_queue:
-                if isinstance(event, SendLockedTransfer):
-                    transfer = event.transfer
-                    if transfer.initiator == self.address:
-                        self.transport.whitelist(address=Address(transfer.target))
-
     def _initialize_channel_fees(self) -> None:
         """ Initializes the fees of all open channels to the latest set values.
 
@@ -1008,6 +993,7 @@ class RaidenService(Runnable):
                 log.info(
                     "Updating channel fees",
                     channel=channel.canonical_identifier,
+                    cap_mediation_fees=fee_config.cap_meditation_fees,
                     flat_fee=flat_fee,
                     proportional_fee=proportional_fee,
                     proportional_imbalance_fee=proportional_imbalance_fee,
@@ -1017,6 +1003,7 @@ class RaidenService(Runnable):
                     proportional_imbalance_fee=proportional_imbalance_fee,
                 )
                 channel.fee_schedule = FeeScheduleState(
+                    cap_fees=fee_config.cap_meditation_fees,
                     flat=flat_fee,
                     proportional=proportional_fee,
                     imbalance_penalty=imbalance_penalty,
@@ -1025,6 +1012,28 @@ class RaidenService(Runnable):
                     chain_state,
                     SendPFSFeeUpdate(canonical_identifier=channel.canonical_identifier),
                 )
+
+    def _get_initial_whitelist(self, chain_state: ChainState) -> List[Address]:
+        """ Fetch direct neighbors and mediated transfer targets on transport """
+        neighbour_addresses: List[Address] = []
+
+        all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
+
+        for neighbour in all_neighbour_nodes:
+            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
+                continue
+            neighbour_addresses.append(neighbour)
+
+        events_queues = views.get_all_messagequeues(chain_state)
+
+        for event_queue in events_queues.values():
+            for event in event_queue:
+                if isinstance(event, SendLockedTransfer):
+                    transfer = event.transfer
+                    if transfer.initiator == self.address:
+                        neighbour_addresses.append(Address(transfer.target))
+
+        return neighbour_addresses
 
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
@@ -1144,11 +1153,11 @@ class RaidenService(Runnable):
 
         log.debug(
             "Mediated transfer",
-            node=self.address,
-            target=target,
+            node=to_checksum_address(self.address),
+            target=to_checksum_address(target),
             amount=amount,
             identifier=identifier,
-            token_network_address=token_network_address,
+            token_network_address=to_checksum_address(token_network_address),
         )
 
         # We must check if the secret was registered against the latest block,

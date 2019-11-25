@@ -1,9 +1,7 @@
-import random
-
 import pytest
 
 from raiden.api.python import RaidenAPI
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -11,6 +9,8 @@ from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
     make_address,
+    make_locksroot,
+    make_message_identifier,
     make_privkey_address,
 )
 from raiden.tests.utils.network import CHAIN
@@ -25,6 +25,14 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import (
+    InitiatorAddress,
+    Nonce,
+    PaymentAmount,
+    PaymentID,
+    PaymentWithFeeAmount,
+    TokenAmount,
+)
 
 
 @raise_on_failure
@@ -40,6 +48,7 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), token_network_registry_address, token_address
     )
+    assert token_network_address
     payment_status = app0.raiden.mediated_transfer_async(
         token_network_address, deposit * 2, app1.raiden.address, identifier=1
     )
@@ -80,38 +89,39 @@ def test_receive_lockedtransfer_invalidnonce(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
 
     amount = 10
+    payment_identifier = PaymentID(1)
     secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
         token_address=token_address,
-        amount=amount,
-        identifier=1,
+        amount=PaymentAmount(10),
+        identifier=payment_identifier,
         timeout=network_wait * number_of_nodes,
     )
 
-    amount = 10
-    payment_identifier = 1
-    repeated_nonce = 1
+    repeated_nonce = Nonce(1)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
         nonce=repeated_nonce,
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        transferred_amount=amount,
-        locked_amount=amount,
+        transferred_amount=TokenAmount(amount),
+        locked_amount=TokenAmount(amount),
         recipient=app1.raiden.address,
-        locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount=amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
+        locksroot=make_locksroot(),
+        lock=Lock(
+            amount=PaymentWithFeeAmount(amount), expiration=expiration, secrethash=UNIT_SECRETHASH
+        ),
         target=app2.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(
             routes=[RouteMetadata(route=[app1.raiden.address, app2.raiden.address])]
@@ -146,25 +156,29 @@ def test_receive_lockedtransfer_invalidsender(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
-    lock_amount = 10
+    lock_amount = TokenAmount(10)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
-        payment_identifier=1,
-        nonce=1,
+        message_identifier=make_message_identifier(),
+        payment_identifier=PaymentID(1),
+        nonce=Nonce(1),
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=app0.raiden.address,
-        locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
+        locksroot=make_locksroot(),
+        lock=Lock(
+            amount=PaymentWithFeeAmount(lock_amount),
+            expiration=expiration,
+            secrethash=UNIT_SECRETHASH,
+        ),
         target=app0.raiden.address,
-        initiator=other_address,
-        fee=0,
+        initiator=InitiatorAddress(other_address),
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app0.raiden.address])]),
     )
@@ -185,28 +199,32 @@ def test_receive_lockedtransfer_invalidrecipient(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
 
-    payment_identifier = 1
+    payment_identifier = PaymentID(1)
     invalid_recipient = make_address()
-    lock_amount = 10
+    lock_amount = TokenAmount(10)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
-        nonce=1,
+        nonce=Nonce(1),
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=invalid_recipient,
-        locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
+        locksroot=make_locksroot(),
+        lock=Lock(
+            amount=PaymentWithFeeAmount(lock_amount),
+            expiration=expiration,
+            secrethash=UNIT_SECRETHASH,
+        ),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )
@@ -229,6 +247,7 @@ def test_received_lockedtransfer_closedchannel(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
 
     RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
@@ -238,25 +257,28 @@ def test_received_lockedtransfer_closedchannel(
     )
 
     # Now receive one mediated transfer for the closed channel
-    lock_amount = 10
-    payment_identifier = 1
+    lock_amount = TokenAmount(10)
+    payment_identifier = PaymentID(1)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
-        nonce=1,
+        nonce=Nonce(1),
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=app1.raiden.address,
-        locksroot=UNIT_SECRETHASH,
-        lock=Lock(amount=lock_amount, expiration=expiration, secrethash=UNIT_SECRETHASH),
+        locksroot=make_locksroot(),
+        lock=Lock(
+            amount=PaymentWithFeeAmount(lock_amount),
+            expiration=expiration,
+            secrethash=UNIT_SECRETHASH,
+        ),
         target=app1.raiden.address,
         initiator=app0.raiden.address,
-        fee=0,
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(routes=[RouteMetadata(route=[app1.raiden.address])]),
     )

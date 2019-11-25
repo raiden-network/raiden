@@ -30,8 +30,14 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
-from raiden.utils import BlockNumber
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, ProportionalFeeAmount, Type
+from raiden.utils.typing import (
+    BlockNumber,
+    FeeAmount,
+    PaymentAmount,
+    PaymentID,
+    ProportionalFeeAmount,
+    Type,
+)
 
 
 @raise_on_failure
@@ -70,22 +76,19 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize(
-    "global_rooms",
+    "broadcast_rooms",
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
-def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
+def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
 ):
-    """On restarts, Raiden will restore state and publish new balance proof
-    updates to the global matrix room. This test will check for regressions
-    in the order of which the global queues are initialized on startup.
+    """ Raiden must broadcast the latest known balance proof on restarts.
 
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
     app0, app1 = raiden_network
     app0.config["services"]["monitoring_enabled"] = True
-    # Send a transfer to make sure the state has a balance proof
-    # to publish to the global matrix rooms
+    # Send a transfer to make sure the state has a balance proof to broadcast
     token_address = token_addresses[0]
 
     amount = PaymentAmount(10)
@@ -102,21 +105,21 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
     app0.stop()
 
     transport = MatrixTransport(app0.config["transport"]["matrix"])
-    transport.send_async = Mock()
-    transport._send_raw = Mock()
+    transport.send_async = Mock()  # type: ignore
+    transport._send_raw = Mock()  # type: ignore
 
     old_start_transport = transport.start
 
-    # Check that the queue is populated before the transport sends it and empties the queue
+    # Asserts the balance proofs are broadcasted before protocol messages
     def start_transport(*args, **kwargs):
-        # Before restart the transport's global message queue should be initialized
-        # There should be 3 messages in the global queue:
+        # Before restart the transport's broadcast queue should be initialized
+        # There should be 3 messages in the queue:
         # - A `MonitorRequest` to the MS
         # - A `PFSCapacityUpdate`
         # - A `PFSFeeUpdate`
-        queue_copy = transport._global_send_queue.copy()
+        queue_copy = transport._broadcast_queue.copy()
         queued_messages = list()
-        for _ in range(len(transport._global_send_queue)):
+        for _ in range(len(transport._broadcast_queue)):
             queued_messages.append(queue_copy.get())
 
         def num_matching_queued_messages(room: str, message_type: Type) -> int:
@@ -134,7 +137,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
         old_start_transport(*args, **kwargs)
 
-    transport.start = start_transport
+    transport.start = start_transport  # type: ignore
 
     app0_restart = App(
         config=app0.config,

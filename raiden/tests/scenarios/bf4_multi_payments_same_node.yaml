@@ -1,0 +1,101 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        deposit: true
+        balance_per_node: 100_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 6
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+
+# This is the bf4 scenario. It sets up a topology of [ [0, 1, 2], [0, 1, 3], [0, 4, 5] ]
+# with deposits in the directions starting from node0 going towards node2, node3 and node5.
+# When the channels are opened with deposits, 100 payments from node0 should be started
+# simultaneously to node2, node3 and node5.
+# When the payments are done assertions make sure that all payments went through and that balances are correct.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - wait: 100
+      - parallel:
+          name: "Assert after channel openings"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Make 100 transfers from 0 to 2, 3 and 5 in parallel"
+          tasks:
+            - serial:
+                name: "Make 100 transfers from 0 to 2"
+                repeat: 100
+                tasks:
+                  - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - serial:
+                name: "Make 100 transfers from 0 to 3"
+                repeat: 100
+                tasks:
+                  - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - serial:
+                name: "Make 100 transfers from 0 to 5"
+                repeat: 100
+                tasks:
+                  - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      # Make sure that all transfers are finalized before asserting
+      - wait: 100
+      - parallel:
+          name: "Assert balances after transfers"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 800_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 900_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 0, balance: 100_000_000_000_000_000, state: "opened"}

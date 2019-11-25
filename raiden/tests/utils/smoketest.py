@@ -49,6 +49,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     Any,
+    BlockNumber,
     Callable,
     ChainID,
     Dict,
@@ -224,13 +225,15 @@ def setup_testchain(
 
 @contextmanager
 def setup_matrix_for_smoketest(
-    print_step: Callable, free_port_generator: Iterable[Port]
+    print_step: Callable,
+    free_port_generator: Iterable[Port],
+    broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List["ParsedURL"]]:
     from raiden.tests.utils.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
 
-    with matrix_server_starter(free_port_generator=free_port_generator) as ctx:
+    with matrix_server_starter(free_port_generator, broadcast_rooms_aliases) as ctx:
         yield ctx
 
 
@@ -286,7 +289,7 @@ def setup_raiden(
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
-        initial_amount=1000,
+        initial_amount=TokenAmount(1000),
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
@@ -296,16 +299,16 @@ def setup_raiden(
         client=client,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
-        token_address=to_canonical_address(token.contract.address),
+        token_address=to_checksum_address(token.contract.address),
     )
     registry = proxy_manager.token_network_registry(
-        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
     )
 
     registry.add_token(
-        token_address=to_canonical_address(token.contract.address),
-        channel_participant_deposit_limit=UINT256_MAX,
-        token_network_deposit_limit=UINT256_MAX,
+        token_address=TokenAddress(to_canonical_address(token.contract.address)),
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
         block_identifier=client.get_confirmed_blockhash(),
     )
 
@@ -375,7 +378,7 @@ def run_smoketest(
         api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
         api_server.start()
 
-        block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
         # prerequisite checks. Wait a bit here to make sure that the confirmed
         # block hash contains the deployed token network or else things break
@@ -442,8 +445,8 @@ def run_smoketest(
     finally:
         if api_server is not None:
             api_server.stop()
-            api_server.get()
+            api_server.greenlet.get()
 
         if app is not None:
             app.stop()
-            app.raiden.get()
+            app.raiden.greenlet.get()

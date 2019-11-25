@@ -12,6 +12,7 @@ from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
+    assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     transfer,
     transfer_and_assert_path,
@@ -23,10 +24,11 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import BlockNumber, create_default_identifier
-from raiden.utils.typing import PaymentID, TokenAmount
+from raiden.utils import create_default_identifier
+from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5133")
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
@@ -41,16 +43,17 @@ def test_recovery_happy_case(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
 
     # make a few transfers from app0 to app2
-    amount = 1
+    amount = PaymentAmount(1)
     spent_amount = deposit - 2
     for identifier in range(spent_amount):
         transfer_and_assert_path(
             path=raiden_network,
             token_address=token_address,
             amount=amount,
-            identifier=identifier,
+            identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
         )
 
@@ -89,11 +92,11 @@ def test_recovery_happy_case(
         timeout=network_wait * number_of_nodes,
     )
 
-    assert_synced_channel_state(
+    assert_succeeding_transfer_invariants(
         token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
     )
 
-    assert_synced_channel_state(
+    assert_succeeding_transfer_invariants(
         token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
 
@@ -113,7 +116,7 @@ def test_recovery_unhappy_case(
     )
 
     # make a few transfers from app0 to app2
-    amount = TokenAmount(1)
+    amount = PaymentAmount(1)
     spent_amount = deposit - 2
     for identifier in range(spent_amount):
         transfer(
@@ -141,6 +144,7 @@ def test_recovery_unhappy_case(
         token_address,
         app0.raiden.address,
     )
+    assert channel01
 
     waiting.wait_for_settle(
         app1.raiden,
@@ -170,10 +174,10 @@ def test_recovery_unhappy_case(
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
+    wal = app0_restart.raiden.wal
+    assert wal
 
-    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
-        RANGE_ALL_STATE_CHANGES
-    )
+    state_changes = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
         state_changes,
@@ -231,13 +235,13 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     del app0  # from here on the app0_restart should be used
 
     app0_restart.raiden.start()
+    wal = app0_restart.raiden.wal
+    assert wal
 
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
     waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
-    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_range(
-        RANGE_ALL_STATE_CHANGES
-    )
+    restarted_state_changes = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
 
 

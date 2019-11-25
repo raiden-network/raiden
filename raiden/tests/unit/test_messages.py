@@ -56,7 +56,7 @@ def test_request_monitoring() -> None:
     assert DictSerializer.deserialize(as_dict) == request_monitoring
     # RequestMonitoring can be created directly from BalanceProofSignedState
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
-        balance_proof,
+        balance_proof=balance_proof,
         non_closing_participant=ADDRESS,
         reward_amount=TokenAmount(55),
         monitoring_service_contract_address=MSC_ADDRESS,
@@ -71,7 +71,7 @@ def test_request_monitoring() -> None:
     assert direct_created == request_monitoring
     other_balance_proof = factories.create(factories.replace(properties, message_hash=sha3(b"2")))
     other_instance = RequestMonitoring.from_balance_proof_signed_state(
-        other_balance_proof,
+        balance_proof=other_balance_proof,
         non_closing_participant=ADDRESS,
         reward_amount=TokenAmount(55),
         monitoring_service_contract_address=MSC_ADDRESS,
@@ -312,7 +312,6 @@ def invalid_values():
             "transferred_amount": [-1, UINT256_MAX + 1],
             "target": invalid_addresses,
             "initiator": invalid_addresses,
-            "fee": [UINT256_MAX + 1],
         }
     )
 

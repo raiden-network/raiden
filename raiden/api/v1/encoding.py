@@ -16,7 +16,13 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
-from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH, UINT256_MAX
+from raiden.constants import (
+    NULL_ADDRESS_BYTES,
+    NULL_ADDRESS_HEX,
+    SECRET_LENGTH,
+    SECRETHASH_LENGTH,
+    UINT256_MAX,
+)
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import ChannelState, NettingChannelState
@@ -56,6 +62,7 @@ class AddressField(fields.Field):
         "invalid_checksum": "Not a valid EIP55 encoded address",
         "invalid_data": "Not a valid hex encoded address, contains invalid characters.",
         "invalid_size": "Not a valid hex encoded address, decoded address is not 20 bytes long.",
+        "null_address": f"The {NULL_ADDRESS_HEX} address is not accepted",
     }
 
     @staticmethod
@@ -76,6 +83,9 @@ class AddressField(fields.Field):
 
         if len(value) != 20:
             self.fail("invalid_size")
+
+        if value == NULL_ADDRESS_BYTES:
+            self.fail("null_address")
 
         return value
 

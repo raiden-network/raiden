@@ -19,7 +19,7 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     CanonicalIdentifier,
     QueueIdentifier,
 )
@@ -48,7 +48,6 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
-    ActionNewTokenNetwork,
     ActionUpdateTransportAuthData,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -576,21 +575,9 @@ def handle_receive_delivered(
     chain_state: ChainState, state_change: ReceiveDelivered
 ) -> TransitionResult[ChainState]:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_GLOBAL_QUEUE)
+    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_UNORDERED_QUEUE)
     inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
-
-
-def handle_action_new_token_network(
-    chain_state: ChainState, state_change: ActionNewTokenNetwork
-) -> TransitionResult[ChainState]:
-    token_network_state = state_change.token_network
-    token_network_registry_address = state_change.token_network_registry_address
-
-    maybe_add_tokennetwork(chain_state, token_network_registry_address, token_network_state)
-
-    events: List[Event] = list()
-    return TransitionResult(chain_state, events)
 
 
 def handle_action_change_node_network_state(
@@ -806,9 +793,6 @@ def handle_state_change(
         if type(state_change) == Block:
             assert isinstance(state_change, Block), MYPY_ANNOTATION
             iteration = handle_block(chain_state, state_change)
-        elif type(state_change) == ActionNewTokenNetwork:
-            assert isinstance(state_change, ActionNewTokenNetwork), MYPY_ANNOTATION
-            iteration = handle_action_new_token_network(chain_state, state_change)
         elif type(state_change) == ActionChannelClose:
             assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
             iteration = handle_token_network_action(chain_state, state_change)

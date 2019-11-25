@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import gevent
-from eth_utils import decode_hex, is_binary_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address
 from gevent.lock import Semaphore
 
 from raiden.network.proxies.metadata import SmartContractMetadata
@@ -17,7 +17,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockNumber,
-    BlockSpecification,
     ChannelID,
     Dict,
     EVMBytecode,
@@ -116,11 +115,6 @@ class ProxyManager:
         delta = last_timestamp - first_timestamp
         return delta / interval
 
-    def next_block(self) -> int:
-        target_block_number = self.client.block_number() + 1
-        self.wait_until_block(target_block_number=target_block_number)
-        return target_block_number
-
     def wait_until_block(self, target_block_number: BlockNumber) -> BlockNumber:
         current_block = self.client.block_number()
 
@@ -170,49 +164,6 @@ class ProxyManager:
                 )
 
         return self.address_to_token_network_registry[address]
-
-    def token_network_from_registry(
-        self,
-        token_network_registry_address: TokenNetworkRegistryAddress,
-        token_address: TokenAddress,
-        block_identifier: BlockSpecification = "latest",
-    ) -> TokenNetwork:
-        token_network_registry = self.token_network_registry(token_network_registry_address)
-        token_network_address = token_network_registry.get_token_network(
-            token_address=token_address, block_identifier=block_identifier
-        )
-
-        if token_network_address is None:
-            raise ValueError(
-                f"{to_checksum_address(token_network_registry_address)} does not "
-                f"have the token {to_checksum_address(token_address)} "
-                f"registered."
-            )
-
-        with self._token_network_creation_lock:
-            if token_network_address not in self.address_to_token_network:
-                metadata = TokenNetworkMetadata(
-                    deployed_at=None,
-                    address=Address(token_network_address),
-                    abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-                    gas_measurements=gas_measurements(self.contract_manager.contracts_version),
-                    runtime_bytecode=EVMBytecode(
-                        decode_hex(
-                            self.contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
-                        )
-                    ),
-                    token_network_registry_address=token_network_registry_address,
-                    filters_start_at=token_network_registry.metadata.filters_start_at,
-                )
-
-                self.address_to_token_network[token_network_address] = TokenNetwork(
-                    jsonrpc_client=self.client,
-                    contract_manager=self.contract_manager,
-                    proxy_manager=self,
-                    metadata=metadata,
-                )
-
-        return self.address_to_token_network[token_network_address]
 
     def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
         if not is_binary_address(address):

@@ -1,18 +1,26 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
-from typing import overload
+from typing import Any, overload
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.events import (
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+    SendSecretRequest,
+    SendSecretReveal,
+)
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, sha3
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
+    AdditionalHash,
     Address,
     BlockExpiration,
     ChainID,
@@ -39,7 +47,7 @@ def assert_envelope_values(
     transferred_amount: TokenAmount,
     locked_amount: TokenAmount,
     locksroot: Locksroot,
-):
+) -> None:
     if nonce <= 0:
         raise ValueError("nonce cannot be zero or negative")
 
@@ -68,7 +76,9 @@ def assert_envelope_values(
         raise ValueError("locksroot must have length 32")
 
 
-def assert_transfer_values(payment_identifier, token, recipient):
+def assert_transfer_values(
+    payment_identifier: PaymentID, token: TokenAddress, recipient: Address
+) -> None:
     if payment_identifier < 0:
         raise ValueError("payment_identifier cannot be negative")
 
@@ -89,7 +99,7 @@ class Lock:
     Args:
         amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
-        secrethash: Hashed secret `sha256(secret).digest()` used to register the transfer,
+        secrethash: Hashed secret used to register the transfer,
         the real `secret` is necessary to release the locked amount.
     """
 
@@ -99,7 +109,7 @@ class Lock:
     expiration: BlockExpiration
     secrethash: SecretHash
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if self.amount < 0:
@@ -118,21 +128,22 @@ class Lock:
             raise ValueError("secrethash {self.secrethash} is not a valid hash")
 
     @property
-    def as_bytes(self):
+    def as_bytes(self) -> bytes:
         return pack_data(
             (self.expiration, "uint256"), (self.amount, "uint256"), (self.secrethash, "bytes32")
         )
 
+    # FIXME: is this used?
     @property
-    def lockhash(self):
+    def lockhash(self) -> bytes:
         return sha3(self.as_bytes)
 
     @classmethod
-    def from_bytes(cls, serialized):
+    def from_bytes(cls, serialized: bytes) -> "Lock":
         return cls(
-            expiration=int.from_bytes(serialized[:32], byteorder="big"),
-            amount=int.from_bytes(serialized[32:64], byteorder="big"),
-            secrethash=serialized[64:],
+            expiration=BlockExpiration(int.from_bytes(serialized[:32], byteorder="big")),
+            amount=PaymentWithFeeAmount(int.from_bytes(serialized[32:64], byteorder="big")),
+            secrethash=SecretHash(serialized[64:]),
         )
 
 
@@ -153,7 +164,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
     channel_identifier: ChannelID
     token_network_address: TokenNetworkAddress
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         assert_envelope_values(
             self.nonce,
             self.channel_identifier,
@@ -163,7 +174,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
         )
 
     @property
-    def message_hash(self):
+    def message_hash(self) -> bytes:
         raise NotImplementedError
 
     def _data_to_sign(self) -> bytes:
@@ -173,7 +184,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
         balance_proof_packed = pack_balance_proof(
             nonce=self.nonce,
             balance_hash=balance_hash,
-            additional_hash=self.message_hash,
+            additional_hash=AdditionalHash(self.message_hash),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=self.chain_id,
                 token_network_address=self.token_network_address,
@@ -195,7 +206,7 @@ class SecretRequest(SignedRetrieableMessage):
     expiration: BlockExpiration
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendSecretRequest) -> "SecretRequest":
         # pylint: disable=unexpected-keyword-arg
         return cls(
             message_identifier=event.message_identifier,
@@ -253,7 +264,7 @@ class Unlock(EnvelopeMessage):
     payment_identifier: PaymentID
     secret: Secret = field(repr=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
         if self.payment_identifier < 0:
             raise ValueError("payment_identifier cannot be negative")
@@ -265,11 +276,11 @@ class Unlock(EnvelopeMessage):
             raise ValueError("secret must have 32 bytes")
 
     @property
-    def secrethash(self):
+    def secrethash(self) -> bytes:
         return sha256(self.secret).digest()
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendBalanceProof) -> "Unlock":
         balance_proof = event.balance_proof
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -310,11 +321,11 @@ class RevealSecret(SignedRetrieableMessage):
     secret: Secret = field(repr=False)
 
     @property
-    def secrethash(self):
+    def secrethash(self) -> bytes:
         return sha256(self.secret).digest()
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendSecretReveal) -> "RevealSecret":
         # pylint: disable=unexpected-keyword-arg
         return cls(
             message_identifier=event.message_identifier,
@@ -343,10 +354,9 @@ class LockedTransferBase(EnvelopeMessage):
     lock: Lock
     target: TargetAddress
     initiator: InitiatorAddress
-    fee: int
     metadata: Metadata
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         super().__post_init__()
         assert_transfer_values(self.payment_identifier, self.token, self.recipient)
 
@@ -355,9 +365,6 @@ class LockedTransferBase(EnvelopeMessage):
 
         if len(self.initiator) != 20:
             raise ValueError("initiator is an invalid address")
-
-        if self.fee > UINT256_MAX:
-            raise ValueError("fee is too large")
 
     @overload
     @classmethod
@@ -372,7 +379,7 @@ class LockedTransferBase(EnvelopeMessage):
         ...
 
     @classmethod  # noqa: F811
-    def from_event(cls, event):
+    def from_event(cls, event: Any) -> Any:
         transfer = event.transfer
         balance_proof = transfer.balance_proof
         lock = Lock(
@@ -380,7 +387,6 @@ class LockedTransferBase(EnvelopeMessage):
             expiration=transfer.lock.expiration,
             secrethash=transfer.lock.secrethash,
         )
-        fee = 0
 
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -398,14 +404,13 @@ class LockedTransferBase(EnvelopeMessage):
             lock=lock,
             target=transfer.target,
             initiator=transfer.initiator,
-            fee=fee,
             signature=EMPTY_SIGNATURE,
             metadata=Metadata(
                 routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
             ),
         )
 
-    def _packed_data(self):
+    def _packed_data(self) -> bytes:
         return pack_data(
             (self.cmdid.value, "uint8"),
             (self.message_identifier, "uint64"),
@@ -417,7 +422,6 @@ class LockedTransferBase(EnvelopeMessage):
             (self.initiator, "address"),
             (self.lock.secrethash, "bytes32"),
             (self.lock.amount, "uint256"),
-            (self.fee, "uint256"),
         )
 
 
@@ -492,7 +496,7 @@ class LockExpired(EnvelopeMessage):
     secrethash: SecretHash
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendLockExpired) -> "LockExpired":
         balance_proof = event.balance_proof
 
         # pylint: disable=unexpected-keyword-arg

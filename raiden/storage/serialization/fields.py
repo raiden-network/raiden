@@ -11,24 +11,14 @@ from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
 
 
-class IntegerToStringField(marshmallow.fields.Field):
-    def _serialize(self, value: int, attr: Any, obj: Any, **kwargs: Any) -> str:
-        return str(value)
-
-    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> int:
-        return int(value)
+class IntegerToStringField(marshmallow.fields.Integer):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(as_string=True, **kwargs)
 
 
-class OptionalIntegerToStringField(marshmallow.fields.Field):
-    def _serialize(self, value: Optional[int], attr: Any, obj: Any, **kwargs: Any) -> str:
-        if value is None:
-            return ""
-        return str(value)
-
-    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> Optional[int]:
-        if value == "":
-            return None
-        return int(value)
+class OptionalIntegerToStringField(marshmallow.fields.Integer):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(as_string=True, required=False, **kwargs)
 
 
 class BytesField(marshmallow.fields.Field):
@@ -46,7 +36,10 @@ class BytesField(marshmallow.fields.Field):
     ) -> Optional[bytes]:
         if value is None:
             return value
-        return to_bytes(hexstr=value)
+        try:
+            return to_bytes(hexstr=value)
+        except (TypeError, ValueError):
+            raise self.make_error("validator_failed", input=value)
 
 
 class AddressField(marshmallow.fields.Field):
@@ -56,7 +49,10 @@ class AddressField(marshmallow.fields.Field):
         return to_checksum_address(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> Address:
-        return to_canonical_address(value)
+        try:
+            return to_canonical_address(value)
+        except (TypeError, ValueError):
+            raise self.make_error("validator_failed", input=value)
 
 
 class QueueIdentifierField(marshmallow.fields.Field):
@@ -82,21 +78,21 @@ class QueueIdentifierField(marshmallow.fields.Field):
             f"{canonical_id.channel_identifier}"
         )
 
-    def _serialize(
-        self, queue_identifier: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any
-    ) -> str:
+    def _serialize(self, value: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any) -> str:
         return (
-            f"{to_checksum_address(queue_identifier.recipient)}"
-            f"-{self._canonical_id_to_string(queue_identifier.canonical_identifier)}"
+            f"{to_checksum_address(value.recipient)}"
+            f"-{self._canonical_id_to_string(value.canonical_identifier)}"
         )
 
-    def _deserialize(
-        self, queue_identifier_str: str, attr: Any, data: Any, **kwargs: Any
-    ) -> QueueIdentifier:
-        str_recipient, str_canonical_id = queue_identifier_str.split("-")
-        return QueueIdentifier(
-            to_canonical_address(str_recipient), self._canonical_id_from_string(str_canonical_id)
-        )
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> QueueIdentifier:
+        try:
+            str_recipient, str_canonical_id = value.split("-")
+            return QueueIdentifier(
+                to_canonical_address(str_recipient),
+                self._canonical_id_from_string(str_canonical_id),
+            )
+        except (TypeError, ValueError, AttributeError):
+            raise self.make_error("validator_failed", input=value)
 
 
 class PRNGField(marshmallow.fields.Field):
@@ -116,7 +112,10 @@ class PRNGField(marshmallow.fields.Field):
         return value.getstate()
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> Random:
-        return self.pseudo_random_generator_from_json(data)
+        try:
+            return self.pseudo_random_generator_from_json(data)
+        except (TypeError, ValueError):
+            raise self.make_error("validator_failed", input=value)
 
 
 class CallablePolyField(PolyField):
@@ -142,14 +141,17 @@ class CallablePolyField(PolyField):
 class NetworkXGraphField(marshmallow.fields.Field):
     """ Converts networkx.Graph objects to a string """
 
-    def _serialize(self, graph: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
+    def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
         return json.dumps(
-            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in graph.edges]
+            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in value.edges]
         )
 
-    def _deserialize(self, graph_data: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
-        raw_data = json.loads(graph_data)
-        canonical_addresses = [
-            (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data
-        ]
-        return networkx.Graph(canonical_addresses)
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
+        try:
+            raw_data = json.loads(value)
+            canonical_addresses = [
+                (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data
+            ]
+            return networkx.Graph(canonical_addresses)
+        except (TypeError, ValueError):
+            raise self.make_error("validator_failed", input=value)

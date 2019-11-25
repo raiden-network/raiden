@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar, cast
 
 import gevent
 
@@ -6,10 +7,10 @@ from raiden.raiden_service import RaidenService
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.transfer.architecture import Event, StateChange
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
-from raiden.utils.typing import Any, Iterable, List, Optional, Tuple, Type, TypeVar
 
 NOVALUE = object()
 T = TypeVar("T")
+TE = TypeVar("TE", bound=Event)
 SC = TypeVar("SC", bound=StateChange)
 TM = TypeVar("TM", bound=Mapping)
 
@@ -85,15 +86,16 @@ def search_for_item(
 
 
 def raiden_events_search_for_item(
-    raiden: RaidenService, item_type: Type[Event], attributes: Mapping
-) -> Optional[Event]:
+    raiden: RaidenService, item_type: Type[TE], attributes: Mapping
+) -> Optional[TE]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.
     """
     assert raiden.wal, "RaidenService must be started"
-    return search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
+    event = search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
+    return cast(TE, event)
 
 
 def raiden_state_changes_search_for_item(
@@ -129,18 +131,20 @@ def must_have_events(event_list: List[TM], *args) -> bool:
     return True
 
 
-def has_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> bool:
+def count_event_of_types(events: List[Event], event_types: Tuple[Type, ...]) -> int:
+    event_count = 0
     for event in events:
-        for event_type in event_types:
-            if isinstance(event, event_type):
-                return True
-    else:
-        return False
+        if any(isinstance(event, event_type) for event_type in event_types):
+            event_count += 1
+    return event_count
 
 
-def has_unlock_failure(raiden: RaidenService) -> bool:
-    events = raiden.wal.storage.get_events()  # type: ignore
-    return has_event_of_types(events, (EventUnlockFailed, EventUnlockClaimFailed))
+def count_unlock_failures(events: List[Event]) -> int:
+    return count_event_of_types(events, (EventUnlockClaimFailed, EventUnlockFailed))
+
+
+def has_unlock_failure(raiden: RaidenService, offset: int = 0) -> bool:
+    return count_unlock_failures(raiden.wal.storage.get_events()) > offset  # type: ignore
 
 
 def wait_for_raiden_event(
@@ -159,8 +163,8 @@ def wait_for_raiden_event(
 
 
 def wait_for_state_change(
-    raiden: RaidenService, item_type: Type[StateChange], attributes: Mapping, retry_timeout: float
-) -> Optional[StateChange]:
+    raiden: RaidenService, item_type: Type[SC], attributes: Mapping, retry_timeout: float
+) -> SC:
     """Wait until a state change is seen in the WAL
 
     Note:

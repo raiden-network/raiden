@@ -15,6 +15,9 @@ from raiden.tests.utils.eth_node import (
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
+from raiden.utils.smart_contracts import deploy_contract_web3
+from raiden.utils.typing import TokenAddress
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -37,9 +40,7 @@ def web3(
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
-    keys_to_fund = set(private_keys)
-    keys_to_fund.add(deploy_key)
-    keys_to_fund = sorted(keys_to_fund)
+    keys_to_fund = sorted(set(private_keys + [deploy_key]))
 
     if blockchain_type not in {client.value for client in EthClient}:
         raise ValueError(f"unknown blockchain_type {blockchain_type}")
@@ -131,4 +132,16 @@ def blockchain_services(
         token_network_registry_address=token_network_registry_address,
         web3=web3,
         contract_manager=contract_manager,
+    )
+
+
+@pytest.fixture
+def unregistered_token(token_amount, deploy_client, contract_manager) -> TokenAddress:
+    return TokenAddress(
+        deploy_contract_web3(
+            CONTRACT_HUMAN_STANDARD_TOKEN,
+            deploy_client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        )
     )

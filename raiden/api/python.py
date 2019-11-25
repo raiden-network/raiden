@@ -38,7 +38,12 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import BalanceProofSignedState, ChannelState, NettingChannelState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    ChannelState,
+    NettingChannelState,
+    NetworkState,
+)
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -72,7 +77,7 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.raiden_service import RaidenService
+    from raiden.raiden_service import RaidenService, PaymentStatus
 
 log = structlog.get_logger(__name__)
 
@@ -168,7 +173,7 @@ class RaidenAPI:  # pragma: no unittest
         self.raiden = raiden
 
     @property
-    def address(self):
+    def address(self) -> Address:
         return self.raiden.address
 
     def get_channel(
@@ -451,8 +456,9 @@ class RaidenAPI:  # pragma: no unittest
         )
         if duplicated_channel:
             raise DuplicatedChannelError(
-                f"A channel with {partner_address} for token {token_address} already exists. "
-                f"(At block: {confirmed_block_identifier})"
+                f"A channel with {to_checksum_address(partner_address)} for token "
+                f"{to_checksum_address(token_address)} already exists. "
+                f"(At blockhash: {confirmed_block_identifier.hex()})"
             )
 
         with self.raiden.gas_reserve_lock:
@@ -535,7 +541,7 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
         total_withdraw: WithdrawAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> None:
         """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
         given `token_address`.
 
@@ -608,7 +614,7 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
         total_deposit: TokenAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> None:
         """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
@@ -760,7 +766,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address,
         reveal_timeout: BlockTimeout,
-    ):
+    ) -> None:
         """ Set the `reveal_timeout` in the channel with the peer at `partner_address` and the
         given `token_address`.
 
@@ -813,7 +819,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> None:
         """Close a channel opened with `partner_address` for the given
         `token_address`.
 
@@ -832,7 +838,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_addresses: List[Address],
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
-    ):
+    ) -> None:
         """Close a channel opened with `partner_address` for the given
         `token_address`.
 
@@ -943,17 +949,17 @@ class RaidenAPI:  # pragma: no unittest
 
         return result
 
-    def get_node_network_state(self, node_address: Address):
+    def get_node_network_state(self, node_address: Address) -> NetworkState:
         """ Returns the currently network status of `node_address`. """
         return views.get_node_network_status(
             chain_state=views.state_from_raiden(self.raiden), node_address=node_address
         )
 
-    def start_health_check_for(self, node_address: Address):
+    def start_health_check_for(self, node_address: Address) -> None:
         """ Returns the currently network status of `node_address`. """
         self.raiden.start_health_check_for(node_address)
 
-    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress):
+    def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
         """Returns a list of tokens the node knows about"""
         tokens_list = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
@@ -981,7 +987,7 @@ class RaidenAPI:  # pragma: no unittest
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
-    ):
+    ) -> "PaymentStatus":
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
 
@@ -1008,7 +1014,7 @@ class RaidenAPI:  # pragma: no unittest
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
-    ):
+    ) -> "PaymentStatus":
         current_state = views.state_from_raiden(self.raiden)
         token_network_registry_address = self.raiden.default_registry.address
 
@@ -1128,7 +1134,9 @@ class RaidenAPI:  # pragma: no unittest
 
         return [event.wrapped_event for event in timestamped_events]
 
-    def get_raiden_internal_events_with_timestamps(self, limit: int = None, offset: int = None):
+    def get_raiden_internal_events_with_timestamps(
+        self, limit: int = None, offset: int = None
+    ) -> List[TimestampedEvent]:
         assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 

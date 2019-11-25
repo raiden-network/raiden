@@ -28,7 +28,7 @@ from raiden.transfer.events import (
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE, CanonicalIdentifier
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -207,9 +207,8 @@ def is_channel_usable_for_mediation(
     channel_usable = is_channel_usable_for_new_transfer(
         channel_state, transfer_amount, lock_timeout
     )
-    lock_timeout_valid = lock_timeout > 0
 
-    return channel_usable and lock_timeout_valid
+    return channel_usable
 
 
 def is_channel_usable_for_new_transfer(
@@ -1989,7 +1988,7 @@ def handle_receive_withdraw_confirmation(
             SendProcessed(
                 recipient=channel_state.partner_state.address,
                 message_identifier=withdraw.message_identifier,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
         ]
 
@@ -2055,7 +2054,7 @@ def handle_receive_withdraw_expired(
         send_processed = SendProcessed(
             recipient=channel_state.partner_state.address,
             message_identifier=withdraw_expired.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2094,7 +2093,7 @@ def handle_refundtransfer(
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
             message_identifier=refund.transfer.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2131,7 +2130,7 @@ def handle_receive_lock_expired(
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
             message_identifier=state_change.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2171,7 +2170,7 @@ def handle_receive_lockedtransfer(
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
             message_identifier=mediated_transfer.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
     else:
@@ -2182,12 +2181,6 @@ def handle_receive_lockedtransfer(
         events = [invalid_locked]
 
     return is_valid, events, msg
-
-
-def handle_receive_refundtransfercancelroute(
-    channel_state: NettingChannelState, refund_transfer: LockedTransferSignedState
-) -> EventsOrError:
-    return handle_receive_lockedtransfer(channel_state, refund_transfer)
 
 
 def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
@@ -2208,7 +2201,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
             message_identifier=unlock.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events: List[Event] = [send_processed]
     else:
@@ -2358,6 +2351,7 @@ def update_fee_schedule_after_balance_change(
     )
 
     channel_state.fee_schedule = FeeScheduleState(
+        cap_fees=channel_state.fee_schedule.cap_fees,
         flat=channel_state.fee_schedule.flat,
         proportional=channel_state.fee_schedule.proportional,
         imbalance_penalty=imbalance_penalty,

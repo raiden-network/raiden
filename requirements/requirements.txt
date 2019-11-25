@@ -38,10 +38,10 @@ itsdangerous==1.1.0       # via flask
 jinja2==2.10.1            # via flask
 lru-dict==1.1.6           # via web3
 markupsafe==1.1.1         # via jinja2
-marshmallow-dataclass==6.0.0rc4
+marshmallow-dataclass==6.0.0
 marshmallow-enum==1.5.1
 marshmallow-polyfield==5.7
-marshmallow==3.0.0rc8
+marshmallow==3.2.2
 matrix-client==0.3.2
 mirakuru==1.1.0
 mypy-extensions==0.4.1    # via raiden-contracts, typing-inspect
@@ -60,8 +60,8 @@ pycryptodome==3.8.2       # via eth-hash, eth-keyfile
 pysha3==1.0.2
 pytoml==0.1.20
 pytz==2019.1              # via flask-restful
-raiden-contracts==0.32.0
-raiden-webui==0.10.0
+raiden-contracts==0.33.3
+raiden-webui==0.10.1
 requests==2.22.0
 rlp==1.1.0                # via eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via py-geth, py-solc
@@ -80,4 +80,4 @@ websockets==6.0           # via web3
 werkzeug==0.15.4          # via flask
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.2.0        # via ipython
+# setuptools==41.6.0        # via ipython

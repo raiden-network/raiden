@@ -2,6 +2,16 @@
 Changelog
 =========
 
+* :feature:`5050` Raiden's argument --debug-logfile-name has been renamed to --debug-logfile-path to better reflect the argument's function.
+* :bug:`5050` Raiden now works on OSX Catalina. Debug logfile is no longer written in the current directory.
+* :feature:`5278` Always use private rooms in the matrix transport.
+* :feature:`5217` Fully support infura as an underlying ethereum rpc node.
+* :bug:`5064` Display a user-friendly error message when the PFS info request fails.
+* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
+* :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
+* :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
+* :feature:`-` Update WebUI to version 0.10.1 https://github.com/raiden-network/webui/releases/tag/v0.10.1
+
 * :release:`0.200.0-rc1 <2019-08-12>`
 * :feature:`4905` Added API parameter to the PATCH channel endpoint to update channel's reveal timeout.
 * :feature:`-` The lowest supported geth version is now 1.8.21.

@@ -1,18 +1,27 @@
 import random
+from pathlib import Path
 
+import marshmallow
 import pytest
 
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.fields import (
+    AddressField,
     BytesField,
+    IntegerToStringField,
     OptionalIntegerToStringField,
     QueueIdentifierField,
 )
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SerializedSQLiteStorage
 from raiden.tests.utils import factories
-from raiden.transfer.events import SendWithdrawRequest
+from raiden.transfer.events import (
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.state_change import ActionInitChain
+from raiden.utils.typing import BlockExpiration, BlockNumber, ChainID, Nonce, WithdrawAmount
 
 
 def assert_roundtrip(field, value):
@@ -39,8 +48,20 @@ def test_queue_identifier_field_invalid_inputs(queue_identifier):
     # TODO check for address and chain/channel id validity in QueueIdentifier too, add tests here
 
     for string in (wrong_delimiter,):
-        with pytest.raises(ValueError):
+        with pytest.raises(marshmallow.exceptions.ValidationError):
             QueueIdentifierField()._deserialize(string, None, None)
+
+
+def test_deserialize_raises_validation_error_on_dict():
+    for field in [
+        IntegerToStringField(),
+        OptionalIntegerToStringField(),
+        BytesField(),
+        AddressField(),
+        QueueIdentifierField(),
+    ]:
+        with pytest.raises(marshmallow.exceptions.ValidationError):
+            field._deserialize({}, None, None)
 
 
 def test_optional_integer_to_string_field_roundtrip():
@@ -57,7 +78,7 @@ def test_bytes_field_roundtrip():
 
 
 def test_events_loaded_from_storage_should_deserialize(tmp_path):
-    filename = f"{tmp_path}/v{RAIDEN_DB_VERSION}_log.db"
+    filename = Path(f"{tmp_path}/v{RAIDEN_DB_VERSION}_log.db")
     storage = SerializedSQLiteStorage(filename, serializer=JSONSerializer())
 
     # Satisfy the foreign-key constraint for state change ID
@@ -65,10 +86,10 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
         [
             ActionInitChain(
                 pseudo_random_generator=random.Random(),
-                block_number=1,
-                block_hash=b"",
+                block_number=BlockNumber(1),
+                block_hash=factories.make_block_hash(),
                 our_address=factories.make_address(),
-                chain_id=1,
+                chain_id=ChainID(1),
             )
         ]
     )
@@ -80,12 +101,46 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
         recipient=recipient,
         canonical_identifier=canonical_identifier,
         message_identifier=factories.make_message_identifier(),
-        total_withdraw=1,
+        total_withdraw=WithdrawAmount(1),
         participant=participant,
-        expiration=10,
-        nonce=15,
+        expiration=BlockExpiration(10),
+        nonce=Nonce(15),
     )
     storage.write_events([(ids[0], event)])
 
     stored_events = storage.get_events()
     assert stored_events[0] == event
+
+
+def test_restore_queueids_to_queues(chain_state, netting_channel_state):
+    """ Test that withdraw messages are restorable if they exist in
+    chain_state.queueids_to_queues.
+    """
+    recipient = netting_channel_state.partner_state.address
+
+    queue_identifier = QueueIdentifier(
+        recipient=recipient, canonical_identifier=netting_channel_state.canonical_identifier
+    )
+
+    msg_args = dict(
+        recipient=recipient,
+        canonical_identifier=netting_channel_state.canonical_identifier,
+        message_identifier=factories.make_message_identifier(),
+        total_withdraw=WithdrawAmount(1),
+        participant=recipient,
+        expiration=BlockExpiration(10),
+        nonce=Nonce(15),
+    )
+    messages = [
+        SendWithdrawRequest(**msg_args),
+        SendWithdrawConfirmation(**msg_args),
+        SendWithdrawExpired(**msg_args),
+    ]
+
+    chain_state.queueids_to_queues[queue_identifier] = messages
+
+    serialized_chain_state = JSONSerializer.serialize(chain_state)
+
+    deserialized_chain_state = JSONSerializer.deserialize(serialized_chain_state)
+
+    assert chain_state == deserialized_chain_state

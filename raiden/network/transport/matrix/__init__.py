@@ -2,8 +2,8 @@ from raiden.network.transport.matrix.transport import MatrixTransport, _RetryQue
 from raiden.network.transport.matrix.utils import (  # noqa
     AddressReachability,
     UserPresence,
-    join_global_room,
-    login_or_register,
+    join_broadcast_room,
+    login,
     make_client,
     make_room_alias,
     sort_servers_closest,

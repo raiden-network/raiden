@@ -3,24 +3,11 @@ from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 
-import signal  # isort:skip # noqa
-import pytest  # isort:skip
-
-# Execute these before the other imports because rewrites can't work after the
-# module has been imported.
-pytest.register_assert_rewrite("raiden.tests.utils.eth_node")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.factories")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.messages")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.network")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.protocol")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.smoketest")  # isort:skip
-pytest.register_assert_rewrite("raiden.tests.utils.transfer")  # isort:skip
-
 import contextlib
 import datetime
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -28,24 +15,37 @@ import time
 from pathlib import Path
 
 import gevent
+import pytest
 import structlog
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
 
-from raiden.constants import (
+# Execute these before the raiden imports because rewrites can't work after the
+# module has been imported.
+pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
+pytest.register_assert_rewrite("raiden.tests.utils.factories")
+pytest.register_assert_rewrite("raiden.tests.utils.messages")
+pytest.register_assert_rewrite("raiden.tests.utils.network")
+pytest.register_assert_rewrite("raiden.tests.utils.protocol")
+pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")
+pytest.register_assert_rewrite("raiden.tests.utils.smoketest")
+pytest.register_assert_rewrite("raiden.tests.utils.transfer")
+
+from raiden.constants import (  # isort:skip
     HIGHEST_SUPPORTED_GETH_VERSION,
     HIGHEST_SUPPORTED_PARITY_VERSION,
     LOWEST_SUPPORTED_GETH_VERSION,
     LOWEST_SUPPORTED_PARITY_VERSION,
     EthClient,
 )
-from raiden.log_config import configure_logging
-from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
-from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-from raiden.tests.utils.transport import make_requests_insecure
-from raiden.utils.cli import LogLevelConfigType
-from raiden.utils.debugging import enable_gevent_monitoring_signal
-from raiden.utils.ethereum_clients import is_supported_client
+from raiden.log_config import configure_logging  # isort:skip
+from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403  # isort:skip
+from raiden.tests.fixtures.variables import *  # noqa: F401,F403  # isort:skip
+from raiden.tests.utils.transport import make_requests_insecure  # isort:skip
+from raiden.utils.cli import LogLevelConfigType  # isort:skip
+from raiden.utils.debugging import enable_gevent_monitoring_signal  # isort:skip
+from raiden.utils.ethereum_clients import is_supported_client  # isort:skip
+
 
 log = structlog.get_logger()
 
@@ -261,7 +261,7 @@ def logging_level(request, logs_storage):
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file,
         cache_logger_on_first_use=False,
-        debug_log_file_name=debug_path,
+        debug_log_file_path=debug_path,
     )
     log.info("Running test", nodeid=request.node.nodeid)
 
@@ -497,54 +497,6 @@ def pytest_runtest_teardown(item):
 
     signal.setitimer(signal.ITIMER_REAL, 0)
     signal.signal(signal.SIGALRM, signal.SIG_DFL)
-
-
-def pytest_generate_tests(metafunc):
-    fixtures = metafunc.fixturenames
-
-    if "transport" in fixtures:
-        parmeterize_private_rooms = True
-        transport_and_privacy = list()
-        number_of_transports = list()
-
-        # Filter existing parametrization which is already done in the test
-        for mark in metafunc.definition.own_markers:
-            if mark.name == "parametrize":
-                # Check if 'private_rooms' gets parameterized
-                if "private_rooms" in mark.args[0]:
-                    parmeterize_private_rooms = False
-                # Check if more than one transport is used
-                if "number_of_transports" == mark.args[0]:
-                    number_of_transports = mark.args[1]
-
-        if "public_and_private_rooms" in fixtures:
-            if number_of_transports:
-                transport_and_privacy.extend(
-                    [
-                        ("matrix", [False for _ in range(number_of_transports[0])]),
-                        ("matrix", [True for _ in range(number_of_transports[0])]),
-                    ]
-                )
-            else:
-                transport_and_privacy.extend([("matrix", False), ("matrix", True)])
-        else:
-            if number_of_transports:
-                transport_and_privacy.extend(
-                    [("matrix", [False for _ in range(number_of_transports[0])])]
-                )
-            else:
-                transport_and_privacy.append(("matrix", False))
-
-        if not parmeterize_private_rooms or "private_rooms" not in fixtures:
-            # If the test does not expect the private_rooms parameter or parametrizes
-            # `private_rooms` itself, only give he transport values
-            metafunc.parametrize(
-                "transport",
-                list(set(transport_type for transport_type, _ in transport_and_privacy)),
-            )
-
-        else:
-            metafunc.parametrize("transport,private_rooms", transport_and_privacy)
 
 
 if sys.platform == "darwin":

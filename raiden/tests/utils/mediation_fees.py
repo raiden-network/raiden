@@ -1,36 +1,21 @@
-from itertools import islice
+from typing import Tuple
 
 from raiden.exceptions import UndefinedMediationFee
-from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer.channel import get_balance
 from raiden.transfer.mediated_transfer.initiator import calculate_safe_amount_with_fee
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.mediated_transfer.mediator import find_intersection
 from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     Balance,
     FeeAmount,
-    Iterable,
     List,
     NamedTuple,
     Optional,
     PaymentAmount,
     PaymentWithFeeAmount,
-    Sequence,
+    TokenAmount,
 )
-
-
-def window(seq: Sequence, n: int = 2) -> Iterable[tuple]:
-    """Returns a sliding window (of width n) over data from the iterable
-    s -> (s0,s1,...s[n-1]), (s1,s2,...,sn), ...
-    See https://stackoverflow.com/a/6822773/114926
-    """
-    remaining_elements = iter(seq)
-    result = tuple(islice(remaining_elements, n))
-    if len(result) == n:
-        yield result
-    for elem in remaining_elements:
-        result = result[1:] + (elem,)
-        yield result
 
 
 def imbalance_fee_receiver(
@@ -69,87 +54,101 @@ def imbalance_fee_sender(
         raise UndefinedMediationFee()
 
 
-def fee_sender(
-    fee_schedule: FeeScheduleState, balance: Balance, amount: PaymentWithFeeAmount
-) -> FeeAmount:
-    """Returns the mediation fee for this channel when transferring the given amount"""
-    imbalance_fee = imbalance_fee_sender(fee_schedule=fee_schedule, amount=amount, balance=balance)
-    flat_fee = fee_schedule.flat
-    prop_fee = int(round(amount * fee_schedule.proportional / 1e6))
-    return FeeAmount(flat_fee + prop_fee + imbalance_fee)
-
-
-def fee_receiver(
-    fee_schedule: FeeScheduleState,
-    balance: Balance,
-    amount: PaymentWithFeeAmount,
-    iterations: int = 2,
-) -> FeeAmount:
-    """Returns the mediation fee for this channel when receiving the given amount"""
-
-    def fee_in(imbalance_fee: FeeAmount) -> FeeAmount:
-        return FeeAmount(
-            round(
-                (
-                    (amount + fee_schedule.flat + imbalance_fee)
-                    / (1 - fee_schedule.proportional / 1e6)
-                )
-                - amount
-            )
-        )
-
-    imbalance_fee = FeeAmount(0)
-    for _ in range(iterations):
-        imbalance_fee = imbalance_fee_receiver(
-            fee_schedule=fee_schedule,
-            amount=PaymentWithFeeAmount(amount + fee_in(imbalance_fee=imbalance_fee)),
-            balance=balance,
-        )
-
-    return fee_in(imbalance_fee=imbalance_fee)
-
-
 class FeesCalculation(NamedTuple):
     total_amount: PaymentWithFeeAmount
     mediation_fees: List[FeeAmount]
 
+    @property
+    def amount_without_fees(self) -> PaymentAmount:
+        return PaymentAmount(self.total_amount - sum(self.mediation_fees))
 
-def get_initial_payment_for_final_target_amount(
-    final_amount: PaymentAmount, channels: List[NettingChannelState]
+
+def get_amount_with_fees(
+    amount_without_fees: PaymentWithFeeAmount,
+    balance_in: Balance,
+    balance_out: Balance,
+    schedule_in: FeeScheduleState,
+    schedule_out: FeeScheduleState,
+    receivable_amount: TokenAmount,
+) -> Optional[PaymentWithFeeAmount]:
+    """ Return the amount the transfer requires before fees are deducted.
+
+    This function is also used by the PFS. Therefore the parameters should not be Raiden state
+    objects.
+
+    Returns `None` when there is no payable amount_with_fees. Potential reasons:
+    * not enough capacity
+    * amount_without_fees is so low that it does not even cover the mediation fees
+    """
+    assert (
+        schedule_in.cap_fees == schedule_out.cap_fees
+    ), "Both channels must have the same cap_fees setting for the same mediator."
+    try:
+        fee_func = FeeScheduleState.mediation_fee_backwards_func(
+            schedule_in=schedule_in,
+            schedule_out=schedule_out,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            receivable=receivable_amount,
+            amount_without_fees=amount_without_fees,
+            cap_fees=schedule_in.cap_fees,
+        )
+        amount_with_fees = find_intersection(
+            fee_func, lambda i: fee_func.x_list[i] - amount_without_fees
+        )
+    except UndefinedMediationFee:
+        return None
+
+    if amount_with_fees is None:
+        return None
+    if amount_with_fees <= 0:
+        # The node can't cover its mediations fees from the transferred amount.
+        return None
+
+    return PaymentWithFeeAmount(int(round(amount_with_fees)))
+
+
+def get_initial_amount_for_amount_after_fees(
+    amount_after_fees: PaymentAmount,
+    channels: List[Tuple[NettingChannelState, NettingChannelState]],
 ) -> Optional[FeesCalculation]:
     """ Calculates the payment amount including fees to be supplied to the given
-    channel configuration, so that `final_amount` arrived at the target.
+    channel configuration, so that `amount_after_fees` arrives at the target.
 
     Note: The channels have to be from the view of the mediator, so for the case
-        A -> B -> C this should be [B->A, B->C]
+        A -> B -> C this should be [(B->A, B->C)]
     """
-    assert len(channels) >= 1, "Need at least one channel"
-
-    # No fees in direct transfer
-    if len(channels) == 1:
-        return FeesCalculation(total_amount=PaymentWithFeeAmount(final_amount), mediation_fees=[])
+    assert len(channels) >= 1, "Need at least one channel pair"
 
     # Backpropagate fees in mediation scenario
-    total = PaymentWithFeeAmount(final_amount)
+    total = PaymentWithFeeAmount(amount_after_fees)
     fees: List[FeeAmount] = []
     try:
-        for channel_in, channel_out in reversed(list(window(channels, 2))):
+        for channel_in, channel_out in reversed(channels):
             assert isinstance(channel_in, NettingChannelState)
-            fee_schedule_out = channel_out.fee_schedule
             assert isinstance(channel_out, NettingChannelState)
-            fee_schedule_in = channel_in.fee_schedule
-
-            balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
-            fee_out = fee_sender(fee_schedule=fee_schedule_out, balance=balance_out, amount=total)
-
-            total += fee_out  # type: ignore
 
             balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
-            fee_in = fee_receiver(fee_schedule=fee_schedule_in, balance=balance_in, amount=total)
+            balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
+            receivable_amount = TokenAmount(
+                channel_in.our_total_deposit + channel_in.partner_total_deposit - balance_in
+            )
 
-            total += fee_in  # type: ignore
+            before_fees = get_amount_with_fees(
+                amount_without_fees=total,
+                balance_in=balance_in,
+                balance_out=balance_out,
+                schedule_in=channel_in.fee_schedule,
+                schedule_out=channel_out.fee_schedule,
+                receivable_amount=receivable_amount,
+            )
 
-            fees.append(FeeAmount(fee_out + fee_in))
+            if before_fees is None:
+                return None
+
+            fee = FeeAmount(before_fees - total)
+            total = PaymentWithFeeAmount(total + fee)
+            fees.append(fee)
     except UndefinedMediationFee:
         return None
 
@@ -170,7 +169,8 @@ class PaymentAmountCalculation(NamedTuple):
 
 
 def get_amount_for_sending_before_and_after_fees(
-    amount_to_leave_initiator: PaymentAmount, channels: List[NettingChannelState]
+    amount_to_leave_initiator: PaymentAmount,
+    channels: List[Tuple[NettingChannelState, NettingChannelState]],
 ) -> Optional[PaymentAmountCalculation]:
     """
     Calculates the amount needed to be sent by the initiator (before fees) in
@@ -180,8 +180,8 @@ def get_amount_for_sending_before_and_after_fees(
     """
     amount_at_target = amount_to_leave_initiator
     while amount_at_target != 0:
-        calculation = get_initial_payment_for_final_target_amount(
-            final_amount=amount_at_target, channels=channels
+        calculation = get_initial_amount_for_amount_after_fees(
+            amount_after_fees=amount_at_target, channels=channels
         )
         if calculation is None:
             amount_at_target = PaymentAmount(amount_at_target - 1)
@@ -189,9 +189,7 @@ def get_amount_for_sending_before_and_after_fees(
 
         total_amount_with_mediator_fees = calculation.total_amount
         mediation_fees = sum(calculation.mediation_fees)
-        estimated_fee = max(
-            mediation_fees, round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_at_target)
-        )
+        estimated_fee = mediation_fees
         estimated_total_amount_at_initiator = calculate_safe_amount_with_fee(
             payment_amount=amount_at_target, estimated_fee=FeeAmount(estimated_fee)
         )

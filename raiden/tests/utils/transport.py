@@ -5,19 +5,24 @@ import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
+from itertools import chain
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import Callable, Iterator, List, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
+from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
+from raiden.network.transport.matrix.client import GMatrixClient
+from raiden.tests.utils.factories import make_signer
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port
+from raiden.utils.typing import Iterable, Port, Signature
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -27,11 +32,56 @@ SynapseConfig = Tuple[str, Path]
 SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
+def new_client(server: "ParsedURL") -> GMatrixClient:
+    server_name = server.netloc
+
+    signer = make_signer()
+    username = str(to_normalized_address(signer.address))
+    password = encode_hex(signer.sign(server_name.encode()))
+
+    client = GMatrixClient(server)
+    client.login(username, password, sync=False)
+
+    return client
+
+
+def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
+    client = new_client(servers[0])
+    room = client.create_room(alias=broadcast_room_name, is_public=True)
+
+    for server in servers[1:]:
+        client = new_client(server)
+
+        # A user must join the room to create the room in the federated server
+        room = client.join_room(room.aliases[0])
+        server_name = server.netloc
+        alias = f"#{broadcast_room_name}:{server_name}"
+
+        msg = "Setting up the room alias must not fail, otherwise the test can not run."
+        assert room.add_room_alias(alias), msg
+
+        room_state = client.api.get_room_state(room.room_id)
+        all_aliases = chain.from_iterable(
+            event["content"]["aliases"]
+            for event in room_state
+            if event["type"] == "m.room.aliases"
+        )
+
+        msg = "The new alias must be added, otherwise the Raiden node won't be able to find it."
+        assert alias in all_aliases, msg
+
+        msg = (
+            "Leaving the room failed. This is done otherwise there would be "
+            "a ghost user in the broadcast room"
+        )
+        assert room.leave(), msg
+
+
 class ParsedURL(str):
     """ A string subclass that allows direct access to the split components of a URL """
 
     def __new__(cls, *args, **kwargs):
-        new = str.__new__(cls, *args, **kwargs)
+        new = str.__new__(cls, *args, **kwargs)  # type: ignore
         new._parsed = urlsplit(new)
         return new
 
@@ -74,7 +124,7 @@ class EthAuthProvider:
             )
             defer.returnValue(False)
 
-        signature = unhexlify(password[2:])
+        signature = Signature(unhexlify(password[2:]))
 
         user_match = self._user_re.match(user_id)
         if not user_match or user_match.group(2) != self.hs_hostname:
@@ -124,18 +174,23 @@ class NoTLSFederationMonkeyPatchProvider:
     __version__ = "0.1"
 
     class NoTLSFactory:
-        def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
+        def __new__(
+            cls, *args: List[Any], **kwargs: Dict[str, Any]  # pylint: disable=unused-argument
+        ):
             return None
 
-    def __init__(self, config, account_handler):  # pylint: disable=unused-argument
+    def __init__(  # pylint: disable=unused-argument
+        self, config: Dict[str, Any], account_handler: AuthHandler
+    ) -> None:
         pass
 
-    @defer.inlineCallbacks
-    def check_password(self, user_id, password):  # pylint: disable=unused-argument,no-self-use
-        defer.returnValue(False)
+    def check_password(  # pylint: disable=unused-argument,no-self-use
+        self, user_id: str, password: str
+    ) -> bool:
+        return False
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Dict[str, Any]) -> Dict[str, Any]:
         from synapse.crypto import context_factory
 
         context_factory.ClientTLSOptionsFactory = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
@@ -150,7 +205,7 @@ def make_requests_insecure():
     """
     # Disable verification in requests by replacing the 'verify'
     # attribute with non-writable property that always returns `False`
-    requests.Session.verify = property(lambda self: False, lambda self, val: None)
+    requests.Session.verify = property(lambda self: False, lambda self, val: None)  # type: ignore
 
 
 @contextmanager
@@ -199,6 +254,7 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
 @contextmanager
 def matrix_server_starter(
     free_port_generator: Iterable[Port],
+    broadcast_rooms_aliases: Iterable[str],
     *,
     count: int = 1,
     config_generator: SynapseConfigGenerator = None,
@@ -272,5 +328,8 @@ def matrix_server_starter(
             # different, however the library doesn't support it. So here we
             # must poke at the private member and overwrite it.
             executor._timeout = teardown_timeout
+
+        for broadcast_room_alias in broadcast_rooms_aliases:
+            setup_broadcast_room(server_urls, broadcast_room_alias)
 
         yield server_urls

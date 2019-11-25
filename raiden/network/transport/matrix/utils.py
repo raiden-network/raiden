@@ -4,8 +4,7 @@ from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
 from operator import attrgetter, itemgetter
-from random import Random
-from typing import Any, Callable, Dict, Iterable, KeysView, List, Optional, Sequence, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -24,9 +23,19 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from structlog._config import BoundLoggerLazyProxy
 
-from raiden.exceptions import InvalidSignature, SerializationError, TransportError
+from raiden.exceptions import (
+    InvalidSignature,
+    RaidenUnrecoverableError,
+    SerializationError,
+    TransportError,
+)
 from raiden.messages.abstract import Message, SignedMessage
-from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.network.transport.matrix.client import (
+    GMatrixClient,
+    Room,
+    User,
+    node_address_from_userid,
+)
 from raiden.network.utils import get_http_rtt
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
@@ -64,6 +73,54 @@ USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
 }
 
 
+def address_from_userid(user_id: str) -> Optional[Address]:
+    match = USERID_RE.match(user_id)
+    if not match:
+        return None
+
+    encoded_address = match.group(1)
+    address: Address = to_canonical_address(encoded_address)
+
+    return address
+
+
+class DisplayNameCache:
+    def __init__(self) -> None:
+        self._userid_to_displayname: Dict[str, str] = dict()
+
+    def warm_users(self, users: List[User]) -> None:
+        for user in users:
+            user_id = user.user_id
+            cached_displayname = self._userid_to_displayname.get(user_id)
+
+            if cached_displayname is None:
+                # The cache is cold, query and warm it.
+                if not user.displayname:
+                    # Handles an edge case where the Matrix federation does not
+                    # have the profile for a given userid. The server response
+                    # is roughly:
+                    #
+                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"}
+                    try:
+                        user.get_display_name()
+                    except MatrixRequestError:
+                        return
+
+                if user.displayname is not None:
+                    self._userid_to_displayname[user.user_id] = user.displayname
+
+            elif user.displayname is None:
+                user.displayname = cached_displayname
+
+            elif user.displayname != cached_displayname:
+                log.debug(
+                    "User displayname changed!",
+                    cached=cached_displayname,
+                    current=user.displayname,
+                )
+                self._userid_to_displayname[user.user_id] = user.displayname
+
+
 class UserAddressManager:
     """ Matrix user <-> eth address mapping and user / address reachability helper.
 
@@ -87,13 +144,13 @@ class UserAddressManager:
     def __init__(
         self,
         client: GMatrixClient,
-        get_user_callable: Callable[[Union[User, str]], User],
+        displayname_cache: DisplayNameCache,
         address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
         _log_context: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._client = client
-        self._get_user = get_user_callable
+        self._displayname_cache = displayname_cache
         self._address_reachability_changed_callback = address_reachability_changed_callback
         self._user_presence_changed_callback = user_presence_changed_callback
         self._stop_event = Event()
@@ -122,27 +179,29 @@ class UserAddressManager:
         self._reset_state()
 
     @property
-    def known_addresses(self) -> KeysView[Address]:
+    def known_addresses(self) -> Set[Address]:
         """ Return all addresses we keep track of """
-        return self._address_to_userids.keys()
+        # This must return a copy of the current keys, because the container
+        # may be modified while these values are used. Issue: #5240
+        return set(self._address_to_userids)
 
     def is_address_known(self, address: Address) -> bool:
         """ Is the given ``address`` reachability being monitored? """
         return address in self._address_to_userids
 
-    def add_address(self, address: Address):
+    def add_address(self, address: Address) -> None:
         """ Add ``address`` to the known addresses that are being observed for reachability. """
         # Since _address_to_userids is a defaultdict accessing the key creates the entry
         _ = self._address_to_userids[address]
 
-    def add_userid_for_address(self, address: Address, user_id: str):
+    def add_userid_for_address(self, address: Address, user_id: str) -> None:
         """ Add a ``user_id`` for the given ``address``.
 
         Implicitly adds the address if it was unknown before.
         """
         self._address_to_userids[address].add(user_id)
 
-    def add_userids_for_address(self, address: Address, user_ids: Iterable[str]):
+    def add_userids_for_address(self, address: Address, user_ids: Iterable[str]) -> None:
         """ Add multiple ``user_ids`` for the given ``address``.
 
         Implicitly adds any addresses if they were unknown before.
@@ -163,7 +222,7 @@ class UserAddressManager:
         """ Return the current reachability state for ``address``. """
         return self._address_to_reachability.get(address, AddressReachability.UNKNOWN)
 
-    def force_user_presence(self, user: User, presence: UserPresence):
+    def force_user_presence(self, user: User, presence: UserPresence) -> None:
         """ Forcibly set the ``user`` presence to ``presence``.
 
         This method is only provided to cover an edge case in our use of the Matrix protocol and
@@ -171,7 +230,7 @@ class UserAddressManager:
         """
         self._userid_to_presence[user.user_id] = presence
 
-    def populate_userids_for_address(self, address: Address, force: bool = False):
+    def populate_userids_for_address(self, address: Address, force: bool = False) -> None:
         """ Populate known user ids for the given ``address`` from the server directory.
 
         If ``force`` is ``True`` perform the directory search even if there
@@ -187,7 +246,7 @@ class UserAddressManager:
                 ),
             )
 
-    def refresh_address_presence(self, address: Address):
+    def track_address_presence(self, address: Address, user_ids: Set[str]) -> None:
         """
         Update synthesized address presence state from cached user presence states.
 
@@ -196,12 +255,30 @@ class UserAddressManager:
         This method is only provided to cover an edge case in our use of the Matrix protocol and
         should **not** generally be used.
         """
-        composite_presence = {
-            self._fetch_user_presence(uid) for uid in self._address_to_userids[address]
-        }
+        self.add_userids_for_address(address, user_ids)
+        userids_to_presence = {}
+        for uid in user_ids:
+            presence = self._fetch_user_presence(uid)
+            userids_to_presence[uid] = presence
+            self._set_user_presence(uid, presence)
 
-        # Iterate over UserPresence in definition order (most to least online) and pick
-        # first matching state
+        log.debug(
+            "Fetched user presences",
+            address=to_checksum_address(address),
+            userids_to_presence=userids_to_presence,
+        )
+
+        self._maybe_address_reachability_changed(address)
+
+    def _maybe_address_reachability_changed(self, address: Address) -> None:
+        # A Raiden node may have multiple Matrix users, this happens when
+        # Raiden roams from a Matrix server to another. This loop goes over all
+        # these users and uses the "best" presence. IOW, if there is a single
+        # Matrix user that is reachable, then the Raiden node is considered
+        # reachable.
+        userids = self._address_to_userids[address].copy()
+        composite_presence = {self._userid_to_presence.get(uid) for uid in userids}
+
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
             if presence in composite_presence:
@@ -212,18 +289,19 @@ class UserAddressManager:
 
         prev_addresss_reachability = self.get_address_reachability(address)
         if new_address_reachability == prev_addresss_reachability:
-            # Cached address reachability matches new state, do nothing
             return
+
         self.log.debug(
             "Changing address reachability state",
             address=to_checksum_address(address),
             prev_state=prev_addresss_reachability,
             state=new_address_reachability,
         )
+
         self._address_to_reachability[address] = new_address_reachability
         self._address_reachability_changed_callback(address, new_address_reachability)
 
-    def _presence_listener(self, event: Dict[str, Any]):
+    def _presence_listener(self, event: Dict[str, Any]) -> None:
         """
         Update cached user presence state from Matrix presence events.
 
@@ -232,57 +310,43 @@ class UserAddressManager:
         """
         if self._stop_event.ready():
             return
+
         user_id = event["sender"]
+
         if event["type"] != "m.presence" or user_id == self._user_id:
             return
 
-        user = self._get_user(user_id)
-        user.displayname = event["content"].get("displayname") or user.displayname
-        address = self._validate_userid_signature(user)
-        if not address:
-            # Malformed address - skip
+        address = address_from_userid(user_id)
+
+        # Not a user we've whitelisted, skip. This needs to be on the top of
+        # the function so that we don't request they displayname of users that
+        # are not important for the node. The presence is updated for every
+        # user on the first sync, since every Raiden node is a member of a
+        # broadcast room. This can result in thousands requests to the Matrix
+        # server in the first sync which will lead to slow startup times and
+        # presence problems.
+        if address is None or not self.is_address_known(address):
             return
 
-        # not a user we've whitelisted, skip
-        if not self.is_address_known(address):
+        user = self._user_from_id(user_id, event["content"].get("displayname"))
+
+        if not user:
             return
+
+        address = self._validate_userid_signature(user)
+        if not address:
+            return
+
+        self._displayname_cache.warm_users([user])
+
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
-        if new_state == self.get_userid_presence(user_id):
-            # Cached presence state matches, no action required
-            return
 
-        self.log.debug(
-            "Changing user presence state",
-            user_id=user_id,
-            prev_state=self._userid_to_presence.get(user_id),
-            state=new_state,
-        )
-        self._userid_to_presence[user_id] = new_state
-        self.refresh_address_presence(address)
+        self._set_user_presence(user_id, new_state)
+        self._maybe_address_reachability_changed(address)
 
-        if self._user_presence_changed_callback:
-            self._user_presence_changed_callback(user, new_state)
-
-    def log_status_message(self):
-        while not self._stop_event.ready():
-            addresses_uids_presence = {
-                to_checksum_address(address): {
-                    user_id: self.get_userid_presence(user_id).value
-                    for user_id in self.get_userids_for_address(address)
-                }
-                for address in self.known_addresses
-            }
-
-            log.debug(
-                "Matrix address manager status",
-                addresses_uids_and_presence=addresses_uids_presence,
-                current_user=self._user_id,
-            )
-            self._stop_event.wait(30)
-
-    def _reset_state(self):
+    def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
@@ -293,14 +357,43 @@ class UserAddressManager:
         assert user_id, f"{self.__class__.__name__}._user_id accessed before client login"
         return user_id
 
+    def _user_from_id(self, user_id: str, display_name: Optional[str] = None) -> Optional[User]:
+        try:
+            return User(self._client.api, user_id, display_name)
+        except ValueError:
+            log.error("Matrix server returned an invalid user_id.")
+        return None
+
     def _fetch_user_presence(self, user_id: str) -> UserPresence:
-        if user_id not in self._userid_to_presence:
-            try:
-                presence = UserPresence(self._client.get_user_presence(user_id))
-            except MatrixRequestError:
-                presence = UserPresence.UNKNOWN
+        try:
+            presence = UserPresence(self._client.get_user_presence(user_id))
+        except MatrixRequestError:
+            # The following exception will be raised if the local user and the
+            # target user do not have a shared room:
+            #
+            #   MatrixRequestError: 403:
+            #   {"errcode":"M_FORBIDDEN","error":"You are not allowed to see their presence."}
+            presence = UserPresence.UNKNOWN
+            log.exception("Could not fetch user presence")
+
+        return presence
+
+    def _set_user_presence(self, user_id: str, presence: UserPresence) -> None:
+        user = self._user_from_id(user_id)
+        if not user:
+            return
+
+        old_presence = self._userid_to_presence.get(user_id)
+        if old_presence != presence:
             self._userid_to_presence[user_id] = presence
-        return self._userid_to_presence[user_id]
+            self.log.debug(
+                "Changing user presence state",
+                user_id=user_id,
+                prev_state=old_presence,
+                state=presence,
+            )
+            if self._user_presence_changed_callback:
+                self._user_presence_changed_callback(user, presence)
 
     @staticmethod
     def _validate_userid_signature(user: User) -> Optional[Address]:
@@ -308,188 +401,171 @@ class UserAddressManager:
 
     @property
     def log(self) -> BoundLoggerLazyProxy:
-        if not self._log:
-            if not hasattr(self._client, "user_id"):
-                return log
-            self._log = log.bind(
-                **{
-                    "current_user": self._user_id,
-                    "node": to_checksum_address(self._user_id.split(":", 1)[0][1:]),
-                    **(self._log_context or {}),
-                }
-            )
-        return self._log
+        if self._log:
+            return self._log
+
+        context = self._log_context or {}
+
+        # Only cache the logger once the user_id becomes available
+        if hasattr(self._client, "user_id"):
+            context["current_user"] = self._user_id
+            context["node"] = node_address_from_userid(self._user_id)
+
+            bound_log = log.bind(**context)
+            self._log = bound_log
+            return bound_log
+
+        # Apply  the `_log_context` even if the user_id is not yet available
+        return log.bind(**context)
 
 
-def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
-    """Join or create a global public room with given name
+def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
+    """ Join the public broadcast through the alias `broadcast_room_alias`.
 
-    First, try to join room on own server (client-configured one)
-    If can't, try to join on each one of servers, and if able, alias it in our server
-    If still can't, create a public room with name in our server
-
-    Params:
-        client: matrix-python-sdk client instance
-        name: name or alias of the room (without #-prefix or server name suffix)
-        servers: optional: sequence of known/available servers to try to find the room in
-    Returns:
-        matrix's Room instance linked to client
+    When a new Matrix instance is deployed the broadcast room _must_ be created
+    and aliased, Raiden will not use a server that does not have the discovery
+    room properly set. Requiring the setup of the broadcast alias as part of
+    the server setup fixes a serious race condition where multiple discovery
+    rooms are created, which would break the presence checking.
+    See: https://github.com/raiden-network/raiden-transport/issues/46
     """
-    our_server_name = urlparse(client.api.base_url).netloc
-    assert our_server_name, "Invalid client's homeserver url"
-    servers = [our_server_name] + [  # client's own server first
-        urlparse(s).netloc
-        for s in servers
-        if urlparse(s).netloc not in {None, "", our_server_name}
-    ]
-
-    our_server_global_room_alias_full = f"#{name}:{servers[0]}"
-
-    # try joining a global room on any of the available servers, starting with ours
-    for server in servers:
-        global_room_alias_full = f"#{name}:{server}"
-        try:
-            global_room = client.join_room(global_room_alias_full)
-        except MatrixRequestError as ex:
-            if ex.code not in (403, 404, 500):
-                raise
-            log.debug(
-                "Could not join global room", room_alias_full=global_room_alias_full, _exception=ex
-            )
-        else:
-            if our_server_global_room_alias_full not in global_room.aliases:
-                # we managed to join a global room, but it's not aliased in our server
-                global_room.add_room_alias(our_server_global_room_alias_full)
-                global_room.aliases.append(our_server_global_room_alias_full)
-            break
-    else:
-        log.debug("Could not join any global room, trying to create one")
-        for _ in range(JOIN_RETRIES):
-            try:
-                global_room = client.create_room(name, is_public=True)
-            except MatrixRequestError as ex:
-                if ex.code not in (400, 409):
-                    raise
-                try:
-                    global_room = client.join_room(our_server_global_room_alias_full)
-                except MatrixRequestError as ex:
-                    if ex.code not in (404, 403):
-                        raise
-                else:
-                    break
-            else:
-                break
-        else:
-            raise TransportError("Could neither join nor create a global room")
-    log.debug("Joined global room", room=global_room)
-    return global_room
+    try:
+        return client.join_room(broadcast_room_alias)
+    except MatrixRequestError:
+        raise RaidenUnrecoverableError(
+            f"Could not join broadcast room {broadcast_room_alias}. "
+            f"Make sure the Matrix server you're trying to connect to uses the recommended server "
+            f"setup, esp. the server-side broadcast room creation. "
+            f"See https://github.com/raiden-network/raiden-transport."
+        )
 
 
-def login_or_register(
-    client: GMatrixClient, signer: Signer, prev_user_id: str = None, prev_access_token: str = None
-) -> User:
-    """Login to a Raiden matrix server with password and displayname proof-of-keys
+def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
+    """Login for the first time.
 
-    - Username is in the format: 0x<eth_address>(.<suffix>)?, where the suffix is not required,
-    but a deterministic (per-account) random 8-hex string to prevent DoS by other users registering
-    our address
-    - Password is the signature of the server hostname, verified by the server to prevent account
-    creation spam
-    - Displayname currently is the signature of the whole user_id (including homeserver), to be
-    verified by other peers. May include in the future other metadata such as protocol version
+    This relies on the Matrix server having the `eth_auth_provider` plugin
+    installed, the plugin will automatically create the user on the first
+    login. The plugin requires the password to be the signature of the server
+    hostname, verified by the server to prevent account creation spam.
 
-    Params:
-        client: GMatrixClient instance configured with desired homeserver
-        signer: raiden.utils.signer.Signer instance for signing password and displayname
-        prev_user_id: (optional) previously persisted client.user_id. Must match signer's account
-        prev_access_token: (optional) previously persisted client.access_token for prev_user_id
-    Returns:
-        Own matrix_client.User
+    Displayname is the signature of the whole user_id (including homeserver),
+    to be verified by other peers and prevent impersonation attacks.
     """
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
-    base_username = str(to_normalized_address(signer.address))
-    _match_user = re.match(
-        f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
-    )
-    if _match_user:  # same user as before
-        assert prev_user_id is not None
-        log.debug("Trying previous user login", user_id=prev_user_id)
-        client.set_access_token(user_id=prev_user_id, token=prev_access_token)
-
-        try:
-            client.api.get_devices()
-        except MatrixRequestError as ex:
-            log.debug(
-                "Couldn't use previous login credentials, discarding",
-                prev_user_id=prev_user_id,
-                _exception=ex,
-            )
-        else:
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()  # initial_sync
-            client.set_sync_limit(prev_sync_limit)
-            log.debug("Success. Valid previous credentials", user_id=prev_user_id)
-            return client.get_user(client.user_id)
-    elif prev_user_id:
-        log.debug(
-            "Different server or account, discarding",
-            prev_user_id=prev_user_id,
-            current_address=base_username,
-            current_server=server_name,
-        )
-
-    # password is signed server address
+    # The plugin `eth_auth_provider` expects a signature of the server_name as
+    # the user's password.
+    #
+    # For a honest matrix server:
+    #
+    # - This prevents impersonation attacks / name squatting, since the plugin
+    # will validate the username by recovering the adddress from the signature
+    # and check the recovered address and the username matches.
+    #
+    # For a badly configured server (one without the plugin):
+    #
+    # - An attacker can front run and register the username before the honest
+    # user:
+    #    - Because the attacker cannot guess the correct password, when the
+    #    honest node tries to login it will fail, which tells us the server is
+    #    improperly configured and should be blacklisted.
+    #    - The attacker cannot forge a signature to use as a display name, so
+    #    the partner node can tell there is a malicious node trying to
+    #    eavesdrop the conversation and that matrix server should be
+    #    blacklisted.
+    # - The username is available, but because the plugin is not installed the
+    # login will fail since the user is not registered. Here too one can infer
+    # the server is improperly configured and blacklist the server.
     password = encode_hex(signer.sign(server_name.encode()))
-    rand = None
-    # try login and register on first 5 possible accounts
-    for i in range(JOIN_RETRIES):
-        username = base_username
-        if i:
-            if not rand:
-                rand = Random()  # deterministic, random secret for username suffixes
-                # initialize rand for seed (which requires a signature) only if/when needed
-                rand.seed(int.from_bytes(signer.sign(b"seed")[-32:], "big"))
-            username = f"{username}.{rand.randint(0, 0xffffffff):08x}"
 
-        try:
-            client.login(username, password, sync=False)
-            prev_sync_limit = client.set_sync_limit(0)
-            client._sync()  # when logging, do initial_sync with limit=0
-            client.set_sync_limit(prev_sync_limit)
-            break
-        except MatrixRequestError as ex:
-            if ex.code != 403:
-                raise
-            log.debug(
-                "Could not login. Trying register",
-                homeserver=server_name,
-                server_url=server_url,
-                username=username,
-            )
-            try:
-                client.register_with_password(username, password)
-                log.debug(
-                    "Register", homeserver=server_name, server_url=server_url, username=username
-                )
-                break
-            except MatrixRequestError as ex:
-                if ex.code != 400:
-                    raise
-                log.debug("Username taken. Continuing")
-                continue
-    else:
-        raise ValueError("Could not register or login!")
+    # Disabling sync because login is done before the transport is fully
+    # initialized, i.e. the inventory rooms don't have the callbacks installed.
+    client.login(username, password, sync=False)
 
+    # Because this is the first login, the display name has to be set, this
+    # prevents the impersonation metioned above. subsequent calls will reuse
+    # the authentication token and the display name will be properly set.
     signature_bytes = signer.sign(client.user_id.encode())
     signature_hex = encode_hex(signature_bytes)
+
     user = client.get_user(client.user_id)
     user.set_display_name(signature_hex)
+
     log.debug(
-        "Matrix user login", homeserver=server_name, server_url=server_url, username=username
+        "Logged to a new server",
+        node=to_checksum_address(username),
+        homeserver=server_name,
+        server_url=server_url,
     )
     return user
+
+
+def is_valid_username(username: str, server_name: str, user_id: str) -> bool:
+    _match_user = re.match(f"^@{re.escape(username)}:{re.escape(server_name)}$", user_id)
+    return bool(_match_user)
+
+
+def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> Optional[User]:
+    """Reuse an existing authentication code.
+
+    If this succeeds it means the user has logged in the past, so we assume the
+    display name is properly set and that there may be rooms open from past
+    executions.
+    """
+    client.set_access_token(user_id=user_id, token=access_token)
+
+    try:
+        # Test the credentional. Any API that requries authentication
+        # would be enough.
+        client.api.get_devices()
+    except MatrixRequestError as ex:
+        log.debug(
+            "Couldn't use previous login credentials",
+            node=node_address_from_userid(client.user_id),
+            prev_user_id=user_id,
+            _exception=ex,
+        )
+        return None
+
+    log.debug(
+        "Success. Valid previous credentials",
+        node=node_address_from_userid(client.user_id),
+        user_id=user_id,
+    )
+    return client.get_user(client.user_id)
+
+
+def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] = None) -> User:
+    """ Login with a matrix server.
+
+    Params:
+        client: GMatrixClient instance configured with desired homeserver.
+        signer: Signer used to sign the password and displayname.
+        prev_auth_data: Previously persisted authentication using the format "{user}/{password}".
+    """
+    server_url = client.api.base_url
+    server_name = urlparse(server_url).netloc
+
+    username = str(to_normalized_address(signer.address))
+
+    if prev_auth_data and prev_auth_data.count("/") == 1:
+        user_id, _, access_token = prev_auth_data.partition("/")
+
+        if is_valid_username(username, server_name, user_id):
+            user = login_with_token(client, user_id, access_token)
+
+            if user is not None:
+                return user
+        else:
+            log.debug(
+                "Auth data is invalid, discarding",
+                node=username,
+                user_id=user_id,
+                server_name=server_name,
+            )
+
+    return first_login(client, signer, username)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
@@ -547,7 +623,7 @@ def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     return sorted_servers
 
 
-def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
+def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
     """Given a list of possible servers, chooses the closest available and create a GMatrixClient
 
     Params:
@@ -588,7 +664,7 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
 
 
 def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
-    """Given a chain_id and any number of suffixes (global room names, pair of addresses),
+    """Given a chain_id and any number of suffixes (broadcast room names, pair of addresses),
     compose and return the canonical room name for raiden network
 
     network name from raiden_contracts.constants.ID_TO_NETWORKNAME is used for name, if available,
@@ -604,7 +680,7 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
     return ROOM_NAME_SEPARATOR.join([ROOM_NAME_PREFIX, network_name, *suffixes])
 
 
-def validate_and_parse_message(data, peer_address) -> List[Message]:
+def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message]:
     messages: List[Message] = list()
 
     if not isinstance(data, str):
@@ -649,11 +725,11 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
     return messages
 
 
-def my_place_or_yours(our_address: Address, partner_address: Address):
+def my_place_or_yours(our_address: Address, partner_address: Address) -> Address:
     """Convention to compare two addresses. Compares lexicographical
     order and returns the preceding address """
 
     if our_address == partner_address:
         raise ValueError("Addresses to compare must differ")
     sorted_addresses = sorted([our_address, partner_address])
-    return our_address if sorted_addresses[0] == our_address else partner_address
+    return sorted_addresses[0]

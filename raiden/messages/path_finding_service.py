@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import datetime
 
 import marshmallow.fields
 import rlp
@@ -27,7 +27,7 @@ class PFSCapacityUpdate(SignedMessage):
     other_capacity: TokenAmount
     reveal_timeout: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
@@ -72,9 +72,9 @@ class PFSFeeUpdate(SignedMessage):
     canonical_identifier: CanonicalIdentifier
     updating_participant: Address
     fee_schedule: FeeScheduleState
-    timestamp: datetime
+    timestamp: datetime = field(metadata={"marshmallow_field": marshmallow.fields.NaiveDateTime()})
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.signature is None:
             self.signature = EMPTY_SIGNATURE
 
@@ -84,21 +84,22 @@ class PFSFeeUpdate(SignedMessage):
             (self.canonical_identifier.token_network_address, "address"),
             (self.canonical_identifier.channel_identifier, "uint256"),
             (self.updating_participant, "address"),
+            (self.fee_schedule.cap_fees, "bool"),
             (self.fee_schedule.flat, "uint256"),
             (self.fee_schedule.proportional, "uint256"),
             (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
             (
-                marshmallow.fields.DateTime()._serialize(self.timestamp, "timestamp", self),
+                marshmallow.fields.NaiveDateTime()._serialize(self.timestamp, "timestamp", self),
                 "string",
             ),
         )
 
     @classmethod
-    def from_channel_state(cls, channel_state: NettingChannelState):
+    def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSFeeUpdate":
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
             fee_schedule=channel_state.fee_schedule,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.utcnow(),
             signature=EMPTY_SIGNATURE,
         )

@@ -56,6 +56,7 @@ scenario:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - wait_blocks: 1  # Wait for balances being up to date
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -67,13 +68,15 @@ scenario:
 
             # Fees are set to 10 TKN per 1000 transferred. Hence for 10000, 100 TKN fee
             # should be paid, plus a 1% fee of fees per mediator.
-            # balance_minus_fee = deposit - transfer_amount - (transfer_amount / prop_fee * amount_of_hubs_to_target)
-            # balance_minus_fee_and_fee_margin = balance_minus_fee - (transfer_amount / prop_fee / 100 * fee_margin)
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_789, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211, state: "opened"}
+            # Fee for second mediator = 10000 * 1% = 100
+            # Fee for first mediator = 10100 * 1% = 101
+            # Fee margin = ceil(201 * 3% + 10000 * 0.05%) = 12
+            # balance 0->1: 100000 - 10000 - 201 - 12 = 89787
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_787, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_213, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_890, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_110, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_887, allow_balance_error: 1, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_113, allow_balance_error: 1, state: "opened"}
 
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_990, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_010, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_988, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_012, state: "opened"}

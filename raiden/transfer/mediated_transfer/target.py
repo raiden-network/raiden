@@ -3,7 +3,7 @@ import random
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentReceivedSuccess, SendProcessed
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
@@ -27,6 +27,7 @@ from raiden.utils.typing import (
     BlockNumber,
     List,
     Optional,
+    PaymentAmount,
     TokenAmount,
 )
 
@@ -126,10 +127,10 @@ def handle_inittarget(
                 recipient=Address(recipient),
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
-                amount=transfer.lock.amount,
+                amount=PaymentAmount(transfer.lock.amount),
                 expiration=transfer.lock.expiration,
                 secrethash=transfer.lock.secrethash,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
             channel_events.append(secret_request)
 
@@ -182,7 +183,7 @@ def handle_offchain_secretreveal(
             recipient=recipient,
             message_identifier=message_identifier,
             secret=target_state.secret,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
 
         iteration = TransitionResult(target_state, [reveal])
@@ -246,7 +247,7 @@ def handle_unlock(
         send_processed = SendProcessed(
             recipient=balance_proof_sender,
             message_identifier=state_change.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])

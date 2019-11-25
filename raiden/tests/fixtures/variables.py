@@ -301,9 +301,9 @@ def unrecoverable_error_should_crash():
 
 
 @pytest.fixture
-def transport(request):
+def transport():
     """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
-    return request.config.getoption("transport")
+    return "matrix"
 
 
 @pytest.fixture

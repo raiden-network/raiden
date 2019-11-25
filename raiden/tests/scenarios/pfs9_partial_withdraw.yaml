@@ -79,9 +79,11 @@ scenario:
           name: "Make payment from 0 to 3"
           tasks:
             # Check that a payment is made with shortest path [0, 4, 3] from 0 to 3
+            - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 300_000_000_000_000_000, expected_http_status: 200}
 
             # Assert that correct amount was tranferred on the correct path
+            - wait_blocks: 1
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 700_000_000_000_000_000}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 700_000_000_000_000_000}
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
@@ -117,9 +119,11 @@ scenario:
           name: "Make payment from 0 to 3 after node4 withdrew and does not have enough capacity"
           tasks:
             # Check that a payment is made with the only path [0, 1, 2, 3] with enough capacity from 0 to 3
+            - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 300_000_000_000_000_000, expected_http_status: 200}
 
             # Assert that correct amount is updated after payment 
+            - wait_blocks: 1
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, balance: 700_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, balance: 700_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, balance: 700_000_000_000_000_000, state: "opened"}

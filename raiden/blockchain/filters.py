@@ -1,13 +1,13 @@
 import structlog
+from eth_typing import ChecksumAddress
 from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
 from gevent.lock import Semaphore
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
-from web3.utils.filters import LogFilter, construct_event_filter_params
+from web3.utils.filters import construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.utils import block_specification_to_number
 from raiden.utils.typing import (
     ABI,
     Any,
@@ -17,6 +17,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     List,
+    Optional,
     TokenNetworkAddress,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
@@ -103,37 +104,31 @@ def decode_event(abi: ABI, log: BlockchainEvent) -> Dict[str, Any]:
     return get_event_data(event_abi, log)
 
 
-class StatelessFilter(LogFilter):
-    """ Like LogFilter, but uses eth_getLogs instead of installed filter
+class StatelessFilter:
+    def __init__(
+        self,
+        web3: Web3,
+        from_block: BlockNumber,
+        contract_address: ChecksumAddress,
+        topics: Optional[List[Optional[str]]],
+    ) -> None:
+        # fix off-by-one
+        last_block = from_block - 1
 
-    Pass latest block_number to get_(new|all)_entries to avoid querying it
-    """
-
-    def __init__(self, web3: Web3, filter_params: Dict[str, Any]) -> None:
-        super().__init__(web3, filter_id=None)
-        self.filter_params: Dict[str, BlockSpecification] = filter_params
-        self._last_block: BlockNumber = BlockNumber(-1)
+        self.web3 = web3
+        self.contract_address = contract_address
+        self.topics = topics
+        self.last_block = last_block
         self._lock = Semaphore()
 
-    def _do_get_new_entries(
-        self, from_block: BlockSpecification, to_block: BlockSpecification
-    ) -> List[BlockchainEvent]:
-        filter_params = self.filter_params.copy()
-        filter_params["fromBlock"] = from_block
-        filter_params["toBlock"] = to_block
-
-        log.debug("Querying StatelessFilter", from_block=from_block, to_block=to_block)
-        result = self.web3.eth.getLogs(filter_params)
-        self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
-        return result
-
     def from_block_number(self) -> BlockNumber:
-        filter_from_number = block_specification_to_number(
-            block=self.filter_params.get("fromBlock", GENESIS_BLOCK_NUMBER), web3=self.web3
-        )
-        return BlockNumber(max(filter_from_number, self._last_block + 1))
+        """Return the next block to be queried."""
+        return BlockNumber(self.last_block + 1)
 
     def get_new_entries(self, target_block_number: BlockNumber) -> List[BlockchainEvent]:
+        """Return the new log entries matching the filter, starting from the
+        last run of `get_new_entries`.
+        """
         with self._lock:
             result: List[BlockchainEvent] = []
             from_block_number = self.from_block_number()
@@ -141,27 +136,23 @@ class StatelessFilter(LogFilter):
             # Batch the filter queries in ranges of FILTER_MAX_BLOCK_RANGE
             # to avoid timeout problems
             while from_block_number <= target_block_number:
-                to_block = min(from_block_number + FILTER_MAX_BLOCK_RANGE, target_block_number)
-                result.extend(
-                    self._do_get_new_entries(from_block=from_block_number, to_block=to_block)
+                to_block = BlockNumber(
+                    min(from_block_number + FILTER_MAX_BLOCK_RANGE, target_block_number)
                 )
-                from_block_number += FILTER_MAX_BLOCK_RANGE  # type: ignore
+                filter_params = {
+                    "fromBlock": from_block_number,
+                    "toBlock": to_block,
+                    "address": self.contract_address,
+                    "topics": self.topics,
+                }
 
-            return result
+                log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
+                result.extend(self.web3.eth.getLogs(filter_params))
 
-    def get_all_entries(self, block_number: BlockNumber = None) -> List[BlockchainEvent]:
-        with self._lock:
-            filter_params = self.filter_params.copy()
-            block_number = block_number or self.web3.eth.blockNumber
+                # `getLogs` is inclusive, the next loop should start from the
+                # next block.
+                from_block_number = BlockNumber(to_block + 1)
 
-            if self.filter_params.get("toBlock") in ("latest", "pending"):
-                filter_params["toBlock"] = block_number
-
-            result = self.web3.eth.getLogs(filter_params)
-            to_block = filter_params.get("toBlock")
-            if to_block:
-                self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
-            else:
-                self._last_block = block_number
+                self.last_block = to_block
 
             return result

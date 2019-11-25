@@ -13,9 +13,11 @@ def test_geth_discover_next_available_nonce(
     https://github.com/raiden-network/raiden/pull/3683#issue-264551799
     """
 
+    def send_transaction(to, startgas):
+        deploy_client.get_next_transaction().send_transaction(to=to, startgas=startgas)
+
     greenlets = {
-        gevent.spawn(deploy_client.send_transaction, make_address(), 50000)  # to  # startgas
-        for _ in range(100)
+        gevent.spawn(send_transaction, make_address(), 50000) for _ in range(100)  # to  # startgas
     }
     gevent.joinall(set(greenlets), raise_error=True)
 

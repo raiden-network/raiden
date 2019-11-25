@@ -43,3 +43,20 @@ dormant_signal=SIGUSR1
     --select-fail-on-missing \
     --select-from-file selected-tests.txt \
     "${@}"
+
+if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
+    # Enable nullglob, otherwise the loop bellow would do one iteration
+    # over the pattern, leading to a failure, since the pattern is not a
+    # valid file.
+    shopt -s nullglob
+
+    for test_directory in ${RAIDEN_TESTS_LOGSDIR}/*; do
+        # Pytest's paremetrize tests have brackets in their names, e.g.
+        # `test_api_open_channel_invalid_input[matrix-False-0-1]`, the
+        # expression bellow must have the test_directory variable in quotes to
+        # prevent the shell from trying to expand the brackets
+        for log_file in "${test_directory}"/raiden-debug*.log; do
+            ./tools/debugging/split_debug_logs.sh "${log_file}" "${test_directory}/node_logs/"
+        done
+    done
+fi

@@ -51,7 +51,7 @@ fancycompleter==0.8       # via pdbpp
 filelock==3.0.12
 flake8-bugbear==19.3.0
 flake8-tuple==0.4.0
-flake8==3.7.7
+flake8==3.7.9
 flask-cors==3.0.8
 flask-restful==0.3.7
 flask==1.0.3
@@ -76,12 +76,12 @@ jsonschema==3.0.1         # via matrix-synapse
 lazy-object-proxy==1.4.1  # via astroid
 lru-dict==1.1.6
 markupsafe==1.1.1
-marshmallow-dataclass==6.0.0rc4
+marshmallow-dataclass==6.0.0
 marshmallow-enum==1.5.1
 marshmallow-polyfield==5.7
-marshmallow==3.0.0rc8
+marshmallow==3.2.2
 matrix-client==0.3.2
-matrix-synapse==1.4.0rc1
+matrix-synapse==1.5.1
 mccabe==0.6.1             # via flake8, pylint
 mirakuru==1.1.0
 more-itertools==7.0.0     # via pytest
@@ -98,7 +98,7 @@ pdbpp==0.10.0
 pexpect==4.7.0
 phonenumbers==8.10.13     # via matrix-synapse
 pickleshare==0.7.5
-pillow==6.0.0             # via matrix-synapse
+pillow==6.2.0             # via matrix-synapse
 pip-tools==3.8.0
 pluggy==0.12.0            # via pytest
 prometheus-client==0.3.1  # via matrix-synapse
@@ -131,8 +131,8 @@ pytest==4.6.3
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1             # via matrix-synapse
-raiden-contracts==0.32.0
-raiden-webui==0.10.0
+raiden-contracts==0.33.3
+raiden-webui==0.10.1
 readme-renderer==24.0
 releases==1.6.1
 requests==2.22.0
@@ -176,4 +176,4 @@ zipp==0.5.1               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.2.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
+# setuptools==41.6.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface

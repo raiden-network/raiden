@@ -1814,6 +1814,105 @@ def test_filter_reachable_routes():
     assert possible_routes[1] not in filtered_routes
 
 
+def test_resume_waiting_transfer():
+    """ Test that a mediator who has a waiting_transfer
+    set (the transfer couldn't be sent forward or backward
+    due to availability or capacity or timeout issues) will retry
+    mediating the waiting_transfer as soon as this transfer's
+    lock expiration becomes valid.
+    """
+    setup = factories.make_transfers_pair(2)
+
+    # Also add transfer sender channel
+    partner_state = factories.NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER)
+    payer_channel = factories.create(
+        factories.NettingChannelStateProperties(partner_state=partner_state)
+    )
+    setup.channels.channels.append(payer_channel)
+
+    from_hop = factories.make_hop_from_channel(payer_channel)
+    possible_routes = setup.channels.get_routes()
+
+    # we received a transfer has an expiry set to a larger value than our settle_timeout.
+    # The `is_channel_usable_for_new_transfer` would return False because of the above.
+    # Therefore, we assign this transfer to `waiting_transfer` and wait until the current block
+    # falls into the range `reveal_timeout > lock expiration >= settle_timeout`
+    lock_expiration = UNIT_SETTLE_TIMEOUT + 3
+    received_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            amount=1,
+            expiration=lock_expiration,
+            canonical_identifier=payer_channel.canonical_identifier,
+        )
+    )
+
+    # we simulate that the initial transfer came too early (from our point of view)
+    # so it went into `waiting_transfer` state
+    # this can happen, when reveal_timeout is around `settle_timeout / 2` and the
+    # receiving node is slightly behind with the blockchain sync
+    # see: https://github.com/raiden-network/raiden/issues/4998
+    transition_result = mediator.state_transition(
+        mediator_state=None,
+        state_change=ActionInitMediator(
+            from_hop=from_hop,
+            route_states=possible_routes,
+            from_transfer=received_transfer,
+            sender=payer_channel.partner_state.address,
+            balance_proof=received_transfer.balance_proof,
+        ),
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+    )
+    mediator_state = transition_result.new_state
+    assert mediator_state.waiting_transfer is not None
+
+    too_early_block = Block(block_number=2, gas_limit=1, block_hash=factories.make_block_hash())
+    iteration = mediator.state_transition(
+        mediator_state=mediator_state,
+        state_change=too_early_block,
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+    )
+
+    assert iteration.events == []
+
+    late_enough_block = Block(block_number=3, gas_limit=1, block_hash=factories.make_block_hash())
+
+    iteration = mediator.state_transition(
+        mediator_state=mediator_state,
+        state_change=late_enough_block,
+        channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+        block_hash=too_early_block.block_hash,
+    )
+    # A LockedTransfer is expected
+    assert search_for_item(
+        iteration.events,
+        SendLockedTransfer,
+        {
+            "recipient": HOP2,
+            "transfer": {
+                "lock": {
+                    "amount": 1,
+                    "expiration": UNIT_SETTLE_TIMEOUT + 3,
+                    "secrethash": received_transfer.lock.secrethash,
+                },
+                "balance_proof": {"nonce": 1, "transferred_amount": 0, "locked_amount": 1},
+            },
+        },
+    )
+    # waiting_transfer should have been cleaned
+    assert mediator_state.waiting_transfer is None
+
+
 def test_node_change_network_state_reachable_node():
     """ Test that a mediator who has a waiting_transfer
     set (the transfer couldn't be sent forward or backward
@@ -2013,67 +2112,25 @@ def test_imbalance_penalty_prevents_transfer():
     1. Only transfer as much as he has capacity. If this payment succeeds, this
        is to the mediator's advantage, since he gets to keep more tokens.
     2. Refund the transfer, because he can't send the negative imbalance fee he
-    promised and the payment is likely to have enough tokens when reaching the
+    promised and the payment is unlikely to have enough tokens when reaching the
     target.
     This test verifies that we choose option 2.
     """
-    # Will reward payment with the enormous amount of 1 token per transferred token!
-    imbalance_penalty = [(0, 100), (100, 0)]
+    # Will reward payment with the amount of 1 token per 10 transferred tokens.
+    imbalance_penalty = [(0, 0), (1000, 100)]
     pair, _ = _foward_transfer_pair(
         10,
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=10),
-            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            fee_schedule=FeeScheduleState(cap_fees=False),
         ),
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=10),
-            fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
+            fee_schedule=FeeScheduleState(
+                flat=0, imbalance_penalty=imbalance_penalty, cap_fees=False
+            ),
         ),
     )
-    assert not pair
-
-
-def test_outdated_imbalance_penalty_at_transfer():
-    """
-    Test that having an outdated (for older capacity) imbalance penalty fee
-    during a transfer where we have sufficient balance does not throw an
-    UndefinedMediationFee exception from the state machine.
-
-    Regression test for https://github.com/raiden-network/raiden/issues/4835
-    """
-    payer_transfer = create(
-        LockedTransferSignedStateProperties(amount=10, initiator=HOP1, target=ADDR, expiration=50)
-    )
-
-    imbalance_penalty = calculate_imbalance_fees(
-        channel_capacity=5, proportional_imbalance_fee=4000
-    )
-    channels = make_channel_set(
-        [
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=10),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-            NettingChannelStateProperties(
-                our_state=NettingChannelEndStateProperties(balance=10),
-                fee_schedule=FeeScheduleState(flat=0, imbalance_penalty=imbalance_penalty),
-            ),
-        ]
-    )
-
-    pair, _ = mediator.forward_transfer_pair(
-        payer_transfer=payer_transfer,
-        payer_channel=channels[0],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
-        channelidentifiers_to_channels=channels.channel_map,
-        pseudo_random_generator=random.Random(),
-        block_number=2,
-    )
-    # Up for discussion: Shouldn't this transfer actually succeed? If the imbalance fee
-    # is outdated for some reason and we can't calculate it shouldn't we just
-    # omit it and mediate without it as a mediator? Or is the current behaviour
-    # from this PR, namely to not mediate the transfer, okay?
     assert not pair
 
 

@@ -25,7 +25,11 @@ from raiden.storage.restore import (
     get_state_change_with_transfer_by_secrethash,
 )
 from raiden.storage.wal import SavedState, WriteAheadLog
-from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
+from raiden.tests.utils.events import (
+    count_unlock_failures,
+    has_unlock_failure,
+    raiden_state_changes_search_for_item,
+)
 from raiden.tests.utils.factories import (
     make_initiator_address,
     make_message_identifier,
@@ -117,9 +121,13 @@ def watch_for_unlock_failures(*apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
     """
 
     def watcher_function():
+        offset = {
+            app.raiden.address: count_unlock_failures(app.raiden.wal.storage.get_events())
+            for app in apps
+        }
         while True:
             for app in apps:
-                assert not has_unlock_failure(app.raiden)
+                assert not has_unlock_failure(app.raiden, offset=offset[app.raiden.address])
             gevent.sleep(retry_timeout)
 
     watcher = gevent.spawn(watcher_function)
@@ -978,7 +986,6 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
-        fee=0,
         metadata=transfer_metadata,
     )
     mediated_transfer_msg.sign(signer)
@@ -1076,5 +1083,7 @@ def block_timeout_for_transfer_by_secrethash(
     )
 
 
-def calculate_fee_for_amount(amount: int) -> int:
-    return round((amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC) * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
+def calculate_fee_for_amount(amount: int) -> FeeAmount:
+    return FeeAmount(
+        round((amount * INTERNAL_ROUTING_DEFAULT_FEE_PERC) * (1 + DEFAULT_MEDIATION_FEE_MARGIN))
+    )

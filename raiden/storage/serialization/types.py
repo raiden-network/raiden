@@ -177,6 +177,21 @@ def message_event_schema_deserialization(
 
         return SchemaCache.get_or_create_schema(SendRefundTransfer)
 
+    elif message_type.endswith("SendWithdrawRequest"):
+        from raiden.transfer.events import SendWithdrawRequest
+
+        return SchemaCache.get_or_create_schema(SendWithdrawRequest)
+
+    elif message_type.endswith("SendWithdrawConfirmation"):
+        from raiden.transfer.events import SendWithdrawConfirmation
+
+        return SchemaCache.get_or_create_schema(SendWithdrawConfirmation)
+
+    elif message_type.endswith("SendWithdrawExpired"):
+        from raiden.transfer.events import SendWithdrawExpired
+
+        return SchemaCache.get_or_create_schema(SendWithdrawExpired)
+
     elif message_type.endswith("SendProcessed"):
         from raiden.transfer.events import SendProcessed
 

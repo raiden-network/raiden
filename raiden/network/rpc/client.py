@@ -10,7 +10,7 @@ from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
 from web3 import Web3
-from web3.contract import ContractFunction
+from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -18,13 +18,14 @@ from web3.utils.contracts import prepare_transaction
 from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
-from raiden import constants
 from raiden.blockchain.filters import StatelessFilter
+from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS_HEX, EthClient
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
     EthNodeInterfaceError,
-    InsufficientFunds,
+    InsufficientEth,
+    RaidenUnrecoverableError,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -35,10 +36,12 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     BlockHash,
+    BlockNumber,
     BlockSpecification,
     CompiledContract,
     Nonce,
     PrivateKey,
+    TokenAmount,
     TransactionHash,
 )
 from raiden_contracts.utils.type_aliases import ChainID
@@ -54,8 +57,7 @@ def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpec
     assert is_valid_to, "event log to block can be integer or latest,pending, earliest"
 
 
-def geth_assert_rpc_interfaces(web3: Web3):
-
+def geth_assert_rpc_interfaces(web3: Web3) -> None:
     try:
         web3.version.node
     except ValueError:
@@ -81,8 +83,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
         )
 
 
-def parity_assert_rpc_interfaces(web3: Web3):
-
+def parity_assert_rpc_interfaces(web3: Web3) -> None:
     try:
         web3.version.node
     except ValueError:
@@ -108,9 +109,7 @@ def parity_assert_rpc_interfaces(web3: Web3):
         )
 
     try:
-        web3.manager.request_blocking(
-            "parity_nextNonce", ["0x0000000000000000000000000000000000000000"]
-        )
+        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS_HEX])
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the parity rpc interface "
@@ -131,7 +130,7 @@ def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce
 
 def check_address_has_code(
     client: "JSONRPCClient", address: Address, contract_name: str = "", expected_code: bytes = None
-):
+) -> None:
     """ Checks that the given address contains code. """
     result = client.web3.eth.getCode(to_checksum_address(address), "latest")
 
@@ -181,7 +180,9 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     return False
 
 
-def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
+def patched_web3_eth_estimate_gas(
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+) -> int:
     """ Temporary workaround until next web3.py release (5.X.X)
 
     Current master of web3.py has this implementation already:
@@ -191,7 +192,7 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
         transaction = assoc(transaction, "from", self.defaultAccount)
 
     if block_identifier is None:
-        params = [transaction]
+        params: List[Any] = [transaction]
     else:
         params = [transaction, block_identifier]
 
@@ -209,7 +210,9 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
     return result
 
 
-def patched_web3_eth_call(self, transaction, block_identifier=None):
+def patched_web3_eth_call(
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+) -> HexBytes:
     if "from" not in transaction and is_checksum_address(self.defaultAccount):
         transaction = assoc(transaction, "from", self.defaultAccount)
 
@@ -229,20 +232,20 @@ def patched_web3_eth_call(self, transaction, block_identifier=None):
 
 
 def estimate_gas_for_function(
-    address,
-    web3,
-    fn_identifier=None,
-    transaction=None,
-    contract_abi=None,
-    fn_abi=None,
-    block_identifier=None,
-    *args,
-    **kwargs,
-):
+    address: Address,
+    web3: Web3,
+    fn_identifier: str = None,
+    transaction: Dict[str, Any] = None,
+    contract_abi: Dict[str, Any] = None,
+    fn_abi: Dict[str, Any] = None,
+    block_identifier: BlockSpecification = None,
+    *args: Any,
+    **kwargs: Any,
+) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     estimate_transaction = prepare_transaction(
-        address,
-        web3,
+        address=address,
+        web3=web3,
         fn_identifier=fn_identifier,
         contract_abi=contract_abi,
         fn_abi=fn_abi,
@@ -263,7 +266,9 @@ def estimate_gas_for_function(
     return gas_estimate
 
 
-def patched_contractfunction_estimateGas(self, transaction=None, block_identifier=None):
+def patched_contractfunction_estimateGas(
+    self: Any, transaction: Dict[str, Any] = None, block_identifier: BlockSpecification = None
+) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
         estimate_gas_transaction: Dict[str, Any] = {}
@@ -302,7 +307,7 @@ def patched_contractfunction_estimateGas(self, transaction=None, block_identifie
     )
 
 
-def monkey_patch_web3(web3, gas_price_strategy):
+def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     try:
         # install caching middleware
         web3.middleware_stack.add(block_hash_cache_middleware)
@@ -329,6 +334,90 @@ def monkey_patch_web3(web3, gas_price_strategy):
     Eth.call = patched_web3_eth_call
 
 
+class TransactionSlot:
+    """A poor's man linear type that will check at the runtime that a nonce is
+    used only once.
+
+    This is necessary to avoid problems with nonce synchronization. If a nonce
+    is not used then all subsequent transactions won't be mined, or if a nonce
+    is used more than once, only one transaction will succeed while all others
+    will fail, which is currently not supported by the Raiden node.
+    """
+
+    def __init__(self, client: "JSONRPCClient", nonce: Nonce):
+        self._client = client
+        self.nonce = nonce
+        self._sent = False
+
+        # Lock to protect the `_sent` attribute. This is necessary otherwise
+        # the check for a duplicate transaction with the same nonce won't work
+        # due to race conditions.
+        self._sent_lock = Semaphore()
+
+    def send_transaction(
+        self, to: Address, startgas: int, value: int = 0, data: bytes = b""
+    ) -> TransactionHash:
+        """ Locally sign the transaction and send it to the network. """
+
+        with self._sent_lock:
+            if self._sent:
+                raise RaidenUnrecoverableError(
+                    f"A transaction for this slot has been sent already! "
+                    f"Reusing the nonce is a synchronization problem."
+                )
+
+            if to == to_canonical_address(NULL_ADDRESS_HEX):
+                warnings.warn("For contract creation the empty string must be used.")
+
+            gas_price = self._client.gas_price()
+
+            transaction = {
+                "data": data,
+                "gas": startgas,
+                "nonce": self.nonce,
+                "value": value,
+                "gasPrice": gas_price,
+            }
+            node_gas_price = self._client.web3.eth.gasPrice
+            log.debug(
+                "Calculated gas price for transaction",
+                node=to_checksum_address(self._client.address),
+                calculated_gas_price=gas_price,
+                node_gas_price=node_gas_price,
+            )
+
+            # add the to address if not deploying a contract
+            if to != b"":
+                transaction["to"] = to_checksum_address(to)
+
+            signed_txn = self._client.web3.eth.account.signTransaction(
+                transaction, self._client.privkey
+            )
+
+            log_details = {
+                "node": to_checksum_address(self._client.address),
+                "nonce": transaction["nonce"],
+                "gasLimit": transaction["gas"],
+                "gasPrice": transaction["gasPrice"],
+            }
+            log.debug("send_raw_transaction called", **log_details)
+
+            tx_hash = self._client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+            log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
+
+            self._sent = True
+
+            return TransactionHash(tx_hash)
+
+    def __del__(self) -> None:
+        if not self._sent:
+            raise RaidenUnrecoverableError(
+                f"Transaction nonce {self.nonce} was not used! "
+                f"This will result in nonce synchronization problems."
+            )
+
+
 class JSONRPCClient:
     """ Ethereum JSON RPC client.
 
@@ -345,8 +434,7 @@ class JSONRPCClient:
         gas_price_strategy: Callable = rpc_gas_price_strategy,
         gas_estimate_correction: Callable = lambda gas: gas,
         block_num_confirmations: int = 0,
-        uses_infura=False,
-    ):
+    ) -> None:
         if privkey is None or len(privkey) != 32:
             raise ValueError("Invalid private key")
 
@@ -364,25 +452,11 @@ class JSONRPCClient:
         address = privatekey_to_address(privkey)
         address_checksumed = to_checksum_address(address)
 
-        if uses_infura:
-            warnings.warn(
-                "Infura does not provide an API to "
-                "recover the latest used nonce. This may cause the Raiden node "
-                "to error on restarts.\n"
-                "The error will manifest while there is a pending transaction "
-                "from a previous execution in the Ethereum's client pool. When "
-                "Raiden restarts the same transaction with the same nonce will "
-                "be retried and *rejected*, because the nonce is already used."
-            )
-            # The first valid nonce is 0, therefore the count is already the next
-            # available nonce
-            available_nonce = web3.eth.getTransactionCount(address_checksumed, "pending")
-
-        elif eth_node is constants.EthClient.PARITY:
+        if eth_node is EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
             available_nonce = parity_discover_next_available_nonce(web3, address_checksumed)
 
-        elif eth_node is constants.EthClient.GETH:
+        elif eth_node is EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(web3, address_checksumed)
 
@@ -406,28 +480,34 @@ class JSONRPCClient:
             client=version,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<JSONRPCClient "
             f"node:{to_checksum_address(self.address)} nonce:{self._available_nonce}"
             f">"
         )
 
-    def block_number(self):
+    def block_number(self) -> BlockNumber:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def get_block(self, block_identifier: BlockSpecification) -> Dict:
+    def get_block(self, block_identifier: BlockSpecification) -> Dict[str, Any]:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)
 
-    def get_confirmed_blockhash(self):
+    def get_confirmed_blockhash(self) -> BlockHash:
         """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
         confirmed_block_number = self.web3.eth.blockNumber - self.default_block_num_confirmations
         if confirmed_block_number < 0:
             confirmed_block_number = 0
 
         return self.blockhash_from_blocknumber(confirmed_block_number)
+
+    def get_next_transaction(self) -> TransactionSlot:
+        with self._nonce_lock:
+            slot = TransactionSlot(self, self._available_nonce)
+            self._available_nonce = Nonce(self._available_nonce + 1)
+            return slot
 
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
@@ -445,9 +525,9 @@ class JSONRPCClient:
         preconditions_block = self.web3.eth.getBlock(block_identifier)
         preconditions_block_number = int(preconditions_block["number"])
         difference = latest_block_number - preconditions_block_number
-        return difference < constants.NO_STATE_QUERY_AFTER_BLOCKS
+        return difference < NO_STATE_QUERY_AFTER_BLOCKS
 
-    def balance(self, account: Address):
+    def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), "pending")
 
@@ -459,7 +539,7 @@ class JSONRPCClient:
         Checks the local tx pool for a transaction from a particular address and for
         a given nonce. If it exists it returns the transaction hash.
         """
-        assert self.eth_node is constants.EthClient.PARITY
+        assert self.eth_node is EthClient.PARITY
         # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
         transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
         log.debug("RETURNED TRANSACTIONS", transactions=transactions)
@@ -499,12 +579,12 @@ class JSONRPCClient:
         """
         return ContractProxy(self, contract=self.new_contract(abi, contract_address))
 
-    def new_contract(self, contract_interface: ABI, contract_address: Address):
+    def new_contract(self, contract_interface: ABI, contract_address: Address) -> Contract:
         return self.web3.eth.contract(
             abi=contract_interface, address=to_checksum_address(contract_address)
         )
 
-    def get_transaction_receipt(self, tx_hash: bytes):
+    def get_transaction_receipt(self, tx_hash: TransactionHash) -> Dict[str, Any]:
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
 
     def deploy_single_contract(
@@ -526,7 +606,7 @@ class JSONRPCClient:
 
         contract_object = self.web3.eth.contract(abi=contract["abi"], bytecode=contract["bin"])
         contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
-        transaction_hash = self.send_transaction(
+        transaction_hash = self.get_next_transaction().send_transaction(
             to=Address(b""),
             data=contract_transaction["data"],
             startgas=self._gas_estimate_correction(contract_transaction["gas"]),
@@ -549,62 +629,11 @@ class JSONRPCClient:
             receipt,
         )
 
-    def send_transaction(
-        self, to: Address, startgas: int, value: int = 0, data: bytes = b""
-    ) -> TransactionHash:
-        """ Helper to send signed messages.
-
-        This method will use the `privkey` provided in the constructor to
-        locally sign the transaction. This requires an extended server
-        implementation that accepts the variables v, r, and s.
-        """
-        if to == to_canonical_address(constants.NULL_ADDRESS):
-            warnings.warn("For contract creation the empty string must be used.")
-
-        with self._nonce_lock:
-            nonce = self._available_nonce
-            gas_price = self.gas_price()
-
-            transaction = {
-                "data": data,
-                "gas": startgas,
-                "nonce": nonce,
-                "value": value,
-                "gasPrice": gas_price,
-            }
-            node_gas_price = self.web3.eth.gasPrice
-            log.debug(
-                "Calculated gas price for transaction",
-                node=to_checksum_address(self.address),
-                calculated_gas_price=gas_price,
-                node_gas_price=node_gas_price,
-            )
-
-            # add the to address if not deploying a contract
-            if to != b"":
-                transaction["to"] = to_checksum_address(to)
-
-            signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
-
-            log_details = {
-                "node": to_checksum_address(self.address),
-                "nonce": transaction["nonce"],
-                "gasLimit": transaction["gas"],
-                "gasPrice": transaction["gasPrice"],
-            }
-            log.debug("send_raw_transaction called", **log_details)
-
-            tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-            self._available_nonce += 1
-
-            log.debug("send_raw_transaction returned", tx_hash=encode_hex(tx_hash), **log_details)
-            return TransactionHash(tx_hash)
-
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
-        Consider the following reorg, were a transaction is mined at block B,
+        Consider the following reorg, where a transaction is mined at block B,
         but it is not mined in the canonical chain A-C-D:
 
              A -> B   D
@@ -664,19 +693,14 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: Optional[List[Optional[str]]],
-        from_block: BlockSpecification,
-        to_block: BlockSpecification,
+        from_block: BlockNumber,
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
-        logs_blocks_sanity_check(from_block, to_block)
         return StatelessFilter(
             self.web3,
-            {
-                "fromBlock": from_block,
-                "toBlock": to_block,
-                "address": to_checksum_address(contract_address),
-                "topics": topics,
-            },
+            from_block=from_block,
+            contract_address=to_checksum_address(contract_address),
+            topics=topics,
         )
 
     def get_filter_events(
@@ -703,11 +727,11 @@ class JSONRPCClient:
         transaction_executed: bool,
         required_gas: int,
         block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ After estimate gas failure checks if our address has enough balance.
 
-        If the account did not have enough ETH balance to execute the,
-        transaction then it raises an `InsufficientFunds` error.
+        If the account did not have enough ETH balance to execute the
+        transaction, it raises an `InsufficientEth` error.
 
         Note:
             This check contains a race condition, it could be the case that a
@@ -723,9 +747,9 @@ class JSONRPCClient:
         if balance < required_balance:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
-            raise InsufficientFunds(msg)
+            raise InsufficientEth(msg)
 
-    def get_checking_block(self):
+    def get_checking_block(self) -> BlockSpecification:
         """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
         In parity doing any call() with the 'pending' block no longer falls back
         to the latest if no pending block is found but throws a mistaken error.
@@ -733,7 +757,7 @@ class JSONRPCClient:
         and use the latest block for checking.
         """
         checking_block = "pending"
-        if self.eth_node is constants.EthClient.PARITY:
+        if self.eth_node is EthClient.PARITY:
             checking_block = "latest"
         return checking_block
 

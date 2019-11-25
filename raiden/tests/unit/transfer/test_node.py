@@ -23,7 +23,7 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
 )
 from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     CanonicalIdentifier,
     QueueIdentifier,
 )
@@ -32,7 +32,7 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.mediated_transfer.tasks import MediatorTask, TargetTask
 from raiden.transfer.node import (
     handle_action_change_node_network_state,
-    handle_action_new_token_network,
+    handle_contract_receive_new_token_network,
     handle_contract_receive_new_token_network_registry,
     handle_receive_delivered,
     handle_receive_processed,
@@ -60,10 +60,10 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
-    ActionNewTokenNetwork,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
+    ContractReceiveNewTokenNetwork,
     ContractReceiveNewTokenNetworkRegistry,
     ReceiveDelivered,
     ReceiveProcessed,
@@ -255,10 +255,14 @@ def test_handle_new_token_network(chain_state, token_network_address):
         network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     token_network_registry_address = factories.make_address()
-    state_change = ActionNewTokenNetwork(
-        token_network_registry_address=token_network_registry_address, token_network=token_network
+    state_change = ContractReceiveNewTokenNetwork(
+        token_network_registry_address=token_network_registry_address,
+        token_network=token_network,
+        transaction_hash=factories.make_transaction_hash(),
+        block_hash=factories.make_block_hash(),
+        block_number=factories.make_block_number(),
     )
-    transition_result = handle_action_new_token_network(
+    transition_result = handle_contract_receive_new_token_network(
         chain_state=chain_state, state_change=state_change
     )
     new_chain_state = transition_result.new_state
@@ -438,7 +442,7 @@ def test_inplace_delete_message_queue(chain_state):
     processed_state_change = ReceiveProcessed(sender=sender, message_identifier=message_id)
 
     global_identifier = QueueIdentifier(
-        recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
 
     chain_state.queueids_to_queues[global_identifier] = None

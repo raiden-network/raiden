@@ -10,6 +10,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
+from raiden.app import App
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     MONITORING_BROADCASTING_ROOM,
@@ -49,11 +50,12 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils import BlockNumber, pex, split_endpoint
+from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     ChainID,
     Endpoint,
     FeeAmount,
@@ -75,7 +77,7 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config: Dict, routing_mode: RoutingMode):
+def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTransport:
     if config["transport"]["matrix"].get("available_servers") is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
@@ -85,12 +87,12 @@ def _setup_matrix(config: Dict, routing_mode: RoutingMode):
 
     # Add PFS broadcast room when not in privat mode
     if routing_mode != RoutingMode.PRIVATE:
-        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["global_rooms"]:
-            config["transport"]["matrix"]["global_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
+        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["broadcast_rooms"]:
+            config["transport"]["matrix"]["broadcast_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
     if config["services"]["monitoring_enabled"] is True:
-        config["transport"]["matrix"]["global_rooms"].append(MONITORING_BROADCASTING_ROOM)
+        config["transport"]["matrix"]["broadcast_rooms"].append(MONITORING_BROADCASTING_ROOM)
 
     try:
         transport = MatrixTransport(config["transport"]["matrix"])
@@ -141,6 +143,10 @@ def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
 def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
 
+    if "infura.io" in eth_rpc_endpoint:
+        # Infura needs to have the https scheme
+        return f"https://{parsed_eth_rpc_endpoint.netloc}{parsed_eth_rpc_endpoint.path}"
+
     if parsed_eth_rpc_endpoint.scheme:
         return eth_rpc_endpoint
 
@@ -180,10 +186,10 @@ def run_app(
     proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
+    cap_mediation_fees: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
-):
+) -> App:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
-    from raiden.app import App
 
     token_network_registry_deployed_at: Optional[BlockNumber]
     smart_contracts_start_at: BlockNumber
@@ -210,6 +216,7 @@ def run_app(
         cli_token_to_flat_fee=flat_fee,
         cli_token_to_proportional_fee=proportional_fee,
         cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
+        cli_cap_mediation_fees=cap_mediation_fees,
     )
 
     config["console"] = console
@@ -236,7 +243,6 @@ def run_app(
         privkey=privatekey,
         gas_price_strategy=gas_price,
         block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        uses_infura="infura.io" in eth_rpc_endpoint,
     )
 
     token_network_registry_deployed_at = None
@@ -316,6 +322,18 @@ def run_app(
             "see https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up",  # noqa: E501
             fg="yellow",
         )
+
+    monitoring_contract_required = (
+        enable_monitoring and CONTRACT_MONITORING_SERVICE not in contracts
+    )
+    if monitoring_contract_required:
+        click.secho(
+            "Monitoring is enabled but the contract for this ethereum network was not found. "
+            "Please provide monitoring service contract address using "
+            "--monitoring-service-address.",
+            fg="red",
+        )
+        sys.exit(1)
 
     # Only send feedback when PFS is used
     if routing_mode == RoutingMode.PFS:

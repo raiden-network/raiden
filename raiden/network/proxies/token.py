@@ -125,11 +125,11 @@ class Token:
                         )
 
                 else:
-                    failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                    failed_at = self.proxy.rpc_client.get_block("latest")
                     failed_at_blockhash = encode_hex(failed_at["hash"])
                     failed_at_blocknumber = failed_at["number"]
 
-                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    self.proxy.rpc_client.check_for_insufficient_eth(
                         transaction_name="approve",
                         transaction_executed=False,
                         required_gas=GAS_REQUIRED_FOR_APPROVE,
@@ -216,7 +216,7 @@ class Token:
                         self.client.blockhash_from_blocknumber(failed_at_number)
                     )
 
-                    self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    self.proxy.rpc_client.check_for_insufficient_eth(
                         transaction_name="transfer",
                         transaction_executed=False,
                         required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,

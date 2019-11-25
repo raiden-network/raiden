@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 
-from eth_utils import to_hex
-
 from raiden.exceptions import InvalidSignature
 from raiden.messages.cmdid import CmdId
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ClassVar, MessageID, Optional, Signature
+from raiden.utils.typing import Address, Any, ClassVar, MessageID, Optional, Signature
 
 
 @dataclass(repr=False, eq=False)
@@ -29,19 +27,17 @@ class SignedMessage(AuthenticatedMessage):
     # by changing the order to packing then signing
     signature: Signature
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self._data_to_sign(), self.signature))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, self.__class__) and hash(self) == hash(other)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __repr__(self):
-        return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=to_hex(hash(self))
-        )
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} ...>"
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed
@@ -50,7 +46,7 @@ class SignedMessage(AuthenticatedMessage):
         """
         raise NotImplementedError
 
-    def sign(self, signer: Signer):
+    def sign(self, signer: Signer) -> None:
         """ Sign message using signer. """
         message_data = self._data_to_sign()
         self.signature = signer.sign(data=message_data)

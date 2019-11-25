@@ -94,7 +94,7 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
         "--gas-price",
         "1000000000",
         "--no-sync-check",
-        f"--debug-logfile-name={base_logfile}",
+        f"--debug-logfile-path={base_logfile}",
         "--routing-mode",
         "local",
     ]

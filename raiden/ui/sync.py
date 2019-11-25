@@ -1,19 +1,28 @@
 import json
 import sys
 from itertools import count
+from typing import Any
 
 import gevent
+import pkg_resources
 import requests
 from eth_utils import to_int
 from requests.exceptions import RequestException
 
+import raiden
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.rpc.client import JSONRPCClient
 
 
 def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
-    def get_result():
-        response = requests.get(url)
+    def get_result() -> Any:
+        response = requests.get(
+            url,
+            headers={
+                "ACCEPT": "application/json",
+                "USER-AGENT": f"raiden-{pkg_resources.require(raiden.__name__)[0].version}",
+            },
+        )
         return json.loads(response.content)["result"]
 
     for _ in range(retries - 1):

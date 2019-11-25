@@ -1,10 +1,12 @@
 import random
+from math import ceil
 
 from raiden.constants import ABSENT_SECRET
 from raiden.settings import (
     DEFAULT_MEDIATION_FEE_MARGIN,
     DEFAULT_WAIT_BEFORE_LOCK_REMOVAL,
     MAX_MEDIATION_FEE_PERC,
+    PAYMENT_AMOUNT_BASED_FEE_MARGIN,
 )
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, TransitionResult
@@ -13,7 +15,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockFailed,
@@ -56,6 +58,23 @@ from raiden.utils.typing import (
 )
 
 
+def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount) -> FeeAmount:
+    if estimated_fee == 0:
+        # If the total fees are zero, we assume that no fees are set. If the
+        # fees sum up to zero incidentally, we should add a margin, but we
+        # can't detect that case.
+        return FeeAmount(0)
+
+    return FeeAmount(
+        int(
+            ceil(
+                abs(estimated_fee) * DEFAULT_MEDIATION_FEE_MARGIN
+                + payment_amount * PAYMENT_AMOUNT_BASED_FEE_MARGIN
+            )
+        )
+    )
+
+
 def calculate_safe_amount_with_fee(
     payment_amount: PaymentAmount, estimated_fee: FeeAmount
 ) -> PaymentWithFeeAmount:
@@ -64,10 +83,14 @@ def calculate_safe_amount_with_fee(
     This total amount consists of the payment amount, the estimated fees as well as a
     small margin that is added to increase the likelihood of payments succeeding in
     conditions where channels are used for multiple payments.
+
+    We could get much better margins by considering that we only need margins
+    for imbalance fees. See
+    https://github.com/raiden-network/raiden-services/issues/569.
     """
-    # `max` is taken as `estimated_fee` can be negative
-    fee_margin = round(max(estimated_fee, FeeAmount(0)) * DEFAULT_MEDIATION_FEE_MARGIN)
-    return PaymentWithFeeAmount(payment_amount + estimated_fee + fee_margin)
+    return PaymentWithFeeAmount(
+        payment_amount + estimated_fee + calculate_fee_margin(payment_amount, estimated_fee)
+    )
 
 
 def events_for_unlock_lock(
@@ -345,6 +368,8 @@ def handle_secretrequest(
         and state_change.payment_identifier
         == initiator_state.transfer_description.payment_identifier
     )
+    if not is_message_from_target:
+        return TransitionResult(initiator_state, list())
 
     lock = channel.get_lock(
         channel_state.our_state, initiator_state.transfer_description.secrethash
@@ -354,7 +379,10 @@ def handle_secretrequest(
     # removed.
     assert lock is not None, "channel is does not have the transfer's lock"
 
-    already_received_secret_request = initiator_state.received_secret_request
+    if initiator_state.received_secret_request:
+        # A secret request was received earlier, all subsequent are ignored
+        # as it might be an attack.
+        return TransitionResult(initiator_state, list())
 
     # transfer_description.amount is the actual payment amount without fees.
     # For the transfer to be valid and the unlock allowed the target must
@@ -365,12 +393,7 @@ def handle_secretrequest(
         and initiator_state.transfer_description.secret != ABSENT_SECRET
     )
 
-    if already_received_secret_request and is_message_from_target:
-        # A secret request was received earlier, all subsequent are ignored
-        # as it might be an attack
-        iteration = TransitionResult(initiator_state, list())
-
-    elif is_valid_secretrequest and is_message_from_target:
+    if is_valid_secretrequest:
         # Reveal the secret to the target node and wait for its confirmation.
         # At this point the transfer is not cancellable anymore as either the lock
         # timeouts or a secret reveal is received.
@@ -384,26 +407,20 @@ def handle_secretrequest(
             recipient=Address(recipient),
             message_identifier=message_identifier,
             secret=transfer_description.secret,
-            canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
 
         initiator_state.transfer_state = "transfer_secret_revealed"
         initiator_state.received_secret_request = True
-        iteration = TransitionResult(initiator_state, [revealsecret])
-
-    elif not is_valid_secretrequest and is_message_from_target:
+        return TransitionResult(initiator_state, [revealsecret])
+    else:
         initiator_state.received_secret_request = True
         invalid_request = EventInvalidSecretRequest(
             payment_identifier=state_change.payment_identifier,
             intended_amount=initiator_state.transfer_description.amount,
             actual_amount=state_change.amount,
         )
-        iteration = TransitionResult(initiator_state, [invalid_request])
-
-    else:
-        iteration = TransitionResult(initiator_state, list())
-
-    return iteration
+        return TransitionResult(initiator_state, [invalid_request])
 
 
 def handle_offchain_secretreveal(

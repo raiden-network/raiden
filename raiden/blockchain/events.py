@@ -297,10 +297,6 @@ class BlockchainEvents:
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self) -> None:
-        for listener in self.event_listeners:
-            if listener.filter.filter_id:
-                listener.filter.web3.eth.uninstallFilter(listener.filter.filter_id)
-
         self.event_listeners = list()
 
     def add_event_listener(
@@ -316,7 +312,7 @@ class BlockchainEvents:
         self,
         token_network_registry_proxy: TokenNetworkRegistry,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = "latest",
+        from_block: BlockNumber,
     ) -> None:
         token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
         token_network_registry_address = token_network_registry_proxy.address
@@ -331,7 +327,7 @@ class BlockchainEvents:
         self,
         token_network_proxy: TokenNetwork,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = "latest",
+        from_block: BlockNumber,
     ) -> None:
         token_network_filter = token_network_proxy.all_events_filter(from_block=from_block)
         token_network_address = token_network_proxy.address
@@ -346,7 +342,7 @@ class BlockchainEvents:
         self,
         secret_registry_proxy: SecretRegistry,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = "latest",
+        from_block: BlockNumber,
     ) -> None:
         secret_registry_filter = secret_registry_proxy.secret_registered_filter(
             from_block=from_block

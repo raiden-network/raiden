@@ -36,6 +36,7 @@ nodes:
     proportional-imbalance-fee:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 20_000  # 2% imbalance fee on channel balance
+    no-cap-mediation-fees: true
 
 ## This is the MFEE4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
 ## whether a path is returned. It also checks that correct fees are deducted.
@@ -58,6 +59,7 @@ scenario:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 3, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - wait_blocks: 1  # Wait for balances being up to date
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -67,16 +69,20 @@ scenario:
                 expected_routes:
                   - [0, 1, 2, 3]
 
-            - wait_blocks: 2
-            # 41_963_768_101_996_008 TKN fees are calculated which are 8.4% of the initial payment, 5% margin are added
-            # This results in a total fee of 44_061_956_507_095_808
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 455_938_043_492_904_366, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_544_061_956_507_095_634, state: "opened"}
+            # This calculation is too complicated to follow it manually. You
+            # can inspect the precise intermediate values in `test_mfee4` if necessary.
+            # Very rough calculation:
+            # Imbalance fees: 2 * 2 * 500e15 * 2% = 40e15
+            # Flat fees: 2 * 100 = 200
+            # Proportional fees: 2 * 500e15 * 1% = 10e15
+            # Total fees: 40e15 + 200 + 10e15 = 50e15
+            # Margin: 50e15 * 3% + 500e15 * 0.05% = 1.5e15 + 0.25e15 = 1.525e15
+            # Amount sent by initiator: 500e15 + 50e15 + 1.525e15 = 551e15
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 456_496_933_858_494_449, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_543_503_066_141_505_551, state: "opened"}
 
-            # update comment ...
-            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_064_586_391_421_968, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_935_413_608_578_032, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_587_602_916_613_423, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_412_397_083_386_577, state: "opened"}
 
-            # update comment ...
-            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_254_201_118_912_876, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_745_798_881_087_124, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_743_132_371_418_303, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_256_867_628_581_697, state: "opened"}

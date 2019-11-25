@@ -311,9 +311,9 @@ UNIT_TRANSFER_AMOUNT = 50
 UNIT_TRANSFER_FEE = 2
 UNIT_SECRET = Secret(b"secretsecretsecretsecretsecretse")
 UNIT_SECRETHASH = sha256_secrethash(UNIT_SECRET)
-UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
-UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
-UNIT_CHANNEL_ID = 1338
+UNIT_TOKEN_ADDRESS = TokenAddress(b"tokentokentokentoken")
+UNIT_TOKEN_NETWORK_ADDRESS = TokenNetworkAddress(b"networknetworknetwor")
+UNIT_CHANNEL_ID = ChannelID(1338)
 UNIT_CHAIN_ID = ChainID(337)
 UNIT_CANONICAL_ID = CanonicalIdentifier(
     chain_identifier=UNIT_CHAIN_ID,
@@ -323,7 +323,9 @@ UNIT_CANONICAL_ID = CanonicalIdentifier(
 UNIT_OUR_KEY = b"ourourourourourourourourourourou"
 UNIT_OUR_ADDRESS = privatekey_to_address(UNIT_OUR_KEY)
 
-UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER = b"tokennetworkregistryidentifier"
+UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS = TokenNetworkRegistryAddress(
+    b"tokennetworkregistryidentifier"
+)
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
 UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
@@ -505,7 +507,7 @@ class NettingChannelStateProperties(Properties):
 NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=CanonicalIdentifierProperties.DEFAULTS,
     token_address=UNIT_TOKEN_ADDRESS,
-    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     fee_schedule=FeeScheduleStateProperties.DEFAULTS,
@@ -530,7 +532,7 @@ class TransferDescriptionProperties(Properties):
 
 
 TransferDescriptionProperties.DEFAULTS = TransferDescriptionProperties(
-    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_IDENTIFIER,
+    token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
     payment_identifier=UNIT_TRANSFER_IDENTIFIER,
     amount=UNIT_TRANSFER_AMOUNT,
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
@@ -781,8 +783,8 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
     payment_identifier: PaymentID = EMPTY
     token: TokenAddress = EMPTY
     secret: Secret = EMPTY
-    sender: Address = EMPTY
-    recipient: Address = EMPTY
+    sender: InitiatorAddress = EMPTY
+    recipient: TargetAddress = EMPTY
     pkey: bytes = EMPTY
     message_identifier: MessageID = EMPTY
     routes: List[List[Address]] = EMPTY
@@ -822,7 +824,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     sender = params.pop("sender")
     if params["locksroot"] == LOCKSROOT_OF_NO_LOCKS:
         params["locksroot"] = keccak(lock.as_bytes)
-    params["fee"] = 0
 
     # Dancing with parameters for different LockedState and LockedTransfer classes
     routes = params.pop("routes")
@@ -864,7 +865,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
 
 @dataclass(frozen=True)
 class LockedTransferProperties(LockedTransferSignedStateProperties):
-    fee: FeeAmount = EMPTY
     metadata: Metadata = EMPTY
     TARGET_TYPE = LockedTransfer
 
@@ -872,7 +872,6 @@ class LockedTransferProperties(LockedTransferSignedStateProperties):
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
     **replace(LockedTransferSignedStateProperties.DEFAULTS, locksroot=GENERATE).__dict__,
     metadata=GENERATE,
-    fee=0,
 )
 
 

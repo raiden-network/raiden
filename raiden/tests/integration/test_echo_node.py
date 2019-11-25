@@ -10,10 +10,11 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import make_secret_with_hash
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import wait_until
 from raiden.utils.echo_node import EchoNode
-from raiden.utils.typing import MYPY_ANNOTATION, List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, List, Optional, PaymentAmount, PaymentID
 from raiden.waiting import TransferWaitResult, wait_for_received_transfer_result
 
 log = structlog.get_logger(__name__)
@@ -43,8 +44,8 @@ def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
 
     wait_for = list()
     for num, app in enumerate([app0, app1]):
-        amount = 1 + num
-        identifier = 10 ** (num + 1)
+        amount = PaymentAmount(1 + num)
+        identifier = PaymentID(10 ** (num + 1))
         secret, secrethash = make_secret_with_hash()
 
         payment_status = RaidenAPI(app.raiden).transfer_async(
@@ -66,17 +67,17 @@ def test_echo_node_response(token_addresses, raiden_chain, retry_timeout):
             f"{to_checksum_address(echo_app.raiden.address)} timed out after "
             f"{transfer_timeout}"
         )
-        with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
+        timeout = gevent.Timeout(transfer_timeout, exception=RuntimeError(msg))
+        with watch_for_unlock_failures(*raiden_chain), timeout:
             payment_status.payment_done.wait()
 
-        echo_identifier = identifier + amount
+        echo_identifier = PaymentID(identifier + amount)
         msg = (
             f"Response transfer {echo_identifier} from echo node "
             f"{to_checksum_address(echo_app.raiden.address)} to "
             f"{to_checksum_address(app.raiden.address)} timed out after "
             f"{transfer_timeout}"
         )
-
         with gevent.Timeout(transfer_timeout, exception=RuntimeError(msg)):
             result = wait_for_received_transfer_result(
                 raiden=app.raiden,
@@ -145,45 +146,49 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     amount = 7
     for num, app in enumerate([app0, app1, app2, app3, app4, app5]):
         identifier = 100 * num
+        with watch_for_unlock_failures(*raiden_chain):
+            transfer_and_await(
+                app=app,
+                token_address=token_address,
+                target=echo_app.raiden.address,
+                amount=amount,
+                identifier=identifier,
+                timeout=transfer_timeout,
+            )
+
+    # test duplicated identifier + amount is ignored
+    with watch_for_unlock_failures(*raiden_chain):
         transfer_and_await(
-            app=app,
+            app=app5,
             token_address=token_address,
             target=echo_app.raiden.address,
             amount=amount,
-            identifier=identifier,
+            identifier=500,  # app5 used this identifier before
             timeout=transfer_timeout,
         )
 
-    # test duplicated identifier + amount is ignored
-    transfer_and_await(
-        app=app5,
-        token_address=token_address,
-        target=echo_app.raiden.address,
-        amount=amount,
-        identifier=500,  # app5 used this identifier before
-        timeout=transfer_timeout,
-    )
-
     # test pool size querying
     pool_query_identifier = 77  # unused identifier different from previous one
-    transfer_and_await(
-        app=app5,
-        token_address=token_address,
-        target=echo_app.raiden.address,
-        amount=amount,
-        identifier=pool_query_identifier,
-        timeout=transfer_timeout,
-    )
+    with watch_for_unlock_failures(*raiden_chain):
+        transfer_and_await(
+            app=app5,
+            token_address=token_address,
+            target=echo_app.raiden.address,
+            amount=amount,
+            identifier=pool_query_identifier,
+            timeout=transfer_timeout,
+        )
 
     # fill the pool
-    transfer_and_await(
-        app=app6,
-        token_address=token_address,
-        target=echo_app.raiden.address,
-        amount=amount,
-        identifier=600,
-        timeout=transfer_timeout,
-    )
+    with watch_for_unlock_failures(*raiden_chain):
+        transfer_and_await(
+            app=app6,
+            token_address=token_address,
+            target=echo_app.raiden.address,
+            amount=amount,
+            identifier=600,
+            timeout=transfer_timeout,
+        )
 
     def get_echoed_transfer(sent_transfer) -> Optional[EventPaymentReceivedSuccess]:
         """For a given transfer sent to echo node, get the corresponding echoed transfer"""

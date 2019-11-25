@@ -153,18 +153,17 @@ def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
 
 
 def check_raiden_environment(network_id: ChainID, environment_type: Environment) -> None:
-    not_allowed = (  # for now we only disallow mainnet with test configuration
+    warn = (  # mainnet --development is only for tests
         network_id == 1 and environment_type == Environment.DEVELOPMENT
     )
-    if not_allowed:
+    if warn:
         click.secho(
             f"The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, "
             f'but the "development" environment was selected.\n'
-            f"This is not allowed. Please start again with a safe environment setting "
+            f"This crashes the node often. Please start again with a safe environment setting "
             f"(--environment production).",
             fg="red",
         )
-        sys.exit(1)
 
 
 def check_smart_contract_addresses(

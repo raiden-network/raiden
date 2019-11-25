@@ -1,5 +1,4 @@
 import random
-from hashlib import sha256
 
 import gevent
 import pytest
@@ -13,9 +12,11 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages.transfers import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.messages.withdraw import WithdrawExpired
+from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
+from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -24,6 +25,7 @@ from raiden.tests.utils.transfer import assert_synced_channel_state, get_channel
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -378,7 +380,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         "expected balances."
     )
     assert lock.expiration > alice_app.raiden.get_block_number(), msg
-    assert lock.secrethash == sha256(secret).digest()
+    assert lock.secrethash == sha256_secrethash(secret)
 
     waiting.wait_for_settle(
         alice_app.raiden,
@@ -608,8 +610,8 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
     target = app1.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -758,15 +760,14 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
     target = app2.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        fee=0,
         target=target,
         identifier=identifier,
         secret=secret,
@@ -801,7 +802,10 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # claim the token from the channel A1 - H
 
     # the attacker settles the contract
-    app2.raiden.proxy_manager.next_block()
+    app2proxymanager = app2.raiden.proxy_manager
+    app2proxymanager.wait_until_block(
+        target_block_number=app2proxymanager.client.block_number() + 1
+    )
 
     attack_channel.netting_channel.settle(token, attack_contract)
 
@@ -819,7 +823,10 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # locked transfer between H-A2 than A1-H. For A2 to acquire the token
     # it needs to make the secret public in the blockchain so it publishes the
     # secret through an event and the Hub is able to require its funds
-    app1.raiden.proxy_manager.next_block()
+    app1proxymanager = app1.raiden.proxy_manager
+    app1proxymanager.wait_until_block(
+        target_block_number=app1proxymanager.client.block_number() + 1
+    )
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
@@ -1066,3 +1073,60 @@ def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
             receiver=alice_bob_channel_state.partner_state.address,
             sender=alice_bob_channel_state.our_state.address,
         )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", (2,))
+@pytest.mark.parametrize("channels_per_node", (1,))
+def test_handle_insufficient_eth(raiden_network, token_addresses, caplog):
+    app0, app1 = raiden_network
+    token = token_addresses[0]
+    registry_address = app0.raiden.default_registry.address
+
+    channel_state = views.get_channelstate_for(
+        chain_state=views.state_from_raiden(app0.raiden),
+        token_network_registry_address=registry_address,
+        token_address=token,
+        partner_address=app1.raiden.address,
+    )
+    assert isinstance(channel_state, NettingChannelState)
+    channel_identifier = channel_state.identifier
+
+    transfer(
+        initiator_app=app0,
+        target_app=app1,
+        amount=PaymentAmount(1),
+        token_address=token,
+        identifier=PaymentID(1),
+        timeout=60,
+    )
+
+    app1.raiden.stop()
+    burn_eth(app1.raiden.rpc_client)
+    app1.raiden.start()
+
+    settle_block_timeout = BlockTimeout(
+        exception_to_throw=RuntimeError("Settle did not happen."),
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + channel_state.settle_timeout * 2,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
+    )
+
+    with settle_block_timeout:
+        RaidenAPI(app0.raiden).channel_close(
+            registry_address=registry_address,
+            token_address=token,
+            partner_address=app1.raiden.address,
+        )
+
+        waiting.wait_for_settle(
+            raiden=app0.raiden,
+            token_network_registry_address=registry_address,
+            token_address=token,
+            channel_ids=[channel_identifier],
+            retry_timeout=DEFAULT_RETRY_TIMEOUT,
+        )
+
+    assert any(
+        "subtask died" in message and "insufficient ETH" in message for message in caplog.messages
+    )

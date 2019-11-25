@@ -268,11 +268,10 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 def test_routing_mocked_pfs_request_error(
     chain_state, token_network_state, one_to_n_address, our_address
 ):
-    token_network_state, addresses, channel_states = create_square_network_topology(
+    token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
     address1, address2, address3, address4 = addresses
-    channel_state1, channel_state2 = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
@@ -290,24 +289,18 @@ def test_routing_mocked_pfs_request_error(
             to_address=address4,
             amount=50,
         )
-        # PFS doesn't work, so internal routing is used, so two possible routes are returned,
-        # whereas the path via address1 is shorter
-        # (even if the route is not possible from a global perspective)
-        assert routes[0].next_hop_address == address1
-        assert routes[0].forward_channel_id == channel_state1.identifier
-        assert routes[1].next_hop_address == address2
-        assert routes[1].forward_channel_id == channel_state2.identifier
+        # Request to PFS failed, but we do not fall back to internal routing
+        assert len(routes) == 0
         assert feedback_token is None
 
 
 def test_routing_mocked_pfs_bad_http_code(
     chain_state, token_network_state, one_to_n_address, our_address
 ):
-    token_network_state, addresses, channel_states = create_square_network_topology(
+    token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
     address1, address2, address3, address4 = addresses
-    channel_state1, channel_state2 = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
@@ -342,25 +335,18 @@ def test_routing_mocked_pfs_bad_http_code(
             to_address=address4,
             amount=50,
         )
-        # PFS doesn't work, so internal routing is used, so two possible routes are returned,
-        # whereas the path via address1 is shorter (
-        # even if the route is not possible from a global perspective)
-        # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].next_hop_address == address1
-        assert routes[0].forward_channel_id == channel_state1.identifier
-        assert routes[1].next_hop_address == address2
-        assert routes[1].forward_channel_id == channel_state2.identifier
+        # Request to PFS failed, but we do not fall back to internal routing
+        assert len(routes) == 0
         assert feedback_token is None
 
 
 def test_routing_mocked_pfs_invalid_json(
     chain_state, token_network_state, one_to_n_address, our_address
 ):
-    token_network_state, addresses, channel_states = create_square_network_topology(
+    token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
     address1, address2, address3, address4 = addresses
-    channel_state1, channel_state2 = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
@@ -380,25 +366,18 @@ def test_routing_mocked_pfs_invalid_json(
             to_address=address4,
             amount=50,
         )
-        # PFS doesn't work, so internal routing is used, so two possible routes are returned,
-        # whereas the path via address1 is shorter (
-        # even if the route is not possible from a global perspective)
-        # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].next_hop_address == address1
-        assert routes[0].forward_channel_id == channel_state1.identifier
-        assert routes[1].next_hop_address == address2
-        assert routes[1].forward_channel_id == channel_state2.identifier
+        # Request to PFS failed, but we do not fall back to internal routing
+        assert len(routes) == 0
         assert feedback_token is None
 
 
 def test_routing_mocked_pfs_invalid_json_structure(
     chain_state, one_to_n_address, token_network_state, our_address
 ):
-    token_network_state, addresses, channel_states = create_square_network_topology(
+    token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
     address1, address2, address3, address4 = addresses
-    channel_state1, channel_state2 = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
@@ -418,14 +397,8 @@ def test_routing_mocked_pfs_invalid_json_structure(
             to_address=address4,
             amount=50,
         )
-        # PFS doesn't work, so internal routing is used, so two possible routes are returned,
-        # whereas the path via address1 is shorter (
-        # even if the route is not possible from a global perspective)
-        # in case the mocked pfs response were used, we would not see address1 on the route
-        assert routes[0].next_hop_address == address1
-        assert routes[0].forward_channel_id == channel_state1.identifier
-        assert routes[1].next_hop_address == address2
-        assert routes[1].forward_channel_id == channel_state2.identifier
+        # Request to PFS failed, but we do not fall back to internal routing
+        assert len(routes) == 0
         assert feedback_token is None
 
 

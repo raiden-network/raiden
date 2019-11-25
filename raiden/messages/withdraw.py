@@ -3,6 +3,11 @@ from dataclasses import dataclass
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
+from raiden.transfer.events import (
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     Address,
@@ -33,7 +38,7 @@ class WithdrawRequest(SignedRetrieableMessage):
     expiration: BlockExpiration
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendWithdrawRequest) -> "WithdrawRequest":
         return cls(
             message_identifier=event.message_identifier,
             chain_id=event.canonical_identifier.chain_identifier,
@@ -74,7 +79,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
     expiration: BlockExpiration
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendWithdrawConfirmation) -> "WithdrawConfirmation":
         return cls(
             message_identifier=event.message_identifier,
             chain_id=event.canonical_identifier.chain_identifier,
@@ -115,7 +120,7 @@ class WithdrawExpired(SignedRetrieableMessage):
     nonce: Nonce
 
     @classmethod
-    def from_event(cls, event):
+    def from_event(cls, event: SendWithdrawExpired) -> "WithdrawExpired":
         return cls(
             message_identifier=event.message_identifier,
             chain_id=event.canonical_identifier.chain_identifier,

@@ -8,12 +8,15 @@ Allows to filter records by `event`.
 
 import hashlib
 import json
+import webbrowser
 from collections import Counter, namedtuple
 from copy import copy
 from datetime import datetime
 from html import escape
+from itertools import chain
 from json import JSONDecodeError
 from math import log10
+from pathlib import Path
 from typing import (
     Any,
     Counter as CounterType,
@@ -36,8 +39,6 @@ from colour import Color
 from eth_utils import is_address, to_canonical_address
 
 from raiden.utils import pex
-
-Record = namedtuple("Line", ("event", "timestamp", "logger", "level", "fields"))
 
 TIME_PAST = datetime(1970, 1, 1)
 TIME_FUTURE = datetime(9999, 1, 1)
@@ -319,7 +320,6 @@ body {{
     color: white;
 }}
 table {{
-    white-space: nowrap;
     border: none;
 }}
 table tr.head {{
@@ -356,6 +356,13 @@ td.no, td.time * {{
 }}
 td.no {{
     text-align: right;
+}}
+td.event {{
+    min-width: 20em;
+    max-width: 35em;
+}}
+td.fields {{
+    white-space: nowrap;
 }}
 .lvl-debug {{
     color: #20d0d0;
@@ -396,13 +403,36 @@ PAGE_END = """\
 ROW_TEMPLATE = """
 <tr class="lvl-{record.level} {additional_row_class}">
     <td class="no">{index}</td>
-    <td><b style="color: {event_color}">{record.event}</b></td>
+    <td class="event"><b style="color: {event_color}">{record.event}</b></td>
     <td class="time"><span title="{time_absolute}" style="{time_color}">{time_display}</span></td>
-    <td>{record.logger}</td>
+    <td><span title="{record.logger}">{logger_name}</span></td>
     <td>{record.level}</td>
-    <td>{fields}</td>
+    <td class="fields">{fields}</td>
 </tr>
 """
+
+
+Record = namedtuple(
+    "Record", ("event", "timestamp", "logger", "truncated_logger", "level", "fields")
+)
+
+
+@cached(LRUCache(maxsize=1_000))
+def truncate_logger_name(logger: str) -> str:
+    """ Truncate dotted logger path names.
+
+    Keeps the last component unchanged.
+
+    >>> truncate_logger_name("some.logger.name")
+    s.l.name
+
+    >>> truncate_logger_name("name")
+    name
+    """
+    if "." not in logger:
+        return logger
+    logger_path, _, logger_module = logger.rpartition(".")
+    return ".".join(chain((part[0] for part in logger_path.split(".")), [logger_module]))
 
 
 def _colorize_cache_key(value: Any, min_luminance: float) -> Tuple[str, float]:
@@ -503,11 +533,13 @@ def parse_log(log_file: TextIO) -> Tuple[List[Record], CounterType[int]]:
         else:
             timestamp = last_ts
 
+        logger_name = line_dict.pop("logger", "MISSING")
         log_records.append(
             Record(
                 line_dict.pop("event"),
                 timestamp,
-                line_dict.pop("logger", "MISSING"),
+                logger_name,
+                truncate_logger_name(logger_name),
                 line_dict.pop("level", "MISSING"),
                 line_dict,
             )
@@ -556,7 +588,7 @@ def transform_records(
             return type(value)(replace(inner) for inner in value)
         elif isinstance(value, dict):
             return {replace(k): replace(v) for k, v in value.items()}
-        str_value = str(value).lower()
+        str_value = str(value).casefold()
         if isinstance(value, str):
             keys_in_value = [key for key in replacement_keys if key in str_value]
             for key in keys_in_value:
@@ -565,15 +597,19 @@ def transform_records(
                 except ValueError:
                     # Value no longer in string due to replacement
                     continue
+                # We use this awkward replacement code since matching is done on a lowercased
+                # version of the string but we want to keep the original case in the output
                 value = f"{value[:repl_start]}{replacements[key]}{value[repl_start + len(key):]}"
-                str_value = value.lower()
+                str_value = value.casefold()
         return replacements.get(str_value, value)
 
-    replacements = {str(k).lower(): v for k, v in replacements.items()}
+    replacements = {str(k).casefold(): v for k, v in replacements.items()}
     for k, v in copy(replacements).items():
-        # Special handling for `pex()`ed eth addresses
+        # Special handling for `pex()`ed and repr'd binary eth addresses
         if isinstance(k, str) and k.startswith("0x") and is_address(k):
-            replacements[pex(to_canonical_address(k))] = v
+            bytes_address = to_canonical_address(k)
+            replacements[pex(bytes_address)] = v
+            replacements[repr(bytes_address).casefold()] = v
     replacement_keys = replacements.keys()
     for record in log_records:
         yield replace(record)
@@ -586,8 +622,9 @@ def render(
     output: TextIO,
     wrap: bool = False,
     show_time_diff: bool = True,
+    truncate_logger: bool = False,
     highlight_records: Optional[Iterable[int]] = (),
-) -> None:
+):
     sorted_known_fields = [name for name, count in known_fields.most_common()]
     highlight_records_set = set(highlight_records) if highlight_records else set()
     prev_record = None
@@ -603,10 +640,12 @@ def render(
         time_absolute, time_color, time_display = get_time_display(prev_record, record)
         event_color = rgb_color_picker(record.event, min_luminance=0.6)
         rendered_fields = render_fields(record, sorted_known_fields)
+
         output.write(
             ROW_TEMPLATE.format(
                 index=i,
                 record=record,
+                logger_name=record.truncated_logger if truncate_logger else record.logger,
                 time_absolute=time_absolute,
                 time_display=time_display,
                 time_color=time_color,
@@ -661,7 +700,7 @@ def render(
         "Input must be a JSON object. "
         "Keys are transformed to lowercase strings before matching. "
         "Partial substring matches will also be replaced. "
-        "Eth-Addresses will also be replaced in pex()ed format."
+        "Eth-Addresses will also be replaced in pex()ed and binary format."
     ),
 )
 @click.option(
@@ -671,7 +710,6 @@ def render(
     help="Behaves as -r / --replacements but reads the JSON object from the given file.",
 )
 @click.option(
-    "-t",
     "--time-range",
     default="^",
     help=(
@@ -689,12 +727,26 @@ def render(
     "-w", "--wrap", is_flag=True, help="Wrap event details into multiple lines.", show_default=True
 )
 @click.option(
+    "-t",
+    "--truncate-logger",
+    is_flag=True,
+    show_default=True,
+    help="Shorten logger module paths ('some.module.logger' -> 's.m.logger').",
+)
+@click.option(
     "-h",
     "--highlight-record",
     "highlight_records",
     multiple=True,
     type=int,
     help="Highlight record with given number. Can be given multiple times.",
+)
+@click.option(
+    "-b",
+    "--open-browser",
+    is_flag=True,
+    help="Open output file in default browser after rendering",
+    show_default=True,
 )
 def main(
     log_file: TextIO,
@@ -706,7 +758,9 @@ def main(
     time_range: str,
     wrap: bool,
     time_diff: bool,
+    truncate_logger: bool,
     highlight_records: List[int],
+    open_browser: bool,
     output: TextIO,
 ) -> None:
     if replacements_from_file:
@@ -750,9 +804,14 @@ def main(
             output=output,
             wrap=wrap,
             show_time_diff=time_diff,
+            truncate_logger=truncate_logger,
             highlight_records=highlight_records,
         )
     click.secho(f"Output written to {click.style(output.name, fg='yellow')}", fg="green")
+    if open_browser:
+        if output.name == "<stdout>":
+            click.secho("Can't open output when writing to stdout.", fg="red")
+        webbrowser.open(f"file://{Path(output.name).resolve()}")
 
 
 if __name__ == "__main__":

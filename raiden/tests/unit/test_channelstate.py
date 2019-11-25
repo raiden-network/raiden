@@ -85,8 +85,9 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import LockedAmount
+from raiden.utils.typing import EncodedData, LockedAmount
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",
@@ -1233,7 +1234,7 @@ def pending_locks_from_packed_data(packed: bytes) -> PendingLocksState:
     locks = make_empty_pending_locks_state()
     for i in range(0, number_of_bytes, 96):
         lock = Lock.from_bytes(packed[i : i + 96])
-        locks.locks.append(lock.as_bytes)  # pylint: disable=E1101
+        locks.locks.append(EncodedData(lock.as_bytes))  # pylint: disable=E1101
     return locks
 
 
@@ -1504,7 +1505,7 @@ def test_get_amount_locked():
     assert channel.get_amount_locked(state) == 23
 
     secret = make_secret(1)
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     lock = HashTimeLockState(amount=21, expiration=100, secrethash=secrethash)
     state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret
@@ -1512,7 +1513,7 @@ def test_get_amount_locked():
     assert channel.get_amount_locked(state) == 44
 
     secret = make_secret(2)
-    secrethash = sha256(secret).digest()
+    secrethash = sha256_secrethash(secret)
     lock = HashTimeLockState(amount=19, expiration=100, secrethash=secrethash)
     state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
         lock=lock, secret=secret

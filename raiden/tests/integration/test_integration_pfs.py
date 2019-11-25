@@ -15,7 +15,7 @@ from raiden.utils.typing import List, TokenAddress, TokenAmount, WithdrawAmount
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize(
-    "global_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
@@ -30,7 +30,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     transport0 = app0.raiden.transport
 
     pfs_room_name = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport0._global_rooms.get(pfs_room_name)
+    pfs_room = transport0._broadcast_rooms.get(pfs_room_name)
     # need to assert for mypy that pfs_room is not None
     assert isinstance(pfs_room, Room)
     pfs_room.send_text = MagicMock(spec=pfs_room.send_text)

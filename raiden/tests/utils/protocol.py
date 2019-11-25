@@ -40,7 +40,7 @@ class Holding(NamedTuple):
 
 class WaitForMessage(MessageHandler):
     def __init__(self):
-        self.waiting = defaultdict(list)
+        self.waiting: Dict[type, list] = defaultdict(list)
 
     def wait_for_message(self, message_type: type, attributes: dict) -> AsyncResult:
         assert not any(attributes == waiting.attributes for waiting in self.waiting[message_type])

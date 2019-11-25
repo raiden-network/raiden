@@ -1,14 +1,17 @@
 import traceback
 from functools import wraps
+from typing import Any, Callable, List
 
 import gevent
 import structlog
 from gevent.event import AsyncResult
 
+from raiden.app import App
+
 log = structlog.get_logger(__name__)
 
 
-def raise_on_failure(test_function):
+def raise_on_failure(test_function: Callable) -> Callable:
     """Wait on the result for the test function and any of the apps.
 
     This decorator should be used for happy path testing with more than one app.
@@ -16,9 +19,12 @@ def raise_on_failure(test_function):
     """
 
     @wraps(test_function)
-    def wrapper(**kwargs):
+    def wrapper(**kwargs: Any) -> None:
         result = AsyncResult()
-        apps = kwargs.get("raiden_network", kwargs.get("raiden_chain"))
+
+        apps: List[App] = kwargs.get("raiden_network", kwargs.get("raiden_chain"))
+        assert all(isinstance(app, App) for app in apps)
+
         if not apps:
             raise Exception(
                 f"Can't use `raise_on_failure` on test function {test_function.__name__} "
@@ -28,7 +34,7 @@ def raise_on_failure(test_function):
         # Do not use `link` or `link_value`, an app an be stopped to test restarts.
         for app in apps:
             assert app.raiden, "The RaidenService must be started"
-            app.raiden.link_exception(result)
+            app.raiden.greenlet.link_exception(result)
 
         test_greenlet = gevent.spawn(test_function, **kwargs)
         test_greenlet.link(result)

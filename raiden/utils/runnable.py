@@ -3,7 +3,7 @@ from typing import Any, Sequence
 import structlog
 from gevent import Greenlet, GreenletExit
 
-from raiden.utils.typing import Callable
+from raiden.utils.typing import Callable, List
 
 log = structlog.get_logger(__name__)
 
@@ -25,6 +25,7 @@ class Runnable:
 
         self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
+        self.greenlets: List[Greenlet] = list()
 
     def start(self) -> None:
         """ Synchronously start task
@@ -77,11 +78,11 @@ class Runnable:
         self.greenlet.kill(exception)
 
     def _schedule_new_greenlet(
-        self, func: Callable, *args, in_seconds_from_now: int = None, **kwargs
+        self, func: Callable, *args: Any, in_seconds_from_now: int = None, **kwargs: Any
     ) -> Greenlet:
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
 
-        def on_success(greenlet):
+        def on_success(greenlet: Greenlet) -> None:
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 
@@ -95,10 +96,10 @@ class Runnable:
             greenlet.start()
         return greenlet
 
-    # redirect missing members to underlying greenlet for compatibility
-    # but better use greenlet directly for now, to make use of the c extension optimizations
-    def __getattr__(self, item: str) -> Any:
-        return getattr(self.greenlet, item)
-
     def __bool__(self) -> bool:
         return bool(self.greenlet)
+
+    def rawlink(self, callback: Callable) -> None:
+        if not self.greenlet:
+            return
+        self.greenlet.rawlink(callback)

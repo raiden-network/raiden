@@ -8,6 +8,7 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
 
+import click
 import gevent
 import structlog
 
@@ -16,6 +17,7 @@ LOG_BLACKLIST: Dict[Pattern, str] = {
     re.compile(
         r"(@0x[0-9a-fA-F]{40}:(?:[\w\d._-]+(?::[0-9]+)?))/([0-9a-zA-Z-]+)"
     ): r"\1/<redacted>",
+    re.compile(r'"secret": ?"0x[0-9a-fA-F]{64}"'): r'"secret": "<redacted>"',
 }
 DEFAULT_LOG_LEVEL = "INFO"
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
@@ -129,13 +131,52 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     return processor_wrapper
 
 
+def configure_debug_logfile_path(debug_log_file_path: Optional[str]) -> str:
+    """Determine the pathname for the debug logfile based on the given argument and user's OS"""
+
+    if debug_log_file_path is not None:
+        given_dir = os.path.dirname(debug_log_file_path)
+        # If it's not just a filename relative to the current directory make sure
+        # that the directory exists
+        if given_dir != "" and not os.path.isdir(given_dir):
+            click.secho(
+                f"The provided directory {given_dir} for the debuglog filename "
+                f"either does not exist or is not a directory",
+                fg="red",
+            )
+            sys.exit(1)
+
+        return debug_log_file_path
+
+    # From here and on determine default based on user's system
+    time = datetime.datetime.utcnow().isoformat()
+    debug_log_file_name = f"raiden-debug_{time}.log"
+
+    home = os.path.expanduser("~")
+    if home == "~":  # Could not expand user path, just use /tmp
+        datadir = "/tmp"
+    if sys.platform == "darwin":
+        datadir = os.path.join(home, "Library", "Logs", "Raiden")
+    elif sys.platform == "win32" or sys.platform == "cygwin":
+        datadir = os.path.join(home, "AppData", "Roaming", "Raiden")
+    elif os.name == "posix":
+        datadir = os.path.join(home, ".raiden")
+    else:
+        raise RuntimeError("Unsupported Operating System")
+
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+
+    return os.path.join(datadir, debug_log_file_name)
+
+
 def configure_logging(
     logger_level_config: Dict[str, str] = None,
     colorize: bool = True,
     log_json: bool = False,
     log_file: str = None,
     disable_debug_logfile: bool = False,
-    debug_log_file_name: str = None,
+    debug_log_file_path: str = None,
     cache_logger_on_first_use: bool = True,
     _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
     _debug_log_file_additional_level_filters: Dict[str, str] = None,
@@ -183,12 +224,10 @@ def configure_logging(
         }
 
     if not disable_debug_logfile:
-        if debug_log_file_name is None:
-            time = datetime.datetime.utcnow().isoformat()
-            debug_log_file_name = f"raiden-debug_{time}.log"
+        debug_logfile_path = configure_debug_logfile_path(debug_log_file_path)
         handlers["debug-info"] = {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": debug_log_file_name,
+            "filename": debug_logfile_path,
             "level": "DEBUG",
             "formatter": "debug",
             "maxBytes": MAX_LOG_FILE_SIZE,

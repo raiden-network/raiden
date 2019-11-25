@@ -1,6 +1,3 @@
-from hashlib import sha256
-from typing import Dict, List
-
 import gevent
 import pytest
 from eth_utils import is_list_like, to_checksum_address
@@ -8,6 +5,7 @@ from web3.utils.events import construct_event_topic_set
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.app import App
 from raiden.blockchain.events import (
     ALL_EVENTS,
     get_all_netting_channel_events,
@@ -22,18 +20,30 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
+from raiden.tests.utils.protocol import HoldRaidenEventHandler
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    get_channelstate,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils import sha3, wait_until
+from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     Balance,
     BlockSpecification,
     ChannelID,
+    Dict,
+    List,
+    PaymentAmount,
+    PaymentID,
+    Secret,
+    TargetAddress,
     TokenNetworkAddress,
 )
 from raiden_contracts.constants import (
@@ -430,7 +440,7 @@ def test_secret_revealed_on_chain(
         secret=secret,
     )
 
-    with gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
             app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
         )
@@ -470,7 +480,7 @@ def test_secret_revealed_on_chain(
         token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
     )
 
-    with gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
             app2.raiden, ContractReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
         )
@@ -478,11 +488,12 @@ def test_secret_revealed_on_chain(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
+def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_wait):
     """ Closing a channel clears the respective message queue. """
     app0, app1 = raiden_network
 
     hold_event_handler = app1.raiden.raiden_event_handler
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler)
 
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -502,26 +513,27 @@ def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     )
 
     target = app1.raiden.address
-    secret = sha3(target)
-    secrethash = sha256(secret).digest()
+    secret = Secret(sha3(target))
+    secrethash = sha256_secrethash(secret)
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     # make an unconfirmed transfer to ensure the nodes have communicated
-    amount = 10
-    payment_identifier = 1337
+    amount = PaymentAmount(10)
+    payment_identifier = PaymentID(1337)
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        target=target,
+        target=TargetAddress(target),
         identifier=payment_identifier,
         secret=secret,
     )
 
     app1.raiden.transport.stop()
-    app1.raiden.transport.get()
+    app1.raiden.transport.greenlet.get()
 
     # make sure to wait until the queue is created
     def has_initiator_events():
+        assert app0.raiden.wal, "raiden server must have been started"
         initiator_events = app0.raiden.wal.storage.get_events()
         return search_for_item(initiator_events, SendLockedTransfer, {})
 

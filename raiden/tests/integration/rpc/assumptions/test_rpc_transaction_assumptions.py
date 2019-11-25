@@ -1,14 +1,15 @@
 import pytest
 from eth_utils import to_checksum_address
 
-from raiden.exceptions import InsufficientFunds
+from raiden.exceptions import InsufficientEth
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
 
 
-def test_transact_opcode(deploy_client):
+def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that did not throw is 0x1 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
@@ -24,7 +25,7 @@ def test_transact_opcode(deploy_client):
     assert check_transaction_threw(receipt=receipt) is None, "must be empty"
 
 
-def test_transact_throws_opcode(deploy_client):
+def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that hit an assert or require is 0x0 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
@@ -45,7 +46,7 @@ def test_transact_throws_opcode(deploy_client):
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
 
-def test_transact_opcode_oog(deploy_client):
+def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that did NOT throw is 0x0. """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
@@ -62,7 +63,9 @@ def test_transact_opcode_oog(deploy_client):
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
 
-def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas(deploy_client):
+def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_gas(
+    deploy_client: JSONRPCClient
+) -> None:
     """ The gas estimation does not fail if the transaction execution requires
     more gas then the account's eth balance. However sending the transaction
     will.
@@ -75,5 +78,5 @@ def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas
     assert startgas, "The gas estimation should not have failed."
 
     burn_eth(deploy_client, amount_to_leave=startgas // 2)
-    with pytest.raises(InsufficientFunds):
+    with pytest.raises(InsufficientEth):
         contract_proxy.transact("loop", startgas, 1000)

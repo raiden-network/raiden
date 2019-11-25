@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytest
 import structlog
@@ -101,7 +102,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
     configure_logging(
         {module: level},
         disable_debug_logfile=disabled_debug,
-        debug_log_file_name=str(tmpdir / "raiden-debug.log"),
+        debug_log_file_path=str(tmpdir / "raiden-debug.log"),
     )
     log = structlog.get_logger(logger).bind(foo="bar")
     log.debug("test event", key="value")
@@ -117,8 +118,16 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
         assert "foo=bar" in captured.err
 
 
+def test_debug_logfile_invalid_dir():
+    """Test that providing an invalid directory for the debug logfile throws an error"""
+    with pytest.raises(SystemExit):
+        configure_logging(
+            {"": "DEBUG"}, debug_log_file_path=os.path.join("notarealdir", "raiden-debug.log")
+        )
+
+
 def test_redacted_request(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
     token = "my_access_token123"
 
     # use logging, as 'urllib3/requests'
@@ -133,7 +142,7 @@ def test_redacted_request(capsys, tmpdir):
 
 
 def test_redacted_state_change(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_name=str(tmpdir / "raiden-debug.log"))
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
     auth_token = (
         "MDAxZGxvY2F0aW9uIGxvY2FsaG9zdDo2NDAzMwowMDEzaWRlbnRpZmllciBrZXkKMDAxMGNpZCBnZW4gPSAxCjAwN"
         "GVjaWQgdXNlcl9pZCA9IEAweDYyNjRkYThmMmViOGQ4MDM3NjM2OTEwYzFlYzAzODA0MzhmNGVmZWU6bG9jYWxob3"
@@ -154,3 +163,19 @@ def test_redacted_state_change(capsys, tmpdir):
 
     assert auth_token not in captured.err
     assert f"{auth_user}/<redacted>" in captured.err
+
+
+def test_that_secret_is_redacted(capsys, tmpdir):
+    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
+
+    log = structlog.get_logger("raiden.network.transport.matrix.transport")
+
+    secret = "0x74564b5d217c3430713e7c6b643b5b244c6d617a4e350945303960723a7b2d4c"
+    data = f"""{{"secret": "{secret}", "signature": "0x274ec0589b47a85fa8645a4b7fa9f021b3ba7b81e41ab47278c6269089bad7b26f41f233236d994dd86b495791c95e433710365224d390aeb9f7ee427eddb5081b", "message_identifier": "3887369794757038169", "type": "RevealSecret"}}"""  # noqa
+
+    log.debug("Send raw", data=data.replace("\n", "\\n"))
+
+    captured = capsys.readouterr()
+
+    assert secret not in captured.err
+    assert f'"secret": "<redacted>"' in captured.err

@@ -41,7 +41,7 @@ def get_best_routes(
     pfs_config = config.get("pfs_config", None)
 
     is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
-    can_use_pfs = pfs_config and one_to_n_address is not None
+    can_use_pfs = pfs_config is not None and one_to_n_address is not None
 
     log.debug(
         "Getting route for payment",
@@ -98,12 +98,14 @@ def get_best_routes(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
             return pfs_routes, pfs_feedback_token
-        else:
-            log.warning(
-                "Request to Pathfinding Service was not successful, "
-                "falling back to internal routing."
-            )
 
+        log.warning(
+            "Request to Pathfinding Service was not successful. "
+            "No routes to the target are found."
+        )
+        return list(), None
+
+    # else non-pfs so let's use internal routing
     return (
         get_best_routes_internal(
             chain_state=chain_state,

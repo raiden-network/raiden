@@ -15,7 +15,6 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.constants import (
     EMPTY_HASH,
     EMPTY_SIGNATURE,
-    GENESIS_BLOCK_NUMBER,
     LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
     UINT256_MAX,
@@ -23,7 +22,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    ChannelOutdatedError,
     DepositOverLimit,
     DuplicatedChannelError,
     InvalidChannelID,
@@ -92,14 +90,13 @@ log = structlog.get_logger(__name__)
 
 
 def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
-    if NULL_ADDRESS_BYTES in (address1, address2):
-        raise ValueError("The null address is not allowed as a channel participant.")
+    msg = "The null address is not allowed as a channel participant."
+    assert NULL_ADDRESS_BYTES not in (address1, address2), msg
+    msg = "Addresses must be in binary"
+    assert is_binary_address(address1) and is_binary_address(address2), msg
 
     if address1 == address2:
         raise SamePeerAddress("Using the same address for both participants is forbiden.")
-
-    if not (is_binary_address(address1) and is_binary_address(address2)):
-        raise ValueError("Addresses must be in binary")
 
 
 class ChannelData(NamedTuple):
@@ -307,11 +304,11 @@ class TokenNetwork:
             settle_timeout=settle_timeout,
         )
         if not gas_limit:
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.openChannel"],
@@ -403,8 +400,6 @@ class TokenNetwork:
             BadFunctionCallOutput: If the `block_identifier` points to a block
                 prior to the deployment of the TokenNetwork.
             SamePeerAddress: If an both addresses are equal.
-            ValueError: If either of the address is an invalid type or the
-                null address.
         """
         raise_if_invalid_address_pair(participant1, participant2)
 
@@ -1073,11 +1068,11 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
@@ -1484,11 +1479,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="total_withdraw",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
@@ -1757,11 +1752,11 @@ class TokenNetwork:
 
                 # The latest block can not be used reliably because of reorgs,
                 # therefore every call using this block has to handle pruned data.
-                failed_at = self.proxy.jsonrpc_client.get_block("latest")
+                failed_at = self.proxy.rpc_client.get_block("latest")
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                self.proxy.rpc_client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.closeChannel"],
@@ -2073,11 +2068,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements[
@@ -2277,11 +2272,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="unlock",
                 transaction_executed=False,
                 required_gas=UNLOCK_TX_GAS_LIMIT,
@@ -2487,7 +2482,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                self.proxy.rpc_client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.settleChannel"],
@@ -2574,7 +2569,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at = self.proxy.rpc_client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -2656,11 +2651,7 @@ class TokenNetwork:
 
             raise RaidenRecoverableError("Settle failed for an unknown reason")
 
-    def all_events_filter(
-        self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
-    ) -> StatelessFilter:
+    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract
 
         Args:
@@ -2671,37 +2662,5 @@ class TokenNetwork:
             The filter instance.
         """
         return self.client.new_filter(
-            contract_address=Address(self.address),
-            topics=None,
-            from_block=from_block,
-            to_block=to_block,
+            contract_address=Address(self.address), topics=None, from_block=from_block
         )
-
-    def _check_for_outdated_channel(
-        self,
-        participant1: Address,
-        participant2: Address,
-        block_identifier: BlockSpecification,
-        channel_identifier: ChannelID,
-    ) -> None:
-        """
-        Checks whether an operation is being executed on a channel
-        between two participants using an old channel identifier
-        """
-        try:
-            onchain_channel_details = self._detail_channel(
-                participant1=participant1,
-                participant2=participant2,
-                block_identifier=block_identifier,
-            )
-        except RaidenRecoverableError:
-            return
-
-        onchain_channel_identifier = onchain_channel_details.channel_identifier
-
-        if onchain_channel_identifier != channel_identifier:
-            raise ChannelOutdatedError(
-                "Current channel identifier is outdated. "
-                f"current={channel_identifier}, "
-                f"new={onchain_channel_identifier}"
-            )

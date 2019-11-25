@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import encode_hex, to_checksum_address, to_hex
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
@@ -11,7 +11,7 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
 )
-from raiden.exceptions import RaidenUnrecoverableError
+from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError
 from raiden.messages.encode import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
@@ -357,7 +357,12 @@ class RaidenEventHandler(EventHandler):
     def handle_contract_send_secretreveal(
         raiden: "RaidenService", channel_reveal_secret_event: ContractSendSecretReveal
     ) -> None:  # pragma: no unittest
-        raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
+        try:
+            raiden.default_secret_registry.register_secret(
+                secret=channel_reveal_secret_event.secret
+            )
+        except InsufficientEth as e:
+            raise RaidenUnrecoverableError(str(e)) from e
 
     @staticmethod
     def handle_contract_send_channelwithdraw(
@@ -375,13 +380,16 @@ class RaidenEventHandler(EventHandler):
             canonical_identifier=channel_withdraw_event.canonical_identifier
         )
 
-        channel_proxy.set_total_withdraw(
-            total_withdraw=channel_withdraw_event.total_withdraw,
-            expiration_block=channel_withdraw_event.expiration,
-            participant_signature=our_signature,
-            partner_signature=channel_withdraw_event.partner_signature,
-            block_identifier=channel_withdraw_event.triggered_by_block_hash,
-        )
+        try:
+            channel_proxy.set_total_withdraw(
+                total_withdraw=channel_withdraw_event.total_withdraw,
+                expiration_block=channel_withdraw_event.expiration,
+                participant_signature=our_signature,
+                partner_signature=channel_withdraw_event.partner_signature,
+                block_identifier=channel_withdraw_event.triggered_by_block_hash,
+            )
+        except InsufficientEth as e:
+            raise RaidenUnrecoverableError(str(e)) from e
 
     @staticmethod
     def handle_contract_send_channelclose(
@@ -455,14 +463,22 @@ class RaidenEventHandler(EventHandler):
             )
             our_signature = raiden.signer.sign(data=non_closing_data)
 
-            channel.update_transfer(
-                nonce=balance_proof.nonce,
-                balance_hash=balance_proof.balance_hash,
-                additional_hash=balance_proof.message_hash,
-                partner_signature=balance_proof.signature,
-                signature=our_signature,
-                block_identifier=channel_update_event.triggered_by_block_hash,
-            )
+            try:
+                channel.update_transfer(
+                    nonce=balance_proof.nonce,
+                    balance_hash=balance_proof.balance_hash,
+                    additional_hash=balance_proof.message_hash,
+                    partner_signature=balance_proof.signature,
+                    signature=our_signature,
+                    block_identifier=channel_update_event.triggered_by_block_hash,
+                )
+            except InsufficientEth as e:
+                raise RaidenUnrecoverableError(
+                    f"{str(e)}\n"
+                    "CAUTION: This happened when updating our side of the channel "
+                    "during a channel settlement. You are in immediate danger of "
+                    "losing funds in this channel."
+                ) from e
 
     @staticmethod
     def handle_contract_send_channelunlock(
@@ -594,13 +610,16 @@ class RaidenEventHandler(EventHandler):
                 and gain.from_our_locks == 0
             )
             if not skip_unlock:
-                unlock(
-                    payment_channel=payment_channel,
-                    end_state=restored_channel_state.our_state,
-                    sender=our_address,
-                    receiver=partner_address,
-                    given_block_identifier=channel_unlock_event.triggered_by_block_hash,
-                )
+                try:
+                    unlock(
+                        payment_channel=payment_channel,
+                        end_state=restored_channel_state.our_state,
+                        sender=our_address,
+                        receiver=partner_address,
+                        given_block_identifier=channel_unlock_event.triggered_by_block_hash,
+                    )
+                except InsufficientEth as e:
+                    raise RaidenUnrecoverableError(str(e)) from e
 
     @staticmethod
     def handle_contract_send_channelsettle(
@@ -706,15 +725,18 @@ class RaidenEventHandler(EventHandler):
             partner_locked_amount = 0
             partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
-        payment_channel.settle(
-            transferred_amount=our_transferred_amount,
-            locked_amount=our_locked_amount,
-            locksroot=our_locksroot,
-            partner_transferred_amount=partner_transferred_amount,
-            partner_locked_amount=partner_locked_amount,
-            partner_locksroot=partner_locksroot,
-            block_identifier=triggered_by_block_hash,
-        )
+        try:
+            payment_channel.settle(
+                transferred_amount=our_transferred_amount,
+                locked_amount=our_locked_amount,
+                locksroot=our_locksroot,
+                partner_transferred_amount=partner_transferred_amount,
+                partner_locked_amount=partner_locked_amount,
+                partner_locksroot=partner_locksroot,
+                block_identifier=triggered_by_block_hash,
+            )
+        except InsufficientEth as e:
+            raise RaidenUnrecoverableError(str(e)) from e
 
 
 class PFSFeedbackEventHandler(RaidenEventHandler):
@@ -746,8 +768,8 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         if feedback_token and pfs_config:
             log.debug(
                 "Received event for failed route",
-                route=route_failed_event.route,
-                secrethash=route_failed_event.secrethash,
+                route=[to_checksum_address(node) for node in route_failed_event.route],
+                secrethash=encode_hex(route_failed_event.secrethash),
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(
@@ -771,7 +793,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         if feedback_token and pfs_config:
             log.debug(
                 "Received payment success event",
-                route=payment_sent_success_event.route,
+                route=[to_checksum_address(node) for node in payment_sent_success_event.route],
                 feedback_token=feedback_token,
             )
             post_pfs_feedback(

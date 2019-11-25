@@ -11,6 +11,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.utils import wait_until
+from raiden.utils.typing import PaymentAmount, PaymentID
 
 
 @raise_on_failure
@@ -25,8 +26,8 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         initiator_app=app0,
         target_app=app2,
         token_address=token_address,
-        amount=amount,
-        identifier=1,
+        amount=PaymentAmount(amount),
+        identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
     )
 

@@ -27,6 +27,25 @@ It is also tested that a node can be stopped and started again and that it still
 Several nodes perform up to 100 payments.
 In the end it is tested that channels can be closed and that the monitoring service correctly kicks in if a node is offline during closing.
 
+#### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
+It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
+When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+At the same time 100 payments are done in parallel from node4 to node0.
+After all payments have finished it is asserted that all nodes received the correct amounts.
+
+#### [bf4_multi_payments_same_node](./bf4_multi_payments_same_node.yaml)
+It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
+When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+At the same time 100 payments are done in parallel from node4 to node0.
+After all payments have finished it is asserted that all nodes received the correct amounts.
+
+#### [bf5_join_and_leave](./bf5_join_and_leave.yaml)
+It sets up a simple topology of two nodes and then uses
+`join_network` to add more nodes to the network. It tests that nodes can join the network
+with nodes that didn't use `join_network` themselves and that nodes that used `join_network`
+also deposits in new channels when other nodes open channels with them. Finally it also
+tests that nodes using `leave_network` have all their open channels closed, when doing so.
+
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
 A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
@@ -102,9 +121,14 @@ This scenario creates a network with topology 0 -> 1 -> 2 -> 3 and only enables 
 It then checks whether a path is returned. It also checks that correct flat mediation fees are deducted.
 
 #### [mfee2_proportional_fees](./mfee2_proportional_fees.yaml)
-This is the MFEE2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
+The MFEE2 scenario creates a network with topology 0 -> 1 -> 2 -> 3 and checks
 whether a path is returned. It also checks that correct proportional mediation fees are deducted
 and received by the mediating parties. For every 1000 TKNs tranferred a fee of 10 TKN is expected.
+
+#### [mfee3_only_imbalance_fees](./mfee3_only_imbalance_fees.yaml)
+Make a transfer over a single mediator with enabled imbalance fees. The
+channels start at maximum imbalance, which causes negative fees. To test this,
+the mediator fee capping has been turned off.
 
 #### [mfee4_combined_fees](./mfee4_combined_fees.yaml)
 This scenario creates a network with topology 0 -> 1 -> 2 -> 3 and only enables all mediation fee components.

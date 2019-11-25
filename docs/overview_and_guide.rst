@@ -66,6 +66,17 @@ An Ethereum client is required in both cases. The Raiden binary takes the same c
 arguments as the ``raiden`` script.
 
 
+PIP
+***
+
+To get the latest available stable version via `pip`::
+
+    pip install raiden
+
+If you'd like to give the pre-releases a spin, use pip's `--pre` flag::
+
+    pip install --pre raiden
+
 Docker
 ******
 
@@ -216,8 +227,6 @@ After account creation, launch Raiden with the path of your keystore supplied::
 
 - **Using Infura**
 
-.. warning::
-    Raiden may fail during restarts when Infura is used. This can happen because Raiden does not know about transactions in the memory pool and therefore new transactions might reuse these nonces. This will lead to a node crash.
 
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 

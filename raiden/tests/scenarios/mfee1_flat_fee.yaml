@@ -55,6 +55,7 @@ scenario:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 3, amount: 10_000, expected_http_status: 200}
+            - wait_blocks: 1  # Wait for balances being up to date
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -64,12 +65,14 @@ scenario:
                 expected_routes:
                   - [0, 1, 2, 3]
 
-            # 200 TKN fees are calculated, 5% margin of that is 10 TKN
-            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_790, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_210, state: "opened"}
+            # Flat fee: 2 * 100 = 200
+            # Fee margin: fee * 3% + amount * 0.05% = 200 * 3% + 10000 * 0.05% = 11
+            # Amount sent by initiator: 10_000 + 200 + 11 = 10_211
+            - assert: {from: 0, to: 1, total_deposit: 100_000, balance: 89_789, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10_211, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_890, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_110, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100_000, balance: 89_889, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 10_111, state: "opened"}
 
-            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_990, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_010, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 100_000, balance: 89_989, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 10_011, state: "opened"}

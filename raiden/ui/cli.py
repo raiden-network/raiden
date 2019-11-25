@@ -10,17 +10,29 @@ from copy import deepcopy
 from io import StringIO
 from subprocess import TimeoutExpired
 from tempfile import mkdtemp, mktemp
-from typing import Any, AnyStr, ContextManager, Dict, List, Optional, Tuple
+from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
+from click import Context
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 from raiden.app import App
-from raiden.constants import Environment, EthClient, RoutingMode
-from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
+from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
+    FLAT_MED_FEE_MIN,
+    IMBALANCE_MED_FEE_MAX,
+    IMBALANCE_MED_FEE_MIN,
+    PROPORTIONAL_MED_FEE_MAX,
+    PROPORTIONAL_MED_FEE_MIN,
+    Environment,
+    EthClient,
+    RoutingMode,
+)
+from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.log_config import configure_logging
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
@@ -47,6 +59,8 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
+from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -63,7 +77,7 @@ OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
 }
 
 
-def options(func):
+def options(func: Callable) -> Callable:
     """Having the common app options as a decorator facilitates reuse."""
 
     # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
@@ -350,8 +364,14 @@ def options(func):
             ),
             option("--log-json", help="Output log lines in JSON format", is_flag=True),
             option(
-                "--debug-logfile-name",
-                help="The debug logfile name.",
+                "--debug-logfile-path",
+                help=(
+                    "The absolute path to the debug logfile. If not given defaults to:\n"
+                    " - OSX: ~/Library/Logs/Raiden/raiden_debug_XXX.log\n"
+                    " - Windows: ~/Appdata/Roaming/Raiden/raiden_debug_XXX.log\n"
+                    " - Linux: ~/.raiden/raiden_debug_XXX.log\n"
+                    "\nIf there is a problem with expanding home it is placed under /tmp"
+                ),
                 type=click.Path(dir_okay=False, writable=True, resolve_path=True),
             ),
             option(
@@ -441,28 +461,43 @@ def options(func):
                 "--flat-fee",
                 help=(
                     "Sets the flat fee required for every mediation in wei of the "
-                    "mediated token for a certain token address."
+                    "mediated token for a certain token address. Must be bigger "
+                    f"or equal to {FLAT_MED_FEE_MIN}."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0)),
+                type=(ADDRESS_TYPE, click.IntRange(min=FLAT_MED_FEE_MIN)),
                 multiple=True,
             ),
             option(
                 "--proportional-fee",
                 help=(
                     "Mediation fee as ratio of mediated amount in parts-per-million "
-                    "(10^-6) for a certain token address."
+                    "(10^-6) for a certain token address. "
+                    f"Must be in [{PROPORTIONAL_MED_FEE_MIN}, {PROPORTIONAL_MED_FEE_MAX}]."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=10 ** 6)),
+                type=(
+                    ADDRESS_TYPE,
+                    click.IntRange(min=PROPORTIONAL_MED_FEE_MIN, max=PROPORTIONAL_MED_FEE_MAX),
+                ),
                 multiple=True,
             ),
             option(
                 "--proportional-imbalance-fee",
                 help=(
                     "Set the worst-case imbalance fee relative to the channels capacity "
-                    "in parts-per-million (10^-6) for a certain token address."
+                    "in parts-per-million (10^-6) for a certain token address. "
+                    f"Must be in [{IMBALANCE_MED_FEE_MIN}, {IMBALANCE_MED_FEE_MAX}]."
                 ),
-                type=(ADDRESS_TYPE, click.IntRange(min=0, max=50_000)),
+                type=(
+                    ADDRESS_TYPE,
+                    click.IntRange(min=IMBALANCE_MED_FEE_MIN, max=IMBALANCE_MED_FEE_MAX),
+                ),
                 multiple=True,
+            ),
+            option(
+                "--cap-mediation-fees/--no-cap-mediation-fees",
+                help="Cap the mediation fees to never get negative.",
+                default=True,
+                show_default=True,
             ),
         ),
     ]
@@ -475,7 +510,7 @@ def options(func):
 @group(invoke_without_command=True, context_settings={"max_content_width": 120})
 @options
 @click.pass_context
-def run(ctx, **kwargs):
+def run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     flamegraph = kwargs.pop("flamegraph", None)
@@ -567,7 +602,7 @@ def run(ctx, **kwargs):
     try:
         app = runner.run()
         app.stop()
-    except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
+    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as e:
         click.secho(
             "{}. Please make sure that this Raiden node is the "
             "only user of the selected account".format(str(e)),
@@ -579,9 +614,15 @@ def run(ctx, **kwargs):
             profiler.stop()
 
 
+# List of available options, used by the scenario player
+FLAG_OPTIONS = {param.name.replace("_", "-") for param in run.params if param.is_flag}
+FLAG_OPTIONS = FLAG_OPTIONS.union({"no-" + opt for opt in FLAG_OPTIONS})
+KNOWN_OPTIONS = {param.name.replace("_", "-") for param in run.params}.union(FLAG_OPTIONS)
+
+
 @run.command()
 @option("--short", is_flag=True, help="Only display Raiden version")
-def version(short):
+def version(short: bool) -> None:
     """Print version information and exit. """
     if short:
         print(get_system_spec()["raiden"])
@@ -604,7 +645,9 @@ def version(short):
     help="Which Ethereum client to run for the smoketests",
 )
 @click.pass_context
-def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str]):
+def smoketest(
+    ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
+) -> None:
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import (
         setup_raiden,
@@ -620,6 +663,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
     stdout = sys.stdout
     raiden_stdout = StringIO()
 
+    assert ctx.parent, MYPY_ANNOTATION
     environment_type = ctx.parent.params["environment_type"]
     transport = ctx.parent.params["transport"]
     disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
@@ -645,7 +689,7 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
         disable_debug_logfile=disable_debug_logfile,
     )
 
-    def append_report(subject: str, data: Optional[AnyStr] = None):
+    def append_report(subject: str, data: Optional[AnyStr] = None) -> None:
         with open(report_file, "a", encoding="UTF-8") as handler:
             handler.write(f'{f" {subject.upper()} ":=^80}{os.linesep}')
             if data is not None:
@@ -685,7 +729,11 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
             base_logdir=datadir,
         )
         matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
-            print_step=print_step, free_port_generator=free_port_generator
+            print_step=print_step,
+            free_port_generator=free_port_generator,
+            broadcast_rooms_aliases=[
+                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM)
+            ],
         )
 
         # Do not redirect the stdout on a debug session, otherwise the REPL
@@ -786,6 +834,6 @@ def smoketest(ctx, debug: bool, eth_client: EthClient, report_path: Optional[str
 )
 @click.option("--token-address", type=ADDRESS_TYPE, required=True)
 @click.pass_context
-def echonode(ctx, token_address):
+def echonode(ctx: Context, token_address: TokenAddress) -> None:
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
     EchoNodeRunner(ctx.obj, ctx, token_address).run()

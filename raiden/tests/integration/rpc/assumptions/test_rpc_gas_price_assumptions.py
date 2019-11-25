@@ -4,7 +4,7 @@ from eth_utils import to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.constants import RECEIPT_FAILURE_CODE
-from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
+from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils import safe_gas_limit
@@ -28,30 +28,97 @@ def make_decreasing_gas_price_strategy(gas_price: GasPrice) -> Callable:
     return increasing_gas_price_strategy
 
 
-def test_duplicated_transaction_same_gas_price_raises(deploy_client: JSONRPCClient) -> None:
-    """ If the same transaction is sent twice a JSON RPC error is raised. """
-    gas_price = GasPrice(2000000000)
-    gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
-    deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
+def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> None:
+    """ If a pending transaction is re-sent the exception `EthereumNonceTooLow` is raised.
+
+    This tests is only sufficient because of the companion test
+    `test_resending_mined_transaction_raises` which shows that if the
+    transaction has been mined a different exception is raised.
+    """
+    # Use a _fixed_ gas price strategy so that both transactions are identical.
+    deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    second_client = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
-
-    second_proxy = second_client.new_contract_proxy(
-        abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
-    )
+    # Create a new instance of the JSONRPCClient, this will store the current available nonce
+    client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
     check_block = deploy_client.get_checking_block()
     gas_estimate = contract_proxy.estimate_gas(check_block, "ret")
     assert gas_estimate, "Gas estimation should not fail here"
     startgas = safe_gas_limit(gas_estimate)
 
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
+    #
+    # Note that it is assumed this runs fast enough so that the first transaction is not
+    # mined before second is sent.
     contract_proxy.transact("ret", startgas)
-    with pytest.raises(TransactionAlreadyPending):
-        second_proxy.transact("ret", startgas)
+    with pytest.raises(EthereumNonceTooLow):
+        client_invalid_nonce.new_contract_proxy(
+            abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
+        ).transact("ret", startgas)
+
+
+def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
+    """ If a mined transaction is re-sent the exception `EthereumNonceTooLow` is raised. """
+    # Use a _fixed_ gas price strategy so that both transactions are identical.
+    deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    address = contract_proxy.contract_address
+    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+
+    # Create a new instance of the JSONRPCClient, this will store the current available nonce
+    client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
+
+    check_block = deploy_client.get_checking_block()
+    gas_estimate = contract_proxy.estimate_gas(check_block, "ret")
+    assert gas_estimate, "Gas estimation should not fail here"
+    startgas = safe_gas_limit(gas_estimate)
+
+    txhash = contract_proxy.transact("ret", startgas)
+    deploy_client.poll(txhash)
+
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
+    #
+    # Note that the same function is called in this test.
+    with pytest.raises(EthereumNonceTooLow):
+        client_invalid_nonce.new_contract_proxy(
+            abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
+        ).transact("ret", startgas)
+
+
+def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
+    """ If a _new_ transaction is sent with an old nonce the exception
+    `EthereumNonceTooLow` is raised.
+    """
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    # Create a new instance of the JSONRPCClient, this will store the current available nonce
+    client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
+
+    check_block = deploy_client.get_checking_block()
+    txhash = contract_proxy.transact("ret", contract_proxy.estimate_gas(check_block, "ret"))
+
+    # Wait for the transaction to be mined (concurrent transactions are tested
+    # by test_local_transaction_with_zero_gasprice_is_mined)
+    deploy_client.poll(txhash)
+
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
+    #
+    # Note that a different function is called in this test.
+    with pytest.raises(EthereumNonceTooLow):
+        client_invalid_nonce.new_contract_proxy(
+            abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
+        ).transact("ret_str", contract_proxy.estimate_gas(check_block, "ret_str"))
 
 
 def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCClient) -> None:
@@ -155,24 +222,67 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
         raise RuntimeError(f"Unknown blockchain_type {blockchain_type}")
 
 
-def test_duplicated_transaction_different_gas_price_raises(deploy_client: JSONRPCClient) -> None:
+def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
     """ If the same transaction is sent twice a JSON RPC error is raised. """
-    gas_price = GasPrice(2000000000)
-    deploy_client.web3.eth.setGasPriceStrategy(make_decreasing_gas_price_strategy(gas_price))
+    # Use a _decreasing_ gas price strategy so that the second transactions is
+    # lower than the first.
+    deploy_client.web3.eth.setGasPriceStrategy(
+        make_decreasing_gas_price_strategy(GasPrice(2000000000))
+    )
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    second_client = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
-
-    second_proxy = second_client.new_contract_proxy(
-        abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
-    )
+    client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
     check_block = deploy_client.get_checking_block()
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "ret"))
+    gas_estimate = contract_proxy.estimate_gas(check_block, "ret")
+    assert gas_estimate, "Gas estimation should not fail here"
+    startgas = safe_gas_limit(gas_estimate)
 
+    contract_proxy.transact("ret", startgas)
+
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
+    #
+    # Note that the same function is called in this test but the gas is decreasing.
     with pytest.raises(ReplacementTransactionUnderpriced):
-        second_proxy.transact("ret", startgas)
-        contract_proxy.transact("ret", startgas)
+        client_invalid_nonce.new_contract_proxy(
+            abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
+        ).transact("ret", startgas)
+
+
+def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
+    """ If a _new_ transaction is sent but with a lower gas the exception
+    `ReplacementTransactionUnderpriced` is raised.
+    """
+    # Use a _decreasing_ gas price strategy so that the second transactions is
+    # lower than the first.
+    deploy_client.web3.eth.setGasPriceStrategy(
+        make_decreasing_gas_price_strategy(GasPrice(2000000000))
+    )
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
+
+    address = contract_proxy.contract_address
+    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+
+    client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
+
+    check_block = deploy_client.get_checking_block()
+    gas_estimate = contract_proxy.estimate_gas(check_block, "ret")
+    assert gas_estimate, "Gas estimation should not fail here"
+    startgas = safe_gas_limit(gas_estimate)
+
+    contract_proxy.transact("ret", startgas)
+
+    # At this point `client_invalid_nonce` has a nonce that is `1` too low,
+    # since a transaction was sent using `deploy_client` above and these two
+    # instances share the same underlying private key.
+    #
+    # Note that the same function is called in this test but the gas is decreasing.
+    with pytest.raises(ReplacementTransactionUnderpriced):
+        client_invalid_nonce.new_contract_proxy(
+            abi=contract_proxy.contract.abi, contract_address=contract_proxy.contract_address
+        ).transact("ret_str", contract_proxy.estimate_gas(check_block, "ret_str"))

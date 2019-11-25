@@ -4,16 +4,10 @@ import pytest
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.network.transport import MatrixTransport
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
 from raiden.utils.typing import Optional
-
-
-@pytest.fixture
-def public_and_private_rooms():
-    """If present in a test, conftest.pytest_generate_tests will parametrize private_rooms fixture
-    """
-    return True
 
 
 @pytest.fixture(scope="session")
@@ -29,14 +23,25 @@ def matrix_server_count():
 
 @pytest.fixture
 def local_matrix_servers(
-    request, transport_protocol, matrix_server_count, synapse_config_generator, port_generator
+    request,
+    transport_protocol,
+    matrix_server_count,
+    synapse_config_generator,
+    port_generator,
+    broadcast_rooms,
+    chain_id,
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]
         return
 
+    broadcast_rooms_aliases = [
+        make_room_alias(chain_id, room_name) for room_name in broadcast_rooms
+    ]
+
     starter = matrix_server_starter(
         free_port_generator=port_generator,
+        broadcast_rooms_aliases=broadcast_rooms_aliases,
         count=matrix_server_count,
         config_generator=synapse_config_generator,
         log_context=request.node.name,
@@ -45,9 +50,8 @@ def local_matrix_servers(
         yield server_urls
 
 
-# Beware: the arguments to `global_rooms` should be lists
 @pytest.fixture
-def global_rooms() -> List[str]:
+def broadcast_rooms() -> List[str]:
     return [DISCOVERY_DEFAULT_ROOM]
 
 
@@ -56,9 +60,8 @@ def matrix_transports(
     local_matrix_servers,
     retries_before_backoff,
     retry_interval,
-    private_rooms,
     number_of_transports,
-    global_rooms,
+    broadcast_rooms,
 ):
     transports = []
     for transport_index in range(number_of_transports):
@@ -66,13 +69,12 @@ def matrix_transports(
         transports.append(
             MatrixTransport(
                 {
-                    "global_rooms": global_rooms,
+                    "broadcast_rooms": broadcast_rooms,
                     "retries_before_backoff": retries_before_backoff,
                     "retry_interval": retry_interval,
                     "server": server,
                     "server_name": server.netloc,
                     "available_servers": local_matrix_servers,
-                    "private_rooms": private_rooms[transport_index],
                 }
             )
         )
@@ -85,7 +87,7 @@ def matrix_transports(
     for transport in transports:
         # Calling `get()` on a never started Greenlet will block forever
         if transport._started:
-            transport.get()
+            transport.greenlet.get()
 
 
 @pytest.fixture

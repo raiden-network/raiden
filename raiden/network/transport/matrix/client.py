@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 import gevent
 import structlog
+from eth_utils import to_checksum_address
 from gevent.lock import Semaphore
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
@@ -20,6 +21,13 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
+
+
+def node_address_from_userid(user_id: Optional[str]) -> Optional[str]:
+    if user_id:
+        return to_checksum_address(user_id.split(":", 1)[0][1:])
+
+    return None
 
 
 class Room(MatrixRoom):
@@ -235,7 +243,7 @@ class GMatrixClient(MatrixClient):
 
     def listen_forever(
         self,
-        timeout_ms: int = 30000,
+        timeout_ms: int = 20000,
         exception_handler: Callable[[Exception], None] = None,
         bad_sync_timeout: int = 5,
     ):
@@ -256,26 +264,38 @@ class GMatrixClient(MatrixClient):
                 self._sync(timeout_ms)
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
-                log.warning("A MatrixRequestError occured during sync.")
+                log.warning(
+                    "A MatrixRequestError occured during sync.",
+                    node=node_address_from_userid(self.user_id),
+                )
                 if e.code >= 500:
-                    log.warning("Problem occured serverside. Waiting", wait_for=_bad_sync_timeout)
+                    log.warning(
+                        "Problem occured serverside. Waiting",
+                        node=node_address_from_userid(self.user_id),
+                        wait_for=_bad_sync_timeout,
+                    )
                     gevent.sleep(_bad_sync_timeout)
                     _bad_sync_timeout = min(_bad_sync_timeout * 2, self.bad_sync_timeout_limit)
                 else:
                     raise
             except MatrixHttpLibError:
-                log.exception("A MatrixHttpLibError occured during sync.")
+                log.exception(
+                    "A MatrixHttpLibError occured during sync.",
+                    node=node_address_from_userid(self.user_id),
+                )
                 if self.should_listen:
                     gevent.sleep(_bad_sync_timeout)
                     _bad_sync_timeout = min(_bad_sync_timeout * 2, self.bad_sync_timeout_limit)
             except Exception as e:
-                log.exception("Exception thrown during sync")
+                log.exception(
+                    "Exception thrown during sync", node=node_address_from_userid(self.user_id)
+                )
                 if exception_handler is not None:
                     exception_handler(e)
                 else:
                     raise
 
-    def start_listener_thread(self, timeout_ms: int = 30000, exception_handler: Callable = None):
+    def start_listener_thread(self, timeout_ms: int = 20000, exception_handler: Callable = None):
         """
         Start a listener greenlet to listen for events in the background.
         Args:
@@ -295,20 +315,32 @@ class GMatrixClient(MatrixClient):
         self.should_listen = False
         if self.sync_thread:
             self.sync_thread.kill()
-            log.debug("Waiting on sync greenlet", current_user=self.user_id)
+            log.debug(
+                "Waiting on sync greenlet",
+                node=node_address_from_userid(self.user_id),
+                current_user=self.user_id,
+            )
             exited = gevent.joinall({self.sync_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True)
             if not exited:
                 raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
         if self._handle_thread is not None:
-            log.debug("Waiting on handle greenlet", current_user=self.user_id)
+            log.debug(
+                "Waiting on handle greenlet",
+                node=node_address_from_userid(self.user_id),
+                current_user=self.user_id,
+            )
             exited = gevent.joinall(
                 {self._handle_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True
             )
             if not exited:
                 raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
             self._handle_thread.get()
-        log.debug("Listener greenlet exited", current_user=self.user_id)
+        log.debug(
+            "Listener greenlet exited",
+            node=node_address_from_userid(self.user_id),
+            current_user=self.user_id,
+        )
         self.sync_thread = None
         self._handle_thread = None
 
@@ -402,6 +434,10 @@ class GMatrixClient(MatrixClient):
 
     def _sync(self, timeout_ms=30000):
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
+        log.debug(
+            "Sync called", node=node_address_from_userid(self.user_id), current_user=self.user_id
+        )
+
         response = self.api.sync(self.sync_token, timeout_ms)
         prev_sync_token = self.sync_token
         self.sync_token = response["next_batch"]
@@ -418,6 +454,7 @@ class GMatrixClient(MatrixClient):
         self._handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
         log.debug(
             "Starting handle greenlet",
+            node=node_address_from_userid(self.user_id),
             first_sync=is_first_sync,
             sync_token=prev_sync_token,
             current_user=self.user_id,
@@ -431,7 +468,10 @@ class GMatrixClient(MatrixClient):
         # We must ignore the stop flag during first_sync
         if not self.should_listen and not first_sync:
             log.warning(
-                "Aborting handle response", reason="Transport stopped", current_user=self.user_id
+                "Aborting handle response",
+                node=node_address_from_userid(self.user_id),
+                reason="Transport stopped",
+                current_user=self.user_id,
             )
             return
         # Handle presence after rooms

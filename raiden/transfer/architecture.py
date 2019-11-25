@@ -2,6 +2,8 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 
+from eth_utils import to_checksum_address, to_hex
+
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
@@ -59,7 +61,7 @@ from raiden.utils.typing import (
 # - A state_transition function must not produce a result that must be further
 # processed, i.e. the state change must be self contained and the result state
 # tree must be serializable to produce a snapshot. To enforce this inputs and
-# outputs are separated under different class hierarquies (StateChange and Event).
+# outputs are separated under different class hierarchies (StateChange and Event).
 
 
 @dataclass
@@ -401,6 +403,18 @@ class BalanceProofSignedState(State):
     @property
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"nonce: {self.nonce} transferred_amount: {self.transferred_amount} "
+            f"locked_amount: {self.locked_amount} locksroot: {to_hex(self.locksroot)} "
+            f"message_hash: {to_hex(self.message_hash)} signature: {to_hex(self.signature)} "
+            f"sender: {to_checksum_address(self.sender)} "
+            f"canonical_identifier: {self.canonical_identifier} "
+            f"balance_hash: {to_hex(self.balance_hash)} "
+            f">"
+        )
 
 
 class SuccessOrError:

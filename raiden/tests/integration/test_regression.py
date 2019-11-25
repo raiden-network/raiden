@@ -1,11 +1,7 @@
-import random
-from hashlib import sha256
-
 import gevent
 import pytest
-from eth_utils import keccak
 
-from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
@@ -16,13 +12,18 @@ from raiden.tests.utils.events import (
     raiden_state_changes_search_for_item,
     search_for_item,
 )
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.factories import (
+    UNIT_CHAIN_ID,
+    make_message_identifier,
+    make_secret_with_hash,
+)
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
 from raiden.utils import PaymentID, sha3
+from raiden.utils.typing import Locksroot, Nonce, PaymentAmount, PaymentWithFeeAmount, TokenAmount
 
 # pylint: disable=too-many-locals
 
@@ -45,6 +46,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5195")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -67,7 +69,13 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     app_channels = [(app0, app1), (app1, app2), (app1, app3), (app3, app4), (app2, app4)]
 
     open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
-    transfer(initiator_app=app0, target_app=app4, token_address=token, amount=1, identifier=1)
+    transfer(
+        initiator_app=app0,
+        target_app=app4,
+        token_address=token,
+        amount=PaymentAmount(1),
+        identifier=PaymentID(1),
+    )
 
 
 @raise_on_failure
@@ -94,9 +102,10 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     event = search_for_item(app1.raiden.wal.storage.get_events(), SendSecretReveal, {})
     assert event
 
-    message_identifier = random.randint(0, UINT64_MAX)
     reveal_secret = RevealSecret(
-        message_identifier=message_identifier, secret=event.secret, signature=EMPTY_SIGNATURE
+        message_identifier=make_message_identifier(),
+        secret=event.secret,
+        signature=EMPTY_SIGNATURE,
     )
     app2.raiden.sign(reveal_secret)
 
@@ -132,30 +141,29 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token
     )
+    assert token_network_address
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
 
-    payment_identifier = 1
-    secret = sha3(b"test_regression_multiple_revealsecret")
-    secrethash = sha256(secret).digest()
+    payment_identifier = PaymentID(1)
+    secret, secrethash = make_secret_with_hash()
     expiration = app0.raiden.get_block_number() + 100
-    lock_amount = 10
+    lock_amount = PaymentWithFeeAmount(10)
     lock = Lock(amount=lock_amount, expiration=expiration, secrethash=secrethash)
 
-    nonce = 1
-    transferred_amount = 0
+    nonce = Nonce(1)
+    transferred_amount = TokenAmount(0)
     mediated_transfer = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
         nonce=nonce,
         token_network_address=app0.raiden.default_registry.address,
         token=token,
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=transferred_amount,
-        locked_amount=lock_amount,
-        fee=0,
+        locked_amount=TokenAmount(lock_amount),
         recipient=app1.raiden.address,
-        locksroot=keccak(lock.as_bytes),
+        locksroot=Locksroot(lock.lockhash),
         lock=lock,
         target=app1.raiden.address,
         initiator=app0.raiden.address,
@@ -172,20 +180,20 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         raise TypeError("Unknown TransportProtocol")
 
     reveal_secret = RevealSecret(
-        message_identifier=random.randint(0, UINT64_MAX), secret=secret, signature=EMPTY_SIGNATURE
+        message_identifier=make_message_identifier(), secret=secret, signature=EMPTY_SIGNATURE
     )
     app0.raiden.sign(reveal_secret)
 
     token_network_address = channelstate_0_1.token_network_address
     unlock = Unlock(
         chain_id=UNIT_CHAIN_ID,
-        message_identifier=random.randint(0, UINT64_MAX),
+        message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
-        nonce=mediated_transfer.nonce + 1,
+        nonce=Nonce(mediated_transfer.nonce + 1),
         token_network_address=token_network_address,
         channel_identifier=channelstate_0_1.identifier,
-        transferred_amount=lock_amount,
-        locked_amount=0,
+        transferred_amount=TokenAmount(lock_amount),
+        locked_amount=TokenAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=secret,
         signature=EMPTY_SIGNATURE,
@@ -255,7 +263,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         initiator_app=app0,
         target_app=app2,
         token_address=token,
-        amount=50,
+        amount=PaymentAmount(50),
         identifier=PaymentID(2),
         timeout=20,
     )

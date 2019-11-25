@@ -31,7 +31,7 @@ pfs_payment_address_default = to_canonical_address("0xB9633dd9a9a71F22C933bF121d
 PFS_INFO = PFSInfo(
     url="my-pfs",
     price=TokenAmount(12),
-    chain_id=ChainID(42),
+    chain_id=ChainID(5),
     token_network_registry_address=token_network_registry_address_test_default,
     payment_address=pfs_payment_address_default,
     message="This is your favorite pathfinding service",
@@ -47,7 +47,7 @@ def test_check_network_id_raises_with_mismatching_ids():
         check_ethereum_network_id(61, MockWeb3(68))
 
 
-@pytest.mark.parametrize("netid", [1, 3, 4, 42, 5, 627])
+@pytest.mark.parametrize("netid", [1, 3, 4, 5, 627])
 def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
     check_ethereum_network_id(netid, MockWeb3(netid))
@@ -63,7 +63,6 @@ def test_setup_environment():
     config = deepcopy(App.DEFAULT_CONFIG)
     setup_environment(config, Environment.PRODUCTION)
     assert config["environment_type"] == Environment.PRODUCTION
-    assert config["transport"]["matrix"]["private_rooms"] is True
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:
@@ -79,13 +78,15 @@ def test_setup_contracts():
     config = {"environment_type": Environment.PRODUCTION}
     contracts = setup_contracts_or_exit(config, 1)
     assert "contracts_path" in config
-    assert not raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Mainnet development -- NOT allowed
     config = {"environment_type": Environment.DEVELOPMENT}
-    with pytest.raises(SystemExit):
-        setup_contracts_or_exit(config, 1)
+    contracts = setup_contracts_or_exit(config, 1)
+    assert "contracts_path" in config
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
 
     # Ropsten production
     config = {"environment_type": Environment.PRODUCTION}
@@ -129,20 +130,6 @@ def test_setup_contracts():
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
-    # Kovan production
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 42)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert service_contracts_in_data(contracts)
-
-    # Kovan development
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 42)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert service_contracts_in_data(contracts)
-
     # random private network production
     config = {"environment_type": Environment.PRODUCTION}
     contracts = setup_contracts_or_exit(config, 5257)
@@ -163,7 +150,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     Test that startup for proxies works fine if only raiden addresses are given
     """
 
-    network_id = 42
+    network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
     proxy_manager = MockProxyManager(node_address=make_address())
@@ -191,7 +178,7 @@ def test_setup_proxies_all_addresses_are_given():
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
 
-    network_id = 42
+    network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = {}
     proxy_manager = MockProxyManager(node_address=make_address())
@@ -220,7 +207,7 @@ def test_setup_proxies_all_addresses_are_known():
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
 
-    network_id = 42
+    network_id = 5
     config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
     contracts = setup_contracts_or_exit(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
@@ -252,7 +239,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
     Regression test for https://github.com/raiden-network/raiden/issues/3740
     """
 
-    network_id = 42
+    network_id = 5
     config = {
         "environment_type": Environment.DEVELOPMENT,
         "chain_id": network_id,
@@ -285,7 +272,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
     then the client exits with an error message
     """
 
-    network_id = 42
+    network_id = 5
     config = {
         "environment_type": environment_type,
         "chain_id": network_id,

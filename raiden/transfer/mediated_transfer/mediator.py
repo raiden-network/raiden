@@ -1,22 +1,27 @@
 import itertools
+import operator
 import random
+from fractions import Fraction
+from typing import Callable
 
 from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
 from raiden.transfer.events import SendProcessed
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnexpectedSecretReveal,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
+    SendLockedTransfer,
+    SendRefundTransfer,
     SendSecretReveal,
 )
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState, Interpolate
 from raiden.transfer.mediated_transfer.state import (
-    HashTimeLockState,
     LockedTransferSignedState,
     LockedTransferUnsignedState,
     MediationPairState,
@@ -52,7 +57,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
-    FeeAmount,
     List,
     LockType,
     NodeNetworkStateMap,
@@ -60,6 +64,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    TokenAmount,
     Tuple,
     Union,
     cast,
@@ -161,36 +166,6 @@ def has_secret_registration_started(
     return is_secret_registered_onchain or has_pending_transaction
 
 
-def filter_used_routes(
-    transfers_pair: List[MediationPairState], routes: List[RouteState]
-) -> List[RouteState]:
-    """This function makes sure we filter routes that have already been used.
-
-    So in a setup like this, we want to make sure that node 2, having tried to
-    route the transfer through 3 will also try 5 before sending it backwards to 1
-
-    1 -> 2 -> 3 -> 4
-         v         ^
-         5 -> 6 -> 7
-    This function will return routes as provided in their original order.
-    """
-    channelid_to_route = {r.forward_channel_id: r for r in routes}
-    routes_order = {route.next_hop_address: index for index, route in enumerate(routes)}
-
-    for pair in transfers_pair:
-        channelid = pair.payer_transfer.balance_proof.channel_identifier
-        if channelid in channelid_to_route:
-            del channelid_to_route[channelid]
-
-        channelid = pair.payee_transfer.balance_proof.channel_identifier
-        if channelid in channelid_to_route:
-            del channelid_to_route[channelid]
-
-    return sorted(
-        channelid_to_route.values(), key=lambda route: routes_order[route.next_hop_address]
-    )
-
-
 def get_payee_channel(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     transfer_pair: MediationPairState,
@@ -222,60 +197,74 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def _fee_for_payer_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an incoming channel.
+def find_intersection(fee_func: Interpolate, line: Callable[[int], Fraction]) -> Optional[float]:
+    """ Returns the x value where both functions intersect
 
-    The `amount` is the total incoming amount without any fees deducted.
+    `fee_func` is a piecewise linear function while `line` is a straight line
+    and takes the one of fee_func's indexes as argument.
+
+    Returns `None` if there is no intersection within `fee_func`s domain, which
+    indicates a lack of capacity.
     """
-    balance = get_balance(channel.our_state, channel.partner_state)
-    try:
-        return channel.fee_schedule.fee_payer(amount, balance)
-    except UndefinedMediationFee:
-        return None
+    i = 0
+    y = fee_func.y_list[i]
+    compare = operator.lt if y < line(i) else operator.gt
+    while compare(y, line(i)):
+        i += 1
+        if i == len(fee_func.x_list):
+            # Not enough capacity to send
+            return None
+        y = fee_func.y_list[i]
+
+    # We found the linear section where the solution is. Now interpolate!
+    x1 = fee_func.x_list[i - 1]
+    x2 = fee_func.x_list[i]
+    yf1 = fee_func.y_list[i - 1]
+    yf2 = fee_func.y_list[i]
+    yl1 = line(i - 1)
+    yl2 = line(i)
+    return (yl1 - yf1) * (x2 - x1) / ((yf2 - yf1) - (yl2 - yl1)) + x1
 
 
-def _fee_for_payee_channel(
-    channel: NettingChannelState, amount: PaymentWithFeeAmount
-) -> Optional[FeeAmount]:
-    """ Fee deducted by the mediator for an outgoing channel.
-
-    The `amount` is the incoming amount where the incoming fee is already
-    deducted, but the outgoing fee isn't (that's what this function does,
-    after all).
-    """
-    balance = get_balance(channel.our_state, channel.partner_state)
-
-    try:
-        return channel.fee_schedule.fee_payee(amount=amount, balance=balance)
-    except UndefinedMediationFee:
-        return None
-
-
-def get_lock_amount_after_fees(
-    lock: HashTimeLockState, payer_channel: NettingChannelState, payee_channel: NettingChannelState
+def get_amount_without_fees(
+    amount_with_fees: PaymentWithFeeAmount,
+    channel_in: NettingChannelState,
+    channel_out: NettingChannelState,
 ) -> Optional[PaymentWithFeeAmount]:
-    """
-    Return the lock.amount after fees are taken.
+    """ Return the amount after fees are taken. """
 
-    Fees are taken only for the outgoing channel, which is the one with
-    collateral locked from this node.
-    """
-    fee_in = _fee_for_payer_channel(payer_channel, lock.amount)
-    if fee_in is None:
+    balance_in = get_balance(channel_in.our_state, channel_in.partner_state)
+    balance_out = get_balance(channel_out.our_state, channel_out.partner_state)
+    receivable = TokenAmount(
+        channel_in.our_total_deposit + channel_in.partner_total_deposit - balance_in
+    )
+    assert (
+        channel_in.fee_schedule.cap_fees == channel_out.fee_schedule.cap_fees
+    ), "Both channels must have the same cap_fees setting for the same mediator."
+    try:
+        fee_func = FeeScheduleState.mediation_fee_func(
+            schedule_in=channel_in.fee_schedule,
+            schedule_out=channel_out.fee_schedule,
+            balance_in=balance_in,
+            balance_out=balance_out,
+            receivable=receivable,
+            amount_with_fees=amount_with_fees,
+            cap_fees=channel_in.fee_schedule.cap_fees,
+        )
+        amount_without_fees = find_intersection(
+            fee_func, lambda i: amount_with_fees - fee_func.x_list[i]
+        )
+    except UndefinedMediationFee:
         return None
-    fee_out = _fee_for_payee_channel(payee_channel, PaymentWithFeeAmount(lock.amount - fee_in))
-    if fee_out is None:
+
+    if amount_without_fees is None:
+        # Insufficient capacity
+        return None
+    if amount_without_fees <= 0:
+        # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    amount_after_fees = PaymentWithFeeAmount(lock.amount - fee_in - fee_out)
-
-    if amount_after_fees <= 0:
-        # The node can't cover its mediations fees from the tranferred amount.
-        return None
-
-    return amount_after_fees
+    return PaymentWithFeeAmount(int(round(amount_without_fees)))
 
 
 def sanity_check(
@@ -407,8 +396,10 @@ def forward_transfer_pair(
     if not payee_channel:
         return None, []
 
-    amount_after_fees = get_lock_amount_after_fees(
-        payer_transfer.lock, payer_channel, payee_channel
+    amount_after_fees = get_amount_without_fees(
+        amount_with_fees=payer_transfer.lock.amount,
+        channel_in=payer_channel,
+        channel_out=payee_channel,
     )
     if not amount_after_fees:
         return None, []
@@ -670,14 +661,21 @@ def events_for_expired_pairs(
             )
             events.append(unlock_claim_failed)
 
-    if waiting_transfer and waiting_transfer.state != "expired":
-        waiting_transfer.state = "expired"
-        unlock_claim_failed = EventUnlockClaimFailed(
-            waiting_transfer.transfer.payment_identifier,
-            waiting_transfer.transfer.lock.secrethash,
-            "lock expired",
+    if waiting_transfer:
+        expiration_threshold = channel.get_receiver_expiration_threshold(
+            waiting_transfer.transfer.lock.expiration
         )
-        events.append(unlock_claim_failed)
+        should_waiting_transfer_expire = (
+            waiting_transfer.state != "expired" and expiration_threshold <= block_number
+        )
+        if should_waiting_transfer_expire:
+            waiting_transfer.state = "expired"
+            unlock_claim_failed = EventUnlockClaimFailed(
+                waiting_transfer.transfer.payment_identifier,
+                waiting_transfer.transfer.lock.secrethash,
+                "lock expired",
+            )
+            events.append(unlock_claim_failed)
 
     return events
 
@@ -726,7 +724,7 @@ def events_for_secretreveal(
                 recipient=payer_transfer.balance_proof.sender,
                 message_identifier=message_identifier,
                 secret=secret,
-                canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
 
             events.append(revealsecret)
@@ -1052,6 +1050,14 @@ def mediate_transfer(
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
     )
 
+    # Makes sure we filter routes that have already been used.
+    #
+    # So in a setup like this, we want to make sure that node 2, having tried to
+    # route the transfer through 3 will also try 5 before sending it backwards to 1
+    #
+    # 1 -> 2 -> 3 -> 4
+    #      v         ^
+    #      5 -> 6 -> 7
     candidate_route_states = routes.filter_acceptable_routes(
         route_states=candidate_route_states, blacklisted_channel_ids=state.refunded_channels
     )
@@ -1144,6 +1150,7 @@ def handle_block(
     mediator_state: MediatorTransferState,
     state_change: Block,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
     """ After Raiden learns about a new block this function must be called to
@@ -1153,11 +1160,43 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
+
+    mediate_events: List[Event] = []
+    if mediator_state.waiting_transfer:
+        secrethash = mediator_state.waiting_transfer.transfer.lock.secrethash
+        payer_channel = channelidentifiers_to_channels.get(
+            mediator_state.waiting_transfer.transfer.balance_proof.channel_identifier
+        )
+        if payer_channel is not None:
+            # If the transfer is waiting, because its expiry was later than the settlement timeout
+            # of the channel, we can retry the mediation on a new block. The call to
+            # `mediate_transfer` will re-evaluate the timeouts and mediate if possible.
+            mediation_attempt = mediate_transfer(
+                state=mediator_state,
+                candidate_route_states=mediator_state.routes,
+                payer_channel=payer_channel,
+                channelidentifiers_to_channels=channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+                pseudo_random_generator=pseudo_random_generator,
+                payer_transfer=mediator_state.waiting_transfer.transfer,
+                block_number=state_change.block_number,
+            )
+            mediator_state = mediation_attempt.new_state
+            mediate_events = mediation_attempt.events
+            success_filter = lambda event: (
+                isinstance(event, (SendLockedTransfer, SendRefundTransfer))
+                and event.transfer.lock.secrethash == secrethash
+            )
+
+            mediation_happened = any(filter(success_filter, mediate_events))
+            if mediation_happened:
+                mediator_state.waiting_transfer = None
+
     expired_locks_events = events_to_remove_expired_locks(
-        mediator_state,
-        channelidentifiers_to_channels,
-        state_change.block_number,
-        pseudo_random_generator,
+        mediator_state=mediator_state,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        block_number=state_change.block_number,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     secret_reveal_events = events_for_onchain_secretreveal_if_dangerzone(
@@ -1176,7 +1215,8 @@ def handle_block(
     )
 
     iteration = TransitionResult(
-        mediator_state, unlock_fail_events + secret_reveal_events + expired_locks_events
+        mediator_state,
+        mediate_events + unlock_fail_events + secret_reveal_events + expired_locks_events,
     )
 
     return iteration
@@ -1365,7 +1405,7 @@ def handle_unlock(
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
                         message_identifier=state_change.message_identifier,
-                        canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+                        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                     )
                     events.append(send_processed)
 
@@ -1502,6 +1542,7 @@ def state_transition(
             mediator_state=mediator_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
 

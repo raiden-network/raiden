@@ -36,9 +36,11 @@ nodes:
     proportional-imbalance-fee:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 10_000  # 1% imbalance fee on channel balance
+    no-cap-mediation-fees: true
 
-## This is the MFEE3 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
-## whether a path is returned. It also checks that correct imbalance fees are deducted.
+# Make a transfer over a single mediator with enabled imbalance fees. The
+# channels start at maximum imbalance, which causes negative fees. To test this,
+# the mediator fee capping has been turned off.
 
 scenario:
   serial:
@@ -54,6 +56,7 @@ scenario:
             - wait_blocks: 2
             # Check that the PFS returns a path from 0 to 3
             - transfer: {from: 0, to: 2, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - wait_blocks: 1  # Wait for balances being up to date
 
             ## Check that the path is indeed the expected one
             - assert_pfs_history:
@@ -63,11 +66,11 @@ scenario:
                 expected_routes:
                   - [0, 1, 2]
 
-            # -2000 TKN fees are calculated, no margin is added for negative fee values
-            - wait_blocks: 2
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 519_999_960_000_040_000, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 480_000_039_999_960_000, state: "opened"}
+            # -2000 TKN fees are calculated, but the actual value is closer to zero because
+            # 1. Due to the negative fee less tokens are transferred, resulting in a smaller negative fee
+            # 2. A fee margin is applied
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 519_149_961_200_077_600, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 480_850_038_799_922_400, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 500_000_000_000_000_000, state: "opened"}
-
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 499_150_001_199_997_600, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 500_849_998_800_002_400, state: "opened"}

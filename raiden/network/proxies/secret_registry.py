@@ -12,11 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
-from raiden.constants import (
-    GAS_REQUIRED_PER_SECRET_IN_BATCH,
-    GENESIS_BLOCK_NUMBER,
-    RECEIPT_FAILURE_CODE,
-)
+from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH, RECEIPT_FAILURE_CODE
 from raiden.exceptions import (
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
@@ -269,7 +265,8 @@ class SecretRegistry:
             #
             # Either of these is a bug. The contract does not use
             # assert/revert, and the account should always be funded
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+            assert gas_limit
+            self.proxy.rpc_client.check_for_insufficient_eth(
                 transaction_name="registerSecretBatch",
                 transaction_executed=True,
                 required_gas=gas_limit,
@@ -321,16 +318,12 @@ class SecretRegistry:
         )
         return block is not None
 
-    def secret_registered_filter(
-        self,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
-    ) -> StatelessFilter:
+    def secret_registered_filter(self, from_block: BlockNumber) -> StatelessFilter:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
         )
         topics: List[Optional[str]] = [encode_hex(event_abi_to_log_topic(event_abi))]
 
         return self.client.new_filter(
-            contract_address=self.address, topics=topics, from_block=from_block, to_block=to_block
+            contract_address=self.address, topics=topics, from_block=from_block
         )

@@ -28,9 +28,10 @@ from raiden.tests.utils.transport import ParsedURL
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
-from raiden.utils import BlockNumber, merge_dict
+from raiden.utils import merge_dict
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     BlockSpecification,
     BlockTimeout,
     ChainID,
@@ -353,8 +354,7 @@ def create_apps(
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     local_matrix_url: Optional[ParsedURL],
-    private_rooms: bool,
-    global_rooms: List[str],
+    broadcast_rooms: List[str],
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
@@ -394,13 +394,12 @@ def create_apps(
                     "transport_type": "matrix",
                     "transport": {
                         "matrix": {
-                            "global_rooms": global_rooms,
+                            "broadcast_rooms": broadcast_rooms,
                             "retries_before_backoff": retries_before_backoff,
                             "retry_interval": retry_interval,
                             "server": local_matrix_url,
                             "server_name": local_matrix_url.netloc,
                             "available_servers": [],
-                            "private_rooms": private_rooms,
                         }
                     },
                 },

@@ -1,0 +1,154 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        deposit: true
+        balance_per_node: 100_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+token:
+  # We need a new token to be able to predict the network topology
+  decimals: 18
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 4
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+
+  node_options:
+    0:
+      matrix-server: https://transport01.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+    2:
+      matrix-server: https://transport03.raiden.network
+    3:
+      matrix-server: https://transport01.raiden.network
+
+# This is the BF5 scenario. It sets up a simple topology of two nodes and then uses
+# `join_network` to add more nodes to the network. It tests that nodes can join the network
+# with nodes that didn't use `join_network` themselves and that nodes that used `join_network`
+# also deposit in new channels when other nodes open channels with them. Finally it also
+# tests that nodes using `leave_network` have all their open channels closed, when doing so.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channel between node0 and node1"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - parallel:
+          name: "Assert after channel openings"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Deposit in the other direction"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - parallel:
+          name: "Assert after deposits"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Node2 joins the network"
+          tasks:
+            # It should not matter that `initial_channel_target` is 3 since there are only two nodes in the network
+            - join_network: {from: 2, funds: 1_000_000_000_000_000_000, initial_channel_target: 3, joinable_funds_target: 0.4, expected_http_status: 204}
+      - parallel:
+          name: "Assert after node2 joined"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            # Deposits from node2 should be funds / 5
+            - assert: {from: 2, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Node3 joins the network"
+          tasks:
+            - join_network: {from: 3, funds: 1_000_000_000_000_000_000, initial_channel_target: 3, joinable_funds_target: 0.4, expected_http_status: 204}
+      - parallel:
+          name: "Assert after node3 joined"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 3, total_deposit: 0, balance: 0, state: "opened"}
+            # Deposits from node2 should be funds / 5
+            - assert: {from: 2, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            # node2 should automatically deposit funds / 5 in the channel with node3
+            - assert: {from: 2, to: 3, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            # node3 should automatically deposit funds / 5 in the channels it opens
+            - assert: {from: 3, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make transfers to make sure that path finding works with join"
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 3, to: 1, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 3, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 1, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 1, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 1, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Make sure that all transfers finish"
+          tasks:
+            - wait: 200
+      - parallel:
+          name: "Assert after transfers. Should be the same as before the transfers were made"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 3, total_deposit: 0, balance: 0, state: "opened"}
+            - assert: {from: 2, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 0, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 200_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Node2 and node3 leave the network"
+          tasks:
+            # Since the API call waits for close and settle we can only check that the http status code is correct, because
+            # the channels are deleted after settle and hence cannot be asserted on.
+            - leave_network: {from: 2, expected_http_status: 200}
+            - leave_network: {from: 3, expected_http_status: 200}

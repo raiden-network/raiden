@@ -17,7 +17,15 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import TokenAddress, TokenAmount
+from raiden.utils.typing import (
+    Optional,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+    Union,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -26,7 +34,7 @@ TRANSFER_MEMORY = 4096
 
 
 class EchoNode:  # pragma: no unittest
-    def __init__(self, api: RaidenAPI, token_address: TokenAddress):
+    def __init__(self, api: RaidenAPI, token_address: TokenAddress) -> None:
         assert isinstance(api, RaidenAPI)
         self.ready = Event()
 
@@ -65,7 +73,10 @@ class EchoNode:  # pragma: no unittest
 
         self.num_seen_events = 0
         self.received_transfers: Queue[EventPaymentReceivedSuccess] = Queue()
-        self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
+
+        # This is used to signal REMOVE_CALLBACK and stop echo_workers
+        self.stop_signal: Optional[bool] = None
+
         self.greenlets: Set[Greenlet] = set()
         self.lock = BoundedSemaphore()
         self.seen_transfers: Deque[EventPaymentReceivedSuccess] = deque(list(), TRANSFER_MEMORY)
@@ -77,7 +88,7 @@ class EchoNode:  # pragma: no unittest
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         log.info("Echo node started")
 
-    def echo_node_alarm_callback(self, block: Dict[str, Any]):
+    def echo_node_alarm_callback(self, block: Dict[str, Any]) -> Union[object, bool]:
         """ This can be registered with the raiden AlarmTask.
         If `EchoNode.stop()` is called, it will give the return signal to be removed from
         the AlarmTask callbacks.
@@ -141,7 +152,7 @@ class EchoNode:  # pragma: no unittest
             if locked:
                 self.lock.release()
 
-    def echo_worker(self):
+    def echo_worker(self) -> None:
         """ The `echo_worker` works through the `self.received_transfers` queue and spawns
         `self.on_transfer` greenlets for all not-yet-seen transfers. """
         log.debug("echo worker", qsize=self.received_transfers.qsize())
@@ -162,7 +173,7 @@ class EchoNode:  # pragma: no unittest
             else:
                 gevent.sleep(0.5)
 
-    def on_transfer(self, transfer):
+    def on_transfer(self, transfer: EventPaymentReceivedSuccess) -> None:
         """ This handles the echo logic, as described in
         https://github.com/raiden-network/raiden/issues/651:
 
@@ -177,7 +188,7 @@ class EchoNode:  # pragma: no unittest
             - for all other transfers it sends a transfer with the same `amount` back to the
             initiator
         """
-        echo_amount = 0
+        echo_amount = PaymentAmount(0)
         if transfer.amount % 3 == 0:
             log.info(
                 "Received amount divisible by three",
@@ -186,7 +197,7 @@ class EchoNode:  # pragma: no unittest
                 amount=transfer.amount,
                 identifier=transfer.identifier,
             )
-            echo_amount = TokenAmount(transfer.amount - 1)
+            echo_amount = PaymentAmount(transfer.amount - 1)
 
         elif transfer.amount == 7:
             log.info(
@@ -214,7 +225,7 @@ class EchoNode:  # pragma: no unittest
                     poolsize=len(tickets),
                 )
                 # signal the poolsize to the participant
-                echo_amount = len(tickets)
+                echo_amount = PaymentAmount(len(tickets))
 
             # payout
             elif len(tickets) == 6:
@@ -228,7 +239,7 @@ class EchoNode:  # pragma: no unittest
 
                 # choose the winner
                 transfer = random.choice(tickets)
-                echo_amount = 49
+                echo_amount = PaymentAmount(49)
             else:
                 self.lottery_pool.put(transfer)
 
@@ -240,10 +251,10 @@ class EchoNode:  # pragma: no unittest
                 amount=transfer.amount,
                 identifier=transfer.identifier,
             )
-            echo_amount = transfer.amount
+            echo_amount = PaymentAmount(transfer.amount)
 
         if echo_amount:
-            echo_identifier = transfer.identifier + echo_amount
+            echo_identifier = PaymentID(transfer.identifier + echo_amount)
             log.debug(
                 "Sending echo transfer",
                 node=to_checksum_address(self.api.address),
@@ -259,13 +270,13 @@ class EchoNode:  # pragma: no unittest
                 registry_address=self.api.raiden.default_registry.address,
                 token_address=self.token_address,
                 amount=echo_amount,
-                target=transfer.initiator,
+                target=TargetAddress(transfer.initiator),
                 identifier=echo_identifier,
             )
 
         self.num_handled_transfers += 1
 
-    def stop(self):
+    def stop(self) -> None:
         self.stop_signal = True
         self.greenlets.add(self.echo_worker_greenlet)
         gevent.joinall(self.greenlets, raise_error=True)

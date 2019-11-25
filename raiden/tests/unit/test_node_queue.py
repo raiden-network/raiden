@@ -5,7 +5,7 @@ from raiden.tests.utils import factories
 from raiden.transfer import node, state, state_change
 from raiden.transfer.events import SendWithdrawRequest
 from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_GLOBAL_QUEUE,
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     CanonicalIdentifier,
     QueueIdentifier,
 )
@@ -30,7 +30,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
         chain_id=chain_id,
     )
     queue_identifier = QueueIdentifier(
-        recipient=recipient, canonical_identifier=CANONICAL_IDENTIFIER_GLOBAL_QUEUE
+        recipient=recipient, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
 
     # Regression test:
@@ -76,7 +76,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         our_address=our_address,
         chain_id=chain_id,
     )
-    queue_identifier = QueueIdentifier(recipient1, CANONICAL_IDENTIFIER_GLOBAL_QUEUE)
+    queue_identifier = QueueIdentifier(recipient1, CANONICAL_IDENTIFIER_UNORDERED_QUEUE)
 
     withdraw_message = SendWithdrawRequest(
         message_identifier=message_identifier,

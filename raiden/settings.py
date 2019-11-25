@@ -27,11 +27,11 @@ DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
-        "https://raw.githubusercontent.com/raiden-network/raiden-transport"
+        "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
         "/master/known_servers.main.yaml"
     ),
     Environment.DEVELOPMENT: (
-        "https://raw.githubusercontent.com/raiden-network/raiden-transport"
+        "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
         "/master/known_servers.test.yaml"
     ),
 }
@@ -58,7 +58,8 @@ DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(4000)  # 0.4% in part
 DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE = ProportionalFeeAmount(
     3000  # 0.3% in parts per million
 )
-DEFAULT_MEDIATION_FEE_MARGIN: float = 0.05
+DEFAULT_MEDIATION_FEE_MARGIN: float = 0.03
+PAYMENT_AMOUNT_BASED_FEE_MARGIN: float = 0.0005
 INTERNAL_ROUTING_DEFAULT_FEE_PERC: float = 0.02
 MAX_MEDIATION_FEE_PERC: float = 0.2
 
@@ -86,6 +87,7 @@ class MediationFeeConfig:
     token_to_proportional_imbalance_fee: Dict[TokenAddress, ProportionalFeeAmount] = field(
         default_factory=dict
     )
+    cap_meditation_fees: bool = True
 
     def get_flat_fee(self, token_address: TokenAddress) -> FeeAmount:
         return self.token_to_flat_fee.get(  # pylint: disable=no-member
