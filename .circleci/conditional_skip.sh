@@ -8,6 +8,13 @@ SKIP_TAG="\[skip tests\]"
 
 if [[ ! -z ${CIRCLE_TAG} ]]; then
     # TAG build - never skip those
+    echo "Tagged commit, not skipping build"
+    exit 0
+fi
+
+if [[ -z ${CIRCLE_PR_NUMBER} ]]; then
+    # Not a PR, also never skip
+    echo "Not a PR, not skipping build"
     exit 0
 fi
 
@@ -22,7 +29,7 @@ fi
 git log --pretty="- %h %B" ${LOG_RANGE} | grep "${SKIP_TAG}"
 
 if [[ ${PIPESTATUS[1]} == 0 ]]; then
-    echo Skip tag found - skipping build
+    echo "Skip tag found - skipping build"
     circleci step halt
 fi
 set -e
