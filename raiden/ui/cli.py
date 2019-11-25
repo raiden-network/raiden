@@ -66,6 +66,7 @@ from raiden_contracts.constants import NETWORKNAME_TO_ID
 from .runners import EchoNodeRunner, MatrixRunner
 
 log = structlog.get_logger(__name__)
+ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
 
 
 OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
@@ -268,7 +269,7 @@ def options(func: Callable) -> Callable:
                 show_default=True,
             ),
             option(
-                "--eth-rpc-endpoint",
+                ETH_RPC_CONFIG_OPTION,
                 help=(
                     '"host:port" address of ethereum JSON-RPC server.\n'
                     "Also accepts a protocol prefix (http:// or https://) with optional port"

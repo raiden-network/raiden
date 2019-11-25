@@ -95,6 +95,15 @@ class NodeRunner:
             app_ = run_app(**self._options)
         except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
             print(COMMUNICATION_ERROR)
+            # TODO: Fix the cyclic import among ui.runners and ui.cli
+            from raiden.ui.cli import ETH_RPC_CONFIG_OPTION
+
+            print(COMMUNICATION_ERROR)
+            print(
+                f"Endpoint used with the Ethereum client: "
+                f"'{self._options['eth_rpc_endpoint']}', this option can be "
+                f"configured with the flag {ETH_RPC_CONFIG_OPTION}"
+            )
             sys.exit(1)
         except RuntimeError as e:
             click.secho(str(e), fg="red")
