@@ -3,6 +3,7 @@ import string
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from hashlib import sha256
+from operator import itemgetter
 
 from eth_utils import keccak, to_checksum_address
 
@@ -284,6 +285,12 @@ def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
+
+
+def make_privkeys_ordered(count: int, reverse: bool = False) -> List[bytes]:
+    """ Return ``count`` private keys ordered by their respective address """
+    key_address_pairs = [make_privkey_address() for _ in range(count)]
+    return [key for key, _ in sorted(key_address_pairs, key=itemgetter(1), reverse=reverse)]
 
 
 def make_signer() -> Signer:

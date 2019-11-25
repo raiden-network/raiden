@@ -28,7 +28,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.factories import HOP1
+from raiden.tests.utils.factories import HOP1, make_privkeys_ordered
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
@@ -815,7 +815,11 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [3])
-def test_matrix_user_roaming(matrix_transports):
+@pytest.mark.parametrize(
+    "roaming_peer",
+    [pytest.param("high", id="roaming_high"), pytest.param("low", id="roaming_low")],
+)
+def test_matrix_user_roaming(matrix_transports, roaming_peer):
     transport0, transport1, transport2 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
@@ -823,8 +827,11 @@ def test_matrix_user_roaming(matrix_transports):
     message_handler0 = MessageHandler(received_messages0)
     message_handler1 = MessageHandler(received_messages1)
 
-    raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1)
+    reverse_privkey_order = roaming_peer == "low"
+    privkey0, privkey1 = make_privkeys_ordered(count=2, reverse=reverse_privkey_order)
+
+    raiden_service0 = MockRaidenService(message_handler0, private_key=privkey0)
+    raiden_service1 = MockRaidenService(message_handler1, private_key=privkey1)
 
     transport0.start(raiden_service0, [], "")
     transport1.start(raiden_service1, [], "")
@@ -863,7 +870,11 @@ def test_matrix_user_roaming(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
-def test_matrix_multi_user_roaming(matrix_transports):
+@pytest.mark.parametrize(
+    "roaming_peer",
+    [pytest.param("high", id="roaming_high"), pytest.param("low", id="roaming_low")],
+)
+def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     # 6 transports on 3 servers, where (0,3), (1,4), (2,5) are one the same server
     (
         transport_rs0_0,
@@ -879,8 +890,11 @@ def test_matrix_multi_user_roaming(matrix_transports):
     message_handler0 = MessageHandler(received_messages0)
     message_handler1 = MessageHandler(received_messages1)
 
-    raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1)
+    reverse_privkey_order = roaming_peer == "low"
+    privkey0, privkey1 = make_privkeys_ordered(count=2, reverse=reverse_privkey_order)
+
+    raiden_service0 = MockRaidenService(message_handler0, private_key=privkey0)
+    raiden_service1 = MockRaidenService(message_handler1, private_key=privkey1)
 
     # Both nodes on the same server
     transport_rs0_0.start(raiden_service0, [], "")
