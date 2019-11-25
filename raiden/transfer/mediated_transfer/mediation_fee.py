@@ -126,6 +126,8 @@ def _mediation_fee_func(
     assert (
         amount_with_fees is None or amount_without_fees is None
     ), "Must be called with either amount_with_fees or amount_without_fees as None"
+
+    # If either channel can't transfer even a single token, there can be no mediation.
     if balance_out == 0 or receivable == 0:
         raise UndefinedMediationFee()
 
