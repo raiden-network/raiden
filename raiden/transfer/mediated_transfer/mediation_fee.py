@@ -126,7 +126,7 @@ def _mediation_fee_func(
     assert (
         amount_with_fees is None or amount_without_fees is None
     ), "Must be called with either amount_with_fees or amount_without_fees as None"
-    if balance_out == 0:
+    if balance_out == 0 or receivable == 0:
         raise UndefinedMediationFee()
 
     # Add dummy penalty funcs if none are set
