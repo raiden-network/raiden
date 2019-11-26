@@ -44,6 +44,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
 from raiden.utils import privatekey_to_address, split_endpoint
+from raiden.utils.http import HTTPExecutor
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -61,6 +62,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
@@ -228,7 +230,7 @@ def setup_matrix_for_smoketest(
     print_step: Callable,
     free_port_generator: Iterable[Port],
     broadcast_rooms_aliases: Iterable[str],
-) -> Iterator[List["ParsedURL"]]:
+) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
     from raiden.tests.utils.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
