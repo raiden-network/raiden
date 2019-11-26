@@ -13,7 +13,7 @@ from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
 from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
 from raiden.transfer.state import ChainState
-from raiden.utils.typing import Dict, List, NamedTuple, SecretHash
+from raiden.utils.typing import Callable, Dict, List, NamedTuple, SecretHash, Set
 
 log = structlog.get_logger(__name__)
 
@@ -75,8 +75,12 @@ class HoldRaidenEventHandler(EventHandler):
         self.wrapped = wrapped_handler
         self.eventtype_to_waitingholds: Dict[type, List[HoldWait]] = defaultdict(list)
         self.eventtype_to_holdings: Dict[type, List[Holding]] = defaultdict(list)
+        self.pre_hooks: Set[Callable] = set()
 
     def on_raiden_event(self, raiden: RaidenService, chain_state: ChainState, event: RaidenEvent):
+        for hook in self.pre_hooks:
+            hook(event)
+
         event_type = type(event)
         # First check that there are no overlapping holds, otherwise the test
         # is likely flaky. It should either reuse the hold for the same event
