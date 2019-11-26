@@ -11,7 +11,7 @@ from raiden.network.transport.matrix.utils import (
     make_client,
     make_room_alias,
 )
-from raiden.tests.utils import factories
+from raiden.tests.utils import factories, transport
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Tuple
 
@@ -104,3 +104,45 @@ def test_assumption_search_user_directory_returns_federated_users(chain_id, loca
 
     for address in addresses:
         assert user_federated.search_user_directory(to_checksum_address(address))
+
+
+@pytest.mark.parametrize("matrix_server_count", [3])
+def test_assumption_cannot_override_room_alias(local_matrix_servers):
+    """ Issue: https://github.com/raiden-network/raiden/issues/5366
+
+    This test creates a room on one matrix server (1) asserting that the room
+    has been "federated" to the other servers (2 & 3). In addition, Once the room is
+    created, aliases for this room are created on (2 & 3).
+
+    The assumption here is that, once aliases are created, an external user
+    will not be able to create a room with a name that already exists as
+    an alias, or override existing aliases.
+    """
+    room_alias_prefix = "public_room"
+
+    server1_client, _ = create_logged_in_client(local_matrix_servers[0])
+    server1_client.create_room(room_alias_prefix, is_public=True)
+
+    # Should have the one room we created
+    public_room = next(iter(server1_client.get_rooms().values()))
+
+    for local_server in local_matrix_servers[1:]:
+        client = transport.new_client(local_server)
+        assert not client.get_rooms()
+        client.join_room(public_room.aliases[0])
+        assert client.get_rooms()
+
+        alias_on_current_server = f"#{room_alias_prefix}:{local_server.netloc}"
+        client.api.set_room_alias(public_room.room_id, alias_on_current_server)
+
+        # Try to create the room again on the current server
+        # after it has been aliased.
+        with pytest.raises(MatrixRequestError):
+            client.create_room(room_alias_prefix, is_public=True)
+
+        # As a different user, try to remove the existing alias
+        # and create a new room with that alias.
+        client2, _ = create_logged_in_client(local_server)
+        with pytest.raises(MatrixRequestError):
+            client2.api.remove_room_alias(alias_on_current_server)
+            client2.create_room(room_alias_prefix, is_public=True)
