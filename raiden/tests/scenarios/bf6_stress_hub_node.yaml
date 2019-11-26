@@ -225,6 +225,8 @@ scenario:
             - transfer: {from: 9, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - transfer: {from: 9, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - transfer: {from: 9, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      # Make sure the PFS has all balance updates
+      - wait: 300
       - parallel:
           name: "Assert after second round of payments through node0"
           tasks:
