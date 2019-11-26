@@ -128,9 +128,9 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
 
     for local_server in local_matrix_servers[1:]:
         client = transport.new_client(local_server)
-        assert not client.get_rooms()
+        assert public_room.room_id not in client.get_rooms()
         client.join_room(public_room.aliases[0])
-        assert client.get_rooms()
+        assert public_room.room_id in client.get_rooms()
 
         alias_on_current_server = f"#{room_alias_prefix}:{local_server.netloc}"
         client.api.set_room_alias(public_room.room_id, alias_on_current_server)
