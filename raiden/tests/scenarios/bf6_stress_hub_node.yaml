@@ -1,0 +1,249 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        deposit: true
+        balance_per_node: 100_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 10
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    default-settle-timeout: 40
+    default-reveal-timeout: 20
+
+  node_options:
+    0:
+      matrix-server: https://transport01.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+    2:
+      matrix-server: https://transport03.raiden.network
+    3:
+      matrix-server: https://transport01.raiden.network
+    4:
+      matrix-server: https://transport01.raiden.network
+    5:
+      matrix-server: https://transport02.raiden.network
+    6:
+      matrix-server: https://transport03.raiden.network
+    7:
+      matrix-server: https://transport01.raiden.network
+    8:
+      matrix-server: https://transport01.raiden.network
+    9:
+      matrix-server: https://transport02.raiden.network
+
+# This is the BF6 scenario. It sets up a tolopogy with 9 nodes connected to node0,
+# so that node0 is the single hub that all payments have to go through. First one
+# payment from each node to another node is carried out in parallel, to check that
+# the hub can handle this amount of load. Then 5 payments from each node to another
+# node is carried out in order to check that node0 can handle this load.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 3, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 5, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 6, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 7, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      # Make sure the PFS has all balance updates
+      - wait: 100
+      - parallel:
+          name: "Assert after channel openings"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 2, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 3, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 5, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 6, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 7, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 4, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 5, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 6, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 7, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 8, total_deposit: 0, balance: 0}
+            - assert: {from: 0, to: 9, total_deposit: 0, balance: 0}
+      - parallel:
+          name: "balance out the channels"
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
+      # Make sure the PFS has all balance updates
+      - wait: 100
+      - parallel:
+          name: "Assert after balancing channels"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 2, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 3, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 5, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 6, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 7, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 4, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 5, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 6, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 7, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 8, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 9, total_deposit: 0, balance: 500_000_000_000_000_000}
+      - parallel:
+          name: "Every node sends 1 payment using Node 0 as hub"
+          tasks:
+            - transfer: {from: 1, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      # Make sure the PFS has all balance updates
+      - wait: 100
+      - parallel:
+          name: "Assert after first round of payments through node0"
+          tasks:
+            # Balances should be the same since all nodes send and receive one payment
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 2, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 3, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 5, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 6, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 7, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 4, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 5, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 6, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 7, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 8, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 9, total_deposit: 0, balance: 500_000_000_000_000_000}
+      - parallel:
+          name: "Every node sends 5 payment using Node 0 as hub"
+          tasks:
+            - transfer: {from: 1, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 1, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 1, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 1, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 1, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 2, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 3, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 4, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 5, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 6, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 7, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 8, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - transfer: {from: 9, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - parallel:
+          name: "Assert after second round of payments through node0"
+          tasks:
+            # Balances should be the same since all nodes send and receive one payment
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 498_000_000_000_000_000}
+            - assert: {from: 2, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 3, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 501_000_000_000_000_000}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 502_000_000_000_000_000}
+            - assert: {from: 5, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 498_000_000_000_000_000}
+            - assert: {from: 6, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 7, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 499_000_000_000_000_000}
+            - assert: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 502_000_000_000_000_000}
+            - assert: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 0, balance: 502_000_000_000_000_000}
+            - assert: {from: 0, to: 2, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 3, total_deposit: 0, balance: 499_000_000_000_000_000}
+            - assert: {from: 0, to: 4, total_deposit: 0, balance: 498_000_000_000_000_000}
+            - assert: {from: 0, to: 5, total_deposit: 0, balance: 502_000_000_000_000_000}
+            - assert: {from: 0, to: 6, total_deposit: 0, balance: 500_000_000_000_000_000}
+            - assert: {from: 0, to: 7, total_deposit: 0, balance: 501_000_000_000_000_000}
+            - assert: {from: 0, to: 8, total_deposit: 0, balance: 498_000_000_000_000_000}
+            - assert: {from: 0, to: 9, total_deposit: 0, balance: 500_000_000_000_000_000}
