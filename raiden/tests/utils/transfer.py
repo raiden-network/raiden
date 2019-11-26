@@ -25,11 +25,7 @@ from raiden.storage.restore import (
     get_state_change_with_transfer_by_secrethash,
 )
 from raiden.storage.wal import SavedState, WriteAheadLog
-from raiden.tests.utils.events import (
-    count_unlock_failures,
-    has_unlock_failure,
-    raiden_state_changes_search_for_item,
-)
+from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
 from raiden.tests.utils.factories import (
     make_initiator_address,
     make_message_identifier,
@@ -40,7 +36,11 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
-from raiden.transfer.mediated_transfer.events import SendSecretRequest
+from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
+    EventUnlockFailed,
+    SendSecretRequest,
+)
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -115,26 +115,23 @@ def get_channelstate(
 
 
 @contextmanager
-def watch_for_unlock_failures(*apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
+def watch_for_unlock_failures(*apps):
     """
     Context manager to assure there are no failing unlocks during transfers in integration tests.
     """
 
-    def watcher_function():
-        offset = {
-            app.raiden.address: count_unlock_failures(app.raiden.wal.storage.get_events())
-            for app in apps
-        }
-        while True:
-            for app in apps:
-                assert not has_unlock_failure(app.raiden, offset=offset[app.raiden.address])
-            gevent.sleep(retry_timeout)
+    def check(event):
+        failed = isinstance(event, (EventUnlockClaimFailed, EventUnlockFailed))
+        assert not failed, f"Unexpected unlock failure: {str(event)}"
 
-    watcher = gevent.spawn(watcher_function)
+    for app in apps:
+        app.raiden.raiden_event_handler.pre_hooks.add(check)
+
     try:
         yield
     finally:
-        gevent.kill(watcher)
+        for app in apps:
+            app.raiden.raiden_event_handler.pre_hooks.remove(check)
 
 
 def transfer(
