@@ -83,9 +83,12 @@ class ScenarioItems:
 
 def detect_scenario_player_log(fn: os.PathLike) -> bool:
     with open(fn) as f:
-        for line in f.readlines():
-            if json.loads(line).get("logger") == "scenario_player.main":
-                return True
+        try:
+            for line in f.readlines():
+                if json.loads(line).get("logger") == "scenario_player.main":
+                    return True
+        except (UnicodeDecodeError, AttributeError):
+            return False
     return False
 
 
@@ -164,7 +167,7 @@ def select_by_number(options: Any, caption: str) -> Any:
 def main(ctx: Any, folder: os.PathLike, run_number: Optional[int]) -> None:
     scenario = ScenarioItems()
     content: List[os.PathLike] = cast(List[os.PathLike], os.listdir(folder))
-    for fn in content:
+    for fn in sorted(content, reverse=True):
         file = os.path.join(folder, fn)
         if os.path.isfile(file) and detect_scenario_player_log(file):
             scenario.scenario_log = file
