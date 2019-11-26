@@ -120,9 +120,12 @@ def watch_for_unlock_failures(*apps):
     Context manager to assure there are no failing unlocks during transfers in integration tests.
     """
 
+    failed_event = None
+
     def check(event):
-        failed = isinstance(event, (EventUnlockClaimFailed, EventUnlockFailed))
-        assert not failed, f"Unexpected unlock failure: {str(event)}"
+        nonlocal failed_event
+        if isinstance(event, (EventUnlockClaimFailed, EventUnlockFailed)):
+            failed_event = event
 
     for app in apps:
         app.raiden.raiden_event_handler.pre_hooks.add(check)
@@ -132,6 +135,7 @@ def watch_for_unlock_failures(*apps):
     finally:
         for app in apps:
             app.raiden.raiden_event_handler.pre_hooks.remove(check)
+        assert failed_event is None, f"Unexpected unlock failure: {str(failed_event)}"
 
 
 def transfer(
