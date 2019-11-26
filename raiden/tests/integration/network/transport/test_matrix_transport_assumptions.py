@@ -1,10 +1,12 @@
+from functools import partial
 from urllib.parse import urlsplit
 
+import gevent
 import pytest
 from eth_utils import to_checksum_address
 from matrix_client.errors import MatrixRequestError
 
-from raiden.network.transport.matrix.client import GMatrixClient, User
+from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     join_broadcast_room,
     login,
@@ -12,8 +14,9 @@ from raiden.network.transport.matrix.utils import (
     make_room_alias,
 )
 from raiden.tests.utils import factories, transport
+from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Tuple
+from raiden.utils.typing import Any, Dict, Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
 USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
@@ -146,3 +149,71 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
         with pytest.raises(MatrixRequestError):
             client2.api.remove_room_alias(alias_on_current_server)
             client2.create_room(room_alias_prefix, is_public=True)
+
+
+@pytest.mark.parametrize("matrix_server_count", [3])
+def test_assumption_federation_works_after_original_server_goes_down(
+    chain_id, local_matrix_servers_with_executor
+):
+    """ Check that a federated broadcast room keeps working after the original server goes down.
+
+    This creates a federation of three matrix servers and a client for each.
+    It then checks that all nodes receive messages from the broadcast room.
+    Then the first matrix server is shut down and a second message send to
+    the broadcast room, which should arrive at both remaining clients.
+    """
+    original_server_url = urlsplit(local_matrix_servers_with_executor[0][0]).netloc
+
+    room_alias = make_room_alias(chain_id, "broadcast_test")
+    room_name_full = f"#{room_alias}:{original_server_url}"
+
+    user_room_creator, _ = create_logged_in_client(local_matrix_servers_with_executor[0][0])
+    original_room: Room = user_room_creator.create_room(room_alias, is_public=True)
+    user_room_creator.start_listener_thread()
+
+    user_federated_1, _ = create_logged_in_client(local_matrix_servers_with_executor[1][0])
+    room_server1 = join_broadcast_room(user_federated_1, room_name_full)
+    user_federated_1.start_listener_thread()
+
+    user_federated_2, _ = create_logged_in_client(local_matrix_servers_with_executor[2][0])
+    room_server2 = join_broadcast_room(user_federated_2, room_name_full)
+    user_federated_2.start_listener_thread()
+
+    received = {}
+
+    def handle_message(node_id: int, _room: Room, event: Dict[str, Any]):
+        nonlocal received
+        received[node_id] = event["content"]["body"]
+
+    original_room.add_listener(partial(handle_message, 0), "m.room.message")
+    room_server1.add_listener(partial(handle_message, 1), "m.room.message")
+    room_server2.add_listener(partial(handle_message, 2), "m.room.message")
+
+    # Full federation, send a message to check it works
+    original_room.send_text("Message1")
+
+    while not len(received) == 3:
+        gevent.sleep(0.1)
+
+    assert sorted(received.keys()) == [0, 1, 2]
+    assert all("Message1" == m for m in received.values())
+
+    # Shutdown server 0, the original creator of the room
+    server: HTTPExecutor = local_matrix_servers_with_executor[0][1]
+    server.stop()
+
+    # Send message from client 1, check that client 2 receives it
+    received = {}
+    room_server1.send_text("Message2")
+    while not len(received) == 2:
+        gevent.sleep(0.1)
+
+    assert sorted(received.keys()) == [1, 2]
+    assert all("Message2" == m for m in received.values())
+
+    # Shut down longrunning threads
+    user_room_creator.stop_listener_thread()
+    user_federated_1.stop_listener_thread()
+    user_federated_2.stop_listener_thread()
+
+    # TODO: restart matrix server 1, check that message 2 arrives

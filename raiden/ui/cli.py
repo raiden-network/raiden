@@ -59,6 +59,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.http import HTTPExecutor
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
@@ -728,7 +729,9 @@ def smoketest(
             base_datadir=datadir,
             base_logdir=datadir,
         )
-        matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
+        matrix_manager: ContextManager[
+            List[Tuple[ParsedURL, HTTPExecutor]]
+        ] = setup_matrix_for_smoketest(
             print_step=print_step,
             free_port_generator=free_port_generator,
             broadcast_rooms_aliases=[
