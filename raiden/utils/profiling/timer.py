@@ -39,7 +39,9 @@ class Timer:
         signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
 
     def __del__(self) -> None:
-        self.stop()
+        assert not hasattr(
+            self, "_callback"
+        ), "Timer must be stopped cleanly, or the signal handler will keep running"
 
     def __bool__(self) -> bool:
         # we're always truthy
