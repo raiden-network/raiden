@@ -1,5 +1,5 @@
 """ Utilities to make and assert transfers. """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from enum import Enum
 
 import gevent
@@ -146,6 +146,7 @@ def transfer(
     identifier: PaymentID,
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
+    expect_unlock_failures: bool = False,
 ) -> SecretHash:
     """ Nice to read shortcut to make successful mediated transfer.
 
@@ -160,6 +161,7 @@ def transfer(
             amount=amount,
             identifier=identifier,
             timeout=timeout,
+            expect_unlock_failures=expect_unlock_failures,
         )
     elif transfer_state is TransferState.EXPIRED:
         return _transfer_expired(
@@ -190,6 +192,7 @@ def _transfer_unlocked(
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
+    expect_unlock_failures: bool = False,
 ) -> SecretHash:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
 
@@ -217,7 +220,8 @@ def _transfer_unlocked(
         secrethash=secrethash,
     )
 
-    with watch_for_unlock_failures(initiator_app, target_app):
+    apps = [initiator_app, target_app]
+    with watch_for_unlock_failures(*apps) if not expect_unlock_failures else nullcontext():
         with Timeout(seconds=timeout):
             wait_for_unlock.get()
             msg = (

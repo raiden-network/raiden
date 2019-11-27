@@ -1353,8 +1353,7 @@ def test_api_payments_with_hash_no_secret(
         ),
         json={"amount": amount, "identifier": identifier, "secret_hash": secret_hash},
     )
-    with watch_for_unlock_failures(*raiden_network):
-        response = request.send().response
+    response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
     assert payment == payment
 
@@ -1409,8 +1408,7 @@ def test_api_payments_with_resolver(
         ),
         json={"amount": amount, "identifier": identifier, "secret": secret},
     )
-    with watch_for_unlock_failures(*raiden_network):
-        response = request.send().response
+    response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
     assert payment == payment
 

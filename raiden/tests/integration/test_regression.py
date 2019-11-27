@@ -266,6 +266,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         amount=PaymentAmount(50),
         identifier=PaymentID(2),
         timeout=20,
+        expect_unlock_failures=True,
     )
 
     assert raiden_state_changes_search_for_item(
