@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, Response
 from flask_restful import Resource
 from webargs.flaskparser import use_kwargs
 
@@ -12,11 +12,27 @@ from raiden.api.v1.encoding import (
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
-from raiden.utils import typing
 from raiden.utils.testnet import MintingMethod
+from raiden.utils.typing import (
+    TYPE_CHECKING,
+    Address,
+    Any,
+    BlockSpecification,
+    BlockTimeout,
+    PaymentAmount,
+    PaymentID,
+    Secret,
+    SecretHash,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+)
+
+if TYPE_CHECKING:
+    from raiden.api.rest import RestAPI
 
 
-def create_blueprint():
+def create_blueprint() -> Blueprint:
     # Take a look at this SO question on hints how to organize versioned
     # API with flask:
     # http://stackoverflow.com/questions/28795561/support-multiple-api-versions-in-flask#28797512
@@ -24,18 +40,18 @@ def create_blueprint():
 
 
 class BaseResource(Resource):
-    def __init__(self, rest_api_object, **kwargs):
+    def __init__(self, rest_api_object: "RestAPI", **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.rest_api = rest_api_object
 
 
 class AddressResource(BaseResource):
-    def get(self):
+    def get(self) -> Response:
         return self.rest_api.get_our_address()
 
 
 class VersionResource(BaseResource):
-    def get(self):
+    def get(self) -> Response:
         return self.rest_api.get_raiden_version()
 
 
@@ -43,7 +59,7 @@ class ChannelsResource(BaseResource):
 
     put_schema = ChannelPutSchema
 
-    def get(self):
+    def get(self) -> Response:
         """
         this translates to 'get all channels the node is connected with'
         """
@@ -52,14 +68,14 @@ class ChannelsResource(BaseResource):
         )
 
     @use_kwargs(put_schema, locations=("json",))
-    def put(self, **kwargs):
+    def put(self, **kwargs: Any) -> Response:
         return self.rest_api.open(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address, **kwargs
         )
 
 
 class ChannelsResourceByTokenAddress(BaseResource):
-    def get(self, **kwargs):
+    def get(self, **kwargs: Any) -> Response:
         """
         this translates to 'get all channels the node is connected to for the given token address'
         """
@@ -73,19 +89,19 @@ class ChannelsResourceByTokenAndPartnerAddress(BaseResource):
     patch_schema = ChannelPatchSchema
 
     @use_kwargs(patch_schema, locations=("json",))
-    def patch(self, **kwargs):
+    def patch(self, **kwargs: Any) -> Response:
         return self.rest_api.patch_channel(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address, **kwargs
         )
 
-    def get(self, **kwargs):
+    def get(self, **kwargs: Any) -> Response:
         return self.rest_api.get_channel(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address, **kwargs
         )
 
 
 class TokensResource(BaseResource):
-    def get(self):
+    def get(self) -> Response:
         """
         this translates to 'get all token addresses we have channels open for'
         """
@@ -95,7 +111,7 @@ class TokensResource(BaseResource):
 
 
 class PartnersResourceByTokenAddress(BaseResource):
-    def get(self, token_address):
+    def get(self, token_address: TokenAddress) -> Response:
         return self.rest_api.get_partners_by_token(
             self.rest_api.raiden_api.raiden.default_registry.address, token_address
         )
@@ -106,7 +122,7 @@ class BlockchainEventsNetworkResource(BaseResource):
     get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, from_block, to_block):
+    def get(self, from_block: BlockSpecification, to_block: BlockSpecification) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or "latest"
 
@@ -122,7 +138,12 @@ class BlockchainEventsTokenResource(BaseResource):
     get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, token_address, from_block, to_block):
+    def get(
+        self,
+        token_address: TokenAddress,
+        from_block: BlockSpecification,
+        to_block: BlockSpecification,
+    ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or "latest"
 
@@ -136,7 +157,13 @@ class ChannelBlockchainEventsResource(BaseResource):
     get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, token_address, partner_address=None, from_block=None, to_block=None):
+    def get(
+        self,
+        token_address: TokenAddress,
+        partner_address: Address = None,
+        from_block: BlockSpecification = None,
+        to_block: BlockSpecification = None,
+    ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or "latest"
 
@@ -153,17 +180,17 @@ class RaidenInternalEventsResource(BaseResource):
     get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, limit=None, offset=None):
+    def get(self, limit: int = None, offset: int = None):
         return self.rest_api.get_raiden_internal_events_with_timestamps(limit=limit, offset=offset)
 
 
 class RegisterTokenResource(BaseResource):
-    def get(self, token_address):
+    def get(self, token_address: TokenAddress) -> Response:
         return self.rest_api.get_token_network_for_token(
             self.rest_api.raiden_api.raiden.default_registry.address, token_address
         )
 
-    def put(self, token_address):
+    def put(self, token_address: TokenAddress) -> Response:
         return self.rest_api.register_token(
             self.rest_api.raiden_api.raiden.default_registry.address, token_address
         )
@@ -173,7 +200,13 @@ class MintTokenResource(BaseResource):
     post_schema = MintTokenSchema
 
     @use_kwargs(post_schema, locations=("json",))
-    def post(self, token_address, to, value, contract_method="mintFor"):
+    def post(
+        self,
+        token_address: TokenAddress,
+        to: Address,
+        value: TokenAmount,
+        contract_method: str = "mintFor",
+    ) -> Response:
         return self.rest_api.mint_token(
             token_address=token_address,
             to=to,
@@ -188,7 +221,13 @@ class ConnectionsResource(BaseResource):
     delete_schema = ConnectionsLeaveSchema()
 
     @use_kwargs(put_schema)
-    def put(self, token_address, funds, initial_channel_target, joinable_funds_target):
+    def put(
+        self,
+        token_address: TokenAddress,
+        funds: TokenAmount,
+        initial_channel_target: int,
+        joinable_funds_target: float,
+    ) -> Response:
         return self.rest_api.connect(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
@@ -198,7 +237,7 @@ class ConnectionsResource(BaseResource):
         )
 
     @use_kwargs(delete_schema, locations=("json",))
-    def delete(self, token_address):
+    def delete(self, token_address: TokenAddress) -> Response:
         return self.rest_api.leave(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
@@ -222,11 +261,11 @@ class PaymentResource(BaseResource):
     @use_kwargs(get_schema, locations=("query",))
     def get(
         self,
-        token_address: typing.TokenAddress = None,
-        target_address: typing.Address = None,
+        token_address: TokenAddress = None,
+        target_address: Address = None,
         limit: int = None,
         offset: int = None,
-    ):
+    ) -> Response:
         return self.rest_api.get_raiden_events_payment_history_with_timestamps(
             token_address=token_address, target_address=target_address, limit=limit, offset=offset
         )
@@ -234,14 +273,14 @@ class PaymentResource(BaseResource):
     @use_kwargs(post_schema, locations=("json",))
     def post(
         self,
-        token_address: typing.TokenAddress,
-        target_address: typing.TargetAddress,
-        amount: typing.PaymentAmount,
-        identifier: typing.PaymentID,
-        secret: typing.Secret,
-        secret_hash: typing.SecretHash,
-        lock_timeout: typing.BlockTimeout,
-    ):
+        token_address: TokenAddress,
+        target_address: TargetAddress,
+        amount: PaymentAmount,
+        identifier: PaymentID,
+        secret: Secret,
+        secret_hash: SecretHash,
+        lock_timeout: BlockTimeout,
+    ) -> Response:
         return self.rest_api.initiate_payment(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
@@ -255,15 +294,15 @@ class PaymentResource(BaseResource):
 
 
 class PendingTransfersResource(BaseResource):
-    def get(self):
+    def get(self) -> Response:
         return self.rest_api.get_pending_transfers()
 
 
 class PendingTransfersResourceByTokenAddress(BaseResource):
-    def get(self, token_address):
+    def get(self, token_address: TokenAddress) -> Response:
         return self.rest_api.get_pending_transfers(token_address)
 
 
 class PendingTransfersResourceByTokenAndPartnerAddress(BaseResource):
-    def get(self, token_address, partner_address):
+    def get(self, token_address: TokenAddress, partner_address: Address) -> Response:
         return self.rest_api.get_pending_transfers(token_address, partner_address)

@@ -26,6 +26,7 @@ from raiden.constants import (
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.utils.typing import AddressHex
 
 
 class InvalidEndpoint(NotFound):
@@ -37,7 +38,7 @@ class InvalidEndpoint(NotFound):
 
 class HexAddressConverter(BaseConverter):
     @staticmethod
-    def to_python(value):
+    def to_python(value: Any) -> Address:
         if not is_0x_prefixed(value):
             raise InvalidEndpoint("Not a valid hex address, 0x prefix missing.")
 
@@ -52,7 +53,7 @@ class HexAddressConverter(BaseConverter):
         return value
 
     @staticmethod
-    def to_url(value):
+    def to_url(value: Any) -> AddressHex:
         return to_checksum_address(value)
 
 
