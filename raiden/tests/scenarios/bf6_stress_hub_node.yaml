@@ -48,7 +48,7 @@ nodes:
     2:
       matrix-server: https://transport03.raiden.network
     3:
-      matrix-server: https://transport01.raiden.network
+      matrix-server: https://transport04.raiden.network
     4:
       matrix-server: https://transport01.raiden.network
     5:
@@ -56,7 +56,7 @@ nodes:
     6:
       matrix-server: https://transport03.raiden.network
     7:
-      matrix-server: https://transport01.raiden.network
+      matrix-server: https://transport04.raiden.network
     8:
       matrix-server: https://transport01.raiden.network
     9:
