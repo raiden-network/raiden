@@ -6,11 +6,11 @@ Raiden Alderaan Mainnet Tutorial
 
 Introduction
 =============
-In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the upcoming Alderaan release. Since the Alderaan release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
+In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. It is based on the upcoming Alderaan release. Since the Alderaan release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
 
-Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` represents the current API version. The current version is version 1, so all queries start with ``/api/v1/``.
+Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL paths always start with: ``/api/``, followed by the current api version. The current version is version 1, so all queries start with ``/api/v1/``.
 
-Before getting started with this tutorial, please see the :doc:`Installation Guide <overview_and_guide>`, to make sure that Raiden is correctly installed and running.
+We assume that you have Raiden correctly installed and running in the desired configuration, see the :doc:`Installation Guide <overview_and_guide>`.
 
 .. _about-weth:
 
@@ -103,7 +103,7 @@ Now that we have joined a token network, we can start making payments. For this,
         "amount": "42"
     }
 
-In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. If we specify an address that we do not have a direct channel with, the Raiden Network finds a path to the target address and use mediated transfers to make a payment from our address to the target address.
+In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. If we specify an address that we do not have a direct channel with, Raiden will try doing a mediated transfer with the help of either its internal routing or the given pathfinding service.
 
 It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the payment. The third call to open a direct channel is optional.
 
