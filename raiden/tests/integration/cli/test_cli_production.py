@@ -64,7 +64,7 @@ def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
 
     expect_cli_until_acknowledgment(child)
-    child.expect(".*Could not contact the Ethereum node through JSON-RPC.")
+    child.expect(".*Communicating with an external service failed.")
 
 
 @pytest.mark.timeout(TIMEOUT)

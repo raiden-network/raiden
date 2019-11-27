@@ -12,6 +12,7 @@ import gevent.monkey
 import structlog
 from gevent.event import AsyncResult
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
+from urllib3.exceptions import ReadTimeoutError
 
 from raiden import constants, settings
 from raiden.api.rest import APIServer, RestAPI
@@ -30,10 +31,12 @@ from .config import dump_cmd_options, dump_config, dump_module
 log = structlog.get_logger(__name__)
 
 
-ETHEREUM_NODE_COMMUNICATION_ERROR = (
+COMMUNICATION_ERROR = (
     "\n"
-    "Could not contact the Ethereum node through JSON-RPC.\n"
-    "Please make sure that the Ethereum node is running and JSON-RPC is enabled."
+    "Communicating with an external service failed.\n"
+    "This can be caused by internet connection problems or \n"
+    "any of the following services, Ethereum client or Matrix or pathfinding.\n"
+    "Please try again in five minutes."
 )
 
 
@@ -90,8 +93,8 @@ class NodeRunner:
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
             app_ = run_app(**self._options)
-        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
-            print(ETHEREUM_NODE_COMMUNICATION_ERROR)
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
+            print(COMMUNICATION_ERROR)
             sys.exit(1)
         except RuntimeError as e:
             click.secho(str(e), fg="red")
@@ -204,8 +207,8 @@ class NodeRunner:
         try:
             event.get()
             print("Signal received. Shutting down ...")
-        except (ConnectionError, ConnectTimeout, RequestsConnectionError):
-            print(ETHEREUM_NODE_COMMUNICATION_ERROR)
+        except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
+            print(COMMUNICATION_ERROR)
             sys.exit(1)
         except RaidenError as ex:
             click.secho(f"FATAL: {ex}", fg="red")
