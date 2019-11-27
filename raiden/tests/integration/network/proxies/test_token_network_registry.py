@@ -6,6 +6,7 @@ from eth_utils import is_same_address, to_canonical_address, to_normalized_addre
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
 from raiden.exceptions import (
     AddressWithoutCode,
+    BrokenPreconditionError,
     InvalidToken,
     InvalidTokenAddress,
     RaidenRecoverableError,
@@ -197,13 +198,35 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
         token_symbol="TKN",
         token_contract_name=token_contract_name,
     )
-    test_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
-
-    # Register a valid token
+    first_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
     preblockhash = deploy_client.get_confirmed_blockhash()
+
+    # Register a valid token, this is the last slot and should succeeded
     token_network_registry_proxy.add_token(
-        token_address=test_token_address,
+        token_address=first_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
         block_identifier=preblockhash,
     )
+
+    test_token = deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=TokenAmount(1000),
+        decimals=0,
+        token_name="TKN",
+        token_symbol="TKN",
+        token_contract_name=token_contract_name,
+    )
+    second_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
+    preblockhash = deploy_client.get_confirmed_blockhash()
+
+    # Tries to register a new valid token after all slots have been used. This
+    # has to fail.
+    with pytest.raises(BrokenPreconditionError):
+        token_network_registry_proxy.add_token(
+            token_address=second_token_address,
+            channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+            token_network_deposit_limit=TokenAmount(UINT256_MAX),
+            block_identifier=preblockhash,
+        )
