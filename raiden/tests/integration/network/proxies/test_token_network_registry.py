@@ -167,3 +167,43 @@ def test_token_network_registry_with_zero_token_address(
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
             block_identifier=deploy_client.get_confirmed_blockhash(),
         )
+
+
+@pytest.mark.parametrize("max_token_networks", [1])
+def test_token_network_registry_allows_the_last_slot_to_be_used(
+    deploy_client, token_network_registry_address, contract_manager, token_contract_name
+):
+    proxy_manager = ProxyManager(
+        rpc_client=deploy_client,
+        contract_manager=contract_manager,
+        metadata=ProxyManagerMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
+    )
+
+    token_network_registry_proxy = proxy_manager.token_network_registry(
+        token_network_registry_address
+    )
+
+    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 0
+
+    test_token = deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=TokenAmount(1000),
+        decimals=0,
+        token_name="TKN",
+        token_symbol="TKN",
+        token_contract_name=token_contract_name,
+    )
+    test_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
+
+    # Register a valid token
+    preblockhash = deploy_client.get_confirmed_blockhash()
+    token_network_registry_proxy.add_token(
+        token_address=test_token_address,
+        channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
+        token_network_deposit_limit=TokenAmount(UINT256_MAX),
+        block_identifier=preblockhash,
+    )
