@@ -50,6 +50,11 @@ def token_contract_name() -> str:
     return CONTRACT_CUSTOM_TOKEN
 
 
+@pytest.fixture
+def max_token_networks() -> int:
+    return UINT256_MAX
+
+
 @pytest.fixture(name="token_addresses")
 def deploy_all_tokens_register_and_return_their_addresses(
     token_amount: TokenAmount,
@@ -223,6 +228,7 @@ def deploy_token_network_registry_and_return_address(
     chain_id: ChainID,
     settle_timeout_min: int,
     settle_timeout_max: int,
+    max_token_networks: int,
     contract_manager: ContractManager,
 ) -> TokenNetworkRegistryAddress:
     constructor_arguments = [
@@ -230,7 +236,7 @@ def deploy_token_network_registry_and_return_address(
         chain_id,
         settle_timeout_min,
         settle_timeout_max,
-        UINT256_MAX,
+        max_token_networks,
     ]
 
     address = deploy_contract_web3(
