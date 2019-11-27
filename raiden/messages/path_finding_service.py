@@ -11,7 +11,7 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import NettingChannelState
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import Address, Nonce, TokenAmount
+from raiden.utils.typing import Address, BlockTimeout, Nonce, TokenAmount
 
 
 @dataclass(repr=False, eq=False)
@@ -25,7 +25,7 @@ class PFSCapacityUpdate(SignedMessage):
     other_nonce: Nonce
     updating_capacity: TokenAmount
     other_capacity: TokenAmount
-    reveal_timeout: int
+    reveal_timeout: BlockTimeout
 
     def __post_init__(self) -> None:
         if self.signature is None:
