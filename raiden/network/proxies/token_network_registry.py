@@ -150,7 +150,7 @@ class TokenNetworkRegistry:
         except BadFunctionCallOutput:
             raise_on_call_returned_empty(block_identifier)
         else:
-            if token_networks_created + 1 >= max_token_networks:
+            if token_networks_created + 1 > max_token_networks:
                 raise BrokenPreconditionError(
                     f"Number of token networks will exceed the max of {max_token_networks}"
                 )
