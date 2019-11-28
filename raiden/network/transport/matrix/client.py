@@ -249,6 +249,7 @@ class GMatrixClient(MatrixClient):
             long_paths=("/sync",),
         )
         self.api.validate_certificate(valid_cert_check)
+        self.synced = gevent.event.Event()  # Set at the end of every sync, then cleared
 
     def listen_forever(
         self,
@@ -557,6 +558,9 @@ class GMatrixClient(MatrixClient):
             # can happen.
             for event in response["account_data"]["events"]:
                 self.account_data[event["type"]] = event["content"]
+
+        self.synced.set()
+        self.synced.clear()
 
     def set_account_data(self, type_: str, content: Dict[str, Any]) -> Dict:
         """ Use this to set a key: value pair in account_data to keep it synced on server """
