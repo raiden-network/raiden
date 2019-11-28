@@ -8,7 +8,6 @@ from urllib.parse import quote
 
 import gevent
 import structlog
-from eth_utils import to_checksum_address
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import Semaphore
@@ -23,8 +22,8 @@ from requests.adapters import HTTPAdapter
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import AddressHex
 from raiden.utils.notifying_queue import NotifyingQueue, event_first_of
+from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
 
@@ -486,9 +485,14 @@ class GMatrixClient(MatrixClient):
         self._sync_iteration += 1
 
     def _handle_process_worker(self, response_queue: NotifyingQueue, event_stop: Event) -> None:
-        if self._post_hook_func is not None and self.sync_token is not None:
-            self._post_hook_func(self.sync_token)
+        """Worker to process network messages from the asynchronous transport.
 
+        Note that his worker will process the messages in the order of
+        delivery, however, the underlying protocol may not guarantee that
+        messages are delivered in-order in which they were sent. The transport
+        layer has to implement retries to guarantee that a message will
+        eventually processed. This introduces a cost in terms of latency.
+        """
         data_or_stop = event_first_of(response_queue, event_stop)
 
         while True:
@@ -496,21 +500,39 @@ class GMatrixClient(MatrixClient):
 
             # Clear the event's internal state for the next iteration.
             #
-            # This *must* be done before any context switch, otherwise cuncurrent
-            # actions can be missed.
+            # This *must* be done before any context switch, otherwise
+            # cuncurrent actions can be missed. Examples:
+            # - If a new element is added to the queue while `_handle_response`
+            # is executing, and the `data_or_stop` is cleared after that
+            # context-switch, then the new element will be missed.
+            # - If the stop event is set while `_handle_response` is being
+            # executed, because this only happens once the stop event be
+            # missed.
             data_or_stop.clear()
 
             if event_stop.is_set():
                 return
 
             # The queue is not empty at this point, so this won't raise Empty.
-            response: JSONResponse = response_queue.get(block=False)
+            #
+            # Here `peek` is used to implement delivery at-least-once
+            # semantics. At-most-once would also be acceptable because of
+            # message retries, however has the pontential of introducing
+            # latency.
+            response: JSONResponse = response_queue.peek(block=False)
 
+            # TODO: Respect the `event_stop` in `_handle_response`. With this
+            # implementation if the event is set while `_handle_response` is
+            # executing, and the handler takes a long time, the process will
+            # take longer than necessary to exit.
             if response is not None:
                 self._handle_response(response)
 
-            # Clear the event's internal state for the next iteration
-            data_or_stop.clear()
+            # Pop up the processed message, if the process is kill right at
+            # before this call, on the next transport start the same message
+            # will be processed again, that is why this is at-least-once
+            # semantics.
+            response_queue.get(block=False)
 
     def _handle_response(self, response: JSONResponse, first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
