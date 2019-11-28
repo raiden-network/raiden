@@ -24,6 +24,10 @@ def event_first_of(*events: _AbstractLinkable) -> Event:
 
 
 class NotifyingQueue(Event):
+    """This is not the same as a JoinableQueue. Here, instead of waiting for
+    all the work to be processed, the wait is for work to be available.
+    """
+
     def __init__(self, maxsize: int = None, items: Iterable[T] = ()) -> None:
         super().__init__()
         self._queue = Queue(maxsize, items)
