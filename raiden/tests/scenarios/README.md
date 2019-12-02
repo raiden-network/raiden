@@ -29,9 +29,9 @@ In the end it is tested that channels can be closed and that the monitoring serv
 
 #### [bf2_long_running](./bf2_long_running.yaml)
 
-This scenario mimics user behaviour for 
-opening channels, depositing, transferring, waiting keeping the raiden node alive for 
-a long time in the process checking that the raiden network 
+This scenario mimics user behaviour for
+opening channels, depositing, transferring, waiting keeping the raiden node alive for
+a long time in the process checking that the raiden network
 works accurately with a sufficiently dirty state of blockchain for a long time.
 
 #### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
@@ -59,6 +59,13 @@ so that node0 is the single hub that all payments have to go through. First one
 payment from each node to another node is carried out in parallel, to check that
 the hub can handle this amount of load. Then 5 payments from each node to another
 node is carried out in order to check that node0 can handle this load.
+
+#### [bf7_long_path](./bf7_long_path.yaml)
+It tests long paths. There are a total of 15 nodes in the scenario.
+A topology with deposits in both directions are created as [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+After opening channels, transfers are made with incrementing length starting with a transfer
+from node0 to node1 and back, then from node0 to node2 with node1 as a mediatorand back etc.
+This is done all the way up to a transfer from node0 to node14 and back.
 
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
