@@ -5,7 +5,7 @@ from eth_utils import is_binary_address, to_checksum_address
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
+from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -15,6 +15,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAmount,
     InvalidBinaryAddress,
+    InvalidPaymentIdentifier,
     InvalidRevealTimeout,
     InvalidSecret,
     InvalidSecretHash,
@@ -1050,6 +1051,12 @@ class RaidenAPI:  # pragma: no unittest
 
         if identifier is None:
             identifier = create_default_identifier()
+
+        if identifier <= 0:
+            raise InvalidPaymentIdentifier("Payment identifier cannot be 0 or negative")
+
+        if identifier > UINT64_MAX:
+            raise InvalidPaymentIdentifier("Payment identifier is too large")
 
         log.debug(
             "Initiating transfer",

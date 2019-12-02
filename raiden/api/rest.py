@@ -72,6 +72,7 @@ from raiden.exceptions import (
     InvalidBinaryAddress,
     InvalidBlockNumberInput,
     InvalidNumberInput,
+    InvalidPaymentIdentifier,
     InvalidRevealTimeout,
     InvalidSecret,
     InvalidSecretHash,
@@ -1072,6 +1073,7 @@ class RestAPI:  # pragma: no unittest
             InvalidBinaryAddress,
             InvalidSecret,
             InvalidSecretHash,
+            InvalidPaymentIdentifier,
             PaymentConflict,
             UnknownTokenAddress,
         ) as e:
