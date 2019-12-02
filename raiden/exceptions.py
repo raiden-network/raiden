@@ -162,6 +162,10 @@ class InvalidSignature(RaidenError):
     """Raised on invalid signature recover/verify"""
 
 
+class InvalidPaymentIdentifier(RaidenError):
+    """Raised on invalid payment identifier"""
+
+
 class SamePeerAddress(RaidenError):
     """ Raised when a user tries to create a channel where the address of both
     peers is the same.
