@@ -132,7 +132,7 @@ pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1             # via matrix-synapse
 raiden-contracts==0.33.3
-raiden-webui==0.10.1
+raiden-webui==0.10.2
 readme-renderer==24.0
 releases==1.6.1
 requests==2.22.0
