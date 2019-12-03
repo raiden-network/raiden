@@ -81,44 +81,46 @@ def test_validate_userid_signature():
     user.get_display_name = Mock(side_effect=lambda: user.displayname)
 
     # displayname is None, get_display_name will be called but continue to give None
-    assert validate_userid_signature(user) is None
-    assert user.get_display_name.call_count == 1
+    with pytest.raises(AssertionError):
+        assert validate_userid_signature(user)
+
+    assert user.get_display_name.call_count == 0
 
     # successfuly recover valid displayname
     user.displayname = encode_hex(signer.sign(user.user_id.encode()))
     assert validate_userid_signature(user) == signer.address
-    assert user.get_display_name.call_count == 2
+    assert user.get_display_name.call_count == 0
 
     # assert another call will cache the result and avoid wasteful get_display_name call
     assert validate_userid_signature(user) == signer.address
-    assert user.get_display_name.call_count == 2
+    assert user.get_display_name.call_count == 0
 
     # non-hex displayname should be gracefully handled
     user.displayname = "random gibberish"
     assert validate_userid_signature(user) is None
-    assert user.get_display_name.call_count == 3
+    assert user.get_display_name.call_count == 0
 
     # valid signature but from another user should also return None
     user.displayname = encode_hex(make_signer().sign(user.user_id.encode()))
     assert validate_userid_signature(user) is None
-    assert user.get_display_name.call_count == 4
+    assert user.get_display_name.call_count == 0
 
     # same address, but different user_id, even if valid, should be rejected
     # (prevent personification)
     user.displayname = encode_hex(signer.sign(user.user_id.encode()))
     user.user_id = f"@{to_normalized_address(signer.address)}.deadbeef:{server_name}"
     assert validate_userid_signature(user) is None
-    assert user.get_display_name.call_count == 5
+    assert user.get_display_name.call_count == 0
 
     # but non-default but valid user_id should be accepted
     user.displayname = encode_hex(signer.sign(user.user_id.encode()))
     assert validate_userid_signature(user) == signer.address
-    assert user.get_display_name.call_count == 6
+    assert user.get_display_name.call_count == 0
 
     # non-compliant user_id shouldn't even call get_display_name
     user.user_id = f"@my_user:{server_name}"
     assert validate_userid_signature(user) is None
-    assert user.get_display_name.call_count == 6
+    assert user.get_display_name.call_count == 0
 
 
 def test_sort_servers_closest(monkeypatch):
