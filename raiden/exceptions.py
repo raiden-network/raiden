@@ -323,6 +323,10 @@ class TokenNetworkDeprecated(RaidenError):
     """
 
 
+class NoRouteAvailable(RaidenRecoverableError):
+    """ No route could be found to use for this payment """
+
+
 class MintFailed(RaidenError):
     """ Raised when an attempt to mint a testnet token failed. """
 

@@ -79,6 +79,7 @@ from raiden.exceptions import (
     InvalidToken,
     InvalidTokenAddress,
     MintFailed,
+    NoRouteAvailable,
     PaymentConflict,
     RaidenRecoverableError,
     SamePeerAddress,
@@ -1076,6 +1077,8 @@ class RestAPI:  # pragma: no unittest
             UnknownTokenAddress,
         ) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except NoRouteAvailable as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
         except InsufficientFunds as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 

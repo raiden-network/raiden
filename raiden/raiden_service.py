@@ -31,6 +31,7 @@ from raiden.exceptions import (
     InvalidDBData,
     InvalidSecret,
     InvalidSecretHash,
+    NoRouteAvailable,
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -120,7 +121,7 @@ def initiator_init(
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
     lock_timeout: BlockTimeout = None,
-) -> ActionInitInitiator:
+) -> Optional[ActionInitInitiator]:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
@@ -144,6 +145,9 @@ def initiator_init(
         config=raiden.config,
         privkey=raiden.privkey,
     )
+
+    if not routes:
+        return None
 
     # Only prepare feedback when token is available
     if feedback_token is not None:
@@ -1215,9 +1219,11 @@ class RaidenService(Runnable):
             lock_timeout=lock_timeout,
         )
 
-        # Dispatch the state change even if there are no routes to create the
-        # wal entry.
+        # Dispatch the state change even if there are no routes to create the wal entry.
         self.handle_and_track_state_changes([init_initiator_statechange])
+
+        if not init_initiator_statechange:
+            raise NoRouteAvailable("No route with sufficient capacity found.")
 
         return payment_status
 
