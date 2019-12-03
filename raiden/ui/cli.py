@@ -189,41 +189,8 @@ def options(func: Callable) -> Callable:
             show_default=True,
         ),
         option(
-            "--tokennetwork-registry-contract-address",
-            help="hex encoded address of the Token Network Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
-            "--secret-registry-contract-address",
-            help="hex encoded address of the Secret Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
-            "--service-registry-contract-address",
-            help="hex encoded address of the Service Registry contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            "--one-to-n-contract-address",
-            help="hex encoded address of the OneToN contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            "--endpoint-registry-contract-address",
-            help="hex encoded address of the Endpoint Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
             "--user-deposit-contract-address",
             help="hex encoded address of the User Deposit contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            "--monitoring-service-contract-address",
-            help="hex encoded address of the Monitorin Service contract.",
             type=ADDRESS_TYPE,
         ),
         option("--console", help="Start the interactive raiden console", is_flag=True),
@@ -868,7 +835,7 @@ def smoketest(
             args["environment_type"] = environment_type
             args["extra_config"] = {"transport": {"available_servers": server_urls}}
             args["one_to_n_contract_address"] = "0x" + "1" * 40
-            args["routing_mode"] = RoutingMode.PRIVATE
+            args["routing_mode"] = RoutingMode.LOCAL
             args["flat_fee"] = ()
             args["proportional_fee"] = ()
             args["proportional_imbalance_fee"] = ()
