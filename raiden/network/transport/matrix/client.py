@@ -9,7 +9,6 @@ from urllib.parse import quote
 import gevent
 import structlog
 from eth_utils import to_checksum_address
-from gevent import Greenlet
 from gevent.lock import Semaphore
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
@@ -459,23 +458,9 @@ class GMatrixClient(MatrixClient):
         prev_sync_token = self.sync_token
         self.sync_token = response["next_batch"]
 
-        if self._handle_thread is not None:
-            # if previous _handle_thread is still running, wait for it and re-raise if needed
-            self._handle_thread.get()
-
         is_first_sync = prev_sync_token is None
-        self._handle_thread = gevent.Greenlet(self._handle_response, response, is_first_sync)
-        self._handle_thread.name = (
-            f"GMatrixClient._sync user_id:{self.user_id} sync_token:{prev_sync_token}"
-        )
-
-        def kill_sync_thread(greenlet: Greenlet) -> None:
-            if self.sync_thread:
-                self.sync_thread.kill(greenlet.exception)
-
-        self._handle_thread.link_exception(kill_sync_thread)
         log.debug(
-            "Starting handle greenlet",
+            "Starting _handle_response",
             node=node_address_from_userid(self.user_id),
             first_sync=is_first_sync,
             sync_token=prev_sync_token,
@@ -505,7 +490,7 @@ class GMatrixClient(MatrixClient):
                 len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
             ),
         )
-        self._handle_thread.start()
+        self._handle_response(response, is_first_sync)
 
         if self._post_hook_func is not None and self.sync_token is not None:
             self._post_hook_func(self.sync_token)
