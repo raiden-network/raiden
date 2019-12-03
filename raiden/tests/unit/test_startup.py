@@ -13,7 +13,11 @@ from raiden.settings import ServiceConfig
 from raiden.tests.utils.factories import make_address, make_token_network_registry_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
-from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
+from raiden.ui.startup import (
+    load_deployed_contracts_data,
+    proxies_from_contracts_deployment,
+    setup_environment,
+)
 from raiden.utils.typing import Address, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
@@ -81,70 +85,70 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 def test_setup_contracts():
     # Mainnet production: contracts are not deployed
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 1)
+    contracts = load_deployed_contracts_data(config, 1)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Mainnet development -- NOT allowed
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 1)
+    contracts = load_deployed_contracts_data(config, 1)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Ropsten production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 3)
+    contracts = load_deployed_contracts_data(config, 3)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Ropsten development
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 3)
+    contracts = load_deployed_contracts_data(config, 3)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 4)
+    contracts = load_deployed_contracts_data(config, 4)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby development
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 4)
+    contracts = load_deployed_contracts_data(config, 4)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 5)
+    contracts = load_deployed_contracts_data(config, 5)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli development
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 5)
+    contracts = load_deployed_contracts_data(config, 5)
     assert "contracts_path" in config
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # random private network production
     config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 5257)
+    contracts = load_deployed_contracts_data(config, 5257)
     assert "contracts_path" in config
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # random private network development
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 5257)
+    contracts = load_deployed_contracts_data(config, 5257)
     assert "contracts_path" in config
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
@@ -160,16 +164,14 @@ def test_setup_proxies_raiden_addresses_are_given():
     contracts = {}
     proxy_manager = MockProxyManager(node_address=make_address())
 
-    proxies = setup_proxies_or_exit(
+    proxies = proxies_from_contracts_deployment(
         config=config,
-        tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-        secret_registry_contract_address=make_address(),
         user_deposit_contract_address=None,
-        service_registry_contract_address=None,
         proxy_manager=proxy_manager,
         contracts=contracts,
         routing_mode=RoutingMode.LOCAL,
         pathfinding_service_address=None,
+        enable_monitoring=False,
     )
     assert proxies
     assert proxies.token_network_registry
@@ -180,7 +182,7 @@ def test_setup_proxies_raiden_addresses_are_given():
 
 def test_setup_proxies_all_addresses_are_given():
     """
-    Test that startup for proxies works fine if all addresses are given and routing is basic
+    Test that startup for proxies works fine if all addresses are given and routing is local
     """
 
     network_id = 5
@@ -189,16 +191,14 @@ def test_setup_proxies_all_addresses_are_given():
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
+        proxies = proxies_from_contracts_deployment(
             config=config,
-            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-            secret_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
-            service_registry_contract_address=make_address(),
             proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
+            enable_monitoring=True,
         )
     assert proxies
     assert proxies.token_network_registry
@@ -213,21 +213,19 @@ def test_setup_proxies_all_addresses_are_known():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
-    contracts = setup_contracts_or_exit(config, network_id)
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
+        proxies = proxies_from_contracts_deployment(
             config=config,
-            tokennetwork_registry_contract_address=None,
-            secret_registry_contract_address=None,
             user_deposit_contract_address=None,
-            service_registry_contract_address=None,
             proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
+            enable_monitoring=True,
         )
     assert proxies
     assert proxies.token_network_registry
@@ -256,16 +254,14 @@ def test_setup_proxies_no_service_registry_but_pfs():
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
+        proxies = proxies_from_contracts_deployment(
             config=config,
-            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-            secret_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
-            service_registry_contract_address=None,
             proxy_manager=proxy_manager,
             contracts=contracts,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
+            enable_monitoring=True,
         )
     assert proxies
 
@@ -290,14 +286,12 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
 
     with pytest.raises(SystemExit):
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-            setup_proxies_or_exit(
+            proxies_from_contracts_deployment(
                 config=config,
-                tokennetwork_registry_contract_address=make_token_network_registry_address(),
-                secret_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
-                service_registry_contract_address=None,
                 proxy_manager=proxy_manager,
                 contracts=contracts,
                 routing_mode=RoutingMode.PFS,
                 pathfinding_service_address=None,
+                enable_monitoring=True,
             )

@@ -16,7 +16,7 @@ from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.ui.checks import (
     check_pfs_configuration,
     check_raiden_environment,
-    check_smart_contract_addresses,
+    check_deployed_contracts_data,
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
@@ -41,7 +41,7 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
     print(f"Raiden is running in {environment_type.value.lower()} mode")
 
 
-def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
+def load_deployed_contracts_data(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
@@ -51,7 +51,7 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict
 
     check_raiden_environment(network_id, environment_type)
 
-    contracts: Dict[str, Any] = dict()
+    deployed_contracts_data: Dict[str, Any] = dict()
     contracts_version = RAIDEN_CONTRACT_VERSION
 
     config["contracts_path"] = contracts_precompiled_path(contracts_version)
@@ -61,11 +61,11 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: ChainID) -> Dict
             chain_id=network_id, version=contracts_version
         )
         if not deployment_data:
-            return contracts
+            return deployed_contracts_data
 
-        contracts = deployment_data["contracts"]
+        deployed_contracts_data = deployment_data["deployed_contracts_data"]
 
-    return contracts
+    return deployed_contracts_data
 
 
 def handle_contract_code_mismatch(mismatch_exception: ContractCodeMismatch) -> None:
@@ -96,16 +96,13 @@ class Proxies(NamedTuple):
     service_registry: Optional[ServiceRegistry]
 
 
-def setup_proxies_or_exit(
+def proxies_from_contracts_deployment(
     config: Dict[str, Any],
-    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
-    secret_registry_contract_address: Address,
-    user_deposit_contract_address: Address,
-    service_registry_contract_address: Address,
     proxy_manager: ProxyManager,
     contracts: Dict[str, Any],
     routing_mode: RoutingMode,
     pathfinding_service_address: str,
+    enable_monitoring: bool,
 ) -> Proxies:
     """
     Initialize and setup the contract proxies.
@@ -120,85 +117,43 @@ def setup_proxies_or_exit(
     node_network_id = config["chain_id"]
     environment_type = config["environment_type"]
 
-    check_smart_contract_addresses(
-        environment_type=environment_type,
-        node_network_id=node_network_id,
-        tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
-        secret_registry_contract_address=secret_registry_contract_address,
-        contracts=contracts,
-    )
-
     token_network_registry = None
-    try:
-        if tokennetwork_registry_contract_address is not None:
-            registered_address = tokennetwork_registry_contract_address
-        else:
-            registered_address = to_canonical_address(
-                contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
-            )
-        token_network_registry = proxy_manager.token_network_registry(registered_address)
-    except ContractCodeMismatch as e:
-        handle_contract_code_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code(
-            "token network registry", Address(tokennetwork_registry_contract_address)
-        )
-    except AddressWrongContract:
-        handle_contract_wrong_address(
-            "token network registry", Address(tokennetwork_registry_contract_address)
-        )
-
-    secret_registry = None
-    try:
-        secret_registry = proxy_manager.secret_registry(
-            secret_registry_contract_address
-            or to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
-        )
-    except ContractCodeMismatch as e:
-        handle_contract_code_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code("secret registry", secret_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address("secret registry", secret_registry_contract_address)
-
-    # If services contracts are provided via the CLI use them instead
-    if user_deposit_contract_address is not None:
-        contracts[CONTRACT_USER_DEPOSIT] = user_deposit_contract_address
-    if service_registry_contract_address is not None:
-        contracts[CONTRACT_SERVICE_REGISTRY] = service_registry_contract_address
-
-    user_deposit = None
-    should_use_user_deposit = (
-        environment_type == Environment.DEVELOPMENT
-        and ID_TO_NETWORKNAME.get(node_network_id) != "smoketest"
-        and CONTRACT_USER_DEPOSIT in contracts
+    token_network_registry_address = to_canonical_address(
+        contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
     )
-    if should_use_user_deposit:
-        try:
-            user_deposit = proxy_manager.user_deposit(
-                user_deposit_contract_address
-                or to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
-            )
-        except ContractCodeMismatch as e:
-            handle_contract_code_mismatch(e)
-        except AddressWithoutCode:
-            handle_contract_no_code("user deposit", user_deposit_contract_address)
-        except AddressWrongContract:
-            handle_contract_wrong_address("user_deposit", user_deposit_contract_address)
+    secret_registry_address = to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
+    user_deposit_contract_address = to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
+    service_registry_contract_address = to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
 
-    service_registry = None
-    if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
+    contractname_address = [
+        ("token network registry", token_network_registry_address, proxy_manager.token_network_registry),
+        ("secret registry", secret_registry_address, proxy_manager.secret_registry),
+
+
+    ]
+    if routing_mode == RoutingMode.PFS:
+        contractname_address.append(("service registry", service_registry_contract_address, proxy_manager.service_registry))
+    if enable_monitoring or routing_mode == RoutingMode.PFS:
+        contractname_address.append(("user_deposit", user_deposit_contract_address, proxy_manager.user_deposit))
+
+    proxies = dict()
+
+    for contractname, address, constructor in contractname_address:
+
         try:
-            service_registry = proxy_manager.service_registry(
-                service_registry_contract_address
-                or to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
-            )
+            proxy = constructor(address)
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:
-            handle_contract_no_code("service registry", service_registry_contract_address)
+            handle_contract_no_code(
+                contractname, address
+            )
         except AddressWrongContract:
-            handle_contract_wrong_address("secret registry", service_registry_contract_address)
+            handle_contract_wrong_address(
+                contractname, address
+        )
+
+        proxies[contractname] = proxy
 
     # By now these should be set or Raiden aborted
     assert token_network_registry, "TokenNetworkRegistry needs to be set"

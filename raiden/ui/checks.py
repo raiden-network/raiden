@@ -13,6 +13,7 @@ from raiden.constants import (
     LOWEST_SUPPORTED_PARITY_VERSION,
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
+    RoutingMode,
 )
 from raiden.exceptions import EthNodeInterfaceError
 from raiden.network.proxies.proxy_manager import ProxyManager
@@ -25,7 +26,13 @@ from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, ChainID, Dict, Optional, TokenNetworkRegistryAddress
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import (
+    CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
+    ID_TO_NETWORKNAME,
+    CONTRACT_TOKEN_NETWORK_REGISTRY, CONTRACT_SECRET_REGISTRY)
 
 log = structlog.get_logger(__name__)
 
@@ -170,26 +177,35 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
         )
 
 
-def check_smart_contract_addresses(
+def check_deployed_contracts_data(
     environment_type: Environment,
     node_network_id: ChainID,
-    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
-    secret_registry_contract_address: Address,
     contracts: Dict[str, Address],
 ) -> None:
-    contract_addresses_given = (
-        tokennetwork_registry_contract_address is not None
-        and secret_registry_contract_address is not None
-    )
 
-    if not contract_addresses_given and not bool(contracts):
-        click.secho(
-            f"There are no known contract addresses for network id '{node_network_id}'. and "
-            f"environment type {environment_type}. Please provide them on the command line or "
-            f"in the configuration file.",
-            fg="red",
-        )
-        sys.exit(1)
+    """ This function only checks if all necessary contracts are indeed in the deployment JSON from Raiden Contracts.
+
+    It does not check anything else, especially not if those contracts are consistent or in fact Raiden contracts.
+
+    """
+    contract_names = [
+        CONTRACT_TOKEN_NETWORK_REGISTRY,
+        CONTRACT_SECRET_REGISTRY,
+        CONTRACT_MONITORING_SERVICE,
+        CONTRACT_SERVICE_REGISTRY,
+        CONTRACT_USER_DEPOSIT,
+        CONTRACT_ONE_TO_N,
+    ]
+
+    for name in contract_names:
+        if name not in contracts:
+            click.secho(
+                f"There are no known contract addresses for network id '{node_network_id}'. and "
+                f"environment type {environment_type}. Please provide them on the command line or "
+                f"in the configuration file.",
+                fg="red",
+            )
+            sys.exit(1)
 
 
 def check_pfs_configuration(

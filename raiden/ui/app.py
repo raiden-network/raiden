@@ -37,6 +37,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
+    check_deployed_contracts_data,
     check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
@@ -49,7 +50,12 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordfile,
     unlock_account_with_passwordprompt,
 )
-from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
+from raiden.ui.startup import (
+    load_deployed_contracts_data,
+    proxies_from_contracts_deployment,
+    setup_environment,
+)
+from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.http import split_endpoint
@@ -161,12 +167,7 @@ def run_app(
     keystore_path: str,
     gas_price: Callable,
     eth_rpc_endpoint: str,
-    tokennetwork_registry_contract_address: TokenNetworkRegistryAddress,
-    one_to_n_contract_address: Address,
-    secret_registry_contract_address: Address,
-    service_registry_contract_address: Address,
-    user_deposit_contract_address: Address,
-    monitoring_service_contract_address: Address,
+    user_deposit_contract_address: Optional[Address],
     api_address: Endpoint,
     rpc: bool,
     sync_check: bool,
@@ -239,7 +240,12 @@ def run_app(
 
     setup_environment(config, environment_type)
 
-    contracts = setup_contracts_or_exit(config, network_id)
+    if user_deposit_contract_address is None:
+        contracts = load_deployed_contracts_data(config, network_id)
+
+        check_deployed_contracts_data(
+            environment_type=environment_type, node_network_id=network_id, contracts=contracts
+        )
 
     rpc_client = JSONRPCClient(
         web3=web3,
@@ -271,16 +277,14 @@ def run_app(
     if sync_check:
         check_synced(proxy_manager)
 
-    proxies = setup_proxies_or_exit(
+    proxies = proxies_from_contracts_deployment(
         config=config,
-        tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
-        secret_registry_contract_address=secret_registry_contract_address,
         user_deposit_contract_address=user_deposit_contract_address,
-        service_registry_contract_address=service_registry_contract_address,
         proxy_manager=proxy_manager,
         contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
+        enable_monitoring=enable_monitoring,
     )
 
     check_ethereum_confirmed_block_is_not_pruned(
@@ -325,18 +329,6 @@ def run_app(
             "see https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up",  # noqa: E501
             fg="yellow",
         )
-
-    monitoring_contract_required = (
-        enable_monitoring and CONTRACT_MONITORING_SERVICE not in contracts
-    )
-    if monitoring_contract_required:
-        click.secho(
-            "Monitoring is enabled but the contract for this ethereum network was not found. "
-            "Please provide monitoring service contract address using "
-            "--monitoring-service-address.",
-            fg="red",
-        )
-        sys.exit(1)
 
     # Only send feedback when PFS is used
     if routing_mode == RoutingMode.PFS:
