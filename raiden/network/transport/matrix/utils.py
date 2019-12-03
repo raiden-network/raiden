@@ -86,12 +86,12 @@ def address_from_userid(user_id: str) -> Optional[Address]:
 
 class DisplayNameCache:
     def __init__(self) -> None:
-        self._userid_to_displayname: Dict[str, str] = dict()
+        self.userid_to_displayname: Dict[str, str] = dict()
 
     def warm_users(self, users: List[User]) -> None:
         for user in users:
             user_id = user.user_id
-            cached_displayname = self._userid_to_displayname.get(user_id)
+            cached_displayname = self.userid_to_displayname.get(user_id)
 
             if cached_displayname is None:
                 # The cache is cold, query and warm it.
@@ -107,7 +107,7 @@ class DisplayNameCache:
                         return
 
                 if user.displayname is not None:
-                    self._userid_to_displayname[user.user_id] = user.displayname
+                    self.userid_to_displayname[user.user_id] = user.displayname
 
             elif user.displayname is None:
                 user.displayname = cached_displayname
@@ -118,7 +118,7 @@ class DisplayNameCache:
                     cached=cached_displayname,
                     current=user.displayname,
                 )
-                self._userid_to_displayname[user.user_id] = user.displayname
+                self.userid_to_displayname[user.user_id] = user.displayname
 
 
 class UserAddressManager:
@@ -336,11 +336,11 @@ class UserAddressManager:
         if not user:
             return
 
+        self._displayname_cache.warm_users([user])
+
         address = self._validate_userid_signature(user)
         if not address:
             return
-
-        self._displayname_cache.warm_users([user])
 
         self.add_userid_for_address(address, user_id)
 
@@ -409,6 +409,7 @@ class UserAddressManager:
             state=presence,
         )
         if self._user_presence_changed_callback:
+            self._displayname_cache.warm_users([user])
             self._user_presence_changed_callback(user, presence)
 
     @staticmethod
@@ -592,11 +593,18 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     if not match:
         return None
 
+    msg = (
+        "The User instance provided to validate_userid_signature must have the "
+        "displayname attribute set. Make sure to warm the value using the "
+        "DisplayNameCache."
+    )
+    displayname = user.displayname
+    assert displayname is not None, msg
+
     encoded_address = match.group(1)
     address: Address = to_canonical_address(encoded_address)
 
     try:
-        displayname = user.get_display_name()
         if DISPLAY_NAME_HEX_RE.match(displayname):
             signature_bytes = decode_hex(displayname)
         else:
