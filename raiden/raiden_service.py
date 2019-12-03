@@ -34,6 +34,7 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
+    SerializationError,
 )
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
@@ -339,12 +340,21 @@ class RaidenService(Runnable):
         )
         storage.update_version()
         storage.log_run()
-        self.wal = wal.restore_to_state_change(
-            transition_function=node.state_transition,
-            storage=storage,
-            state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
-            node_address=self.address,
-        )
+
+        try:
+            self.wal = wal.restore_to_state_change(
+                transition_function=node.state_transition,
+                storage=storage,
+                state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
+                node_address=self.address,
+            )
+        except SerializationError:
+            raise RaidenUnrecoverableError(
+                "Could not restore state. "
+                "It seems like the existing database is incompatible with "
+                "the current version of Raiden. Consider using a stable "
+                "version of the Raiden client."
+            )
 
         if self.wal.state_manager.current_state is None:
             print(
