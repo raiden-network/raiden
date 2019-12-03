@@ -1,8 +1,9 @@
+import itertools
 import json
 import time
 from functools import wraps
 from itertools import repeat
-from typing import Any, Callable, Container, Dict, Iterable, List, Optional
+from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional
 from urllib.parse import quote
 
 import gevent
@@ -250,6 +251,9 @@ class GMatrixClient(MatrixClient):
         )
         self.api.validate_certificate(valid_cert_check)
         self.synced = gevent.event.Event()  # Set at the end of every sync, then cleared
+        # Monotonically increasing id to ensure that presence updates are processed in order.
+        self._presence_update_ids: Iterator[int] = itertools.count()
+        self._worker_pool = gevent.pool.Pool(size=20)
 
     def listen_forever(
         self,
@@ -361,6 +365,7 @@ class GMatrixClient(MatrixClient):
         self.sync_token = None
         self.should_listen = False
         self.rooms: Dict[str, Room] = {}
+        self._worker_pool.join(raise_error=True)
 
     def logout(self) -> None:
         super().logout()
@@ -494,7 +499,11 @@ class GMatrixClient(MatrixClient):
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
             for callback in list(self.presence_listeners.values()):
-                self.call(callback, presence_update)
+                self._worker_pool.spawn(
+                    self.call, callback, presence_update, next(self._presence_update_ids)
+                )
+        # Collect finished greenlets and errors without blocking
+        self._worker_pool.join(timeout=0, raise_error=True)
 
         for to_device_message in response["to_device"]["events"]:
             for listener in self.listeners[:]:

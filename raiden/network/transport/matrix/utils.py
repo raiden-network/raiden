@@ -248,7 +248,7 @@ class UserAddressManager:
 
     def track_address_presence(self, address: Address, user_ids: Set[str]) -> None:
         """
-        Update synthesized address presence state from cached user presence states.
+        Update synthesized address presence state.
 
         Triggers callback (if any) in case the state has changed.
 
@@ -260,7 +260,10 @@ class UserAddressManager:
         for uid in user_ids:
             presence = self._fetch_user_presence(uid)
             userids_to_presence[uid] = presence
-            self._set_user_presence(uid, presence)
+            # We assume that this is only used when no presence has been set,
+            # yet. So let's use a presence_update_id that's smaller than the
+            # usual ones, which start at 0.
+            self._set_user_presence(uid, presence, presence_update_id=-1)
 
         log.debug(
             "Fetched user presences",
@@ -301,7 +304,7 @@ class UserAddressManager:
         self._address_to_reachability[address] = new_address_reachability
         self._address_reachability_changed_callback(address, new_address_reachability)
 
-    def _presence_listener(self, event: Dict[str, Any]) -> None:
+    def _presence_listener(self, event: Dict[str, Any], presence_update_id: int) -> None:
         """
         Update cached user presence state from Matrix presence events.
 
@@ -343,13 +346,14 @@ class UserAddressManager:
 
         new_state = UserPresence(event["content"]["presence"])
 
-        self._set_user_presence(user_id, new_state)
+        self._set_user_presence(user_id, new_state, presence_update_id)
         self._maybe_address_reachability_changed(address)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachability: Dict[Address, AddressReachability] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._userid_to_presence_update_id: Dict[str, int] = dict()
 
     @property
     def _user_id(self) -> str:
@@ -378,22 +382,34 @@ class UserAddressManager:
 
         return presence
 
-    def _set_user_presence(self, user_id: str, presence: UserPresence) -> None:
+    def _set_user_presence(
+        self, user_id: str, presence: UserPresence, presence_update_id: int
+    ) -> None:
         user = self._user_from_id(user_id)
         if not user:
             return
 
+        # -1 is used in track_address_presence, so we use -2 as a default.
+        if self._userid_to_presence_update_id.get(user_id, -2) >= presence_update_id:
+            # We've already received a more recent presence (or the same one)
+            return
+
         old_presence = self._userid_to_presence.get(user_id)
-        if old_presence != presence:
-            self._userid_to_presence[user_id] = presence
-            self.log.debug(
-                "Changing user presence state",
-                user_id=user_id,
-                prev_state=old_presence,
-                state=presence,
-            )
-            if self._user_presence_changed_callback:
-                self._user_presence_changed_callback(user, presence)
+        if old_presence == presence:
+            # This can happen when force_user_presence is used. For most other
+            # cased the presence_update_id check will return first.
+            return
+
+        self._userid_to_presence[user_id] = presence
+        self._userid_to_presence_update_id[user_id] = presence_update_id
+        self.log.debug(
+            "Changing user presence state",
+            user_id=user_id,
+            prev_state=old_presence,
+            state=presence,
+        )
+        if self._user_presence_changed_callback:
+            self._user_presence_changed_callback(user, presence)
 
     @staticmethod
     def _validate_userid_signature(user: User) -> Optional[Address]:
