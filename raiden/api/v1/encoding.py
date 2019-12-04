@@ -287,22 +287,22 @@ class ChannelStateSchema(BaseSchema):
         return to_checksum_address(channel_state.partner_state.address)
 
     @staticmethod
-    def get_balance(channel_state: NettingChannelState) -> int:
-        return channel.get_balance(channel_state.our_state, channel_state.partner_state)
+    def get_balance(channel_state: NettingChannelState) -> str:
+        return str(channel.get_balance(channel_state.our_state, channel_state.partner_state))
 
     @staticmethod
     def get_state(channel_state: NettingChannelState) -> str:
         return channel.get_status(channel_state).value
 
     @staticmethod
-    def get_total_deposit(channel_state: NettingChannelState) -> int:
+    def get_total_deposit(channel_state: NettingChannelState) -> str:
         """Return our total deposit in the contract for this channel"""
-        return channel_state.our_total_deposit
+        return str(channel_state.our_total_deposit)
 
     @staticmethod
-    def get_total_withdraw(channel_state: NettingChannelState) -> int:
+    def get_total_withdraw(channel_state: NettingChannelState) -> str:
         """Return our total withdraw from this channel"""
-        return channel_state.our_total_withdraw
+        return str(channel_state.our_total_withdraw)
 
     class Meta:
         strict = True
