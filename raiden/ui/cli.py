@@ -67,6 +67,7 @@ from .runners import EchoNodeRunner, MatrixRunner
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
+ETH_NETWORKID_OPTION = "--network-id"
 
 
 OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
@@ -184,7 +185,7 @@ def options(func: Callable) -> Callable:
             hidden=True,
         ),
         option(
-            "--network-id",
+            ETH_NETWORKID_OPTION,
             help=(
                 "Specify the network name/id of the Ethereum network to run Raiden on.\n"
                 "Available networks:\n"

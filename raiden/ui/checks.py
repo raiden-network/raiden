@@ -143,9 +143,13 @@ def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
         given_description = f'{given_name or "Unknown"} (id {given_network_id})'
         network_description = f'{network_name or "Unknown"} (id {node_network_id})'
 
+        # TODO: fix cyclic import
+        from raiden.ui.cli import ETH_NETWORKID_OPTION
+
         msg = (
             f"The configured network {given_description} differs "
-            f"from the Ethereum client's network {network_description}. "
+            f"from the Ethereum client's network {network_description}. The "
+            f"network_id can be configured using the flag {ETH_NETWORKID_OPTION}"
             f"Please check your settings."
         )
         click.secho(msg, fg="red")
