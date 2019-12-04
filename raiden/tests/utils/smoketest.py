@@ -443,7 +443,7 @@ def run_smoketest(
             ConnectionManager.BOOTSTRAP_ADDR
         )
         assert response_json[0]["state"] == "opened"
-        assert response_json[0]["balance"] > 0
+        assert int(response_json[0]["balance"]) > 0
     finally:
         if api_server is not None:
             api_server.stop()
