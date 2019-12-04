@@ -353,7 +353,7 @@ def start_and_wait_for_server(
 ) -> RunningNode:
     # redirect the process output for debugging
     os.makedirs(node.data_dir, exist_ok=True)
-    stdout = open(os.path.join(node.data_dir, "stress_test.out"), "w")
+    stdout = open(os.path.join(node.data_dir, "stress_test.out"), "a")
 
     process = Popen(node.args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT)
 
