@@ -51,7 +51,6 @@ from raiden.transfer.state_change import ActionChannelClose
 from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
-from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
 from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -77,7 +76,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    TransactionHash,
     WithdrawAmount,
 )
 
@@ -547,24 +545,18 @@ class RaidenAPI:  # pragma: no unittest
 
         return channel_state.identifier
 
-    def mint_token(
-        self,
-        token_address: TokenAddress,
-        to: Address,
-        value: TokenAmount,
-        contract_method: MintingMethod,
-    ) -> TransactionHash:
-        """ Try to mint `value` units of the token at `token_address` and assign them to `to`,
-        using the minting method named `contract_method`.
+    def mint_token_for(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> None:
+        """ Try to mint `value` units of the token at `token_address` and
+        assign them to `to`, using `mintFor`.
 
         Raises:
             MintFailed if the minting fails for any reason.
         """
-        jsonrpc_client = self.raiden.rpc_client
-        token_proxy = token_minting_proxy(jsonrpc_client, token_address)
-        args = [to, value] if contract_method == MintingMethod.MINT else [value, to]
-
-        return call_minting_method(jsonrpc_client, token_proxy, contract_method, args)
+        confirmed_block_identifier = self.raiden.get_block_number()
+        token_proxy = self.raiden.proxy_manager.custom_token(
+            token_address, block_identifier=confirmed_block_identifier
+        )
+        token_proxy.mint_for(value, to)
 
     def set_total_channel_withdraw(
         self,

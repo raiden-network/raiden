@@ -12,11 +12,12 @@ from raiden.utils.typing import (
     Balance,
     BlockSpecification,
     Dict,
+    List,
     Optional,
     TokenAddress,
     TokenAmount,
 )
-from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -34,7 +35,7 @@ class Token:
         block_identifier: BlockSpecification,
     ) -> None:
         proxy = jsonrpc_client.new_contract_proxy(
-            contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN), Address(token_address)
+            self.abi(contract_manager), Address(token_address)
         )
 
         if not is_binary_address(token_address):
@@ -54,6 +55,11 @@ class Token:
         self.proxy = proxy
 
         self.token_lock: RLock = RLock()
+
+    @staticmethod
+    def abi(contract_manager: ContractManager) -> List[Dict[str, Any]]:
+        """Overwrittable by subclasses to change the proxies ABI."""
+        return contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
 
     def allowance(
         self, owner: Address, spender: Address, block_identifier: BlockSpecification

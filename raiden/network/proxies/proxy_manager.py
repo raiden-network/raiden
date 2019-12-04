@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from eth_utils import decode_hex, is_binary_address
 from gevent.lock import Semaphore
 
+from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.monitoring_service import MonitoringService
 from raiden.network.proxies.one_to_n import OneToN
@@ -78,6 +79,7 @@ class ProxyManager:
     ) -> None:
         self.address_to_secret_registry: Dict[SecretRegistryAddress, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
+        self.address_to_custom_token: Dict[TokenAddress, CustomToken] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
         self.address_to_token_network_registry: Dict[
             TokenNetworkRegistryAddress, TokenNetworkRegistry
@@ -124,6 +126,24 @@ class ProxyManager:
                 )
 
         return self.address_to_token[token_address]
+
+    def custom_token(
+        self, token_address: TokenAddress, block_identifier: BlockSpecification
+    ) -> CustomToken:
+        """ Return a proxy to interact with a token. """
+        if not is_binary_address(token_address):
+            raise ValueError("token_address must be a valid address")
+
+        with self._token_creation_lock:
+            if token_address not in self.address_to_custom_token:
+                self.address_to_custom_token[token_address] = CustomToken(
+                    jsonrpc_client=self.client,
+                    token_address=token_address,
+                    contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
+                )
+
+        return self.address_to_custom_token[token_address]
 
     def token_network_registry(
         self, address: TokenNetworkRegistryAddress, block_identifier: BlockSpecification
