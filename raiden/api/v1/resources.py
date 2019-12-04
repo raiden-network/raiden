@@ -180,7 +180,7 @@ class RaidenInternalEventsResource(BaseResource):
     get_schema = RaidenEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, limit: int = None, offset: int = None):
+    def get(self, limit: int = None, offset: int = None) -> Response:
         return self.rest_api.get_raiden_internal_events_with_timestamps(limit=limit, offset=offset)
 
 
@@ -245,7 +245,7 @@ class ConnectionsResource(BaseResource):
 
 
 class ConnectionsInfoResource(BaseResource):
-    def get(self):
+    def get(self) -> Response:
         return self.rest_api.get_connection_managers_info(
             self.rest_api.raiden_api.raiden.default_registry.address
         )
