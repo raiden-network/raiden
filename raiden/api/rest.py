@@ -749,7 +749,9 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=closed_channels)
 
-    def get_connection_managers_info(self, registry_address: TokenNetworkRegistryAddress) -> Dict:
+    def get_connection_managers_info(
+        self, registry_address: TokenNetworkRegistryAddress
+    ) -> Response:
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
@@ -790,7 +792,7 @@ class RestAPI:  # pragma: no unittest
                     "channels": len(open_channels),
                 }
 
-        return connection_managers
+        return api_response(result=connection_managers)
 
     def get_channel_list(
         self,
@@ -935,14 +937,15 @@ class RestAPI:  # pragma: no unittest
 
     def get_raiden_internal_events_with_timestamps(
         self, limit: Optional[int], offset: Optional[int]
-    ) -> List[str]:
+    ) -> Response:
         assert self.raiden_api.raiden.wal
-        return [
+        events = [
             str(e)
             for e in self.raiden_api.raiden.wal.storage.get_events_with_timestamps(
                 limit=limit, offset=offset
             )
         ]
+        return api_response(result=events)
 
     def get_blockchain_events_channel(
         self,
