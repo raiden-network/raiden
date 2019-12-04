@@ -480,6 +480,30 @@ class GMatrixClient(MatrixClient):
             first_sync=is_first_sync,
             sync_token=prev_sync_token,
             current_user=self.user_id,
+            presence_events_qty=len(response["presence"]["events"]),
+            to_device_events_qty=len(response["to_device"]["events"]),
+            rooms_invites_qty=len(response["rooms"]["invite"]),
+            rooms_leaves_qty=len(response["rooms"]["leave"]),
+            rooms_joined_member_count=sum(
+                room["summary"].get("m.joined_member_count", 0)
+                for room in response["rooms"]["join"].values()
+            ),
+            rooms_invited_member_count=sum(
+                room["summary"].get("m.invited_member_count", 0)
+                for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_state_qty=sum(
+                len(room["state"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_state_events_qty=sum(
+                len(room["state"]["events"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_ephemeral_events_qty=sum(
+                len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_account_data_events_qty=sum(
+                len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
+            ),
         )
         self._handle_thread.start()
 
@@ -496,6 +520,7 @@ class GMatrixClient(MatrixClient):
                 current_user=self.user_id,
             )
             return
+
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
             for callback in list(self.presence_listeners.values()):
