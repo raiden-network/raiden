@@ -104,7 +104,6 @@ from raiden.utils import (
     split_endpoint,
 )
 from raiden.utils.runnable import Runnable
-from raiden.utils.testnet import MintingMethod
 from raiden.utils.typing import (
     Address,
     Any,
@@ -582,12 +581,8 @@ class RestAPI:  # pragma: no unittest
             status_code=HTTPStatus.CREATED,
         )
 
-    def mint_token(
-        self,
-        token_address: TokenAddress,
-        to: Address,
-        value: TokenAmount,
-        contract_method: MintingMethod,
+    def mint_token_for(
+        self, token_address: TokenAddress, to: Address, value: TokenAmount
     ) -> Response:
         if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
@@ -601,19 +596,14 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
             to=to_checksum_address(to),
             value=value,
-            contract_method=contract_method,
         )
 
         try:
-            tx_hash = self.raiden_api.mint_token(
-                token_address=token_address, to=to, value=value, contract_method=contract_method
-            )
+            self.raiden_api.mint_token_for(token_address=token_address, to=to, value=value)
         except MintFailed as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
 
-        return api_response(
-            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(tx_hash))
-        )
+        return api_response(status_code=HTTPStatus.OK, result={})
 
     def open(
         self,

@@ -1,3 +1,5 @@
+from enum import Enum
+
 from flask import Blueprint, Response
 from flask_restful import Resource
 from webargs.flaskparser import use_kwargs
@@ -12,7 +14,6 @@ from raiden.api.v1.encoding import (
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
-from raiden.utils.testnet import MintingMethod
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -37,6 +38,12 @@ def create_blueprint() -> Blueprint:
     # API with flask:
     # http://stackoverflow.com/questions/28795561/support-multiple-api-versions-in-flask#28797512
     return Blueprint("v1_resources", __name__)
+
+
+class MintingMethod(Enum):
+    INCREASE_SUPPLY = "increaseSupply"
+    MINT = "mint"
+    MINT_FOR = "mintFor"
 
 
 class BaseResource(Resource):
@@ -200,19 +207,8 @@ class MintTokenResource(BaseResource):
     post_schema = MintTokenSchema
 
     @use_kwargs(post_schema, locations=("json",))
-    def post(
-        self,
-        token_address: TokenAddress,
-        to: Address,
-        value: TokenAmount,
-        contract_method: str = "mintFor",
-    ) -> Response:
-        return self.rest_api.mint_token(
-            token_address=token_address,
-            to=to,
-            value=value,
-            contract_method=MintingMethod(contract_method),
-        )
+    def post(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> Response:
+        return self.rest_api.mint_token_for(token_address=token_address, to=to, value=value)
 
 
 class ConnectionsResource(BaseResource):

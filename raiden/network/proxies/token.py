@@ -1,3 +1,5 @@
+from typing import Any, Dict, List
+
 import structlog
 from eth_utils import encode_hex, is_binary_address, to_checksum_address
 from gevent.lock import RLock
@@ -10,7 +12,7 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import safe_gas_limit
 from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
-from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -26,9 +28,7 @@ class Token:
         token_address: TokenAddress,
         contract_manager: ContractManager,
     ) -> None:
-        contract = jsonrpc_client.new_contract(
-            contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN), Address(token_address)
-        )
+        contract = jsonrpc_client.new_contract(self.abi(contract_manager), Address(token_address))
         proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(token_address):
@@ -42,6 +42,11 @@ class Token:
         self.proxy = proxy
 
         self.token_lock: RLock = RLock()
+
+    @staticmethod
+    def abi(contract_manager: ContractManager) -> List[Dict[str, Any]]:
+        """Overwrittable by subclasses to change the proxies ABI."""
+        return contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
 
     def allowance(
         self, owner: Address, spender: Address, block_identifier: BlockSpecification
