@@ -12,7 +12,6 @@ from raiden.api.v1.encoding import (
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
-from raiden.utils.testnet import MintingMethod
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -200,19 +199,8 @@ class MintTokenResource(BaseResource):
     post_schema = MintTokenSchema
 
     @use_kwargs(post_schema, locations=("json",))
-    def post(
-        self,
-        token_address: TokenAddress,
-        to: Address,
-        value: TokenAmount,
-        contract_method: str = "mintFor",
-    ) -> Response:
-        return self.rest_api.mint_token(
-            token_address=token_address,
-            to=to,
-            value=value,
-            contract_method=MintingMethod(contract_method),
-        )
+    def post(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> Response:
+        return self.rest_api.mint_token_for(token_address=token_address, to=to, value=value)
 
 
 class ConnectionsResource(BaseResource):

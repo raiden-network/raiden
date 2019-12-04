@@ -868,14 +868,11 @@ API endpoints for testing
 
       {
          "to": "0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685",
-         "value": "1000",
-         "contract_method": "mintFor"
+         "value": "1000"
       }
 
    :reqjson address to: The address to assign the minted tokens to.
    :reqjson int value: The amount of tokens to be minted.
-   :reqjson string contract_method: The name of the contract's minting method. Must be one of
-      ``mintFor``, ``mint`` or ``increaseSupply``. Defaults to ``mintFor``.
 
    **Example Response**:
 

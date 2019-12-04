@@ -38,7 +38,7 @@ mint(){
 
     node_address=$(http GET $address_url | jq .our_address -r)
 
-    http --ignore-stdin --timeout=600 POST $mint_url to=$node_address value=$mint_amount contract_method=mintFor
+    http --ignore-stdin --timeout=600 POST $mint_url to=$node_address value=$mint_amount
 }
 
 
