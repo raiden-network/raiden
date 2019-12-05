@@ -19,6 +19,7 @@ require_bin() {
 
 require_bin jq
 require_bin http
+require_bin parallel
 
 [ $# -lt 2 ] && die "${0} <token_address> <raiden_server>+"
 
@@ -37,14 +38,16 @@ mint(){
 
     node_address=$(http GET $address_url | jq .our_address -r)
 
-    info "Minting for $node_address an amount of $mint_amount"
-    http POST $mint_url to=$node_address value=$mint_amount contract_method=mint
+    http --ignore-stdin --timeout=600 POST $mint_url to=$node_address value=$mint_amount contract_method=mintFor
 }
 
 
 TOKEN_ADDRES=$1
 shift
 
+# export the symbol to allow the subshell spawned by parallel to use it
+export -f mint 
+
 for server in $@; do
-    mint $server $TOKEN_ADDRES $MINT_AMOUNT
-done
+    echo mint $server $TOKEN_ADDRES $MINT_AMOUNT
+done | parallel
