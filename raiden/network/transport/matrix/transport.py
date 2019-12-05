@@ -659,12 +659,6 @@ class MatrixTransport(Runnable):
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
 
-        # Wait on the thread from the sync above, to guarantee the rooms are
-        # populated
-        thread = self._client._handle_thread
-        if thread:
-            thread.get()
-
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
             if room.canonical_alias:
