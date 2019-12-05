@@ -21,15 +21,15 @@ Channel Object
 ::
 
     {
-       "channel_identifier": 21,
+       "channel_identifier": "21",
        "token_network_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-       "balance": 25000000,
-       "total_deposit": 35000000,
+       "balance": "25000000",
+       "total_deposit": "35000000",
        "state": "opened",
-       "settle_timeout": 500,
-       "reveal_timeout": 50
+       "settle_timeout": "500",
+       "reveal_timeout": "50"
     }
 
 
@@ -188,15 +188,15 @@ Querying Information About Channels and Tokens
       [
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-              "channel_identifier": 20,
+              "channel_identifier": "20",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "balance": 25000000,
-              "total_deposit": 35000000,
-              "total_withdraw": 5000000,
+              "balance": "25000000",
+              "total_deposit": "35000000",
+              "total_withdraw": "5000000",
               "state": "opened",
-              "settle_timeout": 500,
-              "reveal_timeout": 50
+              "settle_timeout": "500",
+              "reveal_timeout": "50"
           }
       ]
 
@@ -224,15 +224,15 @@ Querying Information About Channels and Tokens
       [
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-              "channel_identifier": 20,
+              "channel_identifier": "20",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "balance": 25000000,
-              "total_deposit": 35000000,
-              "total_withdraw": 5000000,
+              "balance": "25000000",
+              "total_deposit": "35000000",
+              "total_withdraw": "5000000",
               "state": "opened",
-              "settle_timeout": 500,
-              "reveal_timeout": 50
+              "settle_timeout": "500",
+              "reveal_timeout": "50"
           }
       ]
 
@@ -260,15 +260,15 @@ Querying Information About Channels and Tokens
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 5000000,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "5000000",
           "state": "opened",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 200: Successful query
@@ -444,9 +444,9 @@ Channel Management
       {
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "total_deposit": 35000000,
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "total_deposit": "35000000",
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :reqjson address partner_address: The partner we want to open a channel with.
@@ -473,15 +473,15 @@ Channel Management
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 0,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "0",
           "state": "opened",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 201: Channel created successfully
@@ -516,7 +516,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "total_deposit": 100
+          "total_deposit": "100"
       }
 
    **Example Request (withdraw tokens)**:
@@ -528,7 +528,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "total_withdraw": 100
+          "total_withdraw": "100"
       }
 
    **Example Request (update channel reveal timeout)**:
@@ -540,7 +540,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "reveal_timeout": 50
+          "reveal_timeout": "50"
       }
 
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
@@ -560,15 +560,15 @@ Channel Management
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 5000000,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "5000000",
           "state": "closed",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 200: Success
@@ -611,14 +611,14 @@ Connection Management
 
       {
           "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
-              "funds": 100,
-              "sum_deposits": 67,
-              "channels": 3
+              "funds": "100",
+              "sum_deposits": "67",
+              "channels": "3"
           },
           "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": 49,
-              "sum_deposits": 31,
-              "channels": 1
+              "funds": "49",
+              "sum_deposits": "31",
+              "channels": "1"
           }
       }
 
@@ -646,7 +646,7 @@ Connection Management
       Content-Type: application/json
 
       {
-          "funds": 1337
+          "funds": "1337"
       }
 
    :statuscode 204: For a successful connection creation.
@@ -716,8 +716,8 @@ Payments
       Content-Type: application/json
 
       {
-          "amount": 200,
-          "identifier": 42
+          "amount": "200",
+          "identifier": "42"
       }
 
    :reqjson int amount: Amount to be sent to the target
@@ -736,8 +736,8 @@ Payments
           "initiator_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
-          "amount": 200,
-          "identifier": 42,
+          "amount": "200",
+          "identifier": "42",
           "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
           "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
@@ -765,8 +765,8 @@ To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the end
       Content-Type: application/json
 
       {
-          "amount": 200,
-          "identifier": 42,
+          "amount": "200",
+          "identifier": "42",
           "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
           "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
@@ -811,23 +811,23 @@ The format of ``log_time`` is ISO8601 with milliseconds.
       [
           {
               "event": "EventPaymentReceivedSuccess",
-              "amount": 5,
+              "amount": "5",
               "initiator": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 1,
+              "identifier": "1",
               "log_time": "2018-10-30T07:03:52.193"
           },
           {
               "event": "EventPaymentSentSuccess",
-              "amount": 35,
+              "amount": "35",
               "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 2,
+              "identifier": "2",
               "log_time": "2018-10-30T07:04:22.293"
           },
           {
               "event": "EventPaymentSentSuccess",
-              "amount": 20,
+              "amount": "20",
               "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 3,
+              "identifier": "3",
               "log_time": "2018-10-30T07:10:13.122"
           }
       ]
@@ -864,7 +864,7 @@ API endpoints for testing
 
       {
          "to": "0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685",
-         "value": 1000,
+         "value": "1000",
          "contract_method": "mintFor"
       }
 
