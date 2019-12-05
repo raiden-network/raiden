@@ -39,7 +39,7 @@ STATUS_CODE_FOR_SUCCESS = 0
 FIRST_VALID_PAYMENT_ID = 1
 
 # A transfer plan is a list of transfer amounts were every transfer WILL be
-# **successfully** executed for a predetermined path, were **every direction of
+# **successfully** executed for a predetermined path, where **every direction of
 # every channel** has at least a capacity larger than the amount of the plan.
 # IOW:
 #
@@ -243,7 +243,7 @@ def all_proper_divisors(number: int) -> Iterator[int]:
         divisors would be repeated.
     """
     if number <= 1:
-        raise ValueError("number most be greater than 0")
+        raise ValueError("number must be greater than 0")
 
     # Create a list from the iterator of `factorize_number` because we have
     # have to iterator over the result multiple times.
