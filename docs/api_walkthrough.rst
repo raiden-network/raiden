@@ -96,8 +96,8 @@ To open a channel with another Raiden node four things are needed: the address o
    {
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
-       "total_deposit": 1337,
-       "settle_timeout": 500
+       "total_deposit": "1337",
+       "settle_timeout": "500"
    }
 
 .. note::
@@ -117,11 +117,11 @@ Successfully opening a channel returns the following information:
        "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
-       "balance": 1337,
-       "total_deposit": 1337, 
+       "balance": "1337",
+       "total_deposit": "1337",
        "state": "opened",
-       "settle_timeout": 500,
-       "reveal_timeout": 50
+       "settle_timeout": "500",
+       "reveal_timeout": "50"
    }
 
 Here it's interesting to notice that a ``channel_identifier`` has been generated. This means that the channel has been created inside the `Token Network <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#tokennetwork-contract>`_.
@@ -140,7 +140,7 @@ A payment channel is now open between the user's node and a counterparty. Howeve
    Content-Type: application/json
 
    {
-        "total_deposit": 7331
+        "total_deposit": "7331"
    }
 
 .. note::
@@ -156,10 +156,10 @@ To see if and when the counterparty deposited tokens, the channel can be queried
 This returns a list of events that has happened in the specific payment channel. The relevant event in this case is::
 
     {
-        "amount": 682,
-        "block_number": 3663408,
+        "amount": "682",
+        "block_number": "3663408",
         "event": "EventPaymentSentSuccess",
-        "identifier": 1531927405484,
+        "identifier": "1531927405484",
         "target": "0x25511699C252eeA2678266857C98F459Df97B77c"
     },
 
@@ -204,7 +204,7 @@ Connecting to an already existing token network is quite simple. All that is nee
     Content-Type: application/json
 
     {
-        "funds": 2000
+        "funds": "2000"
     }
 
 .. note::
@@ -250,7 +250,7 @@ Paying tokens to another node is quite easy. The address of the token desired fo
     Content-Type: application/json
 
     {
-        "amount": 42
+        "amount": "42"
     }
 
 An ``"identifier": <some_integer>`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag payments.
@@ -295,10 +295,10 @@ When successful this gives a response with a channel object where the state is s
         "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
         "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
         "token_address": "0x0f114A1E9Db192502E7856309cc899952b3db1ED",
-        "balance": 350,
+        "balance": "350",
         "state": "closed",
-        "settle_timeout": 500,
-        "reveal_timeout": 50
+        "settle_timeout": "500",
+        "reveal_timeout": "50"
     }
 
 Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"opened"``.
@@ -346,16 +346,16 @@ Then you can send a payment to it via the payments endpoint:
    Content-Type: application/json
 
    {
-       "amount": 1,
-       "identifer": 42
+       "amount": "1",
+       "identifer": "42"
    }
 
 Afterwards you can check your events and you should find an ``EventPaymentReceivedSuccess`` event with::
 
     {
         "event": "EventPaymentReceivedSuccess",
-        "amount": 1,
-        "identifier": 43,
+        "amount": "1",
+        "identifier": "43",
         "initiator": "0x02f4b6BC65561A792836212Ebc54434Db0Ab759a",
         "log_time": "2018-10-30T07:04:22.293"
     }

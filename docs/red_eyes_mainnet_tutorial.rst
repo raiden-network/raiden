@@ -40,7 +40,7 @@ In order to do so, we need the address of the token and the initial amount of to
     Content-Type: application/json
 
     {
-        "funds": 20000
+        "funds": "20000"
     }
 
 This automatically connects our node to 3 other nodes in the network with 20000 / 5 wei tokens in each channel.
@@ -58,8 +58,8 @@ In case we know of a specific address in the network that we will do frequent pa
    {
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-       "balance": 2000,
-       "settle_timeout": 500
+       "balance": "2000",
+       "settle_timeout": "500"
    }
 
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <topping-up-a-channel>` to a channel if need be.
@@ -76,11 +76,11 @@ Successfully opening a channel returns the following information:
        "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-       "balance": 2000,
-       "total_deposit": 2000,
+       "balance": "2000",
+       "total_deposit": "2000",
        "state": "opened",
-       "settle_timeout": 500,
-       "reveal_timeout": 50
+       "settle_timeout": "500",
+       "reveal_timeout": "50"
    }
 
 .. _doing-payments:
@@ -96,7 +96,7 @@ Now that we have joined a token network, we can start making payments. For this,
     Content-Type: application/json
 
     {
-        "amount": 42
+        "amount": "42"
     }
 
 In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. If we specify an address that we do not have a direct channel with, the Raiden Network finds a path to the target address and use mediated transfers to make a payment from our address to the target address.
@@ -112,7 +112,7 @@ Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c868
     Content-Type: application/json
 
     {
-        "amount": 73
+        "amount": "73"
     }
 
 Just like this we can send payments to anyone who is part of the token network for the W-ETH token.
@@ -130,7 +130,7 @@ If we spend more tokens than we receive and hence deplete our channels, it it po
    Content-Type: application/json
 
    {
-        "total_deposit": 4000
+        "total_deposit": "4000"
    }
 
 Notice that we need to specify the total deposit, not the amount we wish to top up: We initially deposited 2000 tokens and want to add 2000 more, so we give a ``total_deposit`` of 4000. This way the top-up request is idempotent - if it is sent repeatedly (by accident or as part of an attack) it will have no further effect.
@@ -159,10 +159,10 @@ This returns the following JSON response::
           "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-          "balance": 3958,
+          "balance": "3958",
           "state": "open",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
 We can see that the current balance of the channel is ``3958`` which matches with the two deposits and one payment we've made ``2000 + 2000 - 42``.
