@@ -63,13 +63,19 @@ def channel_open_with_the_same_node(
             "total_deposit": channel_open.deposit1,
         }
 
-        print(url_open)
+        print(f"Running {channel_open}")
         response = requests.put(url_open, json=channel_details)
 
         assert response is not None
         is_json = response.headers["Content-Type"] == "application/json"
         assert is_json, response.headers["Content-Type"]
-        assert response.status_code == HTTPStatus.OK, response.json()
+
+        data = response.json()
+        errors = data.get("errors", "")
+
+        channel_already_exist = "A channel with" in errors and "already exists." in errors
+        if not channel_already_exist:
+            assert response.status_code == HTTPStatus.OK, response.json()
 
         # A deposit only makes sense after the channel is opened.
         deposit = ChannelDeposit(
@@ -78,6 +84,8 @@ def channel_open_with_the_same_node(
             endpoint=channel_open.endpoint2,
             deposit=channel_open.deposit2,
         )
+
+        print(f"Queueing {deposit}")
         target_to_depositqueue[(channel_open.token_address, channel_open.participant2)].put(
             deposit
         )
@@ -102,7 +110,7 @@ def channel_deposit_with_the_same_node_and_token_network(deposit_queue: Joinable
         )
         channel_deposit = {"total_deposit": deposit.deposit}
 
-        print(url_deposit)
+        print(f"Running {deposit}")
         requests.put(url_deposit, json=channel_deposit)
 
 
@@ -134,7 +142,7 @@ def main() -> None:
         node_to_endpoint[node_name] = node_info["endpoint"]
         node_to_address[node_name] = node_info["address"]
 
-    channelnew_by_opener: Dict[str, List[ChannelNew]] = defaultdict(list)
+    queue_per_node: Dict[str, List[ChannelNew]] = defaultdict(list)
     target_to_depositqueue: Dict[Tuple[str, str], JoinableQueue] = dict()
 
     # Schedule the requests to evenly distribute the load. This is important
@@ -148,11 +156,11 @@ def main() -> None:
             participant1 = node_to_address[node1]
             participant2 = node_to_address[node2]
 
-            is_participant1_with_less_work = len(channelnew_by_opener[participant1]) > len(
-                channelnew_by_opener[participant2]
+            is_node1_with_less_work = len(queue_per_node[participant1]) < len(
+                queue_per_node[participant2]
             )
 
-            if is_participant1_with_less_work:
+            if is_node1_with_less_work:
                 channel_new = ChannelNew(
                     token_address=token_address,
                     participant1=participant1,
@@ -162,7 +170,7 @@ def main() -> None:
                     deposit1=channel["deposit1"],
                     deposit2=channel["deposit2"],
                 )
-                channelnew_by_opener[participant1].append(channel_new)
+                queue_per_node[participant1].append(channel_new)
             else:
                 channel_new = ChannelNew(
                     token_address=token_address,
@@ -173,7 +181,7 @@ def main() -> None:
                     deposit1=channel["deposit2"],
                     deposit2=channel["deposit1"],
                 )
-                channelnew_by_opener[participant2].append(channel_new)
+                queue_per_node[participant2].append(channel_new)
 
             # queue used to order deposits
             target = (token_address, channel_new.participant2)
@@ -182,7 +190,7 @@ def main() -> None:
 
     open_greenlets = set(
         gevent.spawn(channel_open_with_the_same_node, channels_to_open, target_to_depositqueue)
-        for channels_to_open in channelnew_by_opener.values()
+        for channels_to_open in queue_per_node.values()
     )
     deposit_greenlets = [
         gevent.spawn(channel_deposit_with_the_same_node_and_token_network, deposit_queue)
@@ -194,7 +202,13 @@ def main() -> None:
     # Because all channels have been opened, there is no more deposits to do,
     # so now one just has to wait for the queues to get empty.
     for queue in target_to_depositqueue.values():
-        queue.join()
+        # Queue` and `JoinableQueue` don't have the method `rawlink`, so
+        # `joinall` cannot be used. At the same time calling `join` in the
+        # `JoinableQueue` was raising an exception `This operation would block
+        # forever` which seems to be a false positive. Using `empty` to
+        # circumvent it.
+        while queue.empty():
+            gevent.sleep(1)
 
     # The deposit greenlets are infinite loops.
     gevent.killall(deposit_greenlets)
