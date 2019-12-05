@@ -218,7 +218,6 @@ class GMatrixClient(MatrixClient):
 
     sync_filter: str
     sync_thread: Optional[gevent.Greenlet] = None
-    _handle_thread: Optional[gevent.Greenlet] = None
 
     def __init__(
         self,
@@ -273,7 +272,6 @@ class GMatrixClient(MatrixClient):
         self.should_listen = True
         while self.should_listen:
             try:
-                # may be killed and raise exception from _handle_thread
                 self._sync(timeout_ms)
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
@@ -339,25 +337,12 @@ class GMatrixClient(MatrixClient):
             if not exited:
                 raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
             self.sync_thread.get()
-        if self._handle_thread is not None:
-            log.debug(
-                "Waiting on handle greenlet",
-                node=node_address_from_userid(self.user_id),
-                current_user=self.user_id,
-            )
-            exited = gevent.joinall(
-                {self._handle_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True
-            )
-            if not exited:
-                raise RuntimeError("Timeout waiting on handle greenlet during transport shutdown.")
-            self._handle_thread.get()
         log.debug(
             "Listener greenlet exited",
             node=node_address_from_userid(self.user_id),
             current_user=self.user_id,
         )
         self.sync_thread = None
-        self._handle_thread = None
 
     def stop(self) -> None:
         self.stop_listener_thread()
