@@ -448,7 +448,6 @@ class GMatrixClient(MatrixClient):
 
         response = self.api.sync(self.sync_token, timeout_ms)
         prev_sync_token = self.sync_token
-        self.sync_token = response["next_batch"]
 
         is_first_sync = prev_sync_token is None
         log.debug(
@@ -495,6 +494,10 @@ class GMatrixClient(MatrixClient):
                 f"Processing Matrix response took {processing_time_s}s, "
                 f"poll timeout is {timeout_s}s."
             )
+
+        # Updating the sync token should only be done after the response has been processed,
+        # otherwise we loose this information from this response in case of a crash.
+        self.sync_token = response["next_batch"]
 
         if self._post_hook_func is not None and self.sync_token is not None:
             self._post_hook_func(self.sync_token)
