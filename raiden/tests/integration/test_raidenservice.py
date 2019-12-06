@@ -104,7 +104,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 
     app0.stop()
 
-    transport = MatrixTransport(app0.config["transport"]["matrix"])
+    transport = MatrixTransport(
+        app0.config["transport"]["matrix"], environment=app0.raiden.config["environment_type"]
+    )
     transport.send_async = Mock()  # type: ignore
     transport._send_raw = Mock()  # type: ignore
 

@@ -11,12 +11,12 @@ def expect_cli_until_account_selection(child):
     child.sendline("0")
 
 
-def expect_cli_successful_connected(child, mode):
+def expect_cli_successful_connected(child, mode: str):
     child.expect(f"Raiden is running in {mode} mode")
     child.expect("You are connected")
     child.expect("The Raiden API RPC server is now running")
 
 
-def expect_cli_normal_startup(child, mode):
+def expect_cli_normal_startup(child, mode: str):
     expect_cli_until_acknowledgment(child)
     expect_cli_successful_connected(child, mode)

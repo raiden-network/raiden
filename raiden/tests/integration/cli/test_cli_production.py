@@ -9,15 +9,13 @@ from raiden.tests.integration.cli.util import (
     expect_cli_until_acknowledgment,
 )
 
-EXPECTED_DEFAULT_ENVIRONMENT_VALUE = Environment.PRODUCTION.value
+EXPECTED_DEFAULT_ENVIRONMENT = Environment.PRODUCTION
 
 pytestmark = [
     pytest.mark.parametrize(
         "cli_tests_contracts_version", [RAIDEN_CONTRACT_VERSION], scope="module"
     ),
-    pytest.mark.parametrize(
-        "environment_type", [EXPECTED_DEFAULT_ENVIRONMENT_VALUE], scope="module"
-    ),
+    pytest.mark.parametrize("environment_type", [EXPECTED_DEFAULT_ENVIRONMENT], scope="module"),
 ]
 
 TIMEOUT = 120
@@ -27,7 +25,7 @@ TIMEOUT = 120
 def test_cli_full_init(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     # expect the default mode
-    expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
+    expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT.value)
 
 
 @pytest.mark.timeout(TIMEOUT)
@@ -48,14 +46,14 @@ def test_cli_missing_password_file_enter_password(raiden_testchain, cli_args, ra
     with open(raiden_testchain["password_file"], "r") as password_file:
         password = password_file.readline()
         child.sendline(password)
-    expect_cli_successful_connected(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
+    expect_cli_successful_connected(child, EXPECTED_DEFAULT_ENVIRONMENT.value)
 
 
 @pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("removed_args", [["data_dir"]])
 def test_cli_missing_data_dir(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
-    expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
+    expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT.value)
 
 
 @pytest.mark.timeout(TIMEOUT)

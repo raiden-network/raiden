@@ -82,7 +82,9 @@ def start_apiserver_for_network(
 
 
 def restart_app(app: App) -> App:
-    new_transport = MatrixTransport(app.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(
+        app.raiden.config["transport"]["matrix"], environment=app.raiden.config["environment_type"]
+    )
     raiden_event_handler = RaidenEventHandler()
     hold_handler = HoldRaidenEventHandler(raiden_event_handler)
     app = App(

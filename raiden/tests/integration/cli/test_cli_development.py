@@ -12,7 +12,7 @@ pytestmark = [
     pytest.mark.parametrize(
         "cli_tests_contracts_version", [RAIDEN_CONTRACT_VERSION], scope="module"
     ),
-    pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT.value], scope="module"),
+    pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT], scope="module"),
 ]
 
 
