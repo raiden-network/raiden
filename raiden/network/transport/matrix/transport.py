@@ -14,7 +14,7 @@ from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
-from raiden.constants import EMPTY_SIGNATURE
+from raiden.constants import EMPTY_SIGNATURE, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import (
     Message,
@@ -280,7 +280,7 @@ class MatrixTransport(Runnable):
     _room_sep = "_"
     log = log
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: Dict[str, Any], environment: Environment) -> None:
         super().__init__()
         self._uuid = uuid4()
         self._config = config
@@ -306,7 +306,7 @@ class MatrixTransport(Runnable):
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
-            environment=config["environment_type"],
+            environment=environment,
         )
         self._server_url = self._client.api.base_url
         self._server_name = config.get("server_name", urlparse(self._server_url).netloc)

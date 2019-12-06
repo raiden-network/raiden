@@ -2,7 +2,7 @@ from typing import List
 
 import pytest
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.fixtures.variables import TransportProtocol
@@ -80,7 +80,8 @@ def matrix_transports(
                     "server": server,
                     "server_name": server.netloc,
                     "available_servers": local_matrix_servers,
-                }
+                },
+                environment=Environment.DEVELOPMENT,
             )
         )
 

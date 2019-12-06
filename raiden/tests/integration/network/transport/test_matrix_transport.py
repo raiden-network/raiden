@@ -15,6 +15,7 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
+    Environment,
     RoutingMode,
 )
 from raiden.exceptions import InsufficientEth
@@ -314,7 +315,8 @@ def test_matrix_message_retry(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
@@ -391,7 +393,8 @@ def test_join_invalid_discovery(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": ["http://invalid.server"],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
@@ -455,7 +458,8 @@ def test_matrix_discovery_room_offline_server(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0], "https://localhost:1"],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport.start(MockRaidenService(None), [], "")
 
@@ -482,7 +486,8 @@ def test_matrix_broadcast(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport.start(MockRaidenService(None), [], "")
     gevent.idle()
@@ -529,7 +534,8 @@ def test_monitoring_broadcast_messages(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
@@ -600,7 +606,8 @@ def test_pfs_broadcast_messages(
             "server": local_matrix_servers[0],
             "server_name": local_matrix_servers[0].netloc,
             "available_servers": [local_matrix_servers[0]],
-        }
+        },
+        environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()

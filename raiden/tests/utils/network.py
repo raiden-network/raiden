@@ -422,7 +422,7 @@ def create_apps(
         if user_deposit_address:
             user_deposit = proxy_manager.user_deposit(user_deposit_address)
 
-        transport = MatrixTransport(config["transport"]["matrix"])
+        transport = MatrixTransport(config["transport"]["matrix"], environment=environment_type)
 
         raiden_event_handler = RaidenEventHandler()
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)

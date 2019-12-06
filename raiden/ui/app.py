@@ -95,7 +95,9 @@ def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTr
         config["transport"]["matrix"]["broadcast_rooms"].append(MONITORING_BROADCASTING_ROOM)
 
     try:
-        transport = MatrixTransport(config["transport"]["matrix"])
+        transport = MatrixTransport(
+            config["transport"]["matrix"], environment=config["environment_type"]
+        )
     except RaidenError as ex:
         click.secho(f"FATAL: {ex}", fg="red")
         sys.exit(1)

@@ -22,6 +22,7 @@ from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     SECONDS_PER_DAY,
     UINT256_MAX,
+    Environment,
     EthClient,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -268,7 +269,7 @@ def setup_raiden(
     web3,
     base_datadir,
     keystore,
-):
+) -> Dict[str, Any]:
     print_step("Deploying Raiden contracts")
 
     if eth_client is EthClient.PARITY:
@@ -335,6 +336,7 @@ def setup_raiden(
         "secret_registry_contract_address": secret_registry_contract_address,
         "sync_check": False,
         "transport": transport,
+        "environment_type": Environment.DEVELOPMENT,
     }
 
     service_registry_contract_address = to_checksum_address(

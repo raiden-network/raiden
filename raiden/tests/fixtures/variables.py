@@ -1,6 +1,7 @@
 # pylint: disable=redefined-outer-name
 import random
 from enum import Enum
+from typing import Dict
 
 import pytest
 from eth_utils import remove_0x_prefix
@@ -13,6 +14,7 @@ from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
 from raiden.utils import sha3
+from raiden.utils.typing import TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 # we need to use fixture for the default values otherwise
@@ -108,7 +110,7 @@ def random_marker():
 
 
 @pytest.fixture
-def logs_storage(request, tmpdir):
+def logs_storage(request, tmpdir) -> str:
     """Returns the path where debugging data should be saved.
 
     Use this to preserve the databases and logs necessary to debug test
@@ -125,33 +127,33 @@ def logs_storage(request, tmpdir):
 
 
 @pytest.fixture
-def deposit():
+def deposit() -> TokenAmount:
     """ Raiden chain default deposit. """
     # Arbitrary initial balance for each channel, using a small number for
     # easier calculations during testing
-    return 200
+    return TokenAmount(200)
 
 
 @pytest.fixture
-def number_of_tokens():
+def number_of_tokens() -> int:
     """ Number of tokens pre-registered in the test Registry. """
     return 1
 
 
 @pytest.fixture
-def register_tokens():
+def register_tokens() -> bool:
     """ Should fixture generated tokens be registered with raiden. """
     return True
 
 
 @pytest.fixture
-def number_of_nodes():
+def number_of_nodes() -> int:
     """ Number of raiden nodes in the test network. """
     return 3
 
 
 @pytest.fixture
-def channels_per_node():
+def channels_per_node() -> int:
     """ Number of pre-created channels per test raiden node. """
     return 1
 
@@ -216,17 +218,17 @@ def deploy_key(privatekey_seed):
 
 
 @pytest.fixture(scope="session")
-def blockchain_type(request):
+def blockchain_type(request) -> str:
     return request.config.option.blockchain_type
 
 
 @pytest.fixture
-def blockchain_extra_config():
+def blockchain_extra_config() -> Dict:
     return {}
 
 
 @pytest.fixture
-def blockchain_number_of_nodes():
+def blockchain_number_of_nodes() -> int:
     """ Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.
     """
@@ -289,7 +291,7 @@ def rest_api_port_number(port_generator):
 
 
 @pytest.fixture
-def environment_type():
+def environment_type() -> Environment:
     """Specifies the environment type"""
     return Environment.DEVELOPMENT
 

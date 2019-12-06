@@ -10,16 +10,18 @@ from raiden.constants import Environment, EthClient
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
-from raiden.utils.typing import Any, ContextManager, Dict
+from raiden.utils.typing import Any, ContextManager, Dict, List, Optional
 
 
 @pytest.fixture(scope="module")
-def cli_tests_contracts_version():
+def cli_tests_contracts_version() -> str:
     return RAIDEN_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")
-def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_version):
+def raiden_testchain(
+    blockchain_type: str, port_generator, cli_tests_contracts_version: str
+) -> Dict[str, Any]:
     import time
 
     start_time = time.monotonic()
@@ -63,17 +65,23 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
 
 
 @pytest.fixture()
-def removed_args():
+def removed_args() -> Optional[Dict[str, Any]]:
     return None
 
 
 @pytest.fixture()
-def changed_args():
+def changed_args() -> Optional[Dict[str, Any]]:
     return None
 
 
 @pytest.fixture()
-def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(
+    logs_storage: str,
+    raiden_testchain: Dict[str, Any],
+    removed_args: Optional[Dict[str, Any]],
+    changed_args: Optional[Dict[str, Any]],
+    environment_type: Environment,
+) -> List[str]:
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -99,8 +107,7 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
         "local",
     ]
 
-    if environment_type == Environment.DEVELOPMENT.value:
-        args += ["--environment-type", environment_type]
+    args += ["--environment-type", environment_type.value]
 
     for arg_name, arg_value in initial_args.items():
         if arg_name == "sync_check":
@@ -117,7 +124,7 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
 
 @pytest.fixture
 def raiden_spawner(tmp_path, request):
-    def spawn_raiden(args):
+    def spawn_raiden(args: List[str]):
         # Remove any possibly defined `RAIDEN_*` environment variables from outer scope
         new_env = {k: copy(v) for k, v in os.environ.items() if not k.startswith("RAIDEN")}
         new_env["HOME"] = str(tmp_path)

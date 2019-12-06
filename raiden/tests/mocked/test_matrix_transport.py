@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import pytest
 
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import Room
@@ -81,7 +81,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         broadcast_rooms=[],
     )
 
-    transport = MatrixTransport(config)
+    transport = MatrixTransport(config, environment=Environment.DEVELOPMENT)
     transport._raiden_service = MockRaidenService()
     transport._stop_event.clear()
     transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
