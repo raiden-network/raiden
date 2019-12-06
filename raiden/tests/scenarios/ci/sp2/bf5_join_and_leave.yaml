@@ -49,7 +49,7 @@ nodes:
     2:
       matrix-server: https://transport03.raiden.network
     3:
-      matrix-server: https://transport01.raiden.network
+      matrix-server: https://transport04.raiden.network
 
 # This is the BF5 scenario. It sets up a simple topology of two nodes and then uses
 # `join_network` to add more nodes to the network. It tests that nodes can join the network

@@ -40,6 +40,37 @@ nodes:
       - 0
     default-settle-timeout: 40
     default-reveal-timeout: 20
+  node_options:
+    0:
+      matrix-server: https://transport01.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+    2:
+      matrix-server: https://transport03.raiden.network
+    3:
+      matrix-server: https://transport04.raiden.network
+    4:
+      matrix-server: https://transport01.raiden.network
+    5:
+      matrix-server: https://transport02.raiden.network
+    6:
+      matrix-server: https://transport03.raiden.network
+    7:
+      matrix-server: https://transport04.raiden.network
+    8:
+      matrix-server: https://transport01.raiden.network
+    9:
+      matrix-server: https://transport02.raiden.network
+    10:
+      matrix-server: https://transport03.raiden.network
+    11:
+      matrix-server: https://transport04.raiden.network
+    12:
+      matrix-server: https://transport01.raiden.network
+    13:
+      matrix-server: https://transport02.raiden.network
+    14:
+      matrix-server: https://transport03.raiden.network
 
 # This is the bf7 scenario. It tests long paths. There are a total of 15 nodes in the scenario.
 # A topology with deposits in both directions are created as [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
