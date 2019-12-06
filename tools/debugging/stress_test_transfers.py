@@ -9,11 +9,8 @@ import os.path
 import signal
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from functools import lru_cache
 from http import HTTPStatus
-from itertools import chain, count, product
-from math import ceil, sqrt
-from random import randint, shuffle
+from itertools import count, product
 from types import TracebackType
 from typing import Any, Callable, Iterator, List, NewType, NoReturn, Optional, Set, Type
 
@@ -30,38 +27,29 @@ from greenlet import greenlet
 from raiden.network.utils import get_free_port
 from raiden.utils import pex
 
-log = structlog.get_logger(__name__)
 BaseURL = NewType("BaseURL", str)
+Amount = NewType("Amount", int)
+
+log = structlog.get_logger(__name__)
 NO_ROUTE_ERROR = 409
 UNBUFERRED = 0
 STATUS_CODE_FOR_SUCCESS = 0
 FIRST_VALID_PAYMENT_ID = 1
 
+# A partial transfer plan is a list of transfers which is guaranteed to succeed
+# (regardless of the order), however the channels won't be retored to their
+# initial state after the plan execution, plans of this type MUST be prossed
+# with `complete_planner_from_partial_planner` to revert the transfers and
+# restore the channel state.
+PartialTransferPlan = Iterator[Amount]
+
 # A transfer plan is a list of transfer amounts were every transfer WILL be
-# **successfully** executed for a predetermined path, where **every direction of
-# every channel** has at least a capacity larger than the amount of the plan.
-# IOW:
-#
-#   lower_bound = min(min(c.forward_capacity, c.backwards_capacity) for c in channels_in_path)
-#   assert lower_bound >= sum(plan)
-#
-# This allows the script to do the transfers in the given path and assert that
-# every transfer is successful.
-#
-# A partial transfer plan is one that does not guarantee the channels are
-# retored to their initial state after execution, plans of this type MUST be
-# prossed with `complete_planner_from_partial_planner`.
-PartialTransferPlan = Iterator[int]
-TransferPlan = Iterator[int]
+# **successfully** executed and the channels restored to their initial state.
+TransferPlan = Iterator[Amount]
 
-# A function that generates partial transfer plans.
-PartialTransferPlanGenerator = Callable[[int], Iterator[PartialTransferPlan]]
-
-# A function that generates complete transfer plans.
-TransferPlanGenerator = Callable[[int], Iterator[TransferPlan]]
-
-# An amount to be used in a transfer
-Amount = NewType("Amount", int)
+PartialTransferPlanGenerator = Callable[[Amount], Iterator[PartialTransferPlan]]
+TransferPlanGenerator = Callable[[Amount], TransferPlan]
+Scheduler = Callable[[List["InitiatorAndTarget"], TransferPlan], Iterator["Transfer"]]
 
 
 @dataclass
@@ -102,6 +90,31 @@ class InitiatorAndTarget:
 
     initiator: RunningNode
     target: RunningNode
+
+
+@dataclass
+class StressTestConfiguration:
+    # These values can NOT be iterables because they will be consumed multiple
+    # times.
+
+    # List of `InitiatorAndTarget` that satisfy the following requirements:
+    #
+    # - Every `InitiatorAndTarget` must have at LEAST
+    # `capacity_lower_bound` in every route.
+    initiator_target_pairs: List[List[InitiatorAndTarget]]
+
+    # Different concurrency levels used to stress the system.
+    concurrency: List[int]
+
+    # List of planners (functions that return a list of transfers) that satify
+    # the following requirements:
+    #
+    # - The plan MAY use UP TO the `capacity_lower_bound`, but no more.
+    planners: List[TransferPlanGenerator]
+
+    # List of schedulers (functions that receive a `InitiatorAndTarget` and a
+    # `TransferPlan`), and decide the order in which these should be executed.
+    schedulers: List[Scheduler]
 
 
 @dataclass
@@ -203,155 +216,6 @@ class Janitor:
             p.send_signal(signal.SIGINT)
 
 
-@lru_cache()
-def factorize_number(number: int) -> Iterator[int]:
-    """Factorize `number` into its primes.
-
-    Note:
-        This function skips the number 1.
-        This function yields each prime `n` times, where `n` is how many times
-        it can be used to devide `number`.
-    """
-    if number <= 1:
-        raise ValueError("Cannot factorize 1, 0, or negative numbers.")
-
-    # Special case 2 to avoid emitting the same value twice
-    if number == 2:
-        yield 2
-        return
-
-    # Optimization: Do the even numbers on a single step, this reduces the
-    # number of candidates in half.
-    while number % 2 == 0:
-        yield 2
-        number //= 2
-
-    # `number` was even
-    if number == 1:
-        return
-
-    # There cannot be a prime that is larger than `sqrt(number)`, this upper
-    # bound drastically reduces the search space.
-    upper_bound = sqrt(number)
-
-    # The `+1` covers the corner case were the `sqrt` itself is a factor. E.g.
-    # `sqrt(9)` is a factor of `9`, and `range(3,3)` would skip it.
-    upper_bound = ceil(upper_bound) + 1
-
-    # skip all even numbers, since they have been processed above
-    step = 2
-    candidates = range(3, upper_bound, step)
-
-    for candidate in candidates:
-        while number % candidate == 0:
-            yield candidate
-            number //= candidate
-
-    # The last number is also a prime
-    if number != 1:
-        yield number
-
-
-def all_proper_divisors(number: int) -> Iterator[int]:
-    """Returns all integers that are proper divisors of `number`.
-
-    A proper `divisor` is a number will divides `number` evenly. i.e. `number %
-    divisor == 0`.
-
-    Note:
-        This does not return the number `1`, otherwise some of the proper
-        divisors would be repeated.
-    """
-    if number <= 1:
-        raise ValueError("number must be greater than 0")
-
-    # Create a list from the iterator of `factorize_number` because we have
-    # have to iterator over the result multiple times.
-    all_factors = list(factorize_number(number))
-
-    for repeat in range(1, len(all_factors) + 1):
-        for factors in product(all_factors, repeat=repeat):
-            result = 1
-            for factor in factors:
-                result *= factor
-
-            is_valid_factor = number >= result and number % result == 0
-            assert is_valid_factor, f"{result} is not a factor of {number}"
-
-            yield result
-
-
-def exhaust_number_with(number: int, i: int) -> Iterator[int]:
-    """Returns a list of integers that add up to `number`. The list will
-    contain the value `i` as many times as possible, the last value will be
-    `number % i`.
-    """
-    iterations, remainder = divmod(number, i)
-
-    for _ in range(iterations):
-        yield i
-
-    if remainder:
-        yield remainder
-
-
-def random_numbers_that_add_to(number: int) -> Iterator[int]:
-    while number:
-        # randint is inclusive on both ends
-        current_value = randint(1, number - 1)
-
-        yield current_value
-        number -= current_value
-
-        assert number >= 0, f"{number} must not be negative"
-
-
-def partial_planner_without_remainders_until_exhaustion(
-    number: int
-) -> Iterator[PartialTransferPlan]:
-    """Returns a list of plans where for each plan every transfer has the same
-    amount and after the plan is executed the channel is exhausted.
-    """
-    # Start with the special value `1`, since that is not returned by
-    # `all_proper_divisors`
-    yield (1 for _ in range(number))
-
-    # Now, for each proper divisor, do the number of transfers necessary so
-    # that `number` is exhausted.
-    for current_value in all_proper_divisors(number):
-        iterations = number / current_value
-
-        msg = "Iterations must be an integer, otherwise there is a bug in `all_proper_divisors`"
-        assert isinstance(iterations, int), msg
-
-        yield (current_value for _ in range(iterations))
-
-
-def partial_planner_with_remainders_until_exhaustion(number: int) -> Iterator[PartialTransferPlan]:
-    """Returns a list of plans that exhaust the channel.
-
-    The generated plans will use every amount from 1 up to `amount`, to ensure
-    the `number` is exhausted the last value in a plan may be different (i.e.
-    the remainder).
-    """
-    # Increase value until `number` is reached, if the `current_value` value is
-    # not a divisor of `number` the remainder is emited as the last amount.
-    for current_value in range(1, number + 1):
-        yield exhaust_number_with(number, current_value)
-
-
-def partial_planner_with_random_values_until_exhaustion(
-    number: int
-) -> Iterator[PartialTransferPlan]:
-    """Returns a list of transfer plans with random `amounts` that will exhaust
-    the channel.
-    """
-    iterations = randint(1, 10)
-
-    for _ in range(iterations):
-        yield random_numbers_that_add_to(number)
-
-
 def get_address(base_url: str) -> str:
     return requests.get(f"{base_url}/api/v1/address").text
 
@@ -442,32 +306,19 @@ def transfer_and_assert_successful(
     assert response.status_code == HTTPStatus.OK, response.json()
 
 
-def complete_planner_from_partial_planner(
-    partial_plan_generator: PartialTransferPlanGenerator
-) -> TransferPlanGenerator:
-    """Created a complete plan out of a partial plan.
+def do_fifty_transfer_up_to(capacity_lower_bound: Amount) -> TransferPlan:
+    """Generates a plan with 50 transfers of the same value.
 
-    The new generated transfer plan will repeat every transfer in the backwards
-    direction, this ensures the transfer will restore the channels to their
-    original state it is executed.
+    >>> len(do_fifty_transfer_up_to(500))
+    ... 50
+    >>> do_fifty_transfer_up_to(500)
+    ... [10, 10, 10 ..., 10]
     """
+    qty_of_transfers = 50
+    amount = Amount(capacity_lower_bound // qty_of_transfers)
 
-    def complete_plan_generator(number: int) -> Iterator[TransferPlan]:
-        partial_plans = partial_plan_generator(number)
-
-        for partial_plan in partial_plans:
-            # save the transfers in the forward direction
-            forward_plan = list(partial_plan)
-
-            # add the transfers in the backwards direction to restore to the
-            # previous state
-            backward_plan = reversed(forward_plan)
-
-            complete_plan = chain(forward_plan, backward_plan)
-
-            yield complete_plan
-
-    return complete_plan_generator
+    for _ in range(qty_of_transfers):
+        yield amount
 
 
 def do_transfers(
@@ -545,27 +396,20 @@ def paths_for_mediated_transfers(running_nodes: List[RunningNode]) -> List[Initi
 def scheduler_preserve_order(
     paths: List[InitiatorAndTarget], plan: TransferPlan
 ) -> Iterator[Transfer]:
-    for from_to in paths:
-        for transfer in plan:
-            yield Transfer(from_to, Amount(transfer))
+    """Execute the same plan for each path, in order.
 
+    E.g.:
 
-def scheduler_interleave_paths(
-    paths: List[InitiatorAndTarget], plan: TransferPlan
-) -> Iterator[Transfer]:
-    # The difference from the interleaved to the preserve order is just order
-    # of the loops bellow.
-    for transfer in plan:
-        for from_to in paths:
-            yield Transfer(from_to, Amount(transfer))
-
-
-def scheduler_random(paths: List[InitiatorAndTarget], plan: TransferPlan) -> Iterator[Transfer]:
-    # TODO: Lazily shuffle
-    all_transfers = list(zip(plan, paths))
-    shuffle(all_transfers)
-
-    for transfer, from_to in all_transfers:
+    >>> paths = [(a, b), (b, c)]
+    >>> transfer_plan = [1,1]
+    >>> scheduler_preserve_order(paths, transfer_plan)
+    ... [Transfer(InitiatorAndTarget(a, b), amount=1),
+    ...  Transfer(InitiatorAndTarget(a, b), amount=1),
+    ...  Transfer(InitiatorAndTarget(b, c), amount=1),
+    ...  Transfer(InitiatorAndTarget(b, c), amount=1)]
+    """
+    # product works fine with generators
+    for from_to, transfer in product(paths, plan):
         yield Transfer(from_to, Amount(transfer))
 
 
@@ -573,90 +417,52 @@ def run_stress_test(
     nursery: Nursery,
     retry_timeout: int,
     running_nodes: List[RunningNode],
-    capacity_lower_bound: int,
+    capacity_lower_bound: Amount,
     token_address: str,
     iteration_counter: Iterator[int],
 ) -> None:
     identifier_generator = count(start=FIRST_VALID_PAYMENT_ID)
 
+    config = StressTestConfiguration(
+        initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
+        concurrency=[1, 5, 20],
+        planners=[do_fifty_transfer_up_to],
+        schedulers=[scheduler_preserve_order],
+    )
+
+    # TODO: Add tests with fees. This may require changes to the transfer plan,
+    # since ATM it depends only in the `capacity_lower_bound` settings.
     for iteration in iteration_counter:
-        log.info(f"Starting run {iteration}")
-
-        # Generate all the paths that can be used with the current topology.
-        # Note: Every channel direction must have at least
-        # `capacity_lower_bound` tokens available.
-        all_direct_paths = list(paths_direct_transfers(running_nodes))
-        all_mediated_paths = list(paths_for_mediated_transfers(running_nodes))
-        all_concurrent_paths = [all_direct_paths, all_mediated_paths]
-
-        # Gradually increase concurrency to stress the system.
-        all_concurrency = list(range(1, 5))
-
-        # Different transfer plans to stress the system. Note that for every
-        # plan:
-        # - The plan MAY use UP TO the available capacity of a channel, but no
-        # more, since using more than the available capacity will fail.
-        # - The plan MUST return the channel to its initial state, by sending
-        # transfers backwards.
-        # - The plan MUST be executed successfully until exhaustion,
-        # otherwise the next plan may try to use an amount that is not
-        # available.
-        #
-        # TODO: Add plans that work with different fee schedules.
-        all_partial_transfers_planners = [
-            partial_planner_without_remainders_until_exhaustion,
-            partial_planner_with_remainders_until_exhaustion,
-            partial_planner_with_random_values_until_exhaustion,
-        ]
-        all_complete_transfer_planners = [
-            complete_planner_from_partial_planner(plan) for plan in all_partial_transfers_planners
-        ]
-
-        # Note that:
-        # - Every direction of every channel in the topology is expected to
-        # have at least `capacity_lower_bound` at the beginning of the plan.
-        # - No plan uses more than `capacity_lower_bound` tokens.
-        # - Every plan restores the lower bound.
-        # Therefore the transfers can be scheduled in any order.
-        all_transfers_schedulers = [
-            scheduler_preserve_order,
-            scheduler_interleave_paths,
-            scheduler_random,
-        ]
-
+        log.info(f"Starting iteration {iteration}")
+        # TODO: Before running the first plan each node should be queried for
+        # their channel status. The script should assert the open channels have
+        # at least `capacity_lower_bound` together.
         for concurent_paths, concurrency, transfer_planner, scheduler in zip(
-            all_concurrent_paths,
-            all_concurrency,
-            all_complete_transfer_planners,
-            all_transfers_schedulers,
+            config.initiator_target_pairs, config.concurrency, config.planners, config.schedulers
         ):
-            # TODO: Before running the first plan each node should be queried
-            # for their channel status. The script should assert there are open
-            # channels with the partner nodes, and a assert the capacities are
-            # lower than `capacity_lower_bound`.
-            # TODO: From the above, the `capacity_lower_bound` can be queried
-            # from the existing nodes in the test network.
+            log.info(
+                f"Starting run {concurent_paths}, {concurrency}, {transfer_planner}, {scheduler}"
+            )
 
-            for transfer_plan in transfer_planner(capacity_lower_bound):
-                transfers = list(scheduler(concurent_paths, transfer_plan))
+            # The plan MUST be executed successfully until exhaustion,
+            # otherwise the next plan may try to use an amount that is not
+            # available.
+            transfer_plan = transfer_planner(capacity_lower_bound)
+            transfers = list(scheduler(concurent_paths, transfer_plan))
 
-                # TODO: While the transfers are being sent the status of the
-                # processes should also be checked (assuming they are local
-                # nodes). If any of the processes crashes the script should
-                # collect and bundle the logs.
-                # TODO: `do_transfers` should return the amount of tokens
-                # transferred with each `(from, to)` pair, and the total amount
-                # must be lower than the `capacity_lower_bound`.
-                do_transfers(
-                    transfers=transfers,
-                    token_address=token_address,
-                    identifier_generator=identifier_generator,
-                    pool_size=concurrency,
-                )
+            # TODO: `do_transfers` should return the amount of tokens
+            # transferred with each `(from, to)` pair, and the total amount
+            # must be lower than the `capacity_lower_bound`.
+            do_transfers(
+                transfers=transfers,
+                token_address=token_address,
+                identifier_generator=identifier_generator,
+                pool_size=concurrency,
+            )
 
-                # After each `do_transfers` the state of the system must be
-                # reset, otherwise there is a bug in the planner or Raiden.
-                restart_network(nursery, running_nodes, retry_timeout)
+            # After each `do_transfers` the state of the system must be
+            # reset, otherwise there is a bug in the planner or Raiden.
+            restart_network(nursery, running_nodes, retry_timeout)
 
 
 # TODO: cancel the spawn_later if `greenlet` exits normally.
@@ -744,8 +550,10 @@ def main() -> None:
                 NodeConfig(raiden_args, address, BaseURL(f"http://{api_url}"), nodedir)
             )
 
+    # TODO: Determine the `capacity_lower_bound` by querying the nodes.
+    capacity_lower_bound = 1130220
+
     iterations = 5
-    balance = 1130220
     token_address = config.defaults()["token-address"]
 
     if not is_checksum_address(token_address):
@@ -766,6 +574,9 @@ def main() -> None:
     # gevent.signal(signal.SIGTERM, stop_on_signal)
     # gevent.signal(signal.SIGINT, stop_on_signal)
 
+    # TODO: If any of the processes crashes the script should collect and
+    # bundle the logs.
+    #
     # Cleanup with the Janitor is not strictily necessary for the stress test,
     # since once can assume a bug happened and the state of the node is
     # inconsistent, however it is nice to have.
@@ -781,10 +592,10 @@ def main() -> None:
             nursery,
             retry_timeout,
             nodes_running,
-            balance,
+            capacity_lower_bound,
             token_address,
             iteration_counter,
-        )
+        ).get()
 
 
 if __name__ == "__main__":
