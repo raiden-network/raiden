@@ -3,11 +3,11 @@ from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all()  # isort:skip # noqa
 
-import abc
 import atexit
 import os
 import os.path
 import signal
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import lru_cache
 from http import HTTPStatus
@@ -15,13 +15,12 @@ from itertools import chain, count, product
 from math import ceil, sqrt
 from random import randint, shuffle
 from types import TracebackType
-from typing import Callable, Iterator, List, NewType, NoReturn, Optional, Set, Type
+from typing import Any, Callable, Iterator, List, NewType, NoReturn, Optional, Set, Type
 
 import gevent
 import requests
 import structlog
 from eth_utils import is_checksum_address, to_canonical_address
-from gevent import getcurrent
 from gevent.event import AsyncResult, Event
 from gevent.greenlet import Greenlet
 from gevent.pool import Pool
@@ -111,8 +110,13 @@ class Transfer:
     amount: Amount
 
 
-class Nursery(abc.ABC):
+class Nursery(ABC):
+    @abstractmethod
     def track(self, process: Popen) -> None:
+        pass
+
+    @abstractmethod
+    def spawn_under_watch(self, function: Callable, *args: Any, **kargs: Any) -> Greenlet:
         pass
 
 
@@ -139,6 +143,7 @@ class Janitor:
         # leads to better behavior in the happy case since the exit handler is
         # used.
         janitor = self
+        stop = self.stop
 
         class ProcessNursery(Nursery):
             @staticmethod
@@ -152,9 +157,24 @@ class Janitor:
 
                     # if the subprocess error'ed propagate the error.
                     if result.get() != STATUS_CODE_FOR_SUCCESS:
-                        self.stop.set()
+                        log.error("Raiden died! Bailing out.")
+                        stop.set()
 
                 process.result.rawlink(subprocess_stopped)
+
+            @staticmethod
+            def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
+                greenlet = gevent.spawn(function, *args, **kwargs)
+
+                # The Event.rawlink is executed inside the Hub thread, which
+                # does validation and *raises on blocking calls*, to go around
+                # this a new greenlet has to be spawned, that in turn will
+                # raise the exceptoin.
+                def spawn_to_kill() -> None:
+                    gevent.spawn(greenlet.throw, gevent.GreenletExit())
+
+                stop.rawlink(lambda _stop: spawn_to_kill())
+                return greenlet
 
         return ProcessNursery()
 
@@ -340,10 +360,15 @@ def wait_for_address_endpoint(base_url: str, retry_timeout: int) -> str:
     """Keeps retrying the `/address` endpoint."""
     while True:
         try:
-            return get_address(base_url)
-        except (requests.RequestException, requests.ConnectionError) as e:
-            print(f"Waiting for {base_url} error={e}")
-            gevent.sleep(retry_timeout)
+            address = get_address(base_url)
+            log.info(f"{address} finished restarting ready")
+            return address
+        except requests.ConnectionError:
+            log.info(f"Waiting for the server {base_url} to start.")
+        except requests.RequestException:
+            log.exception(f"Request to server {base_url} failed.")
+
+        gevent.sleep(retry_timeout)
 
     raise RuntimeError("Stopping")
 
@@ -367,7 +392,7 @@ def start_and_wait_for_all_servers(
     nursery: Nursery, nodes_config: List[NodeConfig], retry_timeout: int
 ) -> List[RunningNode]:
     greenlets = set(
-        gevent.spawn(start_and_wait_for_server, nursery, node, retry_timeout)
+        nursery.spawn_under_watch(start_and_wait_for_server, nursery, node, retry_timeout)
         for node in nodes_config
     )
     gevent.joinall(greenlets, raise_error=True)
@@ -376,15 +401,18 @@ def start_and_wait_for_all_servers(
 
 
 def kill_restart_and_wait_for_server(
-    nursery: Nursery, node: RunningNode, seconds: int
+    nursery: Nursery, node: RunningNode, retry_timeout: int
 ) -> RunningNode:
     node.process.kill(signal.SIGINT)
-    return start_and_wait_for_server(nursery, node.config, seconds)
+    return start_and_wait_for_server(nursery, node.config, retry_timeout)
 
 
-def restart_network(running_nodes: List[RunningNode], stop: Event) -> List[RunningNode]:
+def restart_network(
+    nursery: Nursery, running_nodes: List[RunningNode], retry_timeout: int
+) -> List[RunningNode]:
     greenlets = [
-        gevent.spawn(kill_restart_and_wait_for_server, stop, node) for node in running_nodes
+        nursery.spawn_under_watch(kill_restart_and_wait_for_server, nursery, node, retry_timeout)
+        for node in running_nodes
     ]
     gevent.wait(greenlets)
     return [g.get() for g in greenlets]
@@ -460,7 +488,7 @@ def do_transfers(
     #
     # Note: Capture the parent thread to propagate the exception, this must not
     # be called inside of `propagate_error`.
-    current: greenlet = getcurrent()
+    current: greenlet = gevent.getcurrent()
 
     def propagate_error(result: Greenlet) -> NoReturn:
         current.throw(result.exception)
@@ -542,7 +570,8 @@ def scheduler_random(paths: List[InitiatorAndTarget], plan: TransferPlan) -> Ite
 
 
 def run_stress_test(
-    stop: Event,
+    nursery: Nursery,
+    retry_timeout: int,
     running_nodes: List[RunningNode],
     capacity_lower_bound: int,
     token_address: str,
@@ -627,7 +656,27 @@ def run_stress_test(
 
                 # After each `do_transfers` the state of the system must be
                 # reset, otherwise there is a bug in the planner or Raiden.
-                restart_network(stop, running_nodes)
+                restart_network(nursery, running_nodes, retry_timeout)
+
+
+# TODO: cancel the spawn_later if `greenlet` exits normally.
+def force_quit(stop: Event, greenlet: greenlet, timeout: int) -> None:
+    """If the process does not stop because of the signal, kill it. This will
+    execute the `__exit__` handler that will do the cleanup.
+    """
+
+    def kill_greenlet(_stop: Event) -> None:
+        error = RuntimeError(
+            f"Greenlet {greenlet} had to be forcefully killed. This happened "
+            f"because there is a piece of code that is doing blocking IO and is "
+            f"not monitored by the 'stop' signal. To fix this the code doing the "
+            f"IO operations has to be executed inside a greenlet, and then the "
+            f"subgreenlet has to be linked to the stop signal with "
+            f"'signal.ranliw(greenlet.kill)'."
+        )
+        gevent.spawn_later(timeout, greenlet.throw, error)
+
+    stop.rawlink(kill_greenlet)
 
 
 def main() -> None:
@@ -705,6 +754,8 @@ def main() -> None:
 
     stop = Event()
 
+    force_quit(stop, gevent.getcurrent(), timeout=5)
+
     # def stop_on_signal(sig=None, _frame=None):
     #     stop.set()
     # gevent.signal(signal.SIGQUIT, stop_on_signal)
@@ -717,7 +768,19 @@ def main() -> None:
     with Janitor(stop) as nursery:
         nodes_running = start_and_wait_for_all_servers(nursery, nodes_config, retry_timeout)
 
-        run_stress_test(nursery, nodes_running, balance, token_address, iteration_counter)
+        # If any of the processes failed to startup
+        if stop.is_set():
+            return
+
+        nursery.spawn_under_watch(
+            run_stress_test,
+            nursery,
+            retry_timeout,
+            nodes_running,
+            balance,
+            token_address,
+            iteration_counter,
+        )
 
 
 if __name__ == "__main__":
