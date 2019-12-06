@@ -306,6 +306,7 @@ class MatrixTransport(Runnable):
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
+            environment=config["environment_type"],
         )
         self._server_url = self._client.api.base_url
         self._server_name = config.get("server_name", urlparse(self._server_url).netloc)

@@ -18,6 +18,9 @@ from matrix_client.user import User
 from requests import Response
 from requests.adapters import HTTPAdapter
 
+from raiden.constants import Environment
+from raiden.exceptions import MatrixProcessingTakingTooLongError
+
 log = structlog.get_logger(__name__)
 
 
@@ -230,11 +233,13 @@ class GMatrixClient(MatrixClient):
         http_pool_maxsize: int = 10,
         http_retry_timeout: int = 60,
         http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
+        environment: Environment = Environment.PRODUCTION,
     ) -> None:
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
         self._post_hook_func: Optional[Callable[[str], None]] = None
         self.token: Optional[str] = None
+        self.environment = environment
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -255,12 +260,13 @@ class GMatrixClient(MatrixClient):
 
     def listen_forever(
         self,
-        timeout_ms: int = 20000,
+        timeout_ms: int = 20_000,
         exception_handler: Callable[[Exception], None] = None,
         bad_sync_timeout: int = 5,
     ) -> None:
         """
         Keep listening for events forever.
+
         Args:
             timeout_ms: How long to poll the Home Server for before retrying.
             exception_handler: Optional exception handler function which can
@@ -307,10 +313,11 @@ class GMatrixClient(MatrixClient):
                     raise
 
     def start_listener_thread(
-        self, timeout_ms: int = 20000, exception_handler: Callable = None
+        self, timeout_ms: int = 20_000, exception_handler: Callable = None
     ) -> None:
         """
         Start a listener greenlet to listen for events in the background.
+
         Args:
             timeout_ms: How long to poll the Home Server for before retrying.
             exception_handler: Optional exception handler function which can
@@ -433,7 +440,7 @@ class GMatrixClient(MatrixClient):
     def call(callback: Callable, *args: Any, **kwargs: Any) -> Any:
         return callback(*args, **kwargs)
 
-    def _sync(self, timeout_ms: int = 30000) -> None:
+    def _sync(self, timeout_ms: int = 30_000) -> None:
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
         log.debug(
             "Sync called", node=node_address_from_userid(self.user_id), current_user=self.user_id
@@ -475,7 +482,19 @@ class GMatrixClient(MatrixClient):
                 len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
             ),
         )
-        self._handle_response(response, is_first_sync)
+        before_processing = time.time()
+        self._handle_response(response=response, first_sync=is_first_sync)
+        processing_time_s = time.time() - before_processing
+
+        # If processing the matrix response takes longer than the poll timout, it cannot be
+        # ensured that all messages have been processed.
+        # Therefore an exception is thrown when in development mode.
+        timeout_s = timeout_ms // 1_000
+        if processing_time_s >= timeout_s and self.environment == Environment.DEVELOPMENT:
+            raise MatrixProcessingTakingTooLongError(
+                f"Processing Matrix response took {processing_time_s}s, "
+                f"poll timeout is {timeout_s}s."
+            )
 
         if self._post_hook_func is not None and self.sync_token is not None:
             self._post_hook_func(self.sync_token)
