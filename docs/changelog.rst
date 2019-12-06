@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`5395` Convert and return big integers as strings in the API response body.
 * :feature:`-` Update WebUI to version 0.10.2 https://github.com/raiden-network/webui/releases/tag/v0.10.2
 
 * :release:`0.200.0-rc2 <2019-11-25>`
