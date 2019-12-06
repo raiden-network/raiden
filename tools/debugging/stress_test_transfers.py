@@ -714,6 +714,10 @@ def main() -> None:
             raiden_args = [
                 "raiden",
                 "--accept-disclaimer",
+                "--log-json",
+                "--log-config",
+                "raiden:DEBUG",
+                "--disable-debug-logfile",
                 "--environment-type",
                 "development",
                 "--datadir",
