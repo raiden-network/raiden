@@ -267,7 +267,7 @@ def start_and_wait_for_all_servers(
 def kill_restart_and_wait_for_server(
     nursery: Nursery, node: RunningNode, retry_timeout: int
 ) -> RunningNode:
-    node.process.kill(signal.SIGINT)
+    node.process.send_signal(signal.SIGINT)
     return start_and_wait_for_server(nursery, node.config, retry_timeout)
 
 
