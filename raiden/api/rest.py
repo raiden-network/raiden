@@ -785,11 +785,11 @@ class RestAPI:  # pragma: no unittest
             )
             if connection_manager is not None and open_channels:
                 connection_managers[to_checksum_address(connection_manager.token_address)] = {
-                    "funds": connection_manager.funds,
-                    "sum_deposits": views.get_our_deposits_for_token_network(
+                    "funds": str(connection_manager.funds),
+                    "sum_deposits": str(views.get_our_deposits_for_token_network(
                         views.state_from_raiden(self.raiden_api.raiden), registry_address, token
-                    ),
-                    "channels": len(open_channels),
+                    )),
+                    "channels": str(len(open_channels)),
                 }
 
         return api_response(result=connection_managers)
