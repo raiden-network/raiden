@@ -9,16 +9,19 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Dict, List, NewType, Tuple
+from typing import Dict, List, NewType, Optional, Tuple
 from urllib.parse import urlsplit
 
 import gevent
 import requests
+import structlog
 from gevent.queue import JoinableQueue
 
 NODE_SECTION_RE = re.compile("^node[0-9]+")
 API_VERSION = "v1"
 Address = NewType("Address", str)
+
+log = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -33,8 +36,8 @@ class ChannelNew:
     participant2: Address
     endpoint1: str
     endpoint2: str
-    deposit1: int
-    deposit2: int
+    minimum_capacity1: int
+    minimum_capacity2: int
 
 
 @dataclass
@@ -44,7 +47,55 @@ class ChannelDeposit:
     token_address: str
     partner: Address
     endpoint: str
-    deposit: int
+    minimum_capacity: int
+
+
+def is_successful_reponse(response: requests.Response) -> bool:
+    return (
+        response is not None
+        and response.headers["Content-Type"] == "application/json"
+        and response.status_code == HTTPStatus.OK
+    )
+
+
+def is_json_reponse(response: requests.Response) -> bool:
+    return response is not None and response.headers["Content-Type"] == "application/json"
+
+
+def channel_details(endpoint: str, token_address: str, partner: str) -> Optional[Dict]:
+    url_channel = f"{endpoint}/api/{API_VERSION}/channels/{token_address}/{partner}"
+    channel_response = requests.get(url_channel)
+
+    if not is_json_reponse(channel_response):
+        raise RuntimeError("Unexpected response from server, {channel_response}")
+
+    if channel_response.status_code == HTTPStatus.OK:
+        return channel_response.json()
+
+    return None
+
+
+def channel_deposit_if_necessary(channel_details: Dict, deposit: ChannelDeposit) -> None:
+    url_channel = (
+        f"{deposit.endpoint}/api/{API_VERSION}/"
+        f"channels/{deposit.token_address}/{deposit.partner}"
+    )
+
+    balance_current = int(channel_details["balance"])
+    balance_difference = deposit.minimum_capacity - balance_current
+    is_deposit_necessary = balance_difference > 0
+
+    if is_deposit_necessary:
+        deposit_current = int(channel_details["total_deposit"])
+        deposit_new = deposit_current + balance_difference
+        new_total_deposit = {"total_deposit": deposit_new}
+
+        log.info(f"Depositing to channel {deposit}")
+        response = requests.patch(url_channel, json=new_total_deposit)
+        if not is_successful_reponse(response):
+            raise RuntimeError(f"An error ocurrent while depositing to channel {deposit}")
+    else:
+        log.info(f"Channel exists and has enough capacity {deposit}")
 
 
 def channel_open_with_the_same_node(
@@ -56,36 +107,42 @@ def channel_open_with_the_same_node(
     here channels are open one after the other. (Issue #5446).
     """
     for channel_open in channels_to_open:
-        url_open = f"{channel_open.endpoint1}/api/{API_VERSION}/channels"
-        channel_details = {
-            "token_address": channel_open.token_address,
-            "partner_address": channel_open.participant2,
-            "total_deposit": channel_open.deposit1,
-        }
+        channel = channel_details(
+            channel_open.endpoint1, channel_open.token_address, channel_open.participant2
+        )
 
-        print(f"Running {channel_open}")
-        response = requests.put(url_open, json=channel_details)
+        if channel is None:
+            channel_open_request = {
+                "token_address": channel_open.token_address,
+                "partner_address": channel_open.participant2,
+                "total_deposit": channel_open.minimum_capacity1,
+            }
 
-        assert response is not None
-        is_json = response.headers["Content-Type"] == "application/json"
-        assert is_json, response.headers["Content-Type"]
+            log.info(f"Opening {channel_open}")
+            url_channel_open = f"{channel_open.endpoint1}/api/{API_VERSION}/channels"
+            response = requests.put(url_channel_open, json=channel_open_request)
 
-        data = response.json()
-        errors = data.get("errors", "")
+            if not is_successful_reponse(response):
+                raise RuntimeError(f"An error ocurrent while opening channel {channel_open}")
 
-        channel_already_exist = "A channel with" in errors and "already exists." in errors
-        if not channel_already_exist:
-            assert response.status_code == HTTPStatus.OK, response.json()
+        else:
+            deposit = ChannelDeposit(
+                channel_open.token_address,
+                channel_open.participant2,
+                channel_open.endpoint1,
+                channel_open.minimum_capacity1,
+            )
+            channel_deposit_if_necessary(channel, deposit)
 
         # A deposit only makes sense after the channel is opened.
         deposit = ChannelDeposit(
-            token_address=channel_open.token_address,
-            partner=channel_open.participant1,
-            endpoint=channel_open.endpoint2,
-            deposit=channel_open.deposit2,
+            channel_open.token_address,
+            channel_open.participant1,
+            channel_open.endpoint2,
+            channel_open.minimum_capacity2,
         )
 
-        print(f"Queueing {deposit}")
+        log.info(f"Queueing {deposit}")
         target_to_depositqueue[(channel_open.token_address, channel_open.participant2)].put(
             deposit
         )
@@ -104,14 +161,10 @@ def channel_deposit_with_the_same_node_and_token_network(deposit_queue: Joinable
     while True:
         deposit = deposit_queue.get()
 
-        url_deposit = (
-            f"{deposit.endpoint}/api/{API_VERSION}/"
-            f"channels/{deposit.token_address}/{deposit.partner}"
-        )
-        channel_deposit = {"total_deposit": deposit.deposit}
-
-        print(f"Running {deposit}")
-        requests.put(url_deposit, json=channel_deposit)
+        channel = channel_details(deposit.endpoint, deposit.token_address, deposit.partner)
+        if channel is None:
+            raise RuntimeError(f"Channel does not exist! {deposit}")
+        channel_deposit_if_necessary(channel, deposit)
 
 
 def main() -> None:
@@ -167,8 +220,8 @@ def main() -> None:
                     participant2=participant2,
                     endpoint1=node_to_endpoint[node1],
                     endpoint2=node_to_endpoint[node2],
-                    deposit1=channel["deposit1"],
-                    deposit2=channel["deposit2"],
+                    minimum_capacity1=channel["minimum_capacity1"],
+                    minimum_capacity2=channel["minimum_capacity2"],
                 )
                 queue_per_node[participant1].append(channel_new)
             else:
@@ -178,8 +231,8 @@ def main() -> None:
                     participant2=participant1,
                     endpoint1=node_to_endpoint[node2],
                     endpoint2=node_to_endpoint[node1],
-                    deposit1=channel["deposit2"],
-                    deposit2=channel["deposit1"],
+                    minimum_capacity1=channel["minimum_capacity2"],
+                    minimum_capacity2=channel["minimum_capacity1"],
                 )
                 queue_per_node[participant2].append(channel_new)
 
@@ -198,6 +251,7 @@ def main() -> None:
     ]
 
     gevent.joinall(open_greenlets, raise_error=True)
+    log.info("Opening the channels finished")
 
     # Because all channels have been opened, there is no more deposits to do,
     # so now one just has to wait for the queues to get empty.
@@ -207,9 +261,10 @@ def main() -> None:
         # `JoinableQueue` was raising an exception `This operation would block
         # forever` which seems to be a false positive. Using `empty` to
         # circumvent it.
-        while queue.empty():
+        while not queue.empty():
             gevent.sleep(1)
 
+    log.info("Depositing to the channels finished")
     # The deposit greenlets are infinite loops.
     gevent.killall(deposit_greenlets)
 
