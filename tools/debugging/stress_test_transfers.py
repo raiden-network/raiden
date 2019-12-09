@@ -37,8 +37,8 @@ STATUS_CODE_FOR_SUCCESS = 0
 FIRST_VALID_PAYMENT_ID = 1
 
 # A partial transfer plan is a list of transfers which is guaranteed to succeed
-# (regardless of the order), however the channels won't be retored to their
-# initial state after the plan execution, plans of this type MUST be prossed
+# (regardless of the order), however the channels won't be restored to their
+# initial state after the plan execution, plans of this type MUST be processed
 # with `complete_planner_from_partial_planner` to revert the transfers and
 # restore the channel state.
 PartialTransferPlan = Iterator[Amount]
@@ -77,7 +77,7 @@ class NodeConfig:
 @dataclass
 class RunningNode:
     """A running node, this has a Raiden instance running in the background
-    with a separted process.
+    in a separate process.
     """
 
     process: Popen
@@ -106,7 +106,7 @@ class StressTestConfiguration:
     # Different concurrency levels used to stress the system.
     concurrency: List[int]
 
-    # List of planners (functions that return a list of transfers) that satify
+    # List of planners (functions that return a list of transfers) that satisfy
     # the following requirements:
     #
     # - The plan MAY use UP TO the `capacity_lower_bound`, but no more.
@@ -134,12 +134,12 @@ class Nursery(ABC):
 
 
 class Janitor:
-    """Tries to properly stop all subprocesses before quiting the script.
+    """Tries to properly stop all subprocesses before quitting the script.
 
     - This watches for the status of the subprocess, if the processes exits
       with a non-zero error code then the failure is propagated.
     - If for any reason this process is dying, then all the spawned processes
-      have to be killed in order for a porper clean up to happen.
+      have to be killed in order for a proper clean up to happen.
     """
 
     def __init__(self, stop: Event) -> None:
@@ -152,7 +152,7 @@ class Janitor:
         # greenlet, and its greenlet is not the one that is dying.
         atexit.register(self._free_resources)
 
-        # Hide the nursery to required the context manager to be used. This
+        # Hide the nursery to require the context manager to be used. This
         # leads to better behavior in the happy case since the exit handler is
         # used.
         janitor = self
@@ -164,7 +164,7 @@ class Janitor:
                 janitor._processes.add(process)
 
                 def subprocess_stopped(result: AsyncResult) -> None:
-                    # processes are expected to quit while the nursery is
+                    # Processes are expected to quit while the nursery is
                     # active, remove them from the track list to clear memory
                     janitor._processes.remove(process)
 
@@ -182,7 +182,7 @@ class Janitor:
                 # The Event.rawlink is executed inside the Hub thread, which
                 # does validation and *raises on blocking calls*, to go around
                 # this a new greenlet has to be spawned, that in turn will
-                # raise the exceptoin.
+                # raise the exception.
                 def spawn_to_kill() -> None:
                     gevent.spawn(greenlet.throw, gevent.GreenletExit())
 
@@ -225,7 +225,7 @@ def wait_for_address_endpoint(base_url: str, retry_timeout: int) -> str:
     while True:
         try:
             address = get_address(base_url)
-            log.info(f"{address} finished restarting ready")
+            log.info(f"{address} finished (re)starting and is ready")
             return address
         except requests.ConnectionError:
             log.info(f"Waiting for the server {base_url} to start.")
@@ -346,7 +346,7 @@ def do_transfers(
         raise RuntimeError("Must not switch back, this greenlet is dead.")
 
     # TODO: This should return a dictionary, were the key is `(from, to)`  and
-    # the amount is the sum of all transfer values, this is can then be used to
+    # the amount is the sum of all transfer values, this can then be used to
     # assert on the change of capacity from each running node.
     for transfer in transfers:
         task: Greenlet = pool.spawn(
@@ -478,7 +478,7 @@ def force_quit(stop: Event, greenlet: greenlet, timeout: int) -> None:
             f"not monitored by the 'stop' signal. To fix this the code doing the "
             f"IO operations has to be executed inside a greenlet, and then the "
             f"subgreenlet has to be linked to the stop signal with "
-            f"'signal.ranliw(greenlet.kill)'."
+            f"'signal.rawlink(greenlet.kill)'."
         )
         gevent.spawn_later(timeout, greenlet.throw, error)
 
@@ -602,6 +602,6 @@ if __name__ == "__main__":
     # TODO:
     # - The script should quit if the vpn is closed (and therefore the raiden
     # process is killed)
-    # - With the janitor the database is properly closed (the sqlite's lock
+    # - With the janitor the database is properly closed (sqlite's lock
     # goes away), however the filelock's file is not cleared.
     main()
