@@ -55,11 +55,11 @@ scenario:
             - wait_blocks: 1
             # Assert that correct amount was tranferred
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 1_000_000_000_000_000}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
-            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 1_000_000_000_000_000}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
-            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000}
+            - assert: {from: 3, to: 2, total_deposit: 0, balance: 1_000_000_000_000_000}
 
             # Check that the path is indeed the expected one
             - assert_pfs_history:
