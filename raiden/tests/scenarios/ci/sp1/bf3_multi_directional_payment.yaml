@@ -82,12 +82,12 @@ scenario:
                 name: "Make 100 transfers from 0 to 4"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000}
             - serial:
                 name: "Make 100 transfers from 4 to 0"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000}
       - wait: 100
       - parallel:
           name: "Assert that all balances are the same as before the payments, since same amounts are sent in both directions"
