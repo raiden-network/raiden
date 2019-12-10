@@ -387,7 +387,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
+            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" "<< parameters.test-type >>" << parameters.additional-args >>
       - run:
           name: Report coverage
           command: .circleci/report_coverage.sh << parameters.test-type >>

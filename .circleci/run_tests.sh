@@ -5,9 +5,10 @@ set -x
 
 test_report_dir=$1
 blockchain_type=$2
+test_type=$3
 
 # Remove the above arguments, every thing extra will be passed down to coverage
-shift 2
+shift 3
 
 mkdir -p ${test_report_dir}
 
@@ -44,19 +45,22 @@ dormant_signal=SIGUSR1
     --select-from-file selected-tests.txt \
     "${@}"
 
-if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
-    # Enable nullglob, otherwise the loop bellow would do one iteration
-    # over the pattern, leading to a failure, since the pattern is not a
-    # valid file.
-    shopt -s nullglob
+# Skip log splitting for unit tests
+if [ "${test_type}" != "unit" ]; then
+    if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
+        # Enable nullglob, otherwise the loop bellow would do one iteration
+        # over the pattern, leading to a failure, since the pattern is not a
+        # valid file.
+        shopt -s nullglob
 
-    for test_directory in ${RAIDEN_TESTS_LOGSDIR}/*; do
-        # Pytest's paremetrize tests have brackets in their names, e.g.
-        # `test_api_open_channel_invalid_input[matrix-False-0-1]`, the
-        # expression bellow must have the test_directory variable in quotes to
-        # prevent the shell from trying to expand the brackets
-        for log_file in "${test_directory}"/raiden-debug*.log; do
-            ./tools/debugging/split_debug_logs.sh "${log_file}" "${test_directory}/node_logs/"
+        for test_directory in ${RAIDEN_TESTS_LOGSDIR}/*; do
+            # Pytest's paremetrize tests have brackets in their names, e.g.
+            # `test_api_open_channel_invalid_input[matrix-False-0-1]`, the
+            # expression bellow must have the test_directory variable in quotes to
+            # prevent the shell from trying to expand the brackets
+            for log_file in "${test_directory}"/raiden-debug*.log; do
+                ./tools/debugging/split_debug_logs.sh "${log_file}" "${test_directory}/node_logs/"
+            done
         done
-    done
+    fi
 fi
