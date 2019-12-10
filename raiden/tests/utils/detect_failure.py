@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Any, Callable, List
 
 import gevent
+import pytest
 import structlog
 from gevent.event import AsyncResult
 
@@ -57,4 +58,8 @@ def raise_on_failure(test_function: Callable) -> Callable:
 
             raise
 
+    wrapper._decorated_raise_on_failure = True  # type: ignore
     return wrapper
+
+
+expect_failure = pytest.mark.expect_failure
