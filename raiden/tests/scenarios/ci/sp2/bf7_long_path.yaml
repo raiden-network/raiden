@@ -145,7 +145,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node1"
           tasks:
-            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node1"
@@ -155,7 +155,7 @@ scenario:
       - serial:
           name: "Make one transfer from node1 to node0"
           tasks:
-            - transfer: {from: 1, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 1, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node1 to node0"
@@ -165,7 +165,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node2"
           tasks:
-            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node2"
@@ -175,7 +175,7 @@ scenario:
       - serial:
           name: "Make one transfer from 2 to 0"
           tasks:
-            - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node2 to node0"
@@ -185,7 +185,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node3"
           tasks:
-            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node3"
@@ -195,7 +195,7 @@ scenario:
       - serial:
           name: "Make one transfer from node3 to node0"
           tasks:
-            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node3 to node0"
@@ -205,7 +205,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node4"
           tasks:
-            - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node4"
@@ -215,7 +215,7 @@ scenario:
       - serial:
           name: "Make one transfer from node4 to node0"
           tasks:
-            - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node4 to node0"
@@ -225,7 +225,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node5"
           tasks:
-            - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node5"
@@ -235,7 +235,7 @@ scenario:
       - serial:
           name: "Make one transfer from node5 to node0"
           tasks:
-            - transfer: {from: 5, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 5, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node5 to node0"
@@ -245,7 +245,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node6"
           tasks:
-            - transfer: {from: 0, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node6"
@@ -255,7 +255,7 @@ scenario:
       - serial:
           name: "Make one transfer from node6 to node0"
           tasks:
-            - transfer: {from: 6, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 6, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node6 to node0"
@@ -265,7 +265,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node7"
           tasks:
-            - transfer: {from: 0, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node7"
@@ -275,7 +275,7 @@ scenario:
       - serial:
           name: "Make one transfer from node7 to node0"
           tasks:
-            - transfer: {from: 7, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 7, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node7 to node0"
@@ -285,7 +285,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node8"
           tasks:
-            - transfer: {from: 0, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node8"
@@ -295,7 +295,7 @@ scenario:
       - serial:
           name: "Make one transfer from node8 to node0"
           tasks:
-            - transfer: {from: 8, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 8, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node8 to node0"
@@ -305,7 +305,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node9"
           tasks:
-            - transfer: {from: 0, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node9"
@@ -315,7 +315,7 @@ scenario:
       - serial:
           name: "Make one transfer from node9 to node0"
           tasks:
-            - transfer: {from: 9, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 9, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node9 to node0"
@@ -325,7 +325,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node10"
           tasks:
-            - transfer: {from: 0, to: 10, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 10, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node10"
@@ -335,7 +335,7 @@ scenario:
       - serial:
           name: "Make one transfer from node10 to node0"
           tasks:
-            - transfer: {from: 10, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 10, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node10 to node0"
@@ -345,7 +345,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node11"
           tasks:
-            - transfer: {from: 0, to: 11, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 11, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node11"
@@ -355,7 +355,7 @@ scenario:
       - serial:
           name: "Make one transfer from node11 to node0"
           tasks:
-            - transfer: {from: 11, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 11, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node11 to node0"
@@ -365,7 +365,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node12"
           tasks:
-            - transfer: {from: 0, to: 12, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 12, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node12"
@@ -375,7 +375,7 @@ scenario:
       - serial:
           name: "Make one transfer from node12 to node0"
           tasks:
-            - transfer: {from: 12, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 12, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node12 to node0"
@@ -385,7 +385,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node13"
           tasks:
-            - transfer: {from: 0, to: 13, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 13, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node13"
@@ -395,7 +395,7 @@ scenario:
       - serial:
           name: "Make one transfer from node13 to node0"
           tasks:
-            - transfer: {from: 13, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 13, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node13 to node0"
@@ -405,7 +405,7 @@ scenario:
       - serial:
           name: "Make one transfer from node0 to node14"
           tasks:
-            - transfer: {from: 0, to: 14, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 14, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node0 to node14"
@@ -415,7 +415,7 @@ scenario:
       - serial:
           name: "Make one transfer from node14 to node0"
           tasks:
-            - transfer: {from: 14, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 14, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
       - wait: 100
       - parallel:
           name: "Assert after one transfer from node14 to node0"
