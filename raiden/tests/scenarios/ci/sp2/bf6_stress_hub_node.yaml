@@ -37,8 +37,6 @@ nodes:
     proportional-imbalance-fee:
       - "0x62083c80353Df771426D209eF578619EE68D5C7A"
       - 0
-    default-settle-timeout: 40
-    default-reveal-timeout: 20
 
   node_options:
     0:
