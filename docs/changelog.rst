@@ -3,7 +3,7 @@ Changelog
 =========
 
 * :bug:`5395` Convert and return big integers as strings in the API response body.
-* :feature:`-` Update WebUI to version 0.10.2 https://github.com/raiden-network/webui/releases/tag/v0.10.2
+* :feature:`-` Update WebUI to version 0.10.4 https://github.com/raiden-network/webui/releases/tag/v0.10.4
 
 * :release:`0.200.0-rc2 <2019-11-25>`
 * :feature:`5050` Raiden's argument --debug-logfile-name has been renamed to --debug-logfile-path to better reflect the argument's function.
