@@ -183,7 +183,7 @@ Firing it up
 To fire up Raiden you need at least
  1. a synced **Ethereum Node** - using geth, parity or infura
  2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
-
+ 3. (Only if you use services that charge fees) A deposit of RDN tokens to pay the services with.
 We will provide you with the necessary cli arguments step by step. Full example is at the end of the page.
 
 1. and 2. The synced Ethereum Node & Keystore
@@ -306,6 +306,24 @@ Finally by default the output of the logs are in plain readable text format. In 
 Summing up these are the arguments you need to append if you want to disable the debug log and want to configure normal logging for up to debug statement in json inside a file called ``raiden.log``
 
 ``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``
+
+3. Depositing tokens to pay the services
+****************************************
+
+To pay the services, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
+In this section, we will briefly explain how the ``UserDeposit`` contract can be interacted with manually
+so you are able to use Raiden without the Raiden Wizard or any auxilliary scripts.
+
+All services that are registered in the service registry of a given network will use one shared instance of ``UserDeposit``.
+You can obtain the address of the contract from
+``https://github.com/raiden-network/raiden-contracts/blob/master/raiden_contracts/data/deployment_services_<network>.json``,
+where ``network`` is one of ``mainnet``, ``ropsten``, ``rinkeby`` or ``goerli``.
+
+Log into MyEtherWallet, the geth console or any other Ethereum interface you like with an account
+that holds enough Raiden tokens, and call ``UserDeposit.deposit(<beneficiary>, <total_deposit>)``.
+
+Here ``total_deposit`` is the amount of Raiden tokens you wish to deposit and ``beneficiary`` is the
+Ethereum address of your Raiden node.
 
 Further reading
 ***************
