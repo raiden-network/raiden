@@ -37,7 +37,8 @@ def get_best_routes(
     previous_address: Optional[Address],
     pfs_config: Optional[PFSConfig],
     privkey: bytes,
-) -> Tuple[List[RouteState], Optional[UUID]]:
+) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
+
     is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
     can_use_pfs = pfs_config is not None and one_to_n_address is not None
 
@@ -75,10 +76,10 @@ def get_best_routes(
                 )
                 >= amount
             ):
-                return [route_state], None
+                return (None, [route_state], None)
 
     if pfs_config is not None and one_to_n_address is not None:
-        pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
+        pfs_erro_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
@@ -90,30 +91,28 @@ def get_best_routes(
             privkey=privkey,
         )
 
-        if pfs_answer_ok:
+        if not pfs_erro_msg:
             log.info(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
-            return pfs_routes, pfs_feedback_token
+            return (pfs_erro_msg, pfs_routes, pfs_feedback_token)
 
         log.warning(
             "Request to Pathfinding Service was not successful. "
             "No routes to the target are found."
         )
-        return list(), None
+        return (pfs_erro_msg, list(), None)
 
     # else non-pfs so let's use internal routing
-    return (
-        get_best_routes_internal(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            from_address=from_address,
-            to_address=to_address,
-            amount=amount,
-            previous_address=previous_address,
-        ),
-        None,
+    routes = get_best_routes_internal(
+        chain_state=chain_state,
+        token_network_address=token_network_address,
+        from_address=from_address,
+        to_address=to_address,
+        amount=amount,
+        previous_address=previous_address,
     )
+    return (None, routes, None)
 
 
 class Neighbour(NamedTuple):
@@ -238,7 +237,7 @@ def get_best_routes_pfs(
     previous_address: Optional[Address],
     pfs_config: PFSConfig,
     privkey: bytes,
-) -> Tuple[bool, List[RouteState], Optional[UUID]]:
+) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
             pfs_config=pfs_config,
@@ -256,7 +255,7 @@ def get_best_routes_pfs(
         log_message = e.args[0]
         log_info = e.args[1] if len(e.args) > 1 else {}
         log.warning("An error with the path request occured", log_message=log_message, **log_info)
-        return False, [], None
+        return log_message, [], None
 
     paths = []
     for path_object in pfs_routes:
@@ -299,7 +298,7 @@ def get_best_routes_pfs(
             )
         )
 
-    return True, paths, feedback_token
+    return None, paths, feedback_token
 
 
 def resolve_routes(

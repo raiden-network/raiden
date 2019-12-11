@@ -139,7 +139,7 @@ def get_best_routes_with_iou_request_mocked(
         return mocked_json_response(response_data=iou_json_data)
 
     with patch.object(requests, "get", side_effect=iou_side_effect) as patched:
-        best_routes, feedback_token = get_best_routes(
+        _, best_routes, feedback_token = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
@@ -637,8 +637,8 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     # with the transfer of 50 the direct channel should be returned,
     # so there must be not a pfs call
     with patch("raiden.routing.get_best_routes_pfs") as pfs_request:
-        pfs_request.return_value = True, [], "feedback_token"
-        routes, _ = get_best_routes(
+        pfs_request.return_value = None, [], "feedback_token"
+        _, routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
@@ -656,7 +656,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     # with the transfer of 51 the direct channel should not be returned,
     # so there must be a pfs call
     with patch("raiden.routing.get_best_routes_pfs") as pfs_request:
-        pfs_request.return_value = True, [], "feedback_token"
+        pfs_request.return_value = None, [], "feedback_token"
         get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,

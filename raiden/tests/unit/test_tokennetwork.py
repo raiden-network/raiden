@@ -842,7 +842,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         address4: NetworkState.REACHABLE,
     }
 
-    routes1, _ = get_best_routes(
+    _, routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -864,7 +864,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         address4: NetworkState.REACHABLE,
     }
 
-    routes1, _ = get_best_routes(
+    _, routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -886,7 +886,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         address4: NetworkState.REACHABLE,
     }
 
-    routes1, _ = get_best_routes(
+    _, routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -908,7 +908,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         address4: NetworkState.REACHABLE,
     }
 
-    routes1, _ = get_best_routes(
+    _, routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -1074,7 +1074,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         address3: NetworkState.REACHABLE,
     }
 
-    routes, _ = get_best_routes(
+    _, routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -1096,7 +1096,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         address4: NetworkState.REACHABLE,
     }
 
-    routes, _ = get_best_routes(
+    _, routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -1177,7 +1177,7 @@ def test_internal_routing_mediation_fees(
     }
 
     # Routing to our direct partner would require 0 mediation fees.x
-    routes, _ = get_best_routes(
+    _, routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
@@ -1191,7 +1191,7 @@ def test_internal_routing_mediation_fees(
     assert routes[0].estimated_fee == 0
 
     # Routing to our address2 through address1 would charge 2%
-    routes, _ = get_best_routes(
+    _, routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_address=token_network_state.address,
         one_to_n_address=one_to_n_address,
