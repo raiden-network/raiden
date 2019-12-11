@@ -392,16 +392,14 @@ def create_apps(
                 config,
                 {
                     "transport_type": "matrix",
-                    "transport": {
-                        "matrix": MatrixTransportConfig(
-                            broadcast_rooms=broadcast_rooms,
-                            retries_before_backoff=retries_before_backoff,
-                            retry_interval=retry_interval,
-                            server=local_matrix_url,
-                            server_name=local_matrix_url.netloc,
-                            available_servers=[],
-                        )
-                    },
+                    "transport": MatrixTransportConfig(
+                        broadcast_rooms=broadcast_rooms,
+                        retries_before_backoff=retries_before_backoff,
+                        retry_interval=retry_interval,
+                        server=local_matrix_url,
+                        server_name=local_matrix_url.netloc,
+                        available_servers=[],
+                    ),
                 },
             )
 
@@ -422,7 +420,7 @@ def create_apps(
         if user_deposit_address:
             user_deposit = proxy_manager.user_deposit(user_deposit_address)
 
-        transport = MatrixTransport(config["transport"]["matrix"], environment=environment_type)
+        transport = MatrixTransport(config=config["transport"], environment=environment_type)
 
         raiden_event_handler = RaidenEventHandler()
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)

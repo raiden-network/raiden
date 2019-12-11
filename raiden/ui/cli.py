@@ -786,7 +786,7 @@ def smoketest(
             args["api_address"] = f"localhost:{port}"
             args["config"] = deepcopy(App.DEFAULT_CONFIG)
             args["environment_type"] = environment_type
-            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
+            args["extra_config"] = {"transport": {"available_servers": server_urls}}
             args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.PRIVATE
             args["flat_fee"] = ()

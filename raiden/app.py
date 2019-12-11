@@ -44,20 +44,18 @@ class App:  # pylint: disable=too-few-public-methods
             "confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
             "query_interval": DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
         },
-        "transport": {
-            "matrix": MatrixTransportConfig(
-                # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
-                available_servers=[],
-                # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
-                #       and fix the conditional in `raiden.ui.app:_setup_matrix`
-                #       as well as the tests
-                broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
-                retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-                retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
-                server="auto",
-                server_name=None,
-            )
-        },
+        "transport": MatrixTransportConfig(
+            # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
+            available_servers=[],
+            # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
+            #       and fix the conditional in `raiden.ui.app:_setup_matrix`
+            #       as well as the tests
+            broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
+            retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+            retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
+            server="auto",
+            server_name=None,
+        ),
         "rpc": True,
         "console": False,
         "shutdown_timeout": DEFAULT_SHUTDOWN_TIMEOUT,
