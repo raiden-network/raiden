@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from http import HTTPStatus
 from itertools import count, product
+from time import time
 from types import TracebackType
 from typing import Any, Callable, Iterator, List, NewType, NoReturn, Optional, Set, Type
 
@@ -292,7 +293,13 @@ def do_transfer(post_url: str, identifier: int, amount: int) -> requests.Respons
 
     log.debug("Payment request", url=post_url, json=json)
 
-    return requests.post(post_url, json=json)
+    start = time()
+    response = requests.post(post_url, json=json)
+    elapsed = time() - start
+
+    log.debug("Payment done", url=post_url, json=json, time=elapsed)
+
+    return response
 
 
 def transfer_and_assert_successful(
