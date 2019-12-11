@@ -151,7 +151,7 @@ def test_participant_selection(raiden_network, token_addresses):
                 to_address=target.raiden.address,
                 amount=PaymentAmount(1),
                 previous_address=None,
-                config={},
+                pfs_config=None,
                 privkey=b"",  # not used if pfs is not configured
             )
             assert routes is not None

@@ -128,7 +128,7 @@ class MockRaidenService:
 
         self.message_handler = message_handler
         self.routing_mode = RoutingMode.PRIVATE
-        self.config = config
+        self.config = config or dict()
 
         self.user_deposit = Mock()
         self.default_registry = Mock()
