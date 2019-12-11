@@ -26,7 +26,7 @@ log = structlog.get_logger(__name__)
 
 @dataclass
 class ChannelNew:
-    """Descriptoin of a new channel.
+    """Description of a new channel.
 
     participant1 will open the channel, then participant2 will deposit in it.
     """
@@ -100,11 +100,11 @@ def channel_deposit_if_necessary(channel_details: Dict, deposit: ChannelDeposit)
 
 def channel_open_with_the_same_node(
     channels_to_open: List[ChannelNew],
-    target_to_depositqueue: Dict[Tuple[str, str], JoinableQueue],
+    targetchannel_to_depositqueue: Dict[Tuple[str, str], JoinableQueue],
 ) -> None:
-    """As of 0.100.5 channels cannot be open in parallel, starting multiple
+    """As of 0.100.5 channels cannot be opened in parallel, starting multiple
     opens at the same time can lead to the HTTP request timing out.  Therefore
-    here channels are open one after the other. (Issue #5446).
+    here channels are opened one after the other. (Issue #5446).
     """
     for channel_open in channels_to_open:
         channel = channel_details(
@@ -143,7 +143,7 @@ def channel_open_with_the_same_node(
         )
 
         log.info(f"Queueing {deposit}")
-        target_to_depositqueue[(channel_open.token_address, channel_open.participant2)].put(
+        targetchannel_to_depositqueue[(channel_open.token_address, channel_open.participant2)].put(
             deposit
         )
 
@@ -155,7 +155,7 @@ def channel_deposit_with_the_same_node_and_token_network(deposit_queue: Joinable
     Additionally, to prevent a node from trying to deposit more tokens than it
     has, and by consequence sending an unnecessary transaction, a lock is used.
     (e.g.: When two transactions that are individually valid, but together use
-    more than the account's balance). This has the side effect of forbiding
+    more than the account's balance). This has the side effect of forbidding
     concurrent deposits on the same token network. (Issue #5447)
     """
     while True:
@@ -195,12 +195,12 @@ def main() -> None:
         node_to_endpoint[node_name] = node_info["endpoint"]
         node_to_address[node_name] = node_info["address"]
 
-    queue_per_node: Dict[str, List[ChannelNew]] = defaultdict(list)
-    target_to_depositqueue: Dict[Tuple[str, str], JoinableQueue] = dict()
+    nodeaddress_to_queue: Dict[str, List[ChannelNew]] = defaultdict(list)
+    targetchannel_to_depositqueue: Dict[Tuple[str, str], JoinableQueue] = dict()
 
     # Schedule the requests to evenly distribute the load. This is important
-    # because as of 0.100.5 channel can not be done concurrently, by dividing
-    # the load evenly we make sure the channels are open as fast as possible.
+    # because as of 0.100.5 channel cannot be opened concurrently, by dividing
+    # the load evenly we make sure the channels are opened as fast as possible.
     for token_address, channels_to_open in config["networks"].items():
         for channel in channels_to_open:
             node1 = channel["node1"]
@@ -209,8 +209,8 @@ def main() -> None:
             participant1 = node_to_address[node1]
             participant2 = node_to_address[node2]
 
-            is_node1_with_less_work = len(queue_per_node[participant1]) < len(
-                queue_per_node[participant2]
+            is_node1_with_less_work = len(nodeaddress_to_queue[participant1]) < len(
+                nodeaddress_to_queue[participant2]
             )
 
             if is_node1_with_less_work:
@@ -223,7 +223,7 @@ def main() -> None:
                     minimum_capacity1=channel["minimum_capacity1"],
                     minimum_capacity2=channel["minimum_capacity2"],
                 )
-                queue_per_node[participant1].append(channel_new)
+                nodeaddress_to_queue[participant1].append(channel_new)
             else:
                 channel_new = ChannelNew(
                     token_address=token_address,
@@ -234,20 +234,22 @@ def main() -> None:
                     minimum_capacity1=channel["minimum_capacity2"],
                     minimum_capacity2=channel["minimum_capacity1"],
                 )
-                queue_per_node[participant2].append(channel_new)
+                nodeaddress_to_queue[participant2].append(channel_new)
 
             # queue used to order deposits
             target = (token_address, channel_new.participant2)
-            if target not in target_to_depositqueue:
-                target_to_depositqueue[target] = JoinableQueue()
+            if target not in targetchannel_to_depositqueue:
+                targetchannel_to_depositqueue[target] = JoinableQueue()
 
     open_greenlets = set(
-        gevent.spawn(channel_open_with_the_same_node, channels_to_open, target_to_depositqueue)
-        for channels_to_open in queue_per_node.values()
+        gevent.spawn(
+            channel_open_with_the_same_node, channels_to_open, targetchannel_to_depositqueue
+        )
+        for channels_to_open in nodeaddress_to_queue.values()
     )
     deposit_greenlets = [
         gevent.spawn(channel_deposit_with_the_same_node_and_token_network, deposit_queue)
-        for deposit_queue in target_to_depositqueue.values()
+        for deposit_queue in targetchannel_to_depositqueue.values()
     ]
 
     gevent.joinall(open_greenlets, raise_error=True)
@@ -255,7 +257,7 @@ def main() -> None:
 
     # Because all channels have been opened, there is no more deposits to do,
     # so now one just has to wait for the queues to get empty.
-    for queue in target_to_depositqueue.values():
+    for queue in targetchannel_to_depositqueue.values():
         # Queue` and `JoinableQueue` don't have the method `rawlink`, so
         # `joinall` cannot be used. At the same time calling `join` in the
         # `JoinableQueue` was raising an exception `This operation would block
