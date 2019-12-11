@@ -850,7 +850,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         to_address=address4,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",  # not used if pfs is not configured
     )
     assert routes1[0].next_hop_address == address1
@@ -872,7 +872,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         to_address=address4,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",
     )
     assert routes1[0].next_hop_address == address1
@@ -894,7 +894,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         to_address=address4,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",
     )
     assert routes1[0].next_hop_address == address1
@@ -916,7 +916,7 @@ def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, o
         to_address=address3,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",
     )
     # right now the channel to 1 gets filtered out as it is offline
@@ -1082,7 +1082,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         to_address=address3,
         amount=1,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",
     )
     assert routes[0].next_hop_address == address1
@@ -1104,7 +1104,7 @@ def test_routing_priority(chain_state, token_network_state, one_to_n_address, ou
         to_address=address4,
         amount=1,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",
     )
     assert routes[0].next_hop_address == address2
@@ -1185,7 +1185,7 @@ def test_internal_routing_mediation_fees(
         to_address=address1,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",  # not used if pfs is not configured
     )
     assert routes[0].estimated_fee == 0
@@ -1199,7 +1199,7 @@ def test_internal_routing_mediation_fees(
         to_address=address2,
         amount=50,
         previous_address=None,
-        config={},
+        pfs_config=None,
         privkey=b"",  # not used if pfs is not configured
     )
     assert routes[0].estimated_fee == round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * 50)

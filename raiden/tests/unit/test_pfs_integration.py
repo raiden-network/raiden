@@ -147,7 +147,7 @@ def get_best_routes_with_iou_request_mocked(
             to_address=to_address,
             amount=amount,
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
         assert_checksum_address_in_url(patched.call_args[0][0])
@@ -646,7 +646,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             to_address=address1,
             amount=PaymentAmount(50),
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
         assert routes[0].next_hop_address == address1
@@ -665,7 +665,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             to_address=address1,
             amount=PaymentAmount(51),
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
 

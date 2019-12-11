@@ -1,5 +1,5 @@
 from heapq import heappop, heappush
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 from uuid import UUID
 
 import networkx
@@ -35,11 +35,9 @@ def get_best_routes(
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    config: Dict[str, Any],
+    pfs_config: Optional[PFSConfig],
     privkey: bytes,
 ) -> Tuple[List[RouteState], Optional[UUID]]:
-    pfs_config = config.get("pfs_config", None)
-
     is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
     can_use_pfs = pfs_config is not None and one_to_n_address is not None
 
@@ -79,8 +77,7 @@ def get_best_routes(
             ):
                 return [route_state], None
 
-    if can_use_pfs:
-        assert one_to_n_address  # mypy doesn't realize this has been checked above
+    if pfs_config is not None and one_to_n_address is not None:
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_address=token_network_address,

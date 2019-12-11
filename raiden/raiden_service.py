@@ -142,7 +142,7 @@ def initiator_init(
         to_address=target_address,
         amount=transfer_amount,
         previous_address=None,
-        config=raiden.config,
+        pfs_config=raiden.config.get("pfs_config", None),
         privkey=raiden.privkey,
     )
 
