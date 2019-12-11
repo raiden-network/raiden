@@ -26,7 +26,7 @@ from raiden.network.transport.matrix import AddressReachability, MatrixTransport
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias, my_place_or_yours
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
-from raiden.settings import MONITORING_REWARD
+from raiden.settings import MONITORING_REWARD, MatrixTransportConfig
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.factories import HOP1, make_privkeys_ordered
@@ -308,14 +308,14 @@ def test_matrix_message_retry(
     partner_address = factories.make_address()
 
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=[local_matrix_servers[0]],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport._send_raw = MagicMock()
@@ -386,14 +386,14 @@ def test_join_invalid_discovery(
     our current server should be created
     """
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": ["http://invalid.server"],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=["http://invalid.server"],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0
@@ -451,14 +451,14 @@ def test_matrix_discovery_room_offline_server(
 ):
 
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0], "https://localhost:1"],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=[local_matrix_servers[0], "https://localhost:1"],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport.start(MockRaidenService(None), [], "")
@@ -479,14 +479,14 @@ def test_matrix_broadcast(
     local_matrix_servers, retries_before_backoff, retry_interval, broadcast_rooms
 ):
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=[local_matrix_servers[0]],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport.start(MockRaidenService(None), [], "")
@@ -527,14 +527,14 @@ def test_monitoring_broadcast_messages(
     MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=[local_matrix_servers[0]],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0
@@ -599,14 +599,14 @@ def test_pfs_broadcast_messages(
     PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport(
-        {
-            "broadcast_rooms": broadcast_rooms,
-            "retries_before_backoff": retries_before_backoff,
-            "retry_interval": retry_interval,
-            "server": local_matrix_servers[0],
-            "server_name": local_matrix_servers[0].netloc,
-            "available_servers": [local_matrix_servers[0]],
-        },
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms,
+            retries_before_backoff=retries_before_backoff,
+            retry_interval=retry_interval,
+            server=local_matrix_servers[0],
+            server_name=local_matrix_servers[0].netloc,
+            available_servers=[local_matrix_servers[0]],
+        ),
         environment=Environment.DEVELOPMENT,
     )
     transport._client.api.retry_timeout = 0

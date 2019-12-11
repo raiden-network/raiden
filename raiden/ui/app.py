@@ -78,25 +78,25 @@ log = structlog.get_logger(__name__)
 
 
 def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTransport:
-    if config["transport"]["matrix"].get("available_servers") is None:
+    if not config["transport"]["matrix"].available_servers:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
         available_servers = get_matrix_servers(available_servers_url)
         log.debug("Fetching available matrix servers", available_servers=available_servers)
-        config["transport"]["matrix"]["available_servers"] = available_servers
+        config["transport"]["matrix"].available_servers = available_servers
 
     # Add PFS broadcast room when not in privat mode
     if routing_mode != RoutingMode.PRIVATE:
-        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["broadcast_rooms"]:
-            config["transport"]["matrix"]["broadcast_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
+        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"].broadcast_rooms:
+            config["transport"]["matrix"].broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
     if config["services"]["monitoring_enabled"] is True:
-        config["transport"]["matrix"]["broadcast_rooms"].append(MONITORING_BROADCASTING_ROOM)
+        config["transport"]["matrix"].broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
 
     try:
         transport = MatrixTransport(
-            config["transport"]["matrix"], environment=config["environment_type"]
+            config=config["transport"]["matrix"], environment=config["environment_type"]
         )
     except RaidenError as ex:
         click.secho(f"FATAL: {ex}", fg="red")
@@ -228,7 +228,7 @@ def run_app(
     config["api_port"] = api_port
     config["resolver_endpoint"] = resolver_endpoint
     config["transport_type"] = transport
-    config["transport"]["matrix"]["server"] = matrix_server
+    config["transport"]["matrix"].server = matrix_server
     config["unrecoverable_error_should_crash"] = unrecoverable_error_should_crash
     config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
     config["services"]["monitoring_enabled"] = enable_monitoring
