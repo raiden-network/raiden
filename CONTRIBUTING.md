@@ -527,6 +527,14 @@ function, which will fill in appropriate defaults for each unspecified
 parameter. See the documentation of
 `raiden.tests.utils.factories.Properties` for further details.
 
+The `raiden.tests.utils.detect_failure` module contains two decorators
+for integration tests that run `RaidenService` instances. The use of one
+of the decorators is required on each such test and pytest will enforce it.
+`@raise_on_failure` will make sure every crash of a `RaidenService` leads
+to instant failure of the test, and `@expect_failure` indicates that we
+actually expect the crash of a `RaidenService` instance within the test
+and want to ignore it.
+
 ### Workflow
 
 When developing a feature, or a bug fix you should always start by writing a
