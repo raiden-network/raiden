@@ -19,7 +19,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
-from raiden.exceptions import MatrixProcessingTakingTooLongError
+from raiden.exceptions import MatrixSyncMaxTimeoutReached
 
 log = structlog.get_logger(__name__)
 
@@ -483,16 +483,20 @@ class GMatrixClient(MatrixClient):
         )
         before_processing = time.time()
         self._handle_response(response=response, first_sync=is_first_sync)
-        processing_time_s = time.time() - before_processing
+        processing_time_in_seconds = time.time() - before_processing
 
         # If processing the matrix response takes longer than the poll timout, it cannot be
         # ensured that all messages have been processed.
         # Therefore an exception is thrown when in development mode.
-        timeout_s = timeout_ms // 1_000
-        if processing_time_s >= timeout_s and self.environment == Environment.DEVELOPMENT:
-            raise MatrixProcessingTakingTooLongError(
-                f"Processing Matrix response took {processing_time_s}s, "
-                f"poll timeout is {timeout_s}s."
+        timeout_in_seconds = timeout_ms // 1_000
+        timeout_reached = (
+            processing_time_in_seconds >= timeout_in_seconds
+            and self.environment == Environment.DEVELOPMENT
+        )
+        if timeout_reached:
+            raise MatrixSyncMaxTimeoutReached(
+                f"Processing Matrix response took {processing_time_in_seconds}s, "
+                f"poll timeout is {timeout_in_seconds}s."
             )
 
         # Updating the sync token should only be done after the response has been processed,
