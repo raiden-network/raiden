@@ -66,8 +66,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
 
     # Restart the app. The pending transfers must be processed.
     new_transport = MatrixTransport(
-        app0.raiden.config["transport"]["matrix"],
-        environment=app0.raiden.config["environment_type"],
+        config=app0.raiden.config["transport"], environment=app0.raiden.config["environment_type"]
     )
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
@@ -193,7 +192,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_msc_address=app0.raiden.default_msc_address,
         transport=MatrixTransport(
-            app0.raiden.config["transport"]["matrix"],
+            config=app0.raiden.config["transport"],
             environment=app0.raiden.config["environment_type"],
         ),
         raiden_event_handler=RaidenEventHandler(),
