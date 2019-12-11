@@ -5,6 +5,7 @@ import pytest
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
+from raiden.settings import MatrixTransportConfig
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
 from raiden.utils.typing import Optional
@@ -73,14 +74,14 @@ def matrix_transports(
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
             MatrixTransport(
-                {
-                    "broadcast_rooms": broadcast_rooms,
-                    "retries_before_backoff": retries_before_backoff,
-                    "retry_interval": retry_interval,
-                    "server": server,
-                    "server_name": server.netloc,
-                    "available_servers": local_matrix_servers,
-                },
+                config=MatrixTransportConfig(
+                    broadcast_rooms=broadcast_rooms,
+                    retries_before_backoff=retries_before_backoff,
+                    retry_interval=retry_interval,
+                    server=server,
+                    server_name=server.netloc,
+                    available_servers=local_matrix_servers,
+                ),
                 environment=Environment.DEVELOPMENT,
             )
         )

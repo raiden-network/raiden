@@ -42,6 +42,7 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.network.transport.utils import timeout_exponential_backoff
+from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
@@ -144,9 +145,9 @@ class _RetryQueue(Runnable):
                 )
                 return
             timeout_generator = timeout_exponential_backoff(
-                self.transport._config["retries_before_backoff"],
-                self.transport._config["retry_interval"],
-                self.transport._config["retry_interval"] * 10,
+                self.transport._config.retries_before_backoff,
+                self.transport._config.retry_interval,
+                self.transport._config.retry_interval * 10,
             )
             expiration_generator = self._expiration_generator(timeout_generator)
             self._message_queue.append(
@@ -267,7 +268,7 @@ class _RetryQueue(Runnable):
                 if self._message_queue:
                     self._check_and_send()
             # wait up to retry_interval (or to be notified) before checking again
-            self._notify_event.wait(self.transport._config["retry_interval"])
+            self._notify_event.wait(self.transport._config.retry_interval)
 
     def __str__(self) -> str:
         return self.greenlet.name
@@ -281,25 +282,25 @@ class MatrixTransport(Runnable):
     _room_sep = "_"
     log = log
 
-    def __init__(self, config: Dict[str, Any], environment: Environment) -> None:
+    def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
         super().__init__()
         self._uuid = uuid4()
         self._config = config
         self._raiden_service: Optional["RaidenService"] = None
 
-        if config["server"] == "auto":
-            available_servers = config["available_servers"]
-        elif urlparse(config["server"]).scheme in {"http", "https"}:
-            available_servers = [config["server"]]
+        if config.server == "auto":
+            available_servers = config.available_servers
+        elif urlparse(config.server).scheme in {"http", "https"}:
+            available_servers = [config.server]
         else:
             raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
 
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return timeout_exponential_backoff(
-                config["retries_before_backoff"],
-                config["retry_interval"] / 5,
-                config["retry_interval"],
+                self._config.retries_before_backoff,
+                self._config.retry_interval / 5,
+                self._config.retry_interval,
             )
 
         self._client: GMatrixClient = make_client(
@@ -310,7 +311,7 @@ class MatrixTransport(Runnable):
             environment=environment,
         )
         self._server_url = self._client.api.base_url
-        self._server_name = config.get("server_name", urlparse(self._server_url).netloc)
+        self._server_name = config.server_name or urlparse(self._server_url).netloc
 
         self.greenlets: List[gevent.Greenlet] = list()
 
@@ -578,10 +579,10 @@ class MatrixTransport(Runnable):
 
     def _broadcast_worker(self) -> None:
         def _broadcast(room_name: str, serialized_message: str) -> None:
-            if not any(suffix in room_name for suffix in self._config["broadcast_rooms"]):
+            if not any(suffix in room_name for suffix in self._config.broadcast_rooms):
                 raise RuntimeError(
                     f'Broadcast called on non-public room "{room_name}". '
-                    f'Known public rooms: {self._config["broadcast_rooms"]}.'
+                    f"Known public rooms: {self._config.broadcast_rooms}."
                 )
             room_name = make_room_alias(self.chain_id, room_name)
             if room_name not in self._broadcast_rooms:
@@ -618,7 +619,7 @@ class MatrixTransport(Runnable):
 
             # Stop prioritizing broadcast messages after initial queue has been emptied
             self._prioritize_broadcast_messages = False
-            self._broadcast_event.wait(self._config["retry_interval"])
+            self._broadcast_event.wait(self._config.retry_interval)
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
@@ -637,7 +638,7 @@ class MatrixTransport(Runnable):
         return self._raiden_service.rpc_client.chain_id
 
     def _join_broadcast_rooms(self) -> None:
-        for suffix in self._config["broadcast_rooms"]:
+        for suffix in self._config.broadcast_rooms:
             room_name = make_room_alias(self.chain_id, suffix)
             broadcast_room_alias = f"#{room_name}:{self._server_name}"
             self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
@@ -667,7 +668,7 @@ class MatrixTransport(Runnable):
                 room_aliases.add(room.canonical_alias)
             room_alias_is_broadcast = any(
                 broadcast_alias in room_alias
-                for broadcast_alias in self._config["broadcast_rooms"]
+                for broadcast_alias in self._config.broadcast_rooms
                 for room_alias in room_aliases
             )
             if room_alias_is_broadcast:
@@ -1141,7 +1142,7 @@ class MatrixTransport(Runnable):
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(
             suffix in room_alias
-            for suffix in self._config["broadcast_rooms"]
+            for suffix in self._config.broadcast_rooms
             for room_alias in room.aliases
         )
 

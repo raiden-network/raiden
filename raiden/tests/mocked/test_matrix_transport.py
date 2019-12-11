@@ -7,6 +7,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import Room
+from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
@@ -72,16 +73,16 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     def mock_get_user_presence(self, user_id: str):
         return UserPresence.ONLINE
 
-    config = dict(
-        retry_interval=retry_interval,
+    config = MatrixTransportConfig(
+        broadcast_rooms=[],
         retries_before_backoff=retries_before_backoff,
+        retry_interval=retry_interval,
         server="http://none",
         server_name="none",
         available_servers=[],
-        broadcast_rooms=[],
     )
 
-    transport = MatrixTransport(config, environment=Environment.DEVELOPMENT)
+    transport = MatrixTransport(config=config, environment=Environment.DEVELOPMENT)
     transport._raiden_service = MockRaidenService()
     transport._stop_event.clear()
     transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)

@@ -7,7 +7,9 @@ from raiden.constants import Environment
 from raiden.utils.typing import (
     Dict,
     FeeAmount,
+    List,
     NetworkTimeout,
+    Optional,
     ProportionalFeeAmount,
     TokenAddress,
     TokenAmount,
@@ -103,3 +105,15 @@ class MediationFeeConfig:
         return self.token_to_proportional_imbalance_fee.get(  # pylint: disable=no-member
             token_address, DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
         )
+
+
+@dataclass
+class MatrixTransportConfig:
+    retries_before_backoff: int
+    retry_interval: float
+
+    broadcast_rooms: List[str]
+
+    server: str
+    available_servers: List[str]
+    server_name: Optional[str]

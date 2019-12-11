@@ -18,6 +18,7 @@ from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_RETRY_TIMEOUT,
+    MatrixTransportConfig,
     MediationFeeConfig,
 )
 from raiden.tests.utils.app import database_from_privatekey
@@ -392,14 +393,14 @@ def create_apps(
                 {
                     "transport_type": "matrix",
                     "transport": {
-                        "matrix": {
-                            "broadcast_rooms": broadcast_rooms,
-                            "retries_before_backoff": retries_before_backoff,
-                            "retry_interval": retry_interval,
-                            "server": local_matrix_url,
-                            "server_name": local_matrix_url.netloc,
-                            "available_servers": [],
-                        }
+                        "matrix": MatrixTransportConfig(
+                            broadcast_rooms=broadcast_rooms,
+                            retries_before_backoff=retries_before_backoff,
+                            retry_interval=retry_interval,
+                            server=local_matrix_url,
+                            server_name=local_matrix_url.netloc,
+                            available_servers=[],
+                        )
                     },
                 },
             )
