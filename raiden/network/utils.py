@@ -17,6 +17,11 @@ LOOPBACK = "127.0.0.1"
 
 
 def get_response_json(response: Response) -> Any:
+    """Decode response.
+
+    Fixes issues: #4174 #4378. simplejson failed to decode some responses,
+    whereas stdlib's json module does not fail.
+    """
     return json.loads(response.content)
 
 
