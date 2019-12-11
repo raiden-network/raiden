@@ -19,6 +19,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -346,6 +347,7 @@ def assert_channels(
 
 
 @pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4803")
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [2])

@@ -23,7 +23,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
-from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
@@ -160,6 +160,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     app0_restart.start()
 
 
+@expect_failure  # raise_on_failure will not work here since the apps are not started
 @pytest.mark.parametrize("start_raiden_apps", [False])
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
@@ -208,6 +209,7 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     # alarm task
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_fees_are_updated_during_startup(
     raiden_network, token_addresses, deposit, retry_timeout

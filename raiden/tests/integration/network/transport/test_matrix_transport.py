@@ -29,6 +29,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
+from raiden.tests.utils.detect_failure import expect_failure
 from raiden.tests.utils.factories import HOP1, make_privkeys_ordered
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
@@ -261,6 +262,7 @@ def test_matrix_message_sync(matrix_transports):
         assert any(m.delivered_message_identifier == i for m in transport0_messages)
 
 
+@expect_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
