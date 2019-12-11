@@ -1949,11 +1949,11 @@ def test_initiator_init():
     feedback_token = uuid.uuid4()
 
     with patch(
-        "raiden.routing.get_best_routes", return_value=(route_states, feedback_token)
+        "raiden.routing.get_best_routes", return_value=(None, route_states, feedback_token)
     ) as best_routes:
         assert len(service.route_to_feedback_token) == 0
 
-        state = initiator_init(
+        _, init_state_change = initiator_init(
             raiden=service,
             transfer_identifier=1,
             transfer_amount=PaymentAmount(100),
@@ -1967,7 +1967,7 @@ def test_initiator_init():
         assert len(service.route_to_feedback_token) == 1
         assert service.route_to_feedback_token[tuple(route_states[0].route)] == feedback_token
 
-        assert state.routes == route_states
+        assert init_state_change.routes == route_states
 
 
 def test_calculate_safe_amount_with_fee():

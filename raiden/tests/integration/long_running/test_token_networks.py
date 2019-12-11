@@ -143,7 +143,7 @@ def test_participant_selection(raiden_network, token_addresses):
         for target in raiden_network:
             if target.raiden.address == app.raiden.address:
                 continue
-            routes, _ = routing.get_best_routes(
+            _, routes, _ = routing.get_best_routes(
                 chain_state=node_state,
                 token_network_address=network_state.address,
                 one_to_n_address=one_to_n_address,
