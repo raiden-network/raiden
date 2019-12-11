@@ -335,5 +335,5 @@ class SerializationError(RaidenError):
     """ Invalid data are to be (de-)serialized. """
 
 
-class MatrixProcessingTakingTooLongError(RaidenRecoverableError):
+class MatrixSyncMaxTimeoutReached(RaidenRecoverableError):
     """ Raised if processing the matrix response takes longer than the poll timeout. """
