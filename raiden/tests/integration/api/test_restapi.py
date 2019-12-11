@@ -33,6 +33,7 @@ from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
+from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
@@ -179,6 +180,7 @@ def test_address_field():
     assert field._deserialize("0x414D72a6f6E28F4950117696081450d63D56C354", attr, data) == address
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_invalid_addresses(api_server_test_instance: APIServer, rest_api_port_number):
@@ -210,6 +212,7 @@ def test_payload_with_invalid_addresses(api_server_test_instance: APIServer, res
 @pytest.mark.xfail(
     strict=True, reason="Crashed app also crashes on teardown", raises=CustomException
 )
+@expect_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_crash_on_unhandled_exception(api_server_test_instance: APIServer) -> None:
@@ -227,6 +230,7 @@ def test_crash_on_unhandled_exception(api_server_test_instance: APIServer) -> No
     api_server_test_instance.greenlet.get(timeout=10)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer):
@@ -244,6 +248,7 @@ def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer)
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_address_invalid_length(api_server_test_instance: APIServer):
@@ -261,6 +266,7 @@ def test_payload_with_address_invalid_length(api_server_test_instance: APIServer
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_address_not_eip55(api_server_test_instance: APIServer):
@@ -278,6 +284,7 @@ def test_payload_with_address_not_eip55(api_server_test_instance: APIServer):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_query_our_address(api_server_test_instance: APIServer):
@@ -289,6 +296,7 @@ def test_api_query_our_address(api_server_test_instance: APIServer):
     assert get_json_response(response) == {"our_address": to_checksum_address(our_address)}
 
 
+@raise_on_failure
 def test_api_get_raiden_version(api_server_test_instance: APIServer):
     request = grequests.get(api_url_for(api_server_test_instance, "versionresource"))
     response = request.send().response
@@ -299,6 +307,7 @@ def test_api_get_raiden_version(api_server_test_instance: APIServer):
     assert get_json_response(response) == {"version": raiden_version}
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_get_channel_list(
@@ -341,6 +350,7 @@ def test_api_get_channel_list(
     assert "token_network_address" in channel_info
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_channel_status_channel_nonexistant(
@@ -366,6 +376,7 @@ def test_api_channel_status_channel_nonexistant(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_and_deposit_channel(
@@ -548,6 +559,7 @@ def test_api_open_and_deposit_channel(
     assert "The account balance is below the estimated amount" in json_response["errors"]
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_and_deposit_race(
@@ -647,6 +659,7 @@ def test_api_open_and_deposit_race(
     assert channel_info["total_deposit"] == str(deposit_amount)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_close_and_settle_channel(
@@ -746,6 +759,7 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response, HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_close_insufficient_eth(
@@ -799,6 +813,7 @@ def test_api_close_insufficient_eth(
     assert "insufficient ETH" in json_response["errors"]
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_open_channel_invalid_input(
@@ -835,6 +850,7 @@ def test_api_open_channel_invalid_input(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_api_channel_state_change_errors(
@@ -985,6 +1001,7 @@ def test_api_channel_state_change_errors(
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [2])
@@ -1028,6 +1045,7 @@ def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, to
     assert set(json_response) == set(expected_response)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_query_partners_by_token(
@@ -1094,6 +1112,7 @@ def test_query_partners_by_token(
     assert all(r in json_response for r in expected_response)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_target_error(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1121,6 +1140,7 @@ def test_api_payments_target_error(
     app1.start()
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments(
     api_server_test_instance: APIServer, raiden_network, token_addresses, deposit
@@ -1202,6 +1222,7 @@ def test_api_payments(
     assert all("TimestampedEvent" in event for event in events)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_timestamp_format(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1238,6 +1259,7 @@ def test_api_timestamp_format(
     assert log_timestamp_iso == log_timestamp, "log_time is not a valid ISO8601 string"
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_secret_hash_errors(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1327,6 +1349,7 @@ def test_api_payments_secret_hash_errors(
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_secret_no_hash(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1365,6 +1388,7 @@ def test_api_payments_with_secret_no_hash(
     assert secret == json_response["secret"]
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_hash_no_secret(
     api_server_test_instance, raiden_network, token_addresses
@@ -1401,6 +1425,7 @@ def test_api_payments_with_hash_no_secret(
     assert payment == payment
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("resolver_ports", [[None, 8000]])
 def test_api_payments_with_resolver(
@@ -1475,6 +1500,7 @@ def test_api_payments_with_resolver(
     assert payment == payment
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_secret_and_hash(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1520,6 +1546,7 @@ def test_api_payments_with_secret_and_hash(
     assert secret_hash == json_response["secret_hash"]
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_conflicts(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -1555,6 +1582,7 @@ def test_api_payments_conflicts(
     assert all(response.status_code == HTTPStatus.OK for response in responses)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -1584,6 +1612,7 @@ def test_register_token_mainnet(
     assert response is not None and response.status_code == HTTPStatus.NOT_IMPLEMENTED
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -1661,6 +1690,7 @@ def test_register_token(
     assert_response_with_error(poor_response, HTTPStatus.PAYMENT_REQUIRED)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -1726,6 +1756,7 @@ def test_get_token_network_for_token(
     assert token_network_address == get_json_response(token_response)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -1785,6 +1816,7 @@ def test_get_connection_managers_info(api_server_test_instance: APIServer, token
     # assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -1805,6 +1837,7 @@ def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token
     assert "The account balance is below the estimated amount" in json_response["errors"]
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_network_events(api_server_test_instance: APIServer, token_addresses):
@@ -1836,6 +1869,7 @@ def test_network_events(api_server_test_instance: APIServer, token_addresses):
     assert len(get_json_response(response)) > 0
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_token_events(api_server_test_instance: APIServer, token_addresses):
@@ -1868,6 +1902,7 @@ def test_token_events(api_server_test_instance: APIServer, token_addresses):
     assert len(get_json_response(response)) > 0
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_events(api_server_test_instance: APIServer, token_addresses):
@@ -1901,6 +1936,7 @@ def test_channel_events(api_server_test_instance: APIServer, token_addresses):
     assert len(get_json_response(response)) > 0
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_token_events_errors_for_unregistered_token(api_server_test_instance):
@@ -1930,6 +1966,7 @@ def test_token_events_errors_for_unregistered_token(api_server_test_instance):
     assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("deposit", [DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT])
@@ -2000,6 +2037,7 @@ def test_api_deposit_limit(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_payment_events_endpoints(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -2333,6 +2371,7 @@ def test_payment_events_endpoints(
     app2_server.stop()
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_events_raiden(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -2356,6 +2395,7 @@ def test_channel_events_raiden(
     assert_proper_response(response)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_pending_transfers_endpoint(raiden_network, token_addresses):
@@ -2452,6 +2492,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     assert response.status_code == 404 and b"Channel" in response.content
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
 def test_api_withdraw(api_server_test_instance: APIServer, raiden_network, token_addresses):
@@ -2512,6 +2553,7 @@ def test_api_withdraw(api_server_test_instance: APIServer, raiden_network, token
     assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -2553,6 +2595,7 @@ def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addre
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_lock_timeout(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -2632,6 +2675,7 @@ def test_api_payments_with_lock_timeout(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_api_payments_with_invalid_input(
     api_server_test_instance: APIServer, raiden_network, token_addresses
@@ -2684,6 +2728,7 @@ def test_api_payments_with_invalid_input(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [0])
 def test_api_set_reveal_timeout(
