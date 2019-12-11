@@ -10,7 +10,7 @@ import signal
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from http import HTTPStatus
-from itertools import count, product
+from itertools import chain, count, product
 from time import time
 from types import TracebackType
 from typing import Any, Callable, Iterator, List, NewType, NoReturn, Optional, Set, Type
@@ -519,6 +519,12 @@ def main() -> None:
     nodes_config: List[NodeConfig] = list()
     nodes_running: List[RunningNode] = list()
 
+    defaults = {
+        "--log-config": "raiden:DEBUG",
+        "--environment-type": "development",
+        "--datadir": datadir,
+    }
+
     for section in config:
         if NODE_SECTION_RE.match(section):
             node_config = config[section]
@@ -526,30 +532,29 @@ def main() -> None:
             port = next(port_generator)
             api_url = f"{interface}:{port}"
 
+            node = defaults.copy()
+            node.update(
+                {
+                    "--keystore-path": node_config["keystore"],
+                    "--password-file": node_config["password-file"],
+                    "--eth-rpc-endpoint": node_config["ethnode"],
+                    "--network-id": node_config["networkid"],
+                    "--address": address,
+                    "--api-address": api_url,
+                }
+            )
+
+            pathfinding_url = node_config.get("pathfinding-service-address")
+            if pathfinding_url is not None:
+                node["--pathfinding-service-address"] = pathfinding_url
+
             raiden_args = [
                 "raiden",
                 "--accept-disclaimer",
                 "--log-json",
-                "--log-config",
-                "raiden:DEBUG",
                 "--disable-debug-logfile",
-                "--environment-type",
-                "development",
-                "--datadir",
-                datadir,
-                "--keystore-path",
-                node_config["keystore"],
-                "--password-file",
-                node_config["password-file"],
-                "--eth-rpc-endpoint",
-                node_config["ethnode"],
-                "--network-id",
-                node_config["networkid"],
-                "--address",
-                address,
-                "--api-address",
-                api_url,
             ]
+            raiden_args.extend(chain.from_iterable(node.items()))
 
             if not is_checksum_address(address):
                 raise ValueError(f"address {address} is not checksummed.")
