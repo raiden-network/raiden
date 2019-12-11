@@ -35,6 +35,7 @@ NO_ROUTE_ERROR = 409
 UNBUFERRED = 0
 STATUS_CODE_FOR_SUCCESS = 0
 FIRST_VALID_PAYMENT_ID = 1
+WAIT_FOR_SOCKET_TO_BE_AVAILABLE = 60
 
 # A partial transfer plan is a list of transfers which is guaranteed to succeed
 # (regardless of the order), however the channels won't be restored to their
@@ -268,6 +269,7 @@ def kill_restart_and_wait_for_server(
     nursery: Nursery, node: RunningNode, retry_timeout: int
 ) -> RunningNode:
     node.process.send_signal(signal.SIGINT)
+    gevent.sleep(WAIT_FOR_SOCKET_TO_BE_AVAILABLE)
     return start_and_wait_for_server(nursery, node.config, retry_timeout)
 
 
