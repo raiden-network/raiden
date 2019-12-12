@@ -269,39 +269,35 @@ def subdispatch_initiatortask(
     token_network_address: TokenNetworkAddress,
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
-
-    block_number = chain_state.block_number
-    sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-
-    if not sub_task:
-        manager_state = None
-    elif sub_task and isinstance(sub_task, InitiatorTask):
-        if token_network_address != sub_task.token_network_address:
-            return TransitionResult(chain_state, [])
-        manager_state = sub_task.manager_state
-    else:
-        return TransitionResult(chain_state, [])
-
     token_network_state = get_token_network_by_address(chain_state, token_network_address)
-
     if not token_network_state:
         return TransitionResult(chain_state, [])
 
-    pseudo_random_generator = chain_state.pseudo_random_generator
+    sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
+    if not sub_task:
+        manager_state = None
+    else:
+        if (
+            not isinstance(sub_task, InitiatorTask)
+            or token_network_address != sub_task.token_network_address
+        ):
+            return TransitionResult(chain_state, [])
+        manager_state = sub_task.manager_state
+
     iteration = initiator_manager.state_transition(
         payment_state=manager_state,
         state_change=state_change,
         channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
         nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        pseudo_random_generator=chain_state.pseudo_random_generator,
+        block_number=chain_state.block_number,
     )
     events: List[Event] = iteration.events
 
     if iteration.new_state:
-        sub_task = InitiatorTask(token_network_address, iteration.new_state)
-        if sub_task is not None:
-            chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+        chain_state.payment_mapping.secrethashes_to_task[secrethash] = InitiatorTask(
+            token_network_address, iteration.new_state
+        )
     elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
         del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
