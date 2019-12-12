@@ -359,6 +359,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
                 url="mock-address",
                 chain_id=app0.raiden.rpc_client.chain_id,
                 token_network_registry_address=token_network_registry_address,
+                user_deposit_address=factories.make_address(),
                 payment_address=factories.make_address(),
                 message="",
                 operator="",
