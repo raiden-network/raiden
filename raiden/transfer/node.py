@@ -274,38 +274,36 @@ def subdispatch_initiatortask(
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
-        is_valid_subtask = True
         manager_state = None
-
     elif sub_task and isinstance(sub_task, InitiatorTask):
-        is_valid_subtask = token_network_address == sub_task.token_network_address
+        if token_network_address != sub_task.token_network_address:
+            return TransitionResult(chain_state, [])
         manager_state = sub_task.manager_state
     else:
-        is_valid_subtask = False
+        return TransitionResult(chain_state, [])
 
-    events: List[Event] = list()
-    if is_valid_subtask:
-        pseudo_random_generator = chain_state.pseudo_random_generator
+    token_network_state = get_token_network_by_address(chain_state, token_network_address)
 
-        token_network_state = get_token_network_by_address(chain_state, token_network_address)
+    if not token_network_state:
+        return TransitionResult(chain_state, [])
 
-        if token_network_state:
-            iteration = initiator_manager.state_transition(
-                payment_state=manager_state,
-                state_change=state_change,
-                channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
-                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
-                pseudo_random_generator=pseudo_random_generator,
-                block_number=block_number,
-            )
-            events = iteration.events
+    pseudo_random_generator = chain_state.pseudo_random_generator
+    iteration = initiator_manager.state_transition(
+        payment_state=manager_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+    events: List[Event] = iteration.events
 
-            if iteration.new_state:
-                sub_task = InitiatorTask(token_network_address, iteration.new_state)
-                if sub_task is not None:
-                    chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
-            elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
-                del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+    if iteration.new_state:
+        sub_task = InitiatorTask(token_network_address, iteration.new_state)
+        if sub_task is not None:
+            chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+    elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
+        del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(chain_state, events)
 
