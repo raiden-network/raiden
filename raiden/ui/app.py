@@ -52,7 +52,8 @@ from raiden.ui.prompt import (
 )
 from raiden.ui.startup import (
     load_deployed_contracts_data,
-    proxies_from_contracts_deployment,
+    raiden_bundle_from_contracts_deployment,
+    services_bundle_from_contracts_deployment,
     setup_environment,
 )
 from raiden.utils import pex, split_endpoint
@@ -71,12 +72,16 @@ from raiden.utils.typing import (
     PrivateKey,
     ProportionalFeeAmount,
     TokenAddress,
-    TokenNetworkRegistryAddress,
     Tuple,
+    UserDepositAddress,
 )
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
     ID_TO_NETWORKNAME,
 )
 from raiden_contracts.contract_manager import ContractManager
@@ -167,7 +172,7 @@ def run_app(
     keystore_path: str,
     gas_price: Callable,
     eth_rpc_endpoint: str,
-    user_deposit_contract_address: Optional[Address],
+    user_deposit_contract_address: Optional[UserDepositAddress],
     api_address: Endpoint,
     rpc: bool,
     sync_check: bool,
@@ -277,7 +282,11 @@ def run_app(
     if sync_check:
         check_synced(proxy_manager)
 
-    proxies = proxies_from_contracts_deployment(
+    raiden_bundle = raiden_bundle_from_contracts_deployment(
+        config=config, proxy_manager=proxy_manager, contracts=contracts
+    )
+
+    services_bundle = services_bundle_from_contracts_deployment(
         config=config,
         user_deposit_contract_address=user_deposit_contract_address,
         proxy_manager=proxy_manager,
@@ -289,7 +298,7 @@ def run_app(
 
     check_ethereum_confirmed_block_is_not_pruned(
         jsonrpc_client=rpc_client,
-        secret_registry=proxies.secret_registry,
+        secret_registry=raiden_bundle.secret_registry,
         confirmation_blocks=config["blockchain"]["confirmation_blocks"],
     )
 
@@ -297,7 +306,7 @@ def run_app(
         datadir,
         f"node_{pex(address)}",
         f"netid_{network_id}",
-        f"network_{pex(proxies.token_network_registry.address)}",
+        f"network_{pex(raiden_bundle.token_network_registry.address)}",
         f"v{RAIDEN_DB_VERSION}_log.db",
     )
     config["database_path"] = database_path
@@ -342,21 +351,16 @@ def run_app(
             rpc_client=rpc_client,
             proxy_manager=proxy_manager,
             query_start_block=smart_contracts_start_at,
-            default_one_to_n_address=(
-                one_to_n_contract_address or contracts[CONTRACT_ONE_TO_N]["address"]
-            ),
-            default_registry=proxies.token_network_registry,
-            default_secret_registry=proxies.secret_registry,
-            default_service_registry=proxies.service_registry,
-            default_msc_address=(
-                monitoring_service_contract_address
-                or contracts[CONTRACT_MONITORING_SERVICE]["address"]
-            ),
+            default_one_to_n_address=services_bundle.one_to_n.address,
+            default_registry=raiden_bundle.token_network_registry,
+            default_secret_registry=raiden_bundle.secret_registry,
+            default_service_registry=services_bundle.service_registry,
+            default_msc_address=services_bundle.monitoring_service.address,
             transport=matrix_transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,
             routing_mode=routing_mode,
-            user_deposit=proxies.user_deposit,
+            user_deposit=services_bundle.user_deposit,
         )
     except RaidenError as e:
         click.secho(f"FATAL: {e}", fg="red")
