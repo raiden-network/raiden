@@ -18,6 +18,8 @@ from raiden.utils.typing import (
     Balance,
     BlockSpecification,
     Dict,
+    MonitoringServiceAddress,
+    OneToNAddress,
     TokenAddress,
     TokenAmount,
 )
@@ -70,6 +72,22 @@ class UserDeposit:
         return TokenAddress(
             to_canonical_address(
                 self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+            )
+        )
+
+    def msc_address(self, block_identifier: BlockSpecification) -> MonitoringServiceAddress:
+        return MonitoringServiceAddress(
+            to_canonical_address(
+                self.proxy.contract.functions.msc_address().call(block_identifier=block_identifier)
+            )
+        )
+
+    def one_to_n_address(self, block_identifier: BlockSpecification) -> OneToNAddress:
+        return OneToNAddress(
+            to_canonical_address(
+                self.proxy.contract.functions.one_to_n_address().call(
+                    block_identifier=block_identifier
+                )
             )
         )
 
