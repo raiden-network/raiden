@@ -1,4 +1,5 @@
 import sys
+from dataclasses import dataclass
 
 import click
 import structlog
@@ -13,7 +14,6 @@ from raiden.constants import (
     LOWEST_SUPPORTED_PARITY_VERSION,
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
-    RoutingMode,
 )
 from raiden.exceptions import EthNodeInterfaceError
 from raiden.network.proxies.proxy_manager import ProxyManager
@@ -25,16 +25,29 @@ from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, ChainID, Dict, Optional, TokenNetworkRegistryAddress
-from raiden_contracts.constants import (
-    CONTRACT_MONITORING_SERVICE,
-    CONTRACT_ONE_TO_N,
-    CONTRACT_SERVICE_REGISTRY,
-    CONTRACT_USER_DEPOSIT,
-    ID_TO_NETWORKNAME,
-    CONTRACT_TOKEN_NETWORK_REGISTRY, CONTRACT_SECRET_REGISTRY)
+from raiden.utils.typing import (
+    Address,
+    BlockSpecification,
+    ChainID,
+    Dict,
+    List,
+    MonitoringServiceAddress,
+    OneToNAddress,
+    Optional,
+    ServiceRegistryAddress,
+    UserDepositAddress,
+)
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class ServiceBundleAddresses:
+    user_deposit_address: UserDepositAddress
+    service_registry_address: ServiceRegistryAddress
+    monitoring_service_address: MonitoringServiceAddress
+    one_to_n_address: OneToNAddress
 
 
 def check_sql_version() -> None:
@@ -181,28 +194,18 @@ def check_deployed_contracts_data(
     environment_type: Environment,
     node_network_id: ChainID,
     contracts: Dict[str, Address],
+    required_contracts: List[str],
 ) -> None:
-
-    """ This function only checks if all necessary contracts are indeed in the deployment JSON from Raiden Contracts.
-
-    It does not check anything else, especially not if those contracts are consistent or in fact Raiden contracts.
+    """ This function only checks if all necessary contracts are indeed in the deployment JSON
+    from Raiden Contracts. It does not check anything else, especially not if those contracts
+    are consistent or in fact Raiden contracts.
 
     """
-    contract_names = [
-        CONTRACT_TOKEN_NETWORK_REGISTRY,
-        CONTRACT_SECRET_REGISTRY,
-        CONTRACT_MONITORING_SERVICE,
-        CONTRACT_SERVICE_REGISTRY,
-        CONTRACT_USER_DEPOSIT,
-        CONTRACT_ONE_TO_N,
-    ]
-
-    for name in contract_names:
+    for name in required_contracts:
         if name not in contracts:
             click.secho(
                 f"There are no known contract addresses for network id '{node_network_id}'. and "
-                f"environment type {environment_type}. Please provide them on the command line or "
-                f"in the configuration file.",
+                f"environment type {environment_type}.",
                 fg="red",
             )
             sys.exit(1)
@@ -240,3 +243,57 @@ def check_synced(proxy_manager: ProxyManager) -> None:
         network=network_name if network_id != 1 else "api", action="eth_blockNumber"
     )
     wait_for_sync(proxy_manager, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3)
+
+
+def check_user_deposit_deps_consistency(
+    proxy_manager: ProxyManager,
+    service_bundle_addresses: ServiceBundleAddresses,
+    block_identifier: BlockSpecification,
+) -> None:
+    user_deposit_address = service_bundle_addresses.user_deposit_address
+    user_deposit = proxy_manager.user_deposit(user_deposit_address)
+    token_address = user_deposit.token_address(block_identifier)
+
+    msc_address = service_bundle_addresses.monitoring_service_address
+    one_to_n_address = service_bundle_addresses.one_to_n_address
+    service_registry_address = service_bundle_addresses.service_registry_address
+
+    monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
+    one_to_n_proxy = proxy_manager.one_to_n(one_to_n_address)
+    service_registry_proxy = proxy_manager.service_registry(service_registry_address)
+
+    token_address_matches_monitoring_service = (
+        token_address == monitoring_service_proxy.token_address(block_identifier)
+    )
+    if not token_address_matches_monitoring_service:
+        msg = (
+            f"The token used in the provided user deposit contract "
+            f"{user_deposit_address} does not match the one in the "
+            f"MonitoringService contract {msc_address}."
+        )
+        click.secho(msg, fg="red")
+        sys.exit(1)
+
+    token_address_matches_one_to_n = token_address == one_to_n_proxy.token_address(
+        block_identifier
+    )
+    if not token_address_matches_one_to_n:
+        msg = (
+            f"The token used in the provided user deposit contract "
+            f"{user_deposit_address} does not match the one in the OneToN "
+            f"service contract {msc_address}."
+        )
+        click.secho(msg, fg="red")
+        sys.exit(1)
+
+    token_address_matches_service_registry = token_address == service_registry_proxy.token_address(
+        block_identifier
+    )
+    if not token_address_matches_service_registry:
+        msg = (
+            f"The token used in the provided user deposit contract "
+            f"{user_deposit_address} does not match the one in the ServiceRegistry "
+            f"contract {msc_address}."
+        )
+        click.secho(msg, fg="red")
+        sys.exit(1)
