@@ -13,7 +13,7 @@ from raiden.tests.utils.factories import make_address, make_token_network_regist
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils.typing import TokenAmount, TokenNetworkRegistryAddress
+from raiden.utils.typing import Address, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -25,6 +25,9 @@ from raiden_contracts.utils.type_aliases import ChainID
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
 )
+user_deposit_address_test_default = Address(
+    to_canonical_address("0x8888888888888888888888888888888888888888")
+)
 
 pfs_payment_address_default = to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B907")
 
@@ -33,6 +36,7 @@ PFS_INFO = PFSInfo(
     price=TokenAmount(12),
     chain_id=ChainID(5),
     token_network_registry_address=token_network_registry_address_test_default,
+    user_deposit_address=user_deposit_address_test_default,
     payment_address=pfs_payment_address_default,
     message="This is your favorite pathfinding service",
     operator="John Doe",

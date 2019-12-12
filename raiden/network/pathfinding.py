@@ -49,6 +49,7 @@ class PFSInfo:
     price: TokenAmount
     chain_id: ChainID
     token_network_registry_address: TokenNetworkRegistryAddress
+    user_deposit_address: Address
     payment_address: Address
     message: str
     operator: str
@@ -144,7 +145,10 @@ def get_pfs_info(url: str) -> PFSInfo:
             price=infos["price_info"],
             chain_id=infos["network_info"]["chain_id"],
             token_network_registry_address=TokenNetworkRegistryAddress(
-                to_canonical_address(infos["network_info"]["registry_address"])
+                to_canonical_address(infos["network_info"]["token_network_registry_address"])
+            ),
+            user_deposit_address=Address(
+                to_canonical_address(infos["network_info"]["user_deposit_address"])
             ),
             payment_address=to_canonical_address(infos["payment_address"]),
             message=infos["message"],

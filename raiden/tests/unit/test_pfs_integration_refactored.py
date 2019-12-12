@@ -13,6 +13,7 @@ from raiden.network.pathfinding import PFSInfo, get_pfs_info
 # The client should handle incorrect information and formatting
 
 pfs_test_default_registry_address = "0xB9633dd9a9a71F22C933bF121d7a22008f66B908"
+pfs_test_default_user_deposit_address = "0x1111111111111111111111111111111111111111"
 pfs_test_default_payment_address = "0x2222222222222222222222222222222222222222"
 
 
@@ -21,7 +22,11 @@ def test_get_pfs_info_success():
 
     info_data = {
         "price_info": 5,
-        "network_info": {"chain_id": 42, "registry_address": pfs_test_default_registry_address},
+        "network_info": {
+            "chain_id": 42,
+            "token_network_registry_address": pfs_test_default_registry_address,
+            "user_deposit_address": pfs_test_default_user_deposit_address,
+        },
         "version": "0.0.3",
         "operator": "John Doe",
         "message": "This is your favorite pathfinding service",
@@ -35,25 +40,31 @@ def test_get_pfs_info_success():
         pfs_info = get_pfs_info("url")
 
         req_registry_address = to_canonical_address(pfs_test_default_registry_address)
+        req_udc_address = to_canonical_address(pfs_test_default_user_deposit_address)
 
         assert isinstance(pfs_info, PFSInfo)
         assert pfs_info.price == 5
         assert pfs_info.chain_id == 42
         assert pfs_info.token_network_registry_address == req_registry_address
+        assert pfs_info.user_deposit_address == req_udc_address
         assert pfs_info.message == "This is your favorite pathfinding service"
         assert pfs_info.operator == "John Doe"
         assert pfs_info.version == "0.0.3"
 
 
-# This test tests the correct handling of the 3 error cases of get_pfs_info
-# - JSONDecodeError, RequestException and KeyError
 def test_get_pfs_info_error():
+    """ This test tests the correct handling of the 3 error cases of get_pfs_info
+    JSONDecodeError, RequestException and KeyError
+    """
 
     # test JSONDecodeError with correct data but formatted as a string
-
     incorrect_json_info_data = {
         "price_info": 5,
-        "network_info": {"chain_id": 42, "registry_address": pfs_test_default_registry_address},
+        "network_info": {
+            "chain_id": 42,
+            "token_network_registry_address": pfs_test_default_registry_address,
+            "user_deposit_address": pfs_test_default_user_deposit_address,
+        },
         "version": "0.0.3",
         "operator": "John Doe",
         "message": "This is your favorite pathfinding service",
@@ -77,7 +88,11 @@ def test_get_pfs_info_error():
     # test KeyError with missing key 'price_info' and formatted as json
 
     incorrect_info_data = {
-        "network_info": {"chain_id": 42, "registry_address": pfs_test_default_registry_address},
+        "network_info": {
+            "chain_id": 42,
+            "token_network_registry_address": pfs_test_default_registry_address,
+            "user_deposit_address": pfs_test_default_user_deposit_address,
+        },
         "version": "0.0.3",
         "operator": "John Doe",
         "message": "This is your favorite pathfinding service",
