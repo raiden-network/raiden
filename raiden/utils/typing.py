@@ -141,6 +141,9 @@ TargetAddress = NewType("TargetAddress", T_TargetAddress)
 T_TokenAddress = bytes
 TokenAddress = NewType("TokenAddress", T_TokenAddress)
 
+T_UserDepositAddress = bytes
+UserDepositAddress = NewType("UserDepositAddress", T_UserDepositAddress)
+
 T_MonitoringServiceAddress = bytes
 MonitoringServiceAddress = NewType("MonitoringServiceAddress", T_MonitoringServiceAddress)
 

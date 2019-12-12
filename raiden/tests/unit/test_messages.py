@@ -22,10 +22,10 @@ from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, Rec
 from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.signing import sha3
-from raiden.utils.typing import Address, TokenAmount
+from raiden.utils.typing import MonitoringServiceAddress, TokenAmount
 from raiden_contracts.constants import MessageTypeId
 
-MSC_ADDRESS = Address(bytes([1] * 20))
+MSC_ADDRESS = MonitoringServiceAddress(bytes([1] * 20))
 PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)

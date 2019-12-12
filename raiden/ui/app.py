@@ -37,7 +37,6 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
-    check_deployed_contracts_data,
     check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
@@ -75,15 +74,7 @@ from raiden.utils.typing import (
     Tuple,
     UserDepositAddress,
 )
-from raiden_contracts.constants import (
-    CONTRACT_MONITORING_SERVICE,
-    CONTRACT_ONE_TO_N,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_SERVICE_REGISTRY,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    CONTRACT_USER_DEPOSIT,
-    ID_TO_NETWORKNAME,
-)
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -345,17 +336,26 @@ def run_app(
 
     message_handler = MessageHandler()
 
+    one_to_n_address = (
+        services_bundle.one_to_n.address if services_bundle.one_to_n is not None else None
+    )
+    monitoring_service_address = (
+        services_bundle.monitoring_service.address
+        if services_bundle.monitoring_service is not None
+        else None
+    )
+
     try:
         raiden_app = App(
             config=config,
             rpc_client=rpc_client,
             proxy_manager=proxy_manager,
             query_start_block=smart_contracts_start_at,
-            default_one_to_n_address=services_bundle.one_to_n.address,
             default_registry=raiden_bundle.token_network_registry,
             default_secret_registry=raiden_bundle.secret_registry,
+            default_one_to_n_address=one_to_n_address,
             default_service_registry=services_bundle.service_registry,
-            default_msc_address=services_bundle.monitoring_service.address,
+            default_msc_address=monitoring_service_address,
             transport=matrix_transport,
             raiden_event_handler=event_handler,
             message_handler=message_handler,

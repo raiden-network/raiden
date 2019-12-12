@@ -1255,6 +1255,10 @@ class RaidenAPI:  # pragma: no unittest
         - claim the `reward_amount` from the UDC.
         """
         # create RequestMonitoring message from the above + `reward_amount`
+
+        msg = "Default monitoring service address should not be None"
+        assert self.raiden.default_msc_address is not None, msg
+
         monitor_request = RequestMonitoring.from_balance_proof_signed_state(
             balance_proof=balance_proof,
             non_closing_participant=self.raiden.address,

@@ -42,7 +42,9 @@ from raiden.utils.typing import (
     LockedAmount,
     Locksroot,
     MessageID,
+    MonitoringServiceAddress,
     Nonce,
+    OneToNAddress,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -60,6 +62,7 @@ from raiden.utils.typing import (
     TransactionHash,
     TransferID,
     Union,
+    UserDepositAddress,
     WithdrawAmount,
 )
 
@@ -208,11 +211,14 @@ _native_to_marshmallow.update(
         # Addresses
         Address: AddressField,
         InitiatorAddress: AddressField,
+        MonitoringServiceAddress: AddressField,
+        OneToNAddress: AddressField,
         TokenNetworkRegistryAddress: AddressField,
         SecretRegistryAddress: AddressField,
         TargetAddress: AddressField,
         TokenAddress: AddressField,
         TokenNetworkAddress: AddressField,
+        UserDepositAddress: AddressField,
         # Bytes
         EncodedData: BytesField,
         AdditionalHash: BytesField,

@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
+    UserDepositAddress,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -80,7 +81,7 @@ class ProxyManager:
         self.address_to_token_network_registry: Dict[
             TokenNetworkRegistryAddress, TokenNetworkRegistry
         ] = dict()
-        self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
+        self.address_to_user_deposit: Dict[UserDepositAddress, UserDeposit] = dict()
         self.address_to_service_registry: Dict[ServiceRegistryAddress, ServiceRegistry] = dict()
         self.address_to_monitoring_service: Dict[
             MonitoringServiceAddress, MonitoringService
@@ -253,7 +254,7 @@ class ProxyManager:
 
         return self.identifier_to_payment_channel[dict_key]
 
-    def user_deposit(self, address: Address) -> UserDeposit:
+    def user_deposit(self, address: UserDepositAddress) -> UserDeposit:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 

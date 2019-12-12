@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
+    UserDepositAddress,
 )
 from raiden_contracts.constants import (
     CONTRACT_CUSTOM_TOKEN,
@@ -164,7 +165,7 @@ def deploy_user_deposit_and_return_address(
         constructor_arguments=constructor_arguments,
     )
 
-    user_deposit = proxy_manager.user_deposit(user_deposit_address)
+    user_deposit = proxy_manager.user_deposit(UserDepositAddress(user_deposit_address))
 
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
