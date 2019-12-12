@@ -237,7 +237,6 @@ class GMatrixClient(MatrixClient):
     ) -> None:
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
-        self._post_hook_func: Optional[Callable[[str], None]] = None
         self.token: Optional[str] = None
         self.environment = environment
 
@@ -503,9 +502,6 @@ class GMatrixClient(MatrixClient):
         # otherwise we loose this information from this response in case of a crash.
         self.sync_token = response["next_batch"]
 
-        if self._post_hook_func is not None and self.sync_token is not None:
-            self._post_hook_func(self.sync_token)
-
     def _handle_response(self, response: Dict[str, Any], first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
         if not self.should_listen and not first_sync:
@@ -596,9 +592,6 @@ class GMatrixClient(MatrixClient):
         """ Use this to set a key: value pair in account_data to keep it synced on server """
         self.account_data[type_] = content
         return self.api.set_account_data(quote(self.user_id), quote(type_), content)
-
-    def set_post_sync_hook(self, hook: Callable[[str], None]) -> None:
-        self._post_hook_func = hook
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id
