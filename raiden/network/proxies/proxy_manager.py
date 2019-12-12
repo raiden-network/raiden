@@ -5,6 +5,8 @@ from eth_utils import decode_hex, is_binary_address
 from gevent.lock import Semaphore
 
 from raiden.network.proxies.metadata import SmartContractMetadata
+from raiden.network.proxies.monitoring_service import MonitoringService
+from raiden.network.proxies.one_to_n import OneToN
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -20,7 +22,10 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     EVMBytecode,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Optional,
+    ServiceRegistryAddress,
     T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
@@ -76,7 +81,11 @@ class ProxyManager:
             TokenNetworkRegistryAddress, TokenNetworkRegistry
         ] = dict()
         self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
-        self.address_to_service_registry: Dict[Address, ServiceRegistry] = dict()
+        self.address_to_service_registry: Dict[ServiceRegistryAddress, ServiceRegistry] = dict()
+        self.address_to_monitoring_service: Dict[
+            MonitoringServiceAddress, MonitoringService
+        ] = dict()
+        self.address_to_one_to_n: Dict[OneToNAddress, OneToN] = dict()
         self.identifier_to_payment_channel: Dict[
             Tuple[TokenNetworkAddress, ChannelID], PaymentChannel
         ] = dict()
@@ -92,6 +101,8 @@ class ProxyManager:
         self._service_registry_creation_lock = Semaphore()
         self._payment_channel_creation_lock = Semaphore()
         self._user_deposit_creation_lock = Semaphore()
+        self._monitoring_service_creation_lock = Semaphore()
+        self._one_to_n_creation_lock = Semaphore()
 
     def estimate_blocktime(self, oldest: int = 256) -> float:
         """Calculate a blocktime estimate based on some past blocks.
@@ -208,7 +219,7 @@ class ProxyManager:
 
         return self.address_to_secret_registry[address]
 
-    def service_registry(self, address: Address) -> ServiceRegistry:
+    def service_registry(self, address: ServiceRegistryAddress) -> ServiceRegistry:
         with self._service_registry_creation_lock:
             if address not in self.address_to_service_registry:
                 self.address_to_service_registry[address] = ServiceRegistry(
@@ -256,3 +267,31 @@ class ProxyManager:
                 )
 
         return self.address_to_user_deposit[address]
+
+    def monitoring_service(self, address: MonitoringServiceAddress) -> MonitoringService:
+        if not is_binary_address(address):
+            raise ValueError("address must be a valid address")
+
+        with self._monitoring_service_creation_lock:
+            if address not in self.address_to_monitoring_service:
+                self.address_to_monitoring_service[address] = MonitoringService(
+                    jsonrpc_client=self.client,
+                    monitoring_service_address=address,
+                    contract_manager=self.contract_manager,
+                )
+
+        return self.address_to_monitoring_service[address]
+
+    def one_to_n(self, address: OneToNAddress) -> OneToN:
+        if not is_binary_address(address):
+            raise ValueError("address must be a valid address")
+
+        with self._one_to_n_creation_lock:
+            if address not in self.address_to_one_to_n:
+                self.address_to_one_to_n[address] = OneToN(
+                    jsonrpc_client=self.client,
+                    one_to_n_address=address,
+                    contract_manager=self.contract_manager,
+                )
+
+        return self.address_to_one_to_n[address]
