@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     Dict,
     Optional,
+    ServiceRegistryAddress,
     TokenAddress,
     TokenAmount,
 )
@@ -29,7 +30,7 @@ class ServiceRegistry:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        service_registry_address: Address,
+        service_registry_address: ServiceRegistryAddress,
         contract_manager: ContractManager,
     ):
         if not is_binary_address(service_registry_address):
@@ -38,7 +39,7 @@ class ServiceRegistry:
         self.contract_manager = contract_manager
         check_address_has_code(
             client=jsonrpc_client,
-            address=service_registry_address,
+            address=Address(service_registry_address),
             contract_name=CONTRACT_SERVICE_REGISTRY,
             expected_code=decode_hex(
                 contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY)
@@ -47,7 +48,7 @@ class ServiceRegistry:
 
         proxy = jsonrpc_client.new_contract_proxy(
             abi=self.contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY),
-            contract_address=service_registry_address,
+            contract_address=Address(service_registry_address),
         )
 
         self.address = service_registry_address

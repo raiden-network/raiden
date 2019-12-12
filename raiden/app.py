@@ -24,9 +24,14 @@ from raiden.settings import (
     MatrixTransportConfig,
     ServiceConfig,
 )
-from raiden.utils import typing
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address
+from raiden.utils.typing import (
+    BlockNumber,
+    Dict,
+    MonitoringServiceAddress,
+    OneToNAddress,
+    Optional,
+)
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
@@ -63,15 +68,15 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
-        config: typing.Dict,
+        config: Dict,
         rpc_client: JSONRPCClient,
         proxy_manager: ProxyManager,
-        query_start_block: typing.BlockNumber,
+        query_start_block: BlockNumber,
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
-        default_service_registry: typing.Optional[ServiceRegistry],
-        default_one_to_n_address: typing.Optional[Address],
-        default_msc_address: Address,
+        default_service_registry: Optional[ServiceRegistry],
+        default_one_to_n_address: Optional[OneToNAddress],
+        default_msc_address: Optional[MonitoringServiceAddress],
         transport: MatrixTransport,
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,

@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     FeeAmount,
     InitiatorAddress,
     List,
+    OneToNAddress,
     Optional,
     PaymentAmount,
     Signature,
@@ -69,7 +70,7 @@ class PFSConfig:
 class IOU:
     sender: Address
     receiver: Address
-    one_to_n_address: Address
+    one_to_n_address: OneToNAddress
     amount: TokenAmount
     expiration_block: BlockNumber
     chain_id: ChainID
@@ -393,7 +394,7 @@ def get_last_iou(
         return IOU(
             sender=to_canonical_address(data["sender"]),
             receiver=to_canonical_address(data["receiver"]),
-            one_to_n_address=to_canonical_address(data["one_to_n_address"]),
+            one_to_n_address=OneToNAddress(to_canonical_address(data["one_to_n_address"])),
             amount=data["amount"],
             expiration_block=data["expiration_block"],
             chain_id=data["chain_id"],
@@ -406,7 +407,7 @@ def get_last_iou(
 def make_iou(
     pfs_config: PFSConfig,
     our_address: Address,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     privkey: bytes,
     block_number: BlockNumber,
     chain_id: ChainID,
@@ -462,7 +463,7 @@ def update_iou(
 def create_current_iou(
     pfs_config: PFSConfig,
     token_network_address: TokenNetworkAddress,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     our_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
@@ -548,7 +549,7 @@ def query_paths(
     privkey: bytes,
     current_block_number: BlockNumber,
     token_network_address: TokenNetworkAddress,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     chain_id: ChainID,
     route_from: InitiatorAddress,
     route_to: TargetAddress,

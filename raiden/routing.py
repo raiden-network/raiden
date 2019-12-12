@@ -19,6 +19,7 @@ from raiden.utils.typing import (
     FeeAmount,
     InitiatorAddress,
     NamedTuple,
+    OneToNAddress,
     Optional,
     PaymentAmount,
     TargetAddress,
@@ -31,7 +32,7 @@ log = structlog.get_logger(__name__)
 def get_best_routes(
     chain_state: ChainState,
     token_network_address: TokenNetworkAddress,
-    one_to_n_address: Optional[Address],
+    one_to_n_address: Optional[OneToNAddress],
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,
@@ -231,7 +232,7 @@ def get_best_routes_internal(
 def get_best_routes_pfs(
     chain_state: ChainState,
     token_network_address: TokenNetworkAddress,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,

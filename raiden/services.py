@@ -75,6 +75,9 @@ def update_monitoring_service_from_balance_proof(
     if raiden.config["services"].monitoring_enabled is False:
         return
 
+    msg = f"Monitoring is enabled but the default monitoring service address is None."
+    assert raiden.default_msc_address is not None, msg
+
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state, canonical_identifier=new_balance_proof.canonical_identifier
     )

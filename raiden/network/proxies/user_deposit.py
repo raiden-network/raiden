@@ -22,6 +22,7 @@ from raiden.utils.typing import (
     OneToNAddress,
     TokenAddress,
     TokenAmount,
+    UserDepositAddress,
 )
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
@@ -38,7 +39,7 @@ class UserDeposit:
     def __init__(
         self,
         jsonrpc_client: JSONRPCClient,
-        user_deposit_address: Address,
+        user_deposit_address: UserDepositAddress,
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
     ) -> None:
@@ -63,7 +64,7 @@ class UserDeposit:
 
         self.proxy = jsonrpc_client.new_contract_proxy(
             abi=self.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT),
-            contract_address=user_deposit_address,
+            contract_address=Address(user_deposit_address),
         )
 
         self.deposit_lock = RLock()

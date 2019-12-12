@@ -26,10 +26,14 @@ from raiden.utils.typing import (
     ChainID,
     Iterable,
     List,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Optional,
+    ServiceRegistryAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
+    UserDepositAddress,
 )
 
 
@@ -48,7 +52,7 @@ def routing_mode():
 def raiden_chain(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -62,8 +66,8 @@ def raiden_chain(
     local_matrix_servers: List[ParsedURL],
     blockchain_type: str,
     contracts_path: str,
-    user_deposit_address: Address,
-    monitoring_service_contract_address: Address,
+    user_deposit_address: UserDepositAddress,
+    monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
     routing_mode: RoutingMode,
@@ -81,7 +85,7 @@ def raiden_chain(
 
     base_datadir = os.path.join(logs_storage, "raiden_nodes")
 
-    service_registry_address: Optional[Address] = None
+    service_registry_address: Optional[ServiceRegistryAddress] = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
     raiden_apps = create_apps(
@@ -181,7 +185,7 @@ def resolvers(resolver_ports):
 def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
-    one_to_n_address: Address,
+    one_to_n_address: OneToNAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -195,8 +199,8 @@ def raiden_network(
     local_matrix_servers: List[ParsedURL],
     blockchain_type: str,
     contracts_path: str,
-    user_deposit_address: Address,
-    monitoring_service_contract_address: Address,
+    user_deposit_address: UserDepositAddress,
+    monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
     start_raiden_apps: bool,
