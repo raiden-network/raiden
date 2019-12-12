@@ -141,6 +141,15 @@ TargetAddress = NewType("TargetAddress", T_TargetAddress)
 T_TokenAddress = bytes
 TokenAddress = NewType("TokenAddress", T_TokenAddress)
 
+T_MonitoringServiceAddress = bytes
+MonitoringServiceAddress = NewType("MonitoringServiceAddress", T_MonitoringServiceAddress)
+
+T_ServiceRegistryAddress = bytes
+ServiceRegistryAddress = NewType("ServiceRegistryAddress", T_ServiceRegistryAddress)
+
+T_OneToNAddress = bytes
+OneToNAddress = NewType("OneToNAddress", T_OneToNAddress)
+
 T_TokenNetworkAddress = bytes
 TokenNetworkAddress = NewType("TokenNetworkAddress", T_TokenNetworkAddress)
 
