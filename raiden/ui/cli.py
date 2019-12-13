@@ -60,6 +60,7 @@ from raiden.utils.cli import (
     validate_option_dependencies,
 )
 from raiden.utils.http import HTTPExecutor
+from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
@@ -443,6 +444,12 @@ def options(func: Callable) -> Callable:
                 is_flag=True,
                 default=False,
             ),
+            option(
+                "--log-memory-usage-interval",
+                help="Log memory usage every X sec (fractions accepted). [default: disabled]",
+                type=float,
+                default=0,
+            ),
         ),
         option_group(
             "Hash Resolver Options",
@@ -530,6 +537,12 @@ def run(ctx: Context, **kwargs: Any) -> None:
         flame = FlameGraphCollector(stack_stream)
         profiler = TraceSampler(flame)
 
+    memory_logger = None
+    log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
+    if log_memory_usage_interval > 0:
+        memory_logger = MemoryLogger(log_memory_usage_interval)
+        memory_logger.start()
+
     if kwargs.pop("version", False):
         click.echo(
             click.style("Hint: Use ", fg="green")
@@ -615,6 +628,8 @@ def run(ctx: Context, **kwargs: Any) -> None:
     finally:
         if profiler is not None:
             profiler.stop()
+        if memory_logger is not None:
+            memory_logger.stop()
 
 
 # List of available options, used by the scenario player
