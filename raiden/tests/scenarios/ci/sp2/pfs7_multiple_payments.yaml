@@ -23,6 +23,7 @@ nodes:
   raiden_version: local
 
   default_options:
+    log-memory-usage-interval: "2"
     gas-price: fast
     environment-type: development
     routing-mode: pfs

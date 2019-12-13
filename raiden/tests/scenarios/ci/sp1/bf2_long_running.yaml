@@ -25,6 +25,7 @@ nodes:
   raiden_version: local
   enable-monitoring: false
   default_options:
+    log-memory-usage-interval: "2"
     gas-price: fast
     environment-type: development
     default-settle-timeout: 40
