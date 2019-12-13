@@ -535,10 +535,10 @@ def main() -> None:
             node = defaults.copy()
             node.update(
                 {
-                    "--keystore-path": node_config["keystore"],
+                    "--keystore-path": node_config["keystore-path"],
                     "--password-file": node_config["password-file"],
-                    "--eth-rpc-endpoint": node_config["ethnode"],
-                    "--network-id": node_config["networkid"],
+                    "--eth-rpc-endpoint": node_config["eth-rpc-endpoint"],
+                    "--network-id": node_config["network-id"],
                     "--address": address,
                     "--api-address": api_url,
                 }
