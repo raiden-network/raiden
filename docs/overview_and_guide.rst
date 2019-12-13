@@ -1,5 +1,5 @@
 System Requirements and Installation Guide
-##################################################
+##########################################
 .. toctree::
   :maxdepth: 2
 
@@ -14,15 +14,23 @@ Installation
 
 To install Raiden you can either:
 
-    * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_
+    * Use the Raiden Wizard
     * Download a self contained application bundle from the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_
     * Use pip or, on macOS, homebrew
     * Run a raiden docker image
 
 Below we will give details on how to use the self contained application bundles on different platforms, as well as the other installation methods.
 
+Installation via Raiden Wizard
+******************************
+
+See the `Raiden Wizard documentation <https://docs.raiden.network/quick-start/>`_.
+
+Installation from GitHub
+************************
+
 Linux
-*****
+~~~~~
 
 `Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-x86_64.tar.gz`, and extract it::
 
@@ -33,7 +41,7 @@ than an Ethereum client installed in your system (see below). The Raiden binary 
 arguments as the ``raiden`` script.
 
 macOS
-*****
+~~~~~
 
 `Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-macOS-x86_64.zip`, and extract it::
 
@@ -53,7 +61,7 @@ arguments as the ``raiden`` script.
 Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
 
 Raspberry Pi
-************
+~~~~~~~~~~~~
 
 `Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-armv7l.tar.gz` or :code:`raiden-<version>-linux-aarch64.tar.gz` for the respective Raspberry Pi Model and extract it::
 
@@ -66,8 +74,8 @@ An Ethereum client is required in both cases. The Raiden binary takes the same c
 arguments as the ``raiden`` script.
 
 
-PIP
-***
+Installation using pip
+**********************
 
 To get the latest available stable version via `pip`::
 
@@ -77,8 +85,8 @@ If you'd like to give the pre-releases a spin, use pip's `--pre` flag::
 
     pip install --pre raiden
 
-Docker
-******
+Installation via Docker
+***********************
 
 There are two options to run a raiden docker image:
 
@@ -183,7 +191,10 @@ Firing it up
 To fire up Raiden you need at least
  1. a synced **Ethereum Node** - using geth, parity or infura
  2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
- 3. (Only if you use services that charge fees) A deposit of RDN tokens to pay the services with.
+ 3. If you want to use :doc:`Raiden services <raiden_services>` that charge a fee, a deposit of RDN tokens to pay the services with.
+
+More about the Raiden services (pathfinding and monitoring service) will be explained below. On the testnets there are also free services available, and on any network it is possible (though not recommended) to use Raiden without Raiden services.
+
 We will provide you with the necessary cli arguments step by step. Full example is at the end of the page.
 
 1. and 2. The synced Ethereum Node & Keystore
@@ -234,8 +245,48 @@ Where `<network>` can be mainnet, ropsten, etc.
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
+3. Depositing tokens to pay the services
+****************************************
+
+To pay the services, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
+Normally the Raiden Wizard or some other auxilliary scripts would do the contract interaction for you.
+In this section, we will briefly explain how it can be done manually so you are able to use Raiden without them.
+
+All services that are registered in the service registry of a given network will use one shared instance of ``UserDeposit``.
+You can obtain the address of the contract from
+
+    ``https://github.com/raiden-network/raiden-contracts/blob/master/raiden_contracts/data/deployment_services_<network>.json``
+
+where ``network`` is one of ``mainnet``, ``ropsten``, ``rinkeby`` or ``goerli``.
+
+Log into MyEtherWallet, the geth console or any other Ethereum interface you like with an account
+that holds enough Raiden tokens, and call ``UserDeposit.deposit(<beneficiary>, <total_deposit>)``.
+
+Here ``total_deposit`` is the amount of Raiden tokens you wish to deposit and ``beneficiary`` is the
+Ethereum address of your Raiden node.
+
+For example, suppose we use Raiden with the address ``0x3040435D7F1012e861f0B0989422a47D1825F120`` on the mainnet and want
+to deposit 10 Raiden tokens (10**19 REI) for our Raiden node to use. We take a look at ``deployment_services_mainnet.json``, which yields:
+
+.. code-block:: none
+
+    {
+        "contracts_version": null, "chain_id": 1,
+        (...)
+        "UserDeposit": {
+            "address": "0x53Cc1decDD7d452c8844a5f383e23AD479A1f614",
+            (...)
+
+
+Using MyEtherWallet, we log into our account that holds the Raiden tokens (which must not be the same that we use
+for the Raiden node, since that is supposed to be used only by Raiden) and look up the ``UserDeposit`` contract at
+``0x53Cc1decDD7d452c8844a5f383e23AD479A1f614``, the address we found in the deployment JSON file.
+
+In the contract interface on MyEtherWallet, we set ``method`` to ``deposit``, ``beneficiary`` to our Raiden address
+``0x3040435D7F1012e861f0B0989422a47D1825F120`` and ``total_deposit`` to ``10000000000000000000`` and send the transaction.
+
 Optional CLI arguments
-**********************
+======================
 
 There are further CLI arguments with which you can control, among other things
 
@@ -244,7 +295,7 @@ There are further CLI arguments with which you can control, among other things
  3. Logging
 
 1. Pathfinding service
-~~~~~~~~~~~~~~~~~~~~~~
+**********************
 
 A pathfinding service is a third party service helping your node with efficient transfer routing. It is usually paid in RDN tokens.
 
@@ -258,7 +309,7 @@ If you want to use internal routing anyway, you can do so with ``--routing-mode 
     out Raiden on the mainnet. The Raiden Service Bundle, with pathfinding service and registry,
     will not be deployed on the mainnet until the Alderaan release.
 
-If you want to use a particular pathfinding service, e. g. one of the testnet pathfinding services given below, you can
+If you want to use a particular pathfinding service, e.g. one of the testnet pathfinding services given below, you can
 do so with ``--pathfinding-service-address <url>``. Otherwise Raiden will automatically pick one of the pathfinding
 services from the registry.
 
@@ -282,14 +333,14 @@ There are pathfinding services running on every testnet at the moment, some that
 For the mainnet we don't want to prefer and suggest specific pathfinding services.
 
 2. Monitoring service
-~~~~~~~~~~~~~~~~~~~~~
+*********************
 
 A monitoring service watches a client's open channels while it is offline, and represents the client in case of settlement.
-Like the pathfinding service, it is paid in RDN tokens and can be automatically picked from a registry. If you want to use
-a monitoring service, use the option ``--enable-monitoring``.
+Like the pathfinding service, it is paid in RDN tokens. If you want to use a monitoring service, use the option
+``--enable-monitoring`` and Raiden will automatically pick one from its service registry.
 
 3. Logging configuration
-~~~~~~~~~~~~~~~~~~~~~~~~
+************************
 
 By default raiden keeps a "debug" log file so that people who have not configured logging but are facing problems can still provide us with some logs to debug their problems.
 
@@ -307,25 +358,7 @@ Summing up these are the arguments you need to append if you want to disable the
 
 ``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``
 
-3. Depositing tokens to pay the services
-****************************************
-
-To pay the services, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
-In this section, we will briefly explain how the ``UserDeposit`` contract can be interacted with manually
-so you are able to use Raiden without the Raiden Wizard or any auxilliary scripts.
-
-All services that are registered in the service registry of a given network will use one shared instance of ``UserDeposit``.
-You can obtain the address of the contract from
-``https://github.com/raiden-network/raiden-contracts/blob/master/raiden_contracts/data/deployment_services_<network>.json``,
-where ``network`` is one of ``mainnet``, ``ropsten``, ``rinkeby`` or ``goerli``.
-
-Log into MyEtherWallet, the geth console or any other Ethereum interface you like with an account
-that holds enough Raiden tokens, and call ``UserDeposit.deposit(<beneficiary>, <total_deposit>)``.
-
-Here ``total_deposit`` is the amount of Raiden tokens you wish to deposit and ``beneficiary`` is the
-Ethereum address of your Raiden node.
-
 Further reading
-***************
+===============
 
 Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface, and a :doc:`Mainnet tutorial <alderaan_mainnet_tutorial>` for your first mainnet transfers via API.

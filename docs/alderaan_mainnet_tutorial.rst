@@ -47,7 +47,9 @@ In order to do so, we need the address of the token and the initial amount of to
         "funds": "20000"
     }
 
-This automatically connects our node to 3 other nodes in the network with 20000 / 5 wei tokens in each channel.
+By default, Raiden connects automatically to 3 channels to other nodes and splits up 60% of the funds between them.
+The remaining 40% of tokens will be used to join channels that are automatically opened by other participants.
+So in our example, we will open three channels in the network and fund each of them with 4000 wrapped wei.
 
 We're now ready to start sending W-ETH tokens using the Raiden Network.
 
@@ -66,7 +68,7 @@ In case we know of a specific address in the network that we will do frequent pa
        "settle_timeout": 500
    }
 
-At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <topping-up-a-channel>` to a channel if need be.
+At this point the specific value of the ``total_deposit`` field isn't too important, since it's always possible to :ref:`deposit more tokens <topping-up-a-channel>` to a channel if need be.
 
 Successfully opening a channel returns the following information:
 
@@ -103,7 +105,8 @@ Now that we have joined a token network, we can start making payments. For this,
         "amount": "42"
     }
 
-In this specific case the payment goes directly to one of our channel partners, since we have an open channel with ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``. If we specify an address that we do not have a direct channel with, Raiden will try doing a mediated transfer with the help of either its internal routing or the given pathfinding service.
+This is an example of a direct transfer. Since we have an channel with the address we are sending to, ``0x61C808D82A3Ac53231750daDc13c777b59310bD9``, the payment goes straight to it. If we specify an address that we do not have a direct channel with, Raiden will try to do a mediated transfer, i. e.
+to find a path from us to the target address in the network of channels.
 
 It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the payment. The third call to open a direct channel is optional.
 
@@ -137,7 +140,7 @@ If we spend more tokens than we receive and hence deplete our channels, it it po
         "total_deposit": "4000"
    }
 
-Notice that we need to specify the total deposit, not the amount we wish to top up: We initially deposited 2000 tokens and want to add 2000 more, so we give a ``total_deposit`` of 4000. This way the top-up request is idempotent - if it is sent repeatedly (by accident or as part of an attack) it will have no further effect.
+Notice that we need to specify the total deposit, not the amount we wish to top up: We initially deposited 2000 wei and want to add 2000 more, so we give a ``total_deposit`` of 4000. This way the top-up request is idempotent - if it is sent repeatedly (by accident or as part of an attack) it will have no further effect.
 
 .. _get-channel-status:
 
