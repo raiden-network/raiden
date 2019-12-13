@@ -1,9 +1,11 @@
-""" Stack and trace extraction utilities """
+""" Stack and trace extraction utilities.
+
+This code is heavilly based on the raven-python from the Sentry Team.
+
+:copyright: (c) 2010-2012 by the Sentry Team, see AUTHORS for more details.
+:license: BSD, see LICENSE for more details.
+"""
 import linecache
-# This code is heavilly based on the raven-python from the Sentry Team.
-#
-# :copyright: (c) 2010-2012 by the Sentry Team, see AUTHORS for more details.
-# :license: BSD, see LICENSE for more details.
 import sys
 
 
