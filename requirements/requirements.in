@@ -9,6 +9,7 @@ Flask
 Flask-Cors
 Flask-RESTful
 gevent<1.4
+guppy3
 ipython<5.0.0
 marshmallow-dataclass==6.0.0
 marshmallow-polyfield==5.7
