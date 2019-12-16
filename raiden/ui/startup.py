@@ -354,8 +354,8 @@ def services_bundle_from_contracts_deployment(
         config["pfs_config"] = None
 
     return ServicesBundle(
-        user_deposit=proxies["user_deposit"],
-        service_registry=proxies["service_registry"],
-        monitoring_service=proxies["monitoring_service"],
-        one_to_n=proxies["one_to_n"],
+        user_deposit=proxies.get("user_deposit"),
+        service_registry=proxies.get("service_registry"),
+        monitoring_service=proxies.get("monitoring_service"),
+        one_to_n=proxies.get("one_to_n"),
     )
