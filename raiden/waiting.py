@@ -474,11 +474,14 @@ def wait_for_received_transfer_result(
         This does not time out, use gevent.Timeout.
     """
     log_details = {"payment_identifier": payment_identifier, "amount": amount}
+
+    assert raiden, TRANSPORT_ERROR_MSG
+    assert raiden.wal, TRANSPORT_ERROR_MSG
+    assert raiden.transport, TRANSPORT_ERROR_MSG
+    stream = raiden.wal.storage.get_state_changes_stream(retry_timeout=retry_timeout)
+
     result = None
     while result is None:
-        assert raiden, TRANSPORT_ERROR_MSG
-        assert raiden.wal, TRANSPORT_ERROR_MSG
-        assert raiden.transport, TRANSPORT_ERROR_MSG
 
         state_events = raiden.wal.storage.get_events()
         for event in state_events:
@@ -499,7 +502,7 @@ def wait_for_received_transfer_result(
                 result = TransferWaitResult.UNLOCK_FAILED
                 break
 
-        state_changes = raiden.wal.storage.get_state_changes()
+        state_changes = next(stream)
         for state_change in state_changes:
             registered_onchain = (
                 isinstance(state_change, ContractReceiveSecretReveal)
@@ -515,8 +518,7 @@ def wait_for_received_transfer_result(
                 transfer = state_change_with_transfer.data.transfer
 
                 if raiden.get_block_number() <= transfer.lock.expiration:
-                    result = TransferWaitResult.SECRET_REGISTERED_ONCHAIN
-                    break
+                    return TransferWaitResult.SECRET_REGISTERED_ONCHAIN
 
         log.debug("wait_for_transfer_result", **log_details)
         gevent.sleep(retry_timeout)
@@ -540,21 +542,23 @@ def wait_for_withdraw_complete(
         "canonical_identifier": canonical_identifier,
         "target_total_withdraw": total_withdraw,
     }
-    found = False
-    while not found:
-        assert raiden, TRANSPORT_ERROR_MSG
-        assert raiden.wal, TRANSPORT_ERROR_MSG
-        assert raiden.transport, TRANSPORT_ERROR_MSG
+    assert raiden, TRANSPORT_ERROR_MSG
+    assert raiden.wal, TRANSPORT_ERROR_MSG
+    assert raiden.transport, TRANSPORT_ERROR_MSG
+    stream = raiden.wal.storage.get_state_changes_stream(retry_timeout=retry_timeout)
 
-        state_changes = raiden.wal.storage.get_state_changes()
+    while True:
+        state_changes = next(stream)
+
         for state_change in state_changes:
             found = (
                 isinstance(state_change, ContractReceiveChannelWithdraw)
                 and state_change.total_withdraw == total_withdraw
                 and state_change.canonical_identifier == canonical_identifier
             )
+
             if found:
-                break
+                return
 
         log.debug("wait_for_withdraw_complete", **log_details)
         gevent.sleep(retry_timeout)
