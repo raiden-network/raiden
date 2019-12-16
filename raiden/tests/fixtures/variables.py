@@ -1,5 +1,8 @@
 # pylint: disable=redefined-outer-name
+import itertools
 import random
+import socket
+from contextlib import closing
 from enum import Enum
 from typing import Dict
 
@@ -8,7 +11,6 @@ from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 
 from raiden.constants import Environment
-from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
@@ -258,15 +260,25 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     ]
 
 
+def find_free_port():
+    """ Finds a free port by binding to port zero
+
+    This makes the OS find a free port. Then we mark the port as reusable by
+    another process and return it.
+    """
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("localhost", 0))  # pylint: disable=no-member
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # pylint: disable=no-member
+        port = s.getsockname()[1]  # pylint: disable=no-member
+    with open("/tmp/ports.txt", "a") as f:
+        f.write(str(port) + "\n")
+    return port
+
+
 @pytest.fixture(scope="session")
-def port_generator(request, worker_id):
+def port_generator(request, worker_id):  # pylint: disable=unused-argument
     """ count generator used to get a unique port number. """
-    if worker_id == "master":
-        # xdist is not in use to run parallel tests
-        port_offset = 0
-    else:
-        port_offset = int(worker_id.replace("gw", "")) * 1000
-    return get_free_port(request.config.getoption("base_port") + port_offset)
+    return (find_free_port() for _ in itertools.count())
 
 
 @pytest.fixture
