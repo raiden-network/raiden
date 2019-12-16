@@ -1267,7 +1267,7 @@ class RaidenAPI:  # pragma: no unittest
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
         channel_id = None
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = chain_state.block_hash
         if token_address is not None:
             token_network = self.raiden.default_registry.get_token_network(
                 token_address=token_address, block_identifier=confirmed_block_identifier
@@ -1275,11 +1275,14 @@ class RaidenAPI:  # pragma: no unittest
             if token_network is None:
                 raise UnknownTokenAddress(f"Token {token_address} not found.")
             if partner_address is not None:
-                partner_channel = self.get_channel(
-                    registry_address=self.raiden.default_registry.address,
+                partner_channel = views.get_channelstate_for(
+                    chain_state=chain_state,
+                    token_network_registry_address=self.raiden.default_registry.address,
                     token_address=token_address,
                     partner_address=partner_address,
                 )
+                if not partner_channel:
+                    raise ChannelNotFound(f"Channel with partner `partner_address not found.`")
                 channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)
