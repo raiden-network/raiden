@@ -246,6 +246,7 @@ def test_setup_proxies_all_addresses_are_known():
         token_network_registry_address=to_canonical_address(
             contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
         ),
+        user_deposit_address=user_deposit_address_test_default,
         payment_address=pfs_payment_address_default,
         message="This is your favorite pathfinding service",
         operator="John Doe",
@@ -298,6 +299,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
         token_network_registry_address=to_canonical_address(
             contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
         ),
+        user_deposit_address=user_deposit_address_test_default,
         payment_address=pfs_payment_address_default,
         message="This is your favorite pathfinding service",
         operator="John Doe",
