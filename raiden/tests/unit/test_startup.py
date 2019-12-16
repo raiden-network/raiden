@@ -9,13 +9,19 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
-from raiden.settings import ServiceConfig
-from raiden.tests.utils.factories import make_address, make_token_network_registry_address
+from raiden.settings import (
+    DEFAULT_PATHFINDING_IOU_TIMEOUT,
+    DEFAULT_PATHFINDING_MAX_FEE,
+    DEFAULT_PATHFINDING_MAX_PATHS,
+    ServiceConfig,
+)
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import (
     load_deployed_contracts_data,
-    proxies_from_contracts_deployment,
+    raiden_bundle_from_contracts_deployment,
+    services_bundle_from_contracts_deployment,
     setup_environment,
 )
 from raiden.utils.typing import Address, TokenAmount, TokenNetworkRegistryAddress
@@ -160,11 +166,14 @@ def test_setup_proxies_raiden_addresses_are_given():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
-    contracts = {}
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
-    proxies = proxies_from_contracts_deployment(
+    raiden_bundle = raiden_bundle_from_contracts_deployment(
+        config=config, proxy_manager=proxy_manager, contracts=contracts
+    )
+    services_bundle = services_bundle_from_contracts_deployment(
         config=config,
         user_deposit_contract_address=None,
         proxy_manager=proxy_manager,
@@ -173,11 +182,12 @@ def test_setup_proxies_raiden_addresses_are_given():
         pathfinding_service_address=None,
         enable_monitoring=False,
     )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert not proxies.user_deposit
-    assert not proxies.service_registry
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert not services_bundle.user_deposit
+    assert not services_bundle.service_registry
 
 
 def test_setup_proxies_all_addresses_are_given():
@@ -186,12 +196,15 @@ def test_setup_proxies_all_addresses_are_given():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
-    contracts = {}
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = proxies_from_contracts_deployment(
+        raiden_bundle = raiden_bundle_from_contracts_deployment(
+            config=config, proxy_manager=proxy_manager, contracts=contracts
+        )
+        services_bundle = services_bundle_from_contracts_deployment(
             config=config,
             user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
@@ -200,11 +213,12 @@ def test_setup_proxies_all_addresses_are_given():
             pathfinding_service_address="my-pfs",
             enable_monitoring=True,
         )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert proxies.user_deposit
-    assert proxies.service_registry
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert services_bundle.user_deposit
+    assert not services_bundle.service_registry
 
 
 def test_setup_proxies_all_addresses_are_known():
@@ -213,25 +227,49 @@ def test_setup_proxies_all_addresses_are_known():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    config = {
+        "environment_type": Environment.DEVELOPMENT,
+        "chain_id": network_id,
+        "services": {
+            "pathfinding_max_fee": DEFAULT_PATHFINDING_MAX_FEE,
+            "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
+            "pathfinding_max_paths": DEFAULT_PATHFINDING_MAX_PATHS,
+        },
+    }
     contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    PFS_INFO = PFSInfo(
+        url="my-pfs",
+        price=TokenAmount(12),
+        chain_id=ChainID(5),
+        token_network_registry_address=to_canonical_address(
+            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
+        ),
+        payment_address=pfs_payment_address_default,
+        message="This is your favorite pathfinding service",
+        operator="John Doe",
+        version="0.0.3",
+    )
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = proxies_from_contracts_deployment(
+        raiden_bundle = raiden_bundle_from_contracts_deployment(
+            config=config, proxy_manager=proxy_manager, contracts=contracts
+        )
+        services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            user_deposit_contract_address=None,
+            user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
             contracts=contracts,
-            routing_mode=RoutingMode.LOCAL,
+            routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
-            enable_monitoring=True,
+            enable_monitoring=False,
         )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert proxies.user_deposit
-    assert proxies.service_registry
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert services_bundle.user_deposit
+    assert services_bundle.service_registry
 
 
 def test_setup_proxies_no_service_registry_but_pfs():
@@ -250,11 +288,26 @@ def test_setup_proxies_no_service_registry_but_pfs():
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
     }
-    contracts = {}
+    contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    PFS_INFO = PFSInfo(
+        url="my-pfs",
+        price=TokenAmount(12),
+        chain_id=ChainID(5),
+        token_network_registry_address=to_canonical_address(
+            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
+        ),
+        payment_address=pfs_payment_address_default,
+        message="This is your favorite pathfinding service",
+        operator="John Doe",
+        version="0.0.3",
+    )
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = proxies_from_contracts_deployment(
+        raiden_bundle = raiden_bundle_from_contracts_deployment(
+            config=config, proxy_manager=proxy_manager, contracts=contracts
+        )
+        services_bundle = services_bundle_from_contracts_deployment(
             config=config,
             user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
@@ -263,7 +316,8 @@ def test_setup_proxies_no_service_registry_but_pfs():
             pathfinding_service_address="my-pfs",
             enable_monitoring=True,
         )
-    assert proxies
+    assert raiden_bundle
+    assert services_bundle
 
 
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT, Environment.PRODUCTION])
@@ -286,7 +340,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
 
     with pytest.raises(SystemExit):
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-            proxies_from_contracts_deployment(
+            services_bundle_from_contracts_deployment(
                 config=config,
                 user_deposit_contract_address=make_address(),
                 proxy_manager=proxy_manager,

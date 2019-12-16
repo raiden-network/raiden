@@ -84,10 +84,27 @@ class MockProxyManager:
         return object()
 
     def user_deposit(self, address: Address):  # pylint: disable=unused-argument, no-self-use
-        return object()
+        user_deposit = Mock()
+        user_deposit.msc_address.return_value = bytes(32)
+        user_deposit.token_address.return_value = bytes(32)
+        user_deposit.service_registry_address.return_value = bytes(32)
+        return user_deposit
 
     def service_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
-        return object()
+        service_registry = Mock()
+        service_registry.token_address.return_value = bytes(32)
+        return service_registry
+
+    def one_to_n(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+        one_to_n = Mock()
+        one_to_n.token_address.return_value = bytes(32)
+        return one_to_n
+
+    def monitoring_service(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+        monitoring_service = Mock()
+        monitoring_service.service_registry_address.return_value = bytes(32)
+        monitoring_service.token_address.return_value = bytes(32)
+        return monitoring_service
 
 
 class MockChannelState:
