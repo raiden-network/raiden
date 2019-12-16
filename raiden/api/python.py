@@ -73,7 +73,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     TransactionHash,
-    Tuple,
     WithdrawAmount,
 )
 
@@ -124,11 +123,13 @@ def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
 
 def get_transfer_from_task(
     secrethash: SecretHash, transfer_task: TransferTask
-) -> Tuple[LockedTransferType, str]:
-    role = views.role_from_transfer_task(transfer_task)
+) -> Optional[LockedTransferType]:
     transfer: LockedTransferType
     if isinstance(transfer_task, InitiatorTask):
-        transfer = transfer_task.manager_state.initiator_transfers[secrethash].transfer
+        if secrethash in transfer_task.manager_state.initiator_transfers:
+            transfer = transfer_task.manager_state.initiator_transfers[secrethash].transfer
+        else:
+            return None
     elif isinstance(transfer_task, MediatorTask):
         pairs = transfer_task.mediator_state.transfers_pair
         if pairs:
@@ -140,7 +141,7 @@ def get_transfer_from_task(
     else:  # pragma: no unittest
         raise ValueError("get_transfer_from_task for a non TransferTask argument")
 
-    return transfer, role
+    return transfer
 
 
 def transfer_tasks_view(
@@ -151,7 +152,7 @@ def transfer_tasks_view(
     view = list()
 
     for secrethash, transfer_task in transfer_tasks.items():
-        transfer, role = get_transfer_from_task(secrethash, transfer_task)
+        transfer = get_transfer_from_task(secrethash, transfer_task)
 
         if transfer is None:
             continue
@@ -162,6 +163,7 @@ def transfer_tasks_view(
                 if transfer.balance_proof.channel_identifier != channel_id:
                     continue
 
+        role = views.role_from_transfer_task(transfer_task)
         view.append(flatten_transfer(transfer, role))
 
     return view
