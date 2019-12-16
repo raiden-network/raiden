@@ -19,6 +19,7 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
 from raiden.exceptions import APIServerPortInUseError, EthNodeInterfaceError, RaidenError
 from raiden.log_config import configure_logging
+from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
@@ -206,12 +207,25 @@ class NodeRunner:
         gevent.signal(signal.SIGTERM, sig_set)
         gevent.signal(signal.SIGINT, sig_set)
 
+        # Make sure RaidenService is the last service in the list.
+        runnable_tasks.reverse()
+
         # quit if any task exits, successfully or not
         for runnable in runnable_tasks:
             runnable.greenlet.link(event)
 
         for task in gevent_tasks:
             task.link(event)
+
+        msg = (
+            "The RaidenService must be last service to stop, since the other "
+            "services depend on it to run. Without this it is not possible to have a "
+            "clean shutdown, e.g. the RestAPI must be stopped before "
+            "RaidenService, otherwise it is possible for a request to be "
+            "processed after the RaidenService was stopped and it will cause a "
+            "crash."
+        )
+        assert isinstance(runnable_tasks[-1], RaidenService), msg
 
         try:
             event.get()
