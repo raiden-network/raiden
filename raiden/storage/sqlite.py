@@ -7,6 +7,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Generator
 
+import gevent
 from typing_extensions import Literal
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
@@ -876,9 +877,15 @@ class SerializedSQLiteStorage:
         events = self.database.get_events(limit, offset)
         return [self.serializer.deserialize(event) for event in events]
 
-    def get_state_changes(self, limit: int = None, offset: int = None) -> List[StateChange]:
-        state_changes = self.database.get_state_changes(limit, offset)
-        return [self.serializer.deserialize(state_change) for state_change in state_changes]
+    def get_state_changes_stream(
+        self, retry_timeout: float, limit: int = None, offset: int = 0
+    ) -> Iterator[List[StateChange]]:
+        while True:
+            state_changes = self.database.get_state_changes(limit, offset)
+            yield [self.serializer.deserialize(state_change) for state_change in state_changes]
+            offset += len(state_changes)
+
+            gevent.sleep(retry_timeout)
 
     def close(self) -> None:
         self.database.close()
