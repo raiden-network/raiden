@@ -435,10 +435,6 @@ class GMatrixClient(MatrixClient):
     def get_user_presence(self, user_id: str) -> Optional[str]:
         return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
-    @staticmethod
-    def call(callback: Callable, *args: Any, **kwargs: Any) -> Any:
-        return callback(*args, **kwargs)
-
     def _sync(self, timeout_ms: int = 30_000) -> None:
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
         log.debug(
@@ -516,24 +512,22 @@ class GMatrixClient(MatrixClient):
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
             for callback in list(self.presence_listeners.values()):
-                self._worker_pool.spawn(
-                    self.call, callback, presence_update, next(self._presence_update_ids)
-                )
+                self._worker_pool.spawn(callback, presence_update, next(self._presence_update_ids))
         # Collect finished greenlets and errors without blocking
         self._worker_pool.join(timeout=0, raise_error=True)
 
         for to_device_message in response["to_device"]["events"]:
             for listener in self.listeners[:]:
                 if listener["event_type"] == "to_device":
-                    self.call(listener["callback"], to_device_message)
+                    listener["callback"](to_device_message)
 
         for room_id, invite_room in response["rooms"]["invite"].items():
             for listener in self.invite_listeners[:]:
-                self.call(listener, room_id, invite_room["invite_state"])
+                listener(room_id, invite_room["invite_state"])
 
         for room_id, left_room in response["rooms"]["leave"].items():
             for listener in self.left_listeners[:]:
-                self.call(listener, room_id, left_room)
+                listener(room_id, left_room)
             if room_id in self.rooms:
                 del self.rooms[room_id]
 
@@ -546,11 +540,11 @@ class GMatrixClient(MatrixClient):
 
             for event in sync_room["state"]["events"]:
                 event["room_id"] = room_id
-                self.call(room._process_state_event, event)
+                room._process_state_event(event)
 
             for event in sync_room["timeline"]["events"]:
                 event["room_id"] = room_id
-                self.call(room._put_event, event)
+                room._put_event(event)
 
                 # TODO: global listeners can still exist but work by each
                 # room.listeners[uuid] having reference to global listener
@@ -561,18 +555,18 @@ class GMatrixClient(MatrixClient):
                         listener["event_type"] is None or listener["event_type"] == event["type"]
                     )
                     if should_call:
-                        self.call(listener["callback"], event)
+                        listener["callback"](event)
 
             for event in sync_room["ephemeral"]["events"]:
                 event["room_id"] = room_id
-                self.call(room._put_ephemeral_event, event)
+                room._put_ephemeral_event(event)
 
                 for listener in self.ephemeral_listeners:
                     should_call = (
                         listener["event_type"] is None or listener["event_type"] == event["type"]
                     )
                     if should_call:
-                        self.call(listener["callback"], event)
+                        listener["callback"](event)
 
             for event in sync_room["account_data"]["events"]:
                 room.account_data[event["type"]] = event["content"]
