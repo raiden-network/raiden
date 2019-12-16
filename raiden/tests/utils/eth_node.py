@@ -9,13 +9,13 @@ from typing import ContextManager, Iterator
 import gevent
 import structlog
 from eth_keyfile import create_keyfile_json
-from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, remove_0x_prefix, to_normalized_address
 from pkg_resources import parse_version
 from web3 import Web3
 
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
-from raiden.utils import privatekey_to_address, privatekey_to_publickey
+from raiden.utils import privatekey_to_address, privatekey_to_publickey, to_checksum_address
 from raiden.utils.ethereum_clients import parse_geth_version
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.typing import (

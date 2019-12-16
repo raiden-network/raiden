@@ -1,12 +1,11 @@
 import pytest
-from eth_utils import to_checksum_address
 
 from raiden.exceptions import InsufficientEth
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils import safe_gas_limit
+from raiden.utils import safe_gas_limit, to_checksum_address
 
 
 def test_transact_opcode(deploy_client: JSONRPCClient) -> None:

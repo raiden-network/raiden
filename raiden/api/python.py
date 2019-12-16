@@ -1,6 +1,6 @@
 import gevent
 import structlog
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import is_binary_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
@@ -46,7 +46,7 @@ from raiden.transfer.state import (
     NetworkState,
 )
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import create_default_identifier
+from raiden.utils import create_default_identifier, to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
 from raiden.utils.typing import (

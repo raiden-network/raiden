@@ -3,7 +3,6 @@ from urllib.parse import urlsplit
 
 import gevent
 import pytest
-from eth_utils import to_checksum_address
 from matrix_client.errors import MatrixRequestError
 
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
@@ -14,6 +13,7 @@ from raiden.network.transport.matrix.utils import (
     make_room_alias,
 )
 from raiden.tests.utils import factories, transport
+from raiden.utils import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Tuple

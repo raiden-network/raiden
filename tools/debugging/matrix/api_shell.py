@@ -3,10 +3,11 @@ import os
 
 import click
 import IPython
-from eth_utils import encode_hex, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, to_normalized_address
 
 from raiden.accounts import AccountManager
 from raiden.network.transport.matrix.client import GMatrixHttpApi
+from raiden.utils import to_checksum_address
 from raiden.utils.cli import ADDRESS_TYPE
 from raiden.utils.signer import LocalSigner
 

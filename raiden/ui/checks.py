@@ -2,7 +2,6 @@ import sys
 
 import click
 import structlog
-from eth_utils import to_checksum_address
 from web3 import Web3
 
 from raiden.accounts import AccountManager
@@ -23,6 +22,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
+from raiden.utils import to_checksum_address
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.typing import Address, ChainID, Dict, Optional, TokenNetworkRegistryAddress
 from raiden_contracts.constants import ID_TO_NETWORKNAME

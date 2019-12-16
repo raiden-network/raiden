@@ -9,14 +9,14 @@ from uuid import UUID
 import click
 import requests
 import structlog
-from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
-from raiden.utils import to_rdn
+from raiden.utils import to_checksum_address, to_rdn
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,

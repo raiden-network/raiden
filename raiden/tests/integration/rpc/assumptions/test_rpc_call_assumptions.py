@@ -1,8 +1,9 @@
 import pytest
-from eth_utils import decode_hex, to_checksum_address
+from eth_utils import decode_hex
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils import to_checksum_address
 
 
 def test_call_invalid_selector(deploy_client):

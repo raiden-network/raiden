@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from eth_utils import to_checksum_address
-
 from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     Address,
     ChainID,

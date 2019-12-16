@@ -1,7 +1,7 @@
 from eth_typing.evm import HexAddress
-from eth_utils import to_checksum_address
 
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,

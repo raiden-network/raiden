@@ -8,7 +8,7 @@ from http import HTTPStatus
 
 import click
 import requests
-from eth_utils import remove_0x_prefix, to_canonical_address, to_checksum_address
+from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
@@ -44,7 +44,7 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
-from raiden.utils import privatekey_to_address, split_endpoint
+from raiden.utils import privatekey_to_address, split_endpoint, to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.typing import (
     TYPE_CHECKING,

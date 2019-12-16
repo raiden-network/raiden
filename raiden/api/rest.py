@@ -8,7 +8,7 @@ from http import HTTPStatus
 import gevent
 import gevent.pool
 import structlog
-from eth_utils import encode_hex, to_checksum_address
+from eth_utils import encode_hex
 from flask import Flask, Request, Response, make_response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
@@ -102,6 +102,7 @@ from raiden.utils import (
     get_system_spec,
     optional_address_to_string,
     split_endpoint,
+    to_checksum_address,
 )
 from raiden.utils.runnable import Runnable
 from raiden.utils.testnet import MintingMethod

@@ -4,10 +4,11 @@ from typing import Callable
 
 import marshmallow
 import networkx
-from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import to_bytes, to_canonical_address, to_hex
 from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
 
 

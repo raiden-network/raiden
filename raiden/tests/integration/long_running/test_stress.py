@@ -7,7 +7,7 @@ import gevent
 import grequests
 import pytest
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 from flask import url_for
 
 from raiden import waiting
@@ -27,6 +27,7 @@ from raiden.tests.utils.transfer import (
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

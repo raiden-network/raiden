@@ -2,7 +2,6 @@ from collections import defaultdict
 from unittest.mock import patch
 
 import structlog
-from eth_utils import to_checksum_address
 from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
@@ -13,6 +12,7 @@ from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
 from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
 from raiden.transfer.state import ChainState
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import Callable, Dict, List, NamedTuple, SecretHash, Set
 
 log = structlog.get_logger(__name__)

@@ -1,7 +1,6 @@
-from eth_utils import to_checksum_address
-
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.factories import HOP1
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import Address
 
 

@@ -5,7 +5,7 @@ from functools import singledispatch
 from hashlib import sha256
 from operator import itemgetter
 
-from eth_utils import keccak, to_checksum_address
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.messages.decode import balanceproof_from_envelope
@@ -40,7 +40,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, random_secret, sha3
+from raiden.utils import privatekey_to_address, random_secret, sha3, to_checksum_address
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer

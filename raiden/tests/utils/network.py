@@ -5,7 +5,6 @@ from itertools import product
 
 import gevent
 import structlog
-from eth_utils import to_checksum_address
 from web3 import Web3
 
 from raiden import waiting
@@ -28,7 +27,7 @@ from raiden.tests.utils.transport import ParsedURL
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
-from raiden.utils import merge_dict
+from raiden.utils import merge_dict, to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

@@ -2,13 +2,14 @@ from urllib.parse import urlparse
 
 import structlog
 import web3
-from eth_utils import decode_hex, is_binary_address, to_canonical_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,

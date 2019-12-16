@@ -5,7 +5,7 @@ import click
 import gevent
 import requests
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_hex
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
@@ -22,7 +22,7 @@ from raiden.constants import (
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
-from raiden.utils import gas_reserve, to_rdn
+from raiden.utils import gas_reserve, to_checksum_address, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional, Tuple
 

@@ -2,7 +2,7 @@
 import random
 from typing import TYPE_CHECKING
 
-from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
+from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
@@ -81,6 +81,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils import to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (

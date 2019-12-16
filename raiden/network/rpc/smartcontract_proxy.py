@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from eth_utils import decode_hex, to_canonical_address, to_checksum_address
+from eth_utils import decode_hex, to_canonical_address
 from web3.contract import Contract
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 
@@ -15,6 +15,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
 )
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import TYPE_CHECKING, Address, BlockSpecification, TransactionHash
 
 if TYPE_CHECKING:

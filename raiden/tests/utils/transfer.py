@@ -3,7 +3,6 @@ from contextlib import contextmanager, nullcontext
 from enum import Enum
 
 import gevent
-from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden.app import App
@@ -58,6 +57,7 @@ from raiden.transfer.state import (
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
+from raiden.utils import to_checksum_address
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (

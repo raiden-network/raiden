@@ -1,7 +1,6 @@
 from typing import Union
 
 import structlog
-from eth_utils import to_checksum_address
 
 from raiden import constants
 from raiden.constants import RoutingMode
@@ -12,7 +11,7 @@ from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState
-from raiden.utils import to_rdn
+from raiden.utils import to_checksum_address, to_rdn
 from raiden.utils.typing import TYPE_CHECKING, Address
 
 if TYPE_CHECKING:
