@@ -1,8 +1,8 @@
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, to_checksum_address
 
 
 def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager):

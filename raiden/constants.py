@@ -1,8 +1,9 @@
 import math
 from enum import Enum
 
-from eth_utils import keccak, to_canonical_address, to_checksum_address
+from eth_utils import keccak, to_canonical_address
 
+from raiden.utils import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     AdditionalHash,

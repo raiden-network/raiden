@@ -3,9 +3,9 @@ import sys
 from typing import TextIO
 
 import click
-from eth_utils import to_checksum_address
 
 from raiden.accounts import AccountManager, KeystoreFileNotFound
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import AddressHex, PrivateKey
 
 

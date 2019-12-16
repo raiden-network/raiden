@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, List
 
 import gevent
 import structlog
-from eth_utils import to_checksum_address
 
 from raiden.storage.restore import get_state_change_with_transfer_by_secrethash
 from raiden.transfer import channel, views
@@ -21,6 +20,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
 )
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

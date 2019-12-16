@@ -1,5 +1,4 @@
 import structlog
-from eth_utils import to_checksum_address
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
@@ -26,7 +25,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     RAIDEN_CONTRACT_VERSION,
 )
-from raiden.utils import typing
+from raiden.utils import to_checksum_address, typing
 from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
 from raiden.blockchain.filters import (
@@ -16,6 +16,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Address,

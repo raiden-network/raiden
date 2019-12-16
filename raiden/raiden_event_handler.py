@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import structlog
-from eth_utils import encode_hex, to_checksum_address, to_hex
+from eth_utils import encode_hex, to_hex
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
@@ -69,6 +69,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
+from raiden.utils import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 from raiden_contracts.constants import MessageTypeId

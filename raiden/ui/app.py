@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
@@ -50,7 +50,7 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils import pex, split_endpoint
+from raiden.utils import pex, split_endpoint, to_checksum_address
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (

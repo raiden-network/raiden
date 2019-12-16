@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 import gevent.lock
 import structlog
-from eth_utils import to_checksum_address
 
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import (
@@ -12,6 +11,7 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
+from raiden.utils import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.typing import (
     Address,

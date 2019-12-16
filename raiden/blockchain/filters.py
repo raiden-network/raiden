@@ -1,6 +1,6 @@
 import structlog
 from eth_typing import ChecksumAddress
-from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
+from eth_utils import decode_hex, event_abi_to_log_topic
 from gevent.lock import Semaphore
 from web3 import Web3
 from web3.utils.abi import filter_by_type
@@ -8,6 +8,7 @@ from web3.utils.events import get_event_data
 from web3.utils.filters import construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Any,

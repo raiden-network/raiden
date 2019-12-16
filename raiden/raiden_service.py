@@ -8,7 +8,7 @@ from uuid import UUID
 import filelock
 import gevent
 import structlog
-from eth_utils import is_binary_address, to_checksum_address, to_hex
+from eth_utils import is_binary_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
@@ -84,7 +84,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewTokenNetworkRegistry,
 )
-from raiden.utils import lpex, random_secret
+from raiden.utils import lpex, random_secret, to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash

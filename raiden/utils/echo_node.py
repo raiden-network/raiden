@@ -5,7 +5,6 @@ from typing import Any, Deque, Dict, List, Set
 
 import gevent
 import structlog
-from eth_utils import to_checksum_address
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import BoundedSemaphore
@@ -17,6 +16,7 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import ChannelState
+from raiden.utils import to_checksum_address
 from raiden.utils.typing import (
     Optional,
     PaymentAmount,

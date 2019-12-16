@@ -1,6 +1,6 @@
 import gevent
 import pytest
-from eth_utils import is_list_like, to_checksum_address
+from eth_utils import is_list_like
 from web3.utils.events import construct_event_topic_set
 
 from raiden import waiting
@@ -31,7 +31,7 @@ from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
-from raiden.utils import sha3, wait_until
+from raiden.utils import sha3, to_checksum_address, wait_until
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,

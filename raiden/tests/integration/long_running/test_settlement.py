@@ -2,7 +2,6 @@ import random
 
 import gevent
 import pytest
-from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden import waiting
@@ -31,7 +30,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import sha3
+from raiden.utils import sha3, to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import BlockNumber, MessageID, PaymentAmount, PaymentID, Secret

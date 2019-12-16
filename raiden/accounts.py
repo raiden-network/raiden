@@ -5,10 +5,10 @@ from typing import Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import decode_hex, encode_hex, to_checksum_address
+from eth_utils import decode_hex, encode_hex
 
 from raiden.exceptions import RaidenError
-from raiden.utils import privatekey_to_address, privatekey_to_publickey
+from raiden.utils import privatekey_to_address, privatekey_to_publickey, to_checksum_address
 from raiden.utils.typing import Address, AddressHex, PrivateKey, PublicKey
 
 log = structlog.get_logger(__name__)

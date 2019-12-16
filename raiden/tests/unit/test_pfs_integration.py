@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import requests
-from eth_utils import is_checksum_address, is_hex, is_hex_address, to_checksum_address
+from eth_utils import is_checksum_address, is_hex, is_hex_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
@@ -26,7 +26,7 @@ from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
-from raiden.utils import privatekey_to_address, typing
+from raiden.utils import privatekey_to_address, to_checksum_address, typing
 from raiden.utils.typing import (
     Address,
     Any,

@@ -1,5 +1,4 @@
 import pytest
-from eth_utils import to_checksum_address
 
 from raiden.constants import Environment
 from raiden.settings import RAIDEN_CONTRACT_VERSION
@@ -8,6 +7,7 @@ from raiden.tests.integration.cli.util import (
     expect_cli_successful_connected,
     expect_cli_until_acknowledgment,
 )
+from raiden.utils import to_checksum_address
 
 EXPECTED_DEFAULT_ENVIRONMENT = Environment.PRODUCTION
 

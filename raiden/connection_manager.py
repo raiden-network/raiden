@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List
 
 import gevent
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -23,7 +23,7 @@ from raiden.exceptions import (
 )
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
-from raiden.utils import typing
+from raiden.utils import to_checksum_address, typing
 from raiden.utils.typing import (
     Address,
     TokenAddress,

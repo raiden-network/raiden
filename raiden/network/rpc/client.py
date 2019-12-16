@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gevent
 import structlog
-from eth_utils import encode_hex, is_checksum_address, to_canonical_address, to_checksum_address
+from eth_utils import encode_hex, is_checksum_address, to_canonical_address
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
@@ -29,7 +29,7 @@ from raiden.exceptions import (
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, to_checksum_address
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.typing import (
     ABI,

@@ -8,7 +8,6 @@ from urllib.parse import quote
 
 import gevent
 import structlog
-from eth_utils import to_checksum_address
 from gevent.lock import Semaphore
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
@@ -20,6 +19,7 @@ from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
+from raiden.utils import to_checksum_address
 
 log = structlog.get_logger(__name__)
 

@@ -1,5 +1,5 @@
 import structlog
-from eth_utils import encode_hex, is_binary_address, to_checksum_address
+from eth_utils import encode_hex, is_binary_address
 from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
@@ -8,7 +8,7 @@ from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import safe_gas_limit
+from raiden.utils import safe_gas_limit, to_checksum_address
 from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager

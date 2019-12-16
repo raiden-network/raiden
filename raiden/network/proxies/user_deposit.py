@@ -1,5 +1,5 @@
 import structlog
-from eth_utils import decode_hex, is_binary_address, to_canonical_address, to_checksum_address
+from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
@@ -9,7 +9,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import safe_gas_limit
+from raiden.utils import safe_gas_limit, to_checksum_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,

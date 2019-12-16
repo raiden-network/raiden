@@ -1,5 +1,5 @@
 import pytest
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 
 from raiden.constants import (
     EMPTY_ADDRESS,
@@ -19,7 +19,7 @@ from raiden.tests.utils.smartcontracts import (
     deploy_token,
     deploy_tokens_and_fund_accounts,
 )
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, to_checksum_address
 from raiden.utils.typing import (
     Address,
     ChainID,
