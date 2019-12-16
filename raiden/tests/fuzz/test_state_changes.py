@@ -86,11 +86,12 @@ def unwrap_multiple(multiple_results):
     return values[0] if len(values) == 1 else values
 
 
+clients = Bundle("clients")
 partners = Bundle("partners")
-# shared bundle of ChainStateStateMachine and all mixin classes
+# shared bundles of ChainStateStateMachine and all mixin classes
 
 
-Bla = typing.Dict[typing.Address, typing.TokenAmount]
+AddressToAmount = typing.Dict[typing.Address, typing.TokenAmount]
 
 
 @dataclass
@@ -102,23 +103,36 @@ class Client:
         default_factory=dict
     )
 
-    our_previous_deposit: Bla = field(default_factory=lambda: defaultdict(int))
-    partner_previous_deposit: Bla = field(default_factory=lambda: defaultdict(int))
-    our_previous_transferred: Bla = field(default_factory=lambda: defaultdict(int))
-    partner_previous_transferred: Bla = field(default_factory=lambda: defaultdict(int))
-    our_previous_unclaimed: Bla = field(default_factory=lambda: defaultdict(int))
-    partner_previous_unclaimed: Bla = field(default_factory=lambda: defaultdict(int))
+    our_previous_deposit: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    partner_previous_deposit: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    our_previous_transferred: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    partner_previous_transferred: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    our_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    partner_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
 
 
 class ChainStateStateMachine(RuleBasedStateMachine):
-    def __init__(self, address=None):
-        self.address: typing.Address = address or factories.make_address()
+    def __init__(self, number_of_clients=1):
         self.replay_path: bool = False
         self.address_to_privkey: typing.Dict[typing.Address, typing.PrivateKey] = dict()
         self.address_to_client: typing.Dict[typing.Address, Client] = dict()
         self.initial_number_of_channels = 1
 
+        self.client_addresses = list()
+        for _ in range(number_of_clients):
+            private_key, address = factories.make_privkey_address()
+            self.address_to_privkey[address] = private_key
+            self.client_addresses.append(address)
+
         super().__init__()
+
+    @property
+    def address(self):
+        return self.client_addresses[0]
+
+    @property
+    def private_key(self):
+        return self.private_keys[0]
 
     def __getattr__(self, item):
         if item in (
@@ -135,7 +149,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             client = self.address_to_client[self.address]
             return getattr(client, item)
 
-    def new_channel(self):
+    def new_channel(self, client_address=None):
         """Create a new partner address with private key and channel. The
         private key and channels are listed in the instance's dictionaries,
         the address is returned and should be added to the partners Bundle.
@@ -144,7 +158,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         partner_privkey, partner_address = factories.make_privkey_address()
 
         self.address_to_privkey[partner_address] = partner_privkey
-        self.address_to_channel[partner_address] = factories.create(
+        client = self.address_to_client[client_address or self.address]
+        client.address_to_channel[partner_address] = factories.create(
             factories.NettingChannelStateProperties(
                 our_state=factories.NettingChannelEndStateProperties(
                     balance=1000, address=self.address
@@ -160,18 +175,19 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         return partner_address
 
-    def new_channel_with_transaction(self):
-        partner_address = self.new_channel()
+    def new_channel_with_transaction(self, client_address=None):
+        client = self.address_to_client[client_address or self.address]
+        partner_address = self.new_channel(client_address)
 
         channel_new_state_change = ContractReceiveChannelNew(
             transaction_hash=factories.make_transaction_hash(),
-            channel_state=self.address_to_channel[partner_address],
+            channel_state=client.address_to_channel[partner_address],
             block_number=self.block_number,
             block_hash=factories.make_block_hash(),
         )
-        node.state_transition(self.chain_state, channel_new_state_change)
-        node.state_transition(self.chain_state, channel_new_state_change)
-        self.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
+        node.state_transition(client.chain_state, channel_new_state_change)
+        node.state_transition(client.chain_state, channel_new_state_change)
+        client.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
 
         return partner_address
 
@@ -181,7 +197,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         random=randoms(),
         random_seed=random_module(),
     )
-    def initialize(self, block_number, random, random_seed):
+    def initialize_all(self, block_number, random, random_seed):
         self.random_seed = random_seed
 
         self.block_number = block_number
@@ -189,13 +205,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.random = random
         self.private_key, self.address = factories.make_privkey_address()
 
-        chain_state = ChainState(
-            pseudo_random_generator=self.random,
-            block_number=self.block_number,
-            block_hash=self.block_hash,
-            our_address=self.address,
-            chain_id=factories.UNIT_CHAIN_ID,
-        )
 
         self.token_network_address = factories.UNIT_TOKEN_NETWORK_ADDRESS
         self.token_id = factories.UNIT_TOKEN_ADDRESS
@@ -210,20 +219,32 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        chain_state.identifiers_to_tokennetworkregistries[
-            self.token_network_registry_address
-        ] = self.token_network_registry_state
+        for address in self.client_addresses:
+            chain_state = ChainState(
+                pseudo_random_generator=self.random,
+                block_number=self.block_number,
+                block_hash=self.block_hash,
+                our_address=self.address,
+                chain_id=factories.UNIT_CHAIN_ID,
+            )
+            chain_state.identifiers_to_tokennetworkregistries[
+                self.token_network_registry_address
+            ] = self.token_network_registry_state
 
-        chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
-            self.token_network_address
-        ] = self.token_network_registry_address
+            chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
+                self.token_network_address
+            ] = self.token_network_registry_address
 
-        self.address_to_client[self.address] = Client(chain_state=chain_state)
+            self.address_to_client[address] = Client(chain_state=chain_state)
 
         channels = [
             self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
         ]
         return multiple(*channels)
+
+    @initialize(target=clients)
+    def initialize_clients_bundle(self):
+        return multiple(*self.client_addresses)
 
     def event(self, description):
         """ Wrapper for hypothesis' event function.
@@ -237,89 +258,93 @@ class ChainStateStateMachine(RuleBasedStateMachine):
     @invariant()
     def monotonicity(self):
         """ Check monotonicity properties as given in Raiden specification """
-        if not self.address_to_client:
-            return
+        for client in self.address_to_client.values():
+            for address, netting_channel in client.address_to_channel.items():
 
-        for address, netting_channel in self.address_to_channel.items():
+                # constraint (1TN)
+                assert netting_channel.our_total_deposit >= client.our_previous_deposit[address]
+                assert (
+                    netting_channel.partner_total_deposit >= client.partner_previous_deposit[address]
+                )
+                client.our_previous_deposit[address] = netting_channel.our_total_deposit
+                client.partner_previous_deposit[address] = netting_channel.partner_total_deposit
 
-            # constraint (1TN)
-            assert netting_channel.our_total_deposit >= self.our_previous_deposit[address]
-            assert netting_channel.partner_total_deposit >= self.partner_previous_deposit[address]
-            self.our_previous_deposit[address] = netting_channel.our_total_deposit
-            self.partner_previous_deposit[address] = netting_channel.partner_total_deposit
-
-            # TODO add constraint (2TN) when withdrawal is implemented
-            # constraint (3R) and (4R)
-            our_transferred = transferred_amount(netting_channel.our_state)
-            partner_transferred = transferred_amount(netting_channel.partner_state)
-            our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
-            partner_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.partner_state)
-            assert our_transferred >= self.our_previous_transferred[address]
-            assert partner_transferred >= self.partner_previous_transferred[address]
-            assert (
-                our_unclaimed + our_transferred
-                >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
-            )
-            assert (
-                partner_unclaimed + partner_transferred
-                >= self.partner_previous_transferred[address]
-                + self.partner_previous_unclaimed[address]
-            )
-            self.our_previous_transferred[address] = our_transferred
-            self.partner_previous_transferred[address] = partner_transferred
-            self.our_previous_unclaimed[address] = our_unclaimed
-            self.partner_previous_unclaimed[address] = partner_unclaimed
+                # TODO add constraint (2TN) when withdrawal is implemented
+                # constraint (3R) and (4R)
+                our_transferred = transferred_amount(netting_channel.our_state)
+                partner_transferred = transferred_amount(netting_channel.partner_state)
+                our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
+                partner_unclaimed = channel.get_amount_unclaimed_onchain(
+                    netting_channel.partner_state
+                )
+                assert our_transferred >= client.our_previous_transferred[address]
+                assert partner_transferred >= client.partner_previous_transferred[address]
+                assert (
+                    our_unclaimed + our_transferred
+                    >= client.our_previous_transferred[address]
+                    + client.our_previous_unclaimed[address]
+                )
+                assert (
+                    partner_unclaimed + partner_transferred
+                    >= client.partner_previous_transferred[address]
+                    + client.partner_previous_unclaimed[address]
+                )
+                client.our_previous_transferred[address] = our_transferred
+                client.partner_previous_transferred[address] = partner_transferred
+                client.our_previous_unclaimed[address] = our_unclaimed
+                client.partner_previous_unclaimed[address] = partner_unclaimed
 
     @invariant()
     def channel_state_invariants(self):
         """ Check the invariants for the channel state given in the Raiden specification """
-        if not self.address_to_client:
-            return
+        for client in self.address_to_client.values():
+            for netting_channel in client.address_to_channel.values():
+                our_state = netting_channel.our_state
+                partner_state = netting_channel.partner_state
 
-        for netting_channel in self.address_to_channel.values():
-            our_state = netting_channel.our_state
-            partner_state = netting_channel.partner_state
+                our_transferred_amount = 0
+                if our_state.balance_proof:
+                    our_transferred_amount = our_state.balance_proof.transferred_amount
+                    assert our_transferred_amount >= 0
 
-            our_transferred_amount = 0
-            if our_state.balance_proof:
-                our_transferred_amount = our_state.balance_proof.transferred_amount
-                assert our_transferred_amount >= 0
+                partner_transferred_amount = 0
+                if partner_state.balance_proof:
+                    partner_transferred_amount = partner_state.balance_proof.transferred_amount
+                    assert partner_transferred_amount >= 0
 
-            partner_transferred_amount = 0
-            if partner_state.balance_proof:
-                partner_transferred_amount = partner_state.balance_proof.transferred_amount
-                assert partner_transferred_amount >= 0
+                assert channel.get_distributable(our_state, partner_state) >= 0
+                assert channel.get_distributable(partner_state, our_state) >= 0
 
-            assert channel.get_distributable(our_state, partner_state) >= 0
-            assert channel.get_distributable(partner_state, our_state) >= 0
+                our_deposit = netting_channel.our_total_deposit
+                partner_deposit = netting_channel.partner_total_deposit
+                total_deposit = our_deposit + partner_deposit
 
-            our_deposit = netting_channel.our_total_deposit
-            partner_deposit = netting_channel.partner_total_deposit
-            total_deposit = our_deposit + partner_deposit
+                our_amount_locked = channel.get_amount_locked(our_state)
+                our_balance = channel.get_balance(our_state, partner_state)
+                partner_amount_locked = channel.get_amount_locked(partner_state)
+                partner_balance = channel.get_balance(partner_state, our_state)
 
-            our_amount_locked = channel.get_amount_locked(our_state)
-            our_balance = channel.get_balance(our_state, partner_state)
-            partner_amount_locked = channel.get_amount_locked(partner_state)
-            partner_balance = channel.get_balance(partner_state, our_state)
+                # invariant (5.1R), add withdrawn amounts when implemented
+                assert 0 <= our_amount_locked <= our_balance
+                assert 0 <= partner_amount_locked <= partner_balance
+                assert our_amount_locked <= total_deposit
+                assert partner_amount_locked <= total_deposit
 
-            # invariant (5.1R), add withdrawn amounts when implemented
-            assert 0 <= our_amount_locked <= our_balance
-            assert 0 <= partner_amount_locked <= partner_balance
-            assert our_amount_locked <= total_deposit
-            assert partner_amount_locked <= total_deposit
+                our_transferred = partner_transferred_amount - our_transferred_amount
+                netted_transferred = our_transferred + partner_amount_locked - our_amount_locked
 
-            our_transferred = partner_transferred_amount - our_transferred_amount
-            netted_transferred = our_transferred + partner_amount_locked - our_amount_locked
+                # invariant (6R), add withdrawn amounts when implemented
+                assert 0 <= our_deposit + our_transferred - our_amount_locked <= total_deposit
+                assert (
+                    0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
+                )
 
-            # invariant (6R), add withdrawn amounts when implemented
-            assert 0 <= our_deposit + our_transferred - our_amount_locked <= total_deposit
-            assert 0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
+                # invariant (7R), add withdrawn amounts when implemented
+                assert -our_deposit <= netted_transferred <= partner_deposit
 
-            # invariant (7R), add withdrawn amounts when implemented
-            assert -our_deposit <= netted_transferred <= partner_deposit
-
-    def channel_opened(self, partner_address):
-        needed_channel = self.address_to_channel[partner_address]
+    def channel_opened(self, partner_address, client_address=None):
+        client = self.address_to_client[client_address or self.address]
+        needed_channel = client.address_to_channel[partner_address]
         return channel.get_status(needed_channel) == ChannelState.STATE_OPENED
 
 
@@ -742,7 +767,7 @@ def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorStateMachine()
     state.replay_path = True
 
-    v1 = unwrap_multiple(state.initialize(block_number=1, random=Random(), random_seed=None))
+    v1 = unwrap_multiple(state.initialize_all(block_number=1, random=Random(), random_seed=None))
     v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
