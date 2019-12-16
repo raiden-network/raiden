@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from copy import deepcopy
+from dataclasses import dataclass, field
 from hashlib import sha256
 from random import Random
 
@@ -50,9 +51,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
 )
-from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import BlockNumber
+from raiden.utils import typing
+from raiden.utils.secrethash import sha256_secrethash
 
 
 @composite
@@ -89,24 +90,50 @@ partners = Bundle("partners")
 # shared bundle of ChainStateStateMachine and all mixin classes
 
 
+Bla = typing.Dict[typing.Address, typing.TokenAmount]
+
+
+@dataclass
+class Client:
+    chain_state: ChainState
+
+    address_to_channel: typing.Dict[typing.Address, ChannelState] = field(default_factory=dict)
+    expected_expiry: typing.Dict[typing.SecretHash, typing.BlockNumber] = field(
+        default_factory=dict
+    )
+
+    our_previous_deposit: Bla = field(default_factory=lambda: defaultdict(int))
+    partner_previous_deposit: Bla = field(default_factory=lambda: defaultdict(int))
+    our_previous_transferred: Bla = field(default_factory=lambda: defaultdict(int))
+    partner_previous_transferred: Bla = field(default_factory=lambda: defaultdict(int))
+    our_previous_unclaimed: Bla = field(default_factory=lambda: defaultdict(int))
+    partner_previous_unclaimed: Bla = field(default_factory=lambda: defaultdict(int))
+
+
 class ChainStateStateMachine(RuleBasedStateMachine):
     def __init__(self, address=None):
-        self.address = address or factories.make_address()
-        self.replay_path = False
-        self.address_to_channel = dict()
-        self.address_to_privkey = dict()
+        self.address: typing.Address = address or factories.make_address()
+        self.replay_path: bool = False
+        self.address_to_privkey: typing.Dict[typing.Address, typing.PrivateKey] = dict()
+        self.address_to_client: typing.Dict[typing.Address, Client] = dict()
         self.initial_number_of_channels = 1
 
-        self.our_previous_deposit = defaultdict(int)
-        self.partner_previous_deposit = defaultdict(int)
-        self.our_previous_transferred = defaultdict(int)
-        self.partner_previous_transferred = defaultdict(int)
-        self.our_previous_unclaimed = defaultdict(int)
-        self.partner_previous_unclaimed = defaultdict(int)
-
-        self.expected_expiry = dict()
-
         super().__init__()
+
+    def __getattr__(self, item):
+        if item in (
+            "address_to_channel",
+            "chain_state",
+            "our_previous_deposit",
+            "partner_previous_deposit",
+            "our_previous_transferred",
+            "partner_previous_transferred",
+            "our_previous_unclaimed",
+            "partner_previous_unclaimed",
+            "expected_expiry",
+        ):
+            client = self.address_to_client[self.address]
+            return getattr(client, item)
 
     def new_channel(self):
         """Create a new partner address with private key and channel. The
@@ -143,6 +170,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(self.chain_state, channel_new_state_change)
+        node.state_transition(self.chain_state, channel_new_state_change)
         self.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
 
         return partner_address
@@ -161,7 +189,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.random = random
         self.private_key, self.address = factories.make_privkey_address()
 
-        self.chain_state = ChainState(
+        chain_state = ChainState(
             pseudo_random_generator=self.random,
             block_number=self.block_number,
             block_hash=self.block_hash,
@@ -182,13 +210,16 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        self.chain_state.identifiers_to_tokennetworkregistries[
+        chain_state.identifiers_to_tokennetworkregistries[
             self.token_network_registry_address
         ] = self.token_network_registry_state
 
-        self.chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
+        chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses[
             self.token_network_address
         ] = self.token_network_registry_address
+
+        self.address_to_client[self.address] = Client(chain_state=chain_state)
+
         channels = [
             self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
         ]
@@ -206,6 +237,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
     @invariant()
     def monotonicity(self):
         """ Check monotonicity properties as given in Raiden specification """
+        if not self.address_to_client:
+            return
 
         for address, netting_channel in self.address_to_channel.items():
 
@@ -240,6 +273,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
     @invariant()
     def channel_state_invariants(self):
         """ Check the invariants for the channel state given in the Raiden specification """
+        if not self.address_to_client:
+            return
 
         for netting_channel in self.address_to_channel.values():
             our_state = netting_channel.our_state
@@ -630,7 +665,7 @@ class MediatorMixin:
 
 class OnChainMixin:
 
-    block_number: BlockNumber
+    block_number: typing.BlockNumber
 
     @rule(number=integers(min_value=1, max_value=50))
     def new_blocks(self, number):
