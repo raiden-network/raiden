@@ -1,4 +1,5 @@
 import collections
+import functools
 import os
 import random
 import re
@@ -7,6 +8,7 @@ import time
 from itertools import zip_longest
 from typing import Any, Callable
 
+import eth_utils
 import gevent
 from eth_keys import keys
 from eth_utils import (
@@ -15,7 +17,6 @@ from eth_utils import (
     is_checksum_address,
     remove_0x_prefix,
     to_canonical_address,
-    to_checksum_address,
 )
 
 import raiden
@@ -214,3 +215,7 @@ def safe_gas_limit(*estimates: int) -> int:
 def to_rdn(rei: int) -> float:
     """ Convert REI value to RDN. """
     return rei / 10 ** 18
+
+
+# to_checksum_address is slow, so let's cache the last 1000 results
+to_checksum_address = functools.lru_cache(maxsize=1000)(eth_utils.to_checksum_address)
