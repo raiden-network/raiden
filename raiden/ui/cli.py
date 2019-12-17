@@ -58,6 +58,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.system import get_system_spec
@@ -531,8 +532,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
         from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
 
-        now = datetime.datetime.now()
-        stack_path = os.path.join(flamegraph, f"{now:%Y%m%d_%H%M}_stack.data")
+        now = datetime.datetime.now().isoformat()
+        address = to_checksum_address(kwargs["address"])
+        stack_path = os.path.join(flamegraph, f"{address}_{now}_stack.data")
         stack_stream = open(stack_path, "w")
         flame = FlameGraphCollector(stack_stream)
         profiler = TraceSampler(flame)
