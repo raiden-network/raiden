@@ -17,7 +17,7 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.ui.checks import (
-    ServiceBundleAddresses,
+    DeploymentAddresses,
     check_deployed_contracts_data,
     check_pfs_configuration,
     check_raiden_environment,
@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     List,
+    SecretRegistryAddress,
     TokenNetworkRegistryAddress,
     Tuple,
     UserDepositAddress,
@@ -37,7 +38,6 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import (
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
-    CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
@@ -119,8 +119,47 @@ def handle_contract_wrong_address(name: str, address: Address) -> None:
     sys.exit(1)
 
 
+def load_deployment_addresses_from_udc(
+    proxy_manager: ProxyManager,
+    user_deposit_address: UserDepositAddress,
+    block_identifier: BlockSpecification,
+) -> DeploymentAddresses:
+    """Given a user deposit address, this function returns the list of contract addresses
+    which are used as services which are bound to the user deposit contract deployed.
+    """
+    block_identifier = "latest"
+    user_deposit = proxy_manager.user_deposit(user_deposit_address)
+    msc_address = user_deposit.msc_address(block_identifier)
+    one_to_n_address = user_deposit.one_to_n_address(block_identifier)
+
+    monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
+
+    token_network_registry_address = monitoring_service_proxy.token_network_registry_address(
+        block_identifier
+    )
+
+    token_network_registry_proxy = proxy_manager.token_network_registry(
+        token_network_registry_address
+    )
+    secret_registry_address = token_network_registry_proxy.get_secret_registry_address(
+        block_identifier
+    )
+    service_registry_address = monitoring_service_proxy.service_registry_address(block_identifier)
+
+    return DeploymentAddresses(
+        token_network_registry_address=token_network_registry_address,
+        secret_registry_address=secret_registry_address,
+        user_deposit_address=user_deposit_address,
+        service_registry_address=service_registry_address,
+        monitoring_service_address=msc_address,
+        one_to_n_address=one_to_n_address,
+    )
+
+
 def raiden_bundle_from_contracts_deployment(
-    config: Dict[str, Any], proxy_manager: ProxyManager, contracts: Dict[str, Any]
+    proxy_manager: ProxyManager,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    secret_registry_address: SecretRegistryAddress,
 ) -> RaidenBundle:
     """
     Initialize and setup the contract proxies.
@@ -132,22 +171,6 @@ def raiden_bundle_from_contracts_deployment(
 
     Also depending on the given arguments populate config with PFS related settings
     """
-    node_network_id = config["chain_id"]
-    environment_type = config["environment_type"]
-
-    core_contract_names = [CONTRACT_TOKEN_NETWORK_REGISTRY, CONTRACT_SECRET_REGISTRY]
-    check_deployed_contracts_data(
-        node_network_id=node_network_id,
-        environment_type=environment_type,
-        contracts=contracts,
-        required_contracts=core_contract_names,
-    )
-
-    token_network_registry_address = to_canonical_address(
-        contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
-    )
-    secret_registry_address = to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
-
     contractname_address = [
         (
             "token_network_registry",
@@ -165,9 +188,9 @@ def raiden_bundle_from_contracts_deployment(
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:
-            handle_contract_no_code(contractname, address)
+            handle_contract_no_code(contractname, Address(address))
         except AddressWrongContract:
-            handle_contract_wrong_address(contractname, address)
+            handle_contract_wrong_address(contractname, Address(address))
 
         proxies[contractname] = proxy
 
@@ -183,37 +206,12 @@ def raiden_bundle_from_contracts_deployment(
     )
 
 
-def load_service_addresses(
-    proxy_manager: ProxyManager,
-    user_deposit_address: UserDepositAddress,
-    block_identifier: BlockSpecification,
-) -> ServiceBundleAddresses:
-    """Given a user deposit address, this function returns the list of contract addresses
-    which are used as services which are bound to the user deposit contract deployed.
-    """
-    block_identifier = "latest"
-    user_deposit = proxy_manager.user_deposit(user_deposit_address)
-    msc_address = user_deposit.msc_address(block_identifier)
-    one_to_n_address = user_deposit.one_to_n_address(block_identifier)
-
-    monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
-
-    service_registry_address = monitoring_service_proxy.service_registry_address(block_identifier)
-
-    return ServiceBundleAddresses(
-        user_deposit_address=user_deposit_address,
-        service_registry_address=service_registry_address,
-        monitoring_service_address=msc_address,
-        one_to_n_address=one_to_n_address,
-    )
-
-
 def services_bundle_from_contracts_deployment(
     config: Dict[str, Any],
     proxy_manager: ProxyManager,
     contracts: Dict[str, Any],
     routing_mode: RoutingMode,
-    user_deposit_contract_address: Optional[UserDepositAddress],
+    deployed_addresses: DeploymentAddresses,
     pathfinding_service_address: str,
     enable_monitoring: bool,
 ) -> ServicesBundle:
@@ -230,14 +228,9 @@ def services_bundle_from_contracts_deployment(
     node_network_id = config["chain_id"]
     environment_type = config["environment_type"]
 
+    user_deposit_contract_address = deployed_addresses.user_deposit_address
     if user_deposit_contract_address is None:
         user_deposit_contract_address = contracts[CONTRACT_USER_DEPOSIT]["address"]
-
-    service_bundle_addresses = load_service_addresses(
-        proxy_manager=proxy_manager,
-        user_deposit_address=user_deposit_contract_address,
-        block_identifier="latest",
-    )
 
     services_contracts_map = {
         "monitoring_service_address": CONTRACT_MONITORING_SERVICE,
@@ -248,7 +241,7 @@ def services_bundle_from_contracts_deployment(
     # Filter out contracts from the `contracts` map which we've been unable
     # to find an address for.
     for address_member, contract_name in services_contracts_map.items():
-        if getattr(service_bundle_addresses, address_member) == NULL_ADDRESS_BYTES:
+        if getattr(deployed_addresses, address_member) == NULL_ADDRESS_BYTES:
             del contracts[contract_name]
 
     # If the above step ends up removing any of the required services
@@ -262,7 +255,7 @@ def services_bundle_from_contracts_deployment(
 
     check_user_deposit_deps_consistency(
         proxy_manager=proxy_manager,
-        service_bundle_addresses=service_bundle_addresses,
+        deployment_addresses=deployed_addresses,
         block_identifier="latest",
     )
 
@@ -272,7 +265,7 @@ def services_bundle_from_contracts_deployment(
     service_registry_contract_address = to_canonical_address(
         contracts[CONTRACT_SERVICE_REGISTRY]["address"]
     )
-    if not user_deposit_contract_address:
+    if not deployed_addresses.user_deposit_address:
         user_deposit_contract_address = UserDepositAddress(
             to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
         )
@@ -293,16 +286,12 @@ def services_bundle_from_contracts_deployment(
         contractname_address.append(
             (
                 "monitoring_service",
-                Address(service_bundle_addresses.monitoring_service_address),
+                Address(deployed_addresses.monitoring_service_address),
                 proxy_manager.monitoring_service,
             )
         )
         contractname_address.append(
-            (
-                "one_to_n",
-                Address(service_bundle_addresses.one_to_n_address),
-                proxy_manager.one_to_n,
-            )
+            ("one_to_n", Address(deployed_addresses.one_to_n_address), proxy_manager.one_to_n)
         )
 
     proxies = dict()

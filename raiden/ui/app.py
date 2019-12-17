@@ -51,6 +51,7 @@ from raiden.ui.prompt import (
 )
 from raiden.ui.startup import (
     load_deployed_contracts_data,
+    load_deployment_addresses_from_udc,
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
     setup_environment,
@@ -273,13 +274,25 @@ def run_app(
     if sync_check:
         check_synced(proxy_manager)
 
+    if user_deposit_contract_address is None:
+        click.secho("The user deposit address should be provided", fg="red")
+        sys.exit(1)
+
+    deployment_addresses = load_deployment_addresses_from_udc(
+        proxy_manager=proxy_manager,
+        user_deposit_address=user_deposit_contract_address,
+        block_identifier="latest",
+    )
+
     raiden_bundle = raiden_bundle_from_contracts_deployment(
-        config=config, proxy_manager=proxy_manager, contracts=contracts
+        proxy_manager=proxy_manager,
+        token_network_registry_address=deployment_addresses.token_network_registry_address,
+        secret_registry_address=deployment_addresses.secret_registry_address,
     )
 
     services_bundle = services_bundle_from_contracts_deployment(
         config=config,
-        user_deposit_contract_address=user_deposit_contract_address,
+        deployed_addresses=deployment_addresses,
         proxy_manager=proxy_manager,
         contracts=contracts,
         routing_mode=routing_mode,
