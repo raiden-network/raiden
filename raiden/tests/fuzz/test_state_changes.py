@@ -51,9 +51,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
 )
-from raiden.utils.transfers import random_secret
 from raiden.utils import typing
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.transfers import random_secret
 
 
 @composite
@@ -79,16 +79,15 @@ def transferred_amount(state):
     return 0 if not state.balance_proof else state.balance_proof.transferred_amount
 
 
-# use of hypothesis.stateful.multiple() breaks the failed-example code
-# generation at the moment, this function is a temporary workaround
-def unwrap_multiple(multiple_results):
-    values = multiple_results.values
-    return values[0] if len(values) == 1 else values
+@dataclass
+class AddressPair:
+    our_address: typing.Address
+    partner_address: typing.Address
 
 
-clients = Bundle("clients")
-partners = Bundle("partners")
-# shared bundles of ChainStateStateMachine and all mixin classes
+address_pairs = Bundle("address_pairs")
+# shared bundle of ChainStateStateMachine and all mixin classes
+# contains address pairs for all existing channels
 
 
 AddressToAmount = typing.Dict[typing.Address, typing.TokenAmount]
@@ -126,43 +125,19 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         super().__init__()
 
-    @property
-    def address(self):
-        return self.client_addresses[0]
-
-    @property
-    def private_key(self):
-        return self.private_keys[0]
-
-    def __getattr__(self, item):
-        if item in (
-            "address_to_channel",
-            "chain_state",
-            "our_previous_deposit",
-            "partner_previous_deposit",
-            "our_previous_transferred",
-            "partner_previous_transferred",
-            "our_previous_unclaimed",
-            "partner_previous_unclaimed",
-            "expected_expiry",
-        ):
-            client = self.address_to_client[self.address]
-            return getattr(client, item)
-
-    def new_channel(self, client_address=None):
+    def new_channel(self, client_address: typing.Address) -> AddressPair:
         """Create a new partner address with private key and channel. The
         private key and channels are listed in the instance's dictionaries,
         the address is returned and should be added to the partners Bundle.
         """
-
         partner_privkey, partner_address = factories.make_privkey_address()
 
         self.address_to_privkey[partner_address] = partner_privkey
-        client = self.address_to_client[client_address or self.address]
+        client = self.address_to_client[client_address]
         client.address_to_channel[partner_address] = factories.create(
             factories.NettingChannelStateProperties(
                 our_state=factories.NettingChannelEndStateProperties(
-                    balance=1000, address=self.address
+                    balance=1000, address=client_address
                 ),
                 partner_state=factories.NettingChannelEndStateProperties(
                     balance=1000, address=partner_address
@@ -173,12 +148,13 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             )
         )
 
-        return partner_address
+        return AddressPair(our_address=client_address, partner_address=partner_address)
 
-    def new_channel_with_transaction(self, client_address=None):
-        client = self.address_to_client[client_address or self.address]
-        partner_address = self.new_channel(client_address)
+    def new_channel_with_transaction(self, client_address: typing.Address) -> AddressPair:
+        client = self.address_to_client[client_address]
+        address_pair = self.new_channel(client_address)
 
+        partner_address = address_pair.partner_address
         channel_new_state_change = ContractReceiveChannelNew(
             transaction_hash=factories.make_transaction_hash(),
             channel_state=client.address_to_channel[partner_address],
@@ -189,10 +165,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         node.state_transition(client.chain_state, channel_new_state_change)
         client.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
 
-        return partner_address
+        return address_pair
 
     @initialize(
-        target=partners,
+        target=address_pairs,
         block_number=integers(min_value=GENESIS_BLOCK_NUMBER + 1),
         random=randoms(),
         random_seed=random_module(),
@@ -203,7 +179,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.block_number = block_number
         self.block_hash = factories.make_block_hash()
         self.random = random
-
 
         self.token_network_address = factories.UNIT_TOKEN_NETWORK_ADDRESS
         self.token_id = factories.UNIT_TOKEN_ADDRESS
@@ -218,12 +193,16 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        for address in self.client_addresses:
+        channels = []
+        for _ in range(self.number_of_clients):
+            private_key, address = factories.make_privkey_address()
+            self.address_to_privkey[address] = private_key
+
             chain_state = ChainState(
                 pseudo_random_generator=self.random,
                 block_number=self.block_number,
                 block_hash=self.block_hash,
-                our_address=self.address,
+                our_address=address,
                 chain_id=factories.UNIT_CHAIN_ID,
             )
             chain_state.identifiers_to_tokennetworkregistries[
@@ -236,14 +215,12 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
             self.address_to_client[address] = Client(chain_state=chain_state)
 
-        channels = [
-            self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
-        ]
-        return multiple(*channels)
+            channels.extend(
+                self.new_channel_with_transaction(client_address=address)
+                for _ in range(self.initial_number_of_channels)
+            )
 
-    @initialize(target=clients)
-    def initialize_clients_bundle(self):
-        return multiple(*self.client_addresses)
+        return multiple(*channels)
 
     def event(self, description):
         """ Wrapper for hypothesis' event function.
@@ -263,7 +240,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
                 # constraint (1TN)
                 assert netting_channel.our_total_deposit >= client.our_previous_deposit[address]
                 assert (
-                    netting_channel.partner_total_deposit >= client.partner_previous_deposit[address]
+                    netting_channel.partner_total_deposit
+                    >= client.partner_previous_deposit[address]
                 )
                 client.our_previous_deposit[address] = netting_channel.our_total_deposit
                 client.partner_previous_deposit[address] = netting_channel.partner_total_deposit
@@ -341,8 +319,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
                 # invariant (7R), add withdrawn amounts when implemented
                 assert -our_deposit <= netted_transferred <= partner_deposit
 
-    def channel_opened(self, partner_address, client_address=None):
-        client = self.address_to_client[client_address or self.address]
+    def channel_opened(self, partner_address, client_address):
+        client = self.address_to_client[client_address]
         needed_channel = client.address_to_channel[partner_address]
         return channel.get_status(needed_channel) == ChannelState.STATE_OPENED
 
@@ -375,7 +353,7 @@ class InitiatorMixin:
             sender=transfer.target,
         )
 
-    def _new_transfer_description(self, target, payment_id, amount, secret, initiator=None):
+    def _new_transfer_description(self, target, payment_id, amount, secret, initiator):
         self.used_secrets.add(secret)
 
         return TransferDescriptionWithSecretState(
@@ -383,7 +361,7 @@ class InitiatorMixin:
             payment_identifier=payment_id,
             amount=amount,
             token_network_address=self.token_network_address,
-            initiator=initiator or self.address,
+            initiator=initiator,
             target=target,
             secret=secret,
         )
@@ -406,7 +384,7 @@ class InitiatorMixin:
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
     def _assume_channel_opened(self, action):
-        assume(self.channel_opened(action.transfer.target))
+        assume(self.channel_opened(action.transfer.target, action.transfer.initiator))
 
     def _is_removed(self, action):
         client = self._get_initiator_client(action.transfer)
@@ -417,19 +395,20 @@ class InitiatorMixin:
 
     @rule(
         target=init_initiators,
-        partner=partners,
-        client=clients,
+        address_pair=address_pairs,
         payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1, max_value=100),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
-    def valid_init_initiator(self, partner, client, payment_id, amount, secret):
-        assume(amount <= self._available_amount(client, partner))
+    def valid_init_initiator(self, address_pair, payment_id, amount, secret):
+        our_address = address_pair.our_address
+        partner = address_pair.partner_address
+        assume(amount <= self._available_amount(our_address, partner))
         assume(secret not in self.used_secrets)
 
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
         action = self._action_init_initiator(transfer)
-        client = self.address_to_client[client]
+        client = self.address_to_client[our_address]
         result = node.state_transition(client.chain_state, action)
 
         assert event_types_match(result.events, SendLockedTransfer)
@@ -440,32 +419,35 @@ class InitiatorMixin:
         return action
 
     @rule(
-        partner=partners,
-        client=clients,
+        address_pair=address_pairs,
         payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         excess_amount=integers(min_value=1),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
-    def exceeded_capacity_init_initiator(self, partner, client, payment_id, excess_amount, secret):
-        amount = self._available_amount(client, partner) + excess_amount
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
+    def exceeded_capacity_init_initiator(self, address_pair, payment_id, excess_amount, secret):
+        our_address = address_pair.our_address
+        partner = address_pair.partner_address
+        amount = self._available_amount(our_address, partner) + excess_amount
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
         action = self._action_init_initiator(transfer)
-        client = self.address_to_client[client]
+        client = self.address_to_client[our_address]
         result = node.state_transition(client.chain_state, action)
         assert event_types_match(result.events, EventPaymentSentFailed)
         self.event("ActionInitInitiator failed: Amount exceeded")
 
     @rule(
         previous_action=init_initiators,
-        partner=partners,
+        address_pair=address_pairs,
         payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1),
     )
-    def used_secret_init_initiator(self, previous_action, partner, payment_id, amount):
+    def used_secret_init_initiator(self, previous_action, address_pair, payment_id, amount):
+        our_address = address_pair.our_address
+        partner = address_pair.partner_address
         assume(not self._is_removed(previous_action))
         client = self._get_initiator_client(previous_action.transfer)
         secret = previous_action.transfer.secret
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
         action = self._action_init_initiator(transfer)
         result = node.state_transition(client.chain_state, action)
         assert not result.events
@@ -552,6 +534,12 @@ class BalanceProofData:
             )
 
 
+@dataclass
+class ClientData:
+    client: typing.Address
+    data: typing.Any
+
+
 class MediatorMixin:
     def __init__(self):
         super().__init__()
@@ -560,16 +548,17 @@ class MediatorMixin:
         self.waiting_for_unlock = dict()
         self.initial_number_of_channels = 2
 
-    def _get_balance_proof_data(self, partner):
+    def _get_balance_proof_data(self, partner, client_address):
         if partner not in self.partner_to_balance_proof_data:
-            partner_channel = self.address_to_channel[partner]
+            client = self.address_to_client[client_address]
+            partner_channel = client.address_to_channel[partner]
             self.partner_to_balance_proof_data[partner] = BalanceProofData(
                 canonical_identifier=partner_channel.canonical_identifier
             )
         return self.partner_to_balance_proof_data[partner]
 
-    def _update_balance_proof_data(self, partner, amount, expiration, secret):
-        expected = self._get_balance_proof_data(partner)
+    def _update_balance_proof_data(self, partner, amount, expiration, secret, our_address):
+        expected = self._get_balance_proof_data(partner, our_address)
         lock = HashTimeLockState(
             amount=amount, expiration=expiration, secrethash=sha256_secrethash(secret)
         )
@@ -581,11 +570,11 @@ class MediatorMixin:
     unlocks = Bundle("unlocks")
 
     def _new_mediator_transfer(
-        self, initiator_address, target_address, payment_id, amount, secret
+        self, initiator_address, target_address, payment_id, amount, secret, our_address
     ) -> LockedTransferSignedState:
         initiator_pkey = self.address_to_privkey[initiator_address]
         balance_proof_data = self._update_balance_proof_data(
-            initiator_address, amount, self.block_number + 10, secret
+            initiator_address, amount, self.block_number + 10, secret, our_address
         )
         self.secrethash_to_secret[sha256_secrethash(secret)] = secret
 
@@ -600,108 +589,138 @@ class MediatorMixin:
                 target=target_address,
                 token=self.token_id,
                 sender=initiator_address,
-                recipient=self.address,
+                recipient=our_address,
                 pkey=initiator_pkey,
                 message_identifier=1,
             )
         )
 
-    def _action_init_mediator(self, transfer: LockedTransferSignedState) -> ActionInitMediator:
-        initiator_channel = self.address_to_channel[transfer.initiator]
-        target_channel = self.address_to_channel[transfer.target]
+    def _action_init_mediator(
+        self, transfer: LockedTransferSignedState, client_address
+    ) -> ClientData:
+        client_address = client_address
+        client = self.address_to_client[client_address]
+        initiator_channel = client.address_to_channel[transfer.initiator]
+        target_channel = client.address_to_channel[transfer.target]
 
-        return ActionInitMediator(
+        action = ActionInitMediator(
             route_states=[factories.make_route_from_channel(target_channel)],
             from_hop=factories.make_hop_to_channel(initiator_channel),
             from_transfer=transfer,
             balance_proof=transfer.balance_proof,
             sender=transfer.balance_proof.sender,
         )
+        return ClientData(client=client_address, data=action)
 
     @rule(
         target=init_mediators,
-        initiator_address=partners,
-        target_address=partners,
+        from_channel=address_pairs,
+        to_channel=address_pairs,
         payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1, max_value=100),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
-    def valid_init_mediator(self, initiator_address, target_address, payment_id, amount, secret):
-        assume(initiator_address != target_address)
+    def valid_init_mediator(self, from_channel, to_channel, payment_id, amount, secret):
+        from_partner = from_channel.partner_address
+        to_partner = to_channel.partner_address
+        assume(from_partner != to_partner)
+
+        our_address = from_channel.our_address
+        assert to_channel.our_address == our_address  # FIXME
+        client = self.address_to_client[our_address]
 
         transfer = self._new_mediator_transfer(
-            initiator_address, target_address, payment_id, amount, secret
+            from_partner, to_partner, payment_id, amount, secret, our_address
         )
-        action = self._action_init_mediator(transfer)
-        result = node.state_transition(self.chain_state, action)
+        client_data = self._action_init_mediator(transfer, our_address)
+        result = node.state_transition(client.chain_state, client_data.data)
 
         assert event_types_match(result.events, SendProcessed, SendLockedTransfer)
 
-        return action
+        return client_data
 
-    @rule(target=secret_requests, previous_action=consumes(init_mediators))
-    def valid_receive_secret_reveal(self, previous_action):
+    @rule(target=secret_requests, previous_action_client_data=consumes(init_mediators))
+    def valid_receive_secret_reveal(self, previous_action_client_data):
+        client_address = previous_action_client_data.client
+        client = self.address_to_client[client_address]
+        previous_action = previous_action_client_data.data
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         sender = previous_action.from_transfer.target
         recipient = previous_action.from_transfer.initiator
 
         action = ReceiveSecretReveal(secret=secret, sender=sender)
-        result = node.state_transition(self.chain_state, action)
+        result = node.state_transition(client.chain_state, action)
 
         expiration = previous_action.from_transfer.lock.expiration
         in_time = self.block_number < expiration - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
         still_waiting = self.block_number < expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 
-        if in_time and self.channel_opened(sender) and self.channel_opened(recipient):
+        if in_time and self.channel_opened(sender, client_address) and self.channel_opened(recipient, client_address):
             assert event_types_match(
                 result.events, SendSecretReveal, SendBalanceProof, EventUnlockSuccess
             )
             self.event("Unlock successful.")
             self.waiting_for_unlock[secret] = recipient
-        elif still_waiting and self.channel_opened(recipient):
+        elif still_waiting and self.channel_opened(recipient, client_address):
             assert event_types_match(result.events, SendSecretReveal)
             self.event("Unlock failed, secret revealed too late.")
         else:
             assert not result.events
             self.event("ReceiveSecretRevealed after removal of lock - dropped.")
-        return action
+        return ClientData(client=client_address, data=action)
 
-    @rule(previous_action=secret_requests)
-    def replay_receive_secret_reveal(self, previous_action):
-        result = node.state_transition(self.chain_state, previous_action)
+    @rule(previous_action_client_data=secret_requests)
+    def replay_receive_secret_reveal(self, previous_action_client_data):
+        client_address = previous_action_client_data.client
+        client = self.address_to_client[client_address]
+        previous_action = previous_action_client_data.data
+        result = node.state_transition(client.chain_state, previous_action)
         assert not result.events
 
     # pylint: disable=no-value-for-parameter
-    @rule(previous_action=secret_requests, invalid_sender=address())
+    @rule(previous_action_client_data=secret_requests, invalid_sender=address())
     # pylint: enable=no-value-for-parameter
-    def replay_receive_secret_reveal_scrambled_sender(self, previous_action, invalid_sender):
+    def replay_receive_secret_reveal_scrambled_sender(
+        self, previous_action_client_data, invalid_sender
+    ):
+        client_address = previous_action_client_data.client
+        client = self.address_to_client[client_address]
+        previous_action = previous_action_client_data.data
         action = ReceiveSecretReveal(previous_action.secret, invalid_sender)
-        result = node.state_transition(self.chain_state, action)
+        result = node.state_transition(client.chain_state, action)
         assert not result.events
 
     # pylint: disable=no-value-for-parameter
-    @rule(previous_action=init_mediators, secret=secret())
+    @rule(previous_action_client_data=init_mediators, secret=secret())
     # pylint: enable=no-value-for-parameter
-    def wrong_secret_receive_secret_reveal(self, previous_action, secret):
+    def wrong_secret_receive_secret_reveal(self, previous_action_client_data, secret):
+        client_address = previous_action_client_data.client
+        client = self.address_to_client[client_address]
+        previous_action = previous_action_client_data.data
         sender = previous_action.from_transfer.target
         action = ReceiveSecretReveal(secret, sender)
-        result = node.state_transition(self.chain_state, action)
+        result = node.state_transition(client.chain_state, action)
         assert not result.events
 
     # pylint: disable=no-value-for-parameter
     @rule(
-        target=secret_requests, previous_action=consumes(init_mediators), invalid_sender=address()
+        target=secret_requests,
+        previous_action_client_data=consumes(init_mediators),
+        invalid_sender=address(),
     )
     # pylint: enable=no-value-for-parameter
-    def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
+    def wrong_address_receive_secret_reveal(self, previous_action_client_data, invalid_sender):
+        client_address = previous_action_client_data.client
+        client = self.address_to_client[client_address]
+        previous_action = previous_action_client_data.data
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         invalid_action = ReceiveSecretReveal(secret, invalid_sender)
-        result = node.state_transition(self.chain_state, invalid_action)
+        result = node.state_transition(client.chain_state, invalid_action)
         assert not result.events
 
         valid_sender = previous_action.from_transfer.target
         valid_action = ReceiveSecretReveal(secret, valid_sender)
-        return valid_action
+        return ClientData(client=client_address, data=valid_action)
 
 
 class OnChainMixin:
@@ -710,26 +729,29 @@ class OnChainMixin:
 
     @rule(number=integers(min_value=1, max_value=50))
     def new_blocks(self, number):
-        events = list()
-
         for _ in range(number):
             block_state_change = Block(
                 block_number=self.block_number + 1,
                 gas_limit=1,
                 block_hash=factories.make_keccak_hash(),
             )
-            result = node.state_transition(self.chain_state, block_state_change)
-            events.extend(result.events)
+            for client in self.address_to_client.values():
+                events = list()
+                result = node.state_transition(client.chain_state, block_state_change)
+                events.extend(result.events)
 
             self.block_number += 1
 
-    @rule(target=partners)
-    def open_channel(self):
-        return self.new_channel_with_transaction()
+    @rule(reference=address_pairs, target=address_pairs)
+    def open_channel(self, reference):
+        return self.new_channel_with_transaction(reference.our_address)
 
-    @rule(partner=consumes(partners))
-    def settle_channel(self, partner):
-        channel = self.address_to_channel[partner]
+    @rule(address_pair=consumes(address_pairs))
+    def settle_channel(self, address_pair):
+        our_address = address_pair.our_address
+        partner = address_pair.partner_address
+        client = self.address_to_client[our_address]
+        channel = client.address_to_channel[partner]
 
         channel_settled_state_change = ContractReceiveChannelSettled(
             transaction_hash=factories.make_transaction_hash(),
@@ -744,7 +766,7 @@ class OnChainMixin:
             partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
         )
 
-        node.state_transition(self.chain_state, channel_settled_state_change)
+        node.state_transition(client.chain_state, channel_settled_state_change)
 
 
 class InitiatorStateMachine(InitiatorMixin, ChainStateStateMachine):
@@ -779,14 +801,19 @@ TestMultiChannelMediator = MultiChannelMediatorStateMachine.TestCase
 TestFullStateMachine = FullStateMachine.TestCase
 
 
+# use of hypothesis.stateful.multiple() breaks the failed-example code
+# generation at the moment, this function is a temporary workaround
+def unwrap_multiple(multiple_results):
+    values = multiple_results.values
+    return values[0] if values else None
+
+
 def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorStateMachine()
     state.replay_path = True
 
     v1 = unwrap_multiple(state.initialize_all(block_number=1, random=Random(), random_seed=None))
-    v2 = state.valid_init_initiator(
-        partner=v1, client=state.address, amount=1, payment_id=1, secret=b"\x00" * 32
-    )
+    v2 = state.valid_init_initiator(address_pair=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
 
