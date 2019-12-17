@@ -378,50 +378,10 @@ class GMatrixClient(MatrixClient):
         except KeyError:
             return []
 
-    def search_room_directory(self, filter_term: str = None, limit: int = 10) -> List[Room]:
-        filter_options: dict = {}
-        if filter_term:
-            filter_options = {"filter": {"generic_search_term": filter_term}}
-
-        response = self.api._send("POST", "/publicRooms", {"limit": limit, **filter_options})
-        rooms = []
-        for room_info in response["chunk"]:
-            room = Room(self, room_info["room_id"])
-            room.canonical_alias = room_info.get("canonical_alias")
-            rooms.append(room)
-        return rooms
-
-    def modify_presence_list(
-        self, add_user_ids: List[str] = None, remove_user_ids: List[str] = None
-    ) -> Dict:
-        if add_user_ids is None:
-            add_user_ids = []
-        if remove_user_ids is None:
-            remove_user_ids = []
-        return self.api._send(
-            "POST",
-            f"/presence/list/{quote(self.user_id)}",
-            {"invite": add_user_ids, "drop": remove_user_ids},
-        )
-
-    def get_presence_list(self) -> Dict:
-        return self.api._send("GET", f"/presence/list/{quote(self.user_id)}")
-
     def set_presence_state(self, state: str) -> Dict:
         return self.api._send(
             "PUT", f"/presence/{quote(self.user_id)}/status", {"presence": state}
         )
-
-    def typing(self, room: Room, timeout: int = 5000) -> Dict:
-        """
-        Send typing event directly to api
-
-        Args:
-            room: room to send typing event to
-            timeout: timeout for the event, in ms
-        """
-        path = f"/rooms/{quote(room.room_id)}/typing/{quote(self.user_id)}"
-        return self.api._send("PUT", path, {"typing": True, "timeout": timeout})
 
     def _mkroom(self, room_id: str) -> Room:
         """ Uses a geventified Room subclass """
