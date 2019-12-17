@@ -57,7 +57,7 @@ from raiden.transfer.state import (
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (

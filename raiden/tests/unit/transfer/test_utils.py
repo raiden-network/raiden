@@ -6,7 +6,7 @@ from raiden.tests.utils import factories
 from raiden.transfer.secret_registry import events_for_onchain_secretreveal
 from raiden.transfer.state import TransactionExecutionStatus
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 
 
 @pytest.mark.parametrize(

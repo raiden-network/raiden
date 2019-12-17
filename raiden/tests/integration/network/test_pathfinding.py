@@ -14,7 +14,7 @@ from raiden.network.pathfinding import PFSInfo, check_pfs_for_production, config
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import ChainID, TokenAmount, TokenNetworkRegistryAddress
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(

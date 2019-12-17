@@ -12,7 +12,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state import ChainState
-from raiden.utils import Secret
+from raiden.utils.typing import Secret
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import

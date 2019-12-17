@@ -7,7 +7,7 @@ from raiden.exceptions import BrokenPreconditionError
 from raiden.network.pathfinding import get_random_pfs, get_valid_pfs_url
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import FeeAmount, TokenNetworkRegistryAddress
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(

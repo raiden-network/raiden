@@ -7,7 +7,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.state_change import ActionCancelPayment, Block
-from raiden.utils import sha3
+from raiden.utils.signing import sha3
 
 ADDRESS = sha3(b"foo")[:20]
 SECRET = b"secret"

@@ -26,7 +26,9 @@ from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
-from raiden.utils import privatekey_to_address, to_checksum_address, typing
+from raiden.utils import typing
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
     Any,

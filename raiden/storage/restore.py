@@ -13,7 +13,7 @@ from raiden.storage.wal import restore_to_state_change
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import NettingChannelState
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,

@@ -41,11 +41,12 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveNewTokenNetwork,
 )
-from raiden.utils import create_default_identifier, to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
+from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
     BlockNumber,
     List,

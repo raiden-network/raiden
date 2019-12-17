@@ -23,7 +23,8 @@ from raiden.exceptions import (
 )
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
-from raiden.utils import to_checksum_address, typing
+from raiden.utils import typing
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     TokenAddress,

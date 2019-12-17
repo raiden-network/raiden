@@ -21,9 +21,12 @@ from raiden.exceptions import APIServerPortInUseError, EthNodeInterfaceError, Ra
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
-from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
+from raiden.utils import typing
+from raiden.utils.datastructures import merge_dict
 from raiden.utils.echo_node import EchoNode
+from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import Port
 
 from .app import run_app

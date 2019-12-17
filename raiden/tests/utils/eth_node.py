@@ -15,9 +15,10 @@ from web3 import Web3
 
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
-from raiden.utils import privatekey_to_address, privatekey_to_publickey, to_checksum_address
 from raiden.utils.ethereum_clients import parse_geth_version
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import JSONRPCExecutor
+from raiden.utils.keys import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import (
     Address,
     Any,

@@ -16,9 +16,9 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, sha3
 from raiden.utils.packing import pack_balance_proof
-from raiden.utils.signing import pack_data
+from raiden.utils.predicates import ishash
+from raiden.utils.signing import pack_data, sha3
 from raiden.utils.typing import (
     AdditionalHash,
     Address,

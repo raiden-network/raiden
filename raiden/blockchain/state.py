@@ -34,7 +34,7 @@ from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState, NettingChannelState
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

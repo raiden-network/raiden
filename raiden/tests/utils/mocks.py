@@ -13,7 +13,7 @@ from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state_change import ActionInitChain
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,

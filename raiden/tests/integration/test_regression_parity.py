@@ -11,8 +11,8 @@ from raiden.tests.utils.transfer import TransferState, get_channelstate, transfe
 from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_signed_balance_proof
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import PaymentAmount, PaymentID
 from raiden_contracts.constants import MessageTypeId
 

@@ -27,7 +27,7 @@ from raiden.tests.utils.transfer import (
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

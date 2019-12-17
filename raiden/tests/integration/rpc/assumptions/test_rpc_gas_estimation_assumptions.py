@@ -2,7 +2,7 @@ import pytest
 
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 
 SSTORE_COST = 20000
 

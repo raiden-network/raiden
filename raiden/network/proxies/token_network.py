@@ -44,9 +44,9 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import safe_gas_limit
 from raiden.utils.packing import pack_balance_proof, pack_signed_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     AdditionalHash,

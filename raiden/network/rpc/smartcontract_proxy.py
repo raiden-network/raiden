@@ -15,7 +15,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
 )
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import TYPE_CHECKING, Address, BlockSpecification, TransactionHash
 
 if TYPE_CHECKING:

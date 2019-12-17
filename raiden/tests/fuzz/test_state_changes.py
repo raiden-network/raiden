@@ -50,8 +50,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import random_secret
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import BlockNumber
 
 

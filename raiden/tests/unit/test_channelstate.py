@@ -83,10 +83,10 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import sha3
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
+from raiden.utils.signing import sha3
 from raiden.utils.typing import EncodedData, LockedAmount
 
 PartnerStateModel = namedtuple(

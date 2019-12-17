@@ -25,7 +25,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import create_default_identifier
+from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 
 

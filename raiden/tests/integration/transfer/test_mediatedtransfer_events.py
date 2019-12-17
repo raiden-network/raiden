@@ -10,8 +10,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.utils import wait_until
 from raiden.utils.typing import PaymentAmount, PaymentID
+from raiden.waiting import wait_until
 
 
 @raise_on_failure

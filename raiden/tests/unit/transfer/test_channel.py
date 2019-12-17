@@ -42,8 +42,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import sha3
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
+from raiden.utils.signing import sha3
 from raiden.utils.typing import BlockExpiration, TokenAmount
 
 

@@ -13,7 +13,7 @@ from raiden.network.transport.matrix.utils import (
     make_room_alias,
 )
 from raiden.tests.utils import factories, transport
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Tuple

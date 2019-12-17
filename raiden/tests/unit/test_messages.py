@@ -19,9 +19,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
-from raiden.utils import sha3
 from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
+from raiden.utils.signing import sha3
 from raiden.utils.typing import Address, TokenAmount
 from raiden_contracts.constants import MessageTypeId
 

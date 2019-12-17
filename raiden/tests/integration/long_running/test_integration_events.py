@@ -31,8 +31,9 @@ from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
-from raiden.utils import sha3, to_checksum_address, wait_until
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     Address,
     Balance,
@@ -46,6 +47,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenNetworkAddress,
 )
+from raiden.waiting import wait_until
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     EVENT_TOKEN_NETWORK_CREATED,

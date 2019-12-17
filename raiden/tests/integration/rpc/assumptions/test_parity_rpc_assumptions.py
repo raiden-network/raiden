@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils import safe_gas_limit
+from raiden.utils.smart_contracts import safe_gas_limit
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 

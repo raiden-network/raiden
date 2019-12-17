@@ -12,7 +12,7 @@ from raiden.network.pathfinding import PFSConfig, query_paths
 from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     ChannelID,

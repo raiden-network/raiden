@@ -30,8 +30,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import sha3, to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.signing import sha3
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import BlockNumber, MessageID, PaymentAmount, PaymentID, Secret
 

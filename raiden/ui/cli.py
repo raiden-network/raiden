@@ -44,7 +44,6 @@ from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
     RAIDEN_CONTRACT_VERSION,
 )
-from raiden.utils import get_system_spec
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
@@ -61,6 +60,7 @@ from raiden.utils.cli import (
 )
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.profiling.memory import MemoryLogger
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 

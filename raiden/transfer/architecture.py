@@ -7,7 +7,7 @@ from eth_utils import to_hex
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,

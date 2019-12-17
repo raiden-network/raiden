@@ -38,7 +38,7 @@ from click._compat import _default_text_stderr
 from colour import Color
 from eth_utils import is_address, to_canonical_address
 
-from raiden.utils import pex
+from raiden.utils.formatting import pex
 
 TIME_PAST = datetime(1970, 1, 1)
 TIME_FUTURE = datetime(9999, 1, 1)

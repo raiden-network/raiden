@@ -24,7 +24,7 @@ from raiden.tests.utils.factories import (
 from raiden.transfer.architecture import State, StateChange, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
-from raiden.utils import sha3
+from raiden.utils.signing import sha3
 from raiden.utils.typing import Callable, List
 
 
