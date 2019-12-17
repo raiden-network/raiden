@@ -20,6 +20,7 @@ from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
 from raiden.ui.startup import (
     load_deployed_contracts_data,
+    load_deployment_addresses_from_udc,
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
     setup_environment,
@@ -170,14 +171,21 @@ def test_setup_proxies_raiden_addresses_are_given():
     contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    deployed_addresses = load_deployment_addresses_from_udc(
+        proxy_manager=proxy_manager,
+        user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+        block_identifier="latest",
+    )
     raiden_bundle = raiden_bundle_from_contracts_deployment(
-        config=config, proxy_manager=proxy_manager, contracts=contracts
+        proxy_manager=proxy_manager,
+        token_network_registry_address=deployed_addresses.token_network_registry_address,
+        secret_registry_address=deployed_addresses.secret_registry_address,
     )
     services_bundle = services_bundle_from_contracts_deployment(
         config=config,
-        user_deposit_contract_address=None,
         proxy_manager=proxy_manager,
         contracts=contracts,
+        deployed_addresses=deployed_addresses,
         routing_mode=RoutingMode.LOCAL,
         pathfinding_service_address=None,
         enable_monitoring=False,
@@ -200,15 +208,22 @@ def test_setup_proxies_all_addresses_are_given():
     contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    deployed_addresses = load_deployment_addresses_from_udc(
+        proxy_manager=proxy_manager,
+        user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+        block_identifier="latest",
+    )
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         raiden_bundle = raiden_bundle_from_contracts_deployment(
-            config=config, proxy_manager=proxy_manager, contracts=contracts
+            proxy_manager=proxy_manager,
+            token_network_registry_address=deployed_addresses.token_network_registry_address,
+            secret_registry_address=deployed_addresses.secret_registry_address,
         )
         services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
             contracts=contracts,
+            deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
             enable_monitoring=True,
@@ -252,15 +267,22 @@ def test_setup_proxies_all_addresses_are_known():
         operator="John Doe",
         version="0.0.3",
     )
+    deployed_addresses = load_deployment_addresses_from_udc(
+        proxy_manager=proxy_manager,
+        user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+        block_identifier="latest",
+    )
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         raiden_bundle = raiden_bundle_from_contracts_deployment(
-            config=config, proxy_manager=proxy_manager, contracts=contracts
+            proxy_manager=proxy_manager,
+            token_network_registry_address=deployed_addresses.token_network_registry_address,
+            secret_registry_address=deployed_addresses.secret_registry_address,
         )
         services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
             contracts=contracts,
+            deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
             enable_monitoring=False,
@@ -305,15 +327,22 @@ def test_setup_proxies_no_service_registry_but_pfs():
         operator="John Doe",
         version="0.0.3",
     )
+    deployed_addresses = load_deployment_addresses_from_udc(
+        proxy_manager=proxy_manager,
+        user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+        block_identifier="latest",
+    )
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         raiden_bundle = raiden_bundle_from_contracts_deployment(
-            config=config, proxy_manager=proxy_manager, contracts=contracts
+            proxy_manager=proxy_manager,
+            token_network_registry_address=deployed_addresses.token_network_registry_address,
+            secret_registry_address=deployed_addresses.secret_registry_address,
         )
         services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            user_deposit_contract_address=make_address(),
             proxy_manager=proxy_manager,
             contracts=contracts,
+            deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
             enable_monitoring=True,
@@ -337,16 +366,21 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
     }
-    contracts = {}
+    contracts = {CONTRACT_USER_DEPOSIT: {"address": make_address()}}
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with pytest.raises(SystemExit):
+        deployed_addresses = load_deployment_addresses_from_udc(
+            proxy_manager=proxy_manager,
+            user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+            block_identifier="latest",
+        )
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
             services_bundle_from_contracts_deployment(
                 config=config,
-                user_deposit_contract_address=make_address(),
                 proxy_manager=proxy_manager,
                 contracts=contracts,
+                deployed_addresses=deployed_addresses,
                 routing_mode=RoutingMode.PFS,
                 pathfinding_service_address=None,
                 enable_monitoring=True,

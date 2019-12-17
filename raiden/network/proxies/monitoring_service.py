@@ -8,6 +8,7 @@ from raiden.utils.typing import (
     MonitoringServiceAddress,
     ServiceRegistryAddress,
     TokenAddress,
+    TokenNetworkRegistryAddress,
 )
 from raiden_contracts.constants import CONTRACT_MONITORING_SERVICE
 from raiden_contracts.contract_manager import ContractManager
@@ -44,6 +45,17 @@ class MonitoringService:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
+
+    def token_network_registry_address(
+        self, block_identifier: BlockSpecification
+    ) -> TokenNetworkRegistryAddress:
+        return TokenNetworkRegistryAddress(
+            to_canonical_address(
+                self.proxy.contract.functions.token_network_registry().call(
+                    block_identifier=block_identifier
+                )
+            )
+        )
 
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return TokenAddress(

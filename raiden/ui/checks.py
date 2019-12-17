@@ -34,7 +34,9 @@ from raiden.utils.typing import (
     MonitoringServiceAddress,
     OneToNAddress,
     Optional,
+    SecretRegistryAddress,
     ServiceRegistryAddress,
+    TokenNetworkRegistryAddress,
     UserDepositAddress,
 )
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -43,7 +45,9 @@ log = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True)
-class ServiceBundleAddresses:
+class DeploymentAddresses:
+    token_network_registry_address: TokenNetworkRegistryAddress
+    secret_registry_address: SecretRegistryAddress
     user_deposit_address: UserDepositAddress
     service_registry_address: ServiceRegistryAddress
     monitoring_service_address: MonitoringServiceAddress
@@ -247,16 +251,16 @@ def check_synced(proxy_manager: ProxyManager) -> None:
 
 def check_user_deposit_deps_consistency(
     proxy_manager: ProxyManager,
-    service_bundle_addresses: ServiceBundleAddresses,
+    deployment_addresses: DeploymentAddresses,
     block_identifier: BlockSpecification,
 ) -> None:
-    user_deposit_address = service_bundle_addresses.user_deposit_address
+    user_deposit_address = deployment_addresses.user_deposit_address
     user_deposit = proxy_manager.user_deposit(user_deposit_address)
     token_address = user_deposit.token_address(block_identifier)
 
-    msc_address = service_bundle_addresses.monitoring_service_address
-    one_to_n_address = service_bundle_addresses.one_to_n_address
-    service_registry_address = service_bundle_addresses.service_registry_address
+    msc_address = deployment_addresses.monitoring_service_address
+    one_to_n_address = deployment_addresses.one_to_n_address
+    service_registry_address = deployment_addresses.service_registry_address
 
     monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
     one_to_n_proxy = proxy_manager.one_to_n(one_to_n_address)
