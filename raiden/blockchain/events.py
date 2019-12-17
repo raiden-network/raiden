@@ -250,51 +250,36 @@ class BlockchainEvents:
     def __init__(self, chain_id: ChainID):
         self.chain_id = chain_id
         self.event_listeners: List[EventListener] = list()
-        self.last_log_time: Optional[datetime] = None
-        self.last_log_block: BlockNumber = BlockNumber(0)
+        self.last_log_time = datetime.now()
+        self.last_log_block = BlockNumber(0)
 
     def _log_sync_progress(self, to_block: BlockNumber) -> None:
+        """Print a message if there are many blocks to be fected, or if the
+        time in-between polls is high.
         """
-        In case we have fallen far behind with synchronizing blockchain events,
-        display a sync progress message every few seconds.
-        """
-        log_later = (
-            self.last_log_time is not None
-            and (datetime.now() - self.last_log_time).total_seconds() < 5.0
-        )
-        if log_later:
-            return
+        now = datetime.now()
+        blocks_to_sync = to_block - self.last_log_block
+        elapsed = (now - self.last_log_time).total_seconds()
 
-        if not self.event_listeners:
-            return
-        from_block = min(listener.filter.from_block_number() for listener in self.event_listeners)
-        blocks_to_sync = to_block - from_block
-        if blocks_to_sync <= 100:
-            return
-
-        if self.last_log_time is None:
-            self.last_log_time = datetime.now()
-            self.last_log_block = from_block
-            log.info("Synchronizing blockchain events", blocks_left=blocks_to_sync)
-        else:
-            now = datetime.now()
-            elapsed = (now - self.last_log_time).total_seconds()
-            blocks_per_second = (from_block - self.last_log_block) / elapsed
+        if blocks_to_sync > 100 or elapsed > 15.0:
             log.info(
                 "Synchronizing blockchain events",
                 blocks_left=blocks_to_sync,
-                blocks_per_second=blocks_per_second,
+                blocks_per_second=blocks_to_sync / elapsed,
+                elapse=elapsed,
             )
-            self.last_log_time = now
-            self.last_log_block = from_block
+
+        self.last_log_time = now
+        self.last_log_block = to_block
 
     def poll_blockchain_events(self, block_number: BlockNumber) -> Iterable[DecodedEvent]:
         """ Poll for new blockchain events up to `block_number`. """
+        self._log_sync_progress(block_number)
+
         for event_listener in self.event_listeners:
             assert isinstance(event_listener.filter, StatelessFilter)
 
             for log_event in event_listener.filter.get_new_entries(block_number):
-                self._log_sync_progress(block_number)
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self) -> None:
