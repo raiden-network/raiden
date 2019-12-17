@@ -20,6 +20,7 @@ from requests.adapters import HTTPAdapter
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
 from raiden.utils.formatting import to_checksum_address
+from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
 
@@ -27,7 +28,7 @@ log = structlog.get_logger(__name__)
 SHUTDOWN_TIMEOUT = 35
 
 
-def node_address_from_userid(user_id: Optional[str]) -> Optional[str]:
+def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
     if user_id:
         return to_checksum_address(user_id.split(":", 1)[0][1:])
 
