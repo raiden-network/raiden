@@ -5,15 +5,6 @@ coverage:
         target: 75%
         flags: unit,integration
       unit:
-        target: 75%
+        target: 55%
         flags: unit
     patch: no
-  flags:
-    unit:
-      ignore:
-        - "raiden/app.py"
-        - "raiden/raiden_service.py"
-        - "raiden/ui/*"
-        - "raiden/network/proxies/*"
-        - "raiden/network/transport/*"
-        - "raiden/network/transport/**/*"
