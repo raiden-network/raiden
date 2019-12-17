@@ -9,10 +9,10 @@ from raiden.storage.sqlite import (
     StateChangeID,
     StateChangeRecord,
 )
-from raiden.storage.wal import restore_to_state_change
+from raiden.storage.wal import restore_state
 from raiden.transfer import node, views
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.state import NettingChannelState
+from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -38,17 +38,16 @@ def channel_state_until_state_change(
     """ Go through WAL state changes until a certain balance hash is found. """
     assert raiden.wal, "Raiden has not been started yet"
 
-    _, _, wal = restore_to_state_change(
+    chain_state = restore_state(
         transition_function=node.state_transition,
         storage=raiden.wal.storage,
         state_change_identifier=state_change_identifier,
         node_address=raiden.address,
     )
 
-    msg = "There is a state change, therefore the state must not be None"
-    assert wal.state_manager.current_state is not None, msg
-
-    chain_state = wal.state_manager.current_state
+    msg = "There is a state change, therefore the state must be different from None"
+    assert chain_state is not None, msg
+    assert isinstance(chain_state, ChainState), msg
 
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state, canonical_identifier=canonical_identifier

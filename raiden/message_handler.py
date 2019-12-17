@@ -261,6 +261,7 @@ class MessageHandler:
         raiden: "RaidenService", message: RefundTransfer
     ) -> List[StateChange]:
         chain_state = views.state_from_raiden(raiden)
+
         from_transfer = lockedtransfersigned_from_message(message=message)
 
         role = views.get_transfer_role(

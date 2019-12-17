@@ -1,4 +1,3 @@
-import random
 from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
@@ -7,7 +6,8 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import FilteredDBQuery, Operator, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.transfer.state_change import ActionInitChain
+from raiden.transfer.state_change import Block
+from raiden.utils.typing import BlockGasLimit, BlockNumber
 from raiden.utils.upgrades import VERSION_RE, UpgradeManager, UpgradeRecord, get_db_version
 
 
@@ -80,15 +80,13 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=16), SQLiteStorage(
         str(old_db_filename)
     ) as storage:
-        state_change = ActionInitChain(
-            chain_id=1,
-            our_address=factories.make_address(),
-            block_number=1,
+        state_change = Block(
+            block_number=BlockNumber(0),
+            gas_limit=BlockGasLimit(1000),
             block_hash=factories.make_block_hash(),
-            pseudo_random_generator=random.Random(),
         )
-        action_init_chain_data = JSONSerializer.serialize(state_change)
-        storage.write_state_changes(state_changes=[action_init_chain_data])
+        block_data = JSONSerializer.serialize(state_change)
+        storage.write_state_changes(state_changes=[block_data])
         storage.update_version()
 
     upgrade_functions = [UpgradeRecord(from_version=16, function=Mock())]
@@ -106,7 +104,7 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     with SQLiteStorage(str(db_path)) as storage:
         state_change_record = storage.get_latest_state_change_by_data_field(
             FilteredDBQuery(
-                filters=[{"_type": "raiden.transfer.state_change.ActionInitChain"}],
+                filters=[{"_type": "raiden.transfer.state_change.Block"}],
                 main_operator=Operator.NONE,
                 inner_operator=Operator.NONE,
             )

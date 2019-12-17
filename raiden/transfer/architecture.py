@@ -27,7 +27,6 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Nonce,
-    Optional,
     Signature,
     T_Address,
     T_BlockHash,
@@ -228,20 +227,27 @@ class StateManager(Generic[ST]):
 
     def __init__(
         self,
-        state_transition: Callable[[Optional[ST], StateChange], TransitionResult[ST]],
-        current_state: Optional[ST],
+        state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
+        current_state: ST,
+        unapplied_state_changes: List[StateChange],
     ) -> None:
         """ Initialize the state manager.
 
         Args:
             state_transition: function that can apply a StateChange message.
             current_state: current application state.
+            unapplied_state_changes: state changes that should be applied
+            during initialization because they are not part of the
+            `current_state`.
         """
         if not callable(state_transition):  # pragma: no unittest
             raise ValueError("state_transition must be a callable")
 
         self.state_transition = state_transition
         self.current_state = current_state
+
+        if unapplied_state_changes:
+            self.dispatch(unapplied_state_changes)
 
     def dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[List[Event]]]:
         """ Apply the `state_change` in the current machine and return the
@@ -268,7 +274,7 @@ class StateManager(Generic[ST]):
         # Update the current state by applying the state changes
         events: List[List[Event]] = list()
         for state_change in state_changes:
-            iteration = self.state_transition(next_state, state_change)
+            iteration = self.state_transition(self.current_state, state_change)
 
             assert isinstance(iteration, TransitionResult)
             assert all(isinstance(e, Event) for e in iteration.events)

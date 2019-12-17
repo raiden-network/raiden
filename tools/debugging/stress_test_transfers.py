@@ -281,7 +281,7 @@ def transfer_and_assert_successful(
 
     assert response is not None
     is_json = response.headers["Content-Type"] == "application/json"
-    assert is_json, response.headers["Content-Type"]
+    assert is_json, (response.headers["Content-Type"], response.text)
     assert response.status_code == HTTPStatus.OK, response.json()
 
     log.debug("Payment done", url=post_url, json=json, time=elapsed)

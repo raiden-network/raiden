@@ -327,9 +327,6 @@ def test_batch_unlock(
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
-    # Take snapshot before transfer
-    alice_app.raiden.snapshot()
-
     alice_to_bob_amount = 10
     identifier = 1
     secret = Secret(keccak(bob_address))

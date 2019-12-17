@@ -338,7 +338,7 @@ def test_matrix_message_retry(
     queueid = QueueIdentifier(
         recipient=partner_address, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
-    chain_state = raiden_service.wal.state_manager.current_state
+    chain_state = raiden_service.wal.get_current_state()
 
     retry_queue: _RetryQueue = transport._get_retrier(partner_address)
     assert bool(retry_queue), "retry_queue not running"

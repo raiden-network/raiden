@@ -470,7 +470,7 @@ def test_secret_revealed_on_chain(
         balance_proof=balance_proof,
         triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
     )
-    current_state = app2.raiden.wal.state_manager.current_state
+    current_state = app2.raiden.wal.get_current_state()
     app2.raiden.raiden_event_handler.on_raiden_event(
         raiden=app2.raiden, chain_state=current_state, event=channel_close_event
     )

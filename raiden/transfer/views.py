@@ -77,8 +77,7 @@ def count_token_network_channels(
 
 def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unittest
     assert raiden.wal, "raiden.wal not set"
-    # TODO: current_state should not be optional
-    return raiden.wal.state_manager.current_state  # type: ignore
+    return raiden.wal.get_current_state()
 
 
 def state_from_app(app: "App") -> ChainState:  # pragma: no unittest
@@ -296,6 +295,7 @@ def get_channelstate_by_canonical_identifier(
     chain_state: ChainState, canonical_identifier: CanonicalIdentifier
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
+
     token_network = get_token_network_by_address(
         chain_state, canonical_identifier.token_network_address
     )
