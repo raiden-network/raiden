@@ -19,7 +19,8 @@ from raiden.tests.utils.smartcontracts import (
     deploy_token,
     deploy_tokens_and_fund_accounts,
 )
-from raiden.utils import privatekey_to_address, to_checksum_address
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
     ChainID,

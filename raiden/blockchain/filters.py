@@ -8,7 +8,7 @@ from web3.utils.events import get_event_data
 from web3.utils.filters import construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Any,

@@ -26,7 +26,8 @@ from raiden.settings import (
     RAIDEN_CONTRACT_VERSION,
     MatrixTransportConfig,
 )
-from raiden.utils import to_checksum_address, typing
+from raiden.utils import typing
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address
 from raiden_contracts.contract_manager import contracts_precompiled_path
 

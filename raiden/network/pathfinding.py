@@ -16,8 +16,9 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingM
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
-from raiden.utils import to_checksum_address, to_rdn
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
+from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import (
     Address,
     Any,

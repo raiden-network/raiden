@@ -20,7 +20,7 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import BlockNumber, ChainID, List, Nonce, PrivateKey, TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId

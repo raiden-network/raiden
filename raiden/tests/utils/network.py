@@ -28,7 +28,8 @@ from raiden.tests.utils.transport import ParsedURL
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
-from raiden.utils import merge_dict, to_checksum_address
+from raiden.utils.datastructures import merge_dict
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,

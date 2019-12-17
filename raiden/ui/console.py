@@ -15,7 +15,7 @@ from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden.utils.typing import (
     AddressHex,

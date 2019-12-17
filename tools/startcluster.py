@@ -15,8 +15,9 @@ from raiden.tests.utils.eth_node import (
     GenesisDescription,
     run_private_blockchain,
 )
-from raiden.utils import privatekey_to_address, sha3
 from raiden.utils.http import JSONRPCExecutor
+from raiden.utils.keys import privatekey_to_address
+from raiden.utils.signing import sha3
 from raiden.utils.typing import ChainID, List, Port, PrivateKey, TokenAmount
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 

@@ -42,8 +42,8 @@ from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
-from raiden.utils import get_system_spec
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAmount
 from raiden.waiting import (
     TransferWaitResult,

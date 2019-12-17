@@ -22,8 +22,15 @@ from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_un
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
-from raiden.utils import PaymentID, sha3
-from raiden.utils.typing import Locksroot, Nonce, PaymentAmount, PaymentWithFeeAmount, TokenAmount
+from raiden.utils.signing import sha3
+from raiden.utils.typing import (
+    Locksroot,
+    Nonce,
+    PaymentAmount,
+    PaymentID,
+    PaymentWithFeeAmount,
+    TokenAmount,
+)
 
 # pylint: disable=too-many-locals
 

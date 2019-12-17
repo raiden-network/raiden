@@ -50,8 +50,9 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils import pex, split_endpoint, to_checksum_address
 from raiden.utils.cli import get_matrix_servers
+from raiden.utils.formatting import pex, to_checksum_address
+from raiden.utils.http import split_endpoint
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (
     Address,

@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import socket
 import ssl
 import time
@@ -16,10 +17,22 @@ from mirakuru.base import ENV_UUID
 from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError, TimeoutExpired
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
+from raiden.utils.typing import Endpoint, Host, HostPort, Port
+
 T_IO_OR_INT = Union[IO, int]
 EXECUTOR_IO = Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]
 
 log = structlog.get_logger(__name__)
+
+
+def split_endpoint(endpoint: Endpoint) -> HostPort:
+    match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
+    if not match:
+        raise ValueError("Invalid endpoint", endpoint)
+    host, port = match.groups()
+    if not port:
+        port = "0"
+    return Host(host), Port(int(port))
 
 
 class HTTPExecutor(MiHTTPExecutor):

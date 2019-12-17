@@ -84,11 +84,12 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewTokenNetworkRegistry,
 )
-from raiden.utils import lpex, random_secret, to_checksum_address
+from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
     BlockHash,

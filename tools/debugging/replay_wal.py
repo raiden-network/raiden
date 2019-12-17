@@ -24,7 +24,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
 from raiden.transfer.state import NetworkState
-from raiden.utils import pex, to_checksum_address
+from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,

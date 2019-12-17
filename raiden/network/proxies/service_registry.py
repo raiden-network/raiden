@@ -9,7 +9,7 @@ from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,

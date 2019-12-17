@@ -11,8 +11,8 @@ from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.utils import Address
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import Address
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
 USERID1 = "@0x0987654321098765432109876543210987654321:Wonderland"

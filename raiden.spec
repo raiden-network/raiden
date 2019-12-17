@@ -5,7 +5,7 @@ import pdb
 import platform
 import sys
 
-from raiden.utils import get_system_spec
+from raiden.utils.system import get_system_spec
 
 """
 PyInstaller spec file to build single file or dir distributions

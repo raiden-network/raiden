@@ -69,7 +69,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 from raiden_contracts.constants import MessageTypeId

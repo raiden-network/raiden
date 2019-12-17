@@ -81,7 +81,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (

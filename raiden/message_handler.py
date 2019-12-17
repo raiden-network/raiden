@@ -35,7 +35,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import random_secret
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, List
 
 if TYPE_CHECKING:

@@ -6,7 +6,7 @@ from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import keccak
 
 from raiden.exceptions import InvalidSignature
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, AddressHex, Signature
 
 

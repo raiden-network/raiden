@@ -19,7 +19,7 @@ from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 
 log = structlog.get_logger(__name__)
 

@@ -6,7 +6,8 @@ from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils import safe_gas_limit, to_checksum_address
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import Callable, Dict, GasPrice, List, Port, PrivateKey
 
 

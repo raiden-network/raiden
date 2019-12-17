@@ -18,7 +18,7 @@ from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
 from raiden.exceptions import InvalidChecksummedAddress
-from raiden.utils import address_checksum_and_decode
+from raiden.utils.formatting import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"

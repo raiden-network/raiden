@@ -96,22 +96,19 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.state import ChannelState, NettingChannelState
-from raiden.utils import (
-    Endpoint,
-    create_default_identifier,
-    get_system_spec,
-    optional_address_to_string,
-    split_endpoint,
-    to_checksum_address,
-)
+from raiden.utils.formatting import optional_address_to_string, to_checksum_address
+from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
+from raiden.utils.system import get_system_spec
 from raiden.utils.testnet import MintingMethod
+from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
     Address,
     Any,
     BlockSpecification,
     BlockTimeout,
     Dict,
+    Endpoint,
     List,
     Optional,
     PaymentAmount,

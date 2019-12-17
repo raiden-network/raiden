@@ -8,9 +8,9 @@ from eth_utils import decode_hex, to_canonical_address
 
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_http_rtt
-from raiden.utils import privatekey_to_publickey, sha3
+from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
-from raiden.utils.signing import pack_data
+from raiden.utils.signing import pack_data, sha3
 
 
 def test_privatekey_to_publickey():

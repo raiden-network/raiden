@@ -93,7 +93,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-from raiden.utils import random_secret
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import BlockExpiration, BlockNumber, FeeAmount, TokenAmount
 
 

@@ -20,8 +20,8 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
-from raiden.utils import safe_gas_limit
 from raiden.utils.secrethash import sha256_secrethash
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     Address,
     Any,

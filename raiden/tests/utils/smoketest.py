@@ -44,8 +44,9 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
-from raiden.utils import privatekey_to_address, split_endpoint, to_checksum_address
-from raiden.utils.http import HTTPExecutor
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.http import HTTPExecutor, split_endpoint
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,

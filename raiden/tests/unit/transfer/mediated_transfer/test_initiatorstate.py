@@ -70,7 +70,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveSecretReveal,
 )
-from raiden.utils import random_secret, sha3, typing
+from raiden.utils import typing
+from raiden.utils.signing import sha3
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
     BlockNumber,

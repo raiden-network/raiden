@@ -29,7 +29,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
 )
-from raiden.utils import sha3
+from raiden.utils.signing import sha3
 
 
 @pytest.fixture

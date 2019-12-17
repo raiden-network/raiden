@@ -9,7 +9,7 @@ from matrix_client.user import User
 
 from raiden.network.transport.matrix import AddressReachability, UserPresence
 from raiden.network.transport.matrix.utils import USERID_RE, DisplayNameCache, UserAddressManager
-from raiden.utils import Address
+from raiden.utils.typing import Address
 
 
 class DummyApi:

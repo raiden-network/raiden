@@ -16,7 +16,7 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import ChannelState
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Optional,
     PaymentAmount,

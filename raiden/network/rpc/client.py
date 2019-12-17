@@ -29,8 +29,9 @@ from raiden.exceptions import (
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import privatekey_to_address, to_checksum_address
 from raiden.utils.ethereum_clients import is_supported_client
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     ABI,
     Address,

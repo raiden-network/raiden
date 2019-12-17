@@ -18,7 +18,7 @@ from raiden.ui.checks import (
     check_raiden_environment,
     check_smart_contract_addresses,
 )
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, ChainID, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,

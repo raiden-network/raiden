@@ -16,7 +16,7 @@ from raiden.storage.serialization import SerializationBase
 from raiden.storage.ulid import ULID, ULIDMonotonicFactory
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.transfer.architecture import Event, State, StateChange
-from raiden.utils import get_system_spec
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
     Any,
     Dict,

@@ -9,7 +9,8 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import safe_gas_limit, to_checksum_address
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,

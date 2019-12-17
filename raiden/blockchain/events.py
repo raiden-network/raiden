@@ -16,7 +16,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Address,

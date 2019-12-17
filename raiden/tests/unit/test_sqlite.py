@@ -37,7 +37,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import BalanceProofUnsignedState, HopState, RouteState
 from raiden.transfer.state_change import Block, ReceiveUnlock
-from raiden.utils import sha3
+from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     AdditionalHash,
     BlockExpiration,

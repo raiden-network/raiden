@@ -11,7 +11,7 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.typing import (
     Address,

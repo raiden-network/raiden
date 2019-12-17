@@ -26,7 +26,7 @@ from gevent.subprocess import STDOUT, Popen
 from greenlet import greenlet
 
 from raiden.network.utils import get_free_port
-from raiden.utils import pex
+from raiden.utils.formatting import pex
 
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)

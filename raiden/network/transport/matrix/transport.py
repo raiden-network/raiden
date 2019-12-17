@@ -52,7 +52,7 @@ from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionUpdateTransportAuthData,
 )
-from raiden.utils import to_checksum_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
