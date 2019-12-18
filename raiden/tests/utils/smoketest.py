@@ -39,7 +39,6 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
@@ -59,12 +58,15 @@ from raiden.utils.typing import (
     Iterable,
     Iterator,
     List,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Port,
     PrivateKey,
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
     Tuple,
+    UserDepositAddress,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
@@ -74,6 +76,7 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
     NETWORKNAME_TO_ID,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -106,6 +109,7 @@ def ensure_executable(cmd):
 
 def deploy_smoketest_contracts(
     client: JSONRPCClient,
+    proxy_manager: ProxyManager,
     chain_id: ChainID,
     contract_manager: ContractManager,
     token_address: AddressHex,
@@ -153,10 +157,41 @@ def deploy_smoketest_contracts(
     )
     addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
 
-    # The MSC is not used, no need to waste time on deployment
-    addresses[CONTRACT_MONITORING_SERVICE] = make_address()
-    # The OneToN contract is not used, no need to waste time on deployment
-    addresses[CONTRACT_ONE_TO_N] = make_address()
+    user_deposit_address = deploy_contract_web3(
+        contract_name=CONTRACT_USER_DEPOSIT,
+        deploy_client=client,
+        contract_manager=contract_manager,
+        constructor_arguments=(token_address, UINT256_MAX),
+    )
+    addresses[CONTRACT_USER_DEPOSIT] = user_deposit_address
+
+    monitoring_service_address = deploy_contract_web3(
+        contract_name=CONTRACT_MONITORING_SERVICE,
+        deploy_client=client,
+        contract_manager=contract_manager,
+        constructor_arguments=(
+            token_address,
+            service_registry_address,
+            user_deposit_address,
+            token_network_registry_address,
+        ),
+    )
+    addresses[CONTRACT_MONITORING_SERVICE] = monitoring_service_address
+
+    one_to_n_address = deploy_contract_web3(
+        contract_name=CONTRACT_ONE_TO_N,
+        deploy_client=client,
+        contract_manager=contract_manager,
+        constructor_arguments=(user_deposit_address, chain_id, service_registry_address),
+    )
+    addresses[CONTRACT_ONE_TO_N] = one_to_n_address
+
+    user_deposit_proxy = proxy_manager.user_deposit(UserDepositAddress(user_deposit_address))
+    user_deposit_proxy.init(
+        monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
+        one_to_n_address=OneToNAddress(one_to_n_address),
+        given_block_identifier="latest",
+    )
 
     return addresses
 
@@ -301,6 +336,7 @@ def setup_raiden(
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
+        proxy_manager=proxy_manager,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
         token_address=to_checksum_address(token.contract.address),
@@ -317,12 +353,7 @@ def setup_raiden(
     )
 
     print_step("Setting up Raiden")
-    tokennetwork_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
-    )
-    secret_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_SECRET_REGISTRY]
-    )
+    user_deposit_contract_address = to_checksum_address(contract_addresses[CONTRACT_USER_DEPOSIT])
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -333,8 +364,7 @@ def setup_raiden(
         "matrix_server": matrix_server,
         "network_id": str(NETWORKNAME_TO_ID["smoketest"]),
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
-        "tokennetwork_registry_contract_address": tokennetwork_registry_contract_address,
-        "secret_registry_contract_address": secret_registry_contract_address,
+        "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
         "transport": transport,
         "environment_type": Environment.DEVELOPMENT,
