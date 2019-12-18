@@ -9,6 +9,7 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
+from raiden.settings import ServiceConfig
 from raiden.tests.utils.factories import make_address, make_token_network_registry_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
@@ -155,7 +156,7 @@ def test_setup_proxies_raiden_addresses_are_given():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
     contracts = {}
     proxy_manager = MockProxyManager(node_address=make_address())
 
@@ -183,7 +184,7 @@ def test_setup_proxies_all_addresses_are_given():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
     contracts = {}
     proxy_manager = MockProxyManager(node_address=make_address())
 
@@ -212,7 +213,7 @@ def test_setup_proxies_all_addresses_are_known():
     """
 
     network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
+    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id}
     contracts = setup_contracts_or_exit(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
@@ -247,7 +248,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
     config = {
         "environment_type": Environment.DEVELOPMENT,
         "chain_id": network_id,
-        "services": dict(
+        "services": ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
     }
@@ -280,7 +281,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
     config = {
         "environment_type": environment_type,
         "chain_id": network_id,
-        "services": dict(
+        "services": ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
     }

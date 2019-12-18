@@ -72,7 +72,7 @@ def update_monitoring_service_from_balance_proof(
     new_balance_proof: BalanceProofSignedState,
     non_closing_participant: Address,
 ) -> None:
-    if raiden.config["services"]["monitoring_enabled"] is False:
+    if raiden.config["services"].monitoring_enabled is False:
         return
 
     channel_state = views.get_channelstate_by_canonical_identifier(

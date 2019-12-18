@@ -92,7 +92,7 @@ def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTr
             config["transport"].broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
-    if config["services"]["monitoring_enabled"] is True:
+    if config["services"].monitoring_enabled is True:
         config["transport"].broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
 
     try:
@@ -231,8 +231,8 @@ def run_app(
     config["transport_type"] = transport
     config["transport"].server = matrix_server
     config["unrecoverable_error_should_crash"] = unrecoverable_error_should_crash
-    config["services"]["pathfinding_max_paths"] = pathfinding_max_paths
-    config["services"]["monitoring_enabled"] = enable_monitoring
+    config["services"].pathfinding_max_paths = pathfinding_max_paths
+    config["services"].monitoring_enabled = enable_monitoring
     config["chain_id"] = network_id
     config["mediation_fees"] = fee_config
     config["blockchain"]["query_interval"] = blockchain_query_interval

@@ -87,7 +87,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
     app0, app1 = raiden_network
-    app0.config["services"]["monitoring_enabled"] = True
+    app0.config["services"].monitoring_enabled = True
     # Send a transfer to make sure the state has a balance proof to broadcast
     token_address = token_addresses[0]
 
