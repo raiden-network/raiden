@@ -94,6 +94,11 @@ def get_best_routes(
         )
 
         if not pfs_erro_msg:
+            # As of version 0.5 it is possible for the PFS to return an empty
+            # list of routes without an error message.
+            if not pfs_routes:
+                return ("PFS could not find any routes", list(), None)
+
             log.info(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
