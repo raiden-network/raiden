@@ -370,19 +370,6 @@ def setup_raiden(
         "environment_type": Environment.DEVELOPMENT,
     }
 
-    service_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_SERVICE_REGISTRY]
-    )
-    args["service_registry_contract_address"] = service_registry_contract_address
-
-    monitoring_service_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_MONITORING_SERVICE]
-    )
-    args["monitoring_service_contract_address"] = monitoring_service_contract_address
-
-    one_to_n_contract_address = to_checksum_address(contract_addresses[CONTRACT_ONE_TO_N])
-    args["one_to_n_contract_address"] = one_to_n_contract_address
-
     # Wait until the secret registry is confirmed, otherwise the App
     # inialization will fail, needed for the check
     # `check_ethereum_confirmed_block_is_not_pruned`.
