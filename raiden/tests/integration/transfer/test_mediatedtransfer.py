@@ -8,7 +8,7 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
-from raiden.routing import get_best_routes_internal
+from raiden.routing import get_best_routes
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
@@ -442,12 +442,12 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     )
 
     def get_best_routes_with_fees(*args, **kwargs):
-        routes = get_best_routes_internal(*args, **kwargs)
+        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
         for r in routes:
             r.estimated_fee = fee
-        return routes
+        return error_msg, routes, uuid
 
-    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+    with patch("raiden.routing.get_best_routes", get_best_routes_with_fees):
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
             amount=amount,
@@ -511,10 +511,10 @@ def test_mediated_transfer_with_fees(
         channel_state.fee_schedule = fee_schedule
 
     def get_best_routes_with_fees(*args, **kwargs):
-        routes = get_best_routes_internal(*args, **kwargs)
+        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
         for r in routes:
             r.estimated_fee = fee_without_margin
-        return routes
+        return error_msg, routes, uuid
 
     def assert_balances(expected_transferred_amounts=List[int]):
         for i, transferred_amount in enumerate(expected_transferred_amounts):
@@ -653,7 +653,7 @@ def test_mediated_transfer_with_fees(
         if fee_schedule:
             set_fee_schedule(apps[i + 1], apps[i], fee_schedule)
 
-    route_patch = patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees)
+    route_patch = patch("raiden.routing.get_best_routes", get_best_routes_with_fees)
     disable_max_mediation_fee_patch = patch(
         "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=10000
     )

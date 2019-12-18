@@ -1,5 +1,6 @@
 # pylint: disable=too-many-lines
 import random
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
@@ -133,6 +134,16 @@ class UnlockGain(NamedTuple):
     from_partner_locks: TokenAmount
 
 
+class IsChannelUsable(Enum):
+    YES = True
+    NOT_OPENED = "channel is not open"
+    INVALID_SETTLE_TIMEOUT = "channel settle timeout is too low"
+    CHANNEL_REACHED_PENDING_LIMIT = "channel reached limit of pending transfers"
+    CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE = "channel doesn't have enough distributable tokens"
+    CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW = "channel balance proof would overflow"
+    LOCKTIMEOUT_MISMATCH = "the lock timeout can not be used with the channel"
+
+
 def get_safe_initial_expiration(
     block_number: BlockNumber, reveal_timeout: BlockTimeout, lock_timeout: BlockTimeout = None
 ) -> BlockExpiration:
@@ -209,14 +220,14 @@ def is_channel_usable_for_mediation(
         channel_state, transfer_amount, lock_timeout
     )
 
-    return channel_usable
+    return channel_usable is IsChannelUsable.YES
 
 
 def is_channel_usable_for_new_transfer(
     channel_state: NettingChannelState,
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: Optional[BlockTimeout],
-) -> bool:
+) -> IsChannelUsable:
     """True if the channel can be used to start a new transfer.
 
     This will make sure that:
@@ -249,15 +260,25 @@ def is_channel_usable_for_new_transfer(
     # option is to ignore the channel.
     is_valid_settle_timeout = channel_state.settle_timeout >= channel_state.reveal_timeout * 2
 
-    channel_usable = (
-        get_status(channel_state) == ChannelState.STATE_OPENED
-        and is_valid_settle_timeout
-        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
-        and transfer_amount <= distributable
-        and is_valid_amount(channel_state.our_state, transfer_amount)
-        and lock_timeout_valid
-    )
-    return channel_usable
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
+        return IsChannelUsable.NOT_OPENED
+
+    if not is_valid_settle_timeout:
+        return IsChannelUsable.INVALID_SETTLE_TIMEOUT
+
+    if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
+        return IsChannelUsable.CHANNEL_REACHED_PENDING_LIMIT
+
+    if transfer_amount > distributable:
+        return IsChannelUsable.CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE
+
+    if not is_valid_amount(channel_state.our_state, transfer_amount):
+        return IsChannelUsable.CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW
+
+    if not lock_timeout_valid:
+        return IsChannelUsable.LOCKTIMEOUT_MISMATCH
+
+    return IsChannelUsable.YES
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
