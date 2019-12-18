@@ -570,6 +570,7 @@ def main() -> None:
                 "--proportional-imbalance-fee",
                 "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
                 "0",
+                "--switch-tracing",
             ]
             raiden_args.extend(chain.from_iterable(node.items()))
 

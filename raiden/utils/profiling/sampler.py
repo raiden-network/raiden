@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 from types import FrameType
-from typing import IO, Any, Dict, NewType, Optional
+from typing import IO, Any, Dict, List, NewType, Optional
 
 import greenlet
 import objgraph
@@ -19,15 +19,25 @@ from .timer import TIMER, TIMER_SIGNAL, Timer
 #   amount of memory used by the type (heapy is a good alternative for this)
 # - Experiment with heapy or PySizer for memory profiling / leak hunting
 
-FlameFrame = NewType("FlameFrame", str)
 FlameStack = NewType("FlameStack", str)
 FlameGraph = Dict[FlameStack, int]
 
 
-def frame_format(frame: FrameType) -> FlameFrame:
+def frame_format(frame: FrameType) -> str:
     block_name = frame.f_code.co_name
     module_name = frame.f_globals.get("__name__")
-    return FlameFrame("{}({})".format(block_name, module_name))
+    return "{}({})".format(block_name, module_name)
+
+
+def collect_frames(frame: FrameType) -> List[str]:
+    callstack = []
+    optional_frame: Optional[FrameType] = frame
+    while optional_frame is not None:
+        callstack.append(frame_format(optional_frame))
+        optional_frame = optional_frame.f_back
+
+    callstack.reverse()
+    return callstack
 
 
 def flamegraph_format(stack_count: FlameGraph) -> str:
@@ -35,13 +45,9 @@ def flamegraph_format(stack_count: FlameGraph) -> str:
 
 
 def sample_stack(stack_count: FlameGraph, frame: FrameType, timespent) -> None:
-    callstack = []
-    optional_frame: Optional[FrameType] = frame
-    while optional_frame is not None:
-        callstack.append(frame_format(optional_frame))
-        optional_frame = optional_frame.f_back
+    callstack = collect_frames(frame)
 
-    formatted_stack = FlameStack(";".join(reversed(callstack)))
+    formatted_stack = FlameStack(";".join(callstack))
     stack_count[formatted_stack] += timespent
 
 
@@ -152,6 +158,7 @@ class TraceSampler:
         # stack trace will be reported.
         self.old_frame = None
 
+        self.previous_callback = greenlet.gettrace()
         greenlet.settrace(self._greenlet_profiler)  # pylint: disable=c-extension-no-member
         sys.setprofile(self._thread_profiler)
         # threading.setprofile(self._thread_profiler)
@@ -162,14 +169,14 @@ class TraceSampler:
             return True
         return False
 
-    def _greenlet_profiler(self, _event, _args):
+    def _greenlet_profiler(self, event: str, args: Any) -> None:
         timestamp = time.time()
         try:
             # we need to account the time for the user function
             frame = sys._getframe(1)  # pylint:disable=protected-access
         except ValueError:
             # the first greenlet.switch() and when the greenlet is being
-            # destroied there is nothing more in the stack, so this function is
+            # destroyed there is nothing more in the stack, so this function is
             # the first function called
             frame = sys._getframe(0)  # pylint:disable=protected-access
 
@@ -177,6 +184,11 @@ class TraceSampler:
             self.collector.collect(self.old_frame, timestamp)
 
         self.old_frame = frame
+
+        if self.previous_callback is not None:
+            return self.previous_callback(event, args)
+
+        return None
 
     def _thread_profiler(self, frame: FrameType, _event: str, _arg: Any) -> None:
         timestamp = time.time()
@@ -189,7 +201,7 @@ class TraceSampler:
         # measurements in the end
         sys.setprofile(None)
         threading.setprofile(None)  # type: ignore
-        greenlet.settrace(None)  # pylint: disable=c-extension-no-member
+        greenlet.settrace(self.previous_callback)  # pylint: disable=c-extension-no-member
 
         self.collector.stop()
         self.collector = None
