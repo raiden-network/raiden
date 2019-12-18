@@ -5,6 +5,7 @@ from eth_utils import denoms, to_hex
 import raiden_contracts.constants
 from raiden.constants import Environment
 from raiden.utils.typing import (
+    Address,
     Dict,
     FeeAmount,
     List,
@@ -117,3 +118,12 @@ class MatrixTransportConfig:
     server: str
     available_servers: List[str]
     server_name: Optional[str]
+
+
+@dataclass
+class ServiceConfig:
+    pathfinding_service_address: Optional[Address] = None
+    pathfinding_max_paths: int = DEFAULT_PATHFINDING_MAX_PATHS
+    pathfinding_max_fee: int = DEFAULT_PATHFINDING_MAX_FEE
+    pathfinding_iou_timeout: int = DEFAULT_PATHFINDING_IOU_TIMEOUT
+    monitoring_enabled: bool = False

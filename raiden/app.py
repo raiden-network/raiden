@@ -15,9 +15,6 @@ from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    DEFAULT_PATHFINDING_IOU_TIMEOUT,
-    DEFAULT_PATHFINDING_MAX_FEE,
-    DEFAULT_PATHFINDING_MAX_PATHS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
     DEFAULT_SHUTDOWN_TIMEOUT,
@@ -25,6 +22,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     RAIDEN_CONTRACT_VERSION,
     MatrixTransportConfig,
+    ServiceConfig,
 )
 from raiden.utils import typing
 from raiden.utils.formatting import to_checksum_address
@@ -60,13 +58,7 @@ class App:  # pylint: disable=too-few-public-methods
         "rpc": True,
         "console": False,
         "shutdown_timeout": DEFAULT_SHUTDOWN_TIMEOUT,
-        "services": {
-            "pathfinding_service_address": None,
-            "pathfinding_max_paths": DEFAULT_PATHFINDING_MAX_PATHS,
-            "pathfinding_max_fee": DEFAULT_PATHFINDING_MAX_FEE,
-            "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
-            "monitoring_enabled": False,
-        },
+        "services": ServiceConfig(),
     }
 
     def __init__(
