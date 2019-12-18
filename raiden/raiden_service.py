@@ -137,7 +137,7 @@ def initiator_init(
         lock_timeout=lock_timeout,
     )
 
-    pfs_msg, routes, feedback_token = routing.get_best_routes(
+    error_msg, routes, feedback_token = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_address=token_network_address,
         one_to_n_address=raiden.default_one_to_n_address,
@@ -154,7 +154,7 @@ def initiator_init(
         for route_state in routes:
             raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
 
-    return pfs_msg, ActionInitInitiator(transfer_state, routes)
+    return error_msg, ActionInitInitiator(transfer_state, routes)
 
 
 def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
@@ -1217,7 +1217,7 @@ class RaidenService(Runnable):
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
-        pfs_msg, init_initiator_statechange = initiator_init(
+        error_msg, init_initiator_statechange = initiator_init(
             raiden=self,
             transfer_identifier=identifier,
             transfer_amount=amount,
@@ -1230,7 +1230,7 @@ class RaidenService(Runnable):
 
         # FIXME: Dispatch the state change even if there are no routes to
         # create the wal entry.
-        if pfs_msg is None:
+        if error_msg is None:
             self.handle_and_track_state_changes([init_initiator_statechange])
         else:
             failed = EventPaymentSentFailed(
@@ -1238,7 +1238,7 @@ class RaidenService(Runnable):
                 token_network_address=token_network_address,
                 identifier=identifier,
                 target=target,
-                reason=pfs_msg,
+                reason=error_msg,
             )
             payment_status.payment_done.set(failed)
 

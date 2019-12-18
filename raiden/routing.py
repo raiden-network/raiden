@@ -1,5 +1,5 @@
+from enum import Enum
 from heapq import heappop, heappush
-from typing import List, Tuple
 from uuid import UUID
 
 import networkx
@@ -18,15 +18,24 @@ from raiden.utils.typing import (
     ChannelID,
     FeeAmount,
     InitiatorAddress,
+    List,
     NamedTuple,
     OneToNAddress,
     Optional,
     PaymentAmount,
+    PaymentWithFeeAmount,
     TargetAddress,
     TokenNetworkAddress,
+    Tuple,
 )
 
 log = structlog.get_logger(__name__)
+
+
+class ErrorDirectChannel(Enum):
+    NONE = None
+    CLOSED = "closed"
+    NO_CAPACITY = "no capacity"
 
 
 def get_best_routes(
@@ -41,47 +50,124 @@ def get_best_routes(
     privkey: bytes,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
 
-    is_direct_partner = to_address in views.all_neighbour_nodes(chain_state)
-    can_use_pfs = pfs_config is not None and one_to_n_address is not None
+    token_network = views.get_token_network_by_address(chain_state, token_network_address)
+    assert token_network, "The token network must be validated and exist."
 
-    log.debug(
-        "Getting route for payment",
-        source=to_checksum_address(from_address),
-        target=to_checksum_address(to_address),
-        amount=amount,
-        target_is_direct_partner=is_direct_partner,
-        can_use_pfs=can_use_pfs,
-    )
-
-    # the pfs should not be requested when the target is linked via a direct channel
-    if is_direct_partner:
-        internal_routes = get_best_routes_internal(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            from_address=from_address,
-            to_address=to_address,
+    try:
+        # networkx returns a generator, consume the result since it will be
+        # iterated over multiple times.
+        all_neighbors = list(
+            networkx.all_neighbors(token_network.network_graph.network, from_address)
+        )
+    except networkx.NetworkXError:
+        # If `our_address` is not in the graph, no channels opened with the
+        # address.
+        log.debug(
+            "Node does not have a channel in the requested token network.",
+            source=to_checksum_address(from_address),
+            target=to_checksum_address(to_address),
             amount=amount,
-            previous_address=previous_address,
         )
-        channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            partner_address=Address(to_address),
-        )
+        return ("Node does not have a channel in the requested token network.", list(), None)
 
-        for route_state in internal_routes:
-            if to_address == route_state.next_hop_address and (
-                channel_state
-                # other conditions about e.g. channel state are checked in best routes internal
-                and channel.get_distributable(
-                    sender=channel_state.our_state, receiver=channel_state.partner_state
+    error_closed = 0
+    error_no_route = 0
+    error_no_capacity = 0
+    error_direct = None
+    shortest_routes: List[Neighbour] = list()
+
+    # Always use a direct channel if available:
+    # - There are no race conditions and the capacity is guaranteed to be
+    #   available.
+    # - There will be no mediation fees
+    # - The transfer will be faster
+    if to_address in all_neighbors:
+        for channel_id in token_network.partneraddresses_to_channelidentifiers[
+            Address(to_address)
+        ]:
+            channel_state = token_network.channelidentifiers_to_channels[channel_id]
+
+            # direct channels dont have fees
+            payment_with_fee_amount = PaymentWithFeeAmount(amount)
+            is_usable = channel.is_channel_usable_for_new_transfer(
+                channel_state, payment_with_fee_amount, None
+            )
+
+            if is_usable is channel.IsChannelUsable.YES:
+                direct_route = RouteState(
+                    route=[Address(from_address), Address(to_address)],
+                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+                    estimated_fee=FeeAmount(0),
                 )
-                >= amount
-            ):
-                return (None, [route_state], None)
+                return (None, [direct_route], None)
+
+            error_direct = is_usable
+
+    for partner_address in all_neighbors:
+        for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]:
+            channel_state = token_network.channelidentifiers_to_channels[channel_id]
+
+            if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+                error_closed += 1
+                continue
+
+            try:
+                route = networkx.shortest_path(
+                    token_network.network_graph.network, partner_address, to_address
+                )
+            except (networkx.NetworkXNoPath, networkx.NodeNotFound):
+                error_no_route += 1
+            else:
+                distributable = channel.get_distributable(
+                    channel_state.our_state, channel_state.partner_state
+                )
+
+                if distributable < amount:
+                    error_no_capacity += 1
+                else:
+                    nonrefundable = amount > channel.get_distributable(
+                        channel_state.partner_state, channel_state.our_state
+                    )
+
+                    # The complete route includes the initiator, add it to the beginning
+                    complete_route = [Address(from_address)] + route
+                    neighbour = Neighbour(
+                        length=len(route),
+                        nonrefundable=nonrefundable,
+                        partner_address=partner_address,
+                        channelid=channel_state.identifier,
+                        route=complete_route,
+                    )
+                    heappush(shortest_routes, neighbour)
+
+    if not shortest_routes:
+        qty_channels = sum(
+            len(token_network.partneraddresses_to_channelidentifiers[partner_address])
+            for partner_address in all_neighbors
+        )
+        error_msg = (
+            f"None of the existing channels could be used to complete the "
+            f"transfer. From the {qty_channels} existing channels. "
+            f"{error_closed} are closed. {error_no_route} don't have a route to "
+            f"the target in the given token network. {error_no_capacity} don't "
+            f"have enough capacity for the requested transfer."
+        )
+        if error_direct is not None:
+            error_msg += "direct channel {error_direct}."
+
+        log.warning(
+            "None of the existing channels could be used to complete the transfer",
+            from_address=to_checksum_address(from_address),
+            to_address=to_checksum_address(to_address),
+            error_closed=error_closed,
+            error_no_route=error_no_route,
+            error_no_capacity=error_no_capacity,
+            error_direct=error_direct,
+        )
+        return (error_msg, list(), None)
 
     if pfs_config is not None and one_to_n_address is not None:
-        pfs_erro_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
+        pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_address=token_network_address,
             one_to_n_address=one_to_n_address,
@@ -93,7 +179,7 @@ def get_best_routes(
             privkey=privkey,
         )
 
-        if not pfs_erro_msg:
+        if not pfs_error_msg:
             # As of version 0.5 it is possible for the PFS to return an empty
             # list of routes without an error message.
             if not pfs_routes:
@@ -102,24 +188,37 @@ def get_best_routes(
             log.info(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
-            return (pfs_erro_msg, pfs_routes, pfs_feedback_token)
+            return (pfs_error_msg, pfs_routes, pfs_feedback_token)
 
         log.warning(
             "Request to Pathfinding Service was not successful. "
             "No routes to the target are found."
         )
-        return (pfs_erro_msg, list(), None)
+        return (pfs_error_msg, list(), None)
 
-    # else non-pfs so let's use internal routing
-    routes = get_best_routes_internal(
-        chain_state=chain_state,
-        token_network_address=token_network_address,
-        from_address=from_address,
-        to_address=to_address,
-        amount=amount,
-        previous_address=previous_address,
-    )
-    return (None, routes, None)
+    else:
+        available_routes = list()
+
+        while shortest_routes:
+            neighbour = heappop(shortest_routes)
+
+            # https://github.com/raiden-network/raiden/issues/4751
+            # Internal routing doesn't know how much fees the initiator will be charged,
+            # so it should set a percentage on top of the original amount
+            # for the whole route.
+            estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
+            if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
+                estimated_fee = FeeAmount(0)
+
+            available_routes.append(
+                RouteState(
+                    route=neighbour.route,
+                    forward_channel_id=neighbour.channelid,
+                    estimated_fee=estimated_fee,
+                )
+            )
+
+        return (None, available_routes, None)
 
 
 class Neighbour(NamedTuple):
@@ -128,110 +227,6 @@ class Neighbour(NamedTuple):
     partner_address: Address
     channelid: ChannelID
     route: List[Address]
-
-
-def get_best_routes_internal(
-    chain_state: ChainState,
-    token_network_address: TokenNetworkAddress,
-    from_address: InitiatorAddress,
-    to_address: TargetAddress,
-    amount: int,
-    previous_address: Optional[Address],
-) -> List[RouteState]:
-    """ Returns a list of channels that can be used to make a transfer.
-
-    This will filter out channels that are not open and don't have enough
-    capacity.
-    """
-    # TODO: Route ranking.
-    # Rate each route to optimize the fee price/quality of each route and add a
-    # rate from in the range [0.0,1.0].
-
-    available_routes = list()
-
-    token_network = views.get_token_network_by_address(chain_state, token_network_address)
-
-    if not token_network:
-        return list()
-
-    neighbors_heap: List[Neighbour] = list()
-    try:
-        all_neighbors = networkx.all_neighbors(token_network.network_graph.network, from_address)
-    except networkx.NetworkXError:
-        # If `our_address` is not in the graph, no channels opened with the
-        # address
-        return list()
-
-    for partner_address in all_neighbors:
-        # don't send the message backwards
-        if partner_address == previous_address:
-            continue
-
-        channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state, token_network_address, partner_address
-        )
-
-        if not channel_state:
-            continue
-
-        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
-            log.info(
-                "Channel is not opened, ignoring",
-                from_address=to_checksum_address(from_address),
-                partner_address=to_checksum_address(partner_address),
-                routing_source="Internal Routing",
-            )
-            continue
-
-        nonrefundable = amount > channel.get_distributable(
-            channel_state.partner_state, channel_state.our_state
-        )
-
-        try:
-            route = networkx.shortest_path(
-                token_network.network_graph.network, partner_address, to_address
-            )
-            neighbour = Neighbour(
-                length=len(route),
-                nonrefundable=nonrefundable,
-                partner_address=partner_address,
-                channelid=channel_state.identifier,
-                route=route,
-            )
-            heappush(neighbors_heap, neighbour)
-        except (networkx.NetworkXNoPath, networkx.NodeNotFound):
-            pass
-
-    if not neighbors_heap:
-        log.warning(
-            "No routes available",
-            from_address=to_checksum_address(from_address),
-            to_address=to_checksum_address(to_address),
-        )
-        return list()
-
-    while neighbors_heap:
-        neighbour = heappop(neighbors_heap)
-        # The complete route includes the initiator, add it to the beginning
-        complete_route = [Address(from_address)] + neighbour.route
-
-        # https://github.com/raiden-network/raiden/issues/4751
-        # Internal routing doesn't know how much fees the initiator will be charged,
-        # so it should set a percentage on top of the original amount
-        # for the whole route.
-        estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
-        if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
-            estimated_fee = FeeAmount(0)
-
-        available_routes.append(
-            RouteState(
-                route=complete_route,
-                forward_channel_id=neighbour.channelid,
-                estimated_fee=estimated_fee,
-            )
-        )
-
-    return available_routes
 
 
 def get_best_routes_pfs(
