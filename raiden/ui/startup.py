@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import click
+from eth_utils import to_canonical_address
 
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
@@ -23,13 +24,24 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     List,
+    MonitoringServiceAddress,
+    OneToNAddress,
     SecretRegistryAddress,
+    ServiceRegistryAddress,
     TokenNetworkRegistryAddress,
     Tuple,
     UserDepositAddress,
     cast,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import (
+    CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
+    ID_TO_NETWORKNAME,
+)
 from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployment_info,
@@ -193,6 +205,29 @@ def handle_contract_wrong_address(name: str, address: Address) -> None:
     sys.exit(1)
 
 
+def load_deployment_addresses_from_contracts(contracts: Dict[str, Any]) -> DeploymentAddresses:
+    return DeploymentAddresses(
+        token_network_registry_address=TokenNetworkRegistryAddress(
+            to_canonical_address(contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"])
+        ),
+        secret_registry_address=SecretRegistryAddress(
+            to_canonical_address(contracts[CONTRACT_SECRET_REGISTRY]["address"])
+        ),
+        user_deposit_address=UserDepositAddress(
+            to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
+        ),
+        service_registry_address=ServiceRegistryAddress(
+            to_canonical_address(contracts[CONTRACT_SERVICE_REGISTRY]["address"])
+        ),
+        monitoring_service_address=MonitoringServiceAddress(
+            to_canonical_address(contracts[CONTRACT_MONITORING_SERVICE]["address"])
+        ),
+        one_to_n_address=OneToNAddress(
+            to_canonical_address(contracts[CONTRACT_ONE_TO_N]["address"])
+        ),
+    )
+
+
 def load_deployment_addresses_from_udc(
     proxy_manager: ProxyManager,
     user_deposit_address: UserDepositAddress,
@@ -202,7 +237,9 @@ def load_deployment_addresses_from_udc(
     which are used as services which are bound to the user deposit contract deployed.
     """
     block_identifier = "latest"
-    user_deposit = proxy_manager.user_deposit(user_deposit_address)
+    user_deposit = proxy_manager.user_deposit(
+        UserDepositAddress(to_canonical_address(user_deposit_address))
+    )
     monitoring_service_address = user_deposit.monitoring_service_address(block_identifier)
     one_to_n_address = user_deposit.one_to_n_address(block_identifier)
 
@@ -339,10 +376,7 @@ def services_bundle_from_contracts_deployment(
         proxies[contractname] = proxy
 
     if routing_mode == RoutingMode.PFS:
-        check_pfs_configuration(
-            service_registry=proxies["service_registry"],
-            pathfinding_service_address=pathfinding_service_address,
-        )
+        check_pfs_configuration(pathfinding_service_address=pathfinding_service_address)
 
         pfs_info = configure_pfs_or_exit(
             pfs_url=pathfinding_service_address,
