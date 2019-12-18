@@ -7,7 +7,7 @@ from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
 from web3.utils.filters import construct_event_filter_params
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import FILTER_MAX_BLOCK_RANGE, GENESIS_BLOCK_NUMBER
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
@@ -25,12 +25,6 @@ from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
-
-# The maximum block range to query in a single filter query
-# Helps against timeout errors that occur if you query a filter for
-# the mainnet from Genesis to latest head as we see in:
-# https://github.com/raiden-network/raiden/issues/3558
-FILTER_MAX_BLOCK_RANGE = 100_000
 
 
 def get_filter_args_for_specific_event_from_channel(

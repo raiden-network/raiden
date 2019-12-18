@@ -2,7 +2,8 @@
 import os
 import random
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, NamedTuple, Tuple, cast
 from uuid import UUID
 
 import filelock
@@ -12,13 +13,19 @@ from eth_utils import is_binary_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
-from raiden import constants, routing
+from raiden import routing
 from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import BlockchainEvents
-from raiden.blockchain_events_handler import after_blockchain_statechange
+from raiden.blockchain_events_handler import (
+    after_blockchain_statechange,
+    on_new_token_network_create_filter,
+)
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
+    EMPTY_HASH,
+    EMPTY_TRANSACTION_HASH,
+    FILTER_MAX_BLOCK_RANGE,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -82,6 +89,7 @@ from raiden.transfer.state_change import (
     ActionChannelWithdraw,
     ActionInitChain,
     Block,
+    ContractReceiveNewTokenNetwork,
     ContractReceiveNewTokenNetworkRegistry,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
@@ -111,6 +119,31 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
+
+
+def split_range_into_batches(
+    from_block: BlockNumber, to_block: BlockNumber, batch_size: int
+) -> List[BlockNumber]:
+    """Split the range `(from_block, to_block]` into even batches.
+
+    This function will make a list of batches, were all but the last batch vary
+    in size.
+
+    >>> # In these cases only one batch of varying size is necessary
+    >>> split_range_into_batches(0, 2, 5)
+    ... [2]
+    >>> split_range_into_batches(5, 9, 5)
+    ... [9]
+    >>> # In theses cases multiple batches are necesary
+    >>> # only the latest one will vary in size
+    >>> split_range_into_batches(2, 9, 5)
+    ... [7, 9]
+    >>> split_range_into_batches(5, 15, 5)
+    ... [10, 15]
+    """
+    batches_to_blocks = list(range(from_block + batch_size, to_block, batch_size))
+    batches_to_blocks.append(to_block)
+    return cast(List[BlockNumber], batches_to_blocks)
 
 
 def initiator_init(
@@ -384,7 +417,7 @@ class RaidenService(Runnable):
                 [],  # empty list of token network states as it's the node's startup
             )
             new_network_state_change = ContractReceiveNewTokenNetworkRegistry(
-                transaction_hash=constants.EMPTY_TRANSACTION_HASH,
+                transaction_hash=EMPTY_TRANSACTION_HASH,
                 token_network_registry=token_network_registry,
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
@@ -561,26 +594,12 @@ class RaidenService(Runnable):
         assert self.wal, "The database must have been initialized. node:{self!r}"
 
         self.alarm.register_callback(self._callback_new_block)
+
+        # On the very first run of Raiden, it needs to fetch all the events
+        # since the smart contracts were deployed, this means a very long
+        # period of time has to be queried by the filters and it can take a
+        # little while.
         self.alarm.first_run(last_log_block)
-        # The first run of the alarm task processes some state changes and may add
-        # new token network event filters when this is the first time Raiden runs.
-        # Here we poll for any new events that may exist after the addition of
-        # those event filters.
-        latest_block_num = self.rpc_client.get_block(block_identifier="latest")["number"]
-        latest_confirmed_block_num = max(
-            GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
-        )
-
-        blockchain_events = self.blockchain_events.poll_blockchain_events(
-            latest_confirmed_block_num
-        )
-
-        state_changes = []
-        for event in blockchain_events:
-            state_changes.extend(
-                blockchainevent_to_statechange(self, event, latest_confirmed_block_num)
-            )
-        self.handle_and_track_state_changes(state_changes)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
@@ -740,6 +759,36 @@ class RaidenService(Runnable):
             Therefore this method should be called only once a new block is
             mined with the corresponding block data from the AlarmTask.
         """
+        latest_block_number = latest_block["number"]
+
+        # Handle testing with private chains. The block number can be
+        # smaller than confirmation_blocks
+        confirmed_block = max(GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks)
+
+        self.synchronize_to_confirmed_block_in_batches(confirmed_block)
+
+    def synchronize_to_confirmed_block_in_batches(
+        self, confirmed_target_block_number: BlockNumber
+    ) -> None:
+        """Synchronize with the block chain up to
+        `confirmed_target_block_number`.
+
+        It is very important for `confirmed_target_block_number` to be an
+        confirmed block, otherwise reorgs may cause havoc. This is problematic
+        since some operations are irreversible, namely sending a balance proof.
+        Once a node accepts a deposit, these tokens can be used to do mediated
+        transfers, and if a reorg removes the deposit tokens could be lost.
+
+        This function takes care of fetching blocks in batches and confirming
+        their result. This is important to keep memory usage low and to speed
+        up restarts. Memory usage can get a hit if the node is asleep for a
+        long period of time and on the first run, since all the missing
+        confirmed blocks have to be fetched before the node is in a working
+        state. Restarts get a hit if the node is closed while it was
+        synchronizing, without regularly saving that work, if the node is
+        killed while synchronizing, it only gets gradually slower.
+        """
+        sync_start = datetime.now()
         # User facing APIs, which have on-chain side-effects, force polled the
         # blockchain to update the node's state. This force poll is used to
         # provide a consistent view to the user, e.g. a channel open call waits
@@ -750,72 +799,98 @@ class RaidenService(Runnable):
         # these races (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
-            latest_block_number = latest_block["number"]
 
-            # Handle testing with private chains. The block number can be
-            # smaller than confirmation_blocks
-            latest_confirmed_block_number = max(
-                GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
-            )
-            latest_confirmed_block = self.rpc_client.web3.eth.getBlock(
-                latest_confirmed_block_number
+            end_of_each_batch = split_range_into_batches(
+                from_block=self.get_block_number(),
+                to_block=confirmed_target_block_number,
+                batch_size=FILTER_MAX_BLOCK_RANGE,
             )
 
-            state_changes: List[StateChange] = list()
+            for to_block in end_of_each_batch:
 
-            # On restarts the node has to pick up all events generated since the
-            # last run. To do this the node will set the filters' from_block to
-            # the value of the latest block number known to have *all* events
-            # processed.
-            #
-            # To guarantee the above the node must either:
-            #
-            # - Dispatch the state changes individually, leaving the Block
-            # state change last, so that it knows all the events for the
-            # given block have been processed. On restarts this can result in
-            # the same event being processed twice.
-            # - Dispatch all the smart contract events together with the Block
-            # state change in a single transaction, either all or nothing will
-            # be applied, and on a restart the node picks up from where it
-            # left.
-            #
-            # The approach used bellow is to dispatch the Block and the
-            # blockchain events in a single transaction. This is the preferred
-            # approach because it guarantees that no events will be missed and
-            # it fixes race conditions on the value of the block number value,
-            # that can lead to crashes.
-            #
-            # Example: The user creates a new channel with an initial deposit
-            # of X tokens. This is done with two operations, the first is to
-            # open the new channel, the second is to deposit the requested
-            # tokens in it. Once the node fetches the event for the new channel,
-            # it will immediately request the deposit, which leaves a window for
-            # a race condition. If the Block state change was not yet
-            # processed, the block hash used as the trigerring block for the
-            # deposit will be off-by-one, and it will point to the block
-            # immediately before the channel existed. This breaks a proxy
-            # precondition which crashes the client.
-            block_state_change = Block(
-                block_number=latest_confirmed_block_number,
-                gas_limit=latest_confirmed_block["gasLimit"],
-                block_hash=BlockHash(bytes(latest_confirmed_block["hash"])),
-            )
-            state_changes.append(block_state_change)
+                confirmed_block = self.rpc_client.web3.eth.getBlock(to_block)
+                state_changes: List[StateChange] = list()
 
-            blockchain_events = self.blockchain_events.poll_blockchain_events(
-                latest_confirmed_block_number
-            )
+                # On restarts the node has to pick up all events generated since the
+                # last run. To do this the node will set the filters' from_block to
+                # the value of the latest block number known to have *all* events
+                # processed.
+                #
+                # To guarantee the above the node must either:
+                #
+                # - Dispatch the state changes individually, leaving the Block
+                # state change last, so that it knows all the events for the
+                # given block have been processed. On restarts this can result in
+                # the same event being processed twice.
+                # - Dispatch all the smart contract events together with the Block
+                # state change in a single transaction, either all or nothing will
+                # be applied, and on a restart the node picks up from where it
+                # left.
+                #
+                # The approach used bellow is to dispatch the Block and the
+                # blockchain events in a single transaction. This is the preferred
+                # approach because it guarantees that no events will be missed and
+                # it fixes race conditions on the value of the block number value,
+                # that can lead to crashes.
+                #
+                # Example: The user creates a new channel with an initial deposit
+                # of X tokens. This is done with two operations, the first is to
+                # open the new channel, the second is to deposit the requested
+                # tokens in it. Once the node fetches the event for the new channel,
+                # it will immediately request the deposit, which leaves a window for
+                # a race condition. If the Block state change was not yet
+                # processed, the block hash used as the trigerring block for the
+                # deposit will be off-by-one, and it will point to the block
+                # immediately before the channel existed. This breaks a proxy
+                # precondition which crashes the client.
+                block_state_change = Block(
+                    block_number=confirmed_block["number"],
+                    gas_limit=confirmed_block["gasLimit"],
+                    block_hash=BlockHash(bytes(confirmed_block["hash"])),
+                )
+                state_changes.append(block_state_change)
 
-            for event in blockchain_events:
-                state_changes.extend(
-                    blockchainevent_to_statechange(self, event, latest_confirmed_block_number)
+                blockchain_events = self.blockchain_events.poll_blockchain_events(
+                    confirmed_block["number"]
                 )
 
-            # It's important to /not/ block here, because this function can be
-            # called from the alarm task greenlet, which should not starve.
-            #
-            # All the state changes are dispatched together
-            self.handle_and_track_state_changes(state_changes)
+                for event in blockchain_events:
+                    state_changes.extend(
+                        blockchainevent_to_statechange(self, event, confirmed_block["number"])
+                    )
+
+                # This batch of events may have a new token network in it. A
+                # new filter has to be added for the network, and then the
+                # filter has to be queried until `confirmed_block["number"]` to
+                # guarantee safety on restarts.
+                for state_change in state_changes:
+                    if isinstance(state_change, ContractReceiveNewTokenNetwork):
+                        on_new_token_network_create_filter(self, state_change)
+                        blockchain_events = self.blockchain_events.poll_blockchain_events(
+                            confirmed_block["number"]
+                        )
+
+                        for event in blockchain_events:
+                            state_changes.extend(
+                                blockchainevent_to_statechange(
+                                    self, event, confirmed_block["number"]
+                                )
+                            )
+
+                # It's important to /not/ block here, because this function can
+                # be called from the alarm task greenlet, which should not
+                # starve. This wasa problem when the node decided to send a new
+                # transaction, since the proxies block until the transaction is
+                # mined and confirmed (e.g. the settle window is over and the
+                # node sends the settle transaction).
+                self.handle_and_track_state_changes(state_changes)
+
+        sync_end = datetime.now()
+        log.debug(
+            "Synchronized to a new confirmed block",
+            event_filters_qty=len(self.blockchain_events.event_listeners),
+            sync_elapsed=sync_end - sync_start,
+        )
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.
@@ -952,7 +1027,7 @@ class RaidenService(Runnable):
                 old_state=ChainState(
                     pseudo_random_generator=chain_state.pseudo_random_generator,
                     block_number=GENESIS_BLOCK_NUMBER,
-                    block_hash=constants.EMPTY_HASH,
+                    block_hash=EMPTY_HASH,
                     our_address=chain_state.our_address,
                     chain_id=chain_state.chain_id,
                 ),

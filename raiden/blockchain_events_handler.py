@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # noqa: F401
 
 
-def after_new_token_network_create_filter(
+def on_new_token_network_create_filter(
     raiden: "RaidenService", state_change: ContractReceiveNewTokenNetwork
 ) -> None:
     """ Handles the creation of a new token network.
@@ -87,11 +87,7 @@ def after_new_deposit_join_network(
 
 
 def after_blockchain_statechange(raiden: "RaidenService", state_change: StateChange) -> None:
-    if type(state_change) == ContractReceiveNewTokenNetwork:
-        assert isinstance(state_change, ContractReceiveNewTokenNetwork), MYPY_ANNOTATION
-        after_new_token_network_create_filter(raiden, state_change)
-
-    elif type(state_change) == ContractReceiveChannelNew:
+    if type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
         after_new_channel_start_healthcheck(raiden, state_change)
 

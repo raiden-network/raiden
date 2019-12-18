@@ -84,6 +84,12 @@ STATE_PRUNING_AFTER_BLOCKS = 64
 STATE_PRUNING_SAFETY_MARGIN = 8
 NO_STATE_QUERY_AFTER_BLOCKS = STATE_PRUNING_AFTER_BLOCKS - STATE_PRUNING_SAFETY_MARGIN
 
+# The maximum block range to query in a single filter query
+# Helps against timeout errors that occur if you query a filter for
+# the mainnet from Genesis to latest head as we see in:
+# https://github.com/raiden-network/raiden/issues/3558
+FILTER_MAX_BLOCK_RANGE = 100_000
+
 NULL_ADDRESS_BYTES = bytes(20)
 NULL_ADDRESS_HEX = to_checksum_address(NULL_ADDRESS_BYTES)
 
