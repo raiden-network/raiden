@@ -70,7 +70,9 @@ from raiden.utils.cli import (
 from raiden.utils.debugging import enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
+from raiden.utils.profiling.greenlets import SwitchMonitoring
 from raiden.utils.profiling.memory import MemoryLogger
+from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
 from raiden_contracts.constants import NETWORKNAME_TO_ID
@@ -482,6 +484,7 @@ def options(func: Callable) -> Callable:
                 ),
                 default=None,
             ),
+            option("--switch-tracing", help="Enable switch tracing", is_flag=True, default=False),
             option(
                 "--unrecoverable-error-should-crash",
                 help=(
@@ -572,14 +575,14 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     flamegraph = kwargs.pop("flamegraph", None)
+    switch_tracing = kwargs.pop("switch_tracing", None)
     profiler = None
+    switch_monitor = None
 
     enable_gevent_monitoring_signal()
 
     if flamegraph:
         os.makedirs(flamegraph, exist_ok=True)
-
-        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
 
         now = datetime.datetime.now().isoformat()
         address = to_checksum_address(kwargs["address"])
@@ -587,6 +590,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
         stack_stream = open(stack_path, "w")
         flame = FlameGraphCollector(stack_stream)
         profiler = TraceSampler(flame)
+
+    if switch_tracing is True:
+        switch_monitor = SwitchMonitoring()
 
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
@@ -696,10 +702,12 @@ def run(ctx: Context, **kwargs: Any) -> None:
         write_stack_trace(ex)
         sys.exit(1)
     finally:
-        if profiler is not None:
-            profiler.stop()
+        if switch_monitor is not None:
+            switch_monitor.stop()
         if memory_logger is not None:
             memory_logger.stop()
+        if profiler is not None:
+            profiler.stop()
 
 
 # List of available options, used by the scenario player
