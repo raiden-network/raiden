@@ -37,7 +37,6 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
-    DeploymentAddresses,
     check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
@@ -52,6 +51,7 @@ from raiden.ui.prompt import (
 )
 from raiden.ui.startup import (
     load_deployed_contracts_data,
+    load_deployment_addresses_from_contracts,
     load_deployment_addresses_from_udc,
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
@@ -76,15 +76,7 @@ from raiden.utils.typing import (
     Tuple,
     UserDepositAddress,
 )
-from raiden_contracts.constants import (
-    CONTRACT_MONITORING_SERVICE,
-    CONTRACT_ONE_TO_N,
-    CONTRACT_SECRET_REGISTRY,
-    CONTRACT_SERVICE_REGISTRY,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    CONTRACT_USER_DEPOSIT,
-    ID_TO_NETWORKNAME,
-)
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -302,14 +294,7 @@ def run_app(
             block_identifier="latest",
         )
     else:
-        deployed_addresses = DeploymentAddresses(
-            token_network_registry_address=contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"],
-            secret_registry_address=contracts[CONTRACT_SECRET_REGISTRY]["address"],
-            user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
-            service_registry_address=contracts[CONTRACT_SERVICE_REGISTRY]["address"],
-            monitoring_service_address=contracts[CONTRACT_MONITORING_SERVICE]["address"],
-            one_to_n_address=contracts[CONTRACT_ONE_TO_N]["address"],
-        )
+        deployed_addresses = load_deployment_addresses_from_contracts(contracts=contracts)
 
     raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
