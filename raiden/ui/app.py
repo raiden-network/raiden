@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import is_address, to_canonical_address, to_checksum_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
@@ -37,6 +37,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
+    DeploymentAddresses,
     check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
@@ -75,7 +76,15 @@ from raiden.utils.typing import (
     Tuple,
     UserDepositAddress,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import (
+    CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
+    ID_TO_NETWORKNAME,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -274,27 +283,44 @@ def run_app(
     if sync_check:
         check_synced(proxy_manager)
 
-    if user_deposit_contract_address is None:
-        click.secho("The user deposit address should be provided", fg="red")
-        sys.exit(1)
+    # The user has the option to launch Raiden with a custom
+    # user deposit contract address. This can be used to load
+    # the addresses for the rest of the deployed contracts.
+    # The steps done here make sure that if a UDC address is provided,
+    # the address has to be valid and all the connected contracts
+    # are configured properly.
+    # If a UDC address was not provided, Raiden would fall back
+    # to using the ones deployed and provided by the raiden-contracts package.
+    if user_deposit_contract_address is not None:
+        if not is_address(user_deposit_contract_address):
+            click.secho("The user deposit address is invalid", fg="red")
+            sys.exit(1)
 
-    deployment_addresses = load_deployment_addresses_from_udc(
-        proxy_manager=proxy_manager,
-        user_deposit_address=user_deposit_contract_address,
-        block_identifier="latest",
-    )
+        deployed_addresses = load_deployment_addresses_from_udc(
+            proxy_manager=proxy_manager,
+            user_deposit_address=user_deposit_contract_address,
+            block_identifier="latest",
+        )
+    else:
+        deployed_addresses = DeploymentAddresses(
+            token_network_registry_address=contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"],
+            secret_registry_address=contracts[CONTRACT_SECRET_REGISTRY]["address"],
+            user_deposit_address=contracts[CONTRACT_USER_DEPOSIT]["address"],
+            service_registry_address=contracts[CONTRACT_SERVICE_REGISTRY]["address"],
+            monitoring_service_address=contracts[CONTRACT_MONITORING_SERVICE]["address"],
+            one_to_n_address=contracts[CONTRACT_ONE_TO_N]["address"],
+        )
 
     raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
-        token_network_registry_address=deployment_addresses.token_network_registry_address,
-        secret_registry_address=deployment_addresses.secret_registry_address,
+        token_network_registry_address=deployed_addresses.token_network_registry_address,
+        secret_registry_address=deployed_addresses.secret_registry_address,
     )
 
     services_bundle = services_bundle_from_contracts_deployment(
         config=config,
-        deployed_addresses=deployment_addresses,
+        deployed_addresses=deployed_addresses,
         proxy_manager=proxy_manager,
-        contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
         enable_monitoring=enable_monitoring,

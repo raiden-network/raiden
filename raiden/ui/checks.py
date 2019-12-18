@@ -27,7 +27,6 @@ from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
-    BlockSpecification,
     ChainID,
     Dict,
     List,
@@ -247,57 +246,3 @@ def check_synced(proxy_manager: ProxyManager) -> None:
         network=network_name if network_id != 1 else "api", action="eth_blockNumber"
     )
     wait_for_sync(proxy_manager, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3)
-
-
-def check_user_deposit_deps_consistency(
-    proxy_manager: ProxyManager,
-    deployment_addresses: DeploymentAddresses,
-    block_identifier: BlockSpecification,
-) -> None:
-    user_deposit_address = deployment_addresses.user_deposit_address
-    user_deposit = proxy_manager.user_deposit(user_deposit_address)
-    token_address = user_deposit.token_address(block_identifier)
-
-    msc_address = deployment_addresses.monitoring_service_address
-    one_to_n_address = deployment_addresses.one_to_n_address
-    service_registry_address = deployment_addresses.service_registry_address
-
-    monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
-    one_to_n_proxy = proxy_manager.one_to_n(one_to_n_address)
-    service_registry_proxy = proxy_manager.service_registry(service_registry_address)
-
-    token_address_matches_monitoring_service = (
-        token_address == monitoring_service_proxy.token_address(block_identifier)
-    )
-    if not token_address_matches_monitoring_service:
-        msg = (
-            f"The token used in the provided user deposit contract "
-            f"{user_deposit_address} does not match the one in the "
-            f"MonitoringService contract {msc_address}."
-        )
-        click.secho(msg, fg="red")
-        sys.exit(1)
-
-    token_address_matches_one_to_n = token_address == one_to_n_proxy.token_address(
-        block_identifier
-    )
-    if not token_address_matches_one_to_n:
-        msg = (
-            f"The token used in the provided user deposit contract "
-            f"{user_deposit_address} does not match the one in the OneToN "
-            f"service contract {msc_address}."
-        )
-        click.secho(msg, fg="red")
-        sys.exit(1)
-
-    token_address_matches_service_registry = token_address == service_registry_proxy.token_address(
-        block_identifier
-    )
-    if not token_address_matches_service_registry:
-        msg = (
-            f"The token used in the provided user deposit contract "
-            f"{user_deposit_address} does not match the one in the ServiceRegistry "
-            f"contract {msc_address}."
-        )
-        click.secho(msg, fg="red")
-        sys.exit(1)
