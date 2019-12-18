@@ -18,7 +18,6 @@ from raiden.constants import (
 from raiden.exceptions import EthNodeInterfaceError
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
@@ -32,7 +31,6 @@ from raiden.utils.typing import (
     List,
     MonitoringServiceAddress,
     OneToNAddress,
-    Optional,
     SecretRegistryAddress,
     ServiceRegistryAddress,
     TokenNetworkRegistryAddress,
@@ -214,14 +212,12 @@ def check_deployed_contracts_data(
             sys.exit(1)
 
 
-def check_pfs_configuration(
-    service_registry: Optional[ServiceRegistry], pathfinding_service_address: str
-) -> None:
-    if not service_registry and not pathfinding_service_address:
+def check_pfs_configuration(pathfinding_service_address: str) -> None:
+    if not pathfinding_service_address:
         click.secho(
-            "Requested PFS routing mode but no service registry or no specific pathfinding "
+            "Requested PFS routing mode but no specific pathfinding "
             " service address is provided. Please provide it via either the "
-            "--service-registry-contract-address or the --pathfinding-service-address "
+            "--pathfinding-service-address "
             "argument",
             fg="red",
         )
