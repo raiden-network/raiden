@@ -7,16 +7,19 @@ import sys
 import textwrap
 import traceback
 from copy import deepcopy
+from enum import Enum
 from io import StringIO
 from subprocess import TimeoutExpired
-from tempfile import mkdtemp, mktemp
+from tempfile import NamedTemporaryFile, mkdtemp, mktemp
 from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
 
 import click
 import structlog
 from click import Context
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib3.exceptions import ReadTimeoutError
 
 from raiden.app import App
 from raiden.constants import (
@@ -30,7 +33,13 @@ from raiden.constants import (
     EthClient,
     RoutingMode,
 )
-from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
+from raiden.exceptions import (
+    APIServerPortInUseError,
+    EthereumNonceTooLow,
+    EthNodeInterfaceError,
+    RaidenUnrecoverableError,
+    ReplacementTransactionUnderpriced,
+)
 from raiden.log_config import configure_logging
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.network.utils import get_free_port
@@ -58,6 +67,7 @@ from raiden.utils.cli import (
     option_group,
     validate_option_dependencies,
 )
+from raiden.utils.debugging import enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.profiling.memory import MemoryLogger
@@ -70,6 +80,17 @@ from .runners import EchoNodeRunner, MatrixRunner
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
 ETH_NETWORKID_OPTION = "--network-id"
+COMMUNICATION_ERROR = (
+    f"\n"
+    f"Communicating with an external service failed.\n"
+    f"This can be caused by internet connection problems or \n"
+    f"any of the following services, Ethereum client or Matrix or pathfinding.\n"
+    f"Please try again in five minutes."
+    f"\n"
+    f"Endpoint used with the Ethereum client: "
+    f"'{{}}', this option can be "
+    f"configured with the flag {ETH_RPC_CONFIG_OPTION}"
+)
 
 
 OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
@@ -80,6 +101,32 @@ OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
     "enable-monitoring": [("transport", "matrix")],
     "matrix-server": [("transport", "matrix")],
 }
+
+
+class ReturnCode(Enum):
+    SUCCESS = 0
+    # 1 -> this error code is used arbitraryly in some places, skipping it
+    FATAL = 2
+    GENERIC_COMMUNICATION_ERROR = 3
+    ETH_INTERFACE_ERROR = 4
+    PORT_ALREADY_IN_USE = 5
+
+
+def write_stack_trace(ex: Exception) -> None:
+    file = NamedTemporaryFile(
+        "w",
+        prefix=f"raiden-exception-{datetime.datetime.utcnow():%Y-%m-%dT%H-%M}",
+        suffix=".txt",
+        delete=False,
+    )
+    with file as traceback_file:
+        traceback.print_exc(file=traceback_file)
+        click.secho(
+            f"FATAL: An unexpected exception occured. "
+            f"A traceback has been written to {traceback_file.name}\n"
+            f"{ex}",
+            fg="red",
+        )
 
 
 def options(func: Callable) -> Callable:
@@ -527,6 +574,8 @@ def run(ctx: Context, **kwargs: Any) -> None:
     flamegraph = kwargs.pop("flamegraph", None)
     profiler = None
 
+    enable_gevent_monitoring_signal()
+
     if flamegraph:
         os.makedirs(flamegraph, exist_ok=True)
 
@@ -618,14 +667,32 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
     try:
-        app = runner.run()
-        app.stop()
-    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as e:
+        runner.run()
+    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as ex:
         click.secho(
-            "{}. Please make sure that this Raiden node is the "
-            "only user of the selected account".format(str(e)),
+            f"{ex}. Please make sure that this Raiden node is the "
+            f"only user of the selected account",
             fg="red",
         )
+        sys.exit(1)
+    except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
+        print(COMMUNICATION_ERROR.format(kwargs["eth_rpc_endpoint"]))
+        sys.exit(ReturnCode.GENERIC_COMMUNICATION_ERROR)
+    except EthNodeInterfaceError as e:
+        click.secho(str(e), fg="red")
+        sys.exit(ReturnCode.ETH_INTERFACE_ERROR)
+    except RaidenUnrecoverableError as ex:
+        click.secho(f"FATAL: An un-recoverable error happen, Raiden is bailing {ex}", fg="red")
+        write_stack_trace(ex)
+    except APIServerPortInUseError as ex:
+        click.secho(
+            f"ERROR: API Address {ex} is in use. Use --api-address <host:port> "
+            f"to specify a different port.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.PORT_ALREADY_IN_USE)
+    except Exception as ex:
+        write_stack_trace(ex)
         sys.exit(1)
     finally:
         if profiler is not None:
@@ -676,7 +743,6 @@ def smoketest(
         setup_testchain_for_smoketest,
     )
     from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
-    from raiden.utils.debugging import enable_gevent_monitoring_signal
 
     step_count = 8
     step = 0
@@ -697,7 +763,6 @@ def smoketest(
     else:
         report_file = report_path
 
-    enable_gevent_monitoring_signal()
     make_requests_insecure()
     urllib3.disable_warnings(InsecureRequestWarning)
 

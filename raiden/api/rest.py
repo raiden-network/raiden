@@ -470,7 +470,7 @@ class APIServer(Runnable):  # pragma: no unittest
             wsgiserver.init_socket()
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
-                raise APIServerPortInUseError()
+                raise APIServerPortInUseError(f"{self.config['host']}:{self.config['port']}")
             raise
 
         self.wsgiserver = wsgiserver
