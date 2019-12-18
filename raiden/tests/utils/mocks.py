@@ -67,43 +67,61 @@ class MockPaymentChannel:
 
 
 class MockProxyManager:
-    def __init__(self, node_address: Address):
+    def __init__(self, node_address: Address, mocked_addresses: Dict[str, Address] = None):
         # let's make a single mock token network for testing
         self.client = MockJSONRPCClient(node_address)
         self.token_network = MockTokenNetworkProxy(client=self.client)
+        self.mocked_addresses = mocked_addresses or dict()
 
     def payment_channel(self, canonical_identifier: CanonicalIdentifier):
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
-    def token_network_registry(  # pylint: disable=unused-argument, no-self-use
-        self, address: Address
-    ):
-        return Mock(address=address)
+    def token_network_registry(self, address: Address):  # pylint: disable=no-self-use
+        registry = Mock(address=address)
+        registry.get_secret_registry_address.return_value = self.mocked_addresses.get(
+            "SecretRegistry", factories.make_address()
+        )
+        return registry
 
-    def secret_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
-        return object()
+    def secret_registry(self, address: Address):  # pylint: disable=no-self-use
+        return Mock(address=address)
 
     def user_deposit(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         user_deposit = Mock()
-        user_deposit.msc_address.return_value = bytes(32)
-        user_deposit.token_address.return_value = bytes(32)
-        user_deposit.service_registry_address.return_value = bytes(32)
+        user_deposit.monitoring_service_address.return_value = self.mocked_addresses.get(
+            "MonitoringService", bytes(32)
+        )
+        user_deposit.token_address.return_value = self.mocked_addresses.get("Token", bytes(32))
+        user_deposit.one_to_n_address.return_value = self.mocked_addresses.get("OneToN", bytes(32))
+        user_deposit.service_registry_address.return_value = self.mocked_addresses.get(
+            "ServiceRegistry", bytes(32)
+        )
         return user_deposit
 
     def service_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         service_registry = Mock()
-        service_registry.token_address.return_value = bytes(32)
+        service_registry.address = self.mocked_addresses.get("ServiceRegistry", bytes(32))
+        service_registry.token_address.return_value = self.mocked_addresses.get("Token", bytes(32))
         return service_registry
 
     def one_to_n(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         one_to_n = Mock()
-        one_to_n.token_address.return_value = bytes(32)
+        one_to_n.address = self.mocked_addresses.get("MonitoringService", bytes(32))
+        one_to_n.token_address.return_value = self.mocked_addresses.get("Token", bytes(32))
         return one_to_n
 
     def monitoring_service(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         monitoring_service = Mock()
-        monitoring_service.service_registry_address.return_value = bytes(32)
-        monitoring_service.token_address.return_value = bytes(32)
+        monitoring_service.address = self.mocked_addresses.get("MonitoringService", bytes(32))
+        monitoring_service.token_network_registry_address.return_value = self.mocked_addresses.get(
+            "TokenNetworkRegistry", bytes(32)
+        )
+        monitoring_service.service_registry_address.return_value = self.mocked_addresses.get(
+            "ServiceRegistry", bytes(32)
+        )
+        monitoring_service.token_address.return_value = self.mocked_addresses.get(
+            "Token", bytes(32)
+        )
         return monitoring_service
 
 
