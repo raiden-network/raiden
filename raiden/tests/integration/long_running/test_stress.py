@@ -364,7 +364,7 @@ def test_stress(
 ) -> None:
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
-    identifier_generator = count()
+    identifier_generator = count(start=1)
 
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(raiden_network[0]),
