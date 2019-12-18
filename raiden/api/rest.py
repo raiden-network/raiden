@@ -493,7 +493,13 @@ class APIServer(Runnable):  # pragma: no unittest
         )
 
         if self.wsgiserver is not None:
-            self.wsgiserver.stop()
+            # It is very important to have a timeout here, the existing endpoints only return
+            # once the operation is completed, which for a deposit it means waiting for the
+            # transaction to be mined and confirmed, which can potentially take a few minutes.
+            # If a timeout is not provided here, that would lead to a very and unpredictable
+            # shutdown timeout, which leads to problems with our scenario player tooling.
+
+            self.wsgiserver.stop(timeout=5)
             self.wsgiserver = None
 
         log.debug(
