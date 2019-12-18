@@ -3,9 +3,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import click
-from eth_utils import to_canonical_address
 
-from raiden.constants import NULL_ADDRESS_BYTES, Environment, RoutingMode
+from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
 from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
 from raiden.network.proxies.monitoring_service import MonitoringService
@@ -16,13 +15,7 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import RAIDEN_CONTRACT_VERSION
-from raiden.ui.checks import (
-    DeploymentAddresses,
-    check_deployed_contracts_data,
-    check_pfs_configuration,
-    check_raiden_environment,
-    check_user_deposit_deps_consistency,
-)
+from raiden.ui.checks import DeploymentAddresses, check_pfs_configuration, check_raiden_environment
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
@@ -34,15 +27,9 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     Tuple,
     UserDepositAddress,
+    cast,
 )
-from raiden_contracts.constants import (
-    CONTRACT_MONITORING_SERVICE,
-    CONTRACT_ONE_TO_N,
-    CONTRACT_SERVICE_REGISTRY,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    CONTRACT_USER_DEPOSIT,
-    ID_TO_NETWORKNAME,
-)
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployment_info,
@@ -54,13 +41,100 @@ class RaidenBundle:
     token_network_registry: TokenNetworkRegistry
     secret_registry: SecretRegistry
 
+    def __post_init__(self) -> None:
+        secret_registry_address = self.token_network_registry.get_secret_registry_address("latest")
+        if secret_registry_address != self.secret_registry.address:
+            click.secho(
+                f"Secret registry address linked with the token network registry "
+                f"{to_checksum_address(secret_registry_address)} does not match "
+                f"the address provided by the secret registry proxy "
+                f"{to_checksum_address(self.secret_registry.address)}"
+            )
+
 
 @dataclass(frozen=True)
 class ServicesBundle:
-    user_deposit: Optional[UserDeposit]
+    user_deposit: UserDeposit
     service_registry: Optional[ServiceRegistry]
     monitoring_service: Optional[MonitoringService]
     one_to_n: Optional[OneToN]
+
+    def __post_init__(self) -> None:
+        block_identifier = "latest"
+        user_deposit_address = self.user_deposit.address
+        token_address = self.user_deposit.token_address(block_identifier)
+
+        monitoring_service_address = self.user_deposit.monitoring_service_address(block_identifier)
+
+        # Validation should only be done if monitoring is enabled or PFS is used
+        if (
+            self.monitoring_service is None
+            or self.service_registry is None
+            or self.one_to_n is None
+        ):
+            return
+
+        if monitoring_service_address != self.monitoring_service.address:
+            click.secho(
+                f"Monitoring service address linked with the user deposit contract "
+                f"{to_checksum_address(monitoring_service_address)} does not match "
+                f"the address provided by the monitoring service proxy "
+                f"{to_checksum_address(self.monitoring_service.address)}"
+            )
+        one_to_n_address = self.user_deposit.one_to_n_address(block_identifier)
+        if one_to_n_address != self.one_to_n.address:
+            click.secho(
+                f"OneToN address linked with the user deposit contract "
+                f"{to_checksum_address(one_to_n_address)} does not match "
+                f"the address provided by the OneToN proxy "
+                f"{to_checksum_address(self.one_to_n.address)}"
+            )
+        service_registry_address = self.monitoring_service.service_registry_address(
+            block_identifier
+        )
+        if service_registry_address != self.service_registry.address:
+            click.secho(
+                f"The service registry address linked with the monitoring service contract "
+                f"{to_checksum_address(service_registry_address)} does not match "
+                f"the address provided by the service registry proxy "
+                f"{to_checksum_address(self.service_registry.address)}"
+            )
+
+        token_address_matches_monitoring_service = (
+            token_address == self.monitoring_service.token_address(block_identifier)
+        )
+        if not token_address_matches_monitoring_service:
+            msg = (
+                f"The token used in the provided user deposit contract "
+                f"{user_deposit_address} does not match the one in the "
+                f"MonitoringService contract {monitoring_service_address}."
+            )
+            click.secho(msg, fg="red")
+            sys.exit(1)
+
+        token_address_matches_one_to_n = token_address == self.one_to_n.token_address(
+            block_identifier
+        )
+        if not token_address_matches_one_to_n:
+            msg = (
+                f"The token used in the provided user deposit contract "
+                f"{user_deposit_address} does not match the one in the OneToN "
+                f"service contract {monitoring_service_address}."
+            )
+            click.secho(msg, fg="red")
+            sys.exit(1)
+
+        token_address_matches_service_registry = (
+            token_address == self.service_registry.token_address(block_identifier)
+        )
+        if not token_address_matches_service_registry:
+            msg = (
+                f"The token used in the provided user deposit contract "
+                f"{user_deposit_address} does not match the one in the ServiceRegistry "
+                f"contract {monitoring_service_address}."
+            )
+            click.secho(msg, fg="red")
+            sys.exit(1)
 
 
 def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
@@ -129,10 +203,10 @@ def load_deployment_addresses_from_udc(
     """
     block_identifier = "latest"
     user_deposit = proxy_manager.user_deposit(user_deposit_address)
-    msc_address = user_deposit.msc_address(block_identifier)
+    monitoring_service_address = user_deposit.monitoring_service_address(block_identifier)
     one_to_n_address = user_deposit.one_to_n_address(block_identifier)
 
-    monitoring_service_proxy = proxy_manager.monitoring_service(msc_address)
+    monitoring_service_proxy = proxy_manager.monitoring_service(monitoring_service_address)
 
     token_network_registry_address = monitoring_service_proxy.token_network_registry_address(
         block_identifier
@@ -151,7 +225,7 @@ def load_deployment_addresses_from_udc(
         secret_registry_address=secret_registry_address,
         user_deposit_address=user_deposit_address,
         service_registry_address=service_registry_address,
-        monitoring_service_address=msc_address,
+        monitoring_service_address=monitoring_service_address,
         one_to_n_address=one_to_n_address,
     )
 
@@ -209,7 +283,6 @@ def raiden_bundle_from_contracts_deployment(
 def services_bundle_from_contracts_deployment(
     config: Dict[str, Any],
     proxy_manager: ProxyManager,
-    contracts: Dict[str, Any],
     routing_mode: RoutingMode,
     deployed_addresses: DeploymentAddresses,
     pathfinding_service_address: str,
@@ -228,61 +301,18 @@ def services_bundle_from_contracts_deployment(
     node_network_id = config["chain_id"]
     environment_type = config["environment_type"]
 
-    user_deposit_contract_address = deployed_addresses.user_deposit_address
-    if user_deposit_contract_address is None:
-        user_deposit_contract_address = contracts[CONTRACT_USER_DEPOSIT]["address"]
+    user_deposit_address = deployed_addresses.user_deposit_address
+    service_registry_address = deployed_addresses.service_registry_address
+    token_network_registry_address = deployed_addresses.token_network_registry_address
 
-    services_contracts_map = {
-        "monitoring_service_address": CONTRACT_MONITORING_SERVICE,
-        "user_deposit_address": CONTRACT_USER_DEPOSIT,
-        "one_to_n_address": CONTRACT_ONE_TO_N,
-        "service_registry_address": CONTRACT_SERVICE_REGISTRY,
-    }
-    # Filter out contracts from the `contracts` map which we've been unable
-    # to find an address for.
-    for address_member, contract_name in services_contracts_map.items():
-        if getattr(deployed_addresses, address_member) == NULL_ADDRESS_BYTES:
-            del contracts[contract_name]
-
-    # If the above step ends up removing any of the required services
-    # contracts, the following step will exit.
-    check_deployed_contracts_data(
-        node_network_id=node_network_id,
-        environment_type=environment_type,
-        contracts=contracts,
-        required_contracts=list(services_contracts_map.values()),
-    )
-
-    check_user_deposit_deps_consistency(
-        proxy_manager=proxy_manager,
-        deployment_addresses=deployed_addresses,
-        block_identifier="latest",
-    )
-
-    token_network_registry_address = to_canonical_address(
-        contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
-    )
-    service_registry_contract_address = to_canonical_address(
-        contracts[CONTRACT_SERVICE_REGISTRY]["address"]
-    )
-    if not deployed_addresses.user_deposit_address:
-        user_deposit_contract_address = UserDepositAddress(
-            to_canonical_address(contracts[CONTRACT_USER_DEPOSIT]["address"])
-        )
-
-    contractname_address: List[Tuple[str, Address, Callable]] = []
+    contractname_address: List[Tuple[str, Address, Callable]] = [
+        ("user_deposit", Address(user_deposit_address), proxy_manager.user_deposit)
+    ]
     if routing_mode == RoutingMode.PFS:
         contractname_address.append(
-            (
-                "service_registry",
-                Address(service_registry_contract_address),
-                proxy_manager.service_registry,
-            )
+            ("service_registry", Address(service_registry_address), proxy_manager.service_registry)
         )
     if enable_monitoring or routing_mode == RoutingMode.PFS:
-        contractname_address.append(
-            ("user_deposit", Address(user_deposit_contract_address), proxy_manager.user_deposit)
-        )
         contractname_address.append(
             (
                 "monitoring_service",
@@ -343,8 +373,8 @@ def services_bundle_from_contracts_deployment(
         config["pfs_config"] = None
 
     return ServicesBundle(
-        user_deposit=proxies.get("user_deposit"),
-        service_registry=proxies.get("service_registry"),
-        monitoring_service=proxies.get("monitoring_service"),
-        one_to_n=proxies.get("one_to_n"),
+        user_deposit=cast(UserDeposit, proxies.get("user_deposit")),
+        service_registry=cast(ServiceRegistry, proxies.get("service_registry")),
+        monitoring_service=cast(MonitoringService, proxies.get("monitoring_service")),
+        one_to_n=cast(OneToN, proxies.get("one_to_n")),
     )
