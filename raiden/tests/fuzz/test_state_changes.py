@@ -111,17 +111,12 @@ class Client:
 
 
 class ChainStateStateMachine(RuleBasedStateMachine):
-    def __init__(self, number_of_clients=1):
+    def __init__(self):
         self.replay_path: bool = False
         self.address_to_privkey: typing.Dict[typing.Address, typing.PrivateKey] = dict()
         self.address_to_client: typing.Dict[typing.Address, Client] = dict()
         self.initial_number_of_channels = 1
-
-        self.client_addresses = list()
-        for _ in range(number_of_clients):
-            private_key, address = factories.make_privkey_address()
-            self.address_to_privkey[address] = private_key
-            self.client_addresses.append(address)
+        self.number_of_clients = 1
 
         super().__init__()
 
@@ -535,8 +530,8 @@ class BalanceProofData:
 
 
 @dataclass
-class ClientData:
-    client: typing.Address
+class WithOurAddress:
+    our_address: typing.Address
     data: typing.Any
 
 
@@ -597,8 +592,7 @@ class MediatorMixin:
 
     def _action_init_mediator(
         self, transfer: LockedTransferSignedState, client_address
-    ) -> ClientData:
-        client_address = client_address
+    ) -> WithOurAddress:
         client = self.address_to_client[client_address]
         initiator_channel = client.address_to_channel[transfer.initiator]
         target_channel = client.address_to_channel[transfer.target]
@@ -610,7 +604,13 @@ class MediatorMixin:
             balance_proof=transfer.balance_proof,
             sender=transfer.balance_proof.sender,
         )
-        return ClientData(client=client_address, data=action)
+        return WithOurAddress(our_address=client_address, data=action)
+
+    def _unwrap(self, with_our_address: WithOurAddress):
+        our_address = with_our_address.our_address
+        data = with_our_address.data
+        client = self.address_to_client[our_address]
+        return data, client, our_address
 
     @rule(
         target=init_mediators,
@@ -621,13 +621,13 @@ class MediatorMixin:
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
     def valid_init_mediator(self, from_channel, to_channel, payment_id, amount, secret):
+        our_address = from_channel.our_address
+        assume(to_channel.our_address == our_address)  # FIXME this will be too slow
+        client = self.address_to_client[our_address]
+
         from_partner = from_channel.partner_address
         to_partner = to_channel.partner_address
         assume(from_partner != to_partner)
-
-        our_address = from_channel.our_address
-        assert to_channel.our_address == our_address  # FIXME
-        client = self.address_to_client[our_address]
 
         transfer = self._new_mediator_transfer(
             from_partner, to_partner, payment_id, amount, secret, our_address
@@ -639,11 +639,10 @@ class MediatorMixin:
 
         return client_data
 
-    @rule(target=secret_requests, previous_action_client_data=consumes(init_mediators))
-    def valid_receive_secret_reveal(self, previous_action_client_data):
-        client_address = previous_action_client_data.client
-        client = self.address_to_client[client_address]
-        previous_action = previous_action_client_data.data
+    @rule(target=secret_requests, previous_action_with_address=consumes(init_mediators))
+    def valid_receive_secret_reveal(self, previous_action_with_address):
+        previous_action, client, our_address = self._unwrap(previous_action_with_address)
+
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         sender = previous_action.from_transfer.target
         recipient = previous_action.from_transfer.initiator
@@ -655,48 +654,46 @@ class MediatorMixin:
         in_time = self.block_number < expiration - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
         still_waiting = self.block_number < expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 
-        if in_time and self.channel_opened(sender, client_address) and self.channel_opened(recipient, client_address):
+        if (
+            in_time
+            and self.channel_opened(sender, our_address)
+            and self.channel_opened(recipient, our_address)
+        ):
             assert event_types_match(
                 result.events, SendSecretReveal, SendBalanceProof, EventUnlockSuccess
             )
             self.event("Unlock successful.")
             self.waiting_for_unlock[secret] = recipient
-        elif still_waiting and self.channel_opened(recipient, client_address):
+        elif still_waiting and self.channel_opened(recipient, our_address):
             assert event_types_match(result.events, SendSecretReveal)
             self.event("Unlock failed, secret revealed too late.")
         else:
             assert not result.events
             self.event("ReceiveSecretRevealed after removal of lock - dropped.")
-        return ClientData(client=client_address, data=action)
+        return WithOurAddress(our_address=our_address, data=action)
 
-    @rule(previous_action_client_data=secret_requests)
-    def replay_receive_secret_reveal(self, previous_action_client_data):
-        client_address = previous_action_client_data.client
-        client = self.address_to_client[client_address]
-        previous_action = previous_action_client_data.data
+    @rule(previous_action_with_address=secret_requests)
+    def replay_receive_secret_reveal(self, previous_action_with_address):
+        previous_action, client, _ = self._unwrap(previous_action_with_address)
         result = node.state_transition(client.chain_state, previous_action)
         assert not result.events
 
     # pylint: disable=no-value-for-parameter
-    @rule(previous_action_client_data=secret_requests, invalid_sender=address())
+    @rule(previous_action_with_address=secret_requests, invalid_sender=address())
     # pylint: enable=no-value-for-parameter
     def replay_receive_secret_reveal_scrambled_sender(
-        self, previous_action_client_data, invalid_sender
+        self, previous_action_with_address, invalid_sender
     ):
-        client_address = previous_action_client_data.client
-        client = self.address_to_client[client_address]
-        previous_action = previous_action_client_data.data
+        previous_action, client, _ = self._unwrap(previous_action_with_address)
         action = ReceiveSecretReveal(previous_action.secret, invalid_sender)
         result = node.state_transition(client.chain_state, action)
         assert not result.events
 
     # pylint: disable=no-value-for-parameter
-    @rule(previous_action_client_data=init_mediators, secret=secret())
+    @rule(previous_action_with_address=init_mediators, secret=secret())
     # pylint: enable=no-value-for-parameter
-    def wrong_secret_receive_secret_reveal(self, previous_action_client_data, secret):
-        client_address = previous_action_client_data.client
-        client = self.address_to_client[client_address]
-        previous_action = previous_action_client_data.data
+    def wrong_secret_receive_secret_reveal(self, previous_action_with_address, secret):
+        previous_action, client, _ = self._unwrap(previous_action_with_address)
         sender = previous_action.from_transfer.target
         action = ReceiveSecretReveal(secret, sender)
         result = node.state_transition(client.chain_state, action)
@@ -705,14 +702,12 @@ class MediatorMixin:
     # pylint: disable=no-value-for-parameter
     @rule(
         target=secret_requests,
-        previous_action_client_data=consumes(init_mediators),
+        previous_action_with_address=consumes(init_mediators),
         invalid_sender=address(),
     )
     # pylint: enable=no-value-for-parameter
-    def wrong_address_receive_secret_reveal(self, previous_action_client_data, invalid_sender):
-        client_address = previous_action_client_data.client
-        client = self.address_to_client[client_address]
-        previous_action = previous_action_client_data.data
+    def wrong_address_receive_secret_reveal(self, previous_action_with_address, invalid_sender):
+        previous_action, client, our_address = self._unwrap(previous_action_with_address)
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         invalid_action = ReceiveSecretReveal(secret, invalid_sender)
         result = node.state_transition(client.chain_state, invalid_action)
@@ -720,7 +715,7 @@ class MediatorMixin:
 
         valid_sender = previous_action.from_transfer.target
         valid_action = ReceiveSecretReveal(secret, valid_sender)
-        return ClientData(client=client_address, data=valid_action)
+        return WithOurAddress(our_address=our_address, data=valid_action)
 
 
 class OnChainMixin:
