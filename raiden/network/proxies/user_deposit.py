@@ -3,7 +3,7 @@ from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
@@ -24,7 +24,11 @@ from raiden.utils.typing import (
     TokenAmount,
     UserDepositAddress,
 )
-from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
+from raiden_contracts.constants import (
+    CONTRACT_MONITORING_SERVICE,
+    CONTRACT_ONE_TO_N,
+    CONTRACT_USER_DEPOSIT,
+)
 from raiden_contracts.contract_manager import ContractManager, gas_measurements
 
 if TYPE_CHECKING:
@@ -76,7 +80,9 @@ class UserDeposit:
             )
         )
 
-    def msc_address(self, block_identifier: BlockSpecification) -> MonitoringServiceAddress:
+    def monitoring_service_address(
+        self, block_identifier: BlockSpecification
+    ) -> MonitoringServiceAddress:
         return MonitoringServiceAddress(
             to_canonical_address(
                 self.proxy.contract.functions.msc_address().call(block_identifier=block_identifier)
@@ -110,6 +116,151 @@ class UserDeposit:
                 block_identifier=block_identifier
             )
         )
+
+    def init(
+        self,
+        monitoring_service_address: MonitoringServiceAddress,
+        one_to_n_address: OneToNAddress,
+        given_block_identifier: BlockSpecification,
+    ) -> None:
+        """ Initialize the UserDeposit contract with MS and OneToN addresses """
+        log_details = {
+            "monitoring_service_address": to_checksum_address(monitoring_service_address),
+            "one_to_n_address": to_checksum_address(one_to_n_address),
+        }
+
+        check_address_has_code(
+            client=self.client,
+            address=Address(monitoring_service_address),
+            contract_name=CONTRACT_MONITORING_SERVICE,
+            expected_code=decode_hex(
+                self.contract_manager.get_runtime_hexcode(CONTRACT_MONITORING_SERVICE)
+            ),
+        )
+        check_address_has_code(
+            client=self.client,
+            address=Address(one_to_n_address),
+            contract_name=CONTRACT_ONE_TO_N,
+            expected_code=decode_hex(self.contract_manager.get_runtime_hexcode(CONTRACT_ONE_TO_N)),
+        )
+        try:
+            existing_monitoring_service_address = self.monitoring_service_address(
+                block_identifier=given_block_identifier
+            )
+            existing_one_to_n_address = self.one_to_n_address(
+                block_identifier=given_block_identifier
+            )
+        except ValueError:
+            pass
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(given_block_identifier)
+        else:
+            if existing_monitoring_service_address != EMPTY_ADDRESS:
+                msg = (
+                    f"MonitoringService contract address is already set to "
+                    f"{to_checksum_address(existing_monitoring_service_address)}"
+                )
+                raise BrokenPreconditionError(msg)
+
+            if existing_one_to_n_address != EMPTY_ADDRESS:
+                msg = (
+                    f"OneToN contract address is already set to "
+                    f"{to_checksum_address(existing_one_to_n_address)}"
+                )
+                raise BrokenPreconditionError(msg)
+
+        with log_transaction(log, "init", log_details):
+            self._init(
+                monitoring_service_address=monitoring_service_address,
+                one_to_n_address=one_to_n_address,
+                log_details=log_details,
+            )
+
+    def _init(
+        self,
+        monitoring_service_address: MonitoringServiceAddress,
+        one_to_n_address: OneToNAddress,
+        log_details: Dict[str, Any],
+    ) -> None:
+        checking_block = self.client.get_checking_block()
+        gas_limit = self.proxy.estimate_gas(
+            checking_block,
+            "init",
+            to_checksum_address(monitoring_service_address),
+            to_checksum_address(one_to_n_address),
+        )
+
+        if not gas_limit:
+            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at_blocknumber = failed_at["number"]
+
+            self.proxy.rpc_client.check_for_insufficient_eth(
+                transaction_name="init",
+                transaction_executed=False,
+                required_gas=self.gas_measurements["UserDeposit.init"],
+                block_identifier=failed_at_blocknumber,
+            )
+
+            existing_monitoring_service_address = self.monitoring_service_address(
+                block_identifier=failed_at_blocknumber
+            )
+            existing_one_to_n_address = self.one_to_n_address(
+                block_identifier=failed_at_blocknumber
+            )
+            if existing_monitoring_service_address != EMPTY_ADDRESS:
+                msg = (
+                    f"MonitoringService contract address was set to "
+                    f"{to_checksum_address(existing_monitoring_service_address)}"
+                )
+                raise RaidenRecoverableError(msg)
+
+            if existing_one_to_n_address != EMPTY_ADDRESS:
+                msg = (
+                    f"OneToN contract address was set to "
+                    f"{to_checksum_address(existing_one_to_n_address)}"
+                )
+                raise RaidenRecoverableError(msg)
+
+            raise RaidenRecoverableError("Deposit failed of unknown reason")
+
+        else:
+            gas_limit = safe_gas_limit(gas_limit)
+            log_details["gas_limit"] = gas_limit
+
+            transaction_hash = self.proxy.transact(
+                "init",
+                gas_limit,
+                to_checksum_address(monitoring_service_address),
+                to_checksum_address(one_to_n_address),
+            )
+
+            receipt = self.client.poll(transaction_hash)
+            failed_receipt = check_transaction_threw(receipt=receipt)
+
+            if failed_receipt:
+                failed_at_blocknumber = failed_receipt["blockNumber"]
+
+                existing_monitoring_service_address = self.monitoring_service_address(
+                    block_identifier=failed_at_blocknumber
+                )
+                existing_one_to_n_address = self.one_to_n_address(
+                    block_identifier=failed_at_blocknumber
+                )
+                if existing_monitoring_service_address != EMPTY_ADDRESS:
+                    msg = (
+                        f"MonitoringService contract address was set to "
+                        f"{to_checksum_address(existing_monitoring_service_address)}"
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                if existing_one_to_n_address != EMPTY_ADDRESS:
+                    msg = (
+                        f"OneToN contract address was set to "
+                        f"{to_checksum_address(existing_one_to_n_address)}"
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                raise RaidenRecoverableError("Deposit failed of unknown reason")
 
     def deposit(
         self,
