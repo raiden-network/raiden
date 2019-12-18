@@ -78,7 +78,7 @@ def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
     "changed_args",
     [
         {
-            "tokennetwork_registry_contract_address": to_checksum_address(
+            "user_deposit_contract_address": to_checksum_address(
                 "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"
             )
         }
@@ -88,4 +88,4 @@ def test_cli_registry_address_without_deployed_contract(cli_args, raiden_spawner
     child = raiden_spawner(cli_args)
 
     expect_cli_until_acknowledgment(child)
-    child.expect(".*contract does not contain code")
+    child.expect(".* does not contain code")
