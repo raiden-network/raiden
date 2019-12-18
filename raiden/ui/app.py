@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import is_address, to_canonical_address, to_checksum_address
+from eth_utils import is_address, to_canonical_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
@@ -57,7 +57,6 @@ from raiden.ui.startup import (
     services_bundle_from_contracts_deployment,
     setup_environment,
 )
-from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.http import split_endpoint
@@ -238,12 +237,7 @@ def run_app(
 
     setup_environment(config, environment_type)
 
-    if user_deposit_contract_address is None:
-        contracts = load_deployed_contracts_data(config, network_id)
-
-        check_deployed_contracts_data(
-            environment_type=environment_type, node_network_id=network_id, contracts=contracts
-        )
+    contracts = load_deployed_contracts_data(config, network_id)
 
     rpc_client = JSONRPCClient(
         web3=web3,
