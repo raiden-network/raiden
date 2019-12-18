@@ -137,8 +137,8 @@ class TokenNetworkRegistry:
             settlement_timeout_min = self.settlement_timeout_min(block_identifier=block_identifier)
             settlement_timeout_max = self.settlement_timeout_max(block_identifier=block_identifier)
             chain_id = self.get_chain_id(block_identifier=block_identifier)
-            secret_registry_address = self.get_secret_registry_address(
-                block_identifier=block_identifier
+            secret_registry_address = to_checksum_address(
+                self.get_secret_registry_address(block_identifier=block_identifier)
             )
             max_token_networks = self.get_max_token_networks(block_identifier=block_identifier)
             token_networks_created = self.get_token_network_created(
@@ -261,8 +261,8 @@ class TokenNetworkRegistry:
                     block_identifier=failed_at_blocknumber
                 )
                 chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
-                secret_registry_address = self.get_secret_registry_address(
-                    block_identifier=failed_at_blocknumber
+                secret_registry_address = to_checksum_address(
+                    self.get_secret_registry_address(block_identifier=failed_at_blocknumber)
                 )
 
                 if failed_receipt["cumulativeGasUsed"] == gas_limit:
@@ -357,8 +357,8 @@ class TokenNetworkRegistry:
                 block_identifier=failed_at_blocknumber
             )
             chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
-            secret_registry_address = self.get_secret_registry_address(
-                block_identifier=failed_at_blocknumber
+            secret_registry_address = to_checksum_address(
+                self.get_secret_registry_address(block_identifier=failed_at_blocknumber)
             )
 
             required_gas = (
@@ -464,8 +464,10 @@ class TokenNetworkRegistry:
         self, block_identifier: BlockSpecification
     ) -> SecretRegistryAddress:
         return SecretRegistryAddress(
-            self.proxy.contract.functions.secret_registry_address().call(
-                block_identifier=block_identifier
+            to_canonical_address(
+                self.proxy.contract.functions.secret_registry_address().call(
+                    block_identifier=block_identifier
+                )
             )
         )
 
