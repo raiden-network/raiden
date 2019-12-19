@@ -442,7 +442,7 @@ def run_stress_test(
 
     config = StressTestConfiguration(
         initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
-        concurrency=[10, 20],
+        concurrency=[10],
         planners=[do_fifty_transfer_up_to],
         schedulers=[scheduler_preserve_order],
     )
@@ -570,7 +570,8 @@ def main() -> None:
                 "--proportional-imbalance-fee",
                 "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
                 "0",
-                "--switch-tracing",
+                "--flamegraph",
+                "/tmp/flamegraph",
             ]
             raiden_args.extend(chain.from_iterable(node.items()))
 

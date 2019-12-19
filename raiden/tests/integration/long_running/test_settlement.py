@@ -19,7 +19,7 @@ from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
@@ -34,7 +34,19 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signing import sha3
 from raiden.utils.timeout import BlockTimeout
-from raiden.utils.typing import BlockNumber, MessageID, PaymentAmount, PaymentID, Secret
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockNumber,
+    List,
+    MessageID,
+    PaymentAmount,
+    PaymentID,
+    Secret,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+)
 
 
 def wait_for_batch_unlock(app, token_network_address, receiver, sender):
@@ -271,7 +283,12 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
+def test_batch_unlock(
+    raiden_network: List[App],
+    token_addresses: List[TokenAddress],
+    secret_registry_address: Address,
+    deposit: TokenAmount,
+) -> None:
     """Tests that batch unlock is properly called.
 
     This test will start a single incomplete transfer, the secret will be
@@ -290,9 +307,10 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     assert token_network_address
 
     hold_event_handler = bob_app.raiden.raiden_event_handler
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler)
 
     # Take a snapshot early on
-    alice_app.raiden.wal.snapshot()
+    alice_app.raiden.snapshot()
 
     canonical_identifier = get_channelstate(
         alice_app, bob_app, token_network_address
@@ -306,7 +324,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
     # Take snapshot before transfer
-    alice_app.raiden.wal.snapshot()
+    alice_app.raiden.snapshot()
 
     alice_to_bob_amount = 10
     identifier = 1
@@ -317,9 +335,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
-        amount=alice_to_bob_amount,
-        target=bob_address,
-        identifier=identifier,
+        amount=PaymentAmount(alice_to_bob_amount),
+        target=TargetAddress(bob_address),
+        identifier=PaymentID(identifier),
         secret=secret,
     )
 
@@ -335,11 +353,11 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
-        token_network_address, alice_app, deposit, [lock], bob_app, deposit, []
+        token_network_address, alice_app, Balance(deposit), [lock], bob_app, Balance(deposit), []
     )
 
     # Test WAL restore to return the latest channel state
-    alice_app.raiden.wal.snapshot()
+    alice_app.raiden.snapshot()
     our_balance_proof = alice_bob_channel_state.our_state.balance_proof
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app.raiden,

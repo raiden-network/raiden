@@ -68,6 +68,7 @@ DB_CREATE_SNAPSHOT = """
 CREATE TABLE IF NOT EXISTS state_snapshot (
     identifier ULID PRIMARY KEY NOT NULL,
     statechange_id ULID NOT NULL,
+    statechange_qty INTEGER,
     data JSON,
     timestamp TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL,
     FOREIGN KEY(statechange_id) REFERENCES state_changes(identifier)

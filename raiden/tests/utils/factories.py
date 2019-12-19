@@ -11,6 +11,7 @@ from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX,
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, RefundTransfer, Unlock
+from raiden.storage.ulid import ULID
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -162,6 +163,10 @@ def create_properties(properties: Properties, defaults: Properties = None) -> Pr
     if defaults is not None:
         full_defaults = _replace_properties(defaults, full_defaults)
     return _replace_properties(properties, full_defaults)
+
+
+def make_ulid() -> ULID:
+    return ULID(random.randint(0, 2 ** 128).to_bytes(16, "big"))
 
 
 def make_uint256() -> int:

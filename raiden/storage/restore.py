@@ -38,7 +38,7 @@ def channel_state_until_state_change(
     """ Go through WAL state changes until a certain balance hash is found. """
     assert raiden.wal, "Raiden has not been started yet"
 
-    wal = restore_to_state_change(
+    _, _, wal = restore_to_state_change(
         transition_function=node.state_transition,
         storage=raiden.wal.storage,
         state_change_identifier=state_change_identifier,

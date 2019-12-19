@@ -270,8 +270,6 @@ class RaidenService(Runnable):
         self.stop_event.set()  # inits as stopped
         self.greenlets: List[Greenlet] = list()
 
-        self.snapshot_group = 0
-
         self.contract_manager = ContractManager(config["contracts_path"])
         self.database_path = config["database_path"]
         self.wal: Optional[WriteAheadLog] = None
@@ -345,12 +343,20 @@ class RaidenService(Runnable):
         storage.log_run()
 
         try:
-            self.wal = wal.restore_to_state_change(
+            (
+                state_change_qty_snapshot,
+                state_change_qty_pending,
+                restore_wal,
+            ) = wal.restore_to_state_change(
                 transition_function=node.state_transition,
                 storage=storage,
                 state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
                 node_address=self.address,
             )
+
+            self.wal = restore_wal
+            self.state_change_qty_snapshot = state_change_qty_snapshot
+            self.state_change_qty = state_change_qty_snapshot + state_change_qty_pending
         except SerializationError:
             raise RaidenUnrecoverableError(
                 "Could not restore state. "
@@ -416,10 +422,6 @@ class RaidenService(Runnable):
                     f"{configured_registry}, which conflicts with the current known "
                     f"smart contracts {known_registries}"
                 )
-
-        # Restore the current snapshot group
-        state_change_qty = self.wal.storage.count_state_changes()
-        self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
         # Install the filters using the latest confirmed from_block value,
         # otherwise blockchain logs can be lost.
@@ -666,14 +668,19 @@ class RaidenService(Runnable):
                     self.handle_event(chain_state=new_state, raiden_event=raiden_event)
                 )
 
-            state_changes_count = self.wal.storage.count_state_changes()
-            new_snapshot_group = state_changes_count // SNAPSHOT_STATE_CHANGES_COUNT
-            if new_snapshot_group > self.snapshot_group:
-                log.debug("Storing snapshot", snapshot_id=new_snapshot_group)
-                self.wal.snapshot()
-                self.snapshot_group = new_snapshot_group
+        self.state_change_qty += len(state_changes)
+
+        if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
+            self.snapshot()
 
         return greenlets
+
+    def snapshot(self) -> None:
+        assert self.wal, "Wal must be set."
+
+        log.debug("Storing snapshot")
+        self.wal.snapshot(self.state_change_qty)
+        self.state_change_qty_snapshot = self.state_change_qty
 
     def handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent) -> Greenlet:
         """Spawn a new thread to handle a Raiden event.
