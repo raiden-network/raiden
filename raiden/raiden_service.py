@@ -809,7 +809,7 @@ class RaidenService(Runnable):
             for to_block in end_of_each_batch:
 
                 confirmed_block = self.rpc_client.web3.eth.getBlock(to_block)
-                state_changes: List[StateChange] = list()
+                batch_state_changes: List[StateChange] = list()
 
                 # On restarts the node has to pick up all events generated since the
                 # last run. To do this the node will set the filters' from_block to
@@ -848,34 +848,36 @@ class RaidenService(Runnable):
                     gas_limit=confirmed_block["gasLimit"],
                     block_hash=BlockHash(bytes(confirmed_block["hash"])),
                 )
-                state_changes.append(block_state_change)
+                batch_state_changes.append(block_state_change)
 
-                blockchain_events = self.blockchain_events.poll_blockchain_events(
-                    confirmed_block["number"]
-                )
-
-                for event in blockchain_events:
-                    state_changes.extend(
-                        blockchainevent_to_statechange(self, event, confirmed_block["number"])
+                # The batch itself may have an event for a newly deployed smart
+                # contract, e.g. a new token network. The new smart contract
+                # needs a filter, and then the filter has to be queried before
+                # for the same batch before it is dispatched. This is necessary
+                # to guarantee safety of restarts.
+                should_fetch = True
+                while should_fetch:
+                    blockchain_events = self.blockchain_events.poll_blockchain_events(
+                        confirmed_block["number"]
                     )
+                    should_fetch = False
 
-                # This batch of events may have a new token network in it. A
-                # new filter has to be added for the network, and then the
-                # filter has to be queried until `confirmed_block["number"]` to
-                # guarantee safety on restarts.
-                for state_change in state_changes:
-                    if isinstance(state_change, ContractReceiveNewTokenNetwork):
-                        on_new_token_network_create_filter(self, state_change)
-                        blockchain_events = self.blockchain_events.poll_blockchain_events(
-                            confirmed_block["number"]
+                    for event in blockchain_events:
+                        state_changes = blockchainevent_to_statechange(
+                            self, event, confirmed_block["number"]
                         )
+                        batch_state_changes.extend(state_changes)
 
-                        for event in blockchain_events:
-                            state_changes.extend(
-                                blockchainevent_to_statechange(
-                                    self, event, confirmed_block["number"]
-                                )
-                            )
+                        state_changes_that_need_a_new_filter = [
+                            state_change
+                            for state_change in state_changes
+                            if isinstance(state_change, ContractReceiveNewTokenNetwork)
+                        ]
+                        for state_change in state_changes_that_need_a_new_filter:
+                            if isinstance(state_change, ContractReceiveNewTokenNetwork):
+                                on_new_token_network_create_filter(self, state_change)
+
+                        should_fetch = bool(state_changes_that_need_a_new_filter)
 
                 # It's important to /not/ block here, because this function can
                 # be called from the alarm task greenlet, which should not
@@ -883,7 +885,7 @@ class RaidenService(Runnable):
                 # transaction, since the proxies block until the transaction is
                 # mined and confirmed (e.g. the settle window is over and the
                 # node sends the settle transaction).
-                self.handle_and_track_state_changes(state_changes)
+                self.handle_and_track_state_changes(batch_state_changes)
 
         sync_end = datetime.now()
         log.debug(
