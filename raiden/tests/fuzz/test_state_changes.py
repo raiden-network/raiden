@@ -20,6 +20,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, LOCKSROOT_OF_NO_LOCKS, UINT64
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
@@ -108,6 +109,82 @@ class Client:
     partner_previous_transferred: AddressToAmount = field(default_factory=lambda: defaultdict(int))
     our_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
     partner_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+
+    def assert_monotonicity_invariants(self):
+        """ Assert all monotonicity properties stated in Raiden specification """
+        for address, netting_channel in self.address_to_channel.items():
+
+            # constraint (1TN)
+            assert netting_channel.our_total_deposit >= self.our_previous_deposit[address]
+            assert netting_channel.partner_total_deposit >= self.partner_previous_deposit[address]
+            self.our_previous_deposit[address] = netting_channel.our_total_deposit
+            self.partner_previous_deposit[address] = netting_channel.partner_total_deposit
+
+            # TODO add constraint (2TN) when withdrawal is implemented
+            # constraint (3R) and (4R)
+            our_transferred = transferred_amount(netting_channel.our_state)
+            partner_transferred = transferred_amount(netting_channel.partner_state)
+            our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
+            partner_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.partner_state)
+            assert our_transferred >= self.our_previous_transferred[address]
+            assert partner_transferred >= self.partner_previous_transferred[address]
+            assert (
+                our_unclaimed + our_transferred
+                >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
+            )
+            assert (
+                partner_unclaimed + partner_transferred
+                >= self.partner_previous_transferred[address]
+                + self.partner_previous_unclaimed[address]
+            )
+            self.our_previous_transferred[address] = our_transferred
+            self.partner_previous_transferred[address] = partner_transferred
+            self.our_previous_unclaimed[address] = our_unclaimed
+            self.partner_previous_unclaimed[address] = partner_unclaimed
+
+    def assert_channel_state_invariants(self):
+        """ Assert all channel state invariants given in the Raiden specification """
+        for netting_channel in self.address_to_channel.values():
+            our_state = netting_channel.our_state
+            partner_state = netting_channel.partner_state
+
+            our_transferred_amount = 0
+            if our_state.balance_proof:
+                our_transferred_amount = our_state.balance_proof.transferred_amount
+                assert our_transferred_amount >= 0
+
+            partner_transferred_amount = 0
+            if partner_state.balance_proof:
+                partner_transferred_amount = partner_state.balance_proof.transferred_amount
+                assert partner_transferred_amount >= 0
+
+            assert channel.get_distributable(our_state, partner_state) >= 0
+            assert channel.get_distributable(partner_state, our_state) >= 0
+
+            our_deposit = netting_channel.our_total_deposit
+            partner_deposit = netting_channel.partner_total_deposit
+            total_deposit = our_deposit + partner_deposit
+
+            our_amount_locked = channel.get_amount_locked(our_state)
+            our_balance = channel.get_balance(our_state, partner_state)
+            partner_amount_locked = channel.get_amount_locked(partner_state)
+            partner_balance = channel.get_balance(partner_state, our_state)
+
+            # invariant (5.1R), add withdrawn amounts when implemented
+            assert 0 <= our_amount_locked <= our_balance
+            assert 0 <= partner_amount_locked <= partner_balance
+            assert our_amount_locked <= total_deposit
+            assert partner_amount_locked <= total_deposit
+
+            our_transferred = partner_transferred_amount - our_transferred_amount
+            netted_transferred = our_transferred + partner_amount_locked - our_amount_locked
+
+            # invariant (6R), add withdrawn amounts when implemented
+            assert 0 <= our_deposit + our_transferred - our_amount_locked <= total_deposit
+            assert 0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
+
+            # invariant (7R), add withdrawn amounts when implemented
+            assert -our_deposit <= netted_transferred <= partner_deposit
 
 
 class ChainStateStateMachine(RuleBasedStateMachine):
@@ -227,92 +304,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             event(description)
 
     @invariant()
-    def monotonicity(self):
-        """ Check monotonicity properties as given in Raiden specification """
+    def chain_state_invariants(self):
         for client in self.address_to_client.values():
-            for address, netting_channel in client.address_to_channel.items():
-
-                # constraint (1TN)
-                assert netting_channel.our_total_deposit >= client.our_previous_deposit[address]
-                assert (
-                    netting_channel.partner_total_deposit
-                    >= client.partner_previous_deposit[address]
-                )
-                client.our_previous_deposit[address] = netting_channel.our_total_deposit
-                client.partner_previous_deposit[address] = netting_channel.partner_total_deposit
-
-                # TODO add constraint (2TN) when withdrawal is implemented
-                # constraint (3R) and (4R)
-                our_transferred = transferred_amount(netting_channel.our_state)
-                partner_transferred = transferred_amount(netting_channel.partner_state)
-                our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
-                partner_unclaimed = channel.get_amount_unclaimed_onchain(
-                    netting_channel.partner_state
-                )
-                assert our_transferred >= client.our_previous_transferred[address]
-                assert partner_transferred >= client.partner_previous_transferred[address]
-                assert (
-                    our_unclaimed + our_transferred
-                    >= client.our_previous_transferred[address]
-                    + client.our_previous_unclaimed[address]
-                )
-                assert (
-                    partner_unclaimed + partner_transferred
-                    >= client.partner_previous_transferred[address]
-                    + client.partner_previous_unclaimed[address]
-                )
-                client.our_previous_transferred[address] = our_transferred
-                client.partner_previous_transferred[address] = partner_transferred
-                client.our_previous_unclaimed[address] = our_unclaimed
-                client.partner_previous_unclaimed[address] = partner_unclaimed
-
-    @invariant()
-    def channel_state_invariants(self):
-        """ Check the invariants for the channel state given in the Raiden specification """
-        for client in self.address_to_client.values():
-            for netting_channel in client.address_to_channel.values():
-                our_state = netting_channel.our_state
-                partner_state = netting_channel.partner_state
-
-                our_transferred_amount = 0
-                if our_state.balance_proof:
-                    our_transferred_amount = our_state.balance_proof.transferred_amount
-                    assert our_transferred_amount >= 0
-
-                partner_transferred_amount = 0
-                if partner_state.balance_proof:
-                    partner_transferred_amount = partner_state.balance_proof.transferred_amount
-                    assert partner_transferred_amount >= 0
-
-                assert channel.get_distributable(our_state, partner_state) >= 0
-                assert channel.get_distributable(partner_state, our_state) >= 0
-
-                our_deposit = netting_channel.our_total_deposit
-                partner_deposit = netting_channel.partner_total_deposit
-                total_deposit = our_deposit + partner_deposit
-
-                our_amount_locked = channel.get_amount_locked(our_state)
-                our_balance = channel.get_balance(our_state, partner_state)
-                partner_amount_locked = channel.get_amount_locked(partner_state)
-                partner_balance = channel.get_balance(partner_state, our_state)
-
-                # invariant (5.1R), add withdrawn amounts when implemented
-                assert 0 <= our_amount_locked <= our_balance
-                assert 0 <= partner_amount_locked <= partner_balance
-                assert our_amount_locked <= total_deposit
-                assert partner_amount_locked <= total_deposit
-
-                our_transferred = partner_transferred_amount - our_transferred_amount
-                netted_transferred = our_transferred + partner_amount_locked - our_amount_locked
-
-                # invariant (6R), add withdrawn amounts when implemented
-                assert 0 <= our_deposit + our_transferred - our_amount_locked <= total_deposit
-                assert (
-                    0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
-                )
-
-                # invariant (7R), add withdrawn amounts when implemented
-                assert -our_deposit <= netted_transferred <= partner_deposit
+            client.assert_monotonicity_invariants()
+            client.assert_channel_state_invariants()
 
     def channel_opened(self, partner_address, client_address):
         client = self.address_to_client[client_address]
@@ -348,7 +343,7 @@ class InitiatorMixin:
             sender=transfer.target,
         )
 
-    def _new_transfer_description(self, target, payment_id, amount, secret, initiator):
+    def _new_transfer_description(self, address_pair, payment_id, amount, secret):
         self.used_secrets.add(secret)
 
         return TransferDescriptionWithSecretState(
@@ -356,8 +351,8 @@ class InitiatorMixin:
             payment_identifier=payment_id,
             amount=amount,
             token_network_address=self.token_network_address,
-            initiator=initiator,
-            target=target,
+            initiator=address_pair.our_address,
+            target=address_pair.partner_address,
             secret=secret,
         )
 
@@ -373,9 +368,9 @@ class InitiatorMixin:
         result = node.state_transition(client.chain_state, action)
         assert not result.events
 
-    def _available_amount(self, initiator_address, partner_address):
-        client = self.address_to_client[initiator_address]
-        netting_channel = client.address_to_channel[partner_address]
+    def _available_amount(self, address_pair):
+        client = self.address_to_client[address_pair.our_address]
+        netting_channel = client.address_to_channel[address_pair.partner_address]
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
     def _assume_channel_opened(self, action):
@@ -396,14 +391,12 @@ class InitiatorMixin:
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
     def valid_init_initiator(self, address_pair, payment_id, amount, secret):
-        our_address = address_pair.our_address
-        partner = address_pair.partner_address
-        assume(amount <= self._available_amount(our_address, partner))
+        assume(amount <= self._available_amount(address_pair))
         assume(secret not in self.used_secrets)
 
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
+        transfer = self._new_transfer_description(address_pair, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
-        client = self.address_to_client[our_address]
+        client = self.address_to_client[address_pair.our_address]
         result = node.state_transition(client.chain_state, action)
 
         assert event_types_match(result.events, SendLockedTransfer)
@@ -420,12 +413,10 @@ class InitiatorMixin:
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
     def exceeded_capacity_init_initiator(self, address_pair, payment_id, excess_amount, secret):
-        our_address = address_pair.our_address
-        partner = address_pair.partner_address
-        amount = self._available_amount(our_address, partner) + excess_amount
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
+        amount = self._available_amount(address_pair) + excess_amount
+        transfer = self._new_transfer_description(address_pair, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
-        client = self.address_to_client[our_address]
+        client = self.address_to_client[address_pair.our_address]
         result = node.state_transition(client.chain_state, action)
         assert event_types_match(result.events, EventPaymentSentFailed)
         self.event("ActionInitInitiator failed: Amount exceeded")
@@ -437,12 +428,10 @@ class InitiatorMixin:
         amount=integers(min_value=1),
     )
     def used_secret_init_initiator(self, previous_action, address_pair, payment_id, amount):
-        our_address = address_pair.our_address
-        partner = address_pair.partner_address
         assume(not self._is_removed(previous_action))
         client = self._get_initiator_client(previous_action.transfer)
         secret = previous_action.transfer.secret
-        transfer = self._new_transfer_description(partner, payment_id, amount, secret, our_address)
+        transfer = self._new_transfer_description(address_pair, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
         result = node.state_transition(client.chain_state, action)
         assert not result.events
@@ -532,7 +521,7 @@ class BalanceProofData:
 @dataclass
 class WithOurAddress:
     our_address: typing.Address
-    data: typing.Any
+    data: StateChange
 
 
 class MediatorMixin:
@@ -734,6 +723,7 @@ class OnChainMixin:
                 events = list()
                 result = node.state_transition(client.chain_state, block_state_change)
                 events.extend(result.events)
+            # TODO assert on events
 
             self.block_number += 1
 
@@ -743,10 +733,8 @@ class OnChainMixin:
 
     @rule(address_pair=consumes(address_pairs))
     def settle_channel(self, address_pair):
-        our_address = address_pair.our_address
-        partner = address_pair.partner_address
-        client = self.address_to_client[our_address]
-        channel = client.address_to_channel[partner]
+        client = self.address_to_client[address_pair.our_address]
+        channel = client.address_to_channel[address_pair.partner_address]
 
         channel_settled_state_change = ContractReceiveChannelSettled(
             transaction_hash=factories.make_transaction_hash(),
