@@ -383,7 +383,13 @@ def paths_direct_transfers(running_nodes: List[RunningNode]) -> List[InitiatorAn
     return a list of `(from, to)` which will do a direct transfer using each
     channel.
     """
-    return [InitiatorAndTarget(from_, to_) for from_, to_ in zip(running_nodes, running_nodes[1:])]
+    forward = [
+        InitiatorAndTarget(from_, to_) for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])
+    ]
+    backward = [
+        InitiatorAndTarget(to_, from_) for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])
+    ]
+    return forward + backward
 
 
 # TODO: Expand `paths_for_mediated_transfers` to work with graphs. Any sequence
@@ -399,7 +405,9 @@ def paths_for_mediated_transfers(running_nodes: List[RunningNode]) -> List[Initi
         "a chain with more than 3 running_nodes"
     )
     assert len(running_nodes) == 3, msg
-    return [InitiatorAndTarget(running_nodes[0], running_nodes[-1])]
+    return [InitiatorAndTarget(running_nodes[0], running_nodes[-1])] + [
+        InitiatorAndTarget(running_nodes[-1], running_nodes[0])
+    ]
 
 
 def scheduler_preserve_order(
@@ -434,7 +442,7 @@ def run_stress_test(
 
     config = StressTestConfiguration(
         initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
-        concurrency=[1, 5, 20],
+        concurrency=[10, 20],
         planners=[do_fifty_transfer_up_to],
         schedulers=[scheduler_preserve_order],
     )
@@ -553,6 +561,15 @@ def main() -> None:
                 "--accept-disclaimer",
                 "--log-json",
                 "--disable-debug-logfile",
+                "--flat-fee",
+                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                "0",
+                "--proportional-fee",
+                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                "0",
+                "--proportional-imbalance-fee",
+                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                "0",
             ]
             raiden_args.extend(chain.from_iterable(node.items()))
 
