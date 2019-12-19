@@ -48,9 +48,7 @@ from raiden.exceptions import (
 )
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
-from raiden.messages.decode import lockedtransfersigned_from_message
 from raiden.messages.encode import message_from_sendevent
-from raiden.messages.transfers import LockedTransfer
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -79,13 +77,9 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     calculate_imbalance_fees,
 )
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
-from raiden.transfer.mediated_transfer.state_change import (
-    ActionInitInitiator,
-    ActionInitMediator,
-    ActionInitTarget,
-)
+from raiden.transfer.mediated_transfer.state_change import ActionInitInitiator
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, HopState, NetworkState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelSetRevealTimeout,
@@ -167,50 +161,6 @@ def initiator_init(
             raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
 
     return error_msg, ActionInitInitiator(transfer_state, routes)
-
-
-def mediator_init(raiden: "RaidenService", transfer: LockedTransfer) -> ActionInitMediator:
-    assert transfer.sender, "transfer must be signed"
-
-    from_transfer = lockedtransfersigned_from_message(transfer)
-    from_hop = HopState(
-        transfer.sender,
-        # pylint: disable=E1101
-        from_transfer.balance_proof.channel_identifier,
-    )
-    route_states = routing.resolve_routes(
-        routes=transfer.metadata.routes,
-        # pylint: disable=E1101
-        token_network_address=from_transfer.balance_proof.token_network_address,
-        chain_state=views.state_from_raiden(raiden),
-    )
-
-    init_mediator_statechange = ActionInitMediator(
-        from_hop=from_hop,
-        route_states=route_states,
-        from_transfer=from_transfer,
-        balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-    )
-    return init_mediator_statechange
-
-
-def target_init(transfer: LockedTransfer) -> ActionInitTarget:
-    assert transfer.sender, "transfer must be signed"
-
-    from_transfer = lockedtransfersigned_from_message(transfer)
-    from_hop = HopState(
-        node_address=transfer.sender,
-        # pylint: disable=E1101
-        channel_identifier=from_transfer.balance_proof.channel_identifier,
-    )
-    init_target_statechange = ActionInitTarget(
-        from_hop=from_hop,
-        transfer=from_transfer,
-        balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-    )
-    return init_target_statechange
 
 
 def smart_contract_filters_from_node_state(
@@ -703,8 +653,8 @@ class RaidenService(Runnable):
         assert self.wal, f"WAL object not yet initialized. node:{self!r}"
         return views.block_number(self.wal.state_manager.current_state)  # type: ignore
 
-    def on_message(self, message: Message) -> None:
-        self.message_handler.on_message(self, message)
+    def on_messages(self, messages: List[Message]) -> None:
+        self.message_handler.on_messages(self, messages)
 
     def handle_and_track_state_changes(self, state_changes: List[StateChange]) -> None:
         """ Dispatch the state change and does not handle the exceptions.
@@ -1366,15 +1316,6 @@ class RaidenService(Runnable):
             payment_status.payment_done.set(failed)
 
         return payment_status
-
-    def mediate_mediated_transfer(self, transfer: LockedTransfer) -> None:
-        init_mediator_statechange = mediator_init(self, transfer)
-        self.handle_and_track_state_changes([init_mediator_statechange])
-
-    def target_mediated_transfer(self, transfer: LockedTransfer) -> None:
-        self.start_health_check_for(Address(transfer.initiator))
-        init_target_statechange = target_init(transfer)
-        self.handle_and_track_state_changes([init_target_statechange])
 
     def withdraw(
         self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount

@@ -50,10 +50,11 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     from raiden.network.transport.matrix.utils import UserPresence
     from raiden.network.transport.matrix import transport as transport_module
 
+    def make_client_monkey(handle_messages_callback, servers, *args, **kwargs):
+        return GMatrixClient(handle_messages_callback, servers[0])
+
     monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
-    monkeypatch.setattr(
-        transport_module, "make_client", lambda url, *a, **kw: GMatrixClient(url[0])
-    )
+    monkeypatch.setattr(transport_module, "make_client", make_client_monkey)
 
     def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
         klass, address: Address
@@ -65,10 +66,10 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     ):
         pass
 
-    def mock_receive_message(klass, message):  # pylint: disable=unused-argument
-        # We are just unit testing the matrix transport receive so do nothing
-        assert message
-        assert message.sender
+    def mock_on_messages(messages):  # pylint: disable=unused-argument
+        for message in messages:
+            assert message
+            assert message.sender
 
     def mock_get_user_presence(self, user_id: str):
         return UserPresence.ONLINE
@@ -92,7 +93,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
         MatrixTransport, "_get_room_ids_for_address", mock_get_room_ids_for_address
     )
     monkeypatch.setattr(MatrixTransport, "_set_room_id_for_address", mock_set_room_id_for_address)
-    monkeypatch.setattr(MatrixTransport, "_receive_message", mock_receive_message)
+    monkeypatch.setattr(transport._raiden_service, "on_messages", mock_on_messages)
     monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
 
     return transport
@@ -125,7 +126,7 @@ def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     room, event = make_message()
-    assert mock_matrix._handle_message(room, event)
+    assert mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_processing_invalid_json(  # pylint: disable=unused-argument
@@ -133,21 +134,21 @@ def test_processing_invalid_json(  # pylint: disable=unused-argument
 ):
     invalid_json = '{"foo": 1,'
     room, event = make_message(overwrite_data=invalid_json)
-    assert not mock_matrix._handle_message(room, event)
+    assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_non_signed_message_is_rejected(
     mock_matrix, skip_userid_validation
 ):  # pylint: disable=unused-argument
     room, event = make_message(sign=False)
-    assert not mock_matrix._handle_message(room, event)
+    assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_sending_nonstring_body(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     room, event = make_message(overwrite_data=b"somebinarydata")
-    assert not mock_matrix._handle_message(room, event)
+    assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 @pytest.mark.parametrize(
@@ -161,7 +162,7 @@ def test_processing_invalid_message_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation, message_input
 ):
     room, event = make_message(overwrite_data=message_input)
-    assert not mock_matrix._handle_message(room, event)
+    assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
@@ -169,4 +170,4 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
 ):
     invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(overwrite_data=invalid_message)
-    assert not mock_matrix._handle_message(room, event)
+    assert not mock_matrix._handle_sync_messages([(room, [event])])

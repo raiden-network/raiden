@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import structlog
 from eth_utils import to_hex
 
+from raiden import routing
 from raiden.constants import ABSENT_SECRET
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
@@ -20,6 +21,8 @@ from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitMediator,
+    ActionInitTarget,
     ActionTransferReroute,
     ReceiveLockExpired,
     ReceiveSecretRequest,
@@ -27,6 +30,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
 )
+from raiden.transfer.state import HopState
 from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
@@ -36,7 +40,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, List
+from raiden.utils.typing import MYPY_ANNOTATION, Address, List
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -45,57 +49,66 @@ log = structlog.get_logger(__name__)
 
 
 class MessageHandler:
-    def on_message(self, raiden: "RaidenService", message: Message) -> None:
+    def on_messages(self, raiden: "RaidenService", messages: List[Message]) -> None:
         # pylint: disable=unidiomatic-typecheck
 
-        if type(message) == SecretRequest:
-            assert isinstance(message, SecretRequest), MYPY_ANNOTATION
-            self.handle_message_secretrequest(raiden, message)
+        all_state_changes: List[StateChange] = list()
+        for message in messages:
+            if type(message) == SecretRequest:
+                assert isinstance(message, SecretRequest), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_secretrequest(raiden, message))
 
-        elif type(message) == RevealSecret:
-            assert isinstance(message, RevealSecret), MYPY_ANNOTATION
-            self.handle_message_revealsecret(raiden, message)
+            elif type(message) == RevealSecret:
+                assert isinstance(message, RevealSecret), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_revealsecret(raiden, message))
 
-        elif type(message) == Unlock:
-            assert isinstance(message, Unlock), MYPY_ANNOTATION
-            self.handle_message_unlock(raiden, message)
+            elif type(message) == Unlock:
+                assert isinstance(message, Unlock), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_unlock(raiden, message))
 
-        elif type(message) == LockExpired:
-            assert isinstance(message, LockExpired), MYPY_ANNOTATION
-            self.handle_message_lockexpired(raiden, message)
+            elif type(message) == LockExpired:
+                assert isinstance(message, LockExpired), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_lockexpired(raiden, message))
 
-        elif type(message) == RefundTransfer:
-            assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
-            self.handle_message_refundtransfer(raiden, message)
+            elif type(message) == RefundTransfer:
+                assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_refundtransfer(raiden, message))
 
-        elif type(message) == LockedTransfer:
-            assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
-            self.handle_message_lockedtransfer(raiden, message)
+            elif type(message) == LockedTransfer:
+                assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_lockedtransfer(raiden, message))
 
-        elif type(message) == WithdrawRequest:
-            assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
-            self.handle_message_withdrawrequest(raiden, message)
+            elif type(message) == WithdrawRequest:
+                assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_withdrawrequest(raiden, message))
 
-        elif type(message) == WithdrawConfirmation:
-            assert isinstance(message, WithdrawConfirmation), MYPY_ANNOTATION
-            self.handle_message_withdraw_confirmation(raiden, message)
+            elif type(message) == WithdrawConfirmation:
+                assert isinstance(message, WithdrawConfirmation), MYPY_ANNOTATION
+                all_state_changes.extend(
+                    self.handle_message_withdraw_confirmation(raiden, message)
+                )
 
-        elif type(message) == WithdrawExpired:
-            assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
-            self.handle_message_withdraw_expired(raiden, message)
+            elif type(message) == WithdrawExpired:
+                assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_withdraw_expired(raiden, message))
 
-        elif type(message) == Delivered:
-            assert isinstance(message, Delivered), MYPY_ANNOTATION
-            self.handle_message_delivered(raiden, message)
+            elif type(message) == Delivered:
+                assert isinstance(message, Delivered), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_delivered(raiden, message))
 
-        elif type(message) == Processed:
-            assert isinstance(message, Processed), MYPY_ANNOTATION
-            self.handle_message_processed(raiden, message)
-        else:
-            log.error(f"Unknown message cmdid {message.cmdid}")
+            elif type(message) == Processed:
+                assert isinstance(message, Processed), MYPY_ANNOTATION
+                all_state_changes.extend(self.handle_message_processed(raiden, message))
+            else:
+                log.error(f"Unknown message cmdid {message.cmdid}")
+
+        if all_state_changes:
+            raiden.handle_and_track_state_changes(all_state_changes)
 
     @staticmethod
-    def handle_message_withdrawrequest(raiden: "RaidenService", message: WithdrawRequest) -> None:
+    def handle_message_withdrawrequest(
+        raiden: "RaidenService", message: WithdrawRequest  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
@@ -111,12 +124,12 @@ class MessageHandler:
             expiration=message.expiration,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_changes([withdraw_request])
+        return [withdraw_request]
 
     @staticmethod
     def handle_message_withdraw_confirmation(
-        raiden: "RaidenService", message: WithdrawConfirmation
-    ) -> None:
+        raiden: "RaidenService", message: WithdrawConfirmation  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         withdraw = ReceiveWithdrawConfirmation(
             canonical_identifier=CanonicalIdentifier(
@@ -132,10 +145,12 @@ class MessageHandler:
             expiration=message.expiration,
             signature=message.signature,
         )
-        raiden.handle_and_track_state_changes([withdraw])
+        return [withdraw]
 
     @staticmethod
-    def handle_message_withdraw_expired(raiden: "RaidenService", message: WithdrawExpired) -> None:
+    def handle_message_withdraw_expired(
+        raiden: "RaidenService", message: WithdrawExpired  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         withdraw_expired = ReceiveWithdrawExpired(
             canonical_identifier=CanonicalIdentifier(
@@ -150,10 +165,12 @@ class MessageHandler:
             nonce=message.nonce,
             expiration=message.expiration,
         )
-        raiden.handle_and_track_state_changes([withdraw_expired])
+        return [withdraw_expired]
 
     @staticmethod
-    def handle_message_secretrequest(raiden: "RaidenService", message: SecretRequest) -> None:
+    def handle_message_secretrequest(
+        raiden: "RaidenService", message: SecretRequest  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         secret_request = ReceiveSecretRequest(
             payment_identifier=message.payment_identifier,
@@ -162,38 +179,46 @@ class MessageHandler:
             secrethash=message.secrethash,
             sender=message.sender,
         )
-        raiden.handle_and_track_state_changes([secret_request])
+        return [secret_request]
 
     @staticmethod
-    def handle_message_revealsecret(raiden: "RaidenService", message: RevealSecret) -> None:
+    def handle_message_revealsecret(
+        raiden: "RaidenService", message: RevealSecret  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
-        state_change = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
-        raiden.handle_and_track_state_changes([state_change])
+        secret_reveal = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
+        return [secret_reveal]
 
     @staticmethod
-    def handle_message_unlock(raiden: "RaidenService", message: Unlock) -> None:
+    def handle_message_unlock(
+        raiden: "RaidenService", message: Unlock  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         balance_proof = balanceproof_from_envelope(message)
-        state_change = ReceiveUnlock(
+        unlock = ReceiveUnlock(
             message_identifier=message.message_identifier,
             secret=message.secret,
             balance_proof=balance_proof,
             sender=balance_proof.sender,
         )
-        raiden.handle_and_track_state_changes([state_change])
+        return [unlock]
 
     @staticmethod
-    def handle_message_lockexpired(raiden: "RaidenService", message: LockExpired) -> None:
+    def handle_message_lockexpired(
+        raiden: "RaidenService", message: LockExpired  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         balance_proof = balanceproof_from_envelope(message)
-        state_change = ReceiveLockExpired(
+        lock_expired = ReceiveLockExpired(
             sender=balance_proof.sender,
             balance_proof=balance_proof,
             secrethash=message.secrethash,
             message_identifier=message.message_identifier,
         )
-        raiden.handle_and_track_state_changes([state_change])
+        return [lock_expired]
 
     @staticmethod
-    def handle_message_refundtransfer(raiden: "RaidenService", message: RefundTransfer) -> None:
+    def handle_message_refundtransfer(
+        raiden: "RaidenService", message: RefundTransfer
+    ) -> List[StateChange]:
         chain_state = views.state_from_raiden(raiden)
         from_transfer = lockedtransfersigned_from_message(message=message)
 
@@ -238,10 +263,12 @@ class MessageHandler:
                 )
             )
 
-        raiden.handle_and_track_state_changes(state_changes)
+        return state_changes
 
     @staticmethod
-    def handle_message_lockedtransfer(raiden: "RaidenService", message: LockedTransfer) -> None:
+    def handle_message_lockedtransfer(
+        raiden: "RaidenService", message: LockedTransfer  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         secrethash = message.lock.secrethash
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
@@ -260,21 +287,61 @@ class MessageHandler:
                 f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
                 f"since it is already registered in the secret registry"
             )
-            return
+            return []
+
+        assert message.sender, "Invalid message dispatched, it should be signed"
 
         if message.target == raiden.address:
-            raiden.target_mediated_transfer(message)
+            raiden.start_health_check_for(Address(message.initiator))
+
+            from_transfer = lockedtransfersigned_from_message(message)
+            from_hop = HopState(
+                node_address=message.sender,
+                # pylint: disable=E1101
+                channel_identifier=from_transfer.balance_proof.channel_identifier,
+            )
+            init_target_statechange = ActionInitTarget(
+                from_hop=from_hop,
+                transfer=from_transfer,
+                balance_proof=from_transfer.balance_proof,
+                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+            )
+            return [init_target_statechange]
         else:
-            raiden.mediate_mediated_transfer(message)
+            from_transfer = lockedtransfersigned_from_message(message)
+            from_hop = HopState(
+                message.sender,
+                from_transfer.balance_proof.channel_identifier,  # pylint: disable=E1101
+            )
+            token_network_address = (
+                from_transfer.balance_proof.token_network_address  # pylint: disable=E1101
+            )
+            route_states = routing.resolve_routes(
+                routes=message.metadata.routes,
+                token_network_address=token_network_address,
+                chain_state=views.state_from_raiden(raiden),
+            )
+            init_mediator_statechange = ActionInitMediator(
+                from_hop=from_hop,
+                route_states=route_states,
+                from_transfer=from_transfer,
+                balance_proof=from_transfer.balance_proof,
+                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+            )
+            return [init_mediator_statechange]
 
     @staticmethod
-    def handle_message_processed(raiden: "RaidenService", message: Processed) -> None:
+    def handle_message_processed(
+        raiden: "RaidenService", message: Processed  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         processed = ReceiveProcessed(message.sender, message.message_identifier)
-        raiden.handle_and_track_state_changes([processed])
+        return [processed]
 
     @staticmethod
-    def handle_message_delivered(raiden: "RaidenService", message: Delivered) -> None:
+    def handle_message_delivered(
+        raiden: "RaidenService", message: Delivered  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
         assert message.sender, "message must be signed"
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
-        raiden.handle_and_track_state_changes([delivered])
+        return [delivered]

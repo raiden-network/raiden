@@ -1,24 +1,13 @@
-from unittest.mock import Mock
-
 import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
-from raiden.message_handler import MessageHandler
 from raiden.messages.healthcheck import Ping
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.messages.synchronization import Delivered, Processed
-from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
-from raiden.transfer.mediated_transfer.state_change import (
-    ReceiveLockExpired,
-    ReceiveSecretRequest,
-    ReceiveSecretReveal,
-)
-from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.signing import sha3
@@ -326,105 +315,3 @@ def test_refund_transfer_invalid_values(invalid_values):
     for invalid_value in invalid_values:
         with pytest.raises(ValueError):
             factories.create(factories.RefundTransferProperties(**invalid_value))
-
-
-def assert_method_call(mock, method, *args, **kwargs):
-    child_mock = getattr(mock, method)
-    child_mock.assert_called_once_with(*args, **kwargs)
-    child_mock.reset_mock()
-
-
-def test_message_handler():
-    """
-    Test for MessageHandler.on_message and the different methods it dispatches into.
-    Each of them results in a call to a RaidenService method, which is checked with a Mock.
-    """
-
-    our_address = factories.make_address()
-    sender_privkey, sender = factories.make_privkey_address()
-    signer = LocalSigner(sender_privkey)
-    message_handler = MessageHandler()
-    mock_raiden = Mock(
-        address=our_address, default_secret_registry=Mock(is_secret_registered=lambda **_: False)
-    )
-
-    properties = factories.LockedTransferProperties(sender=sender, pkey=sender_privkey)
-    locked_transfer = factories.create(properties)
-    message_handler.on_message(mock_raiden, locked_transfer)
-    assert_method_call(mock_raiden, "mediate_mediated_transfer", locked_transfer)
-
-    locked_transfer_for_us = factories.create(factories.replace(properties, target=our_address))
-    message_handler.on_message(mock_raiden, locked_transfer_for_us)
-    assert_method_call(mock_raiden, "target_mediated_transfer", locked_transfer_for_us)
-
-    mock_raiden.default_secret_registry.is_secret_registered = lambda **_: True
-    message_handler.on_message(mock_raiden, locked_transfer)
-    assert not mock_raiden.mediate_mediated_transfer.called
-    assert not mock_raiden.target_mediated_transfer.called
-    mock_raiden.default_secret_registry.is_secret_registered = lambda **_: False
-
-    params = dict(
-        payment_identifier=13, amount=14, expiration=15, secrethash=factories.UNIT_SECRETHASH
-    )
-    secret_request = SecretRequest(
-        message_identifier=16, signature=factories.EMPTY_SIGNATURE, **params
-    )
-    secret_request.sign(signer)
-    receive = ReceiveSecretRequest(sender=sender, **params)
-    message_handler.on_message(mock_raiden, secret_request)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
-
-    secret = factories.make_secret()
-    reveal_secret = RevealSecret(
-        message_identifier=100, signature=factories.EMPTY_SIGNATURE, secret=secret
-    )
-    reveal_secret.sign(signer)
-    receive = ReceiveSecretReveal(sender=sender, secret=secret)
-    message_handler.on_message(mock_raiden, reveal_secret)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
-
-    properties: factories.UnlockProperties = factories.create_properties(
-        factories.UnlockProperties()
-    )
-    unlock = factories.create(properties)
-    unlock.sign(signer)
-    balance_proof = factories.make_signed_balance_proof_from_unsigned(
-        factories.create(properties.balance_proof), signer, unlock.message_hash
-    )
-    receive = ReceiveUnlock(
-        message_identifier=properties.message_identifier,
-        secret=properties.secret,
-        balance_proof=balance_proof,
-        sender=sender,
-    )
-    message_handler.on_message(mock_raiden, unlock)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
-
-    properties: factories.LockExpiredProperties = factories.create_properties(
-        factories.LockExpiredProperties()
-    )
-    lock_expired = factories.create(properties)
-    lock_expired.sign(signer)
-    balance_proof = factories.make_signed_balance_proof_from_unsigned(
-        factories.create(properties.balance_proof), signer, lock_expired.message_hash
-    )
-    receive = ReceiveLockExpired(
-        balance_proof=balance_proof,
-        message_identifier=properties.message_identifier,
-        secrethash=properties.secrethash,  # pylint: disable=no-member
-        sender=sender,
-    )
-    message_handler.on_message(mock_raiden, lock_expired)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
-
-    delivered = Delivered(delivered_message_identifier=1, signature=factories.EMPTY_SIGNATURE)
-    delivered.sign(signer)
-    receive = ReceiveDelivered(message_identifier=1, sender=sender)
-    message_handler.on_message(mock_raiden, delivered)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])
-
-    processed = Processed(message_identifier=42, signature=factories.EMPTY_SIGNATURE)
-    processed.sign(signer)
-    receive = ReceiveProcessed(message_identifier=42, sender=sender)
-    message_handler.on_message(mock_raiden, processed)
-    assert_method_call(mock_raiden, "handle_and_track_state_changes", [receive])

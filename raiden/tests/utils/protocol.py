@@ -50,14 +50,15 @@ class WaitForMessage(MessageHandler):
         self.waiting[message_type].append(waiting)
         return waiting.async_result
 
-    def on_message(self, raiden: RaidenService, message: Message) -> None:
+    def on_messages(self, raiden: RaidenService, messages: List[Message]) -> None:
         # First handle the message, and then set the events, to ensure the
         # expected side-effects of the message are applied
-        super().on_message(raiden, message)
+        super().on_messages(raiden, messages)
 
-        for waiting in self.waiting[type(message)]:
-            if check_nested_attrs(message, waiting.attributes):
-                waiting.async_result.set(message)
+        for message in messages:
+            for waiting in self.waiting[type(message)]:
+                if check_nested_attrs(message, waiting.attributes):
+                    waiting.async_result.set(message)
 
 
 class HoldRaidenEventHandler(EventHandler):
@@ -167,7 +168,7 @@ def dont_handle_lock_expired_mock(app):
     """
 
     def do_nothing(raiden, message):  # pylint: disable=unused-argument
-        pass
+        return []
 
     return patch.object(
         app.raiden.message_handler, "handle_message_lockexpired", side_effect=do_nothing

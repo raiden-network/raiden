@@ -3,7 +3,7 @@ import json
 import time
 from functools import wraps
 from itertools import repeat
-from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
 from urllib.parse import quote
 
 import gevent
@@ -26,6 +26,9 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
+MatrixMessage = Dict[str, Any]
+MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
+MatrixSyncMessages = List[MatrixRoomMessages]
 
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
@@ -229,6 +232,7 @@ class GMatrixClient(MatrixClient):
 
     def __init__(
         self,
+        handle_messages_callback: Callable[[MatrixSyncMessages], bool],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -244,6 +248,7 @@ class GMatrixClient(MatrixClient):
         self.account_data: Dict[str, Dict[str, Any]] = dict()
         self.token: Optional[str] = None
         self.environment = environment
+        self.handle_messages_callback = handle_messages_callback
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -504,6 +509,7 @@ class GMatrixClient(MatrixClient):
             if room_id in self.rooms:
                 del self.rooms[room_id]
 
+        all_messages: MatrixSyncMessages = []
         for room_id, sync_room in response["rooms"]["join"].items():
             if room_id not in self.rooms:
                 self._mkroom(room_id)
@@ -519,16 +525,7 @@ class GMatrixClient(MatrixClient):
                 event["room_id"] = room_id
                 room._put_event(event)
 
-                # TODO: global listeners can still exist but work by each
-                # room.listeners[uuid] having reference to global listener
-
-                # Dispatch for client (global) listeners
-                for listener in self.listeners:
-                    should_call = (
-                        listener["event_type"] is None or listener["event_type"] == event["type"]
-                    )
-                    if should_call:
-                        listener["callback"](event)
+            all_messages.append((room, sync_room["timeline"]["events"]))
 
             for event in sync_room["ephemeral"]["events"]:
                 event["room_id"] = room_id
@@ -543,6 +540,8 @@ class GMatrixClient(MatrixClient):
 
             for event in sync_room["account_data"]["events"]:
                 room.account_data[event["type"]] = event["content"]
+
+        self.handle_messages_callback(all_messages)
 
         if first_sync:
             # Only update the local account data on first sync to avoid races.

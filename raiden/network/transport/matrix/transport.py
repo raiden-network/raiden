@@ -16,16 +16,17 @@ from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
 from raiden.constants import EMPTY_SIGNATURE, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
-from raiden.messages.abstract import (
-    Message,
-    RetrieableMessage,
-    SignedMessage,
-    SignedRetrieableMessage,
-)
+from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.matrix import ToDevice
 from raiden.messages.synchronization import Delivered, Processed
-from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.network.transport.matrix.client import (
+    GMatrixClient,
+    MatrixMessage,
+    MatrixSyncMessages,
+    Room,
+    User,
+)
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -67,7 +68,6 @@ from raiden.utils.typing import (
     NewType,
     Optional,
     Tuple,
-    Union,
     cast,
 )
 
@@ -301,6 +301,7 @@ class MatrixTransport(Runnable):
             )
 
         self._client: GMatrixClient = make_client(
+            self._handle_sync_messages,
             available_servers,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -659,14 +660,6 @@ class MatrixTransport(Runnable):
             for broadcast_alias in self._config.broadcast_rooms:
                 if broadcast_alias in room_aliases:
                     self._broadcast_rooms[broadcast_alias] = room
-                    break
-            else:
-                # Only add listener to non-broadcast rooms, the broadcast
-                # messages are only for the services. Add the listener to all
-                # other rooms, _handle_message should ignore them if msg sender
-                # isn't whitelisted yet
-                if not room.listeners:
-                    room.add_listener(self._handle_message, "m.room.message")
 
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
@@ -784,9 +777,6 @@ class MatrixTransport(Runnable):
             self.log.warning("Got invite to broadcast room, ignoring", inviting_user=user)
             return
 
-        if not room.listeners:
-            room.add_listener(self._handle_message, "m.room.message")
-
         # room state may not populated yet, so we populate 'invite_only' from event
         room.invite_only = private_room
 
@@ -799,22 +789,27 @@ class MatrixTransport(Runnable):
             inviting_address=to_checksum_address(peer_address),
         )
 
-    def _handle_message(self, room: Room, event: Dict[str, Any]) -> bool:
-        """ Handle text messages sent to listening rooms """
-        if self._stop_event.ready():
-            return False
+    def _handle_text(self, room: Room, message: MatrixMessage) -> List[Message]:
+        """Handle a single Matrix message.
+
+        The matrix message is expected to be a NDJSON, and each entry should be
+        a valid JSON encoded Raiden message.
+
+        Return::
+            If any of the validations fail emtpy is returned, otherwise a list
+            contained all parsed messages is returned.
+        """
 
         is_valid_type = (
-            event["type"] == "m.room.message" and event["content"]["msgtype"] == "m.text"
+            message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
         )
         if not is_valid_type:
-            return False
+            return []
 
-        sender_id = event["sender"]
-
+        # Ignore our own messages
+        sender_id = message["sender"]
         if sender_id == self._user_id:
-            # Ignore our own messages
-            return False
+            return []
 
         user = self._client.get_user(sender_id)
         self._displayname_cache.warm_users([user])
@@ -826,7 +821,7 @@ class MatrixTransport(Runnable):
                 peer_user=user.user_id,
                 room=room,
             )
-            return False
+            return []
 
         if self._is_broadcast_room(room):
             # This must not happen. Nodes must not listen on broadcast rooms.
@@ -841,7 +836,7 @@ class MatrixTransport(Runnable):
                 sender_address=to_checksum_address(peer_address),
                 room=room,
             )
-            return False
+            return []
 
         # rooms we created and invited user, or were invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
@@ -855,72 +850,40 @@ class MatrixTransport(Runnable):
                 expected_room_ids=room_ids,
                 reason="unknown room for user",
             )
+            return []
+
+        return validate_and_parse_message(message["content"]["body"], peer_address)
+
+    def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
+        """ Handle text messages sent to listening rooms """
+        if self._stop_event.ready():
             return False
 
-        messages = validate_and_parse_message(event["content"]["body"], peer_address)
+        assert self._raiden_service is not None, "_raiden_service not set"
 
-        if not messages:
-            return False
+        all_messages: List[Message] = list()
+        for room, room_messages in sync_messages:
+            # TODO: Don't fetch messages from the broadcast rooms. #5535
+            if not self._is_broadcast_room(room):
+                for text in room_messages:
+                    all_messages.extend(self._handle_text(room, text))
 
-        self.log.debug(
-            "Incoming messages",
-            messages=messages,
-            sender=to_checksum_address(peer_address),
-            sender_user=user,
-            room=room,
-        )
-
-        for message in messages:
-            if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
-                self.log.warning(
-                    "Received invalid message",
-                    message=redact_secret(DictSerializer.serialize(message)),
+        # Remove this #3254
+        for message in all_messages:
+            if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
+                delivered_message = Delivered(
+                    delivered_message_identifier=message.message_identifier,
+                    signature=EMPTY_SIGNATURE,
                 )
-            if isinstance(message, Delivered):
-                self._receive_delivered(message)
-            elif isinstance(message, Processed):
-                self._receive_message(message)
-            else:
-                assert isinstance(message, SignedRetrieableMessage)
-                self._receive_message(message)
+                self._raiden_service.sign(delivered_message)
+                retrier = self._get_retrier(message.sender)
+                retrier.enqueue_unordered(delivered_message)
 
-        return True
+        self.log.debug("Incoming messages", messages=all_messages)
 
-    def _receive_delivered(self, delivered: Delivered) -> None:
-        assert delivered.sender is not None, MYPY_ANNOTATION
-        self.log.debug(
-            "Delivered message received",
-            sender=to_checksum_address(delivered.sender),
-            message=DictSerializer.serialize(delivered),
-        )
+        self._raiden_service.on_messages(all_messages)
 
-        assert self._raiden_service is not None, "_raiden_service not set"
-        self._raiden_service.on_message(delivered)
-
-    def _receive_message(self, message: Union[SignedRetrieableMessage, Processed]) -> None:
-        assert self._raiden_service is not None, "_raiden_service not set"
-        assert message.sender is not None, MYPY_ANNOTATION
-        self.log.debug(
-            "Message received",
-            node=to_checksum_address(self._raiden_service.address),
-            message=redact_secret(DictSerializer.serialize(message)),
-            sender=to_checksum_address(message.sender),
-        )
-
-        # TODO: Maybe replace with Matrix read receipts.
-        #       Unfortunately those work on an 'up to' basis, not on individual messages
-        #       which means that message order is important which isn't guaranteed between
-        #       federated servers.
-        #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-        delivered_message = Delivered(
-            delivered_message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
-        )
-        self._raiden_service.sign(delivered_message)
-
-        if message.sender:  # Ignore unsigned messages
-            retrier = self._get_retrier(message.sender)
-            retrier.enqueue_unordered(delivered_message)
-            self._raiden_service.on_message(message)
+        return bool(all_messages)
 
     def _receive_to_device(self, to_device: ToDevice) -> None:
         assert to_device.sender is not None, MYPY_ANNOTATION
@@ -1135,9 +1098,6 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
-
-            if not room.listeners:
-                room.add_listener(self._handle_message, "m.room.message")
 
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room

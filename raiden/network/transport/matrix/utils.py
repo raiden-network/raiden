@@ -32,6 +32,7 @@ from raiden.exceptions import (
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
+    MatrixSyncMessages,
     Room,
     User,
     node_address_from_userid,
@@ -664,7 +665,12 @@ def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     return {fastest_url: rtt}
 
 
-def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
+def make_client(
+    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    servers: List[str],
+    *args: Any,
+    **kwargs: Any,
+) -> GMatrixClient:
     """Given a list of possible servers, chooses the closest available and create a GMatrixClient
 
     Params:
@@ -683,7 +689,7 @@ def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
 
     last_ex = None
     for server_url, rtt in sorted_servers.items():
-        client = GMatrixClient(server_url, *args, **kwargs)
+        client = GMatrixClient(handle_messages_callback, server_url, *args, **kwargs)
 
         retries = 3
         while retries:

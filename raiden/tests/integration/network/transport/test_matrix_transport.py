@@ -49,8 +49,8 @@ class MessageHandler:
     def __init__(self, bag: set):
         self.bag = bag
 
-    def on_message(self, _, message):
-        self.bag.add(message)
+    def on_messages(self, _, messages):
+        self.bag.update(messages)
 
 
 def ping_pong_message_success(transport0, transport1):

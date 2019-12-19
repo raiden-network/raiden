@@ -736,7 +736,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
         signature=EMPTY_SIGNATURE,
     )
     app0.raiden.sign(reveal_secret)
-    message_handler.on_message(app1.raiden, reveal_secret)
+    message_handler.on_messages(app1.raiden, [reveal_secret])
 
     chain_state = views.state_from_app(app1)
 

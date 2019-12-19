@@ -12,7 +12,8 @@ from raiden.network.transport.matrix.utils import (
     make_client,
     make_room_alias,
 )
-from raiden.tests.utils import factories, transport
+from raiden.tests.utils import factories
+from raiden.tests.utils.transport import ignore_messages, new_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
@@ -23,7 +24,7 @@ USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
-    client = make_client([server])
+    client = make_client(ignore_messages, [server])
     signer = factories.make_signer()
 
     login(client, signer)
@@ -66,8 +67,8 @@ def test_assumption_matrix_userid(local_matrix_servers):
         user.get_display_name()
 
     # The userid is valid and the user exists, this should not raise
-    new_client, _ = create_logged_in_client(local_matrix_servers[0])
-    user = User(client.api, new_client.user_id)
+    newlogin_client, _ = create_logged_in_client(local_matrix_servers[0])
+    user = User(client.api, newlogin_client.user_id)
     user.get_display_name()
 
 
@@ -130,7 +131,7 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
     public_room = next(iter(server1_client.get_rooms().values()))
 
     for local_server in local_matrix_servers[1:]:
-        client = transport.new_client(local_server)
+        client = new_client(ignore_messages, local_server)
         assert public_room.room_id not in client.get_rooms()
         client.join_room(public_room.aliases[0])
         assert public_room.room_id in client.get_rooms()
