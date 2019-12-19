@@ -32,7 +32,7 @@ def restore_to_state_change(
     storage: SerializedSQLiteStorage,
     state_change_identifier: StateChangeID,
     node_address: Address,
-) -> "WriteAheadLog":
+) -> Tuple[int, int, "WriteAheadLog"]:
     chain_state: Optional[State]
     from_identifier: StateChangeID
 
@@ -49,6 +49,7 @@ def restore_to_state_change(
         )
         from_identifier = snapshot.state_change_identifier
         chain_state = snapshot.data
+        state_change_qty = snapshot.state_change_qty
     else:
         log.debug(
             "No snapshot found, replaying all state changes",
@@ -57,6 +58,7 @@ def restore_to_state_change(
         )
         from_identifier = LOW_STATECHANGE_ULID
         chain_state = None
+        state_change_qty = 0
 
     state_manager = StateManager(transition_function, chain_state)
     wal = WriteAheadLog(state_manager, storage)
@@ -75,7 +77,7 @@ def restore_to_state_change(
         )
         wal.state_manager.dispatch(unapplied_state_changes)
 
-    return wal
+    return state_change_qty, len(unapplied_state_changes), wal
 
 
 ST = TypeVar("ST", bound=State)
@@ -137,7 +139,7 @@ class WriteAheadLog(Generic[ST]):
 
         return latest_state, flattened_events
 
-    def snapshot(self) -> None:
+    def snapshot(self, statechange_qty: int) -> None:
         """ Snapshot the application state.
 
         Snapshots are used to restore the application state, either after a
@@ -149,7 +151,7 @@ class WriteAheadLog(Generic[ST]):
 
             # otherwise no state change was dispatched
             if state_change_id and current_state is not None:
-                self.storage.write_state_snapshot(current_state, state_change_id)
+                self.storage.write_state_snapshot(current_state, state_change_id, statechange_qty)
 
     @property
     def version(self) -> RaidenDBVersion:
