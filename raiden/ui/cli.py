@@ -684,6 +684,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
     except RaidenUnrecoverableError as ex:
         click.secho(f"FATAL: An un-recoverable error happen, Raiden is bailing {ex}", fg="red")
         write_stack_trace(ex)
+        sys.exit(ReturnCode.FATAL)
     except APIServerPortInUseError as ex:
         click.secho(
             f"ERROR: API Address {ex} is in use. Use --api-address <host:port> "
