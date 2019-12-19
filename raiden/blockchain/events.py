@@ -254,7 +254,7 @@ class BlockchainEvents:
         self.last_log_block = BlockNumber(0)
 
     def _log_sync_progress(self, to_block: BlockNumber) -> None:
-        """Print a message if there are many blocks to be fected, or if the
+        """Print a message if there are many blocks to be fetched, or if the
         time in-between polls is high.
         """
         now = datetime.now()
@@ -274,12 +274,19 @@ class BlockchainEvents:
 
     def poll_blockchain_events(self, block_number: BlockNumber) -> Iterable[DecodedEvent]:
         """ Poll for new blockchain events up to `block_number`. """
-        self._log_sync_progress(block_number)
 
         for event_listener in self.event_listeners:
             assert isinstance(event_listener.filter, StatelessFilter)
 
-            for log_event in event_listener.filter.get_new_entries(block_number):
+            new_entries = event_listener.filter.get_new_entries(block_number)
+
+            # Since this is a generator, it is hard to predict how often the
+            # log will be called. This is placed just after the JSON-RPC
+            # request, which should be the slowest part of the processing
+            # pipeline.
+            self._log_sync_progress(block_number)
+
+            for log_event in new_entries:
                 yield decode_raiden_event_to_internal(event_listener.abi, self.chain_id, log_event)
 
     def uninstall_all_event_listeners(self) -> None:
