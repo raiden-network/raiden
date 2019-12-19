@@ -41,7 +41,9 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     ProportionalFeeAmount,
+    Secret,
     TargetAddress,
+    TokenAddress,
     TokenAmount,
 )
 from raiden.waiting import wait_for_block
@@ -331,25 +333,26 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
 
 
 @raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", (1,))
+@pytest.mark.parametrize("number_of_nodes", (3,))
 @pytest.mark.parametrize("channels_per_node", (CHAIN,))
-def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
-    app0, = raiden_network
+def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: List[TokenAddress]):
+    app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address, "Fixture token_addresses don't have correspoding token_network"
 
     with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
 
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
-            amount=10,
-            target=factories.HOP1,
-            identifier=1,
-            secret=b"1" * 32,
+            amount=PaymentAmount(10),
+            target=TargetAddress(app1.raiden.address),
+            identifier=PaymentID(1),
+            secret=Secret(b"1" * 32),
         )
         assert not patched.called
 
@@ -373,10 +376,10 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
 
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
-            amount=11,
-            target=factories.HOP2,
-            identifier=2,
-            secret=b"2" * 32,
+            amount=PaymentAmount(11),
+            target=TargetAddress(app2.raiden.address),
+            identifier=PaymentID(2),
+            secret=Secret(b"2" * 32),
         )
         assert patched.call_count == 1
 
@@ -385,7 +388,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             factories.LockedTransferProperties(
                 amount=TokenAmount(5),
                 initiator=factories.HOP1,
-                target=TargetAddress(factories.HOP2),
+                target=TargetAddress(app2.raiden.address),
                 sender=factories.HOP1,
                 pkey=factories.HOP1_KEY,
                 token=token_address,
