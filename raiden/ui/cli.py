@@ -702,6 +702,10 @@ def run(ctx: Context, **kwargs: Any) -> None:
         write_stack_trace(ex)
         sys.exit(1)
     finally:
+        # teardown order is important because of side-effects, both the
+        # switch_monitor and profiler could use the tracing api, for the
+        # teardown code to work correctly the teardown has to be done in the
+        # reverse order of the initialization.
         if switch_monitor is not None:
             switch_monitor.stop()
         if memory_logger is not None:
