@@ -55,7 +55,7 @@ def test_upgrade_manager_transaction_rollback(tmp_path, monkeypatch):
             m.setattr("raiden.storage.sqlite.RAIDEN_DB_VERSION", 2)
             upgrade_list = [UpgradeRecord(from_version=1, function=failure)]
             m.setattr("raiden.utils.upgrades.UPGRADES_LIST", upgrade_list)
-            manager = UpgradeManager(FORMAT.format(2))
+            manager = UpgradeManager(Path(FORMAT.format(2)))
             manager.run()
 
     storage = SQLiteStorage(Path(FORMAT.format(2)))
@@ -81,7 +81,7 @@ def test_regression_delete_should_not_commit_the_upgrade_transaction(tmp_path, m
             m.setattr("raiden.storage.sqlite.RAIDEN_DB_VERSION", 2)
             upgrade_list = [UpgradeRecord(from_version=1, function=failure)]
             m.setattr("raiden.utils.upgrades.UPGRADES_LIST", upgrade_list)
-            manager = UpgradeManager(FORMAT.format(2))
+            manager = UpgradeManager(Path(FORMAT.format(2)))
             manager.run()
 
     storage = SQLiteStorage(Path(FORMAT.format(2)))

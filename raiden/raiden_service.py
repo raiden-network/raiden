@@ -63,7 +63,7 @@ from raiden.services import (
     update_monitoring_service_from_balance_proof,
     update_services_from_balance_proof,
 )
-from raiden.settings import MediationFeeConfig
+from raiden.settings import RaidenConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
@@ -157,7 +157,7 @@ def initiator_init(
         to_address=target_address,
         amount=transfer_amount,
         previous_address=None,
-        pfs_config=raiden.config.get("pfs_config", None),
+        pfs_config=raiden.config.pfs_config,
         privkey=raiden.privkey,
     )
 
@@ -271,7 +271,7 @@ class RaidenService(Runnable):
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,
         routing_mode: RoutingMode,
-        config: Dict[str, Any],
+        config: RaidenConfig,
         user_deposit: UserDeposit = None,
     ) -> None:
         super().__init__()
@@ -296,7 +296,7 @@ class RaidenService(Runnable):
         self.user_deposit = user_deposit
 
         self.alarm = AlarmTask(
-            proxy_manager, sleep_time=self.config["blockchain"]["query_interval"]
+            proxy_manager=proxy_manager, sleep_time=self.config.blockchain.query_interval
         )
         self.raiden_event_handler = raiden_event_handler
         self.message_handler = message_handler
@@ -309,14 +309,14 @@ class RaidenService(Runnable):
         self.last_log_time = datetime.now()
         self.last_log_block = BlockNumber(0)
 
-        self.contract_manager = ContractManager(config["contracts_path"])
-        self.database_path = config["database_path"]
+        self.contract_manager = ContractManager(config.contracts_path)
         self.wal: Optional[WriteAheadLog] = None
-        if self.database_path != ":memory:":
-            database_dir = os.path.dirname(config["database_path"])
+
+        if self.config.database_path != ":memory:":
+            database_dir = os.path.dirname(config.database_path)
             os.makedirs(database_dir, exist_ok=True)
 
-            self.database_dir = database_dir
+            self.database_dir: Optional[str] = database_dir
 
             # Two raiden processes must not write to the same database. Even
             # though it's possible the database itself would not be corrupt,
@@ -332,7 +332,6 @@ class RaidenService(Runnable):
             lock_file = os.path.join(self.database_dir, ".lock")
             self.db_lock = filelock.FileLock(lock_file)
         else:
-            self.database_path = ":memory:"
             self.database_dir = None
             self.serialization_file = None
             self.db_lock = None
@@ -446,7 +445,7 @@ class RaidenService(Runnable):
 
     @property
     def confirmation_blocks(self) -> BlockTimeout:
-        return self.config["blockchain"]["confirmation_blocks"]
+        return self.config.blockchain.confirmation_blocks
 
     @property
     def privkey(self) -> bytes:
@@ -502,7 +501,7 @@ class RaidenService(Runnable):
         self.maybe_upgrade_db()
 
         storage = sqlite.SerializedSQLiteStorage(
-            database_path=self.database_path, serializer=JSONSerializer()
+            database_path=self.config.database_path, serializer=JSONSerializer()
         )
         storage.update_version()
         storage.log_run()
@@ -816,8 +815,8 @@ class RaidenService(Runnable):
             raise
         except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
             log_unrecoverable = (
-                self.config["environment_type"] == Environment.PRODUCTION
-                and not self.config["unrecoverable_error_should_crash"]
+                self.config.environment_type == Environment.PRODUCTION
+                and not self.config.unrecoverable_error_should_crash
             )
             if log_unrecoverable:
                 log.error(str(e))
@@ -1143,7 +1142,7 @@ class RaidenService(Runnable):
         This includes a recalculation of the dynamic rebalancing fees.
         """
         chain_state = views.state_from_raiden(self)
-        fee_config: MediationFeeConfig = self.config["mediation_fees"]
+        fee_config = self.config.mediation_fees
         token_addresses = views.get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=self.default_registry.address
         )
@@ -1401,6 +1400,6 @@ class RaidenService(Runnable):
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(
-            db_filename=self.database_path, raiden=self, web3=self.rpc_client.web3
+            db_filename=self.config.database_path, raiden=self, web3=self.rpc_client.web3
         )
         manager.run()

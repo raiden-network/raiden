@@ -1,20 +1,28 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
-from raiden.constants import Environment
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, Environment
+from raiden.network.pathfinding import PFSConfig
 from raiden.utils.typing import (
     Address,
+    BlockTimeout,
+    ChainID,
+    DatabasePath,
     Dict,
     FeeAmount,
+    Host,
     List,
     NetworkTimeout,
     Optional,
+    Port,
     ProportionalFeeAmount,
     TokenAddress,
     TokenAmount,
 )
+from raiden_contracts.contract_manager import contracts_precompiled_path
 
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
@@ -39,22 +47,23 @@ DEFAULT_MATRIX_KNOWN_SERVERS = {
     ),
 }
 
-DEFAULT_REVEAL_TIMEOUT = 50
-DEFAULT_SETTLE_TIMEOUT = 500
+DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
+DEFAULT_SETTLE_TIMEOUT = BlockTimeout(500)
 DEFAULT_RETRY_TIMEOUT = NetworkTimeout(0.5)
 DEFAULT_BLOCKCHAIN_QUERY_INTERVAL = 5.0
 DEFAULT_JOINABLE_FUNDS_TARGET = 0.4
 DEFAULT_INITIAL_CHANNEL_TARGET = 3
 DEFAULT_WAIT_FOR_SETTLE = True
-DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS = 5
-DEFAULT_WAIT_BEFORE_LOCK_REMOVAL = 2 * DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS = BlockTimeout(5)
+DEFAULT_WAIT_BEFORE_LOCK_REMOVAL = BlockTimeout(2 * DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 DEFAULT_CHANNEL_SYNC_TIMEOUT = 5
 
 DEFAULT_SHUTDOWN_TIMEOUT = 2
 
 DEFAULT_PATHFINDING_MAX_PATHS = 3
 DEFAULT_PATHFINDING_MAX_FEE = TokenAmount(5 * 10 ** 16)  # about .01$
-DEFAULT_PATHFINDING_IOU_TIMEOUT = 2 * 10 ** 5  # now the pfs has 200 000blocks (40days) to cash in
+# PFS has 200 000 blocks (~40days) to cash in
+DEFAULT_PATHFINDING_IOU_TIMEOUT = BlockTimeout(2 * 10 ** 5)
 
 DEFAULT_MEDIATION_FLAT_FEE = FeeAmount(0)
 DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(4000)  # 0.4% in parts per million
@@ -124,6 +133,55 @@ class MatrixTransportConfig:
 class ServiceConfig:
     pathfinding_service_address: Optional[Address] = None
     pathfinding_max_paths: int = DEFAULT_PATHFINDING_MAX_PATHS
-    pathfinding_max_fee: int = DEFAULT_PATHFINDING_MAX_FEE
-    pathfinding_iou_timeout: int = DEFAULT_PATHFINDING_IOU_TIMEOUT
+    pathfinding_max_fee: TokenAmount = DEFAULT_PATHFINDING_MAX_FEE
+    pathfinding_iou_timeout: BlockTimeout = DEFAULT_PATHFINDING_IOU_TIMEOUT
     monitoring_enabled: bool = False
+
+
+@dataclass
+class BlockchainConfig:
+    confirmation_blocks: BlockTimeout = DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    query_interval: float = DEFAULT_BLOCKCHAIN_QUERY_INTERVAL
+
+
+@dataclass
+class RaidenConfig:
+    chain_id: ChainID
+    environment_type: Environment
+
+    reveal_timeout: BlockTimeout = DEFAULT_REVEAL_TIMEOUT
+    settle_timeout: BlockTimeout = DEFAULT_SETTLE_TIMEOUT
+
+    contracts_path: Path = contracts_precompiled_path(RAIDEN_CONTRACT_VERSION)
+    database_path: DatabasePath = ":memory:"
+
+    blockchain: BlockchainConfig = BlockchainConfig()
+    mediation_fees: MediationFeeConfig = MediationFeeConfig()
+    services: ServiceConfig = ServiceConfig()
+
+    transport_type: str = "matrix"
+    transport: MatrixTransportConfig = MatrixTransportConfig(
+        # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
+        available_servers=[],
+        # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
+        #       and fix the conditional in `raiden.ui.app:_setup_matrix`
+        #       as well as the tests
+        broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
+        retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+        retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
+        server="auto",
+        server_name=None,
+    )
+
+    shutdown_timeout: int = DEFAULT_SHUTDOWN_TIMEOUT
+    unrecoverable_error_should_crash: bool = False
+
+    rpc: bool = True
+    web_ui: bool = True
+    console: bool = False
+
+    api_host: Optional[Host] = None
+    api_port: Optional[Port] = None
+    resolver_endpoint: Optional[str] = None
+
+    pfs_config: Optional[PFSConfig] = None

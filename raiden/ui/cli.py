@@ -6,7 +6,6 @@ import signal
 import sys
 import textwrap
 import traceback
-from copy import deepcopy
 from enum import Enum
 from io import StringIO
 from subprocess import TimeoutExpired
@@ -22,7 +21,6 @@ from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from urllib3.exceptions import ReadTimeoutError
 
-from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     FLAT_MED_FEE_MIN,
@@ -349,6 +347,7 @@ def options(func: Callable) -> Callable:
             option(
                 "--enable-monitoring",
                 help="Enable broadcasting of balance proofs to the monitoring services.",
+                default=False,
                 is_flag=True,
             ),
         ),
@@ -840,7 +839,6 @@ def smoketest(
             port = next(free_port_generator)
 
             args["api_address"] = f"localhost:{port}"
-            args["config"] = deepcopy(App.DEFAULT_CONFIG)
             args["environment_type"] = environment_type
             args["extra_config"] = {"transport": {"available_servers": server_urls}}
             args["one_to_n_contract_address"] = "0x" + "1" * 40

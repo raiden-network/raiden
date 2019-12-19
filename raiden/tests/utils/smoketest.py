@@ -453,7 +453,7 @@ def run_smoketest(
         assert distributable == channel_state.our_state.contract_balance
         assert channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
-        port_number = raiden_service.config["api_port"]
+        port_number = raiden_service.config.api_port
         response = requests.get(f"http://localhost:{port_number}/api/v1/channels")
 
         assert response.status_code == HTTPStatus.OK

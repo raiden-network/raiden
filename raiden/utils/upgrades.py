@@ -10,7 +10,7 @@ import structlog
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
-from raiden.utils.typing import Any, Callable, List, NamedTuple
+from raiden.utils.typing import Any, Callable, DatabasePath, List, NamedTuple
 
 
 class UpgradeRecord(NamedTuple):
@@ -118,7 +118,7 @@ class UpgradeManager:
       to proceed or not.
     """
 
-    def __init__(self, db_filename: str, **kwargs: Any) -> None:
+    def __init__(self, db_filename: DatabasePath, **kwargs: Any) -> None:
         base_name = os.path.basename(db_filename)
         match = VERSION_RE.match(base_name)
         assert match, f'Database name "{base_name}" does not match our format'

@@ -8,7 +8,7 @@ from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import RaidenError
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
-from raiden.settings import ServiceConfig
+from raiden.settings import RaidenConfig, ServiceConfig
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
@@ -72,70 +72,70 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 
 def test_setup_contracts():
     # Mainnet production: contracts are not deployed
-    config = {"environment_type": Environment.PRODUCTION}
+    config = RaidenConfig(chain_id=1, environment_type=Environment.PRODUCTION)
     contracts = load_deployed_contracts_data(config, 1)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Mainnet development -- NOT allowed
-    config = {"environment_type": Environment.DEVELOPMENT}
+    config = RaidenConfig(chain_id=1, environment_type=Environment.DEVELOPMENT)
     with pytest.raises(RaidenError):
         contracts = load_deployed_contracts_data(config, 1)
 
     # Ropsten production
-    config = {"environment_type": Environment.PRODUCTION}
+    config = RaidenConfig(chain_id=3, environment_type=Environment.PRODUCTION)
     contracts = load_deployed_contracts_data(config, 3)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Ropsten development
-    config = {"environment_type": Environment.DEVELOPMENT}
+    config = RaidenConfig(chain_id=3, environment_type=Environment.DEVELOPMENT)
     contracts = load_deployed_contracts_data(config, 3)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby production
-    config = {"environment_type": Environment.PRODUCTION}
+    config = RaidenConfig(chain_id=4, environment_type=Environment.PRODUCTION)
     contracts = load_deployed_contracts_data(config, 4)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby development
-    config = {"environment_type": Environment.DEVELOPMENT}
+    config = RaidenConfig(chain_id=4, environment_type=Environment.DEVELOPMENT)
     contracts = load_deployed_contracts_data(config, 4)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli production
-    config = {"environment_type": Environment.PRODUCTION}
+    config = RaidenConfig(chain_id=5, environment_type=Environment.PRODUCTION)
     contracts = load_deployed_contracts_data(config, 5)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli development
-    config = {"environment_type": Environment.DEVELOPMENT}
+    config = RaidenConfig(chain_id=5, environment_type=Environment.DEVELOPMENT)
     contracts = load_deployed_contracts_data(config, 5)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # random private network production
-    config = {"environment_type": Environment.PRODUCTION}
+    config = RaidenConfig(chain_id=5257, environment_type=Environment.PRODUCTION)
     contracts = load_deployed_contracts_data(config, 5257)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # random private network development
-    config = {"environment_type": Environment.DEVELOPMENT}
+    config = RaidenConfig(chain_id=5257, environment_type=Environment.DEVELOPMENT)
     contracts = load_deployed_contracts_data(config, 5257)
-    assert "contracts_path" in config
+    assert config.contracts_path is not None
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
@@ -144,10 +144,9 @@ def test_setup_proxies_raiden_addresses_are_given():
     """
     Test that startup for proxies works fine if only raiden addresses are given
     """
-
-    network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
-    contracts = load_deployed_contracts_data(config, network_id)
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
@@ -176,10 +175,9 @@ def test_setup_proxies_all_addresses_are_given():
     """
     Test that startup for proxies works fine if all addresses are given and routing is local
     """
-
-    network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
-    contracts = load_deployed_contracts_data(config, network_id)
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
@@ -209,16 +207,9 @@ def test_setup_proxies_all_addresses_are_known():
     """
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
-
-    network_id = 5
-    config = {
-        "environment_type": Environment.DEVELOPMENT,
-        "chain_id": network_id,
-        "services": ServiceConfig(
-            pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
-        ),
-    }
-    contracts = load_deployed_contracts_data(config, network_id)
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
     PFS_INFO = PFSInfo(
         url="my-pfs",
@@ -263,16 +254,15 @@ def test_setup_proxies_no_service_registry_but_pfs():
 
     Regression test for https://github.com/raiden-network/raiden/issues/3740
     """
-
-    network_id = 5
-    config = {
-        "environment_type": Environment.DEVELOPMENT,
-        "chain_id": network_id,
-        "services": ServiceConfig(
+    chain_id = ChainID(5)
+    config = RaidenConfig(
+        chain_id=chain_id,
+        environment_type=Environment.DEVELOPMENT,
+        services=ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
-    }
-    contracts = load_deployed_contracts_data(config, network_id)
+    )
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     PFS_INFO = PFSInfo(
@@ -308,15 +298,15 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
     then the client exits with an error message
     """
 
-    network_id = 5
-    config = {
-        "environment_type": environment_type,
-        "chain_id": network_id,
-        "services": ServiceConfig(
+    chain_id = ChainID(5)
+    config = RaidenConfig(
+        chain_id=chain_id,
+        environment_type=environment_type,
+        services=ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
-    }
-    contracts = load_deployed_contracts_data(config, network_id)
+    )
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
     with pytest.raises(RaidenError):

@@ -1,5 +1,6 @@
 import os
 import subprocess
+from pathlib import Path
 
 import gevent
 import pytest
@@ -65,7 +66,7 @@ def raiden_chain(
     unrecoverable_error_should_crash: bool,
     local_matrix_servers: List[ParsedURL],
     blockchain_type: str,
-    contracts_path: str,
+    contracts_path: Path,
     user_deposit_address: UserDepositAddress,
     monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
@@ -192,7 +193,7 @@ def raiden_network(
     unrecoverable_error_should_crash: bool,
     local_matrix_servers: List[ParsedURL],
     blockchain_type: str,
-    contracts_path: str,
+    contracts_path: Path,
     user_deposit_address: UserDepositAddress,
     monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],

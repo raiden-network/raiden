@@ -700,7 +700,7 @@ def test_raidenapi_channel_lifecycle(
         )
 
     address_for_lowest_settle_timeout = make_address()
-    lowest_valid_settle_timeout = node1.raiden.config["reveal_timeout"] * 2
+    lowest_valid_settle_timeout = node1.raiden.config.reveal_timeout * 2
 
     # Make sure a small settle timeout is not accepted when opening a channel
     with pytest.raises(InvalidSettleTimeout):

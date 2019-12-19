@@ -267,8 +267,8 @@ class ConnectionManager:  # pragma: no unittest
                 raise
             except RaidenUnrecoverableError as e:
                 should_crash = (
-                    self.raiden.config["environment_type"] != Environment.PRODUCTION
-                    or self.raiden.config["unrecoverable_error_should_crash"]
+                    self.raiden.config.environment_type != Environment.PRODUCTION
+                    or self.raiden.config.unrecoverable_error_should_crash
                 )
                 if should_crash:
                     raise
@@ -355,8 +355,8 @@ class ConnectionManager:  # pragma: no unittest
             )
         except RaidenUnrecoverableError:
             should_crash = (
-                self.raiden.config["environment_type"] != Environment.PRODUCTION
-                or self.raiden.config["unrecoverable_error_should_crash"]
+                self.raiden.config.environment_type != Environment.PRODUCTION
+                or self.raiden.config.unrecoverable_error_should_crash
             )
             if should_crash:
                 raise

@@ -3,7 +3,8 @@ import random
 from collections import defaultdict
 from unittest.mock import Mock, PropertyMock
 
-from raiden.constants import RoutingMode
+from raiden.constants import Environment, RoutingMode
+from raiden.settings import RaidenConfig
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
@@ -150,7 +151,7 @@ class MockChainState:
 
 
 class MockRaidenService:
-    def __init__(self, message_handler=None, state_transition=None, private_key=None, config=None):
+    def __init__(self, message_handler=None, state_transition=None, private_key=None):
         if private_key is None:
             self.privkey, self.address = factories.make_privkey_address()
         else:
@@ -163,7 +164,9 @@ class MockRaidenService:
 
         self.message_handler = message_handler
         self.routing_mode = RoutingMode.PRIVATE
-        self.config = config or dict()
+        self.config = RaidenConfig(
+            chain_id=self.rpc_client.chain_id, environment_type=Environment.DEVELOPMENT
+        )
 
         self.user_deposit = Mock()
         self.default_registry = Mock()
@@ -218,7 +221,7 @@ def make_raiden_service_mock(
     channel_identifier: ChannelID,
     partner: Address,
 ):
-    raiden_service = MockRaidenService(config={})
+    raiden_service = MockRaidenService()
     chain_state = MockChainState()
     wal = Mock()
     wal.state_manager.current_state = chain_state

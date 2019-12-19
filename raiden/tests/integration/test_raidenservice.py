@@ -87,7 +87,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
     app0, app1 = raiden_network
-    app0.config["services"].monitoring_enabled = True
+    app0.config.services.monitoring_enabled = True
     # Send a transfer to make sure the state has a balance proof to broadcast
     token_address = token_addresses[0]
 
@@ -105,7 +105,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     app0.stop()
 
     transport = MatrixTransport(
-        config=app0.raiden.config["transport"], environment=app0.raiden.config["environment_type"]
+        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
     )
     transport.send_async = Mock()  # type: ignore
     transport._send_raw = Mock()  # type: ignore
@@ -255,13 +255,13 @@ def test_fees_are_updated_during_startup(
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
     assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
-    orginal_config = app0.raiden.config.copy()
+    original_config = deepcopy(app0.raiden.config)
 
     # Now restart app0, and set new flat fee for that token network
     flat_fee = FeeAmount(100)
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_flat_fee = {token_address: flat_fee}
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_flat_fee[token_address] = flat_fee
     app0.start()
 
     channel_state = get_channel_state(app0)
@@ -272,8 +272,8 @@ def test_fees_are_updated_during_startup(
     # Now restart app0, and set new proportional fee
     prop_fee = ProportionalFeeAmount(123)
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_fee = {token_address: prop_fee}
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_proportional_fee[token_address] = prop_fee
     app0.start()
 
     channel_state = get_channel_state(app0)
@@ -283,10 +283,8 @@ def test_fees_are_updated_during_startup(
 
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {
-        token_address: 0.05e6
-    }
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_proportional_imbalance_fee[token_address] = 0.05e6
     app0.start()
 
     channel_state = get_channel_state(app0)

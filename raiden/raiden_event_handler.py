@@ -764,7 +764,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         raiden: "RaidenService", route_failed_event: EventRouteFailed
     ) -> None:  # pragma: no unittest
         feedback_token = raiden.route_to_feedback_token.get(tuple(route_failed_event.route))
-        pfs_config = raiden.config.get("pfs_config")
+        pfs_config = raiden.config.pfs_config
 
         if feedback_token and pfs_config:
             log.debug(
@@ -789,7 +789,7 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
         feedback_token = raiden.route_to_feedback_token.get(
             tuple(payment_sent_success_event.route)
         )
-        pfs_config = raiden.config.get("pfs_config")
+        pfs_config = raiden.config.pfs_config
 
         if feedback_token and pfs_config:
             log.debug(

@@ -366,9 +366,9 @@ def blockchainevent_to_statechange(
         )
 
         if new_channel_details is not None:
-            fee_config: MediationFeeConfig = raiden.config["mediation_fees"]
+            fee_config: MediationFeeConfig = raiden.config.mediation_fees
             channel_config = ChannelConfig(
-                reveal_timeout=raiden.config["reveal_timeout"],
+                reveal_timeout=raiden.config.reveal_timeout,
                 fee_schedule=FeeScheduleState(
                     cap_fees=fee_config.cap_meditation_fees,
                     flat=fee_config.get_flat_fee(new_channel_details.token_address),
@@ -384,13 +384,11 @@ def blockchainevent_to_statechange(
             state_changes.append(contractreceiveroutenew_from_event(event))
 
     elif event_name == ChannelEvent.DEPOSIT:
-        deposit = contractreceivechanneldeposit_from_event(event, raiden.config["mediation_fees"])
+        deposit = contractreceivechanneldeposit_from_event(event, raiden.config.mediation_fees)
         state_changes.append(deposit)
 
     elif event_name == ChannelEvent.WITHDRAW:
-        withdraw = contractreceivechannelwithdraw_from_event(
-            event, raiden.config["mediation_fees"]
-        )
+        withdraw = contractreceivechannelwithdraw_from_event(event, raiden.config.mediation_fees)
         state_changes.append(withdraw)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:

@@ -36,7 +36,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
-    BlockNumber,
+    BlockTimeout,
     FeeAmount,
     PaymentAmount,
     PaymentID,
@@ -357,7 +357,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
         assert not patched.called
 
         # Setup PFS config
-        app0.raiden.config["pfs_config"] = PFSConfig(
+        app0.raiden.config.pfs_config = PFSConfig(
             info=PFSInfo(
                 url="mock-address",
                 chain_id=app0.raiden.rpc_client.chain_id,
@@ -370,7 +370,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
                 price=TokenAmount(0),
             ),
             maximum_fee=TokenAmount(100),
-            iou_timeout=BlockNumber(100),
+            iou_timeout=BlockTimeout(100),
             max_paths=5,
         )
 

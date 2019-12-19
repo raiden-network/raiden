@@ -375,10 +375,10 @@ class RaidenAPI:  # pragma: no unittest
         with the given `token_address`.
         """
         if settle_timeout is None:
-            settle_timeout = self.raiden.config["settle_timeout"]
+            settle_timeout = self.raiden.config.settle_timeout
 
         if reveal_timeout is None:
-            reveal_timeout = self.raiden.config["reveal_timeout"]
+            reveal_timeout = self.raiden.config.reveal_timeout
 
         if reveal_timeout <= 0:
             raise InvalidRevealTimeout("reveal_timeout should be larger than zero")

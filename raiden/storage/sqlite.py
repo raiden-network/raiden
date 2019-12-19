@@ -3,12 +3,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from types import TracebackType
 from typing import Generator
 
 import gevent
-from typing_extensions import Literal
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
@@ -19,6 +17,7 @@ from raiden.transfer.architecture import Event, State, StateChange
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
     Any,
+    DatabasePath,
     Dict,
     Generic,
     Iterator,
@@ -211,7 +210,7 @@ def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
 
 
 class SQLiteStorage:
-    def __init__(self, database_path: Union[Path, Literal[":memory:"]]):
+    def __init__(self, database_path: DatabasePath):
         sqlite3.register_adapter(ULID, adapt_ulid_identifier)
         sqlite3.register_converter("ULID", convert_ulid_identifier)
 
@@ -763,9 +762,7 @@ class SerializedSQLiteStorage:
     applied the automatic encoding/deconding will not work.
     """
 
-    def __init__(
-        self, database_path: Union[Path, Literal[":memory:"]], serializer: SerializationBase
-    ) -> None:
+    def __init__(self, database_path: DatabasePath, serializer: SerializationBase) -> None:
         self.database = SQLiteStorage(database_path)
         self.serializer = serializer
 

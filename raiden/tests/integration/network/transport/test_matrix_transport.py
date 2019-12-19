@@ -25,7 +25,7 @@ from raiden.network.transport.matrix import AddressReachability, MatrixTransport
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias, my_place_or_yours
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
-from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, ServiceConfig
+from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConfig, ServiceConfig
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure
@@ -542,7 +542,11 @@ def test_monitoring_broadcast_messages(
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
-    raiden_service.config = dict(services=ServiceConfig(monitoring_enabled=True))
+    raiden_service.config = RaidenConfig(
+        chain_id=1234,
+        environment_type=Environment.DEVELOPMENT,
+        services=ServiceConfig(monitoring_enabled=True),
+    )
 
     transport.start(raiden_service, [], None)
 
@@ -614,7 +618,7 @@ def test_pfs_broadcast_messages(
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
-    raiden_service.config = dict(services=dict(monitoring_enabled=True))
+    raiden_service.config.services.monitoring_enabled = True
     raiden_service.routing_mode = route_mode
 
     transport.start(raiden_service, [], None)
