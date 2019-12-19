@@ -23,9 +23,9 @@ from raiden.utils.typing import (
     Any,
     BlockNumber,
     BlockSpecification,
+    BlockTimeout,
     ChainID,
     Dict,
-    FeeAmount,
     InitiatorAddress,
     List,
     OneToNAddress,
@@ -61,7 +61,7 @@ class PFSInfo:
 class PFSConfig:
     info: PFSInfo
     maximum_fee: TokenAmount
-    iou_timeout: BlockNumber
+    iou_timeout: BlockTimeout
     max_paths: int
 
 
@@ -168,7 +168,7 @@ def get_valid_pfs_url(
     service_registry: ServiceRegistry,
     index_in_service_registry: int,
     block_identifier: BlockSpecification,
-    pathfinding_max_fee: FeeAmount,
+    pathfinding_max_fee: TokenAmount,
 ) -> Optional[str]:
     """Returns the URL for the PFS identified by the given index
 
@@ -205,7 +205,7 @@ def get_valid_pfs_url(
 def get_random_pfs(
     service_registry: ServiceRegistry,
     block_identifier: BlockSpecification,
-    pathfinding_max_fee: FeeAmount,
+    pathfinding_max_fee: TokenAmount,
 ) -> Optional[str]:
     """Selects a random PFS from service_registry.
 
@@ -238,7 +238,7 @@ def configure_pfs_or_exit(
     service_registry: Optional[ServiceRegistry],
     node_network_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
-    pathfinding_max_fee: FeeAmount,
+    pathfinding_max_fee: TokenAmount,
 ) -> PFSInfo:
     """
     Take in the given pfs_address argument, the service registry and find out a

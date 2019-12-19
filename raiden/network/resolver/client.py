@@ -26,7 +26,7 @@ def reveal_secret_with_resolver(
     raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
 ) -> bool:
 
-    resolver_endpoint = raiden.config.get("resolver_endpoint")
+    resolver_endpoint = raiden.config.resolver_endpoint
     if not resolver_endpoint:
         return False
 

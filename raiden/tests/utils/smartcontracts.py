@@ -10,16 +10,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.smart_contracts import deploy_contract_web3
-from raiden.utils.typing import (
-    Address,
-    Any,
-    Dict,
-    FeeAmount,
-    List,
-    TokenAddress,
-    TokenAmount,
-    Tuple,
-)
+from raiden.utils.typing import Address, Any, Dict, List, TokenAddress, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -118,7 +109,7 @@ def deploy_service_registry_and_set_urls(
     )
 
     # Test that getting a random service for an empty registry returns None
-    pfs_address = get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=FeeAmount(1))
+    pfs_address = get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=TokenAmount(1))
     assert pfs_address is None
 
     # Test that setting the urls works

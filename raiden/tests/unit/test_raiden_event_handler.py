@@ -145,7 +145,7 @@ def setup_pfs_handler_test(
 
     # Set PFS config and feedback token
     pfs_config = True  # just a truthy value
-    raiden.config["pfs_config"] = pfs_config
+    raiden.config.pfs_config = pfs_config
 
     feedback_uuid = None
     if set_feedback_token:
@@ -179,7 +179,7 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=raiden.config["pfs_config"],
+        pfs_config=raiden.config.pfs_config,
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         successful=False,
@@ -239,7 +239,7 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=raiden.config["pfs_config"],
+        pfs_config=raiden.config.pfs_config,
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         successful=True,

@@ -1,5 +1,6 @@
 import os
-from typing import Any, Callable, Dict, TextIO
+from pathlib import Path
+from typing import Any, Callable, TextIO
 from urllib.parse import urlparse
 
 import click
@@ -34,6 +35,7 @@ from raiden.settings import (
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     MatrixTransportConfig,
+    RaidenConfig,
     ServiceConfig,
 )
 from raiden.ui.checks import (
@@ -182,7 +184,6 @@ def run_app(
     enable_monitoring: bool,
     resolver_endpoint: str,
     routing_mode: RoutingMode,
-    config: Dict[str, Any],
     flat_fee: Tuple[Tuple[TokenAddress, FeeAmount], ...],
     proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
@@ -220,21 +221,26 @@ def run_app(
         cli_cap_mediation_fees=cap_mediation_fees,
     )
 
-    config["console"] = console
-    config["rpc"] = rpc
-    config["web_ui"] = rpc and web_ui
-    config["api_host"] = api_host
-    config["api_port"] = api_port
-    config["resolver_endpoint"] = resolver_endpoint
-    config["transport_type"] = transport
-    config["transport"].server = matrix_server
-    config["unrecoverable_error_should_crash"] = unrecoverable_error_should_crash
-    config["services"].pathfinding_max_paths = pathfinding_max_paths
-    config["services"].monitoring_enabled = enable_monitoring
-    config["chain_id"] = network_id
-    config["mediation_fees"] = fee_config
-    config["blockchain"]["query_interval"] = blockchain_query_interval
-    config["environment_type"] = environment_type
+    config = RaidenConfig(chain_id=network_id, environment_type=environment_type)
+    config.console = console
+    config.rpc = rpc
+    config.web_ui = rpc and web_ui
+
+    config.blockchain.query_interval = blockchain_query_interval
+
+    config.mediation_fees = fee_config
+
+    config.services.monitoring_enabled = enable_monitoring
+    config.services.pathfinding_max_paths = pathfinding_max_paths
+
+    config.transport_type = transport
+    config.transport.server = matrix_server
+
+    config.unrecoverable_error_should_crash = unrecoverable_error_should_crash
+
+    config.api_host = api_host
+    config.api_port = api_port
+    config.resolver_endpoint = resolver_endpoint
 
     contracts = load_deployed_contracts_data(config, network_id)
 
@@ -258,7 +264,7 @@ def run_app(
 
     proxy_manager = ProxyManager(
         rpc_client=rpc_client,
-        contract_manager=ContractManager(config["contracts_path"]),
+        contract_manager=ContractManager(config.contracts_path),
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=token_network_registry_deployed_at,
             filters_start_at=smart_contracts_start_at,
@@ -306,17 +312,19 @@ def run_app(
     check_ethereum_confirmed_block_is_not_pruned(
         jsonrpc_client=rpc_client,
         secret_registry=raiden_bundle.secret_registry,
-        confirmation_blocks=config["blockchain"]["confirmation_blocks"],
+        confirmation_blocks=config.blockchain.confirmation_blocks,
     )
 
-    database_path = os.path.join(
-        datadir,
-        f"node_{pex(address)}",
-        f"netid_{network_id}",
-        f"network_{pex(raiden_bundle.token_network_registry.address)}",
-        f"v{RAIDEN_DB_VERSION}_log.db",
+    database_path = Path(
+        os.path.join(
+            datadir,
+            f"node_{pex(address)}",
+            f"netid_{network_id}",
+            f"network_{pex(raiden_bundle.token_network_registry.address)}",
+            f"v{RAIDEN_DB_VERSION}_log.db",
+        )
     )
-    config["database_path"] = database_path
+    config.database_path = database_path
 
     print(f"Raiden is running in {environment_type.value.lower()} mode")
     print(
@@ -327,7 +335,7 @@ def run_app(
 
     if transport == "matrix":
         matrix_transport = setup_matrix(
-            config["transport"], config["services"], environment_type, routing_mode
+            config.transport, config.services, environment_type, routing_mode
         )
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')

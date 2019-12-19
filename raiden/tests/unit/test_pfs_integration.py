@@ -33,6 +33,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     Dict,
     PaymentAmount,
@@ -112,7 +113,7 @@ PFS_CONFIG = PFSConfig(
         version="",
     ),
     maximum_fee=TokenAmount(100),
-    iou_timeout=BlockNumber(100),
+    iou_timeout=BlockTimeout(100),
     max_paths=5,
 )
 CONFIG = {"pfs_config": PFS_CONFIG}

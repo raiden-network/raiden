@@ -22,16 +22,11 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
     RAIDEN_CONTRACT_VERSION,
     MatrixTransportConfig,
+    RaidenConfig,
     ServiceConfig,
 )
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import (
-    BlockNumber,
-    Dict,
-    MonitoringServiceAddress,
-    OneToNAddress,
-    Optional,
-)
+from raiden.utils.typing import BlockNumber, MonitoringServiceAddress, OneToNAddress, Optional
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
@@ -68,7 +63,7 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
-        config: Dict,
+        config: RaidenConfig,
         rpc_client: JSONRPCClient,
         proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
@@ -104,9 +99,9 @@ class App:  # pylint: disable=too-few-public-methods
         settlement_timeout_min = default_registry.settlement_timeout_min("latest")
         settlement_timeout_max = default_registry.settlement_timeout_max("latest")
         invalid_settle_timeout = (
-            config["settle_timeout"] < settlement_timeout_min
-            or config["settle_timeout"] > settlement_timeout_max
-            or config["settle_timeout"] < config["reveal_timeout"] * 2
+            config.settle_timeout < settlement_timeout_min
+            or config.settle_timeout > settlement_timeout_max
+            or config.settle_timeout < config.reveal_timeout * 2
         )
         if invalid_settle_timeout:
             raise InvalidSettleTimeout(
@@ -117,7 +112,7 @@ class App:  # pylint: disable=too-few-public-methods
                     to_checksum_address(default_registry.address),
                     settlement_timeout_min,
                     settlement_timeout_max,
-                    config["settle_timeout"],
+                    config.settle_timeout,
                 )
             )
 

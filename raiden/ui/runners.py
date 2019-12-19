@@ -1,5 +1,4 @@
 import signal
-from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
 import gevent
@@ -10,12 +9,10 @@ from gevent.event import AsyncResult
 from raiden import constants, settings
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import typing
-from raiden.utils.datastructures import merge_dict
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
@@ -23,7 +20,7 @@ from raiden.utils.system import get_system_spec
 from raiden.utils.typing import Port
 
 from .app import run_app
-from .config import dump_cmd_options, dump_config, dump_module
+from .config import dump_cmd_options, dump_module
 
 log = structlog.get_logger(__name__)
 DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"
@@ -62,17 +59,8 @@ class NodeRunner:
             log.debug("Using config file", config_file=self._options["config_file"])
 
     def _start_services(self) -> None:
-        config = deepcopy(App.DEFAULT_CONFIG)
-        config["reveal_timeout"] = self._options["default_reveal_timeout"]
-        config["settle_timeout"] = self._options["default_settle_timeout"]
-        if self._options.get("extra_config", dict()):
-            merge_dict(config, self._options["extra_config"])
-            del self._options["extra_config"]
-        self._options["config"] = config
-
         if self._options["showconfig"]:
             print("Configuration Dump:")
-            dump_config(config)
             dump_cmd_options(self._options)
             dump_module("settings", settings)
             dump_module("constants", constants)
@@ -142,7 +130,7 @@ class NodeRunner:
 
         self._startup_hook()
 
-        stop_event: "AsyncResult[None]" = AsyncResult()
+        stop_event: AsyncResult[None] = AsyncResult()
 
         def sig_set(sig=None, _frame=None):
             stop_event.set(sig)
@@ -184,9 +172,7 @@ class NodeRunner:
                 task.stop()
 
             gevent.joinall(
-                set(gevent_tasks + runnable_tasks),
-                app.config.get("shutdown_timeout", settings.DEFAULT_SHUTDOWN_TIMEOUT),
-                raise_error=True,
+                set(gevent_tasks + runnable_tasks), app.config.shutdown_timeout, raise_error=True
             )
 
             app.stop()

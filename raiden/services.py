@@ -72,7 +72,7 @@ def update_monitoring_service_from_balance_proof(
     new_balance_proof: BalanceProofSignedState,
     non_closing_participant: Address,
 ) -> None:
-    if raiden.config["services"].monitoring_enabled is False:
+    if raiden.config.services.monitoring_enabled is False:
         return
 
     msg = f"Monitoring is enabled but the default monitoring service address is None."

@@ -400,14 +400,14 @@ class APIServer(Runnable):  # pragma: no unittest
 
             web3 = self.flask_app.config.get("WEB3_ENDPOINT")
             if "config." in file_name and file_name.endswith(".json"):
-                environment_type = self.rest_api.raiden_api.raiden.config[
-                    "environment_type"
-                ].name.lower()
+                environment_type = (
+                    self.rest_api.raiden_api.raiden.config.environment_type.name.lower()
+                )
                 config = {
                     "raiden": self._api_prefix,
                     "web3": web3,
-                    "settle_timeout": self.rest_api.raiden_api.raiden.config["settle_timeout"],
-                    "reveal_timeout": self.rest_api.raiden_api.raiden.config["reveal_timeout"],
+                    "settle_timeout": self.rest_api.raiden_api.raiden.config.settle_timeout,
+                    "reveal_timeout": self.rest_api.raiden_api.raiden.config.reveal_timeout,
                     "environment_type": environment_type,
                 }
 
@@ -549,7 +549,7 @@ class RestAPI:  # pragma: no unittest
     def register_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> Response:
-        if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
+        if self.raiden_api.raiden.config.environment_type == Environment.PRODUCTION:
             return api_error(
                 errors="Registering a new token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
@@ -593,7 +593,7 @@ class RestAPI:  # pragma: no unittest
         value: TokenAmount,
         contract_method: MintingMethod,
     ) -> Response:
-        if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
+        if self.raiden_api.raiden.config.environment_type == Environment.PRODUCTION:
             return api_error(
                 errors="Minting a token is currently disabled in production mode",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
