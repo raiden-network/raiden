@@ -19,6 +19,7 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.tests.utils.factories import make_signer
+from raiden.tests.utils.transport import ignore_messages
 from raiden.utils.signer import recover
 
 
@@ -153,11 +154,11 @@ def test_sort_servers_closest(monkeypatch):
 def test_make_client(monkeypatch):
     # invalid server url (ftp not supported)
     with pytest.raises(TransportError):
-        make_client(["ftp://server1.com", "http://server2.com"])
+        make_client(ignore_messages, ["ftp://server1.com", "http://server2.com"])
 
     # no valid server url
     with pytest.raises(TransportError):
-        make_client([])
+        make_client(ignore_messages, [])
 
     # valid but unreachable servers
     with pytest.raises(TransportError), monkeypatch.context() as m:
@@ -168,7 +169,7 @@ def test_make_client(monkeypatch):
 
         m.setattr(raiden.network.transport.matrix.utils, "return_after_retries", mock_get_http_rtt)
 
-        make_client([f"http://server{i}.xyz" for i in range(3)])
+        make_client(ignore_messages, [f"http://server{i}.xyz" for i in range(3)])
 
     mock_send = Mock(side_effect=lambda method, path, *args, **kwargs: True)
 
@@ -177,7 +178,7 @@ def test_make_client(monkeypatch):
         m.setattr(raiden.network.transport.matrix.client.GMatrixHttpApi, "_send", mock_send)
 
         url = "https://server1.xyz"
-        client = make_client([url])
+        client = make_client(ignore_messages, [url])
         assert isinstance(client, raiden.network.transport.matrix.client.GMatrixClient)
         assert client.api.base_url == url
 

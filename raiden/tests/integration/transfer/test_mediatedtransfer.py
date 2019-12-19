@@ -397,7 +397,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
                 ),
             )
         )
-        app0.raiden.mediate_mediated_transfer(locked_transfer)
+        app0.raiden.on_messages([locked_transfer])
         assert patched.call_count == 1
 
 

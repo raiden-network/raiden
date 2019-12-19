@@ -195,9 +195,9 @@ class MockRaidenService:
 
         self.wal.log_and_dispatch([state_change])
 
-    def on_message(self, message):
+    def on_messages(self, messages):
         if self.message_handler:
-            self.message_handler.on_message(self, message)
+            self.message_handler.on_messages(self, messages)
 
     def handle_and_track_state_changes(self, state_changes):
         pass

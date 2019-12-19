@@ -101,7 +101,7 @@ class TransferState(Enum):
 def sign_and_inject(message: SignedMessage, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
-    MessageHandler().on_message(app.raiden, message)
+    MessageHandler().on_messages(app.raiden, [message])
 
 
 def get_channelstate(
