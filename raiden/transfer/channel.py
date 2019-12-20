@@ -134,8 +134,8 @@ class UnlockGain(NamedTuple):
     from_partner_locks: TokenAmount
 
 
-class IsChannelUsable(Enum):
-    YES = True
+class ChannelUsability(Enum):
+    USABLE = True
     NOT_OPENED = "channel is not open"
     INVALID_SETTLE_TIMEOUT = "channel settle timeout is too low"
     CHANNEL_REACHED_PENDING_LIMIT = "channel reached limit of pending transfers"
@@ -220,14 +220,14 @@ def is_channel_usable_for_mediation(
         channel_state, transfer_amount, lock_timeout
     )
 
-    return channel_usable is IsChannelUsable.YES
+    return channel_usable is ChannelUsability.USABLE
 
 
 def is_channel_usable_for_new_transfer(
     channel_state: NettingChannelState,
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: Optional[BlockTimeout],
-) -> IsChannelUsable:
+) -> ChannelUsability:
     """True if the channel can be used to start a new transfer.
 
     This will make sure that:
@@ -261,24 +261,24 @@ def is_channel_usable_for_new_transfer(
     is_valid_settle_timeout = channel_state.settle_timeout >= channel_state.reveal_timeout * 2
 
     if get_status(channel_state) != ChannelState.STATE_OPENED:
-        return IsChannelUsable.NOT_OPENED
+        return ChannelUsability.NOT_OPENED
 
     if not is_valid_settle_timeout:
-        return IsChannelUsable.INVALID_SETTLE_TIMEOUT
+        return ChannelUsability.INVALID_SETTLE_TIMEOUT
 
     if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
-        return IsChannelUsable.CHANNEL_REACHED_PENDING_LIMIT
+        return ChannelUsability.CHANNEL_REACHED_PENDING_LIMIT
 
     if transfer_amount > distributable:
-        return IsChannelUsable.CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE
+        return ChannelUsability.CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE
 
     if not is_valid_amount(channel_state.our_state, transfer_amount):
-        return IsChannelUsable.CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW
+        return ChannelUsability.CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW
 
     if not lock_timeout_valid:
-        return IsChannelUsable.LOCKTIMEOUT_MISMATCH
+        return ChannelUsability.LOCKTIMEOUT_MISMATCH
 
-    return IsChannelUsable.YES
+    return ChannelUsability.USABLE
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
