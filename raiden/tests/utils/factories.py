@@ -182,7 +182,15 @@ def make_uint64() -> int:
 
 
 def make_payment_id() -> PaymentID:
-    return random.randint(0, UINT64_MAX)
+    return PaymentID(make_uint64())
+
+
+def make_nonce() -> Nonce:
+    return Nonce(make_uint64())
+
+
+def make_token_amount() -> TokenAmount:
+    return TokenAmount(random.randint(0, UINT256_MAX))
 
 
 def make_balance() -> Balance:
@@ -201,24 +209,28 @@ def make_message_identifier() -> MessageID:
     return MessageID(random.randint(0, UINT64_MAX))
 
 
-def make_20bytes() -> bytes:
-    return bytes("".join(random.choice(string.printable) for _ in range(20)), encoding="utf-8")
+def make_bytes(length: int) -> bytes:
+    return bytes("".join(random.choice(string.printable) for _ in range(length)), encoding="utf-8")
+
+
+def make_32bytes() -> bytes:
+    return make_bytes(32)
 
 
 def make_locksroot() -> Locksroot:
-    return Locksroot(make_32bytes())
+    return Locksroot(make_bytes(32))
 
 
 def make_address() -> Address:
-    return Address(make_20bytes())
+    return Address(make_bytes(20))
 
 
 def make_initiator_address() -> InitiatorAddress:
-    return InitiatorAddress(make_20bytes())
+    return InitiatorAddress(make_bytes(20))
 
 
 def make_target_address() -> TargetAddress:
-    return TargetAddress(make_20bytes())
+    return TargetAddress(make_bytes(20))
 
 
 def make_checksum_address() -> AddressHex:
@@ -226,7 +238,7 @@ def make_checksum_address() -> AddressHex:
 
 
 def make_token_address() -> TokenAddress:
-    return make_20bytes()
+    return make_bytes(20)
 
 
 def make_token_network_address() -> TokenNetworkAddress:
@@ -238,47 +250,47 @@ def make_token_network_registry_address() -> TokenNetworkRegistryAddress:
 
 
 def make_additional_hash() -> AdditionalHash:
-    return AdditionalHash(make_32bytes())
-
-
-def make_32bytes() -> bytes:
-    return bytes("".join(random.choice(string.printable) for _ in range(32)), encoding="utf-8")
+    return AdditionalHash(make_bytes(32))
 
 
 def make_transaction_hash() -> TransactionHash:
-    return TransactionHash(make_32bytes())
+    return TransactionHash(make_bytes(32))
 
 
 def make_block_hash() -> BlockHash:
-    return BlockHash(make_32bytes())
+    return BlockHash(make_bytes(32))
 
 
 def make_privatekey_bin() -> bin:
-    return make_32bytes()
+    return make_bytes(32)
 
 
 def make_keccak_hash() -> Keccak256:
-    return Keccak256(make_32bytes())
+    return Keccak256(make_bytes(32))
 
 
 def make_secret(i: int = EMPTY) -> Secret:
     if i is not EMPTY:
         return format(i, ">032").encode()
     else:
-        return make_32bytes()
+        return make_bytes(32)
 
 
 def make_secret_hash(i: int = EMPTY) -> SecretHash:
     if i is not EMPTY:
         return sha256(format(i, ">032").encode()).digest()
     else:
-        return make_32bytes()
+        return make_bytes(32)
 
 
 def make_secret_with_hash(i: int = EMPTY) -> Tuple[Secret, SecretHash]:
     secret = make_secret(i)
     secrethash = sha256_secrethash(secret)
     return secret, secrethash
+
+
+def make_signature() -> bytes:
+    return make_bytes(65)
 
 
 def make_lock() -> HashTimeLockState:
