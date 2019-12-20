@@ -114,6 +114,7 @@ from raiden.utils.typing import (
     SecretHash,
     SecretRegistryAddress,
     TargetAddress,
+    TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
@@ -901,11 +902,16 @@ class RaidenService(Runnable):
             self._log_sync_progress(target_block_number)
 
             poll_result = self.blockchain_events.fetch_logs_in_batch(target_block_number)
+            pendingtokenregistration: Dict[
+                TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+            ] = dict()
 
             state_changes: List[StateChange] = list()
             for event in poll_result.events:
                 state_changes.extend(
-                    blockchainevent_to_statechange(self, event, poll_result.polled_block_number)
+                    blockchainevent_to_statechange(
+                        self, event, poll_result.polled_block_number, pendingtokenregistration
+                    )
                 )
 
             # On restarts the node has to pick up all events generated since the

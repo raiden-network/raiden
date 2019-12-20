@@ -51,11 +51,14 @@ from raiden.utils.typing import (
     Balance,
     BlockNumber,
     BlockTimeout,
+    Dict,
     List,
     Optional,
     SecretRegistryAddress,
+    TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
@@ -78,17 +81,28 @@ class ChannelConfig:
 
 
 def contractreceivenewtokennetwork_from_event(
-    event: DecodedEvent
+    event: DecodedEvent,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> ContractReceiveNewTokenNetwork:
     data = event.event_data
     args = data["args"]
+
     token_network_address = args["token_network_address"]
+    token_address = TokenAddress(args["token_address"])
+    token_network_registry_address = TokenNetworkRegistryAddress(event.originating_contract)
+
+    pendingtokenregistration[token_network_address] = (
+        token_network_registry_address,
+        token_address,
+    )
 
     return ContractReceiveNewTokenNetwork(
-        token_network_registry_address=TokenNetworkRegistryAddress(event.originating_contract),
+        token_network_registry_address=token_network_registry_address,
         token_network=TokenNetworkState(
             address=token_network_address,
-            token_address=args["token_address"],
+            token_address=token_address,
             network_graph=TokenNetworkGraphState(token_network_address),
         ),
         transaction_hash=event.transaction_hash,
@@ -325,7 +339,12 @@ def contractreceivechannelbatchunlock_from_event(
 
 
 def blockchainevent_to_statechange(
-    raiden: "RaidenService", event: DecodedEvent, latest_confirmed_block: BlockNumber
+    raiden: "RaidenService",
+    event: DecodedEvent,
+    latest_confirmed_block: BlockNumber,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> List[StateChange]:  # pragma: no unittest
     msg = "The state of the node has to be primed before blockchain events can be processed."
     assert raiden.wal, msg
@@ -337,11 +356,13 @@ def blockchainevent_to_statechange(
     state_changes: List[StateChange] = []
 
     if event_name == EVENT_TOKEN_NETWORK_CREATED:
-        state_changes.append(contractreceivenewtokennetwork_from_event(event))
+        state_changes.append(
+            contractreceivenewtokennetwork_from_event(event, pendingtokenregistration)
+        )
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state=chain_state, event=event
+            chain_state=chain_state, event=event, pendingtokenregistration=pendingtokenregistration
         )
 
         if new_channel_details is not None:
