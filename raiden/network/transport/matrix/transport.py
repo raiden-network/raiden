@@ -394,8 +394,8 @@ class MatrixTransport(Runnable):
         )
 
         self._initialize_first_sync()
-        self._initialize_broadcast_rooms()
         self._initialize_room_inventory()
+        self._initialize_broadcast_rooms()
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -650,18 +650,6 @@ class MatrixTransport(Runnable):
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
 
-    def _initialize_broadcast_rooms(self) -> None:
-        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
-        assert self._user_id, msg
-
-        for suffix in self._config.broadcast_rooms:
-            room_name = make_room_alias(self.chain_id, suffix)
-            broadcast_room_alias = f"#{room_name}:{self._server_name}"
-            self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
-            self._broadcast_rooms[room_name] = join_broadcast_room(
-                client=self._client, broadcast_room_alias=broadcast_room_alias
-            )
-
     def _initialize_room_inventory(self) -> None:
         msg = "The rooms can only be inventoried after the first sync."
         assert self._client.sync_token, msg
@@ -669,16 +657,39 @@ class MatrixTransport(Runnable):
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
 
         for room in self._client.rooms.values():
-            if self._is_broadcast_room(room):
-                # Broadcast rooms are write-only, don't listen on them
-                continue
-            # we add listener for all valid rooms, _handle_message should ignore them
-            # if msg sender isn't whitelisted yet
-            if not room.listeners:
-                room.add_listener(self._handle_message, "m.room.message")
+            room_aliases = set(room.aliases)
+            if room.canonical_alias:
+                room_aliases.add(room.canonical_alias)
+
+            for broadcast_alias in self._config.broadcast_rooms:
+                if broadcast_alias in room_aliases:
+                    self._broadcast_rooms[broadcast_alias] = room
+                    break
+            else:
+                # Only add listener to non-broadcast rooms, the broadcast
+                # messages are only for the services. Add the listener to all
+                # other rooms, _handle_message should ignore them if msg sender
+                # isn't whitelisted yet
+                if not room.listeners:
+                    room.add_listener(self._handle_message, "m.room.message")
+
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
+
+    def _initialize_broadcast_rooms(self) -> None:
+        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
+        assert self._user_id, msg
+
+        for suffix in self._config.broadcast_rooms:
+            room_name = make_room_alias(self.chain_id, suffix)
+            broadcast_room_alias = f"#{room_name}:{self._server_name}"
+
+            if room_name not in self._broadcast_rooms:
+                self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
+                self._broadcast_rooms[room_name] = join_broadcast_room(
+                    client=self._client, broadcast_room_alias=broadcast_room_alias
+                )
 
     def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
         """Handle an invite request.
