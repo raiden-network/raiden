@@ -1,8 +1,14 @@
 # pylint: disable=too-few-public-methods
-from copy import deepcopy
+import inspect
+from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import EnumMeta
+from functools import wraps
+from random import Random
 
+import networkx
 from eth_utils import to_hex
+from hexbytes import HexBytes
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
@@ -19,6 +25,7 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     ChannelID,
+    Dict,
     Generic,
     List,
     Locksroot,
@@ -63,6 +70,151 @@ from raiden.utils.typing import (
 # processed, i.e. the state change must be self contained and the result state
 # tree must be serializable to produce a snapshot. To enforce this inputs and
 # outputs are separated under different class hierarchies (StateChange and Event).
+
+
+T = TypeVar("T")
+
+
+def check_no_cycle(func: Callable) -> Callable:
+    """Raises if obj is already in `rec_check`. Only use for mutable types!."""
+
+    # disable the recursion check, the current version of the state is a DAG
+    # and not a tree.
+    return func
+
+    # if __debug__:
+    #     @wraps(func)
+    #     def wrapper(original: T, rec_check: set) -> T:
+    #         identifier = id(original)
+    #         if identifier in rec_check:
+    #             raise RuntimeError(
+    #                 f"treecopy does not support cycle, it only works with tree "
+    #                 f"like datastructures. {original} repeated"
+    #             )
+    #         rec_check.add(identifier)
+    #         return func(original, rec_check)
+    #     return wrapper
+    # else:
+    #     return func
+
+
+def treecopy_tuple(original: tuple, rec_check: set) -> tuple:
+    constructor_args = (treecopy(value, rec_check) for value in original)
+    return tuple(constructor_args)
+
+
+def treecopy_atomic_value(original: T, _rec_check: set) -> T:
+    return original
+
+
+@check_no_cycle
+def treecopy_list(original: list, rec_check: set) -> list:
+    constructor_args = (treecopy(value, rec_check) for value in original)
+    return list(constructor_args)
+
+
+@check_no_cycle
+def treecopy_random(original: Random, _rec_check: set) -> Random:
+    copy = Random()
+    copy.setstate(original.getstate())
+    return copy
+
+
+@check_no_cycle
+def treecopy_dict(original: dict, rec_check: set) -> dict:
+    return {treecopy(k, rec_check): treecopy(v, rec_check) for k, v in original.items()}
+
+
+@check_no_cycle
+def treecopy_defaultdict(original: defaultdict, rec_check: set) -> defaultdict:
+    constructor_args = (
+        (treecopy(k, rec_check), treecopy(v, rec_check)) for k, v in original.items()
+    )
+    return defaultdict(original.default_factory, constructor_args)
+
+
+@check_no_cycle
+def treecopy_networkx_graph(original: networkx.Graph, _rec_check: set) -> networkx.Graph:
+    if __debug__:
+        assert all(isinstance(value, bytes) for edge in original.edges for value in edge)
+
+    # This only works because the edges are immutable
+    return networkx.Graph(original.edges)
+
+
+def treecopy_hexbytes(original: HexBytes, _rec_check: set) -> bytes:
+    return bytes(original)
+
+
+# This signature does not work
+# constructor_cache: Dict[type, Callable[[T, set], T]] = dict()
+constructor_cache: Dict[type, Callable[[Any, set], Any]] = dict()
+constructor_cache[int] = treecopy_atomic_value
+constructor_cache[float] = treecopy_atomic_value
+constructor_cache[bool] = treecopy_atomic_value
+constructor_cache[complex] = treecopy_atomic_value
+constructor_cache[bytes] = treecopy_atomic_value
+constructor_cache[str] = treecopy_atomic_value
+constructor_cache[type(None)] = treecopy_atomic_value
+
+constructor_cache[dict] = treecopy_dict
+constructor_cache[tuple] = treecopy_tuple
+constructor_cache[list] = treecopy_list
+constructor_cache[Random] = treecopy_random
+constructor_cache[networkx.Graph] = treecopy_networkx_graph
+constructor_cache[defaultdict] = treecopy_defaultdict
+constructor_cache[HexBytes] = treecopy_hexbytes
+
+
+def create_treecopy_constructor(klass: type) -> Callable[[T, set], T]:
+    argspec = inspect.getfullargspec(klass)
+    args = argspec.args
+
+    # Each enum is a new class, so the cache has to be warmed as the copies
+    # happen.
+    if isinstance(klass, EnumMeta):
+        return treecopy_atomic_value
+
+    msg = f"Can only generate constructor functions for classes, found {klass} with args {argspec.args}"
+    assert args[0] == "self", msg
+
+    msg = f"Can only generate constructor for dataclasses, found {klass}."
+    dataclass_params = getattr(klass, "__dataclass_params__", None)
+    assert dataclass_params, msg
+
+    attributes = args[1:]
+
+    def treecopy_constructor(original: T, rec_check: set) -> T:
+        constructor_args = (treecopy(getattr(original, attr), rec_check) for attr in attributes)
+        return klass(*constructor_args)
+
+    # Treat frozen dataclasses as plain values
+    if not dataclass_params.frozen:
+        treecopy_constructor = check_no_cycle(treecopy_constructor)
+
+    return treecopy_constructor
+
+
+def treecopy(original: T, rec_check: set) -> T:
+    klass = type(original)
+
+    constructor = constructor_cache.get(klass)
+
+    if constructor is None:
+        constructor = create_treecopy_constructor(klass)
+        constructor_cache[klass] = constructor
+
+    copy = constructor(original, rec_check)
+
+    # Because of HexBytes this check cannot be performed
+    # if __debug__:
+    #     msg = (
+    #         f"treecopy constructor {constructor} returned constructed the wrong "
+    #         f"type. original: {original} copy: {copy}."
+    #     )
+    #     assert type(original) == type(copy), msg
+
+    return copy
 
 
 @dataclass
@@ -187,18 +339,18 @@ class ContractReceiveStateChange(StateChange):
         typecheck(self.block_hash, T_BlockHash)
 
 
-T = TypeVar("T", covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 ST = TypeVar("ST", bound=State)
 
 
-class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
+class TransitionResult(Generic[T_co]):  # pylint: disable=unsubscriptable-object
     """ Representes the result of applying a single state change.
 
     When a task is completed the new_state is set to None, allowing the parent
     task to cleanup after the child.
     """
 
-    def __init__(self, new_state: T, events: List[Event]) -> None:
+    def __init__(self, new_state: T_co, events: List[Event]) -> None:
         self.new_state = new_state
         self.events = events
 
@@ -255,7 +407,7 @@ class StateManager(Generic[ST]):
 
         # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
-        next_state = deepcopy(self.current_state)
+        next_state = treecopy(self.current_state, rec_check=set())
 
         # Update the current state by applying the state changes
         events: List[List[Event]] = list()
