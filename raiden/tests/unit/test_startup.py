@@ -9,12 +9,7 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
-from raiden.settings import (
-    DEFAULT_PATHFINDING_IOU_TIMEOUT,
-    DEFAULT_PATHFINDING_MAX_FEE,
-    DEFAULT_PATHFINDING_MAX_PATHS,
-    ServiceConfig,
-)
+from raiden.settings import ServiceConfig
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
@@ -235,11 +230,9 @@ def test_setup_proxies_all_addresses_are_known():
     config = {
         "environment_type": Environment.DEVELOPMENT,
         "chain_id": network_id,
-        "services": {
-            "pathfinding_max_fee": DEFAULT_PATHFINDING_MAX_FEE,
-            "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
-            "pathfinding_max_paths": DEFAULT_PATHFINDING_MAX_PATHS,
-        },
+        "services": ServiceConfig(
+            pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
+        ),
     }
     contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
