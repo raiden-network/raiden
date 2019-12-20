@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Any, Callable, Dict, TextIO
 from urllib.parse import urlparse
 
@@ -24,6 +23,7 @@ from raiden.constants import (
     RopstenForks,
     RoutingMode,
 )
+from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
@@ -274,8 +274,7 @@ def run_app(
     # to using the ones deployed and provided by the raiden-contracts package.
     if user_deposit_contract_address is not None:
         if not is_address(user_deposit_contract_address):
-            click.secho("The user deposit address is invalid", fg="red")
-            sys.exit(1)
+            raise RaidenError("The user deposit address is invalid")
 
         deployed_addresses = load_deployment_addresses_from_udc(
             proxy_manager=proxy_manager,

@@ -1,4 +1,3 @@
-import sys
 from dataclasses import dataclass
 
 import click
@@ -15,7 +14,7 @@ from raiden.constants import (
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
 )
-from raiden.exceptions import EthNodeInterfaceError
+from raiden.exceptions import EthNodeInterfaceError, RaidenError
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
@@ -53,12 +52,8 @@ class DeploymentAddresses:
 
 def check_sql_version() -> None:
     if not assert_sqlite_version():
-        log.error(
-            "SQLite3 should be at least version {}".format(
-                "{}.{}.{}".format(*SQLITE_MIN_REQUIRED_VERSION)
-            )
-        )
-        sys.exit(1)
+        version = "{}.{}.{}".format(*SQLITE_MIN_REQUIRED_VERSION)
+        raise RaidenError(f"SQLite3 should be at least version {version}")
 
 
 def check_ethereum_client_is_supported(web3: Web3) -> None:
@@ -73,33 +68,28 @@ def check_ethereum_client_is_supported(web3: Web3) -> None:
 
     supported, our_client, our_version = is_supported_client(node_version)
     if not supported:
-        click.secho(
+        raise RaidenError(
             f"You need a Byzantium enabled ethereum node. Parity >= "
             f"{LOWEST_SUPPORTED_PARITY_VERSION} <= {HIGHEST_SUPPORTED_PARITY_VERSION}"
             f" or Geth >= {LOWEST_SUPPORTED_GETH_VERSION} <= {HIGHEST_SUPPORTED_GETH_VERSION}"
-            f" but you have {our_version} {our_client}",
-            fg="red",
+            f" but you have {our_version} {our_client}"
         )
-        sys.exit(1)
 
 
 def check_ethereum_has_accounts(account_manager: AccountManager) -> None:
     if not account_manager.accounts:
-        msg = (
+        raise RaidenError(
             f"No Ethereum accounts found in the provided keystore directory "
             f"{account_manager.keystore_path}. Please provide a directory "
             f"containing valid ethereum account files."
         )
-        click.secho(msg, fg="red")
-        sys.exit(1)
 
 
 def check_account(account_manager: AccountManager, address_hex: Address) -> None:
     if not account_manager.address_in_keystore(to_checksum_address(address_hex)):
-        click.secho(
-            f"Account '{address_hex}' could not be found on the system. Aborting ...", fg="red"
+        raise RaidenError(
+            f"Account '{address_hex}' could not be found on the system. Aborting ..."
         )
-        sys.exit(1)
 
 
 def check_ethereum_confirmed_block_is_not_pruned(
@@ -138,14 +128,12 @@ def check_ethereum_confirmed_block_is_not_pruned(
     except ValueError:
         # If this exception is raised the Ethereum node is too aggressive with
         # the block pruning.
-        click.secho(
+        raise RaidenError(
             f"The ethereum client does not have the necessary data available. "
             f"The client can not operate because the prunning strategy is too "
             f"agressive. Please make sure that at very minimum "
-            f"{minimum_available_history} blocks of history are available.",
-            fg="red",
+            f"{minimum_available_history} blocks of history are available."
         )
-        sys.exit(1)
 
 
 def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
@@ -167,14 +155,12 @@ def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
         # TODO: fix cyclic import
         from raiden.ui.cli import ETH_NETWORKID_OPTION
 
-        msg = (
+        raise RaidenError(
             f"The configured network {given_description} differs "
             f"from the Ethereum client's network {network_description}. The "
             f"network_id can be configured using the flag {ETH_NETWORKID_OPTION}"
             f"Please check your settings."
         )
-        click.secho(msg, fg="red")
-        sys.exit(1)
 
 
 def check_raiden_environment(network_id: ChainID, environment_type: Environment) -> None:
@@ -182,12 +168,11 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
         network_id == 1 and environment_type == Environment.DEVELOPMENT
     )
     if warn:
-        click.secho(
+        raise RaidenError(
             f"The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, "
             f'but the "development" environment was selected.\n'
             f"This crashes the node often. Please start again with a safe environment setting "
-            f"(--environment production).",
-            fg="red",
+            f"(--environment production)."
         )
 
 
@@ -200,28 +185,22 @@ def check_deployed_contracts_data(
     """ This function only checks if all necessary contracts are indeed in the deployment JSON
     from Raiden Contracts. It does not check anything else, especially not if those contracts
     are consistent or in fact Raiden contracts.
-
     """
     for name in required_contracts:
         if name not in contracts:
-            click.secho(
+            raise RaidenError(
                 f"There are no known contract addresses for network id '{node_network_id}'. and "
-                f"environment type {environment_type} for contract {name}.",
-                fg="red",
+                f"environment type {environment_type} for contract {name}."
             )
-            sys.exit(1)
 
 
 def check_pfs_configuration(pathfinding_service_address: str) -> None:
     if not pathfinding_service_address:
-        click.secho(
+        raise RaidenError(
             "Requested PFS routing mode but no specific pathfinding "
             "service address is provided. Please provide it via the "
-            "--pathfinding-service-address "
-            "argument",
-            fg="red",
+            "--pathfinding-service-address argument"
         )
-        sys.exit(1)
 
 
 def check_synced(proxy_manager: ProxyManager) -> None:
@@ -229,14 +208,12 @@ def check_synced(proxy_manager: ProxyManager) -> None:
     network_name = ID_TO_NETWORKNAME.get(network_id)
 
     if network_name is None:
-        msg = (
+        raise RaidenError(
             f"Your ethereum client is connected to a non-recognized private "
             f"network with network-ID {network_id}. Since we can not check if the "
             f"client is synced please restart raiden with the --no-sync-check "
             f"argument."
         )
-        click.secho(msg, fg="red")
-        sys.exit(1)
 
     url = ETHERSCAN_API.format(
         network=network_name if network_id != 1 else "api", action="eth_blockNumber"
