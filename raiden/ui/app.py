@@ -57,7 +57,6 @@ from raiden.ui.startup import (
     load_deployment_addresses_from_udc,
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
-    setup_environment,
 )
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.formatting import pex, to_checksum_address
@@ -233,8 +232,7 @@ def run_app(
     config["chain_id"] = network_id
     config["mediation_fees"] = fee_config
     config["blockchain"]["query_interval"] = blockchain_query_interval
-
-    setup_environment(config, environment_type)
+    config["environment_type"] = environment_type
 
     contracts = load_deployed_contracts_data(config, network_id)
 
@@ -319,6 +317,7 @@ def run_app(
     )
     config["database_path"] = database_path
 
+    print(f"Raiden is running in {environment_type.value.lower()} mode")
     print(
         "\nYou are connected to the '{}' network and the DB path is: {}".format(
             ID_TO_NETWORKNAME.get(network_id, network_id), database_path

@@ -1,11 +1,9 @@
-from copy import deepcopy
 from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
 from eth_utils import to_canonical_address
 
-from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
@@ -18,7 +16,6 @@ from raiden.ui.startup import (
     load_deployment_addresses_from_contracts,
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
-    setup_environment,
 )
 from raiden.utils.typing import Address, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
@@ -62,18 +59,6 @@ def test_check_network_id_raises_with_mismatching_ids():
 def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
     check_ethereum_network_id(netid, MockWeb3(netid))
-
-
-def test_setup_environment():
-    # Test that setting development works
-    config = deepcopy(App.DEFAULT_CONFIG)
-    setup_environment(config, Environment.DEVELOPMENT)
-    assert config["environment_type"] == Environment.DEVELOPMENT
-
-    # Test that setting production sets private rooms for Matrix
-    config = deepcopy(App.DEFAULT_CONFIG)
-    setup_environment(config, Environment.PRODUCTION)
-    assert config["environment_type"] == Environment.PRODUCTION
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:

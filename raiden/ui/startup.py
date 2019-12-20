@@ -149,14 +149,6 @@ class ServicesBundle:
             sys.exit(1)
 
 
-def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
-    """Sets the config depending on the environment type"""
-    # interpret the provided string argument
-    config["environment_type"] = environment_type
-
-    print(f"Raiden is running in {environment_type.value.lower()} mode")
-
-
 def load_deployed_contracts_data(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
