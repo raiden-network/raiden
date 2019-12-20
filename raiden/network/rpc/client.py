@@ -450,15 +450,15 @@ class JSONRPCClient:
             raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
 
         address = privatekey_to_address(privkey)
-        address_checksumed = to_checksum_address(address)
+        address_checksummed = to_checksum_address(address)
 
         if eth_node is EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
-            available_nonce = parity_discover_next_available_nonce(web3, address_checksumed)
+            available_nonce = parity_discover_next_available_nonce(web3, address_checksummed)
 
         elif eth_node is EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
-            available_nonce = geth_discover_next_available_nonce(web3, address_checksumed)
+            available_nonce = geth_discover_next_available_nonce(web3, address_checksummed)
 
         self.eth_node = eth_node
         self.privkey = privkey
