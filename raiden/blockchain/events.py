@@ -210,7 +210,7 @@ def get_secret_registry_events(
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
     to_block: BlockSpecification = "latest",
 ) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of a NettingChannelContract. """
+    """ Helper to get all events of a SecretRegistry contract. """
 
     return get_contract_events(
         proxy_manager,
@@ -337,12 +337,11 @@ def filters_to_rpc(
         "fromBlock": from_block,
         "toBlock": to_block,
         "address": [event_filter.checksummed_contract_address for event_filter in filters],
-        # This interface exists to query multiple smart contracts
-        # with a single query, therefore topics cannot be
-        # supported. Because the address can be a types of smart
-        # contract, the topics are likely different. Additionally,
-        # not having topics here will result in a sligth
-        # performance gain (read documentation above for why).
+        # This interface exists to query multiple smart contracts with a single
+        # query, therefore topics cannot be supported. Because the address can
+        # be different types of smart contract, the topics are likely
+        # different. Additionally, not having topics here will result in a
+        # slight performance gain (read documentation above for why).
         # "topics": None,
     }
 
@@ -357,10 +356,6 @@ class BlockchainEvents:
         event_filters: List[SmartContractEvents],
         max_number_of_blocks_to_poll: BlockNumber,
     ) -> None:
-        address_to_filter: Dict[Address, SmartContractEvents] = {
-            event.contract_address: event for event in event_filters
-        }
-
         self.web3 = web3
         self.chain_id = chain_id
         self.last_fetched_block = last_fetched_block
@@ -389,7 +384,9 @@ class BlockchainEvents:
         # protect against these races (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         self._filters_lock = Semaphore()
-        self._address_to_filters = address_to_filter
+        self._address_to_filters: Dict[Address, SmartContractEvents] = {
+            event.contract_address: event for event in event_filters
+        }
 
     def fetch_logs_in_batch(self, target_block_number: BlockNumber) -> PollResult:
         """Poll the smart contract events for a limited number of blocks to
