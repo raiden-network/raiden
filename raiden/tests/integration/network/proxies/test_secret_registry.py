@@ -41,7 +41,7 @@ def secret_registry_batch_happy_path(
             secrethash=secrethash, block_identifier="latest"
         )
         msg = "Block number reported by the proxy and the event must match"
-        assert block == secret_registered["blockNumber"], msg
+        assert block == secret_registered["block_number"], msg
 
 
 def test_register_secret_happy_path(

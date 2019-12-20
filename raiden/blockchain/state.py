@@ -39,11 +39,13 @@ from raiden.utils.typing import (
     Address,
     BlockNumber,
     ChainID,
+    Dict,
     Locksroot,
     Optional,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 
 
@@ -220,7 +222,11 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState, event: DecodedEvent
+    chain_state: ChainState,
+    event: DecodedEvent,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data
@@ -238,20 +244,27 @@ def get_contractreceivechannelnew_data_from_event(
         # Not a channel which this node is a participant
         return None
 
-    token_network_registry = views.get_token_network_registry_by_token_network_address(
-        chain_state, token_network_address
-    )
-    assert token_network_registry is not None, "Token network registry missing"
+    pending_addresses = pendingtokenregistration.get(token_network_address)
 
-    token_network = views.get_token_network_by_address(
-        chain_state=chain_state, token_network_address=token_network_address
-    )
-    assert token_network is not None, "Token network missing"
+    if pending_addresses:
+        token_network_registry_address, token_address = pending_addresses
+    else:
+        token_network_registry = views.get_token_network_registry_by_token_network_address(
+            chain_state, token_network_address
+        )
+        assert token_network_registry is not None, "Token network registry missing"
+
+        token_network = views.get_token_network_by_address(
+            chain_state=chain_state, token_network_address=token_network_address
+        )
+        assert token_network is not None, "Token network missing"
+        token_network_registry_address = token_network_registry.address
+        token_address = token_network.token_address
 
     return NewChannelDetails(
         chain_id=event.chain_id,
-        token_network_registry_address=token_network_registry.address,
-        token_address=token_network.token_address,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
         token_network_address=token_network_address,
         our_address=our_address,
         partner_address=partner_address,
