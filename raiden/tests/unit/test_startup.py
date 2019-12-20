@@ -5,6 +5,7 @@ import pytest
 from eth_utils import to_canonical_address
 
 from raiden.constants import Environment, RoutingMode
+from raiden.exceptions import RaidenError
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
 from raiden.settings import ServiceConfig
@@ -49,10 +50,10 @@ PFS_INFO = PFSInfo(
 
 
 def test_check_network_id_raises_with_mismatching_ids():
-    check_ethereum_network_id(68, MockWeb3(68))
+    check_ethereum_network_id(ChainID(68), MockWeb3(68))
 
-    with pytest.raises(SystemExit):
-        check_ethereum_network_id(61, MockWeb3(68))
+    with pytest.raises(RaidenError):
+        check_ethereum_network_id(ChainID(61), MockWeb3(68))
 
 
 @pytest.mark.parametrize("netid", [1, 3, 4, 5, 627])
@@ -79,10 +80,8 @@ def test_setup_contracts():
 
     # Mainnet development -- NOT allowed
     config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = load_deployed_contracts_data(config, 1)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert service_contracts_in_data(contracts)
+    with pytest.raises(RaidenError):
+        contracts = load_deployed_contracts_data(config, 1)
 
     # Ropsten production
     config = {"environment_type": Environment.PRODUCTION}
@@ -320,7 +319,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
     contracts = load_deployed_contracts_data(config, network_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         deployed_addresses = load_deployment_addresses_from_contracts(contracts)
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
             services_bundle_from_contracts_deployment(
