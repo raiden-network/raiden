@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, TextIO
 from urllib.parse import urlparse
 
 import click
-import filelock
 import structlog
 from eth_utils import is_address, to_canonical_address
 from web3 import HTTPProvider, Web3
@@ -25,7 +24,6 @@ from raiden.constants import (
     RopstenForks,
     RoutingMode,
 )
-from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
@@ -362,40 +360,23 @@ def run_app(
         if services_bundle.monitoring_service is not None
         else None
     )
+    raiden_app = App(
+        config=config,
+        rpc_client=rpc_client,
+        proxy_manager=proxy_manager,
+        query_start_block=smart_contracts_start_at,
+        default_registry=raiden_bundle.token_network_registry,
+        default_secret_registry=raiden_bundle.secret_registry,
+        default_one_to_n_address=one_to_n_address,
+        default_service_registry=services_bundle.service_registry,
+        default_msc_address=monitoring_service_address,
+        transport=matrix_transport,
+        raiden_event_handler=event_handler,
+        message_handler=message_handler,
+        routing_mode=routing_mode,
+        user_deposit=services_bundle.user_deposit,
+    )
 
-    try:
-        raiden_app = App(
-            config=config,
-            rpc_client=rpc_client,
-            proxy_manager=proxy_manager,
-            query_start_block=smart_contracts_start_at,
-            default_registry=raiden_bundle.token_network_registry,
-            default_secret_registry=raiden_bundle.secret_registry,
-            default_one_to_n_address=one_to_n_address,
-            default_service_registry=services_bundle.service_registry,
-            default_msc_address=monitoring_service_address,
-            transport=matrix_transport,
-            raiden_event_handler=event_handler,
-            message_handler=message_handler,
-            routing_mode=routing_mode,
-            user_deposit=services_bundle.user_deposit,
-        )
-    except RaidenError as e:
-        click.secho(f"FATAL: {e}", fg="red")
-        sys.exit(1)
-
-    try:
-        raiden_app.start()
-    except RuntimeError as e:
-        click.secho(f"FATAL: {e}", fg="red")
-        sys.exit(1)
-    except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
-        click.secho(
-            f"FATAL: Another Raiden instance already running for account "
-            f"{to_checksum_address(address)} on network id {name_or_id}",
-            fg="red",
-        )
-        sys.exit(1)
+    raiden_app.start()
 
     return raiden_app
