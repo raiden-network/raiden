@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import click
 import structlog
 from web3 import Web3
 
