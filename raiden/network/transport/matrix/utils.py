@@ -684,24 +684,35 @@ def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:
     last_ex = None
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(server_url, *args, **kwargs)
-        try:
-            client.api._send("GET", "/versions", api_path="/_matrix/client")
-        except MatrixError as ex:
-            log.warning("Selected server not usable", server_url=server_url, _exception=ex)
-            last_ex = ex
-        else:
-            log.info(
-                "Using Matrix server",
-                server_url=server_url,
-                server_ident=client.api.server_ident,
-                average_rtt=rtt,
-            )
-            break
-    else:
-        raise TransportError(
-            "Unable to find a reachable Matrix server. Please check your network connectivity."
-        ) from last_ex
-    return client
+
+        retries = 3
+        while retries:
+            retries -= 1
+            try:
+                client.api._send("GET", "/versions", api_path="/_matrix/client")
+            except MatrixRequestError as ex:
+                log.warning(
+                    "Matrix server returned an error, retrying",
+                    server_url=server_url,
+                    _exception=ex,
+                )
+                last_ex = ex
+            except MatrixError as ex:
+                log.warning("Selected server not usable", server_url=server_url, _exception=ex)
+                last_ex = ex
+                retries = 0
+            else:
+                log.info(
+                    "Using Matrix server",
+                    server_url=server_url,
+                    server_ident=client.api.server_ident,
+                    average_rtt=rtt,
+                )
+                return client
+
+    raise TransportError(
+        "Unable to find a reachable Matrix server. Please check your network connectivity."
+    ) from last_ex
 
 
 def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
