@@ -35,6 +35,8 @@ from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    MatrixTransportConfig,
+    ServiceConfig,
 )
 from raiden.ui.checks import (
     check_ethereum_client_is_supported,
@@ -81,32 +83,29 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config: Dict[str, Any], routing_mode: RoutingMode) -> MatrixTransport:
-    if not config["transport"].available_servers:
+def setup_matrix(
+    transport_config: MatrixTransportConfig,
+    services_config: ServiceConfig,
+    environment_type: Environment,
+    routing_mode: RoutingMode,
+) -> MatrixTransport:
+    if not transport_config.available_servers:
         # fetch list of known servers from raiden-network/raiden-tranport repo
-        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config["environment_type"]]
+        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[environment_type]
         available_servers = get_matrix_servers(available_servers_url)
         log.debug("Fetching available matrix servers", available_servers=available_servers)
-        config["transport"].available_servers = available_servers
+        transport_config.available_servers = available_servers
 
     # Add PFS broadcast room when not in privat mode
     if routing_mode != RoutingMode.PRIVATE:
-        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"].broadcast_rooms:
-            config["transport"].broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
+        if PATH_FINDING_BROADCASTING_ROOM not in transport_config.broadcast_rooms:
+            transport_config.broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
-    if config["services"].monitoring_enabled is True:
-        config["transport"].broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
+    if services_config.monitoring_enabled is True:
+        transport_config.broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
 
-    try:
-        transport = MatrixTransport(
-            config=config["transport"], environment=config["environment_type"]
-        )
-    except RaidenError as ex:
-        click.secho(f"FATAL: {ex}", fg="red")
-        sys.exit(1)
-
-    return transport
+    return MatrixTransport(config=transport_config, environment=environment_type)
 
 
 def get_account_and_private_key(
@@ -327,7 +326,9 @@ def run_app(
     )
 
     if transport == "matrix":
-        matrix_transport = _setup_matrix(config, routing_mode)
+        matrix_transport = setup_matrix(
+            config["transport"], config["services"], environment_type, routing_mode
+        )
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
