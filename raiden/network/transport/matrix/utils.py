@@ -3,7 +3,7 @@ import re
 from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 from uuid import UUID
@@ -36,7 +36,7 @@ from raiden.network.transport.matrix.client import (
     User,
     node_address_from_userid,
 )
-from raiden.network.utils import get_http_rtt
+from raiden.network.utils import return_after_retries
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, Signature
@@ -645,16 +645,23 @@ def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     if not {urlparse(url).scheme for url in servers}.issubset({"http", "https"}):
         raise TransportError("Invalid server urls")
 
-    get_rtt_jobs = set(
-        gevent.spawn(lambda url: (url, get_http_rtt(url)), server_url) for server_url in servers
+    timeout = 1.0
+    rtt_greenlets = set(
+        gevent.spawn(return_after_retries, server_url, timeout) for server_url in servers
     )
-    # these tasks should never raise, returns None on errors
-    gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
-    sorted_servers: Dict[str, float] = dict(
-        sorted((job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1))
-    )
-    log.debug("Matrix homeserver RTTs", rtts=sorted_servers)
-    return sorted_servers
+
+    result = gevent.wait(rtt_greenlets, count=1)[0].get()
+    gevent.killall(rtt_greenlets)
+
+    if result is None:
+        raise TransportError(
+            f"No Matrix server available with good latency, requests takes more "
+            f"than {timeout} seconds."
+        )
+
+    fastest_url, rtt = result
+    log.debug("Fastest Matrix homeserver", fastest_url=fastest_url, rtt=rtt)
+    return {fastest_url: rtt}
 
 
 def make_client(servers: List[str], *args: Any, **kwargs: Any) -> GMatrixClient:

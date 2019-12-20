@@ -126,16 +126,18 @@ def test_validate_userid_signature():
 def test_sort_servers_closest(monkeypatch):
     cnt = 0
 
-    def random_or_none(url):  # pylint: disable=unused-argument
+    def random_or_none(url, timeout):  # pylint: disable=unused-argument
         nonlocal cnt
         cnt += 1
-        return random.random() if cnt % 3 else None
+        return (url, random.random() if cnt % 3 else None)
 
     mock_get_http_rtt = Mock(
-        spec=raiden.network.transport.matrix.utils.get_http_rtt, side_effect=random_or_none
+        spec=raiden.network.transport.matrix.utils.return_after_retries, side_effect=random_or_none
     )
 
-    monkeypatch.setattr(raiden.network.transport.matrix.utils, "get_http_rtt", mock_get_http_rtt)
+    monkeypatch.setattr(
+        raiden.network.transport.matrix.utils, "return_after_retries", mock_get_http_rtt
+    )
 
     with pytest.raises(TransportError):
         sort_servers_closest(["ftp://server1.com", "server2.com"])
@@ -160,10 +162,11 @@ def test_make_client(monkeypatch):
     # valid but unreachable servers
     with pytest.raises(TransportError), monkeypatch.context() as m:
         mock_get_http_rtt = Mock(
-            spec=raiden.network.transport.matrix.utils.get_http_rtt, side_effect=lambda url: None
+            spec=raiden.network.transport.matrix.utils.return_after_retries,
+            side_effect=lambda url, timeout: None,
         )
 
-        m.setattr(raiden.network.transport.matrix.utils, "get_http_rtt", mock_get_http_rtt)
+        m.setattr(raiden.network.transport.matrix.utils, "return_after_retries", mock_get_http_rtt)
 
         make_client([f"http://server{i}.xyz" for i in range(3)])
 
