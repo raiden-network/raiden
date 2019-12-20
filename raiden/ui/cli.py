@@ -14,6 +14,7 @@ from tempfile import NamedTemporaryFile, mkdtemp, mktemp
 from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
 
 import click
+import filelock
 import structlog
 from click import Context
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
@@ -75,7 +76,7 @@ from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
-from raiden_contracts.constants import NETWORKNAME_TO_ID
+from raiden_contracts.constants import ID_TO_NETWORKNAME, NETWORKNAME_TO_ID
 
 from .runners import EchoNodeRunner, MatrixRunner
 
@@ -665,6 +666,14 @@ def run(ctx: Context, **kwargs: Any) -> None:
             fg="red",
         )
         sys.exit(ReturnCode.PORT_ALREADY_IN_USE)
+    except filelock.Timeout:
+        name_or_id = ID_TO_NETWORKNAME.get(kwargs["network_id"], kwargs["network_id"])
+        click.secho(
+            f"FATAL: Another Raiden instance already running for account "
+            f"{to_checksum_address(address)} on network id {name_or_id}",
+            fg="red",
+        )
+        sys.exit(1)
     except Exception as ex:
         write_stack_trace(ex)
         sys.exit(1)
