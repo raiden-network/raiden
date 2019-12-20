@@ -1,4 +1,3 @@
-from enum import Enum
 from heapq import heappop, heappush
 from uuid import UUID
 
@@ -30,12 +29,6 @@ from raiden.utils.typing import (
 )
 
 log = structlog.get_logger(__name__)
-
-
-class ErrorDirectChannel(Enum):
-    NONE = None
-    CLOSED = "closed"
-    NO_CAPACITY = "no capacity"
 
 
 def get_best_routes(
@@ -87,13 +80,13 @@ def get_best_routes(
         ]:
             channel_state = token_network.channelidentifiers_to_channels[channel_id]
 
-            # direct channels dont have fees
+            # direct channels don't have fees
             payment_with_fee_amount = PaymentWithFeeAmount(amount)
             is_usable = channel.is_channel_usable_for_new_transfer(
                 channel_state, payment_with_fee_amount, None
             )
 
-            if is_usable is channel.IsChannelUsable.YES:
+            if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
                     route=[Address(from_address), Address(to_address)],
                     forward_channel_id=channel_state.canonical_identifier.channel_identifier,
