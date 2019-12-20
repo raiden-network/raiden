@@ -1,6 +1,5 @@
 import json
 import random
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum, unique
@@ -13,7 +12,7 @@ from eth_utils import decode_hex, encode_hex, to_canonical_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
-from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
+from raiden.exceptions import RaidenError, ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
 from raiden.utils.formatting import to_checksum_address
@@ -255,12 +254,11 @@ def configure_pfs_or_exit(
     assert pfs_url, msg
     if pfs_url == "auto":
         if service_registry is None:
-            click.secho(
+            raise RaidenError(
                 "Raiden was started with routing mode set to PFS, the pathfinding service address "
                 "set to 'auto' but no service registry address was given. Either specifically "
                 "provide a PFS address or provide a service registry address."
             )
-            sys.exit(1)
 
         block_hash = service_registry.client.get_confirmed_blockhash()
         maybe_pfs_url = get_random_pfs(
@@ -269,49 +267,44 @@ def configure_pfs_or_exit(
             pathfinding_max_fee=pathfinding_max_fee,
         )
         if maybe_pfs_url is None:
-            click.secho(
+            raise RaidenError(
                 "The Service Registry has no registered Pathfinding Service "
                 "and basic routing is not used."
             )
-            sys.exit(1)
         else:
             pfs_url = maybe_pfs_url
 
     try:
         pathfinding_service_info = get_pfs_info(pfs_url)
     except ServiceRequestFailed as e:
-        click.secho(
+        raise RaidenError(
             f"There was an error with the Pathfinding Service with address "
             f"{pfs_url}. Raiden will shut down. Please try a different Pathfinding Service. \n"
             f"Error Message: {str(e)}"
         )
-        sys.exit(1)
 
     if pathfinding_service_info.price > 0 and not pathfinding_service_info.payment_address:
-        click.secho(
+        raise RaidenError(
             f"The Pathfinding Service at {pfs_url} did not provide a payment address. "
             f"Raiden will shut down. Please try a different Pathfinding Service."
         )
-        sys.exit(1)
 
     if not node_network_id == pathfinding_service_info.chain_id:
-        click.secho(f"Invalid reply from Pathfinding Service {pfs_url}", fg="red")
-        click.secho(
+        raise RaidenError(
+            f"Invalid reply from Pathfinding Service {pfs_url}\n"
             f"Pathfinding Service is not operating on the same network "
             f"({pathfinding_service_info.chain_id}) as your node is ({node_network_id}).\n"
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
-        sys.exit(1)
 
     if pathfinding_service_info.token_network_registry_address != token_network_registry_address:
-        click.secho(f"Invalid reply from Pathfinding Service {pfs_url}", fg="red")
-        click.secho(
+        raise RaidenError(
+            f"Invalid reply from Pathfinding Service {pfs_url}"
             f"Pathfinding Service is not operating on the same Token Network Registry "
             f"({to_checksum_address(pathfinding_service_info.token_network_registry_address)})"
             f" as your node ({to_checksum_address(token_network_registry_address)}).\n"
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
-        sys.exit(1)
     click.secho(
         f"You have chosen the Pathfinding Service at {pfs_url}.\n"
         f"Operator: {pathfinding_service_info.operator}, "
@@ -336,11 +329,10 @@ def check_pfs_for_production(
     Should only be called in production mode.
     """
     if service_registry is None:
-        click.secho(
+        raise RaidenError(
             f"Cannot verify registration of Pathfinding Service because no Service Registry "
             f"is set. Raiden will shut down. Please select a Service Registry."
         )
-        sys.exit(1)
 
     pfs_registered = service_registry.has_valid_registration(
         block_identifier=service_registry.client.get_confirmed_blockhash(),
@@ -352,14 +344,13 @@ def check_pfs_for_production(
     )
     pfs_url_matches = registered_pfs_url == pfs_info.url
     if not (pfs_registered and pfs_url_matches):
-        click.secho(
+        raise RaidenError(
             f"The Pathfinding Service at {pfs_info.url} is not registered "
             f"with the Service Registry at {to_checksum_address(service_registry.address)} "
             f"or the registered URL ({registered_pfs_url}) doesn't match the given URL "
             f"{pfs_info.url}. "
             f"Raiden will shut down. Please select a registered Pathfinding Service."
         )
-        sys.exit(1)
 
 
 def get_last_iou(

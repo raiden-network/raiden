@@ -1,4 +1,3 @@
-import sys
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
@@ -6,7 +5,12 @@ import click
 from eth_utils import to_canonical_address
 
 from raiden.constants import Environment, RoutingMode
-from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractCodeMismatch
+from raiden.exceptions import (
+    AddressWithoutCode,
+    AddressWrongContract,
+    ContractCodeMismatch,
+    RaidenError,
+)
 from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
 from raiden.network.proxies.monitoring_service import MonitoringService
 from raiden.network.proxies.one_to_n import OneToN
@@ -116,37 +120,31 @@ class ServicesBundle:
             token_address == self.monitoring_service.token_address(block_identifier)
         )
         if not token_address_matches_monitoring_service:
-            msg = (
+            raise RaidenError(
                 f"The token used in the provided user deposit contract "
                 f"{user_deposit_address} does not match the one in the "
                 f"MonitoringService contract {monitoring_service_address}."
             )
-            click.secho(msg, fg="red")
-            sys.exit(1)
 
         token_address_matches_one_to_n = token_address == self.one_to_n.token_address(
             block_identifier
         )
         if not token_address_matches_one_to_n:
-            msg = (
+            raise RaidenError(
                 f"The token used in the provided user deposit contract "
                 f"{user_deposit_address} does not match the one in the OneToN "
                 f"service contract {monitoring_service_address}."
             )
-            click.secho(msg, fg="red")
-            sys.exit(1)
 
         token_address_matches_service_registry = (
             token_address == self.service_registry.token_address(block_identifier)
         )
         if not token_address_matches_service_registry:
-            msg = (
+            raise RaidenError(
                 f"The token used in the provided user deposit contract "
                 f"{user_deposit_address} does not match the one in the ServiceRegistry "
                 f"contract {monitoring_service_address}."
             )
-            click.secho(msg, fg="red")
-            sys.exit(1)
 
 
 def load_deployed_contracts_data(config: Dict[str, Any], network_id: ChainID) -> Dict[str, Any]:
@@ -177,24 +175,20 @@ def load_deployed_contracts_data(config: Dict[str, Any], network_id: ChainID) ->
 
 
 def handle_contract_code_mismatch(mismatch_exception: ContractCodeMismatch) -> None:
-    click.secho(f"{str(mismatch_exception)}. Please update your Raiden installation.", fg="red")
-    sys.exit(1)
+    raise RaidenError(f"{str(mismatch_exception)}. Please update your Raiden installation.")
 
 
 def handle_contract_no_code(name: str, address: Address) -> None:
     hex_addr = to_checksum_address(address)
-    click.secho(f"Error: Provided {name} {hex_addr} contract does not contain code", fg="red")
-    sys.exit(1)
+    raise RaidenError(f"Error: Provided {name} {hex_addr} contract does not contain code")
 
 
 def handle_contract_wrong_address(name: str, address: Address) -> None:
     hex_addr = to_checksum_address(address)
-    click.secho(
+    raise RaidenError(
         f"Error: Provided address {hex_addr} for {name} contract"
-        " does not contain expected code.",
-        fg="red",
+        " does not contain expected code."
     )
-    sys.exit(1)
 
 
 def load_deployment_addresses_from_contracts(contracts: Dict[str, Any]) -> DeploymentAddresses:
