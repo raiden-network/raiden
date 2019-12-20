@@ -11,7 +11,7 @@ import psutil
 import requests
 from requests import Response
 
-from raiden.utils.typing import Any, Iterator, Optional, Port
+from raiden.utils.typing import Any, Iterator, Optional, Port, Tuple
 
 LOOPBACK = "127.0.0.1"
 
@@ -97,21 +97,24 @@ def get_free_port(initial_port: Optional[int] = None) -> Iterator[Port]:
     return _unused_ports(initial_port=initial_port)
 
 
-def get_http_rtt(
-    url: str, samples: int = 3, method: str = "head", timeout: int = 1
-) -> Optional[float]:
+def return_after_retries(
+    url: str, timeout: float, samples: int = 3, method: str = "head"
+) -> Optional[Tuple[str, float]]:
+    """Return the `url` after `samples` successful requests.
+
+    Use this to sort the fastest servers, the vallues `samples` and `timeout`
+    must be equal for each `url`. The first `url` to return is the fastest
+    server.
     """
-    Determine the average HTTP RTT to `url` over the number of `samples`.
-    Returns `None` if the server is unreachable.
-    """
-    durations = []
+    durations = 0.0
     for _ in range(samples):
         try:
             response = requests.request(method, url, timeout=timeout)
             response.raise_for_status()
-            durations.append(response.elapsed.total_seconds())
+            durations += response.elapsed.total_seconds()
         except (OSError, requests.RequestException):
             return None
-        # Slight delay to avoid overloading
-        sleep(0.125)
-    return sum(durations) / samples
+
+        sleep(0.125)  # Slight delay to avoid overloading
+
+    return (url, durations / samples)
