@@ -206,7 +206,7 @@ def check_deployed_contracts_data(
         if name not in contracts:
             click.secho(
                 f"There are no known contract addresses for network id '{node_network_id}'. and "
-                f"environment type {environment_type}.",
+                f"environment type {environment_type} for contract {name}.",
                 fg="red",
             )
             sys.exit(1)
@@ -216,7 +216,7 @@ def check_pfs_configuration(pathfinding_service_address: str) -> None:
     if not pathfinding_service_address:
         click.secho(
             "Requested PFS routing mode but no specific pathfinding "
-            " service address is provided. Please provide it via either the "
+            "service address is provided. Please provide it via the "
             "--pathfinding-service-address "
             "argument",
             fg="red",
