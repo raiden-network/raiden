@@ -64,7 +64,7 @@ pysha3==1.0.2
 pytoml==0.1.20
 pytz==2019.1              # via flask-restful
 raiden-contracts==0.33.3
-raiden-webui==0.10.4
+raiden-webui==0.11.0
 requests==2.22.0
 rlp==1.1.0                # via eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via py-geth, py-solc
