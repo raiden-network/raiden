@@ -1,8 +1,8 @@
 import structlog
-from eth_utils import decode_hex, is_binary_address, to_canonical_address
+from eth_utils import decode_hex, is_binary_address
 
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.utils.typing import Address, BlockSpecification, OneToNAddress, TokenAddress
+from raiden.utils.typing import Address, OneToNAddress
 from raiden_contracts.constants import CONTRACT_ONE_TO_N
 from raiden_contracts.contract_manager import ContractManager
 
@@ -24,9 +24,7 @@ class OneToN:
             client=jsonrpc_client,
             address=Address(one_to_n_address),
             contract_name=CONTRACT_ONE_TO_N,
-            expected_code=decode_hex(
-                contract_manager.get_runtime_hexcode(CONTRACT_ONE_TO_N)
-            ),
+            expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_ONE_TO_N)),
         )
 
         proxy = jsonrpc_client.new_contract_proxy(
