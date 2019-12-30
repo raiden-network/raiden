@@ -126,16 +126,6 @@ class ServicesBundle:
                 f"MonitoringService contract {monitoring_service_address}."
             )
 
-        token_address_matches_one_to_n = token_address == self.one_to_n.token_address(
-            block_identifier
-        )
-        if not token_address_matches_one_to_n:
-            raise RaidenError(
-                f"The token used in the provided user deposit contract "
-                f"{user_deposit_address} does not match the one in the OneToN "
-                f"service contract {monitoring_service_address}."
-            )
-
         token_address_matches_service_registry = (
             token_address == self.service_registry.token_address(block_identifier)
         )
