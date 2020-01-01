@@ -152,7 +152,11 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     if parsed_eth_rpc_endpoint.scheme:
         return eth_rpc_endpoint
 
-    return f"http://{eth_rpc_endpoint}"
+    scheme = "http://"
+    if eth_rpc_endpoint.startswith("//"):
+        scheme = "http:"
+
+    return f"{scheme}{eth_rpc_endpoint}"
 
 
 def run_app(
