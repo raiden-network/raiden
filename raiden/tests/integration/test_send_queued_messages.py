@@ -24,7 +24,6 @@ from raiden.utils.typing import BlockNumber, PaymentID, TokenAmount
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.skip("Issue: #4312")
 def test_send_queued_messages(  # pylint: disable=unused-argument
     raiden_network, deposit, token_addresses, network_wait
 ):

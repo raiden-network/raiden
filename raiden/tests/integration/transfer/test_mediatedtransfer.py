@@ -245,7 +245,7 @@ def test_mediated_transfer_with_entire_deposit(
         )
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4804")
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4694")
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])

@@ -53,7 +53,6 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5195")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
