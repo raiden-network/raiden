@@ -398,15 +398,16 @@ class ConnectionManager:  # pragma: no unittest
             if channel_state not in funded_channels
         ]
         possible_new_partners = self._find_new_partners()
-        if possible_new_partners == 0:
+        if not possible_new_partners:
             return False
 
         # if we already met our target, break
         if len(funded_channels) >= self.initial_channel_target:
             return False
+
         # if we didn't, but there's no nonfunded channels and no available partners
         # it means the network is smaller than our target, so we should also break
-        if not nonfunded_channels and possible_new_partners == 0:
+        if not nonfunded_channels and not possible_new_partners:
             return False
 
         n_to_join = self.initial_channel_target - len(funded_channels)
