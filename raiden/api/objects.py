@@ -30,3 +30,10 @@ class PartnersPerToken:
     def __init__(self, partner_address, channel):
         self.partner_address = partner_address
         self.channel = channel
+
+
+def useless_function():
+    print("This is useless.")
+    print("But also not covered by any tests.")
+    print("So the PR introducing it ")
+    print("will have very low patch coverage.")
