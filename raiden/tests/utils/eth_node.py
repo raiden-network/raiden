@@ -53,13 +53,11 @@ class AccountDescription(NamedTuple):
 
 
 class GenesisDescription(NamedTuple):
-    """Genesis configuration for a geth PoA private chain.
+    """ Genesis configuration for a geth PoA private chain.
 
     Args:
         prefunded_accounts: iterable list of privatekeys whose
             corresponding accounts will have a premined balance available.
-        seal_address: Address of the ethereum account that can seal
-            blocks in the PoA chain.
         random_marker: A unique used to preventing interacting with the wrong
             chain.
         chain_id: The id of the private chain.
@@ -489,15 +487,12 @@ def run_private_blockchain(
 
     Args:
         web3: A Web3 instance used to check when the private chain is running.
-        accounts_to_fund: Accounts that will start with funds in
-            the private chain.
         eth_nodes: A list of geth node
             description, containing the details of each node of the private
             chain.
         base_datadir: Directory used to store the geth databases.
         log_dir: Directory used to store the geth logs.
         verbosity: Verbosity used by the geth nodes.
-        random_marker: A random marked used to identify the private chain.
     """
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 

@@ -33,7 +33,6 @@ def web3(
     private_keys,
     account_genesis_eth_balance,
     random_marker,
-    request,
     tmpdir,
     chain_id,
     logs_storage,
