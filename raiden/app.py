@@ -1,6 +1,6 @@
 import structlog
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
+from raiden.constants import RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.message_handler import MessageHandler
 from raiden.network.proxies.proxy_manager import ProxyManager
@@ -12,55 +12,14 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
-from raiden.settings import (
-    DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
-    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    DEFAULT_REVEAL_TIMEOUT,
-    DEFAULT_SETTLE_TIMEOUT,
-    DEFAULT_SHUTDOWN_TIMEOUT,
-    DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
-    DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-    RAIDEN_CONTRACT_VERSION,
-    MatrixTransportConfig,
-    RaidenConfig,
-    ServiceConfig,
-)
+from raiden.settings import RaidenConfig
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import BlockNumber, MonitoringServiceAddress, OneToNAddress, Optional
-from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)
 
 
 class App:  # pylint: disable=too-few-public-methods
-    DEFAULT_CONFIG = {
-        "reveal_timeout": DEFAULT_REVEAL_TIMEOUT,
-        "settle_timeout": DEFAULT_SETTLE_TIMEOUT,
-        "contracts_path": contracts_precompiled_path(RAIDEN_CONTRACT_VERSION),
-        "database_path": "",
-        "transport_type": "matrix",
-        "blockchain": {
-            "confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-            "query_interval": DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
-        },
-        "transport": MatrixTransportConfig(
-            # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
-            available_servers=[],
-            # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
-            #       and fix the conditional in `raiden.ui.app:_setup_matrix`
-            #       as well as the tests
-            broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
-            retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-            retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
-            server="auto",
-            server_name=None,
-        ),
-        "rpc": True,
-        "console": False,
-        "shutdown_timeout": DEFAULT_SHUTDOWN_TIMEOUT,
-        "services": ServiceConfig(),
-    }
-
     def __init__(
         self,
         config: RaidenConfig,
