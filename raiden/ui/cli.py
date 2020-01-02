@@ -26,6 +26,7 @@ from raiden.constants import (
     FLAT_MED_FEE_MIN,
     IMBALANCE_MED_FEE_MAX,
     IMBALANCE_MED_FEE_MIN,
+    PATH_FINDING_BROADCASTING_ROOM,
     PROPORTIONAL_MED_FEE_MAX,
     PROPORTIONAL_MED_FEE_MIN,
     Environment,
@@ -807,7 +808,8 @@ def smoketest(
             print_step=print_step,
             free_port_generator=free_port_generator,
             broadcast_rooms_aliases=[
-                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM)
+                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
+                make_room_alias(NETWORKNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
             ],
         )
 
@@ -840,7 +842,11 @@ def smoketest(
 
             args["api_address"] = f"localhost:{port}"
             args["environment_type"] = environment_type
-            args["extra_config"] = {"transport": {"available_servers": server_urls}}
+
+            # Matrix server
+            # TODO: do we need more than one here?
+            first_server = server_urls[0]
+            args["matrix_server"] = first_server[0]
             args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.LOCAL
             args["flat_fee"] = ()
