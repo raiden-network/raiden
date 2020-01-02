@@ -1,6 +1,7 @@
 import random
 
 import pytest
+import responses
 
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
@@ -120,3 +121,10 @@ def netting_channel_state(chain_state, token_network_state, token_network_regist
     token_network_state.channelidentifiers_to_channels[channel_id] = channel_state
 
     return channel_state
+
+
+@pytest.fixture
+def requests_responses():
+    """ Uses ``responses`` to provide easy requests tests. """
+    with responses.RequestsMock() as mock_responses:
+        yield mock_responses
