@@ -1,0 +1,25 @@
+codecov:
+  require_ci_to_pass: yes
+
+flags:
+  integration:
+    joined: true
+  unit:
+    joined: true
+
+coverage:
+  range: "75...100"
+  status:
+    project:
+      default:
+        target: 75%
+        threshold: 1%
+        flags:
+          - unit
+          - integration
+      unit:
+        target: 55%
+        threshold: 1%
+        flags:
+          - unit
+    patch: false
