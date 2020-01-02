@@ -1,8 +1,7 @@
-from datetime import timedelta
-from unittest.mock import Mock, patch
-
+import gevent
 import pytest
 import requests
+import responses
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, to_canonical_address
 
@@ -62,19 +61,34 @@ def test_recover_exception(signature, nested_exception):
     assert isinstance(exc_info.value.__context__, nested_exception)
 
 
-def test_get_http_rtt():
-    with patch.object(requests, "request", side_effect=requests.RequestException):
-        assert get_http_rtt(url="url", method="get") is None
+def test_get_http_rtt_happy(requests_responses):
+    """ Ensure get_http_rtt returns the average RTT over the number of samples. """
+    delay = iter([0.05, 0.05, 0.1])
 
-    seconds = iter([0.2, 0.2, 0.5])
+    def response(_):
+        gevent.sleep(next(delay))
+        return 200, {}, ""
 
-    def request_mock(method, url, **_):
-        assert method == "get"
-        assert url == "url"
-        return Mock(elapsed=timedelta(seconds=next(seconds)))
+    requests_responses.add_callback(responses.GET, "http://url", callback=response)
+    requests_responses.add_callback(responses.GET, "http://url", callback=response)
+    requests_responses.add_callback(responses.GET, "http://url", callback=response)
+    assert round(get_http_rtt(url="http://url", method="get", samples=3), 1) == 0.1
 
-    with patch.object(requests, "request", side_effect=request_mock):
-        assert get_http_rtt(url="url", method="get") == 0.3
+
+def test_get_http_rtt_ignore_failing(requests_responses):
+    """ Ensure get_http_rtt ignores failing servers. """
+
+    # RequestException (e.g. DNS not resolvable, server not reachable)
+    requests_responses.add(responses.GET, "http://url1", body=requests.RequestException())
+    assert get_http_rtt(url="http://url1", method="get") is None
+
+    # Server misconfigured
+    requests_responses.add(responses.GET, "http://url2", status=404)
+    assert get_http_rtt(url="http://url2", method="get") is None
+
+    # Internal server error
+    requests_responses.add(responses.GET, "http://url3", status=500)
+    assert get_http_rtt(url="http://url3", method="get") is None
 
 
 def test_pack_data():

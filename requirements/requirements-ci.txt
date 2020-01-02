@@ -144,6 +144,7 @@ raiden-webui==0.11.0
 readme-renderer==24.0
 releases==1.6.1
 requests==2.22.0
+responses==0.10.9
 rlp==1.1.0
 s3cmd==2.0.2
 semantic-version==2.6.0
@@ -185,4 +186,4 @@ zipp==0.5.1
 zope.interface==4.6.0
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==42.0.2        # via ipython, jsonschema, pyhamcrest, pyinstaller, sphinx, zope.interface
+# setuptools==44.0.0        # via ipython, jsonschema, pyhamcrest, pyinstaller, sphinx, zope.interface

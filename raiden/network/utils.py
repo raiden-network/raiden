@@ -107,9 +107,9 @@ def get_http_rtt(
     durations = []
     for _ in range(samples):
         try:
-            durations.append(
-                requests.request(method, url, timeout=timeout).elapsed.total_seconds()
-            )
+            response = requests.request(method, url, timeout=timeout)
+            response.raise_for_status()
+            durations.append(response.elapsed.total_seconds())
         except (OSError, requests.RequestException):
             return None
         # Slight delay to avoid overloading
