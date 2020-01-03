@@ -166,7 +166,7 @@ class ConnectionManager:  # pragma: no unittest
                 views.state_from_raiden(self.raiden), self.registry_address, self.token_address
             )
 
-            if not qty_network_channels:
+            if qty_network_channels == 0:
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
@@ -398,8 +398,6 @@ class ConnectionManager:  # pragma: no unittest
             if channel_state not in funded_channels
         ]
         possible_new_partners = self._find_new_partners()
-        if not possible_new_partners:
-            return False
 
         # if we already met our target, break
         if len(funded_channels) >= self.initial_channel_target:
