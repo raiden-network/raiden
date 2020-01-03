@@ -75,8 +75,8 @@ def test_participant_selection(raiden_network, token_addresses):
     registry_address = raiden_network[0].raiden.default_registry.address
     one_to_n_address = raiden_network[0].raiden.default_one_to_n_address
     token_address = token_addresses[0]
-
-    # connect the first node (will register the token if necessary)
+    # connect the first node - this will register the token and open the first channel
+    # Since there is no other nodes available to connect to this call will do nothing more
     RaidenAPI(raiden_network[0].raiden).token_network_connect(
         registry_address=registry_address, token_address=token_address, funds=TokenAmount(100)
     )
@@ -101,12 +101,12 @@ def test_participant_selection(raiden_network, token_addresses):
             joinable_funds_target=-1,
         )
 
-    # connect the other nodes
+    # Make all nodes connect
     connect_greenlets = [
         gevent.spawn(
             RaidenAPI(app.raiden).token_network_connect, registry_address, token_address, 100
         )
-        for app in raiden_network[1:]
+        for app in raiden_network
     ]
     gevent.wait(connect_greenlets)
 
