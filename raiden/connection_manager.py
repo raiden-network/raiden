@@ -405,7 +405,7 @@ class ConnectionManager:  # pragma: no unittest
 
         # if we didn't, but there's no nonfunded channels and no available partners
         # it means the network is smaller than our target, so we should also break
-        if not nonfunded_channels and not possible_new_partners:
+        if len(nonfunded_channels) == 0 and len(possible_new_partners) == 0:
             return False
 
         n_to_join = self.initial_channel_target - len(funded_channels)
