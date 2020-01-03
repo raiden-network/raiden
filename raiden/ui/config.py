@@ -42,11 +42,6 @@ def _clean_non_serializables(data: Dict) -> Dict:
     return copy
 
 
-def dump_config(config: Dict) -> None:
-    print(pytoml.dumps({"configs": _clean_non_serializables(config)}))
-    print()
-
-
 def dump_cmd_options(options: Dict) -> None:
     print(pytoml.dumps({"options": _clean_non_serializables(options)}))
     print()
