@@ -101,12 +101,12 @@ def test_participant_selection(raiden_network, token_addresses):
             joinable_funds_target=-1,
         )
 
-    # Make all nodes connect
+    # Call the connect endpoint for all but the first node
     connect_greenlets = [
         gevent.spawn(
             RaidenAPI(app.raiden).token_network_connect, registry_address, token_address, 100
         )
-        for app in raiden_network
+        for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
 
