@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
+import pickle
 import time
-from copy import deepcopy
 from dataclasses import dataclass, field
 
 import structlog
@@ -260,7 +260,7 @@ class StateManager(Generic[ST]):
         # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
         before_copy = time.time()
-        next_state = deepcopy(self.current_state)
+        next_state = pickle.loads(pickle.dumps(self.current_state, pickle.HIGHEST_PROTOCOL))
         log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
 
         # Update the current state by applying the state changes
