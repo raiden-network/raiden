@@ -1,7 +1,9 @@
 # pylint: disable=too-few-public-methods
+import time
 from copy import deepcopy
 from dataclasses import dataclass, field
 
+import structlog
 from eth_utils import to_hex
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
@@ -39,6 +41,8 @@ from raiden.utils.typing import (
     TypeVar,
     typecheck,
 )
+
+log = structlog.get_logger(__name__)
 
 # Quick overview
 # --------------
@@ -255,7 +259,9 @@ class StateManager(Generic[ST]):
 
         # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
+        before_copy = time.time()
         next_state = deepcopy(self.current_state)
+        log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
 
         # Update the current state by applying the state changes
         events: List[List[Event]] = list()
