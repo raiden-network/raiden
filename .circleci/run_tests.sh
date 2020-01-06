@@ -24,7 +24,7 @@ dormant_timeout=570
 # raiden/tests/conftest.py::auto_enable_gevent_monitoring_signal
 dormant_signal=SIGUSR1
 
-./tools/kill_if_no_output.py \
+./.circleci/kill_if_no_output.py \
     --dormant-timeout=${dormant_timeout} \
     --dormant-signal=${dormant_signal} \
     --kill-timeout=15 \
