@@ -14,7 +14,6 @@ from raiden.constants import (
     Environment,
 )
 from raiden.exceptions import EthNodeInterfaceError, RaidenError
-from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
@@ -202,8 +201,8 @@ def check_pfs_configuration(pathfinding_service_address: str) -> None:
         )
 
 
-def check_synced(proxy_manager: ProxyManager) -> None:
-    network_id = ChainID(int(proxy_manager.client.web3.version.network))
+def check_synced(rpc_client: JSONRPCClient) -> None:
+    network_id = ChainID(int(rpc_client.web3.version.network))
     network_name = ID_TO_NETWORKNAME.get(network_id)
 
     if network_name is None:
@@ -217,4 +216,6 @@ def check_synced(proxy_manager: ProxyManager) -> None:
     url = ETHERSCAN_API.format(
         network=network_name if network_id != 1 else "api", action="eth_blockNumber"
     )
-    wait_for_sync(proxy_manager, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3)
+    wait_for_sync(
+        rpc_client=rpc_client, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3
+    )
