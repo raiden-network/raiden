@@ -114,7 +114,7 @@ def raiden_chain(
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=confirmed_block)
+    blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     parallel_start_apps(raiden_apps)
 
@@ -234,7 +234,7 @@ def raiden_network(
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=confirmed_block)
+    blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     if start_raiden_apps:
         parallel_start_apps(raiden_apps)

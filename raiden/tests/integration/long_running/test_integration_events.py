@@ -390,7 +390,7 @@ def test_query_events(
     assert must_have_event(all_netting_channel_events, closed_event)
 
     settle_expiration = app0.raiden.rpc_client.block_number() + settle_timeout + 5
-    app0.raiden.proxy_manager.wait_until_block(target_block_number=settle_expiration)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
         proxy_manager=app0.raiden.proxy_manager,
@@ -471,7 +471,7 @@ def test_secret_revealed_on_chain(
         + settle_timeout
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    app0.raiden.proxy_manager.wait_until_block(target_block_number=settle_expiration)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     # TODO:
     # - assert on the transferred amounts on-chain (for settle and unlock)

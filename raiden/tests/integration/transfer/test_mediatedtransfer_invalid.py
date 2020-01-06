@@ -252,7 +252,7 @@ def test_received_lockedtransfer_closedchannel(
 
     RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
 
-    app0.raiden.proxy_manager.wait_until_block(
+    app0.raiden.rpc_client.wait_until_block(
         target_block_number=app0.raiden.rpc_client.block_number() + 1
     )
 

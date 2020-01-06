@@ -761,3 +761,14 @@ class JSONRPCClient:
             return False
 
         return True
+
+    def wait_until_block(
+        self, target_block_number: BlockNumber, retry_timeout: float = 0.5
+    ) -> BlockNumber:
+        current_block = self.block_number()
+
+        while current_block < target_block_number:
+            current_block = self.block_number()
+            gevent.sleep(retry_timeout)
+
+        return current_block

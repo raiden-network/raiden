@@ -743,7 +743,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     secrethash = sha256_secrethash(secret)
     target_task = chain_state.payment_mapping.secrethashes_to_task[secrethash]
     lock_expiration = target_task.target_state.transfer.lock.expiration  # type: ignore
-    app1.raiden.proxy_manager.wait_until_block(target_block_number=lock_expiration)
+    app1.raiden.proxy_manager.client.wait_until_block(target_block_number=lock_expiration)
 
     assert app1.raiden.default_secret_registry.is_secret_registered(
         secrethash=secrethash, block_identifier="latest"
@@ -805,7 +805,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
     assert attack_transfer
-    app2.raiden.proxy_manager.wait_until_block(
+    app2.raiden.rpc_client.wait_until_block(
         target_block_number=attack_transfer.lock.expiration - 1
     )
 
@@ -820,9 +820,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # claim the token from the channel A1 - H
 
     # the attacker settles the contract
-    app2proxymanager = app2.raiden.proxy_manager
-    app2proxymanager.wait_until_block(
-        target_block_number=app2proxymanager.client.block_number() + 1
+    app2.raiden.rpc_client.wait_until_block(
+        target_block_number=app2.raiden.rpc_client.block_number() + 1
     )
 
     attack_channel.netting_channel.settle(token, attack_contract)
@@ -841,9 +840,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # locked transfer between H-A2 than A1-H. For A2 to acquire the token
     # it needs to make the secret public in the blockchain so it publishes the
     # secret through an event and the Hub is able to require its funds
-    app1proxymanager = app1.raiden.proxy_manager
-    app1proxymanager.wait_until_block(
-        target_block_number=app1proxymanager.client.block_number() + 1
+    app1.raiden.rpc_client.wait_until_block(
+        target_block_number=app1.raiden.rpc_client.block_number() + 1
     )
 
     # XXX: verify that the Hub has found the secret, close and settle the channel

@@ -56,7 +56,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     target_block_num = (
         app0.raiden.rpc_client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     )
-    app0.raiden.proxy_manager.wait_until_block(target_block_num)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_num)
 
     latest_block = app0.raiden.rpc_client.get_block(block_identifier="latest")
     app0.raiden._callback_new_block(latest_block=latest_block)
@@ -179,7 +179,7 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
         blockchain_services.proxy_manager.client.block_number()
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=target_block_num)
+    blockchain_services.proxy_manager.client.wait_until_block(target_block_number=target_block_num)
 
     # This is a bit brittle, it calls the same steps as `start` would do
     app0.raiden._initialize_wal()

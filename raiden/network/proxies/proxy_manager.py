@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import gevent
 from eth_utils import decode_hex, is_binary_address
 from gevent.lock import Semaphore
 
@@ -105,15 +104,6 @@ class ProxyManager:
         self._user_deposit_creation_lock = Semaphore()
         self._monitoring_service_creation_lock = Semaphore()
         self._one_to_n_creation_lock = Semaphore()
-
-    def wait_until_block(self, target_block_number: BlockNumber) -> BlockNumber:
-        current_block = self.client.block_number()
-
-        while current_block < target_block_number:
-            current_block = self.client.block_number()
-            gevent.sleep(0.5)
-
-        return current_block
 
     def token(self, token_address: TokenAddress) -> Token:
         """ Return a proxy to interact with a token. """

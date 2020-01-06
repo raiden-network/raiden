@@ -65,15 +65,7 @@ def test_register_secret_happy_path(
         secrethash=secrethash_unregistered, block_identifier="latest"
     ), "Test setup is invalid, secret must be unknown"
 
-    proxy_manager = ProxyManager(
-        rpc_client=secret_registry_proxy.client,
-        contract_manager=contract_manager,
-        metadata=ProxyManagerMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
-            filters_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
-    proxy_manager.wait_until_block(BlockNumber(STATE_PRUNING_AFTER_BLOCKS + 1))
+    secret_registry_proxy.client.wait_until_block(BlockNumber(STATE_PRUNING_AFTER_BLOCKS + 1))
 
     with pytest.raises(NoStateForBlockIdentifier):
         secret_registry_proxy.is_secret_registered(
@@ -82,6 +74,14 @@ def test_register_secret_happy_path(
 
     secret_registry_proxy.register_secret(secret=secret)
 
+    proxy_manager = ProxyManager(
+        rpc_client=secret_registry_proxy.client,
+        contract_manager=contract_manager,
+        metadata=ProxyManagerMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
+    )
     logs = get_secret_registry_events(
         proxy_manager=proxy_manager,
         secret_registry_address=secret_registry_proxy.address,
@@ -121,21 +121,13 @@ def test_register_secret_batch_with_pruned_block(
     secret_registry_proxy: SecretRegistry,
     web3: Web3,
     private_keys: List[PrivateKey],
-    contract_manager: ContractManager,
 ) -> None:
     """Test secret registration with a pruned given block."""
-    c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_proxy_manager = ProxyManager(
-        rpc_client=c1_client,
-        contract_manager=contract_manager,
-        metadata=ProxyManagerMetadata(
-            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
-            filters_start_at=GENESIS_BLOCK_NUMBER,
-        ),
-    )
+    rpc_client = JSONRPCClient(web3, private_keys[1])
+
     # Now wait until this block becomes pruned
-    pruned_number = c1_proxy_manager.client.block_number()
-    c1_proxy_manager.wait_until_block(
+    pruned_number = rpc_client.block_number()
+    rpc_client.wait_until_block(
         target_block_number=BlockNumber(pruned_number + STATE_PRUNING_AFTER_BLOCKS)
     )
     secret_registry_batch_happy_path(proxy_manager, secret_registry_proxy)
