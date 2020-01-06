@@ -39,9 +39,9 @@ def test_payment_channel_proxy_basics(
     token_network_address = token_network_proxy.address
     partner = privatekey_to_address(private_keys[0])
 
-    client = JSONRPCClient(web3, private_keys[1])
+    rpc_client = JSONRPCClient(web3, private_keys[1])
     proxy_manager = ProxyManager(
-        rpc_client=client,
+        rpc_client=rpc_client,
         contract_manager=contract_manager,
         metadata=ProxyManagerMetadata(
             token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
@@ -69,8 +69,8 @@ def test_payment_channel_proxy_basics(
 
     # Test deposit
     initial_token_balance = TokenAmount(100)
-    token_proxy.transfer(client.address, initial_token_balance)
-    assert token_proxy.balance_of(client.address) == initial_token_balance
+    token_proxy.transfer(rpc_client.address, initial_token_balance)
+    assert token_proxy.balance_of(rpc_client.address) == initial_token_balance
     assert token_proxy.balance_of(partner) == 0
     channel_proxy_1.set_total_deposit(total_deposit=TokenAmount(10), block_identifier="latest")
 
@@ -124,8 +124,8 @@ def test_payment_channel_proxy_basics(
     # update transfer -- we need to wait on +1 since we use the latest block on parity for
     # estimate gas and at the time the latest block is the settle timeout block.
     # More info: https://github.com/raiden-network/raiden/pull/3699#discussion_r270477227
-    proxy_manager.wait_until_block(
-        target_block_number=BlockNumber(client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
+    rpc_client.wait_until_block(
+        target_block_number=BlockNumber(rpc_client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
     )
 
     channel_proxy_1.settle(
