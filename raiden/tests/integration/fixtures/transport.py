@@ -7,8 +7,9 @@ from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.fixtures.variables import TransportProtocol
-from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
-from raiden.utils.typing import Optional
+from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
+from raiden.utils.http import HTTPExecutor
+from raiden.utils.typing import Iterable, Optional, Tuple
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +19,7 @@ def synapse_config_generator():
 
 
 @pytest.fixture
-def matrix_server_count():
+def matrix_server_count() -> int:
     return 1
 
 
@@ -31,9 +32,9 @@ def local_matrix_servers_with_executor(
     port_generator,
     broadcast_rooms,
     chain_id,
-):
+) -> Iterable[List[Tuple[ParsedURL, HTTPExecutor]]]:
     if transport_protocol is not TransportProtocol.MATRIX:
-        yield [None]
+        yield []
         return
 
     broadcast_rooms_aliases = [
@@ -52,7 +53,9 @@ def local_matrix_servers_with_executor(
 
 
 @pytest.fixture
-def local_matrix_servers(local_matrix_servers_with_executor):
+def local_matrix_servers(
+    local_matrix_servers_with_executor: List[Tuple[ParsedURL, HTTPExecutor]]
+) -> Iterable[List[ParsedURL]]:
     yield [url for url, _ in local_matrix_servers_with_executor]
 
 
@@ -63,13 +66,15 @@ def broadcast_rooms() -> List[str]:
 
 @pytest.fixture
 def matrix_transports(
-    local_matrix_servers,
-    retries_before_backoff,
-    retry_interval,
-    number_of_transports,
-    broadcast_rooms,
-):
+    local_matrix_servers: List[ParsedURL],
+    retries_before_backoff: int,
+    retry_interval: float,
+    number_of_transports: int,
+    broadcast_rooms: List[str],
+) -> Iterable[List[MatrixTransport]]:
     transports = []
+    local_matrix_servers_str = [str(server) for server in local_matrix_servers]
+
     for transport_index in range(number_of_transports):
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
@@ -80,7 +85,7 @@ def matrix_transports(
                     retry_interval=retry_interval,
                     server=server,
                     server_name=server.netloc,
-                    available_servers=local_matrix_servers,
+                    available_servers=local_matrix_servers_str,
                 ),
                 environment=Environment.DEVELOPMENT,
             )
