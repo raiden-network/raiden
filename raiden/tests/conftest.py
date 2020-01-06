@@ -131,7 +131,7 @@ def check_geth_version_for_tests(blockchain_type):
     ).communicate()
     supported, _, our_version = is_supported_client(geth_version_string.decode())
     if not supported:
-        sys.exit(
+        pytest.exit(
             f"You are trying to run tests with an unsupported GETH version. "
             f"Your Version: {our_version} "
             f"Min Supported Version {LOWEST_SUPPORTED_GETH_VERSION} "
@@ -149,7 +149,7 @@ def check_parity_version_for_tests(blockchain_type):
     ).communicate()
     supported, _, our_version = is_supported_client(parity_version_string.decode())
     if not supported:
-        sys.exit(
+        pytest.exit(
             f"You are trying to run tests with an unsupported PARITY version. "
             f"Your Version: {our_version} "
             f"Min Supported Version {LOWEST_SUPPORTED_PARITY_VERSION} "
