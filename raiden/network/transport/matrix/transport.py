@@ -18,7 +18,6 @@ from raiden.constants import EMPTY_SIGNATURE, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
-from raiden.messages.matrix import ToDevice
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
@@ -54,7 +53,6 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
-    MYPY_ANNOTATION,
     Address,
     AddressHex,
     Any,
@@ -339,7 +337,6 @@ class MatrixTransport(Runnable):
         )
 
         self._client.add_invite_listener(self._handle_invite)
-        self._client.add_listener(self._handle_to_device_message, event_type="to_device")
 
         self._health_lock = Semaphore()
         self._account_data_lock = Semaphore()
@@ -885,14 +882,6 @@ class MatrixTransport(Runnable):
 
         return bool(all_messages)
 
-    def _receive_to_device(self, to_device: ToDevice) -> None:
-        assert to_device.sender is not None, MYPY_ANNOTATION
-        self.log.debug(
-            "ToDevice message received",
-            sender=to_checksum_address(to_device.sender),
-            message=DictSerializer.serialize(to_device),
-        )
-
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
         if receiver not in self._address_to_retrier:
@@ -1281,73 +1270,3 @@ class MatrixTransport(Runnable):
             "network.raiden.rooms",  # back from cast in _set_room_id_for_address
             cast(Dict[str, Any], _address_to_room_ids),
         )
-
-    def send_to_device(self, address: Address, message: Message) -> None:
-        """ Sends send-to-device events to a all known devices of a peer without retries. """
-        user_ids = self._address_mgr.get_userids_for_address(address)
-
-        data = {user_id: {"*": MessageSerializer.serialize(message)} for user_id in user_ids}
-
-        return self._client.api.send_to_device("m.to_device_message", data)
-
-    def _handle_to_device_message(self, event: Dict[str, Any]) -> bool:
-        """
-        Handles to_device_message sent to us.
-        - validates peer_whitelisted
-        - validates userid_signature
-        Todo: Currently doesnt do anything but logging when a to device message is received.
-        """
-        sender_id = event["sender"]
-
-        if (
-            event["type"] != "m.to_device_message"
-            or self._stop_event.ready()
-            or sender_id == self._user_id
-        ):
-            # Ignore non-messages and our own messages
-            return False
-
-        user = self._client.get_user(sender_id)
-        self._displayname_cache.warm_users([user])
-
-        peer_address = validate_userid_signature(user)
-        if not peer_address:
-            self.log.debug(
-                "To_device_message from invalid user displayName signature", peer_user=user.user_id
-            )
-            return False
-
-        # don't proceed if user isn't whitelisted (yet)
-        if not self._address_mgr.is_address_known(peer_address):
-            # user not start_health_check'ed
-            self.log.debug(
-                "ToDevice Message from non-whitelisted peer - ignoring",
-                sender=user,
-                sender_address=to_checksum_address(peer_address),
-            )
-            return False
-
-        messages = validate_and_parse_message(event["content"], peer_address)
-
-        if not messages:
-            return False
-
-        self.log.debug(
-            "Incoming ToDevice Messages",
-            messages=messages,
-            sender=to_checksum_address(peer_address),
-            sender_user=user,
-        )
-
-        for message in messages:
-            if isinstance(message, ToDevice):
-                self._receive_to_device(message)
-            else:
-                log.warning(
-                    "Received Message is not of type ToDevice, invalid",
-                    message=redact_secret(DictSerializer.serialize(message)),
-                    peer_address=to_checksum_address(peer_address),
-                )
-                continue
-
-        return True

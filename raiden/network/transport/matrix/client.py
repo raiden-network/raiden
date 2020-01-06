@@ -188,32 +188,6 @@ class GMatrixHttpApi(MatrixHttpApi):
 
         return {}  # Just for mypy, this will never be reached
 
-    def send_to_device(
-        self, event_type: str, messages: Dict, txn_id: str = None
-    ) -> None:  # pylint: disable=unused-argument
-        started = time.time()
-        last_ex = None
-        for delay in self.retry_delay():
-            try:
-                with self._semaphore:
-                    return super().send_to_device(event_type, messages, txn_id=txn_id)
-            except (MatrixRequestError, MatrixHttpLibError) as ex:
-                # from MatrixRequestError, retry only 5xx http errors
-                if isinstance(ex, MatrixRequestError) and ex.code < 500:
-                    raise
-                if time.time() > started + self.retry_timeout:
-                    raise
-                last_ex = ex
-                log.debug(
-                    "Got http _send exception, waiting then retrying",
-                    wait_for=delay,
-                    _exception=ex,
-                )
-                gevent.sleep(delay)
-        else:
-            if last_ex:
-                raise last_ex
-
     def _record_server_ident(
         self, response: Response, *args: Any, **kwargs: Any  # pylint: disable=unused-argument
     ) -> None:
