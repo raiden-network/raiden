@@ -8,3 +8,6 @@ coverage:
         target: 55%
         flags: unit
     patch: no
+
+comment:
+  after_n_builds: 5  # only post github comment after all 5 coverage reports have been submitted
