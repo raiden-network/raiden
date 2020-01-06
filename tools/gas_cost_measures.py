@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from os import urandom
 
 # increase block gas limit

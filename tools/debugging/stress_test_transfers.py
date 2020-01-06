@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all()  # isort:skip # noqa
@@ -442,7 +442,7 @@ def run_stress_test(
 
     config = StressTestConfiguration(
         initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
-        concurrency=[10],
+        concurrency=[50],
         planners=[do_fifty_transfer_up_to],
         schedulers=[scheduler_preserve_order],
     )
