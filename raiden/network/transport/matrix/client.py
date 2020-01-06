@@ -208,7 +208,7 @@ class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
 
     sync_filter: str
-    sync_thread: Optional[Greenlet] = None
+    sync_worker: Optional[Greenlet] = None
     message_worker: Optional[Greenlet] = None
 
     def __init__(
@@ -231,7 +231,7 @@ class GMatrixClient(MatrixClient):
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
         self.response_queue = NotifyingQueue()
-        self.event_stop = Event()
+        self.stop_event = Event()
 
         super().__init__(
             base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
@@ -324,36 +324,36 @@ class GMatrixClient(MatrixClient):
             exception_handler: Optional exception handler function which can
                 be used to handle exceptions in the caller thread.
         """
-        assert not self.should_listen and self.sync_thread is None, "Already running"
+        assert not self.should_listen and self.sync_worker is None, "Already running"
         self.should_listen = True
 
-        self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
-        self.sync_thread.name = f"GMatrixClient.listen_forever user_id:{self.user_id}"
+        self.sync_worker = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
+        self.sync_worker.name = f"GMatrixClient._sync_worker user_id:{self.user_id}"
 
         self.message_worker = gevent.spawn(
-            self._handle_process_worker, self.response_queue, self.event_stop
+            self._handle_message, self.response_queue, self.stop_event
         )
-        self.message_worker.name = f"GMatrixClient._handle_process_worker user_id:{self.user_id}"
-        self.message_worker.link_exception(lambda g: self.sync_thread.kill(g.exception))
+        self.message_worker.name = f"GMatrixClient._message_worker user_id:{self.user_id}"
+        self.message_worker.link_exception(lambda g: self.sync_worker.kill(g.exception))
 
     def stop_listener_thread(self) -> None:
         """ Kills sync_thread greenlet before joining it """
         # when stopping, `kill` will cause the `self.api.sync` call in _sync
         # to raise a connection error. This flag will ensure it exits gracefully then
         self.should_listen = False
-        self.event_stop.set()
+        self.stop_event.set()
 
-        if self.sync_thread:
-            self.sync_thread.kill()
+        if self.sync_worker:
+            self.sync_worker.kill()
             log.debug(
                 "Waiting on sync greenlet",
                 node=node_address_from_userid(self.user_id),
                 user_id=self.user_id,
             )
-            exited = gevent.joinall({self.sync_thread}, timeout=SHUTDOWN_TIMEOUT, raise_error=True)
+            exited = gevent.joinall({self.sync_worker}, timeout=SHUTDOWN_TIMEOUT, raise_error=True)
             if not exited:
                 raise RuntimeError("Timeout waiting on sync greenlet during transport shutdown.")
-            self.sync_thread.get()
+            self.sync_worker.get()
 
         if self.message_worker is not None:
             log.debug(
@@ -373,7 +373,7 @@ class GMatrixClient(MatrixClient):
             node=node_address_from_userid(self.user_id),
             user_id=self.user_id,
         )
-        self.sync_thread = None
+        self.sync_worker = None
         self.message_worker = None
 
     def stop(self) -> None:
@@ -484,7 +484,7 @@ class GMatrixClient(MatrixClient):
         self.sync_token = response["next_batch"]
         self._sync_iteration += 1
 
-    def _handle_process_worker(self, response_queue: NotifyingQueue, event_stop: Event) -> None:
+    def _handle_message(self, response_queue: NotifyingQueue, stop_event: Event) -> None:
         """ Worker to process network messages from the asynchronous transport.
 
         Note that this worker will process the messages in the order of
@@ -493,7 +493,7 @@ class GMatrixClient(MatrixClient):
         layer has to implement retries to guarantee that a message is
         eventually processed. This introduces a cost in terms of latency.
         """
-        data_or_stop = event_first_of(response_queue, event_stop)
+        data_or_stop = event_first_of(response_queue, stop_event)
 
         while True:
             data_or_stop.wait()
@@ -510,7 +510,7 @@ class GMatrixClient(MatrixClient):
             # missed.
             data_or_stop.clear()
 
-            if event_stop.is_set():
+            if stop_event.is_set():
                 return
 
             # The queue is not empty at this point, so this won't raise Empty.
@@ -521,14 +521,14 @@ class GMatrixClient(MatrixClient):
             # latency.
             response: JSONResponse = response_queue.peek(block=False)
 
-            # TODO: Respect the `event_stop` in `_handle_response`. With this
-            # implementation if the event is set while `_handle_response` is
-            # executing, and the handler takes a long time, the process will
-            # take longer than necessary to exit.
+            # TODO: Respect the `stop_event` in `_handle_response`. With this
+            #   implementation if the event is set while `_handle_response` is
+            #   executing, and the handler takes a long time, the process will
+            #   take longer than necessary to exit.
             if response is not None:
                 self._handle_response(response)
 
-            # Pop up the processed message, if the process is killed right
+            # Pop the processed message, if the process is killed right
             # before this call, on the next transport start the same message
             # will be processed again, that is why this is at-least-once
             # semantics.

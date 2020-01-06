@@ -397,10 +397,14 @@ class MatrixTransport(Runnable):
                 self.greenlets.remove(greenlet)
 
         self._client.start_listener_thread(timeout_ms=self._config.sync_timeout)
-        assert isinstance(self._client.sync_thread, gevent.Greenlet)
-        self._client.sync_thread.link_exception(self.on_error)
-        self._client.sync_thread.link_value(on_success)
-        self.greenlets = [self._client.sync_thread]
+        assert isinstance(self._client.sync_worker, gevent.Greenlet)
+        self._client.sync_worker.link_exception(self.on_error)
+        self._client.sync_worker.link_value(on_success)
+
+        assert isinstance(self._client.message_worker, gevent.Greenlet)
+        self._client.message_worker.link_exception(self.on_error)
+        self._client.message_worker.link_value(on_success)
+        self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
@@ -664,7 +668,7 @@ class MatrixTransport(Runnable):
             "is executed, the listener for the inventory rooms must be set up "
             "before any messages can be processed."
         )
-        assert self._client.sync_thread is None, msg
+        assert self._client.sync_worker is None, msg
         assert self._client.message_worker is None, msg
 
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
