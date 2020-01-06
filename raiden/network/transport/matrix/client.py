@@ -485,12 +485,12 @@ class GMatrixClient(MatrixClient):
         self._sync_iteration += 1
 
     def _handle_process_worker(self, response_queue: NotifyingQueue, event_stop: Event) -> None:
-        """Worker to process network messages from the asynchronous transport.
+        """ Worker to process network messages from the asynchronous transport.
 
-        Note that his worker will process the messages in the order of
-        delivery, however, the underlying protocol may not guarantee that
+        Note that this worker will process the messages in the order of
+        delivery. However, the underlying protocol may not guarantee that
         messages are delivered in-order in which they were sent. The transport
-        layer has to implement retries to guarantee that a message will
+        layer has to implement retries to guarantee that a message is
         eventually processed. This introduces a cost in terms of latency.
         """
         data_or_stop = event_first_of(response_queue, event_stop)
@@ -501,7 +501,7 @@ class GMatrixClient(MatrixClient):
             # Clear the event's internal state for the next iteration.
             #
             # This *must* be done before any context switch, otherwise
-            # cuncurrent actions can be missed. Examples:
+            # concurrent actions can be missed. Examples:
             # - If a new element is added to the queue while `_handle_response`
             # is executing, and the `data_or_stop` is cleared after that
             # context-switch, then the new element will be missed.
@@ -517,7 +517,7 @@ class GMatrixClient(MatrixClient):
             #
             # Here `peek` is used to implement delivery at-least-once
             # semantics. At-most-once would also be acceptable because of
-            # message retries, however has the pontential of introducing
+            # message retries, however has the potential of introducing
             # latency.
             response: JSONResponse = response_queue.peek(block=False)
 
@@ -528,7 +528,7 @@ class GMatrixClient(MatrixClient):
             if response is not None:
                 self._handle_response(response)
 
-            # Pop up the processed message, if the process is kill right at
+            # Pop up the processed message, if the process is killed right
             # before this call, on the next transport start the same message
             # will be processed again, that is why this is at-least-once
             # semantics.
