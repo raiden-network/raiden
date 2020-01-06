@@ -24,6 +24,7 @@ from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias, my_place_or_yours
+from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConfig, ServiceConfig
 from raiden.tests.utils import factories
@@ -36,7 +37,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, List
+from raiden.utils.typing import Address, List, cast
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 TIMEOUT_MESSAGE_RECEIVE = 15
@@ -710,9 +711,14 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
-def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
+def test_matrix_invite_retry_with_offline_invitee(
+    matrix_transports: List[MatrixTransport]
+) -> None:
+    """The inviter should create the room and send the invite even if the
+    target node is offline.
+    """
+    raiden_service0: RaidenService = cast(RaidenService, MockRaidenService(None))
+    raiden_service1: RaidenService = cast(RaidenService, MockRaidenService(None))
 
     transport0, transport1 = matrix_transports
 
@@ -730,20 +736,18 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
         inviter_transport = transport1
         invitee_transport = transport0
 
-    inviter_transport.start(inviter_service, [], None)
+    # Initialize the invitee and stop it before the invite happens
     invitee_transport.start(invitee_service, [], None)
-
-    inviter_transport.start_health_check(invitee_service.address)
-    invitee_transport.start_health_check(inviter_service.address)
-
-    assert is_reachable(inviter_transport, invitee_service.address)
-    assert is_reachable(invitee_transport, inviter_service.address)
-
     invitee_transport.stop()
+
+    inviter_transport.start(inviter_service, [], None)
+    inviter_transport.start_health_check(invitee_service.address)
+
     wait_for_peer_unreachable(inviter_transport, invitee_service.address)
     assert not is_reachable(inviter_transport, invitee_service.address)
 
-    room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
+    room = inviter_transport._get_room_for_address(invitee_service.address)
+    assert room, "The inviter should have created the room, even if the invitee is offline."
 
     invitee_transport.start(invitee_service, [], None)
     invitee_transport.start_health_check(inviter_service.address)
@@ -751,7 +755,7 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
-                room_state0 = inviter_transport._client.api.get_room_state(room_id)
+                room_state0 = inviter_transport._client.api.get_room_state(room.room_id)
                 break
             except MatrixRequestError:
                 gevent.sleep(0.1)
@@ -761,7 +765,7 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
-                room_state1 = invitee_transport._client.api.get_room_state(room_id)
+                room_state1 = invitee_transport._client.api.get_room_state(room.room_id)
                 break
             except MatrixRequestError as ex:
                 print(ex, transport0._client.user_id, transport1._client.user_id)
@@ -769,12 +773,18 @@ def test_matrix_invite_retry_with_offline_invitee(matrix_transports):
 
     assert room_state1 is not None
 
+    assert is_reachable(inviter_transport, invitee_service.address)
+    assert is_reachable(invitee_transport, inviter_service.address)
+
 
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
-def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
+def test_matrix_invitee_receives_invite_on_restart(
+    matrix_transports: List[MatrixTransport]
+) -> None:
+    """The invitee should receive the invite, even if the inviter is offline."""
+    raiden_service0: RaidenService = cast(RaidenService, MockRaidenService(None))
+    raiden_service1: RaidenService = cast(RaidenService, MockRaidenService(None))
 
     transport0, transport1 = matrix_transports
 
@@ -792,33 +802,26 @@ def test_matrix_invitee_receives_invite_on_restart(matrix_transports):
         inviter_transport = transport1
         invitee_transport = transport0
 
-    inviter_transport.start(inviter_service, [], None)
+    # Initialize the invitee and stop it before the invite happens
     invitee_transport.start(invitee_service, [], None)
-
-    inviter_transport.start_health_check(invitee_service.address)
-    invitee_transport.start_health_check(inviter_service.address)
-
-    wait_for_peer_reachable(inviter_transport, invitee_service.address)
-    wait_for_peer_reachable(invitee_transport, inviter_service.address)
-
-    assert is_reachable(invitee_transport, inviter_service.address)
-    assert is_reachable(inviter_transport, invitee_service.address)
-
     invitee_transport.stop()
 
-    wait_for_peer_unreachable(inviter_transport, invitee_service.address)
-    assert not is_reachable(inviter_transport, invitee_service.address)
+    inviter_transport.start(inviter_service, [], None)
+    inviter_transport.start_health_check(invitee_service.address)
 
-    room_id = inviter_transport._get_room_for_address(invitee_service.address).room_id
+    room = inviter_transport._get_room_for_address(invitee_service.address)
+    assert room, "The inviter should have created the room, even if the invitee is offline."
+
+    # Now stop the inviter and check the invitee received the invite
+    inviter_transport.stop()
+
     invitee_transport.start(invitee_service, [], None)
     invitee_transport.start_health_check(inviter_service.address)
-
-    inviter_transport.stop()
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
-                room_state1 = invitee_transport._client.api.get_room_state(room_id)
+                room_state1 = invitee_transport._client.api.get_room_state(room.room_id)
                 break
             except MatrixRequestError:
                 gevent.sleep(0.1)

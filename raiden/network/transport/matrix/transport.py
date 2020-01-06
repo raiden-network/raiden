@@ -663,16 +663,7 @@ class MatrixTransport(Runnable):
             )
 
     def _initialize_inventory_rooms(self) -> None:
-        msg = (
-            "Fetching the inventory rooms requires the node to be logged in "
-            "with the Matrix server."
-        )
-        assert self._client.sync_token, msg
-
-        msg = (
-            "Fetching the inventory rooms requires the node to be logged in "
-            "with the Matrix server."
-        )
+        msg = "The inventory rooms can only be initialized after the first sync."
         assert self._client.sync_token, msg
 
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
