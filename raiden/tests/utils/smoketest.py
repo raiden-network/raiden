@@ -100,11 +100,10 @@ TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 def ensure_executable(cmd):
     """look for the given command and make sure it can be executed"""
     if not shutil.which(cmd):
-        print(
+        raise ValueError(
             "Error: unable to locate %s binary.\n"
             "Make sure it is installed and added to the PATH variable." % cmd
         )
-        sys.exit(1)
 
 
 def deploy_smoketest_contracts(
