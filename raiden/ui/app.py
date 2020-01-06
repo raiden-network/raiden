@@ -272,7 +272,7 @@ def run_app(
     )
 
     if sync_check:
-        check_synced(proxy_manager)
+        check_synced(rpc_client)
 
     # The user has the option to launch Raiden with a custom
     # user deposit contract address. This can be used to load
