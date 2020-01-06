@@ -255,6 +255,28 @@ class GMatrixClient(MatrixClient):
         # can remain constant over multiple loops (if no events occur).
         self.sync_iteration = 0
 
+        self._sync_filter_id: Optional[int] = None
+
+    def create_sync_filter(self, broadcast_rooms: Dict[str, Optional[Room]]) -> Optional[int]:
+        ignore_rooms = [room.room_id for room in broadcast_rooms.values() if room is not None]
+        filter_params = {
+            "room": {
+                # Filter out all room state events / messages from broadcast rooms
+                "not_rooms": ignore_rooms,
+                # Ignore "message recipts" from all rooms
+                "ephemeral": {"not_types": ["m.receipt"]},
+            },
+            # Get all presence updates
+            "presence": {"types": ["m.presence"]},
+        }
+        try:
+            # 0 is a valid filter ID
+            filter_id = self.api.create_filter(self.user_id, filter_params)
+        except MatrixRequestError:
+            log.error(f"Failed to create filter: {filter_params} for user {self.user_id}")
+            filter_id = None
+        return filter_id
+
     def listen_forever(
         self,
         timeout_ms: int = 20_000,

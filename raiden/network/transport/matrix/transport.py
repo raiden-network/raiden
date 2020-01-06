@@ -393,6 +393,8 @@ class MatrixTransport(Runnable):
         self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
 
+        self._client.create_sync_filter(self._broadcast_rooms)
+
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
