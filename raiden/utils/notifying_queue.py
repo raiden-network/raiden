@@ -61,3 +61,6 @@ class NotifyingQueue(Event):
         while not copy.empty():
             result.append(copy.get_nowait())
         return result
+
+    def __repr__(self) -> str:
+        return f"NotifyingQueue(num_items={len(self._queue)})"
