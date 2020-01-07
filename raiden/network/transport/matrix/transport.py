@@ -903,7 +903,7 @@ class MatrixTransport(Runnable):
 
         self._raiden_service.on_messages(all_messages)
 
-        return bool(all_messages)
+        return len(all_messages) > 0
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """

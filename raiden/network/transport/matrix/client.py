@@ -596,7 +596,8 @@ class GMatrixClient(MatrixClient):
             for event in sync_room["account_data"]["events"]:
                 room.account_data[event["type"]] = event["content"]
 
-        self.handle_messages_callback(all_messages)
+        if len(all_messages) > 0:
+            self.handle_messages_callback(all_messages)
 
         if first_sync:
             # Only update the local account data on first sync to avoid races.
