@@ -926,13 +926,20 @@ class RestAPI:  # pragma: no unittest
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
         result = []
+        chain_state = views.state_from_raiden(self.raiden_api.raiden)
         for event in service_result:
             if isinstance(event.wrapped_event, EventPaymentSentSuccess):
-                serialized_event = self.sent_success_payment_schema.dump(event)
+                serialized_event = self.sent_success_payment_schema.serialize(
+                    chain_state=chain_state, event=event.wrapped_event
+                )
             elif isinstance(event.wrapped_event, EventPaymentSentFailed):
-                serialized_event = self.failed_payment_schema.dump(event)
+                serialized_event = self.failed_payment_schema.serialize(
+                    chain_state=chain_state, event=event.wrapped_event
+                )
             elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
-                serialized_event = self.received_success_payment_schema.dump(event)
+                serialized_event = self.received_success_payment_schema.serialize(
+                    chain_state=chain_state, event=event.wrapped_event
+                )
             else:
                 log.warning(
                     "Unexpected event",
