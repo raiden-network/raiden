@@ -20,7 +20,7 @@ from raiden.transfer.architecture import (
     BalanceProofUnsignedState,
     TransferTask,
 )
-from raiden.transfer.events import SendMessageEvent
+from raiden.transfer.events import SendMessageEvent, SendRetriableMessageEvent
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
@@ -264,6 +264,11 @@ _native_to_marshmallow.update(
             allow_none=True,
         ),
         SendMessageEvent: CallablePolyField(
+            serialization_schema_selector=message_event_schema_serialization,
+            deserialization_schema_selector=message_event_schema_deserialization,
+            allow_none=True,
+        ),
+        SendRetriableMessageEvent: CallablePolyField(
             serialization_schema_selector=message_event_schema_serialization,
             deserialization_schema_selector=message_event_schema_deserialization,
             allow_none=True,

@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 
 from raiden.constants import EMPTY_SECRETHASH
-from raiden.transfer.architecture import Event, SendMessageEvent
+from raiden.transfer.architecture import Event, SendRetriableMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.secrethash import sha256_secrethash
@@ -32,13 +32,13 @@ def refund_from_sendmediated(
 
 
 @dataclass(frozen=True)
-class SendLockExpired(SendMessageEvent):
+class SendLockExpired(SendRetriableMessageEvent):
     balance_proof: BalanceProofUnsignedState
     secrethash: SecretHash
 
 
 @dataclass(frozen=True)
-class SendLockedTransfer(SendMessageEvent):
+class SendLockedTransfer(SendRetriableMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
 
     transfer: LockedTransferUnsignedState
@@ -53,7 +53,7 @@ class SendLockedTransfer(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendSecretReveal(SendMessageEvent):
+class SendSecretReveal(SendRetriableMessageEvent):
     """ Sends a SecretReveal to another node.
 
     This event is used once the secret is known locally and an action must be
@@ -91,7 +91,7 @@ class SendSecretReveal(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendUnlock(SendMessageEvent):
+class SendUnlock(SendRetriableMessageEvent):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to claim it.
 
@@ -121,7 +121,7 @@ class SendUnlock(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendSecretRequest(SendMessageEvent):
+class SendSecretRequest(SendRetriableMessageEvent):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
     """
@@ -133,7 +133,7 @@ class SendSecretRequest(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendRefundTransfer(SendMessageEvent):
+class SendRefundTransfer(SendRetriableMessageEvent):
     """ Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the recipient to
     the sender, allowing the sender to try a different route without the risk

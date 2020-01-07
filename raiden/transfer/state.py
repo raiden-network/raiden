@@ -19,7 +19,7 @@ from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ContractSendEvent,
-    SendMessageEvent,
+    SendRetriableMessageEvent,
     State,
     TransferTask,
 )
@@ -65,7 +65,7 @@ from raiden.utils.typing import (
     typecheck,
 )
 
-QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
+QueueIdsToQueues = Dict[QueueIdentifier, List[SendRetriableMessageEvent]]
 
 
 class ChannelState(Enum):

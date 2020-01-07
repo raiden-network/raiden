@@ -6,7 +6,11 @@ import structlog
 from eth_utils import to_hex
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+    CanonicalIdentifier,
+    QueueIdentifier,
+)
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.copy import deepcopy
 from raiden.utils.formatting import to_checksum_address
@@ -135,17 +139,29 @@ class TransferTask(State):
 
 @dataclass(frozen=True)
 class SendMessageEvent(Event):
-    """ Marker used for events which represent off-chain protocol messages tied
-    to a channel.
-
-    Messages are sent only once, delivery is guaranteed by the transport and
-    not by the state machine
-    """
+    """ Marker used for events which represent off-chain protocol messages. """
 
     recipient: Address
-    canonical_identifier: CanonicalIdentifier
     message_identifier: MessageID
     queue_identifier: QueueIdentifier = field(init=False)
+
+    def __post_init__(self) -> None:
+        queue_identifier = QueueIdentifier(
+            recipient=self.recipient, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
+        )
+        object.__setattr__(self, "queue_identifier", queue_identifier)
+
+
+@dataclass(frozen=True)
+class SendRetriableMessageEvent(SendMessageEvent):
+    """ Marker used for events which represent retriable off-chain protocol
+    messages.
+
+    Messages are queued and retried by the transport until the confirmed by the
+    recipient.
+    """
+
+    canonical_identifier: CanonicalIdentifier
 
     def __post_init__(self) -> None:
         queue_identifier = QueueIdentifier(

@@ -1411,7 +1411,6 @@ def handle_unlock(
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
                         message_identifier=state_change.message_identifier,
-                        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                     )
                     events.append(send_processed)
 

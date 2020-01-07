@@ -246,9 +246,7 @@ def handle_unlock(
         )
 
         send_processed = SendProcessed(
-            recipient=balance_proof_sender,
-            message_identifier=state_change.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+            recipient=balance_proof_sender, message_identifier=state_change.message_identifier
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])

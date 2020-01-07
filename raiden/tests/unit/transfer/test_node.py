@@ -13,7 +13,7 @@ from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_block_hash,
 )
-from raiden.transfer.architecture import SendMessageEvent, TransitionResult
+from raiden.transfer.architecture import SendRetriableMessageEvent, TransitionResult
 from raiden.transfer.channel import get_status
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -452,7 +452,7 @@ def test_inplace_delete_message_queue(chain_state):
     assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
 
     chain_state.queueids_to_queues[global_identifier] = [
-        SendMessageEvent(
+        SendRetriableMessageEvent(
             recipient=sender,
             canonical_identifier=canonical_identifier,
             message_identifier=message_id,
@@ -465,7 +465,7 @@ def test_inplace_delete_message_queue(chain_state):
     queue_identifier = QueueIdentifier(recipient=sender, canonical_identifier=canonical_identifier)
     assert queue_identifier not in chain_state.queueids_to_queues, "queue not empty"
     chain_state.queueids_to_queues[queue_identifier] = [
-        SendMessageEvent(
+        SendRetriableMessageEvent(
             recipient=sender,
             canonical_identifier=canonical_identifier,
             message_identifier=message_id,

@@ -8,6 +8,7 @@ from raiden.transfer.architecture import (
     ContractSendExpirableEvent,
     Event,
     SendMessageEvent,
+    SendRetriableMessageEvent,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
@@ -37,8 +38,19 @@ from raiden.utils.typing import (
 
 
 @dataclass(frozen=True)
-class SendWithdrawRequest(SendMessageEvent):
-    """ Event used by node to request a withdraw from channel partner."""
+class SendProcessed(SendMessageEvent):
+    pass
+
+
+@dataclass(frozen=True)
+class SendWithdrawRequest(SendRetriableMessageEvent):
+    """ Event used by node to request a withdraw from channel partner.
+
+    This message has to be retried until:
+    - The withdraw is confirmed.
+    - The withdraw is expired.
+    - The channel is closed.
+    """
 
     total_withdraw: WithdrawAmount
     participant: Address
@@ -55,9 +67,10 @@ class SendWithdrawRequest(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendWithdrawConfirmation(SendMessageEvent):
-    """ Event used by node to confirm a withdraw for a channel's partner."""
+class SendWithdrawConfirmation(SendProcessed):
+    """ Event used by node to confirm a withdraw for a channel's partner. """
 
+    canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
     participant: Address
     expiration: BlockExpiration
@@ -73,7 +86,7 @@ class SendWithdrawConfirmation(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendWithdrawExpired(SendMessageEvent):
+class SendWithdrawExpired(SendRetriableMessageEvent):
     """ Event used by node to expire a withdraw request."""
 
     total_withdraw: WithdrawAmount
@@ -386,11 +399,6 @@ class EventInvalidActionSetRevealTimeout(Event):
 
     reveal_timeout: BlockTimeout
     reason: str
-
-
-@dataclass(frozen=True)
-class SendProcessed(SendMessageEvent):
-    pass
 
 
 @dataclass(frozen=True)

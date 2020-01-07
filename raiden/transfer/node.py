@@ -3,7 +3,7 @@ from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     ContractSendEvent,
     Event,
-    SendMessageEvent,
+    SendRetriableMessageEvent,
     StateChange,
     TransitionResult,
 )
@@ -458,7 +458,7 @@ def inplace_delete_message_queue(
 
 
 def inplace_delete_message(
-    message_queue: List[SendMessageEvent],
+    message_queue: List[SendRetriableMessageEvent],
     state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
@@ -1130,7 +1130,7 @@ def update_queues(iteration: TransitionResult[ChainState], state_change: StateCh
         chain_state.pending_transactions = pending_transactions
 
     for event in iteration.events:
-        if isinstance(event, SendMessageEvent):
+        if isinstance(event, SendRetriableMessageEvent):
             queue = chain_state.queueids_to_queues.setdefault(event.queue_identifier, [])
             queue.append(event)
 
@@ -1141,8 +1141,6 @@ def update_queues(iteration: TransitionResult[ChainState], state_change: StateCh
 def state_transition(
     chain_state: Optional[ChainState], state_change: StateChange
 ) -> TransitionResult[ChainState]:
-    # pylint: disable=too-many-branches,unidiomatic-typecheck
-
     iteration = handle_state_change(chain_state, state_change)
 
     update_queues(iteration, state_change)

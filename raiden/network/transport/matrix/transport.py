@@ -51,6 +51,7 @@ from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
+from raiden.transfer.architecture import SendRetriableMessageEvent
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
@@ -246,16 +247,14 @@ class _RetryQueue(Runnable):
         message_texts: List[str] = list()
         for message_data in self._message_queue[:]:
             # Messages are sent on two conditions:
-            # - Non-retryable (e.g. Delivered)
+            # - Non-retryable (e.g. Delivered/Processed)
             #   - Those are immediately remove from the local queue since they are only sent once
             # - Retryable
             #   - Those are retried according to their retry generator as long as they haven't been
             #     removed from the Raiden queue
             remove = False
-            if isinstance(message_data.message, (Delivered, Ping, Pong)):
-                # e.g. Delivered, send only once and then clear
-                # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
-                #       later `Processed` message?
+
+            if not isinstance(message_data.message, SendRetriableMessageEvent):
                 remove = True
                 message_texts.append(message_data.text)
             elif not message_is_in_queue(message_data):

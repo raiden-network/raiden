@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
 from raiden.constants import EMPTY_SIGNATURE
-from raiden.messages.abstract import SignedMessage, SignedRetrieableMessage
+from raiden.messages.abstract import SignedMessage
 from raiden.messages.cmdid import CmdId
-from raiden.transfer.architecture import SendMessageEvent
+from raiden.transfer.events import SendProcessed
 from raiden.utils.typing import ClassVar, MessageID
 
 
 @dataclass(repr=False, eq=False)
-class Processed(SignedRetrieableMessage):
+class Processed(SignedMessage):
     """ Used by the recipient when a message which has to be validated against
     blockchain data was successfully processed.
 
@@ -38,13 +38,12 @@ class Processed(SignedRetrieableMessage):
           therefore it can replace it.
     """
 
-    # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
     cmdid: ClassVar[CmdId] = CmdId.PROCESSED
 
     message_identifier: MessageID
 
     @classmethod
-    def from_event(cls, event: SendMessageEvent) -> "Processed":
+    def from_event(cls, event: SendProcessed) -> "Processed":
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
     def _data_to_sign(self) -> bytes:
