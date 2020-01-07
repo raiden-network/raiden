@@ -1,6 +1,6 @@
 import binascii
 import datetime
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from eth_utils import (
     is_0x_prefixed,
@@ -26,7 +26,9 @@ from raiden.constants import (
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.storage.serialization.fields import IntegerToStringField
 from raiden.transfer import channel
-from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.transfer.architecture import Event
+from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
+from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.typing import AddressHex
 
 
@@ -375,43 +377,67 @@ class ConnectionsLeaveSchema(BaseSchema):
         decoding_class = dict
 
 
-class EventPaymentSentFailedSchema(BaseSchema):
+class EventPaymentSchema(BaseSchema):
     block_number = IntegerToStringField()
     identifier = IntegerToStringField()
+    log_time = TimeStampField()
+    token_address = AddressField(missing=None)
+
+    def serialize(self, chain_state: ChainState, event: Event) -> Dict[str, Any]:
+        serialized_event = self.dump(event)
+        token_network = get_token_network_by_address(
+            chain_state=chain_state,
+            token_network_address=event.token_network_address,  # type: ignore
+        )
+        assert token_network, "Token network object should be registered if we got events with it"
+        serialized_event["token_address"] = to_checksum_address(token_network.token_address)
+        return serialized_event
+
+
+class EventPaymentSentFailedSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentSentFailed")
     reason = fields.Str()
     target = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "reason", "target", "log_time")
+        fields = ("block_number", "event", "reason", "target", "log_time", "token_address")
         strict = True
         decoding_class = dict
 
 
-class EventPaymentSentSuccessSchema(BaseSchema):
-    block_number = IntegerToStringField()
-    identifier = IntegerToStringField()
+class EventPaymentSentSuccessSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentSentSuccess")
     amount = IntegerToStringField()
     target = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "amount", "target", "identifier", "log_time")
+        fields = (
+            "block_number",
+            "event",
+            "amount",
+            "target",
+            "identifier",
+            "log_time",
+            "token_address",
+        )
         strict = True
         decoding_class = dict
 
 
-class EventPaymentReceivedSuccessSchema(BaseSchema):
-    block_number = IntegerToStringField()
-    identifier = IntegerToStringField()
+class EventPaymentReceivedSuccessSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentReceivedSuccess")
     amount = IntegerToStringField()
     initiator = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "amount", "initiator", "identifier", "log_time")
+        fields = (
+            "block_number",
+            "event",
+            "amount",
+            "initiator",
+            "identifier",
+            "log_time",
+            "token_address",
+        )
         strict = True
         decoding_class = dict
