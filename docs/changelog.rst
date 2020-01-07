@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`5589` The Rest API now includes the token address in all returned payment related events.
 * :bug:`5395` Convert and return big integers as strings in the API response body.
 * :feature:`-` Update WebUI to version 0.11.0 https://github.com/raiden-network/webui/releases/tag/v0.11.0
 
