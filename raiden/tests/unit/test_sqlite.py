@@ -460,7 +460,7 @@ def test_batch_query_state_changes():
     )
 
     # Test that querying the state changes in batches of 10 works
-    state_changes_num = 87
+    state_changes_num = 86
     state_changes = []
     for state_changes_batch in storage.batch_query_state_changes(batch_size=10):
         state_changes.extend(state_changes_batch)

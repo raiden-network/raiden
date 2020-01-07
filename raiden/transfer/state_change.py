@@ -76,17 +76,6 @@ class Block(StateChange):
 
 
 @dataclass(frozen=True)
-class ActionUpdateTransportAuthData(StateChange):
-    """ Holds the last "timestamp" at which we synced
-    with the transport. The timestamp could be a date/time value
-    or any other value provided by the transport backend.
-    Can be used later to filter the messages which have not been processed.
-    """
-
-    auth_data: str
-
-
-@dataclass(frozen=True)
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
