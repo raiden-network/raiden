@@ -11,21 +11,35 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import assert_synced_channel_state, watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import create_default_identifier
-from raiden.utils.typing import BlockNumber, PaymentID, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockNumber,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+)
 
 
 @raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_send_queued_messages(  # pylint: disable=unused-argument
-    raiden_network, deposit, token_addresses, network_wait
+def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
+    raiden_network: List[App],
+    deposit: TokenAmount,
+    token_addresses: List[TokenAddress],
+    network_wait: float,
 ):
     """Test re-sending of undelivered messages on node restart"""
     app0, app1 = raiden_network
@@ -38,7 +52,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     assert token_network_address
 
     number_of_transfers = 7
-    amount_per_transfer = 1
+    amount_per_transfer = PaymentAmount(1)
     total_transferred_amount = TokenAmount(amount_per_transfer * number_of_transfers)
 
     # Make sure none of the transfers will be sent before the restart
@@ -48,6 +62,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
         secrethash = sha256_secrethash(secret)
         transfers.append((create_default_identifier(), amount_per_transfer, secret, secrethash))
 
+        assert isinstance(app0.raiden.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
         app0.raiden.raiden_event_handler.hold(
             SendLockedTransfer, {"transfer": {"lock": {"secrethash": secrethash}}}
         )
@@ -56,7 +71,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
         app0.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
-            target=app1.raiden.address,
+            target=TargetAddress(app1.raiden.address),
             identifier=identifier,
             secret=secret,
         )
@@ -125,10 +140,10 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
     assert_synced_channel_state(
         token_network_address,
         app0_restart,
-        deposit - total_transferred_amount,
+        Balance(deposit - total_transferred_amount),
         [],
         app1,
-        deposit + total_transferred_amount,
+        Balance(deposit + total_transferred_amount),
         [],
     )
     new_transport.stop()
@@ -139,7 +154,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
-    raiden_network, token_addresses, network_wait
+    raiden_network: List[App], token_addresses: List[TokenAddress], network_wait: float
 ):
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport
@@ -160,22 +175,27 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
+
+    target_address = TargetAddress(app1.raiden.address)
 
     # make a few transfers from app0 to app1
-    amount = 1
+    amount = PaymentAmount(1)
     spent_amount = TokenAmount(7)
 
     for identifier in range(spent_amount):
         # Make sure the transfer is not completed
         secret = make_secret(identifier)
+
+        assert isinstance(app0.raiden.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
         app0.raiden.raiden_event_handler.hold(SendSecretReveal, {"secret": secret})
 
         identifier = identifier + 1
         payment_status = app0.raiden.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
-            target=app1.raiden.address,
-            identifier=identifier,
+            target=target_address,
+            identifier=PaymentID(identifier),
             secret=secret,
         )
         assert payment_status.payment_identifier == identifier
@@ -207,7 +227,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     for identifier in range(spent_amount):
         identifier = PaymentID(identifier + 1)
         mapping = app0_restart.raiden.targets_to_identifiers_to_statuses
-        status = mapping[app1.raiden.address][identifier]
+        status = mapping[target_address][identifier]
         assert status.amount == 1
         assert status.payment_identifier == identifier
         assert status.token_network_address == token_network_address
@@ -222,7 +242,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
             partner_address=app0_restart.raiden.address,
-            target_address=app1.raiden.address,
+            target_address=Address(target_address),
             target_balance=spent_amount,
             retry_timeout=network_wait,
         )
