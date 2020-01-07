@@ -1122,23 +1122,29 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
 
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
-def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
-    """ Ensure the transport uses the filter and does not receive broadcast
-    rooms message / state event updates."""
+def test_transport_does_not_receive_broadcast_rooms_updates(
+    matrix_transports, matrix_sync_timeout
+):
+    """ Ensure that matrix server-side filters take effect on sync for broadcast room content.
+
+    The test sets up 3 transports where:
+    Transport0 sends a message to the PFS broadcast room.
+    Transport1 has an active sync filter ID that filters out broadcast room messages.
+    Transport2 has NO active sync filter so it receives everything.
+
+    The test should wait for Transport0 to send a message and then
+    verify that Transport2 has received the message while Transport1
+    did not.
+    """
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
     raiden_service2 = MockRaidenService(None)
 
     transport0, transport1, transport2 = matrix_transports
-    transport0.start(raiden_service0, [], None)
-    transport1.start(raiden_service1, [], None)
-    transport2.start(raiden_service2, [], None)
-
-    pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
 
     received_sync_events: Dict[str, List[Dict[str, Any]]] = {"t1": [], "t2": []}
 
@@ -1153,12 +1159,21 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     # Replace the transport's handle_response method
     # Should be able to detect if sync delivered a message
     transport1._client._handle_response = partial(_handle_response, "t1")
+    transport2._client._handle_response = partial(_handle_response, "t2")
+
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
+    transport2.start(raiden_service2, [], None)
+
+    pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
+
+    transport1._client._sync_filter_id = None
 
     # Reset transport2 sync filter identifier so that
     # we can receive broadcast messages
     assert transport2._client._sync_filter_id is not None
     transport2._client._sync_filter_id = None
-    transport2._client._handle_response = partial(_handle_response, "t2")
 
     # Send another message to the broadcast room, if transport1 listens on the room it will
     # throw an exception
@@ -1166,10 +1181,14 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     message_text = MessageSerializer.serialize(message)
     pfs_broadcast_room_t0.send_text(message_text)
 
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
+    with Timeout(matrix_sync_timeout + 2):
         sync_iteration = transport2._client._sync_iteration
         while sync_iteration == transport2._client._sync_iteration:
             gevent.joinall({transport2.greenlet}, timeout=0.1, raise_error=True)
+
+        sync_iteration = transport1._client._sync_iteration
+        while sync_iteration == transport1._client._sync_iteration:
+            gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
 
     # Transport2 should have received the message
     assert received_sync_events["t2"]
