@@ -1,5 +1,6 @@
 import json
 import random
+from functools import partial
 from typing import Any, Set
 from unittest.mock import MagicMock
 
@@ -1117,3 +1118,63 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
         sync_iteration = transport1._client.sync_iteration
         while sync_iteration == transport1._client.sync_iteration:
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
+
+
+@pytest.mark.parametrize("number_of_transports", [3])
+@pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+)
+def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
+    """ Ensure the transport uses the filter and does not receive broadcast
+    rooms message / state event updates."""
+    raiden_service0 = MockRaidenService(None)
+    raiden_service1 = MockRaidenService(None)
+    raiden_service2 = MockRaidenService(None)
+
+    transport0, transport1, transport2 = matrix_transports
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
+    transport2.start(raiden_service2, [], None)
+
+    pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
+
+    received_sync_events: Dict[str, List[Dict[str, Any]]] = {"t1": [], "t2": []}
+
+    def _handle_response(
+        name: str, response: Dict[str, Any], first_sync: bool = False
+    ):  # pylint: disable=unused-argument
+        joined_rooms = response.get("rooms", {}).get("join", {})
+        for joined_room in joined_rooms.values():
+            timeline_events = joined_room.get("timeline").get("events", [])
+            received_sync_events[name].extend(timeline_events)
+
+    # Replace the transport's handle_response method
+    # Should be able to detect if sync delivered a message
+    transport1._client._handle_response = partial(_handle_response, "t1")
+
+    # Reset transport2 sync filter identifier so that
+    # we can receive broadcast messages
+    assert transport2._client._sync_filter_id is not None
+    transport2._client._sync_filter_id = None
+    transport2._client._handle_response = partial(_handle_response, "t2")
+
+    # Send another message to the broadcast room, if transport1 listens on the room it will
+    # throw an exception
+    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
+    message_text = MessageSerializer.serialize(message)
+    pfs_broadcast_room_t0.send_text(message_text)
+
+    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
+        sync_iteration = transport2._client._sync_iteration
+        while sync_iteration == transport2._client._sync_iteration:
+            gevent.joinall({transport2.greenlet}, timeout=0.1, raise_error=True)
+
+    # Transport2 should have received the message
+    assert received_sync_events["t2"]
+    event_body = received_sync_events["t2"][0]["content"]["body"]
+    assert message_text == event_body
+
+    # Transport1 used the filter so nothing was received
+    assert not received_sync_events["t1"]
