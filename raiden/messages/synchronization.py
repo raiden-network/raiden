@@ -55,6 +55,9 @@ class Processed(SignedRetrieableMessage):
             (self.message_identifier, "uint64"),
         )
 
+    def __repr__(self) -> str:
+        return f"<Processed(msg_id={self.message_identifier})>"
+
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
@@ -78,3 +81,6 @@ class Delivered(SignedMessage):
             (b"\x00" * 3, "bytes"),  # padding
             (self.delivered_message_identifier, "uint64"),
         )
+
+    def __repr__(self) -> str:
+        return f"<Delivered(msg_id={self.delivered_message_identifier})>"
