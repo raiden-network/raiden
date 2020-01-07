@@ -48,7 +48,6 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
-    ActionUpdateTransportAuthData,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -767,14 +766,6 @@ def handle_receive_unlock(
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
-def handle_action_update_transport_auth_data(
-    chain_state: ChainState, state_change: ActionUpdateTransportAuthData
-) -> TransitionResult[ChainState]:
-    assert chain_state is not None, "chain_state must be set"
-    chain_state.last_transport_authdata = state_change.auth_data
-    return TransitionResult(chain_state, list())
-
-
 def handle_state_change(
     chain_state: Optional[ChainState], state_change: StateChange
 ) -> TransitionResult[ChainState]:  # pragma: no cover
@@ -816,9 +807,6 @@ def handle_state_change(
         elif type(state_change) == ActionInitTarget:
             assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
             iteration = handle_action_init_target(chain_state, state_change)
-        elif type(state_change) == ActionUpdateTransportAuthData:
-            assert isinstance(state_change, ActionUpdateTransportAuthData), MYPY_ANNOTATION
-            iteration = handle_action_update_transport_auth_data(chain_state, state_change)
         elif type(state_change) == ReceiveTransferCancelRoute:
             assert isinstance(state_change, ReceiveTransferCancelRoute), MYPY_ANNOTATION
             iteration = handle_receive_transfer_cancel_route(chain_state, state_change)

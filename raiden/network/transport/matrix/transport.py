@@ -48,10 +48,7 @@ from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
-from raiden.transfer.state_change import (
-    ActionChangeNodeNetworkState,
-    ActionUpdateTransportAuthData,
-)
+from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
@@ -439,11 +436,9 @@ class MatrixTransport(Runnable):
         """ Runnable main method, perform wait on long-running subtasks """
         # dispatch auth data on first scheduling after start
         assert self._raiden_service is not None, "_raiden_service not set"
-        state_change = ActionUpdateTransportAuthData(f"{self._user_id}/{self._client.api.token}")
         self.greenlet.name = (
             f"MatrixTransport._run node:{to_checksum_address(self._raiden_service.address)}"
         )
-        self._raiden_service.handle_and_track_state_changes([state_change])
         try:
             # waits on _stop_event.ready()
             self._broadcast_worker()

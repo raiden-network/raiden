@@ -37,7 +37,7 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
-from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
+from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, Dict, List, cast
 
@@ -189,14 +189,6 @@ def test_matrix_message_sync(matrix_transports):
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
 
-    latest_auth_data = f"{transport1._user_id}/{transport1._client.api.token}"
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
-    with gevent.Timeout(2):
-        wait_assert(
-            raiden_service1.handle_and_track_state_changes.assert_called_with,
-            [update_transport_auth_data],
-        )
-
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
@@ -236,8 +228,6 @@ def test_matrix_message_sync(matrix_transports):
 
     wait_for_peer_unreachable(transport0, transport1._raiden_service.address)
 
-    assert latest_auth_data
-
     # Send more messages while the other end is offline
     for i in range(10, 15):
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
@@ -246,7 +236,7 @@ def test_matrix_message_sync(matrix_transports):
         transport0.send_async(queue_identifier, message)
 
     # Should fetch the 5 messages sent while transport1 was offline
-    transport1.start(transport1._raiden_service, [], latest_auth_data)
+    transport1.start(transport1._raiden_service, [], None)
     transport1.start_health_check(transport0._raiden_service.address)
 
     with gevent.Timeout(TIMEOUT_MESSAGE_RECEIVE):
