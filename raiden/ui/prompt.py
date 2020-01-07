@@ -1,10 +1,9 @@
 import getpass
-import sys
 from typing import TextIO
 
 import click
 
-from raiden.accounts import AccountManager, KeystoreFileNotFound
+from raiden.accounts import AccountManager, KeystoreAuthenticationError
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import AddressHex, PrivateKey
 
@@ -36,12 +35,8 @@ def unlock_account_with_passwordfile(
 
     try:
         return account_manager.get_privkey(address_hex, password.strip())
-    except KeystoreFileNotFound as e:
-        click.secho(str(e), fg="red")
-        sys.exit(1)
     except ValueError:
-        click.secho(f"Incorrect password for {address_hex} in file. Aborting ...", fg="red")
-        sys.exit(1)
+        raise KeystoreAuthenticationError(f"Incorrect password for {address_hex} in file.")
 
 
 def unlock_account_with_passwordprompt(
@@ -61,4 +56,6 @@ def unlock_account_with_passwordprompt(
                 f"Usually Ctrl-c."
             )
 
-    sys.exit(1)
+    raise KeystoreAuthenticationError(
+        f"Provided Incorrect password for {address_hex} {tries} times."
+    )

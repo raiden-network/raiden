@@ -25,6 +25,10 @@ class KeystoreFileNotFound(RaidenError):
     """ A keystore file for a user provided account could not be found. """
 
 
+class KeystoreAuthenticationError(RaidenError):
+    """ The provided password could not authenticated the ethereum keystore. """
+
+
 def _find_datadir() -> Optional[str]:  # pragma: no cover
     home = os.path.expanduser("~")
     if home == "~":  # Could not expand user path
