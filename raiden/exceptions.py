@@ -337,3 +337,7 @@ class SerializationError(RaidenError):
 
 class MatrixSyncMaxTimeoutReached(RaidenRecoverableError):
     """ Raised if processing the matrix response takes longer than the poll timeout. """
+
+
+class ConfigurationError(RaidenError):
+    """ Raised when there is something wrong with the provided Raiden Configuration/arguments """
