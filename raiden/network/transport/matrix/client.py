@@ -257,7 +257,7 @@ class GMatrixClient(MatrixClient):
 
         self._sync_filter_id: Optional[int] = None
 
-    def create_sync_filter(self, broadcast_rooms: Dict[str, Optional[Room]]) -> Optional[int]:
+    def create_sync_filter(self, broadcast_rooms: Dict[str, Optional[Room]]) -> None:
         ignore_rooms = [room.room_id for room in broadcast_rooms.values() if room is not None]
         filter_params = {
             "room": {
@@ -265,17 +265,30 @@ class GMatrixClient(MatrixClient):
                 "not_rooms": ignore_rooms,
                 # Ignore "message recipts" from all rooms
                 "ephemeral": {"not_types": ["m.receipt"]},
+                "state": {
+                    "not_types": [
+                        "m.room.power_levels",
+                        "m.room.join_rules",
+                        "m.room.member",
+                        "m.room.canonical_alias",
+                        "m.room.aliases",
+                        "m.room.history_visibility",
+                    ]
+                },
             },
             # Get all presence updates
             "presence": {"types": ["m.presence"]},
         }
+
+        filter_id = None
         try:
             # 0 is a valid filter ID
-            filter_id = self.api.create_filter(self.user_id, filter_params)
+            filter_response = self.api.create_filter(self.user_id, filter_params)
+            filter_id = filter_response.get("filter_id")
         except MatrixRequestError:
             log.error(f"Failed to create filter: {filter_params} for user {self.user_id}")
-            filter_id = None
-        return filter_id
+
+        self._sync_filter_id = filter_id
 
     def listen_forever(
         self,
@@ -471,7 +484,9 @@ class GMatrixClient(MatrixClient):
                 f"poll timeout is {timeout_in_seconds}s."
             )
 
-        response = self.api.sync(self.sync_token, timeout_ms)
+        response = self.api.sync(
+            since=self.sync_token, timeout_ms=timeout_ms, filter=self._sync_filter_id
+        )
         time_after_sync = time.time()
         self.last_sync = time_after_sync
 
