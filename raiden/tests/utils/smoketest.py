@@ -2,7 +2,6 @@ import json
 import os
 import random
 import shutil
-import sys
 from contextlib import contextmanager
 from http import HTTPStatus
 
