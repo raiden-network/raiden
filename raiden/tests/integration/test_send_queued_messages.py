@@ -104,14 +104,14 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     app0_restart.start()
 
     # XXX: There is no synchronization among the app and the test, so it is
-    # possible between `start` and the check bellow that some of the transfers
+    # possible between `start` and the check below that some of the transfers
     # have completed, making it flaky.
     #
     # Make sure the transfers are in the queue and fail otherwise.
-    # chain_state = views.state_from_raiden(app0_restart.raiden)
-    # for _, _, _, secrethash in transfers:
-    #     msg = "The secrethashes of the pending transfers must be in the queue after a restart."
-    #     assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
+    chain_state = views.state_from_raiden(app0_restart.raiden)
+    for _, _, _, secrethash in transfers:
+        msg = "The secrethashes of the pending transfers must be in the queue after a restart."
+        assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
 
     with watch_for_unlock_failures(*raiden_network):
         exception = RuntimeError("Timeout while waiting for balance update for app0")

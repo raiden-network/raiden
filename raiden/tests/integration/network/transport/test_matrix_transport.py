@@ -1114,6 +1114,6 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
         # Wait for the current transport1 sync loop to complete to ensure all server events
         # have been processed (making sure no exception is raised late)
-        sync_iteration = transport1._client._sync_iteration
-        while sync_iteration == transport1._client._sync_iteration:
+        sync_iteration = transport1._client.sync_iteration
+        while sync_iteration == transport1._client.sync_iteration:
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)

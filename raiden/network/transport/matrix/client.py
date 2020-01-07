@@ -29,7 +29,7 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
-SYNC_TIMEOUT_MS = 30_000
+SYNC_TIMEOUT_MS = 20_000
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
@@ -210,6 +210,7 @@ class GMatrixClient(MatrixClient):
     sync_filter: str
     sync_worker: Optional[Greenlet] = None
     message_worker: Optional[Greenlet] = None
+    last_sync: Optional[float] = None
 
     def __init__(
         self,
@@ -251,7 +252,7 @@ class GMatrixClient(MatrixClient):
         self._worker_pool = gevent.pool.Pool(size=20)
         # Gets incremented every time a sync loop is completed. This is useful since the sync token
         # can remain constant over multiple loops (if no events occur).
-        self._sync_iteration = 0
+        self.sync_iteration = 0
 
     def listen_forever(
         self,
@@ -425,64 +426,30 @@ class GMatrixClient(MatrixClient):
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
         log.debug("Sync called", node=node_address_from_userid(self.user_id), user_id=self.user_id)
 
-        response = self.api.sync(self.sync_token, timeout_ms)
-        prev_sync_token = self.sync_token
+        if self.last_sync:
+            time_since_last_sync_in_seconds = time.time() - self.last_sync
 
-        is_first_sync = prev_sync_token is None
-        log.debug(
-            "Starting _handle_response",
-            node=node_address_from_userid(self.user_id),
-            first_sync=is_first_sync,
-            sync_token=prev_sync_token,
-            current_user=self.user_id,
-            presence_events_qty=len(response["presence"]["events"]),
-            to_device_events_qty=len(response["to_device"]["events"]),
-            rooms_invites_qty=len(response["rooms"]["invite"]),
-            rooms_leaves_qty=len(response["rooms"]["leave"]),
-            rooms_joined_member_count=sum(
-                room["summary"].get("m.joined_member_count", 0)
-                for room in response["rooms"]["join"].values()
-            ),
-            rooms_invited_member_count=sum(
-                room["summary"].get("m.invited_member_count", 0)
-                for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_state_qty=sum(
-                len(room["state"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_state_events_qty=sum(
-                len(room["state"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_ephemeral_events_qty=sum(
-                len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_account_data_events_qty=sum(
-                len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-        )
-        before_processing = time.time()
-        self._handle_response(response=response, first_sync=is_first_sync)
-        processing_time_in_seconds = time.time() - before_processing
-
-        # If processing the matrix response takes longer than the poll timout, it cannot be
-        # ensured that all messages have been processed.
-        # Therefore an exception is thrown when in development mode.
-        timeout_in_seconds = timeout_ms // 1_000
-        timeout_reached = (
-            processing_time_in_seconds >= timeout_in_seconds
-            and self.environment == Environment.DEVELOPMENT
-        )
-        if timeout_reached:
-            raise MatrixSyncMaxTimeoutReached(
-                f"Processing Matrix response took {processing_time_in_seconds}s, "
-                f"poll timeout is {timeout_in_seconds}s."
+            # If it takes longer than `timeout_ms` to call `_sync` again, we throw an exception.
+            # The exception is only thrown when in development mode.
+            timeout_in_seconds = timeout_ms // 1_000
+            timeout_reached = (
+                time_since_last_sync_in_seconds >= timeout_in_seconds
+                and self.environment == Environment.DEVELOPMENT
             )
+            if timeout_reached:
+                raise MatrixSyncMaxTimeoutReached(
+                    f"Processing Matrix response took {time_since_last_sync_in_seconds}s, "
+                    f"poll timeout is {timeout_in_seconds}s."
+                )
+
+        response = self.api.sync(self.sync_token, timeout_ms)
+        self.last_sync = time.time()
 
         # Updating the sync token should only be done after the response is
         # saved in the queue, otherwise the data can be lost in a stop/start.
         self.response_queue.put(response)
         self.sync_token = response["next_batch"]
-        self._sync_iteration += 1
+        self.sync_iteration += 1
 
     def _handle_message(self, response_queue: NotifyingQueue, stop_event: Event) -> None:
         """ Worker to process network messages from the asynchronous transport.
@@ -544,6 +511,36 @@ class GMatrixClient(MatrixClient):
                 user_id=self.user_id,
             )
             return
+
+        log.debug(
+            "Running _handle_response",
+            node=node_address_from_userid(self.user_id),
+            current_user=self.user_id,
+            presence_events_qty=len(response["presence"]["events"]),
+            to_device_events_qty=len(response["to_device"]["events"]),
+            rooms_invites_qty=len(response["rooms"]["invite"]),
+            rooms_leaves_qty=len(response["rooms"]["leave"]),
+            rooms_joined_member_count=sum(
+                room["summary"].get("m.joined_member_count", 0)
+                for room in response["rooms"]["join"].values()
+            ),
+            rooms_invited_member_count=sum(
+                room["summary"].get("m.invited_member_count", 0)
+                for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_state_qty=sum(
+                len(room["state"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_state_events_qty=sum(
+                len(room["state"]["events"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_ephemeral_events_qty=sum(
+                len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
+            ),
+            rooms_join_account_data_events_qty=sum(
+                len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
+            ),
+        )
 
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
