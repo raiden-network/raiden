@@ -16,11 +16,7 @@ import click
 import filelock
 import structlog
 from click import Context
-from requests.exceptions import (
-    ConfigurationError,
-    ConnectionError as RequestsConnectionError,
-    ConnectTimeout,
-)
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from urllib3.exceptions import ReadTimeoutError
@@ -40,6 +36,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     APIServerPortInUseError,
+    ConfigurationError,
     EthereumNonceTooLow,
     EthNodeInterfaceError,
     RaidenUnrecoverableError,

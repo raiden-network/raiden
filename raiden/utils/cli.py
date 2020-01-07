@@ -2,7 +2,6 @@ import errno
 import os
 import re
 import string
-import sys
 from enum import EnumMeta
 from itertools import groupby
 from pathlib import Path
