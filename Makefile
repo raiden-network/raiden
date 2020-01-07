@@ -52,9 +52,7 @@ ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_module
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only
 lint: BLACK_CHECK_PARAMS := --check --diff
-lint: mypy mypy-all isort black
-	flake8 $(JOBS_ARG) $(LINT_PATHS)
-	pylint $(JOBS_ARG) $(LINT_PATHS)
+lint: format flake8 mypy pylint
 
 mypy:
 	mypy raiden
@@ -64,6 +62,12 @@ mypy-all:
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
 	# Remaining errors in tests:
 	mypy --config-file /dev/null raiden --ignore-missing-imports | grep error | wc -l
+
+flake8:
+	flake8 $(JOBS_ARG) $(LINT_PATHS)
+
+pylint:
+	pylint $(JOBS_ARG) $(LINT_PATHS)
 
 isort:
 	isort $(JOBS_ARG) $(ISORT_PARAMS) $(ISORT_CHECK_PARAMS)
