@@ -17,7 +17,6 @@ from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
-from raiden.services import send_pfs_update
 from raiden.storage.restore import (
     channel_state_until_state_change,
     get_event_with_balance_proof_by_balance_hash,
@@ -47,7 +46,6 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
-    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -188,9 +186,6 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == ContractSendChannelWithdraw:
             assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
             self.handle_contract_send_channelwithdraw(raiden, event)
-        elif type(event) == SendPFSFeeUpdate:
-            assert isinstance(event, SendPFSFeeUpdate), MYPY_ANNOTATION
-            self.handle_send_pfs_fee_update(raiden, event)
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
@@ -199,16 +194,6 @@ class RaidenEventHandler(EventHandler):
                 event_type=str(type(event)),
                 node=to_checksum_address(raiden.address),
             )
-
-    @staticmethod
-    def handle_send_pfs_fee_update(
-        raiden: "RaidenService", event: SendPFSFeeUpdate
-    ) -> None:  # pragma: no unittest
-        send_pfs_update(
-            raiden=raiden,
-            canonical_identifier=event.canonical_identifier,
-            update_fee_schedule=True,
-        )
 
     @staticmethod
     def handle_send_lockexpired(

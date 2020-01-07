@@ -28,7 +28,7 @@ from raiden.transfer.channel import (
     set_settled,
     update_fee_schedule_after_balance_change,
 )
-from raiden.transfer.events import EventInvalidActionSetRevealTimeout, SendPFSFeeUpdate
+from raiden.transfer.events import EventInvalidActionSetRevealTimeout
 from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
@@ -438,8 +438,7 @@ def test_update_fee_schedule_after_balance_change():
         cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 50_000),),  # 5%
         cli_cap_mediation_fees=True,
     )
-    events = update_fee_schedule_after_balance_change(channel_state, fee_config)
-    assert isinstance(events[0], SendPFSFeeUpdate)
+    update_fee_schedule_after_balance_change(channel_state, fee_config)
     assert channel_state.fee_schedule.imbalance_penalty[0] == (0, 5)
 
 

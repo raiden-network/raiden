@@ -401,13 +401,3 @@ class EventInvalidSecretRequest(Event):
     payment_identifier: PaymentID
     intended_amount: PaymentAmount
     actual_amount: PaymentAmount
-
-
-@dataclass(frozen=True)
-class SendPFSFeeUpdate(Event):
-    """ Tell the PFSs about changed fee schedules
-
-    For example when a deposit or a withdrawal is made into a channel
-    """
-
-    canonical_identifier: CanonicalIdentifier

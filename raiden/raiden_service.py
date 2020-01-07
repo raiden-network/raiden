@@ -65,7 +65,7 @@ from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
 from raiden.transfer.channel import get_capacity
-from raiden.transfer.events import EventPaymentSentFailed, SendPFSFeeUpdate
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.mediation_fee import (
@@ -94,6 +94,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelDeposit,
     ContractReceiveNewTokenNetworkRegistry,
     ReceiveUnlock,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
@@ -131,6 +132,7 @@ ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 PATH_FINDING_SERVICE_UPDATE = (
     ContractReceiveChannelDeposit,
     ReceiveUnlock,
+    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ActionInitMediator,
     ActionInitTarget,
@@ -139,11 +141,9 @@ PATH_FINDING_SERVICE_UPDATE = (
     ReceiveLockExpired,
     ReceiveTransferRefund,
     # State change | Reason why update is not needed
-    # ActionChannelWithdraw | Update was done by the
-    #                         SendWithdrawRequest/SendWithdrawConfirmation/SendWithdrawExpired
+    # ActionChannelWithdraw | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
     # ActionInitInitiator | The update is done by the SendLockedTransfer event
-    # ReceiveWithdrawRequest | Update was done by the SendWithdrawConfirmation/SendWithdrawExpired
-    # ReceiveWithdrawConfirmation | Update done by SendWithdrawRequest
+    # ReceiveWithdrawRequest | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
 
 
@@ -1162,9 +1162,10 @@ class RaidenService(Runnable):
                     proportional=proportional_fee,
                     imbalance_penalty=imbalance_penalty,
                 )
-                self.handle_event(
-                    chain_state,
-                    SendPFSFeeUpdate(canonical_identifier=channel.canonical_identifier),
+                send_pfs_update(
+                    raiden=self,
+                    canonical_identifier=channel.canonical_identifier,
+                    update_fee_schedule=True,
                 )
 
     def _get_initial_whitelist(self, chain_state: ChainState) -> List[Address]:
