@@ -95,8 +95,11 @@ class ProxyManager:
         self.contract_manager = contract_manager
         self.metadata = metadata
 
+        # exposing the lock since it is needed for a proper gas_reserve
+        # estimation
+        self.token_network_creation_lock = Semaphore()
+
         self._token_creation_lock = Semaphore()
-        self._token_network_creation_lock = Semaphore()
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
         self._service_registry_creation_lock = Semaphore()
@@ -150,7 +153,7 @@ class ProxyManager:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
-        with self._token_network_creation_lock:
+        with self.token_network_creation_lock:
             if address not in self.address_to_token_network:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
