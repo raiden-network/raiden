@@ -20,6 +20,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError, Conn
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from urllib3.exceptions import ReadTimeoutError
+from raiden.accounts import KeystoreFileNotFound, KeystoreAuthenticationError
 
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
@@ -112,6 +113,7 @@ class ReturnCode(Enum):
     GENERIC_COMMUNICATION_ERROR = 3
     ETH_INTERFACE_ERROR = 4
     PORT_ALREADY_IN_USE = 5
+    ETH_ACCOUNT_ERROR = 6
 
 
 def write_stack_trace(ex: Exception) -> None:
@@ -666,6 +668,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
             fg="red",
         )
         sys.exit(ReturnCode.PORT_ALREADY_IN_USE)
+    except (KeystoreAuthenticationError, KeystoreFileNotFound) as e:
+        click.secho(str(e), fg="red")
+        sys.exit(ReturnCode.ETH_ACCOUNT_ERROR)
     except filelock.Timeout:
         name_or_id = ID_TO_NETWORKNAME.get(kwargs["network_id"], kwargs["network_id"])
         click.secho(
