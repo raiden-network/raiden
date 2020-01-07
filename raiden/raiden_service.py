@@ -57,10 +57,7 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
-from raiden.services import (
-    update_monitoring_service_from_balance_proof,
-    update_services_from_balance_proof,
-)
+from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import RaidenConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
@@ -77,7 +74,15 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
     calculate_imbalance_fees,
 )
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
-from raiden.transfer.mediated_transfer.state_change import ActionInitInitiator
+from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitInitiator,
+    ActionInitMediator,
+    ActionInitTarget,
+    ActionTransferReroute,
+    ReceiveLockExpired,
+    ReceiveTransferCancelRoute,
+    ReceiveTransferRefund,
+)
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
@@ -85,8 +90,12 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
+    BalanceProofStateChange,
     Block,
+    ContractReceiveChannelDeposit,
     ContractReceiveNewTokenNetworkRegistry,
+    ReceiveUnlock,
+    ReceiveWithdrawExpired,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.logging import redact_secret
@@ -119,6 +128,24 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
+
+PATH_FINDING_SERVICE_UPDATE = (
+    ContractReceiveChannelDeposit,
+    ReceiveUnlock,
+    ReceiveWithdrawExpired,
+    ActionInitMediator,
+    ActionInitTarget,
+    ActionTransferReroute,
+    ReceiveTransferCancelRoute,
+    ReceiveLockExpired,
+    ReceiveTransferRefund,
+    # State change | Reason why update is not needed
+    # ActionChannelWithdraw | Update was done by the
+    #                         SendWithdrawRequest/SendWithdrawConfirmation/SendWithdrawExpired
+    # ActionInitInitiator | The update is done by the SendLockedTransfer event
+    # ReceiveWithdrawRequest | Update was done by the SendWithdrawConfirmation/SendWithdrawExpired
+    # ReceiveWithdrawConfirmation | Update done by SendWithdrawRequest
+)
 
 
 def initiator_init(
@@ -687,16 +714,32 @@ class RaidenService(Runnable):
         old_state = views.state_from_raiden(self)
         new_state, raiden_event_list = self.wal.log_and_dispatch(state_changes)
 
+        # For safety of the mediation the monitoring service must be updated
+        # before the balance proof is sent. Otherwise a timing attack would be
+        # possible, were an attacker would mediate a transfer through a node,
+        # and try to DoS it, with the expectation that the victim would
+        # forward the payment, but wouldn't be able to send a transaction to
+        # the blockchain nor update a MS.
+        for state_change in state_changes:
+            if self.config.services.monitoring_enabled and isinstance(
+                state_change, BalanceProofStateChange
+            ):
+                update_monitoring_service_from_balance_proof(
+                    raiden=self,
+                    chain_state=old_state,
+                    new_balance_proof=state_change.balance_proof,
+                    non_closing_participant=self.address,
+                )
+
+            if isinstance(state_change, PATH_FINDING_SERVICE_UPDATE):
+                if isinstance(state_change, BalanceProofStateChange):
+                    canonical_identifier = state_change.balance_proof.canonical_identifier
+                else:
+                    canonical_identifier = state_change.canonical_identifier
+                send_pfs_update(raiden=self, canonical_identifier=canonical_identifier)
+
         for state_change in state_changes:
             after_blockchain_statechange(self, state_change)
-
-        for changed_balance_proof in views.detect_balance_proof_change(old_state, new_state):
-            update_services_from_balance_proof(
-                self,
-                chain_state=new_state,
-                balance_proof=changed_balance_proof,
-                non_closing_participant=self.address,
-            )
 
         log.debug(
             "Raiden events",
