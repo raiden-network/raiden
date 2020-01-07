@@ -41,11 +41,13 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
     BalanceProofSignedState,
+    ChainState,
     ChannelState,
     NettingChannelState,
     NetworkState,
 )
 from raiden.transfer.state_change import ActionChannelClose
+from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
@@ -89,7 +91,12 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 )
 
 
-def event_filter_for_payments(event: Event, partner_address: Address = None) -> bool:
+def event_filter_for_payments(
+    event: Event,
+    chain_state: Optional[ChainState] = None,
+    partner_address: Optional[Address] = None,
+    token_address: Optional[TokenAddress] = None,
+) -> bool:
     """Filters payment history related events depending on partner_address argument
 
     - If no other args are given, all payment related events match
@@ -98,14 +105,26 @@ def event_filter_for_payments(event: Event, partner_address: Address = None) -> 
       target matches it's returned. If it's a payment received and the initiator matches
       then it's returned.
     """
-
     sent_and_target_matches = isinstance(
         event, (EventPaymentSentFailed, EventPaymentSentSuccess)
     ) and (partner_address is None or event.target == partner_address)
     received_and_initiator_matches = isinstance(event, EventPaymentReceivedSuccess) and (
         partner_address is None or event.initiator == partner_address
     )
-    return sent_and_target_matches or received_and_initiator_matches
+
+    token_address_matches = True
+    if token_address:
+        assert chain_state, "Filtering for token_address without a chain state is an error"
+        token_network = get_token_network_by_address(
+            chain_state=chain_state,
+            token_network_address=event.token_network_address,  # type: ignore
+        )
+        if not token_network:
+            token_address_matches = False
+        else:
+            token_address_matches = token_address == token_network.token_address
+
+    return token_address_matches and (sent_and_target_matches or received_and_initiator_matches)
 
 
 def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
@@ -1124,10 +1143,16 @@ class RaidenAPI:  # pragma: no unittest
             logical_and=False,
         )
 
+        chain_state = chain_state = views.state_from_raiden(self.raiden)
         events = [
             e
             for e in events
-            if event_filter_for_payments(event=e.wrapped_event, partner_address=target_address)
+            if event_filter_for_payments(
+                event=e.wrapped_event,
+                chain_state=chain_state,
+                partner_address=target_address,
+                token_address=token_address,
+            )
         ]
 
         return events
