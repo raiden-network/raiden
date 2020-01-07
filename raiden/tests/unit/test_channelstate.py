@@ -46,7 +46,6 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
-    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -280,9 +279,6 @@ def test_channelstate_update_contract_balance():
 
     assert_partner_state(new_state.our_state, new_state.partner_state, our_model2)
     assert_partner_state(new_state.partner_state, new_state.our_state, partner_model2)
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
 
 def test_channelstate_decreasing_contract_balance():
@@ -2223,9 +2219,6 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.our_state.total_withdraw == total_withdraw
     assert iteration.new_state.our_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.our_state.withdraws_pending
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
     contract_receive_withdraw = ContractReceiveChannelWithdraw(
         canonical_identifier=channel_state.canonical_identifier,
@@ -2248,6 +2241,3 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.partner_state.total_withdraw == total_withdraw
     assert iteration.new_state.partner_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.partner_state.withdraws_pending
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)

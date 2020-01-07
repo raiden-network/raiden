@@ -23,7 +23,6 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
-    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -2378,7 +2377,7 @@ def update_fee_schedule_after_balance_change(
         proportional=channel_state.fee_schedule.proportional,
         imbalance_penalty=imbalance_penalty,
     )
-    return [SendPFSFeeUpdate(canonical_identifier=channel_state.canonical_identifier)]
+    return []
 
 
 def handle_channel_deposit(
@@ -2393,8 +2392,8 @@ def handle_channel_deposit(
         update_contract_balance(channel_state.partner_state, contract_balance)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
-    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
-    return TransitionResult(channel_state, events)
+    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, [])
 
 
 def handle_channel_withdraw(
@@ -2420,8 +2419,8 @@ def handle_channel_withdraw(
     end_state.onchain_total_withdraw = state_change.total_withdraw
 
     # A withdraw changes the total capacity of the channel and as such the fees need to change
-    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
-    return TransitionResult(channel_state, events)
+    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, [])
 
 
 def handle_channel_batch_unlock(
