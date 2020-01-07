@@ -2444,6 +2444,20 @@ def test_payment_events_endpoints(
         },
     )
 
+    # also add a test for filtering by wrong token address
+    request = grequests.get(
+        api_url_for(
+            app2_server,
+            "token_target_paymentresource",
+            token_address=target1_address,
+            target_address=target1_address,
+        )
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    json_response = get_json_response(response)
+    assert len(json_response) == 0
+
     app1_server.stop()
     app2_server.stop()
 
