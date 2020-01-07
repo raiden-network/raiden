@@ -4,6 +4,7 @@ import os
 import pytest
 import structlog
 
+from raiden.exceptions import ConfigurationError
 from raiden.log_config import LogFilter, configure_logging
 
 
@@ -120,7 +121,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
 
 def test_debug_logfile_invalid_dir():
     """Test that providing an invalid directory for the debug logfile throws an error"""
-    with pytest.raises(SystemExit):
+    with pytest.raises(ConfigurationError):
         configure_logging(
             {"": "DEBUG"}, debug_log_file_path=os.path.join("notarealdir", "raiden-debug.log")
         )
