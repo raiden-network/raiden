@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all()  # isort:skip # noqa
@@ -619,6 +619,10 @@ def main() -> None:
         # If any of the processes failed to startup
         if stop.is_set():
             return
+
+        # Uncomment this if you want to interact manually with the started nodes
+        # print("All nodes are ready")
+        # input()
 
         nursery.spawn_under_watch(
             run_stress_test,
