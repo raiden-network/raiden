@@ -3,8 +3,6 @@ from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
-    BalanceProofSignedState,
-    BalanceProofUnsignedState,
     ChainState,
     ChannelState,
     NettingChannelState,
@@ -14,13 +12,11 @@ from raiden.transfer.state import (
     TokenNetworkState,
 )
 from raiden.utils.typing import (
-    MYPY_ANNOTATION,
     TYPE_CHECKING,
     Address,
     BlockNumber,
     Callable,
     Dict,
-    Iterator,
     List,
     Optional,
     Secret,
@@ -30,7 +26,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
-    Union,
 )
 
 if TYPE_CHECKING:
@@ -528,79 +523,6 @@ def filter_channels_by_status(
             states.append(channel_state)
 
     return states
-
-
-def detect_balance_proof_change(
-    old_state: ChainState, current_state: ChainState
-) -> Iterator[Union[BalanceProofSignedState, BalanceProofUnsignedState]]:
-    """ Compare two states for any received balance_proofs that are not in `old_state`. """
-    if old_state == current_state:
-        return
-    for token_network_registry_address in current_state.identifiers_to_tokennetworkregistries:
-        try:
-            old_registry = old_state.identifiers_to_tokennetworkregistries.get(
-                token_network_registry_address
-            )
-        except AttributeError:
-            old_registry = None
-
-        current_registry = current_state.identifiers_to_tokennetworkregistries[
-            token_network_registry_address
-        ]
-        if old_registry == current_registry:
-            continue
-
-        for token_network_address in current_registry.tokennetworkaddresses_to_tokennetworks:
-            if old_registry:
-                old_token_network = old_registry.tokennetworkaddresses_to_tokennetworks.get(
-                    token_network_address
-                )
-            else:
-                old_token_network = None
-
-            current_token_network = current_registry.tokennetworkaddresses_to_tokennetworks[
-                token_network_address
-            ]
-            if old_token_network == current_token_network:
-                continue
-
-            for channel_identifier in current_token_network.channelidentifiers_to_channels:
-                if old_token_network:
-                    old_channel = old_token_network.channelidentifiers_to_channels.get(
-                        channel_identifier
-                    )
-                else:
-                    old_channel = None
-
-                current_channel = current_token_network.channelidentifiers_to_channels[
-                    channel_identifier
-                ]
-                if current_channel == old_channel:
-                    continue
-
-                else:
-                    partner_state_updated = (
-                        current_channel.partner_state.balance_proof is not None
-                        and (
-                            old_channel is None
-                            or old_channel.partner_state.balance_proof
-                            != current_channel.partner_state.balance_proof
-                        )
-                    )
-
-                    if partner_state_updated:
-                        assert current_channel.partner_state.balance_proof, MYPY_ANNOTATION
-                        yield current_channel.partner_state.balance_proof
-
-                    our_state_updated = current_channel.our_state.balance_proof is not None and (
-                        old_channel is None
-                        or old_channel.our_state.balance_proof
-                        != current_channel.our_state.balance_proof
-                    )
-
-                    if our_state_updated:
-                        assert current_channel.our_state.balance_proof, MYPY_ANNOTATION
-                        yield current_channel.our_state.balance_proof
 
 
 def get_networks(
