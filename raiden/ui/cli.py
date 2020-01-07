@@ -655,7 +655,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
             f"only user of the selected account",
             fg="red",
         )
-        sys.exit(1)
+        sys.exit(ReturnCode.ETH_ACCOUNT_ERROR)
     except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
         print(COMMUNICATION_ERROR.format(kwargs["eth_rpc_endpoint"]))
         sys.exit(ReturnCode.GENERIC_COMMUNICATION_ERROR)
@@ -686,10 +686,10 @@ def run(ctx: Context, **kwargs: Any) -> None:
             f"{to_checksum_address(address)} on network id {name_or_id}",
             fg="red",
         )
-        sys.exit(1)
+        sys.exit(ReturnCode.CONFIGURATION_ERROR)
     except Exception as ex:
         write_stack_trace(ex)
-        sys.exit(1)
+        sys.exit(ReturnCode.FATAL)
     finally:
         # teardown order is important because of side-effects, both the
         # switch_monitor and profiler could use the tracing api, for the
