@@ -103,3 +103,7 @@ class Runnable:
         if not self.greenlet:
             return
         self.greenlet.rawlink(callback)
+
+    @property
+    def loop(self) -> Any:
+        return self.greenlet.loop
