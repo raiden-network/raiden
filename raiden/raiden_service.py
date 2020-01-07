@@ -27,7 +27,6 @@ from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
-    EMPTY_HASH,
     EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
@@ -1095,21 +1094,16 @@ class RaidenService(Runnable):
         msg = f"The node state was not yet recovered, cant read balance proofs. node:{self!r}"
         assert self.wal, msg
 
-        current_balance_proofs = list(
-            balance_proof
-            for balance_proof in views.detect_balance_proof_change(
-                old_state=ChainState(
-                    pseudo_random_generator=chain_state.pseudo_random_generator,
-                    block_number=GENESIS_BLOCK_NUMBER,
-                    block_hash=EMPTY_HASH,
-                    our_address=chain_state.our_address,
-                    chain_id=chain_state.chain_id,
-                ),
-                current_state=chain_state,
-            )
-            # only request monitoring for partner's BPs
-            if isinstance(balance_proof, BalanceProofSignedState)
-        )
+        # Fetch all balance proofs from the chain_state
+        current_balance_proofs: List[BalanceProofSignedState] = []
+        for tn_registry in chain_state.identifiers_to_tokennetworkregistries.values():
+            for tn in tn_registry.tokennetworkaddresses_to_tokennetworks.values():
+                for channel in tn.channelidentifiers_to_channels.values():
+                    balance_proof = channel.partner_state.balance_proof
+                    if not balance_proof:
+                        continue
+                    assert isinstance(balance_proof, BalanceProofSignedState)
+                    current_balance_proofs.append(balance_proof)
 
         log.debug(
             "Initializing monitoring services",
