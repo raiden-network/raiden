@@ -450,7 +450,7 @@ class RaidenService(Runnable):
             channel state and is necessary to reject new messages for closed
             channels.
         """
-        assert self.ready_to_process_events, f"Event procossing disable. node:{self!r}"
+        assert self.ready_to_process_events, f"Event processing disable. node:{self!r}"
         assert self.blockchain_events
 
         whitelist = self._get_initial_whitelist(chain_state)
@@ -521,7 +521,7 @@ class RaidenService(Runnable):
             # The value `self.query_start_block` is an optimization, because
             # Raiden has to poll all events until the last confirmed block,
             # using the genesis block would result in fetchs for a few million
-            # of unecessary blocks. Instead of querying all these unecessary
+            # of unnecessary blocks. Instead of querying all these unnecessary
             # blocks, the configuration variable `query_start_block` is used to
             # start at the block which `TokenNetworkRegistry`  was deployed.
             init_state_change = ActionInitChain(
@@ -764,7 +764,7 @@ class RaidenService(Runnable):
         return greenlets
 
     def snapshot(self) -> None:
-        assert self.wal, "Wal must be set."
+        assert self.wal, "WAL must be set."
 
         log.debug("Storing snapshot")
         self.wal.snapshot(self.state_change_qty)
@@ -785,7 +785,7 @@ class RaidenService(Runnable):
 
         Important:
 
-            This is spawing a new greenlet for /each/ transaction. It's
+            This is spawning a new greenlet for /each/ transaction. It's
             therefore /required/ that there is *NO* order among these.
         """
         return gevent.spawn(self._handle_event, chain_state, raiden_event)
@@ -852,7 +852,7 @@ class RaidenService(Runnable):
         """Poll blockchain events up to `target_block_number`.
 
         Multiple queries may be necessary on restarts, because the node may
-        have been offline for an extend perior of time. During normal
+        have been offline for an extend period of time. During normal
         operation, this must not happen, because in this case the node may have
         missed important events, like a channel close, while the transport
         layer is running, this can lead to loss of funds.
@@ -930,7 +930,7 @@ class RaidenService(Runnable):
             # tokens in it. Once the node fetches the event for the new channel,
             # it will immediately request the deposit, which leaves a window for
             # a race condition. If the Block state change was not yet
-            # processed, the block hash used as the trigerring block for the
+            # processed, the block hash used as the triggering block for the
             # deposit will be off-by-one, and it will point to the block
             # immediately before the channel existed. This breaks a proxy
             # precondition which crashes the client.
@@ -1345,7 +1345,7 @@ class RaidenService(Runnable):
         )
 
         # FIXME: Dispatch the state change even if there are no routes to
-        # create the wal entry.
+        # create the WAL entry.
         if error_msg is None:
             self.handle_and_track_state_changes([init_initiator_statechange])
         else:
