@@ -285,11 +285,15 @@ def restart_network(
     return [g.get() for g in greenlets]
 
 
-def do_transfer(post_url: str, identifier: int, amount: int) -> requests.Response:
+def transfer_and_assert_successful(
+    base_url: str, token_address: str, target_address: str, payment_identifier: int, amount: int
+) -> None:
     # TODO: Add an UUID to the transfer, change Raiden to log the UUID and for
     # it to forward the data to the PFS, which also should log the UUID. This
     # should make debugging easier.
-    json = {"amount": amount, "identifier": identifier}
+
+    post_url = f"{base_url}/api/v1/payments/{token_address}/{target_address}"
+    json = {"amount": amount, "identifier": payment_identifier}
 
     log.debug("Payment request", url=post_url, json=json)
 
@@ -297,22 +301,12 @@ def do_transfer(post_url: str, identifier: int, amount: int) -> requests.Respons
     response = requests.post(post_url, json=json)
     elapsed = time() - start
 
-    log.debug("Payment done", url=post_url, json=json, time=elapsed)
-
-    return response
-
-
-def transfer_and_assert_successful(
-    base_url: str, token_address: str, target_address: str, payment_identifier: int, amount: int
-) -> None:
-    response = do_transfer(
-        f"{base_url}/api/v1/payments/{token_address}/{target_address}", payment_identifier, amount
-    )
-
     assert response is not None
     is_json = response.headers["Content-Type"] == "application/json"
     assert is_json, response.headers["Content-Type"]
     assert response.status_code == HTTPStatus.OK, response.json()
+
+    log.debug("Payment done", url=post_url, json=json, time=elapsed)
 
 
 def do_fifty_transfer_up_to(capacity_lower_bound: Amount) -> TransferPlan:
