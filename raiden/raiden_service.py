@@ -634,7 +634,7 @@ class RaidenService(Runnable):
             GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
         )
 
-        # `blockchain_events` is a required for `_poll_until_target`, so it
+        # `blockchain_events` is a requirement for `_poll_until_target`, so it
         # must be set before calling it
         self.blockchain_events = blockchain_events
         self._poll_until_target(latest_confirmed_block_number)
