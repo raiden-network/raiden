@@ -18,6 +18,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transport import (
@@ -268,6 +269,7 @@ def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, loc
     assert first_sync_filter_id == second_sync_filter_id
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize("matrix_server_count", [1])
 def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
@@ -334,6 +336,7 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
         kicked_transport._client.api.kick_user(room_id, non_admin_user_ids[1])
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_transports", [20])
 @pytest.mark.parametrize("matrix_server_count", [1])
 def test_assumption_receive_all_state_events_upon_first_sync_after_join(

@@ -12,10 +12,15 @@ def pytest_configure(config):
 
 def pytest_collection_finish(session):
     def unsafe(item):
-        has_nodes = "raiden_network" in item.fixturenames or "raiden_chain" in item.fixturenames
+        has_runnable = (
+            "raiden_network" in item.fixturenames
+            or "raiden_chain" in item.fixturenames
+            or "api_server_test_instance" in item.fixturenames
+            or "matrix_transports" in item.fixturenames
+        )
         is_secure = getattr(item.function, "_decorated_raise_on_failure", False)
         is_exempt = item.get_closest_marker("expect_failure") is not None
-        return has_nodes and not (is_secure or is_exempt)
+        return has_runnable and not (is_secure or is_exempt)
 
     unsafe_tests = [item.originalname or item.name for item in session.items if unsafe(item)]
 

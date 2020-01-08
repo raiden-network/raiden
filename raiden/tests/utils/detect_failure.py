@@ -1,15 +1,15 @@
 import traceback
 from functools import wraps
-from typing import Any, Callable, List
+from typing import Any, Callable, Set
 
 import gevent
 import pytest
 import structlog
 from gevent.event import AsyncResult
 
-from raiden.api.rest import APIServer
-from raiden.app import App
 from raiden.raiden_service import RaidenService
+from raiden.utils.runnable import Runnable
+from raiden.utils.typing import List
 
 log = structlog.get_logger(__name__)
 
@@ -24,32 +24,28 @@ def raise_on_failure(test_function: Callable) -> Callable:
     @wraps(test_function)
     def wrapper(**kwargs: Any) -> None:
         result = AsyncResult()
-        raiden_services: List[RaidenService] = []
 
-        apps: List[App] = kwargs.get("raiden_network", kwargs.get("raiden_chain"))
+        raiden_services: List[RaidenService] = list()
+        raiden_services.extend(app.raiden for app in kwargs.get("raiden_network", list()))
+        raiden_services.extend(app.raiden for app in kwargs.get("raiden_chain", list()))
 
-        if apps:
-            assert all(isinstance(app, App) for app in apps)
-            raiden_services = [app.raiden for app in apps]
-        else:
-            api_server = kwargs.get("api_server_test_instance")
-            if isinstance(api_server, APIServer):
-                raiden_services = [api_server.rest_api.raiden_api.raiden]
+        api_server = kwargs.get("api_server_test_instance")
+        if api_server:
+            raiden_services.append(api_server.rest_api.raiden_api.raiden)
 
-        if not raiden_services:
-            raise Exception(
-                f"Can't use `raise_on_failure` on test function {test_function.__name__} "
-                "which uses neither `raiden_network` nor `raiden_chain` fixtures."
-            )
+        for raiden in raiden_services:
+            assert raiden, "The RaidenService must be started"
+
+        runnables: Set[Runnable] = set()
+        runnables.update(kwargs.get("matrix_transports", list()))
+        runnables.update(raiden_services)
 
         restart_node = kwargs.get("restart_node", None)
         if restart_node is not None:
             restart_node.link_exception_to(result)
 
-        # Do not use `link` or `link_value`, an app can be stopped to test restarts.
-        for raiden in raiden_services:
-            assert raiden, "The RaidenService must be started"
-            raiden.greenlet.link_exception(result)
+        for task in runnables:
+            task.greenlet.link_exception(result)
 
         test_greenlet = gevent.spawn(test_function, **kwargs)
         test_greenlet.link(result)
