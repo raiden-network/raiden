@@ -4,7 +4,7 @@ import gevent
 import psutil
 
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
+from raiden.api.rest import APIConfig, APIServer, RestAPI
 from raiden.app import App
 
 
@@ -28,9 +28,9 @@ def wait_for_listening_port(
 def create_api_server(raiden_app: App, port_number: int) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api, config={"host": "localhost", "port": port_number})
+    api_config = APIConfig(host="localhost", port=port_number, api_prefix="api", webui_config=None)
+    api_server = APIServer(rest_api, api_config)
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{port_number}"
-    api_server.start()
 
     # Fixes flaky test, were requests are done prior to the server initializing
     # the listening socket.

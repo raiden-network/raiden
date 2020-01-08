@@ -15,7 +15,7 @@ from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
+from raiden.api.rest import APIConfig, APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     EMPTY_ADDRESS,
@@ -397,8 +397,9 @@ def run_smoketest(
         raiden_api = RaidenAPI(app.raiden)
         rest_api = RestAPI(raiden_api)
         (api_host, api_port) = split_endpoint(args["api_address"])
-        api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
-        api_server.start()
+
+        api_config = APIConfig(host=api_host, port=api_port, api_prefix="api", webui_config=None)
+        api_server = APIServer(rest_api, api_config)
 
         block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for

@@ -2,6 +2,7 @@ import errno
 import json
 import logging
 import socket
+from dataclasses import dataclass
 from hashlib import sha256
 from http import HTTPStatus
 
@@ -13,6 +14,7 @@ from flask import Flask, Request, Response, make_response, request, send_from_di
 from flask.json import jsonify
 from flask_cors import CORS
 from flask_restful import Api, abort
+from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from hexbytes import HexBytes
 from marshmallow import Schema
@@ -98,7 +100,6 @@ from raiden.transfer.events import (
 from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.utils.formatting import optional_address_to_string, to_checksum_address
 from raiden.utils.http import split_endpoint
-from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 from raiden.utils.testnet import MintingMethod
 from raiden.utils.transfers import create_default_identifier
@@ -280,7 +281,15 @@ def normalize_events_list(old_list: List) -> List:
     return new_list
 
 
-def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) -> None:
+def restapi_setup_urls(
+    flask_app: Flask, flask_api_context: Api, rest_api: "RestAPI", urls: List
+) -> None:
+    msg = (
+        "Blueprint must not be registered *before* the URL setup. As of Flask "
+        "1.0.3 registering the URLs after the blueprint has been registered will be a noop."
+    )
+    assert flask_api_context.blueprint.name not in flask_app.blueprints, msg
+
     for url_tuple in urls:
         if len(url_tuple) == 2:
             route, resource_cls = url_tuple
@@ -304,83 +313,129 @@ def restapi_setup_type_converters(
         flask_app.url_map.converters[key] = value
 
 
-class APIServer(Runnable):  # pragma: no unittest
+@dataclass
+class WebUIConfig:
+    cors_domain_list: List[str]
+    eth_rpc_endpoint: Optional[str]
+
+
+@dataclass
+class APIConfig:
+    host: str
+    port: int
+    api_prefix: str
+    webui_config: Optional[WebUIConfig]
+
+
+class APIServer:  # pragma: no unittest
     """
     Runs the API-server that routes the endpoint to the resources.
     The API is wrapped in multiple layers, and the Server should be invoked this way::
 
-        # instance of the raiden-api
-        raiden_api = RaidenAPI(...)
-
-        # wrap the raiden-api with rest-logic and encoding
-        rest_api = RestAPI(raiden_api)
-
-        # create the server and link the api-endpoints with flask / flask-restful middleware
-        api_server = APIServer(rest_api, {'host: '127.0.0.1', 'port': 5001})
-
-        # run the server greenlet
-        api_server.start()
+        config = APIConfig(
+            host='127.0.0.1',
+            port=5001,
+            api_prefix='api',
+            cors_domain_list=list(),
+            web_ui=False,
+            eth_rpc_endpoint='localhost:5555',
+        )
+        api_server = APIServer(RestAPI(RaidenAPI(...)), config)
     """
 
-    _api_prefix = "/api/1"
+    greenlet: Greenlet
 
-    def __init__(
-        self,
-        rest_api: "RestAPI",
-        config: Dict[str, Any],
-        cors_domain_list: List[str] = None,
-        web_ui: bool = False,
-        eth_rpc_endpoint: str = None,
-    ) -> None:
-        super().__init__()
-        if rest_api.version != 1:
-            raise ValueError(f"Invalid api version: {rest_api.version}")
-        self._api_prefix = f"/api/v{rest_api.version}"
-
-        flask_app = Flask(__name__)
-        if cors_domain_list:
-            CORS(flask_app, origins=cors_domain_list)
-
-        if eth_rpc_endpoint:
-            if not eth_rpc_endpoint.startswith("http"):
-                eth_rpc_endpoint = f"http://{eth_rpc_endpoint}"
-            flask_app.config["WEB3_ENDPOINT"] = eth_rpc_endpoint
-
-        blueprint = create_blueprint()
-        flask_api_context = Api(blueprint, prefix=self._api_prefix)
-
-        restapi_setup_type_converters(
-            flask_app, {"hexaddress": cast(BaseConverter, HexAddressConverter)}
+    def __init__(self, rest_api: "RestAPI", api_config: APIConfig) -> None:
+        log.debug(
+            "REST API starting",
+            node=to_checksum_address(rest_api.raiden_api.address),
+            api_config=api_config,
         )
 
-        restapi_setup_urls(flask_api_context, rest_api, URLS_V1)
+        super().__init__()
 
-        self.config = config
+        if rest_api.version != 1:
+            raise ValueError(f"Invalid api version: {rest_api.version}")
+
+        self._initialize_flask(rest_api, api_config)
+        self._initialize_wsgi(api_config)
+
+        self.api_config = api_config
         self.rest_api = rest_api
+        self.greenlet = gevent.spawn(self.wsgiserver.serve_forever)
+
+        self._is_raiden_running()
+
+        log.debug(
+            "REST API started",
+            node=to_checksum_address(rest_api.raiden_api.address),
+            api_config=api_config,
+        )
+
+    def _initialize_flask(self, rest_api: "RestAPI", api_config: APIConfig) -> None:
+        flask_app = Flask(__name__)
+        flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
+        # needed so flask_restful propagates the exception to our error handler above
+        # or else, it'll replace it with a E500 response
+        flask_app.config["PROPAGATE_EXCEPTIONS"] = True
+
+        blueprint = create_blueprint()
+        flask_api_context = Api(blueprint, prefix=f"/{api_config.api_prefix}/v{rest_api.version}")
+
+        converters: Dict[str, BaseConverter] = {
+            "hexaddress": cast(BaseConverter, HexAddressConverter)
+        }
+
+        restapi_setup_type_converters(flask_app, converters)
+        restapi_setup_urls(flask_app, flask_api_context, rest_api, URLS_V1)
+
+        flask_app.register_blueprint(blueprint)
+        flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
+        flask_app.register_error_handler(Exception, self.unhandled_exception)
+        flask_app.before_request(self._is_raiden_running)
+
+        if api_config.webui_config:
+            self._initialize_webui(flask_app, api_config.webui_config)
+
         self.flask_app = flask_app
         self.blueprint = blueprint
         self.flask_api_context = flask_api_context
 
-        self.wsgiserver = None
-        self.flask_app.register_blueprint(self.blueprint)
-
-        self.flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
-
-        self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
-        self.flask_app.register_error_handler(Exception, self.unhandled_exception)
-        self.flask_app.before_request(self._is_raiden_running)
-
-        # needed so flask_restful propagates the exception to our error handler above
-        # or else, it'll replace it with a E500 response
-        self.flask_app.config["PROPAGATE_EXCEPTIONS"] = True
-
-        if web_ui:
+    def _initialize_webui(self, flask_app: Flask, webui_config: WebUIConfig) -> None:
+        if webui_config:
             for route in ("/ui/<path:file_name>", "/ui", "/ui/", "/index.html", "/"):
-                self.flask_app.add_url_rule(
-                    route, route, view_func=self._serve_webui, methods=("GET",)
-                )
+                flask_app.add_url_rule(route, route, view_func=self._serve_webui, methods=("GET",))
 
-        self._is_raiden_running()
+            if webui_config.eth_rpc_endpoint:
+                if not webui_config.eth_rpc_endpoint.startswith("http"):
+                    eth_rpc_endpoint = f"http://{webui_config.eth_rpc_endpoint}"
+                flask_app.config["WEB3_ENDPOINT"] = eth_rpc_endpoint
+
+            if webui_config.cors_domain_list:
+                CORS(flask_app, origins=webui_config.cors_domain_list)
+
+    def _initialize_wsgi(self, api_config: APIConfig) -> None:
+        # WSGI expects an stdlib logger. With structlog there's conflict of
+        # method names. Rest unhandled exception will be re-raised here:
+        wsgi_log = logging.getLogger(__name__ + ".pywsgi")
+
+        pool = gevent.pool.Pool()
+        wsgiserver = WSGIServer(
+            (api_config.host, api_config.port),
+            self.flask_app,
+            log=wsgi_log,
+            error_log=wsgi_log,
+            spawn=pool,
+        )
+
+        try:
+            wsgiserver.init_socket()
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                raise APIServerPortInUseError(f"{api_config.host}:{api_config.port}")
+            raise
+
+        self.wsgiserver = wsgiserver
 
     def _is_raiden_running(self) -> None:
         # We cannot accept requests before the node has synchronized with the
@@ -404,7 +459,7 @@ class APIServer(Runnable):  # pragma: no unittest
                     self.rest_api.raiden_api.raiden.config.environment_type.name.lower()
                 )
                 config = {
-                    "raiden": self._api_prefix,
+                    "raiden": self.flask_api_context.prefix,
                     "web3": web3,
                     "settle_timeout": self.rest_api.raiden_api.raiden.config.settle_timeout,
                     "reveal_timeout": self.rest_api.raiden_api.raiden.config.reveal_timeout,
@@ -431,82 +486,25 @@ class APIServer(Runnable):  # pragma: no unittest
             response = send_from_directory(self.flask_app.config["WEBUI_PATH"], "index.html")
         return response
 
-    def _run(self) -> None:  # type: ignore
-        try:
-            # stop may have been executed before _run was scheduled, in this
-            # case wsgiserver will be None
-            if self.wsgiserver is not None:
-                self.wsgiserver.serve_forever()
-        except gevent.GreenletExit:  # pylint: disable=try-except-raise
-            raise
-        except Exception:
-            self.stop()  # ensure cleanup and wait on subtasks
-            raise
-
-    def start(self) -> None:
-        log.debug(
-            "REST API starting",
-            host=self.config["host"],
-            port=self.config["port"],
-            node=to_checksum_address(self.rest_api.raiden_api.address),
-        )
-
-        # WSGI expects an stdlib logger. With structlog there's conflict of
-        # method names. Rest unhandled exception will be re-raised here:
-        wsgi_log = logging.getLogger(__name__ + ".pywsgi")
-
-        # server.stop() clears the handle and the pool, this is okay since a
-        # new WSGIServer is created on each start
-        pool = gevent.pool.Pool()
-        wsgiserver = WSGIServer(
-            (self.config["host"], self.config["port"]),
-            self.flask_app,
-            log=wsgi_log,
-            error_log=wsgi_log,
-            spawn=pool,
-        )
-
-        try:
-            wsgiserver.init_socket()
-        except socket.error as e:
-            if e.errno == errno.EADDRINUSE:
-                raise APIServerPortInUseError(f"{self.config['host']}:{self.config['port']}")
-            raise
-
-        self.wsgiserver = wsgiserver
-
-        log.debug(
-            "REST API started",
-            host=self.config["host"],
-            port=self.config["port"],
-            node=to_checksum_address(self.rest_api.raiden_api.address),
-        )
-
-        super().start()
-
     def stop(self) -> None:
         log.debug(
             "REST API stopping",
-            host=self.config["host"],
-            port=self.config["port"],
             node=to_checksum_address(self.rest_api.raiden_api.address),
+            api_config=self.api_config,
         )
 
-        if self.wsgiserver is not None:
-            # It is very important to have a timeout here, the existing endpoints only return
-            # once the operation is completed, which for a deposit it means waiting for the
-            # transaction to be mined and confirmed, which can potentially take a few minutes.
-            # If a timeout is not provided here, that would lead to a very and unpredictable
-            # shutdown timeout, which leads to problems with our scenario player tooling.
-
-            self.wsgiserver.stop(timeout=5)
-            self.wsgiserver = None
+        # It is very important to have a timeout here, the existing endpoints only return
+        # once the operation is completed, which for a deposit it means waiting for the
+        # transaction to be mined and confirmed, which can potentially take a few minutes.
+        # If a timeout is not provided here, that would lead to a very and unpredictable
+        # shutdown timeout, which leads to problems with our scenario player tooling.
+        self.wsgiserver.stop(timeout=5)
+        self.wsgiserver = None
 
         log.debug(
             "REST API stopped",
-            host=self.config["host"],
-            port=self.config["port"],
             node=to_checksum_address(self.rest_api.raiden_api.address),
+            api_config=self.api_config,
         )
 
     def unhandled_exception(self, exception: Exception) -> Response:

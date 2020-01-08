@@ -12,7 +12,7 @@ from flask import url_for
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
+from raiden.api.rest import APIConfig, APIServer, RestAPI
 from raiden.app import App
 from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
@@ -65,12 +65,16 @@ def _url_for(apiserver: APIServer, endpoint: str, **kwargs) -> str:
 def start_apiserver(raiden_app: App, rest_api_port_number: Port) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api, config={"host": "localhost", "port": rest_api_port_number})
+
+    api_server = APIServer(
+        rest_api,
+        api_config=APIConfig(
+            host="localhost", port=rest_api_port_number, api_prefix="api", webui_config=None
+        ),
+    )
 
     # required for url_for
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{rest_api_port_number}"
-
-    api_server.start()
 
     wait_for_listening_port(rest_api_port_number)
 

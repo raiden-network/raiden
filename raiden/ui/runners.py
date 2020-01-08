@@ -8,14 +8,13 @@ from gevent.event import AsyncResult
 
 from raiden import constants, settings
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
+from raiden.api.rest import APIConfig, APIServer, RestAPI, WebUIConfig
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import split_endpoint
-from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import Port
 
@@ -67,10 +66,11 @@ class NodeRunner:
 
         app = run_app(**self._options)
 
-        gevent_tasks: List[gevent.Greenlet] = list()
-        runnable_tasks: List[Runnable] = list()
+        greenlets: List[gevent.Greenlet] = list()
+        stoppables: List[Any] = list()
 
-        runnable_tasks.append(app.raiden)
+        greenlets.append(app.raiden.greenlet)
+        stoppables.append(app.raiden)
 
         domain_list = []
         if self._options["rpccorsdomain"]:
@@ -89,14 +89,23 @@ class NodeRunner:
             if not api_port:
                 api_port = Port(settings.DEFAULT_HTTP_SERVER_PORT)
 
+            webui_config: Optional[WebUIConfig]
+            if self._options["web_ui"]:
+                webui_config = WebUIConfig(
+                    cors_domain_list=domain_list,
+                    eth_rpc_endpoint=self._options["eth_rpc_endpoint"],
+                )
+            else:
+                webui_config = None
+
             api_server = APIServer(
                 rest_api,
-                config={"host": api_host, "port": api_port},
-                cors_domain_list=domain_list,
-                web_ui=self._options["web_ui"],
-                eth_rpc_endpoint=self._options["eth_rpc_endpoint"],
+                APIConfig(
+                    host=api_host, port=api_port, api_prefix="api", webui_config=webui_config
+                ),
             )
-            api_server.start()
+            greenlets.append(api_server.greenlet)
+            stoppables.append(api_server)
 
             url = f"http://{api_host}:{api_port}/"
             print(
@@ -104,7 +113,6 @@ class NodeRunner:
                 f"the Raiden documentation for all available endpoints at\n "
                 f"{DOC_URL}"
             )
-            runnable_tasks.append(api_server)
 
         if self._options["console"]:
             from raiden.ui.console import Console
@@ -112,11 +120,11 @@ class NodeRunner:
             console = Console(app)
             console.start()
 
-            gevent_tasks.append(console)
+            greenlets.append(console)
 
-        gevent_tasks.append(gevent.spawn(check_version, get_system_spec()["raiden"]))
-        gevent_tasks.append(gevent.spawn(check_gas_reserve, app.raiden))
-        gevent_tasks.append(
+        greenlets.append(gevent.spawn(check_version, get_system_spec()["raiden"]))
+        greenlets.append(gevent.spawn(check_gas_reserve, app.raiden))
+        greenlets.append(
             gevent.spawn(
                 check_network_id, app.raiden.rpc_client.chain_id, app.raiden.rpc_client.web3
             )
@@ -126,7 +134,7 @@ class NodeRunner:
             self._options["pathfinding_service_address"] or self._options["enable_monitoring"]
         )
         if spawn_user_deposit_task:
-            gevent_tasks.append(gevent.spawn(check_rdn_deposits, app.raiden, app.user_deposit))
+            greenlets.append(gevent.spawn(check_rdn_deposits, app.raiden, app.user_deposit))
 
         self._startup_hook()
 
@@ -139,15 +147,23 @@ class NodeRunner:
         gevent.signal(signal.SIGTERM, sig_set)
         gevent.signal(signal.SIGINT, sig_set)
 
-        # Make sure RaidenService is the last service in the list.
-        runnable_tasks.reverse()
+        # Stop the services in reverse order, this is necessary to make sure
+        # the dependencies are only stopped after the running service,
+        # otherwise shutdown will fail.
+        #
+        # Example:
+        #
+        # - RaidenService is a dependecy for APIServer, therefore the former is
+        #   instantiated and added first to the list.
+        # - If during shutdown the order is not reversed, the RaidenService
+        #   will be stopped before the api, which will lead to errors in the API
+        # - To fix the above the order is reversed.
+        greenlets.reverse()
+        stoppables.reverse()
 
-        # quit if any task exits, successfully or not
-        for runnable in runnable_tasks:
-            runnable.greenlet.link(stop_event)
-
-        for task in gevent_tasks:
-            task.link(stop_event)
+        # Raiden must stop if any services stops, successfully or not.
+        for g in greenlets:
+            g.greenlet.link(stop_event)
 
         msg = (
             "The RaidenService must be last service to stop, since the other "
@@ -157,7 +173,7 @@ class NodeRunner:
             "processed after the RaidenService was stopped and it will cause a "
             "crash."
         )
-        assert isinstance(runnable_tasks[-1], RaidenService), msg
+        assert isinstance(stoppables[-1], RaidenService), msg
 
         try:
             stop_event.get()
@@ -165,17 +181,15 @@ class NodeRunner:
         finally:
             self._shutdown_hook()
 
-            for task in gevent_tasks:
+            for service in stoppables:
+                service.stop()
+
+            gevent.joinall(set(stoppables), app.config.shutdown_timeout, raise_error=True)
+
+            for task in greenlets:
                 task.kill()
 
-            for task in runnable_tasks:
-                task.stop()
-
-            gevent.joinall(
-                set(gevent_tasks + runnable_tasks), app.config.shutdown_timeout, raise_error=True
-            )
-
-            app.stop()
+            gevent.joinall(set(greenlets), app.config.shutdown_timeout, raise_error=True)
 
 
 class MatrixRunner(NodeRunner):
