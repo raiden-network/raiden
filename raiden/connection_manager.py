@@ -206,7 +206,7 @@ class ConnectionManager:  # pragma: no unittest
                 registry_address,
                 self.token_address,
                 channel_ids,
-                self.raiden.alarm.sleep_time,
+                self.raiden.config.blockchain.query_interval,
             )
 
         return channels_to_close

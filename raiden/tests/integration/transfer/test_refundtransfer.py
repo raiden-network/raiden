@@ -492,7 +492,7 @@ def test_different_view_of_last_bp_during_unlock(
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         channel_ids=[channel_identifier],
-        retry_timeout=app0.raiden.alarm.sleep_time,
+        retry_timeout=app0.raiden.config.blockchain.query_interval,
     )
 
     timeout = 30 if blockchain_type == "parity" else 10

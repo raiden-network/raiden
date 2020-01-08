@@ -6,6 +6,7 @@ import gevent
 import requests
 import structlog
 from eth_utils import to_hex
+from gevent import Greenlet
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
@@ -24,7 +25,6 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
 from raiden.utils import gas_reserve
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.runnable import Runnable
 from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional, Tuple
 
@@ -137,39 +137,31 @@ def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no uni
         gevent.sleep(CHECK_NETWORK_ID_INTERVAL)
 
 
-class AlarmTask(Runnable):
+class AlarmTask(Greenlet):
     """ Task to notify when a block is mined. """
 
     def __init__(self, proxy_manager: ProxyManager, sleep_time: float) -> None:
+        rpc_client = proxy_manager.client
+        log.debug("Alarm task starting", node=to_checksum_address(rpc_client.address))
+
         super().__init__()
 
         self.callbacks: List[Callable] = list()
+        self.known_block_number: Optional[BlockNumber] = None
         self.proxy_manager = proxy_manager
         self.rpc_client = proxy_manager.client
-
-        self.known_block_number: Optional[BlockNumber] = None
-        self._stop_event: Optional[AsyncResult] = None
-
-        # TODO: Start with a larger sleep_time and decrease it as the
-        # probability of a new block increases.
         self.sleep_time = sleep_time
+        self._stop_event = AsyncResult()
+
+        super().start()
+        self.name = f"AlarmTask._run node:{to_checksum_address(self.rpc_client.address)}"
+
+        log.debug("Alarm task started", node=to_checksum_address(self.rpc_client.address))
 
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__} node:" f"{to_checksum_address(self.rpc_client.address)}>"
         )
-
-    def start(self) -> None:
-        log.debug("Alarm task started", node=to_checksum_address(self.rpc_client.address))
-        self._stop_event = AsyncResult()
-        super().start()
-
-    def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
-        self.greenlet.name = f"AlarmTask._run node:{to_checksum_address(self.rpc_client.address)}"
-        try:
-            self.loop_until_stop()
-        finally:
-            self.callbacks = list()
 
     def register_callback(self, callback: Callable) -> None:
         """ Register a new callback.
@@ -184,17 +176,13 @@ class AlarmTask(Runnable):
 
         self.callbacks.append(callback)
 
-    def remove_callback(self, callback: Callable) -> None:
-        """Remove callback from the list of callbacks if it exists"""
-        if callback in self.callbacks:
-            self.callbacks.remove(callback)
-
-    def loop_until_stop(self) -> None:
-        sleep_time = self.sleep_time
-        while self._stop_event and self._stop_event.wait(sleep_time) is not True:
+    def _start(self) -> None:
+        while self._stop_event.wait(self.sleep_time) is not True:
             latest_block = self.rpc_client.get_block(block_identifier="latest")
-
             self._maybe_run_callbacks(latest_block)
+
+        self.callbacks = []
+        log.debug("Alarm task stopped", node=to_checksum_address(self.rpc_client.address))
 
     def _maybe_run_callbacks(self, latest_block: Dict[str, Any]) -> None:
         """ Run the callbacks if there is at least one new block.
@@ -245,12 +233,3 @@ class AlarmTask(Runnable):
                 self.callbacks.remove(callback)
 
             self.known_block_number = latest_block_number
-
-    def stop(self) -> Any:
-        if self._stop_event:
-            self._stop_event.set(True)
-        log.debug("Alarm task stopped", node=to_checksum_address(self.rpc_client.address))
-        result = self.greenlet.join()
-        # Callbacks should be cleaned after join
-        self.callbacks = []
-        return result

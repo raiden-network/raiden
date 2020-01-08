@@ -405,7 +405,7 @@ def test_batch_unlock(
         token_network_registry_address,
         token_address,
         [alice_bob_channel_state.identifier],
-        alice_app.raiden.alarm.sleep_time,
+        alice_app.raiden.config.blockchain.query_interval,
     )
 
     msg = "The channel_state must not have been cleared, one of the ends has pending locks to do."

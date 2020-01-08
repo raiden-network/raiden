@@ -360,10 +360,8 @@ class RaidenService(Runnable):
         # - React to incoming messages
         # - Send pending transactions
         # - Send pending message
-        self.alarm.greenlet.link_exception(self.on_error)
-        self.transport.greenlet.link_exception(self.on_error)
         self._start_transport(chain_state)
-        self._start_alarm_task()
+        self._start_following_blockchain()
 
         log.debug("Raiden Service started", node=to_checksum_address(self.address))
         super().start()
@@ -397,10 +395,9 @@ class RaidenService(Runnable):
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
         self.transport.stop()
-        self.alarm.stop()
 
         self.transport.greenlet.join()
-        self.alarm.greenlet.join()
+        self.alarm.join()
 
         assert (
             self.blockchain_events
@@ -459,6 +456,7 @@ class RaidenService(Runnable):
             node=to_checksum_address(self.address),
         )
 
+        self.transport.greenlet.link_exception(self.on_error)
         self.transport.start(raiden_service=self, prev_auth_data=None, whitelist=whitelist)
 
         for neighbour in views.all_neighbour_nodes(chain_state):
@@ -639,10 +637,8 @@ class RaidenService(Runnable):
         self.blockchain_events = blockchain_events
         self._poll_until_target(latest_confirmed_block_number)
 
-        self.alarm.register_callback(self._callback_new_block)
-
-    def _start_alarm_task(self) -> None:
-        """Start the alarm task.
+    def _start_following_blockchain(self) -> None:
+        """Install callback to get notified about new blocks.
 
         Note:
             The alarm task must be started only when processing events is
@@ -650,7 +646,8 @@ class RaidenService(Runnable):
             ignored.
         """
         assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
-        self.alarm.start()
+        self.alarm.greenlet.link_exception(self.on_error)
+        self.alarm.register_callback(self._callback_new_block)
 
     def _initialize_ready_to_process_events(self) -> None:
         """Mark the node as ready to start processing raiden events that may

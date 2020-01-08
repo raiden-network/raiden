@@ -562,7 +562,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
             registry_address,
             token_address,
             [channel_identifier],
-            app0.raiden.alarm.sleep_time,
+            app0.raiden.config.blockchain.query_interval,
         )
 
     # assert all queues with this partner are gone or empty
