@@ -1,4 +1,4 @@
-from raiden.network.transport.matrix.transport import MatrixTransport, _RetryQueue  # noqa
+from raiden.network.transport.matrix.transport import MatrixTransport, RetryQueue  # noqa
 from raiden.network.transport.matrix.utils import (  # noqa
     AddressReachability,
     UserPresence,

@@ -21,7 +21,7 @@ from raiden.constants import (
 from raiden.exceptions import InsufficientEth
 from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
-from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
+from raiden.network.transport.matrix import AddressReachability, MatrixTransport, RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import UserPresence, make_room_alias, my_place_or_yours
 from raiden.raiden_service import RaidenService
@@ -328,7 +328,7 @@ def test_matrix_message_retry(
     )
     chain_state = raiden_service.wal.state_manager.current_state
 
-    retry_queue: _RetryQueue = transport._get_retrier(partner_address)
+    retry_queue: RetryQueue = transport._get_retrier(partner_address)
     assert bool(retry_queue), "retry_queue not running"
 
     # Send the initial message

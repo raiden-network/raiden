@@ -8,6 +8,7 @@ from uuid import uuid4
 import gevent
 import structlog
 from eth_utils import is_binary_address, to_normalized_address
+from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import RLock, Semaphore
 from gevent.pool import Pool
@@ -80,8 +81,8 @@ ROOM_JOIN_RETRY_INTERVAL = 0.1
 ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER = 1.55
 
 
-class _RetryQueue(Runnable):
-    """ A helper Runnable to send batched messages to receiver through transport """
+class RetryQueue:
+    """ A helper to send batched messages to receiver through transport """
 
     class _MessageData(NamedTuple):
         """ Small helper data structure for message queue """
@@ -93,17 +94,27 @@ class _RetryQueue(Runnable):
         expiration_generator: Iterator[bool]
 
     def __init__(self, transport: "MatrixTransport", receiver: Address) -> None:
-        self.transport = transport
-        self.receiver = receiver
-        self._message_queue: List[_RetryQueue._MessageData] = list()
+        self._transport = transport
+        self._receiver = receiver
+        self._message_queue: List[RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
-        super().__init__()
-        self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
+
+        self.greenlet = Greenlet(self._run)
+        # Greenlet name is set in ``_run``
+
+        self.greenlet.start()
+
+    # FIXME: should be removed
+    def start(self) -> None:
+        if self.greenlet:
+            raise RuntimeError(f"Greenlet {self.greenlet!r} already started")
+
+        self.greenlet.start()
 
     @property
     def log(self) -> Any:
-        return self.transport.log
+        return self._transport.log
 
     @staticmethod
     def _expiration_generator(
@@ -125,7 +136,7 @@ class _RetryQueue(Runnable):
 
     def enqueue(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """ Enqueue a message to be sent, and notify main loop """
-        assert queue_identifier.recipient == self.receiver
+        assert queue_identifier.recipient == self._receiver
         with self._lock:
             already_queued = any(
                 queue_identifier == data.queue_identifier and message == data.message
@@ -134,19 +145,19 @@ class _RetryQueue(Runnable):
             if already_queued:
                 self.log.warning(
                     "Message already in queue - ignoring",
-                    receiver=to_checksum_address(self.receiver),
+                    receiver=to_checksum_address(self._receiver),
                     queue=queue_identifier,
                     message=redact_secret(DictSerializer.serialize(message)),
                 )
                 return
             timeout_generator = timeout_exponential_backoff(
-                self.transport._config.retries_before_backoff,
-                self.transport._config.retry_interval,
-                self.transport._config.retry_interval * 10,
+                self._transport._config.retries_before_backoff,
+                self._transport._config.retry_interval,
+                self._transport._config.retry_interval * 10,
             )
             expiration_generator = self._expiration_generator(timeout_generator)
             self._message_queue.append(
-                _RetryQueue._MessageData(
+                RetryQueue._MessageData(
                     queue_identifier=queue_identifier,
                     message=message,
                     text=MessageSerializer.serialize(message),
@@ -159,7 +170,7 @@ class _RetryQueue(Runnable):
         """ Helper to enqueue a message in the unordered queue. """
         self.enqueue(
             queue_identifier=QueueIdentifier(
-                recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
+                recipient=self._receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
             ),
             message=message,
         )
@@ -175,26 +186,26 @@ class _RetryQueue(Runnable):
         After composing the to-be-sent message, also message queue from messages that are not
         present in the respective SendMessageEvent queue anymore
         """
-        if not self.transport.greenlet:
+        if not self._transport.greenlet:
             self.log.warning("Can't retry", reason="Transport not yet started")
             return
-        if self.transport._stop_event.ready():
+        if self._transport._stop_event.ready():
             self.log.warning("Can't retry", reason="Transport stopped")
             return
 
         # On startup protocol messages must be sent only after the monitoring
         # services are updated. For more details refer to the method
         # `RaidenService._initialize_monitoring_services_queue`
-        if self.transport._prioritize_broadcast_messages:
-            self.transport._broadcast_queue.join()
+        if self._transport._prioritize_broadcast_messages:
+            self._transport._broadcast_queue.join()
 
-        self.log.debug("Retrying message", receiver=to_checksum_address(self.receiver))
-        status = self.transport._address_mgr.get_address_reachability(self.receiver)
+        self.log.debug("Retrying message", receiver=to_checksum_address(self._receiver))
+        status = self._transport._address_mgr.get_address_reachability(self._receiver)
         if status is not AddressReachability.REACHABLE:
             # if partner is not reachable, return
             self.log.debug(
                 "Partner not reachable. Skipping.",
-                partner=to_checksum_address(self.receiver),
+                partner=to_checksum_address(self._receiver),
                 status=status,
             )
             return
@@ -206,11 +217,11 @@ class _RetryQueue(Runnable):
             if next(data.expiration_generator)
         ]
 
-        def message_is_in_queue(data: _RetryQueue._MessageData) -> bool:
+        def message_is_in_queue(data: RetryQueue._MessageData) -> bool:
             return any(
                 isinstance(data.message, RetrieableMessage)
                 and send_event.message_identifier == data.message.message_identifier
-                for send_event in self.transport._queueids_to_queues[data.queue_identifier]
+                for send_event in self._transport._queueids_to_queues[data.queue_identifier]
             )
 
         # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
@@ -221,7 +232,7 @@ class _RetryQueue(Runnable):
                 # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
                 #       later `Processed` message?
                 remove = True
-            elif msg_data.queue_identifier not in self.transport._queueids_to_queues:
+            elif msg_data.queue_identifier not in self._transport._queueids_to_queues:
                 remove = True
                 self.log.debug(
                     "Stopping message send retry",
@@ -243,33 +254,35 @@ class _RetryQueue(Runnable):
 
         if message_texts:
             self.log.debug(
-                "Send", receiver=to_checksum_address(self.receiver), messages=message_texts
+                "Send", receiver=to_checksum_address(self._receiver), messages=message_texts
             )
-            self.transport._send_raw(self.receiver, "\n".join(message_texts))
+            self._transport._send_raw(self._receiver, "\n".join(message_texts))
 
-    def _run(self) -> None:  # type: ignore
+    def _run(self) -> None:
         msg = f"_RetryQueue started before transport._raiden_service is set"
-        assert self.transport._raiden_service is not None, msg
+        assert self._transport._raiden_service is not None, msg
+
         self.greenlet.name = (
             f"RetryQueue "
-            f"node:{to_checksum_address(self.transport._raiden_service.address)} "
-            f"recipient:{to_checksum_address(self.receiver)}"
+            f"node:{to_checksum_address(self._transport._raiden_service.address)} "
+            f"recipient:{to_checksum_address(self._receiver)}"
         )
+
         # run while transport parent is running
-        while not self.transport._stop_event.ready():
+        while not self._transport._stop_event.ready():
             # once entered the critical section, block any other enqueue or notify attempt
             with self._lock:
                 self._notify_event.clear()
                 if self._message_queue:
                     self._check_and_send()
             # wait up to retry_interval (or to be notified) before checking again
-            self._notify_event.wait(self.transport._config.retry_interval)
+            self._notify_event.wait(self._transport._config.retry_interval)
 
     def __str__(self) -> str:
         return self.greenlet.name
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>"
+        return f"<{self.__class__.__name__} for {to_checksum_address(self._receiver)}>"
 
 
 class MatrixTransport(Runnable):
@@ -311,7 +324,7 @@ class MatrixTransport(Runnable):
 
         self.greenlets: List[gevent.Greenlet] = list()
 
-        self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
+        self._address_to_retryqueue: Dict[Address, RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
 
         self._broadcast_rooms: Dict[str, Optional[Room]] = dict()
@@ -404,11 +417,12 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        # (re)start any _RetryQueue which was initialized before start
-        for retrier in self._address_to_retrier.values():
-            if not retrier:
-                self.log.debug("Starting retrier", retrier=retrier)
-                retrier.start()
+        # (re)start any RetryQueue which was initialized before start
+        for retry_queue in self._address_to_retryqueue.values():
+            if not retry_queue:
+                self.log.debug("Starting retry queue", queue=retry_queue)
+                # FIXME: should be removed
+                retry_queue.start()
 
         super().start()  # start greenlet
         self._starting = False
@@ -461,13 +475,13 @@ class MatrixTransport(Runnable):
         self._stop_event.set()
         self._broadcast_event.set()
 
-        for retrier in self._address_to_retrier.values():
-            if retrier:
-                retrier.notify()
+        for retry_queue in self._address_to_retryqueue.values():
+            if retry_queue:
+                retry_queue.notify()
 
         # Wait for retriers to exit, then discard them
-        gevent.wait({r.greenlet for r in self._address_to_retrier.values()})
-        self._address_to_retrier = {}
+        gevent.wait({r.greenlet for r in self._address_to_retryqueue.values()})
+        self._address_to_retryqueue = {}
 
         self._address_mgr.stop()
         self._client.stop()  # stop sync_thread, wait on client's greenlets
@@ -882,11 +896,11 @@ class MatrixTransport(Runnable):
 
         return bool(all_messages)
 
-    def _get_retrier(self, receiver: Address) -> _RetryQueue:
+    def _get_retrier(self, receiver: Address) -> RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
-        if receiver not in self._address_to_retrier:
-            retrier = _RetryQueue(transport=self, receiver=receiver)
-            self._address_to_retrier[receiver] = retrier
+        if receiver not in self._address_to_retryqueue:
+            retrier = RetryQueue(transport=self, receiver=receiver)
+            self._address_to_retryqueue[receiver] = retrier
             # Always start the _RetryQueue, otherwise `stop` will block forever
             # waiting for the corresponding gevent.Greenlet to complete. This
             # has no negative side-effects if the transport has stopped because
@@ -894,7 +908,7 @@ class MatrixTransport(Runnable):
             retrier.start()
             # ``Runnable.start()`` may re-create the internal greenlet
             retrier.greenlet.link_exception(self.on_error)
-        return self._address_to_retrier[receiver]
+        return self._address_to_retryqueue[receiver]
 
     def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         retrier = self._get_retrier(queue_identifier.recipient)
@@ -1115,7 +1129,7 @@ class MatrixTransport(Runnable):
         if reachability is AddressReachability.REACHABLE:
             node_reachability = NetworkState.REACHABLE
             # _QueueRetry.notify when partner comes online
-            retrier = self._address_to_retrier.get(address)
+            retrier = self._address_to_retryqueue.get(address)
             if retrier:
                 retrier.notify()
         elif reachability is AddressReachability.UNKNOWN:
