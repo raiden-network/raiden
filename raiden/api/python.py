@@ -97,13 +97,14 @@ def event_filter_for_payments(
     partner_address: Optional[Address] = None,
     token_address: Optional[TokenAddress] = None,
 ) -> bool:
-    """Filters payment history related events depending on partner_address argument
+    """Filters payment history related events depending on given arguments
 
-    - If no other args are given, all payment related events match
-    - If a token network identifier is given then only payment events for that match
+    - If no other args are given, all payment related events match.
+    - If a token network identifier is given then only payment events for that match.
     - If a partner is also given then if the event is a payment sent event and the
-      target matches it's returned. If it's a payment received and the initiator matches
+      target matches it's returned. If it's a payment received and the initiator matches.
       then it's returned.
+    - If a token address is given then all events are filtered to be about that token.
     """
     sent_and_target_matches = isinstance(
         event, (EventPaymentSentFailed, EventPaymentSentSuccess)
@@ -1143,7 +1144,7 @@ class RaidenAPI:  # pragma: no unittest
             logical_and=False,
         )
 
-        chain_state = chain_state = views.state_from_raiden(self.raiden)
+        chain_state = views.state_from_raiden(self.raiden)
         events = [
             e
             for e in events
