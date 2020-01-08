@@ -657,7 +657,8 @@ class MatrixTransport(Runnable):
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
         while response_queue:
-            self._client._handle_response(response_queue.get(block=False), first_sync=True)
+            token_response = response_queue.get(block=False)
+            self._client._handle_response(token_response[1], first_sync=True)
 
     def _initialize_room_inventory(self) -> None:
         msg = "The rooms can only be inventoried after the first sync."

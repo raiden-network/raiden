@@ -5,6 +5,7 @@ from functools import wraps
 from itertools import repeat
 from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
 from urllib.parse import quote
+from uuid import UUID, uuid4
 
 import gevent
 import structlog
@@ -22,7 +23,7 @@ from requests.adapters import HTTPAdapter
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.notifying_queue import NotifyingQueue, event_first_of
+from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
@@ -210,7 +211,7 @@ class GMatrixClient(MatrixClient):
     sync_filter: str
     sync_worker: Optional[Greenlet] = None
     message_worker: Optional[Greenlet] = None
-    last_sync: Optional[float] = None
+    last_sync: float = float("inf")
 
     def __init__(
         self,
@@ -426,30 +427,71 @@ class GMatrixClient(MatrixClient):
         """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
         log.debug("Sync called", node=node_address_from_userid(self.user_id), user_id=self.user_id)
 
-        if self.last_sync:
-            time_since_last_sync_in_seconds = time.time() - self.last_sync
+        time_before_sync = time.time()
 
-            # If it takes longer than `timeout_ms` to call `_sync` again, we throw an exception.
-            # The exception is only thrown when in development mode.
-            timeout_in_seconds = timeout_ms // 1_000
-            timeout_reached = (
-                time_since_last_sync_in_seconds >= timeout_in_seconds
-                and self.environment == Environment.DEVELOPMENT
+        time_since_last_sync_in_seconds = time_before_sync - self.last_sync
+
+        # If it takes longer than `timeout_ms` to call `_sync` again, we throw an exception.
+        # The exception is only thrown when in development mode.
+        timeout_in_seconds = timeout_ms // 1_000
+        timeout_reached = (
+            time_since_last_sync_in_seconds >= timeout_in_seconds
+            and self.environment == Environment.DEVELOPMENT
+        )
+        if timeout_reached:
+            raise MatrixSyncMaxTimeoutReached(
+                f"Processing Matrix response took {time_since_last_sync_in_seconds}s, "
+                f"poll timeout is {timeout_in_seconds}s."
             )
-            if timeout_reached:
-                raise MatrixSyncMaxTimeoutReached(
-                    f"Processing Matrix response took {time_since_last_sync_in_seconds}s, "
-                    f"poll timeout is {timeout_in_seconds}s."
-                )
 
         response = self.api.sync(self.sync_token, timeout_ms)
-        self.last_sync = time.time()
+        time_after_sync = time.time()
+        self.last_sync = time_after_sync
 
-        # Updating the sync token should only be done after the response is
-        # saved in the queue, otherwise the data can be lost in a stop/start.
-        self.response_queue.put(response)
-        self.sync_token = response["next_batch"]
-        self.sync_iteration += 1
+        if response:
+            token = uuid4()
+
+            log.debug(
+                "Sync returned",
+                node=node_address_from_userid(self.user_id),
+                token=token,
+                elapsed=time_after_sync - time_before_sync,
+                current_user=self.user_id,
+                presence_events_qty=len(response["presence"]["events"]),
+                to_device_events_qty=len(response["to_device"]["events"]),
+                rooms_invites_qty=len(response["rooms"]["invite"]),
+                rooms_leaves_qty=len(response["rooms"]["leave"]),
+                rooms_joined_member_count=sum(
+                    room["summary"].get("m.joined_member_count", 0)
+                    for room in response["rooms"]["join"].values()
+                ),
+                rooms_invited_member_count=sum(
+                    room["summary"].get("m.invited_member_count", 0)
+                    for room in response["rooms"]["join"].values()
+                ),
+                rooms_join_state_qty=sum(
+                    len(room["state"]) for room in response["rooms"]["join"].values()
+                ),
+                rooms_join_timeline_events_qty=sum(
+                    len(room["timeline"]["events"]) for room in response["rooms"]["join"].values()
+                ),
+                rooms_join_state_events_qty=sum(
+                    len(room["state"]["events"]) for room in response["rooms"]["join"].values()
+                ),
+                rooms_join_ephemeral_events_qty=sum(
+                    len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
+                ),
+                rooms_join_account_data_events_qty=sum(
+                    len(room["account_data"]["events"])
+                    for room in response["rooms"]["join"].values()
+                ),
+            )
+
+            # Updating the sync token should only be done after the response is
+            # saved in the queue, otherwise the data can be lost in a stop/start.
+            self.response_queue.put((token, response))
+            self.sync_token = response["next_batch"]
+            self.sync_iteration += 1
 
     def _handle_message(self, response_queue: NotifyingQueue, stop_event: Event) -> None:
         """ Worker to process network messages from the asynchronous transport.
@@ -460,46 +502,35 @@ class GMatrixClient(MatrixClient):
         layer has to implement retries to guarantee that a message is
         eventually processed. This introduces a cost in terms of latency.
         """
-        data_or_stop = event_first_of(response_queue, stop_event)
-
         while True:
-            data_or_stop.wait()
-
-            # Clear the event's internal state for the next iteration.
-            #
-            # This *must* be done before any context switch, otherwise
-            # concurrent actions can be missed. Examples:
-            # - If a new element is added to the queue while `_handle_response`
-            # is executing, and the `data_or_stop` is cleared after that
-            # context-switch, then the new element will be missed.
-            # - If the stop event is set while `_handle_response` is being
-            # executed, because this only happens once the stop event be
-            # missed.
-            data_or_stop.clear()
+            gevent.wait({response_queue, stop_event}, count=1)
 
             if stop_event.is_set():
                 return
 
-            # The queue is not empty at this point, so this won't raise Empty.
-            #
-            # Here `peek` is used to implement delivery at-least-once
-            # semantics. At-most-once would also be acceptable because of
-            # message retries, however has the potential of introducing
-            # latency.
-            response: JSONResponse = response_queue.peek(block=False)
+            while response_queue:
+                # Here `peek` is used to implement delivery at-least-once
+                # semantics. At-most-once would also be acceptable because of
+                # message retries, however has the potential of introducing
+                # latency.
+                token_response: Tuple[UUID, JSONResponse] = response_queue.peek(block=False)
+                token, response = token_response
+                assert response is not None, "None is not a valid value for a Matrix response."
 
-            # TODO: Respect the `stop_event` in `_handle_response`. With this
-            #   implementation if the event is set while `_handle_response` is
-            #   executing, and the handler takes a long time, the process will
-            #   take longer than necessary to exit.
-            if response is not None:
+                log.debug(
+                    "Handling Matrix response",
+                    token=token,
+                    node=node_address_from_userid(self.user_id),
+                    current_size=len(response_queue),
+                )
+
                 self._handle_response(response)
 
-            # Pop the processed message, if the process is killed right
-            # before this call, on the next transport start the same message
-            # will be processed again, that is why this is at-least-once
-            # semantics.
-            response_queue.get(block=False)
+                # Pop the processed message, if the process is killed right
+                # before this call, on the next transport start the same message
+                # will be processed again, that is why this is at-least-once
+                # semantics.
+                response_queue.get(block=False)
 
     def _handle_response(self, response: JSONResponse, first_sync: bool = False) -> None:
         # We must ignore the stop flag during first_sync
@@ -511,36 +542,6 @@ class GMatrixClient(MatrixClient):
                 user_id=self.user_id,
             )
             return
-
-        log.debug(
-            "Running _handle_response",
-            node=node_address_from_userid(self.user_id),
-            current_user=self.user_id,
-            presence_events_qty=len(response["presence"]["events"]),
-            to_device_events_qty=len(response["to_device"]["events"]),
-            rooms_invites_qty=len(response["rooms"]["invite"]),
-            rooms_leaves_qty=len(response["rooms"]["leave"]),
-            rooms_joined_member_count=sum(
-                room["summary"].get("m.joined_member_count", 0)
-                for room in response["rooms"]["join"].values()
-            ),
-            rooms_invited_member_count=sum(
-                room["summary"].get("m.invited_member_count", 0)
-                for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_state_qty=sum(
-                len(room["state"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_state_events_qty=sum(
-                len(room["state"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_ephemeral_events_qty=sum(
-                len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-            rooms_join_account_data_events_qty=sum(
-                len(room["account_data"]["events"]) for room in response["rooms"]["join"].values()
-            ),
-        )
 
         # Handle presence after rooms
         for presence_update in response["presence"]["events"]:
