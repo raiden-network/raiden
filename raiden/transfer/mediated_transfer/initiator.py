@@ -262,12 +262,12 @@ def try_new_route(
             route_fee_exceeds_max = True
             continue
 
-        is_channel_usable = channel.is_channel_usable_for_new_transfer(
+        channel_usability_state = channel.is_channel_usable_for_new_transfer(
             channel_state=candidate_channel_state,
             transfer_amount=amount_with_fee,
             lock_timeout=transfer_description.lock_timeout,
         )
-        if is_channel_usable is channel.ChannelUsability.USABLE:
+        if channel_usability_state is channel.ChannelUsability.USABLE:
             channel_state = candidate_channel_state
             route_state = reachable_route_state
             break

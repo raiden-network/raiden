@@ -65,6 +65,7 @@ from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import (
     Address,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     Endpoint,
     FeeAmount,
@@ -183,6 +184,8 @@ def run_app(
     pathfinding_max_paths: int,
     enable_monitoring: bool,
     resolver_endpoint: str,
+    default_reveal_timeout: BlockTimeout,
+    default_settle_timeout: BlockTimeout,
     routing_mode: RoutingMode,
     flat_fee: Tuple[Tuple[TokenAddress, FeeAmount], ...],
     proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
@@ -241,6 +244,9 @@ def run_app(
     config.api_host = api_host
     config.api_port = api_port
     config.resolver_endpoint = resolver_endpoint
+
+    config.reveal_timeout = default_reveal_timeout
+    config.settle_timeout = default_settle_timeout
 
     contracts = load_deployed_contracts_data(config, network_id)
 
