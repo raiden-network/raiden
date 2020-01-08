@@ -4,10 +4,9 @@ tools
 - `parallel_tests.sh`: Tool to execute the test suite in parallel, useful to
   run multiple integration tests at the same time.
 - `startcluster.py`: This tool will generate a genesis file with a few
-  pre-funded accounts to be used as Raidne accounts, and then run a local
+  pre-funded accounts to be used as Raiden accounts, and then run a local
   Geth private chain, useful for debugging.
-- `genesis_builder.py`: This tool will generate a genesis file.
-- `transfer_eth.py`: This is just a simple tool to send a eth transfer using
+- `transfer_eth.py`: This is just a simple tool to send an eth transfer using
   the provided private key.
 
 debugging
